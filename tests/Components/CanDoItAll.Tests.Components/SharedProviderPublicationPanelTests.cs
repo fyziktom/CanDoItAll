@@ -140,9 +140,13 @@ internal sealed class RecordingSharedProviderManagementService(
         return Task.FromResult(State);
     }
 
+    public int ListSourcesCallCount { get; private set; }
+
     public Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(
-        CancellationToken cancellationToken = default)
-        => Task.FromResult(Sources);
+        CancellationToken cancellationToken = default) {
+        ListSourcesCallCount++;
+        return Task.FromResult(Sources);
+    }
 
     public Task<SharedProviderSourceWriteResult> SaveSourceAsync(
         SharedProviderSourceEditorRequest request,

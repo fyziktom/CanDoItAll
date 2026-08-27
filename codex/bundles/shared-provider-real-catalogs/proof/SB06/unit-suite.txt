@@ -1,0 +1,13 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:05.05]     CanDoItAll.Tests.Unit.AgentFramework.WorkflowCatalogTests.ComponentLibraryAcceptsStructuredOutputForOllama [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.WorkflowCatalogTests.ComponentLibraryAcceptsStructuredOutputForOllama [195 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : LLM Call Component 'ae403e06-9967-45c0-a992-cebf6ce8bb5f' model 'llama3.2' requires a model price row on provider 'Ollama chat'.
+  Trasování zásobníku:
+     at CanDoItAll.AgentFramework.Core.InMemoryWorkflowCatalogService.SaveComponentAsync(LlmCallComponentSaveRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\WorkflowCatalogServices.cs:line 508
+   at CanDoItAll.Tests.Unit.AgentFramework.WorkflowCatalogTests.ComponentLibraryAcceptsStructuredOutputForOllama() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:line 398
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB06\unit-suite.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:  6988, Přeskočeno:     0, Celkem:  6989, Doba trvání: 3 m 39 s - CanDoItAll.Tests.Unit.dll (net10.0)

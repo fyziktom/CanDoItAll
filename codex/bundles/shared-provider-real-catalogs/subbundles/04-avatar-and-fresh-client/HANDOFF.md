@@ -1,5 +1,9 @@
 # Three-instance manual testing
 
+Superseded by [SB06 administration handoff](../06-token-lifecycle-and-fresh-handoff/HANDOFF.md).
+The current image, connections-toolbar entry point and recoverable 5214 reset are documented there.
+The following is the retained SB04 checkpoint.
+
 All three apps run image `candoitall-shared-providers-ui:avatar-blank-client-20260827-2`.
 They are published on loopback only. On first visit, confirm the selected database with
 **Continue**. Ordinary local UI access does not require a browser JWT.

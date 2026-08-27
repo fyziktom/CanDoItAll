@@ -259,42 +259,7 @@
                     }
                     else if (apiStatus.SigningKeyConfigured)
                     {
-                        <EditForm Model="apiTokenModel" OnValidSubmit="IssueApiTokenAsync">
-                            <Stack GapScale="LayoutGap.Large">
-                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Subject</label>
-                                        <InputText @bind-Value="apiTokenModel.Subject" class="cda-input" />
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Display name</label>
-                                        <InputText @bind-Value="apiTokenModel.DisplayName" class="cda-input" />
-                                    </div>
-                                </Grid>
-                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Lifetime minutes</label>
-                                        <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="cda-input" />
-                                        <p class="cda-body-muted mt-1">Maximum: @apiStatus.MaxTokenLifetimeMinutes minutes</p>
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Scopes</label>
-                                        <InputText @bind-Value="apiScopesText" class="cda-input" />
-                                        <p class="cda-body-muted mt-1">Separate scopes with spaces or commas.</p>
-                                    </div>
-                                </Grid>
-                                <Button Text="Create token" Icon="key" Type="submit" />
-                            </Stack>
-                        </EditForm>
-
-                        @if (issuedApiToken is not null)
-                        {
-                            <Alert AlertStyle="AlertStyle.Success">
-                                <p class="font-semibold">Token created for @issuedApiToken.DisplayName.</p>
-                                <p class="mt-1">Expires: @FormatTimestamp(issuedApiToken.ExpiresAtUtc)</p>
-                                <textarea readonly class="cda-input cda-input--textarea mt-3 min-h-32">@issuedApiToken.Token</textarea>
-                            </Alert>
-                        }
+                        <ApiTokenAdministrationPanel Status="apiStatus" />
                     }
                     else
                     {

@@ -1,0 +1,10 @@
+Command: & proof/SB06/transcripts/Verify-Proof.ps1 -FailingFirst
+Archived failing-first evidence, not a new execution of the test:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:07.83]     CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_SCOPES_empty_selection_never_grants_broad_api_access [FAIL]
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB06\regression-red.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 6 s - CanDoItAll.Tests.Integration.dll (net10.0)
+Original test ExitCode: 1
+Collector ExitCode: 0

@@ -1,5 +1,9 @@
 # Normalized Requirements
 
+- R8 / N008: compact icon toolbar/filter; shared connections only in a dedicated dialog.
+- R9 / N009: scope checkbox picker and lazy searchable token management with enforced revocation.
+- R10 / N010: rebuild test apps, preserve 5210/5212 and recoverably reset only 5214.
+
 - R6 / N006: Avatar agrees across card/editor/picker, including default, rename,
   selected/uploaded image and reset.
 - R7 / N007: Rebuild Docker pair preserving data; start isolated provider-free third

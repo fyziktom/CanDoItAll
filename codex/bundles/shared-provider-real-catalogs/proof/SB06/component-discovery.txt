@@ -1,0 +1,6 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply
+    CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_list_is_lazy_and_revoke_delete_require_confirmation
+    CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_access_denial_prevents_data_loading_and_rechecks_every_action
+    CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value

@@ -36,6 +36,7 @@ public partial class AgentProviderProfilesPanel
     private int providerEditorTabIndex;
     private bool isLoading;
     private bool isBusy;
+    private bool sharedConnectionsOpen;
 
     private IReadOnlyList<ProviderProfile> FilteredProviders => providers
         .Where(MatchesProviderSearch)

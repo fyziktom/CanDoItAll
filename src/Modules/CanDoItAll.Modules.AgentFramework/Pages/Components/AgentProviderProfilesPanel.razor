@@ -1,35 +1,31 @@
 <ListDetailShell ListPaneWidth="25rem"
                  data-testid="agents-provider-profiles-panel">
     <ListHeader>
-        <ListPanelHeader Title="Provider profiles"
-                         Description="AgentFramework provider catalog, including persisted profiles and seeded runtime providers."
-                         Count="@($"{FilteredProviders.Count} profile(s)")">
+        <ListPanelHeader Title="Provider profiles" Dense="true">
             <Actions>
-                <Button Text="New provider"
-                        Icon="add"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Click="ResetProviderAsync"
-                        data-testid="providers-new" />
-                <Button Text="Refresh"
-                        Icon="refresh"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Click="LoadAsync"
-                        data-testid="providers-refresh" />
+                <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
+                    <Button Icon="add" title="New provider" aria-label="New provider"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="ResetProviderAsync" data-testid="providers-new" />
+                    <Button Icon="refresh" title="Refresh providers" aria-label="Refresh providers"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="LoadAsync" data-testid="providers-refresh" />
+                    <Button Icon="hub" title="Shared provider connections" aria-label="Shared provider connections"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="@(() => sharedConnectionsOpen = true)" data-testid="providers-connections" />
+                </Cluster>
             </Actions>
             <Filters>
-                <FilterBar ResultText="@($"{FilteredProviders.Count} of {providers.Count} provider(s)")">
-                    <input @bind="providerSearch"
-                           @bind:event="oninput"
-                           class="cda-input min-w-[14rem] flex-1"
-                           placeholder="Search providers"
-                           data-testid="providers-search" />
-                    <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Click="ResetProviderSearch" />
-                </FilterBar>
+                <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny" data-testid="providers-filter">
+                    <input @bind="providerSearch" @bind:event="oninput"
+                           class="cda-input min-w-0 flex-1" placeholder="Search providers"
+                           aria-label="Search providers" data-testid="providers-search" />
+                    <Button Icon="filter_alt_off" title="Reset filter" aria-label="Reset provider filter"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="ResetProviderSearch" data-testid="providers-search-reset" />
+                    <span class="shrink-0 text-xs text-slate-500" data-testid="providers-filter-count"
+                          aria-label="Provider results">@FilteredProviders.Count / @providers.Count</span>
+                </Cluster>
             </Filters>
         </ListPanelHeader>
     </ListHeader>
@@ -235,7 +231,6 @@
                         </TabsItem>
                         <TabsItem Text="Sharing" Icon="share" data-testid="provider-editor-tab-sharing">
                             <SharedProviderManagementPanel ProviderProfileId="providerModel.Id"
-                                                           Secrets="secrets"
                                                            ProvidersChanged="RefreshProvidersAfterSharedChangeAsync" />
                         </TabsItem>
                     </Tabs>
@@ -273,3 +268,9 @@
         </EditForm>
     </DetailContent>
 </ListDetailShell>
+
+@if (sharedConnectionsOpen) {
+    <SharedProviderSourcesDialog Secrets="secrets"
+                                 ProvidersChanged="RefreshProvidersAfterSharedChangeAsync"
+                                 OnClose="@(() => sharedConnectionsOpen = false)" />
+}

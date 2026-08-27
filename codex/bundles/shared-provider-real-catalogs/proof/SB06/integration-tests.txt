@@ -1,0 +1,793 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.48]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.82]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.88]   Starting:    CanDoItAll.Tests.Integration
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {c6905369-201b-4bc5-ae95-0cf3a0f3398b} with creation date 2026-08-27 21:04:47Z, activation date 2026-08-27 21:04:47Z, and expiration date 2026-11-25 21:04:47Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {c6905369-201b-4bc5-ae95-0cf3a0f3398b} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: Microsoft.EntityFrameworkCore.Update[30100]
+      Saved 866 entities to in-memory store.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 111 created and 0 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:58104
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\d00fbbcda689490099d5e5c0f8ad4a3b
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmChatApiPage`1' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - 200 - application/json;+charset=utf-8 1083.5029ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:58104/api/llm-chats - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]
+      AuthenticationScheme: Bearer was forbidden.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:58104/api/llm-chats - 403 - application/json;+charset=utf-8 58.4303ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]
+      Failed to validate the token.
+      Microsoft.IdentityModel.Tokens.SecurityTokenSignatureKeyNotFoundException: IDX10517: Signature validation failed. The token's kid is missing. Keys tried: 'Microsoft.IdentityModel.Tokens.SymmetricSecurityKey, KeyId: '', InternalId: 'NmVpZnc9dE9RhIlMNiDnsDFG4PyWwA8yjy7JD3vqkzE'. , KeyId: 
+      '. Number of keys in TokenValidationParameters: '1'. 
+Number of keys in Configuration: '0'. 
+Exceptions caught:
+ '[PII of type 'System.Text.StringBuilder' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'.
+token: '[PII of type 'Microsoft.IdentityModel.JsonWebTokens.JsonWebToken' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'. See https://aka.ms/IDX10503 for details.
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateSignature(JsonWebToken jwtToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateSignatureAndIssuerSecurityKey(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: IDX10517: Signature validation failed. The token's kid is missing. Keys tried: 'Microsoft.IdentityModel.Tokens.SymmetricSecurityKey, KeyId: '', InternalId: 'NmVpZnc9dE9RhIlMNiDnsDFG4PyWwA8yjy7JD3vqkzE'. , KeyId: 
+      '. Number of keys in TokenValidationParameters: '1'. 
+Number of keys in Configuration: '0'. 
+Exceptions caught:
+ '[PII of type 'System.Text.StringBuilder' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'.
+token: '[PII of type 'Microsoft.IdentityModel.JsonWebTokens.JsonWebToken' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'. See https://aka.ms/IDX10503 for details.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - 401 - application/json;+charset=utf-8 22.7671ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_legacy_tokens_remain_subject_to_signature_and_scope_checks [11 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {8691d7c8-fe8c-493c-9ffb-90a89fcdcba0} with creation date 2026-08-27 21:04:52Z, activation date 2026-08-27 21:04:52Z, and expiration date 2026-11-25 21:04:52Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {8691d7c8-fe8c-493c-9ffb-90a89fcdcba0} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:58106
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\e24dbb5f9d7242a7bd9f8076a48fb2bc
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - - -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - 401 - application/json;+charset=utf-8 944.3382ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58106/authorized-files/content - - -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58106/authorized-files/content - 401 - application/json;+charset=utf-8 4.9059ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmChatApiPage`1' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - 200 - application/json;+charset=utf-8 57.9759ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:58106/api/llm-chats - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]
+      AuthenticationScheme: Bearer was forbidden.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:58106/api/llm-chats - 403 - application/json;+charset=utf-8 23.4342ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.API_BOUNDARY_local_operator_ui_identity_does_not_authenticate_http_boundaries [2 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {124b9cf1-93d2-4eec-bb43-e23e08b48c76} with creation date 2026-08-27 21:04:54Z, activation date 2026-08-27 21:04:54Z, and expiration date 2026-11-25 21:04:54Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {124b9cf1-93d2-4eec-bb43-e23e08b48c76} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:58108
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\fe46ef6eb44944c996892b24cc8801b4
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58108/api/llm-chats - - -
+fail: ApiManagedTokenValidation[0]
+      Cannot validate registered API token b8ccdbf7-ae08-4f25-bad8-b8d0cf6d0bce: InvalidDataException. Access denied.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: The API token registry is unavailable.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58108/api/llm-chats - 401 - application/json;+charset=utf-8 612.9723ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_corrupt_registration_fails_closed_on_http [1 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {150e3fee-cd61-41bf-b7e1-affb7bf1eac0} with creation date 2026-08-27 21:04:56Z, activation date 2026-08-27 21:04:56Z, and expiration date 2026-11-25 21:04:56Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {150e3fee-cd61-41bf-b7e1-affb7bf1eac0} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:58110
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\5af3a3e9bea445829c53128e3cd296fb
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_SCOPES_empty_selection_never_grants_broad_api_access [1 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {8305ff49-cad9-4126-99fd-cc20f9788f33} with creation date 2026-08-27 21:04:57Z, activation date 2026-08-27 21:04:57Z, and expiration date 2026-11-25 21:04:57Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {8305ff49-cad9-4126-99fd-cc20f9788f33} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:58112
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\f4fea81a556a47d8893b18e31f937509
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmChatApiPage`1' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - 200 - application/json;+charset=utf-8 563.2726ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: The API token is revoked, expired or deleted.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - 401 - application/json;+charset=utf-8 18.2359ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: The API token is revoked, expired or deleted.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - 401 - application/json;+charset=utf-8 18.8104ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: True) [2 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {7c443085-f1a9-413d-9890-9ee36e8aa48d} with creation date 2026-08-27 21:05:00Z, activation date 2026-08-27 21:05:00Z, and expiration date 2026-11-25 21:05:00Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {7c443085-f1a9-413d-9890-9ee36e8aa48d} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:58119
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\a91191582daf44be8802766dbea88ed3
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmChatApiPage`1' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/llm-chats/ => ListDefinitionsAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - 200 - application/json;+charset=utf-8 1085.9497ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: The API token is revoked, expired or deleted.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - 401 - application/json;+charset=utf-8 19.7124ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: False) [2 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {4c2690b2-8fdf-48f2-95a9-ecfdd32a7d44} with creation date 2026-08-27 21:05:02Z, activation date 2026-08-27 21:05:02Z, and expiration date 2026-11-25 21:05:02Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {4c2690b2-8fdf-48f2-95a9-ecfdd32a7d44} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:58122
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\1216ecf07ae84cd891956edc0f65c3f7
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:58122/api/access/tokens - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/access/tokens'
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[1]
+      Setting HTTP status code 400.
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[3]
+      Writing value of type 'ApiErrorResponse' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/access/tokens'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:58122/api/access/tokens - 400 - application/json;+charset=utf-8 646.9932ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Authorization_disabled_token_endpoint_is_not_protected_by_the_scope_policy [1 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {39666972-66f2-4356-91a4-26d88853bfbc} with creation date 2026-08-27 21:05:04Z, activation date 2026-08-27 21:05:04Z, and expiration date 2026-11-25 21:05:04Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {39666972-66f2-4356-91a4-26d88853bfbc} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56047
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\14e5af6bfb924fc7b26443a29cf79a39
+info: Microsoft.EntityFrameworkCore.Update[30100]
+      Saved 1 entities to in-memory store.
+info: Microsoft.EntityFrameworkCore.Update[30100]
+      Saved 1 entities to in-memory store.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56047/api/project-structure/node-catalog - - -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]
+      AuthenticationScheme: Bearer was forbidden.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56047/api/project-structure/node-catalog - 403 - application/json;+charset=utf-8 1013.4287ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:56047/api/project-structure/leases/acquire - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/project-structure/leases/acquire'
+info: Microsoft.EntityFrameworkCore.Update[30100]
+      Saved 1 entities to in-memory store.
+info: Microsoft.EntityFrameworkCore.Update[30100]
+      Saved 1 entities to in-memory store.
+info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+      Writing value of type 'ProjectStructureLeaseSnapshot' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/project-structure/leases/acquire'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:56047/api/project-structure/leases/acquire - 200 - application/json;+charset=utf-8 183.6415ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Project_structure_routes_require_write_scope_and_bind_lease_owner_to_token_subject [2 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {0bd6c9e6-df5a-4189-8aed-f4a5e6d0f4a4} with creation date 2026-08-27 21:05:06Z, activation date 2026-08-27 21:05:06Z, and expiration date 2026-11-25 21:05:06Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {0bd6c9e6-df5a-4189-8aed-f4a5e6d0f4a4} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56049
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\edac2f9722e348b7af3204d559a3d202
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]
+      AuthenticationScheme: Bearer was forbidden.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - 403 - application/json;+charset=utf-8 692.9052ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/access/tokens'
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'ApiTokenIssueResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/access/tokens'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - 200 - application/json;+charset=utf-8 52.2600ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {698eb868-8ee6-4a85-ab30-1881c8229a48} with creation date 2026-08-27 21:05:08Z, activation date 2026-08-27 21:05:08Z, and expiration date 2026-11-25 21:05:08Z.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {698eb868-8ee6-4a85-ab30-1881c8229a48} may be persisted to storage in unencrypted form.
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56051
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\869a45a06f28402ea84c8197bcbb973c
+  Úspěšné CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Token_issuance_requires_explicit_privileged_scope [1 s]
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/shared-providers/openai/v1/models => WriteOpenAiModelsAsync'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/shared-providers/openai/v1/models => WriteOpenAiModelsAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 200 - application/json;+charset=utf-8 912.8198ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]
+      Failed to validate the token.
+      Microsoft.IdentityModel.Tokens.SecurityTokenMalformedException: IDX14100: JWT is not well formed, there are no dots (.).
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken.ReadToken(ReadOnlyMemory`1 encodedTokenMemory)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken..ctor(String jwtEncodedString)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ReadToken(String token, TokenValidationParameters validationParameters)
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: IDX14100: JWT is not well formed, there are no dots (.).
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 401 - application/json;+charset=utf-8 5.3293ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]
+      Failed to validate the token.
+      Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.
+         at Microsoft.IdentityModel.Tokens.ValidatorUtilities.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+         at Microsoft.IdentityModel.Tokens.Validators.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateTokenPayloadAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 401 - application/json;+charset=utf-8 2.9910ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 401 - application/json;+charset=utf-8 0.1965ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/shared-providers/v1/catalog => WriteNativeCatalogAsync'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/shared-providers/v1/catalog => WriteNativeCatalogAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 200 - application/json 44.4891ms
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/shared-providers/openai/v1/models => WriteOpenAiModelsAsync'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/shared-providers/openai/v1/models => WriteOpenAiModelsAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 200 - application/json;+charset=utf-8 11.0000ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/shared-providers/v1/catalog => WriteNativeCatalogAsync'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/shared-providers/v1/catalog => WriteNativeCatalogAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 200 - application/json 11.6564ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]
+      AuthenticationScheme: Bearer was forbidden.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 403 - application/json;+charset=utf-8 10.2877ms
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]
+      Failed to validate the token.
+      Microsoft.IdentityModel.Tokens.SecurityTokenMalformedException: IDX14100: JWT is not well formed, there are no dots (.).
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken.ReadToken(ReadOnlyMemory`1 encodedTokenMemory)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken..ctor(String jwtEncodedString)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ReadToken(String token, TokenValidationParameters validationParameters)
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: IDX14100: JWT is not well formed, there are no dots (.).
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 401 - application/json;+charset=utf-8 3.4418ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]
+      Failed to validate the token.
+      Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.
+         at Microsoft.IdentityModel.Tokens.ValidatorUtilities.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+         at Microsoft.IdentityModel.Tokens.Validators.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateTokenPayloadAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]
+      Bearer was not authenticated. Failure message: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 401 - application/json;+charset=utf-8 0.7526ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]
+      AuthenticationScheme: Bearer was challenged.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 401 - application/json;+charset=utf-8 0.4647ms
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels [974 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized [67 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized [1 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog [82 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels [45 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies [46 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden [45 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized [40 ms]
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized [3 ms]
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]
+      Authorization failed. These requirements were not met:
+      Handler assertion should evaluate to true.
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]
+      AuthenticationScheme: Bearer was forbidden.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 403 - application/json;+charset=utf-8 15.9271ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+[xUnit.net 00:00:31.38]   Finished:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden [49 ms]
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB06\integration-tests.trx
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 19
+     Úspěšné: 19
+ Celkový čas: 32,5267 Sekundy

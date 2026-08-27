@@ -1,0 +1,9 @@
+C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workspace\Pages\Components\ApiTokenAdministrationPanel.razor(6,5): warning RZ2012: Component 'EmptyState' expects a value for the parameter 'Description', but a value may not have been provided. [C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj]
+
+Vytváření sestavení bylo úspěšně dokončeno.
+
+C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workspace\Pages\Components\ApiTokenAdministrationPanel.razor(6,5): warning RZ2012: Component 'EmptyState' expects a value for the parameter 'Description', but a value may not have been provided. [C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj]
+    1 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:52.67

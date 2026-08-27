@@ -1,0 +1,358 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:08:21.68]     CanDoItAll.Tests.Integration.LiveLocalOllamaThinkingEffortIntegrationTests.Installed_catalog_and_native_effort_mapping_match_thinking_capabilities [SKIP]
+  Přeskočeno CanDoItAll.Tests.Integration.LiveLocalOllamaThinkingEffortIntegrationTests.Installed_catalog_and_native_effort_mapping_match_thinking_capabilities [1 ms]
+[xUnit.net 00:09:32.93]     CanDoItAll.Tests.Integration.Runtime.ManagedSeedExecutionFallbackIntegrationTests.Organization_catalog_repair_preserves_priced_luna_assignment_for_managed_seed_agent [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.Runtime.ManagedSeedExecutionFallbackIntegrationTests.Organization_catalog_repair_preserves_priced_luna_assignment_for_managed_seed_agent [3 s]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.Runtime.ManagedSeedExecutionFallbackIntegrationTests.Organization_catalog_repair_preserves_priced_luna_assignment_for_managed_seed_agent() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ManagedSeedExecutionFallbackIntegrationTests.cs:line 79
+   at CanDoItAll.Tests.Integration.Runtime.ManagedSeedExecutionFallbackIntegrationTests.Organization_catalog_repair_preserves_priced_luna_assignment_for_managed_seed_agent() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ManagedSeedExecutionFallbackIntegrationTests.cs:line 97
+   at CanDoItAll.Tests.Integration.Runtime.ManagedSeedExecutionFallbackIntegrationTests.Organization_catalog_repair_preserves_priced_luna_assignment_for_managed_seed_agent() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ManagedSeedExecutionFallbackIntegrationTests.cs:line 97
+--- End of stack trace from previous location ---
+[xUnit.net 00:17:29.29]     CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Saving_managed_agent_policy_customization_preserves_dialog_settings [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Saving_managed_agent_policy_customization_preserves_dialog_settings [3 s]
+  Chybová zpráva:
+   System.InvalidOperationException : Agent model override 'gpt-5.6-luna' for provider 'OpenAI default' requires a model price row on the provider profile.
+  Trasování zásobníku:
+     at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.EnsureModelSelectionIsValid(Nullable`1 providerProfileId, String normalizedModel, ProviderProfile selectedProvider) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 235
+   at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.Create(SandboxWorkspaceCatalog catalog, AgentEditorModel model, Guid id, AgentDefinition existingAgent, DateTimeOffset now, IProviderProfileService providerProfileService, String operationLabel) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 46
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.<>c__DisplayClass2_0.<SaveAgentAsync>b__0(SandboxWorkspaceCatalog catalog) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 70
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 230
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 249
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogAsync(Func`2 update, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 183
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 41
+   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:line 131
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Saving_managed_agent_policy_customization_preserves_dialog_settings() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 312
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Saving_managed_agent_policy_customization_preserves_dialog_settings() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 322
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Saving_managed_agent_policy_customization_preserves_dialog_settings() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 322
+--- End of stack trace from previous location ---
+[xUnit.net 00:17:40.58]     CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog [2 s]
+  Chybová zpráva:
+   Assert.All() Failure: 4 out of 4 items in the collection did not pass.
+[0]: Item:  "gpt-5.6"
+     Error: Assert.Contains() Failure: Item not found in collection
+            Collection: ["gpt-5.4-mini"]
+            Not found:  "gpt-5.6"
+[1]: Item:  "gpt-5.6-luna"
+     Error: Assert.Contains() Failure: Item not found in collection
+            Collection: ["gpt-5.4-mini"]
+            Not found:  "gpt-5.6-luna"
+[2]: Item:  "gpt-5.6-terra"
+     Error: Assert.Contains() Failure: Item not found in collection
+            Collection: ["gpt-5.4-mini"]
+            Not found:  "gpt-5.6-terra"
+[3]: Item:  "gpt-5.6-sol"
+     Error: Assert.Contains() Failure: Item not found in collection
+            Collection: ["gpt-5.4-mini"]
+            Not found:  "gpt-5.6-sol"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 1507
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 1522
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 1522
+--- End of stack trace from previous location ---
+[xUnit.net 00:17:49.06]     CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Legacy_serious_delivery_seed_agents_are_refreshed_to_the_current_baseline [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Legacy_serious_delivery_seed_agents_are_refreshed_to_the_current_baseline [4 s]
+  Chybová zpráva:
+   System.InvalidOperationException : Agent model override 'gpt-5.4-mini' for provider 'OpenAI chat completions' requires a model price row on the provider profile.
+  Trasování zásobníku:
+     at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.EnsureModelSelectionIsValid(Nullable`1 providerProfileId, String normalizedModel, ProviderProfile selectedProvider) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 235
+   at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.Create(SandboxWorkspaceCatalog catalog, AgentEditorModel model, Guid id, AgentDefinition existingAgent, DateTimeOffset now, IProviderProfileService providerProfileService, String operationLabel) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 46
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.<>c__DisplayClass2_0.<SaveAgentAsync>b__0(SandboxWorkspaceCatalog catalog) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 70
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 230
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 249
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogAsync(Func`2 update, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 183
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 41
+   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:line 131
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.DowngradeAgentToLegacyProgrammingAsync(IAgentFrameworkWorkspaceService workspaceService, IReadOnlyDictionary`2 capabilityIdsByKey, Guid openAiChatProviderId) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 2916
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Legacy_serious_delivery_seed_agents_are_refreshed_to_the_current_baseline() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 2522
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Legacy_serious_delivery_seed_agents_are_refreshed_to_the_current_baseline() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 2560
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Legacy_serious_delivery_seed_agents_are_refreshed_to_the_current_baseline() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 2560
+--- End of stack trace from previous location ---
+[xUnit.net 00:18:35.28]     CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Stale_research_agent_seed_is_refreshed_and_drops_project_structure_capability [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Stale_research_agent_seed_is_refreshed_and_drops_project_structure_capability [4 s]
+  Chybová zpráva:
+   System.InvalidOperationException : Agent model override 'gpt-5.4-mini' for provider 'OpenAI default' requires a model price row on the provider profile.
+  Trasování zásobníku:
+     at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.EnsureModelSelectionIsValid(Nullable`1 providerProfileId, String normalizedModel, ProviderProfile selectedProvider) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 235
+   at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.Create(SandboxWorkspaceCatalog catalog, AgentEditorModel model, Guid id, AgentDefinition existingAgent, DateTimeOffset now, IProviderProfileService providerProfileService, String operationLabel) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 46
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.<>c__DisplayClass2_0.<SaveAgentAsync>b__0(SandboxWorkspaceCatalog catalog) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 70
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 230
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 249
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogAsync(Func`2 update, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 183
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 41
+   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:line 131
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Stale_research_agent_seed_is_refreshed_and_drops_project_structure_capability() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 2585
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Stale_research_agent_seed_is_refreshed_and_drops_project_structure_capability() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 2600
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Stale_research_agent_seed_is_refreshed_and_drops_project_structure_capability() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 2600
+--- End of stack trace from previous location ---
+[xUnit.net 00:18:53.73]     CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_migrates_exact_legacy_managed_openai_image_model [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_migrates_exact_legacy_managed_openai_image_model [3 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: ManagedOpenAiImageProviderState { Id = 8958fa61-4bd6-1451-8123-4e4e4fea2e26, Name = OpenAI image generation, ProviderKind = OllamaRemote, ConnectorPluginKey = provider.ollama.remote, ConfigSchemaVersion = customer-v7, BaseUrl = https://customer.example.test/image-api, ApiKeySecretId = 9effd604-8a0c-497c-ad48-7fb9bb405edd, DefaultModel = gpt-image-2, TimeoutSeconds = 137, IsEnabled = False, SupportsStreaming = True, SupportsToolCalling = True, SupportsStructuredOutput = True, SupportsVision = True, LastHealthCheckAtUtc = 19.07.2026 12:34:56 +00:00, LastHealthStatus = Customer image provider healthy, ExtraSettingsJson = {"configuration":{"background":"transparent","quality":"high"},"apiKeyEnvironmentVariable":"CUSTOM_IMAGE_API_KEY","providerTransport":"ChatCompletions","providerPurpose":"ImageGeneration","notes":"Customer-owned image provider settings.","tags":["customer","image"],"suggestedModels":["gpt-image-1-mini","customer-image-model-v7"],"isPrivateProvider":true,"modelPrices":[{"model":"customer-image-model-v7","inputPerMillionTokensUsd":1.25,"cachedInputPerMillionTokensUsd":0.25,"outputPerMillionTokensUsd":2.5,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true}]}, ConcurrencyToken = 94a94a23-5de9-4563-a53a-7f931c047345 }
+Actual:   ManagedOpenAiImageProviderState { Id = 8958fa61-4bd6-1451-8123-4e4e4fea2e26, Name = OpenAI image generation, ProviderKind = OllamaRemote, ConnectorPluginKey = provider.ollama.remote, ConfigSchemaVersion = customer-v7, BaseUrl = https://customer.example.test/image-api, ApiKeySecretId = 9effd604-8a0c-497c-ad48-7fb9bb405edd, DefaultModel = gpt-image-2, TimeoutSeconds = 137, IsEnabled = False, SupportsStreaming = True, SupportsToolCalling = True, SupportsStructuredOutput = True, SupportsVision = True, LastHealthCheckAtUtc = 19.07.2026 12:34:56 +00:00, LastHealthStatus = Customer image provider healthy, ExtraSettingsJson = {"connectorPluginKey":"provider.openai","configSchemaVersion":"1.0","timeoutSeconds":600,"secretRecordId":"86f781f1-1e76-4b45-9f1a-42b8cf13d8c7","apiKeyEnvironmentVariable":"OPENAI_API_KEY","tags":["cloud","image","image-generation","openai"],"isPrivateProvider":false,"modelPrices":[{"model":"gpt-5.6-luna","inputPerMillionTokensUsd":0.20,"cachedInputPerMillionTokensUsd":0.02,"outputPerMillionTokensUsd":1.20,"cacheWritePerMillionTokensUsd":0.25,"longContextThresholdTokens":272000,"longContextInputPerMillionTokensUsd":0.40,"longContextCachedInputPerMillionTokensUsd":0.04,"longContextCacheWritePerMillionTokensUsd":0.50,"longContextOutputPerMillionTokensUsd":1.80,"hasConfiguredStandardPrice":true},{"model":"gpt-5.6-terra","inputPerMillionTokensUsd":2.00,"cachedInputPerMillionTokensUsd":0.20,"outputPerMillionTokensUsd":12.00,"cacheWritePerMillionTokensUsd":2.50,"longContextThresholdTokens":272000,"longContextInputPerMillionTokensUsd":4.00,"longContextCachedInputPerMillionTokensUsd":0.40,"longContextCacheWritePerMillionTokensUsd":5.00,"longContextOutputPerMillionTokensUsd":18.00,"hasConfiguredStandardPrice":true},{"model":"gpt-5.6-sol","inputPerMillionTokensUsd":4.00,"cachedInputPerMillionTokensUsd":0.40,"outputPerMillionTokensUsd":20.00,"cacheWritePerMillionTokensUsd":5.00,"longContextThresholdTokens":272000,"longContextInputPerMillionTokensUsd":8.00,"longContextCachedInputPerMillionTokensUsd":0.80,"longContextCacheWritePerMillionTokensUsd":10.00,"longContextOutputPerMillionTokensUsd":30.00,"hasConfiguredStandardPrice":true},{"model":"gpt-5.5","inputPerMillionTokensUsd":5.00,"cachedInputPerMillionTokensUsd":0.50,"outputPerMillionTokensUsd":30.00,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true},{"model":"gpt-5.4","inputPerMillionTokensUsd":2.50,"cachedInputPerMillionTokensUsd":0.25,"outputPerMillionTokensUsd":15.00,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true},{"model":"gpt-5.4-mini","inputPerMillionTokensUsd":0.75,"cachedInputPerMillionTokensUsd":0.075,"outputPerMillionTokensUsd":4.50,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true},{"model":"gpt-5.4-nano","inputPerMillionTokensUsd":0.20,"cachedInputPerMillionTokensUsd":0.02,"outputPerMillionTokensUsd":1.25,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true},{"model":"gpt-5.3-codex","inputPerMillionTokensUsd":1.75,"cachedInputPerMillionTokensUsd":0.175,"outputPerMillionTokensUsd":14.00,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true},{"model":"chat-latest","inputPerMillionTokensUsd":5.00,"cachedInputPerMillionTokensUsd":0.50,"outputPerMillionTokensUsd":30.00,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true},{"model":"gpt-5-mini","inputPerMillionTokensUsd":0.25,"cachedInputPerMillionTokensUsd":0.025,"outputPerMillionTokensUsd":2.00,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":true},{"model":"gpt-image-2","inputPerMillionTokensUsd":0,"cachedInputPerMillionTokensUsd":0,"outputPerMillionTokensUsd":0,"cacheWritePerMillionTokensUsd":null,"longContextThresholdTokens":null,"longContextInputPerMillionTokensUsd":null,"longContextCachedInputPerMillionTokensUsd":null,"longContextCacheWritePerMillionTokensUsd":null,"longContextOutputPerMillionTokensUsd":null,"hasConfiguredStandardPrice":false}],"agentFrameworkProviderKind":"OpenAi","providerTransport":"Responses","providerPurpose":"ImageGeneration","suggestedModels":[]}, ConcurrencyToken = 94a94a23-5de9-4563-a53a-7f931c047345 }
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_migrates_exact_legacy_managed_openai_image_model() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 1227
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_migrates_exact_legacy_managed_openai_image_model() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 1237
+   at CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.Organization_workspace_migrates_exact_legacy_managed_openai_image_model() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs:line 1237
+--- End of stack trace from previous location ---
+[xUnit.net 00:21:20.40]     CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.Plugin_grants_refresh_office365_workflow_templates_for_project_structure_add_options [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.Plugin_grants_refresh_office365_workflow_templates_for_project_structure_add_options [9 s]
+  Chybová zpráva:
+   System.InvalidOperationException: LLM Call Component '3e70f80d-ee82-4d90-aaaf-2b51aa6f71b4' model 'gpt-5.4-mini' requires a model price row on provider 'OpenAI chat completions'.
+   at CanDoItAll.Modules.AgentFramework.PersistentWorkflowCatalogService.SaveComponentAsync(LlmCallComponentSaveRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:line 645
+   at CanDoItAll.Modules.AgentFramework.PersistentWorkflowCatalogService.SaveComponentAsync(LlmCallComponentSaveRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:line 700
+   at CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService.EnsureComponentAsync(WorkflowTemplatePack templatePack, WorkflowTemplateDefinition template, WorkflowProviderOption provider, List`1 existingComponents, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowExampleCatalogSeedService.cs:line 206
+   at CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService.EnsureSeededAsync(CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowExampleCatalogSeedService.cs:line 60
+   at CanDoItAll.Web.Api.PluginsApi.ToApiResultAndRefreshWorkflowTemplatesAsync[T](String pluginId, Func`2 action, IServiceScopeFactory serviceScopeFactory, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\App\CanDoItAll.Web\Api\PluginsApi.cs:line 332
+   at CanDoItAll.Web.Api.PluginsApi.ToApiResultAndRefreshWorkflowTemplatesAsync[T](String pluginId, Func`2 action, IServiceScopeFactory serviceScopeFactory, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\App\CanDoItAll.Web\Api\PluginsApi.cs:line 332
+   at CanDoItAll.Web.Api.PluginsApi.<>c.<<MapPluginsApi>b__1_8>d.MoveNext() in C:\repositories\CanDoItAll\src\App\CanDoItAll.Web\Api\PluginsApi.cs:line 132
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Http.RequestDelegateFactory.ExecuteTaskResult[T](Task`1 task, HttpContext httpContext)
+   at Microsoft.AspNetCore.Http.RequestDelegateFactory.<>c__DisplayClass102_2.<<HandleRequestBodyAndCompileRequestDelegateForJson>b__2>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.<Invoke>g__AwaitRequestTask|7_0(Endpoint endpoint, Task requestTask, ILogger logger)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at CanDoItAll.Web.Api.AccessContextReferenceMiddleware.InvokeAsync(HttpContext httpContext, AccessContextReferenceState state) in C:\repositories\CanDoItAll\src\App\CanDoItAll.Web\Api\AccessContextReferenceMiddleware.cs:line 17
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+
+HEADERS
+=======
+Host: 127.0.0.1:54554
+Content-Type: application/json; charset=utf-8
+Transfer-Encoding: chunked
+
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.Plugin_grants_refresh_office365_workflow_templates_for_project_structure_add_options() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:line 183
+   at CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.Plugin_grants_refresh_office365_workflow_templates_for_project_structure_add_options() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:line 205
+--- End of stack trace from previous location ---
+[xUnit.net 00:32:33.75]     CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentIntegrationTests.StartProcessNodeAsync_hr_match_skips_exact_agent_when_provider_cannot_satisfy_process_output_contract [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentIntegrationTests.StartProcessNodeAsync_hr_match_skips_exact_agent_when_provider_cannot_satisfy_process_output_contract [5 s]
+  Chybová zpráva:
+   System.InvalidOperationException : Agent model override 'gpt-5.6-luna' for provider 'OpenAI default' requires a model price row on the provider profile.
+  Trasování zásobníku:
+     at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.EnsureModelSelectionIsValid(Nullable`1 providerProfileId, String normalizedModel, ProviderProfile selectedProvider) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 235
+   at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.Create(SandboxWorkspaceCatalog catalog, AgentEditorModel model, Guid id, AgentDefinition existingAgent, DateTimeOffset now, IProviderProfileService providerProfileService, String operationLabel) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 46
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.<>c__DisplayClass2_0.<SaveAgentAsync>b__0(SandboxWorkspaceCatalog catalog) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 70
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 230
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 249
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogAsync(Func`2 update, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 183
+   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceCatalogService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:line 41
+   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:line 131
+   at CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentIntegrationTests.StartProcessNodeAsync_hr_match_skips_exact_agent_when_provider_cannot_satisfy_process_output_contract() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:line 2491
+   at CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentIntegrationTests.StartProcessNodeAsync_hr_match_skips_exact_agent_when_provider_cannot_satisfy_process_output_contract() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:line 2717
+   at CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentIntegrationTests.StartProcessNodeAsync_hr_match_skips_exact_agent_when_provider_cannot_satisfy_process_output_contract() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:line 2717
+--- End of stack trace from previous location ---
+[xUnit.net 00:44:56.25]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_MidstreamFailureEmitsNoSyntheticDoneAndFailsCompletion [FAIL]
+[xUnit.net 00:44:56.26]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.StreamingResponse_AppliesSafeHeadersWithoutForwardingPrivateUpstreamHeaders [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_MidstreamFailureEmitsNoSyntheticDoneAndFailsCompletion [7 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Unable to resolve service for type 'CanDoItAll.AgentFramework.Providers.IProviderInferenceRelayRuntime' while attempting to activate 'CanDoItAll.SharedProviders.Http.SharedProviderHttpRelayClient'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateEnumerable(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.Tests.Integration.DispatcherHarness..ctor(Func`2 responseFactory, TimeSpan timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 780
+   at CanDoItAll.Tests.Integration.DispatcherHarness.Create(Func`2 responseFactory, Nullable`1 timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 794
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_MidstreamFailureEmitsNoSyntheticDoneAndFailsCompletion() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 353
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.StreamingResponse_AppliesSafeHeadersWithoutForwardingPrivateUpstreamHeaders [4 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Unable to resolve service for type 'CanDoItAll.AgentFramework.Providers.IProviderInferenceRelayRuntime' while attempting to activate 'CanDoItAll.SharedProviders.Http.SharedProviderHttpRelayClient'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateEnumerable(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.Tests.Integration.DispatcherHarness..ctor(Func`2 responseFactory, TimeSpan timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 780
+   at CanDoItAll.Tests.Integration.DispatcherHarness.Create(Func`2 responseFactory, Nullable`1 timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 794
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.StreamingResponse_AppliesSafeHeadersWithoutForwardingPrivateUpstreamHeaders() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 268
+--- End of stack trace from previous location ---
+[xUnit.net 00:44:57.07]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_ExtractsTerminalUsage [FAIL]
+[xUnit.net 00:44:57.08]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_LeavesMissingUsageUnavailable [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_ExtractsTerminalUsage [1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Unable to resolve service for type 'CanDoItAll.AgentFramework.Providers.IProviderInferenceRelayRuntime' while attempting to activate 'CanDoItAll.SharedProviders.Http.SharedProviderHttpRelayClient'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateEnumerable(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.Tests.Integration.DispatcherHarness..ctor(Func`2 responseFactory, TimeSpan timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 780
+   at CanDoItAll.Tests.Integration.DispatcherHarness.Create(Func`2 responseFactory, Nullable`1 timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 794
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_ExtractsTerminalUsage() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 118
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_LeavesMissingUsageUnavailable [< 1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Unable to resolve service for type 'CanDoItAll.AgentFramework.Providers.IProviderInferenceRelayRuntime' while attempting to activate 'CanDoItAll.SharedProviders.Http.SharedProviderHttpRelayClient'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateEnumerable(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.Tests.Integration.DispatcherHarness..ctor(Func`2 responseFactory, TimeSpan timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 780
+   at CanDoItAll.Tests.Integration.DispatcherHarness.Create(Func`2 responseFactory, Nullable`1 timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 794
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_LeavesMissingUsageUnavailable() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 139
+--- End of stack trace from previous location ---
+[xUnit.net 00:44:59.11]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.PostHeaderIdleTimeout_KeepsSseStatusAndFailsCompletion [FAIL]
+[xUnit.net 00:44:59.11]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_ReassemblesSplitUtf8WithoutCorruptingFrame [FAIL]
+[xUnit.net 00:44:59.12]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_RejectsMalformedAndOversizedSseFramesBoundedly [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.PostHeaderIdleTimeout_KeepsSseStatusAndFailsCompletion [1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Unable to resolve service for type 'CanDoItAll.AgentFramework.Providers.IProviderInferenceRelayRuntime' while attempting to activate 'CanDoItAll.SharedProviders.Http.SharedProviderHttpRelayClient'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateEnumerable(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.Tests.Integration.DispatcherHarness..ctor(Func`2 responseFactory, TimeSpan timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 780
+   at CanDoItAll.Tests.Integration.DispatcherHarness.Create(Func`2 responseFactory, Nullable`1 timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 794
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.PostHeaderIdleTimeout_KeepsSseStatusAndFailsCompletion() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 208
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_ReassemblesSplitUtf8WithoutCorruptingFrame [2 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Unable to resolve service for type 'CanDoItAll.AgentFramework.Providers.IProviderInferenceRelayRuntime' while attempting to activate 'CanDoItAll.SharedProviders.Http.SharedProviderHttpRelayClient'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateEnumerable(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.Tests.Integration.DispatcherHarness..ctor(Func`2 responseFactory, TimeSpan timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 780
+   at CanDoItAll.Tests.Integration.DispatcherHarness.Create(Func`2 responseFactory, Nullable`1 timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 794
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_ReassemblesSplitUtf8WithoutCorruptingFrame() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 90
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_RejectsMalformedAndOversizedSseFramesBoundedly [1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Unable to resolve service for type 'CanDoItAll.AgentFramework.Providers.IProviderInferenceRelayRuntime' while attempting to activate 'CanDoItAll.SharedProviders.Http.SharedProviderHttpRelayClient'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateEnumerable(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.Tests.Integration.DispatcherHarness..ctor(Func`2 responseFactory, TimeSpan timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 780
+   at CanDoItAll.Tests.Integration.DispatcherHarness.Create(Func`2 responseFactory, Nullable`1 timeout) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 794
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.AssertInvalidStreamAsync(ChunkSequenceStream upstreamStream) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 441
+   at CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Dispatcher_RejectsMalformedAndOversizedSseFramesBoundedly() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderStreamingIntegrationTests.cs:line 337
+--- End of stack trace from previous location ---
+[xUnit.net 00:45:22.21]     CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Catalog_publication_defaults_off_filters_ineligible_and_supports_sanitized_conditional_get [FAIL]
+[xUnit.net 00:45:22.21]     CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Public_model_ids_route_duplicate_upstream_model_names_without_cross_routing [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Catalog_publication_defaults_off_filters_ineligible_and_supports_sanitized_conditional_get [1 s]
+  Chybová zpráva:
+   System.InvalidOperationException : Provider publication metadata property 'agentFrameworkProviderKind' is required.
+  Trasování zásobníku:
+     at CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderCatalogProjector.ProjectPublication(SharedProviderCatalogProjectionSource source, IDictionary`2 routes) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\SharedProviders\SharedProviderCatalogProjection.cs:line 153
+   at CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderCatalogProjector.Project(SharedProviderSourceInstanceId sourceInstanceId, IEnumerable`1 sources) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\SharedProviders\SharedProviderCatalogProjection.cs:line 116
+   at CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Catalog_publication_defaults_off_filters_ineligible_and_supports_sanitized_conditional_get() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderBackendCheckpointIntegrationTests.cs:line 55
+   at CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Catalog_publication_defaults_off_filters_ineligible_and_supports_sanitized_conditional_get() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderBackendCheckpointIntegrationTests.cs:line 102
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Public_model_ids_route_duplicate_upstream_model_names_without_cross_routing [< 1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Provider publication metadata property 'agentFrameworkProviderKind' is required.
+  Trasování zásobníku:
+     at CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderCatalogProjector.ProjectPublication(SharedProviderCatalogProjectionSource source, IDictionary`2 routes) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\SharedProviders\SharedProviderCatalogProjection.cs:line 153
+   at CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderCatalogProjector.Project(SharedProviderSourceInstanceId sourceInstanceId, IEnumerable`1 sources) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\SharedProviders\SharedProviderCatalogProjection.cs:line 116
+   at CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Public_model_ids_route_duplicate_upstream_model_names_without_cross_routing() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderBackendCheckpointIntegrationTests.cs:line 159
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB06\integration-suite.trx
+
+Neúspěšné!  - Neúspěšné:    17, Úspěšné:  1121, Přeskočeno:     1, Celkem:  1139, Doba trvání: 59 m 44 s - CanDoItAll.Tests.Integration.dll (net10.0)

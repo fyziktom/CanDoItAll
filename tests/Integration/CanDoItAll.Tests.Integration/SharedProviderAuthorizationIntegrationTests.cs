@@ -194,7 +194,8 @@ public sealed class SharedProviderAuthorizationIntegrationTests(
         var hostClock = fixture.Host.App.Services.GetRequiredService<IClock>();
         var tokenService = new ApiTokenService(
             fixture.Host.App.Services.GetRequiredService<IOptions<ApiAccessOptions>>(),
-            new FixedClock(hostClock.GetUtcNow().AddHours(-2)));
+            new FixedClock(hostClock.GetUtcNow().AddHours(-2)),
+            fixture.Host.App.Services.GetRequiredService<CanDoItAll.Infrastructure.ControlPlane.IApiTokenRegistry>());
         return tokenService.IssueToken(new ApiTokenIssueRequest
         {
             Subject = "expired-shared-provider-client",

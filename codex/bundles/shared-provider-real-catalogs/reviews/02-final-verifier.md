@@ -1,6 +1,50 @@
 # Final Verifier
 
-## Verdict
+## Current Administration Verdict
+
+SB05/SB06 requested behavior and architecture pass. The primary agent reviewed the
+actual source, focused tests, final Docker image and desktop MCP interactions. This is
+not an independent-review or clean-whole-repository claim. Broader regression results
+are reported separately under proof/SB06; historical verdicts below retain their scope.
+
+- N008/R8: icon-only New/Refresh/Connections share one row; search/reset/count share one
+  row in the 25rem rail. Connections mount in a dialog, including Add/Edit/Discover.
+  Empty-source rejection, cancellation, real Test/Discover and no-selected-provider
+  access pass. All overlays were visually inspected at 1920x1080.
+- N009/R9: every declared scope is selectable; confirm applies exactly that selection,
+  cancel preserves it and empty scope issuance is rejected. Metadata history is fetched
+  only when its dialog opens. Search, bounded pages and short/full ID search pass.
+- Issuance persists metadata before returning a JWT. Every administration action checks
+  permission. Real JWT validation rejects missing/corrupt/revoked/deleted managed records;
+  no bearer value or signing key is stored in token history. Pre-tracking JWTs retain
+  original expiry and cannot be retroactively recovered or individually revoked here.
+- Final-image MCP used the SAME UI-issued token: active200, cancel200, revoke401,
+  delete401. Test metadata was removed through UI. This proves access denial, not merely
+  hiding a list row. Final short-ID search settled from zero matches to one real record.
+- Forty distinct focused cases pass: provider components11, registry6, token components4,
+  real HTTP19. The final one-line ID-search change reran registry and desktop search;
+  JWT issuance/lookup/admission owners were unchanged and live admission was repeated.
+- N010/R10: all three containers use admin-dialogs-20260827-2 and return Healthy200.
+  5214 was reset once with its original DB and volume retained for recovery. Subsequent
+  image updates preserved the new data. Final read-only checks found zero providers,
+  sources, imports, user secrets and token metadata. 5210/5212 data and 5032 were preserved.
+- The expired 5212 legacy credential was renewed through source UI with only catalog-read
+  and invoke; its existing secret was updated through UI. Final source discovery returns
+  the same 72/128/5 real-model catalogs. No paid inference or full historical runtime
+  revalidation is claimed for this administration-only extension.
+- No project/package or sibling source change. Narrow registry/access adapters implement
+  real storage/security boundaries. Source management and token administration moved out
+  of unrelated UI owners, with no runtime partial-class split or fake service boundary.
+- Exact source hashes, failing-first assertion, negative cases, test discovery, privacy,
+  scope limits and final image evidence are indexed in proof/SB06/manifest.md.
+- Both broad runs finished naturally: Unit 6988 passed/1 failed, Integration 1121 passed/
+  17 failed/1 opt-in skip. All failure classifications and unchanged-owner checks are in
+  proof/SB06/broad-regression-results.md; no measured pre-edit full-suite baseline exists.
+- Completed bundle validation and focused proof/hash verification exit 0 in
+  proof/SB06/transcripts/bundle-completed.txt and verification.txt. These gate results
+  do not relabel the broader failed test runs.
+
+## Historical SB04 Verdict
 
 Pass. SB04 adds the requested avatar correction and provider-free manual client.
 Behavioral and architecture gates pass. Latest closure evidence is proof/SB04/manifest.md;

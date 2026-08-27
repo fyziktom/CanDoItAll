@@ -1,0 +1,903 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="50478953-2956-467f-9ea0-56b4cc9920d7" name="lucys@LUCYSPOWER 2026-08-27 17:04:51" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T17:04:51.9403474-04:00" queuing="2026-08-27T17:04:51.9403479-04:00" start="2026-08-27T17:04:38.0169288-04:00" finish="2026-08-27T17:05:10.5845628-04:00" />
+  <TestSettings name="default" id="84d6cb47-0494-4a5e-8482-0a14155abb94">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_17_04_51" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="f80e55c3-dc70-40e9-af75-db36c7703752" testId="5f802808-c6a5-e149-3ffa-65b6ef77941c" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog" computerName="LUCYSPOWER" duration="00:00:00.0826907" startTime="2026-08-27T17:05:10.1488341-04:00" endTime="2026-08-27T17:05:10.2317284-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f80e55c3-dc70-40e9-af75-db36c7703752" />
+    <UnitTestResult executionId="58119aa3-88e5-4d8d-9a69-3783ff433dc4" testId="12e36110-7e93-41f2-b7ee-6d161a2e533b" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized" computerName="LUCYSPOWER" duration="00:00:00.0409849" startTime="2026-08-27T17:05:10.3710051-04:00" endTime="2026-08-27T17:05:10.4121368-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="58119aa3-88e5-4d8d-9a69-3783ff433dc4" />
+    <UnitTestResult executionId="2bf4fcc4-4273-4cd0-8211-611205eca5cc" testId="c649e657-be57-de9f-ca8f-296e7ffecb7d" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Project_structure_routes_require_write_scope_and_bind_lease_owner_to_token_subject" computerName="LUCYSPOWER" duration="00:00:02.3804731" startTime="2026-08-27T17:05:03.9800686-04:00" endTime="2026-08-27T17:05:06.3601473-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2bf4fcc4-4273-4cd0-8211-611205eca5cc" />
+    <UnitTestResult executionId="1c12debd-a3a4-4c27-b462-086fae025846" testId="88a9d0cd-f7f0-5ea2-021a-55a2724c2ef6" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized" computerName="LUCYSPOWER" duration="00:00:00.0017341" startTime="2026-08-27T17:05:10.1468918-04:00" endTime="2026-08-27T17:05:10.1487222-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1c12debd-a3a4-4c27-b462-086fae025846" />
+    <UnitTestResult executionId="13f9993c-2842-4ebe-98bd-a2ffad0acce9" testId="30fe8aa5-1071-8f9e-7370-08df03859b07" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized" computerName="LUCYSPOWER" duration="00:00:00.0033808" startTime="2026-08-27T17:05:10.4124094-04:00" endTime="2026-08-27T17:05:10.4160430-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="13f9993c-2842-4ebe-98bd-a2ffad0acce9" />
+    <UnitTestResult executionId="93c4d1f0-969b-4551-979b-ed1b9541b6b4" testId="c82fca80-aebc-17c7-b086-187efb1fe437" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized" computerName="LUCYSPOWER" duration="00:00:00.0671252" startTime="2026-08-27T17:05:10.0792966-04:00" endTime="2026-08-27T17:05:10.1466442-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="93c4d1f0-969b-4551-979b-ed1b9541b6b4" />
+    <UnitTestResult executionId="9e66e668-5381-4e7c-a29b-e758bf9a14cb" testId="a2c38363-5e13-117a-690c-e2104470f768" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: True)" computerName="LUCYSPOWER" duration="00:00:02.8151090" startTime="2026-08-27T17:04:57.2234002-04:00" endTime="2026-08-27T17:05:00.0385377-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9e66e668-5381-4e7c-a29b-e758bf9a14cb" />
+    <UnitTestResult executionId="3e51bd0e-51a2-4686-a3ce-324774e09ed2" testId="added71b-cccd-e385-e277-620d5517354a" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies" computerName="LUCYSPOWER" duration="00:00:00.0461303" startTime="2026-08-27T17:05:10.2779537-04:00" endTime="2026-08-27T17:05:10.3242589-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3e51bd0e-51a2-4686-a3ce-324774e09ed2" />
+    <UnitTestResult executionId="eb46fa40-1dac-428c-ace1-aee89cd5bb67" testId="e741d0d8-511e-56fa-1520-3678aac5699c" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_SCOPES_empty_selection_never_grants_broad_api_access" computerName="LUCYSPOWER" duration="00:00:01.2769329" startTime="2026-08-27T17:04:55.9458135-04:00" endTime="2026-08-27T17:04:57.2228546-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eb46fa40-1dac-428c-ace1-aee89cd5bb67" />
+    <UnitTestResult executionId="b5e50888-b4e0-42ca-9369-fa391400ce40" testId="40f965e2-56c7-95ca-43f2-a69042c3d37b" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.API_BOUNDARY_local_operator_ui_identity_does_not_authenticate_http_boundaries" computerName="LUCYSPOWER" duration="00:00:02.2620545" startTime="2026-08-27T17:04:51.9121620-04:00" endTime="2026-08-27T17:04:54.1186972-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b5e50888-b4e0-42ca-9369-fa391400ce40" />
+    <UnitTestResult executionId="078fdf36-5388-43b7-a7da-8dac53c1fcb3" testId="3981c982-c46b-4693-f754-f84c2c1ff2a1" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Authorization_disabled_token_endpoint_is_not_protected_by_the_scope_policy" computerName="LUCYSPOWER" duration="00:00:01.6158268" startTime="2026-08-27T17:05:02.3635809-04:00" endTime="2026-08-27T17:05:03.9792001-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="078fdf36-5388-43b7-a7da-8dac53c1fcb3" />
+    <UnitTestResult executionId="4f0ae785-93e7-42fa-a7a2-58d3f93057f9" testId="5486e91b-b737-b528-430f-47af7534019a" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: False)" computerName="LUCYSPOWER" duration="00:00:02.3240021" startTime="2026-08-27T17:05:00.0392512-04:00" endTime="2026-08-27T17:05:02.3629731-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4f0ae785-93e7-42fa-a7a2-58d3f93057f9" />
+    <UnitTestResult executionId="5e2e3326-6233-4070-a869-012bf106c8d1" testId="dff5a5ee-da55-d312-6c90-292698cb1149" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden" computerName="LUCYSPOWER" duration="00:00:00.0499577" startTime="2026-08-27T17:05:10.4179761-04:00" endTime="2026-08-27T17:05:10.4664695-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5e2e3326-6233-4070-a869-012bf106c8d1" />
+    <UnitTestResult executionId="998047eb-b59b-48e8-9024-600a6bdfe834" testId="f42973bf-7b51-9439-df97-202906708ba2" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden" computerName="LUCYSPOWER" duration="00:00:00.0458019" startTime="2026-08-27T17:05:10.3244006-04:00" endTime="2026-08-27T17:05:10.3706335-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="998047eb-b59b-48e8-9024-600a6bdfe834" />
+    <UnitTestResult executionId="32cdc168-ef25-4730-ab49-c18604e4d938" testId="643f141f-89fa-c551-b4e4-a714c0bcdf84" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Token_issuance_requires_explicit_privileged_scope" computerName="LUCYSPOWER" duration="00:00:01.7985388" startTime="2026-08-27T17:05:06.3607884-04:00" endTime="2026-08-27T17:05:08.1591812-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="32cdc168-ef25-4730-ab49-c18604e4d938" />
+    <UnitTestResult executionId="8ab4c6db-cbd5-40f2-95c6-86dd36f4c1c7" testId="dd7f74e4-190e-7140-45d1-3081736852ea" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels" computerName="LUCYSPOWER" duration="00:00:00.9740604" startTime="2026-08-27T17:05:09.1054563-04:00" endTime="2026-08-27T17:05:10.0791442-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8ab4c6db-cbd5-40f2-95c6-86dd36f4c1c7" />
+    <UnitTestResult executionId="cd6dcdab-4f2c-4a69-a137-61cd9f5ba1e7" testId="026df356-d363-f38a-c430-52f57f901eed" testName="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels" computerName="LUCYSPOWER" duration="00:00:00.0457350" startTime="2026-08-27T17:05:10.2318667-04:00" endTime="2026-08-27T17:05:10.2777918-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cd6dcdab-4f2c-4a69-a137-61cd9f5ba1e7" />
+    <UnitTestResult executionId="3f7f45ae-d8a3-4726-8a33-9c348595eb6a" testId="c10ffb81-50a3-67c4-27f4-a4dfe6ba9f8d" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_corrupt_registration_fails_closed_on_http" computerName="LUCYSPOWER" duration="00:00:01.8258613" startTime="2026-08-27T17:04:54.1218750-04:00" endTime="2026-08-27T17:04:55.9450005-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3f7f45ae-d8a3-4726-8a33-9c348595eb6a" />
+    <UnitTestResult executionId="d6b7bbd1-a563-4e16-b00d-83d898ed7394" testId="b83eb3a5-b1ce-0844-fd70-26ecc0d9c86e" testName="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_legacy_tokens_remain_subject_to_signature_and_scope_checks" computerName="LUCYSPOWER" duration="00:00:11.8132161" startTime="2026-08-27T17:04:40.0223174-04:00" endTime="2026-08-27T17:04:51.8526516-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d6b7bbd1-a563-4e16-b00d-83d898ed7394" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="c82fca80-aebc-17c7-b086-187efb1fe437">
+      <Execution id="93c4d1f0-969b-4551-979b-ed1b9541b6b4" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="88a9d0cd-f7f0-5ea2-021a-55a2724c2ef6">
+      <Execution id="1c12debd-a3a4-4c27-b462-086fae025846" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="dff5a5ee-da55-d312-6c90-292698cb1149">
+      <Execution id="5e2e3326-6233-4070-a869-012bf106c8d1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Authorization_disabled_token_endpoint_is_not_protected_by_the_scope_policy" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="3981c982-c46b-4693-f754-f84c2c1ff2a1">
+      <Execution id="078fdf36-5388-43b7-a7da-8dac53c1fcb3" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="Authorization_disabled_token_endpoint_is_not_protected_by_the_scope_policy" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.API_BOUNDARY_local_operator_ui_identity_does_not_authenticate_http_boundaries" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="40f965e2-56c7-95ca-43f2-a69042c3d37b">
+      <Execution id="b5e50888-b4e0-42ca-9369-fa391400ce40" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="API_BOUNDARY_local_operator_ui_identity_does_not_authenticate_http_boundaries" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: True)" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="a2c38363-5e13-117a-690c-e2104470f768">
+      <Execution id="9e66e668-5381-4e7c-a29b-e758bf9a14cb" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="30fe8aa5-1071-8f9e-7370-08df03859b07">
+      <Execution id="13f9993c-2842-4ebe-98bd-a2ffad0acce9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Project_structure_routes_require_write_scope_and_bind_lease_owner_to_token_subject" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="c649e657-be57-de9f-ca8f-296e7ffecb7d">
+      <Execution id="2bf4fcc4-4273-4cd0-8211-611205eca5cc" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="Project_structure_routes_require_write_scope_and_bind_lease_owner_to_token_subject" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="5f802808-c6a5-e149-3ffa-65b6ef77941c">
+      <Execution id="f80e55c3-dc70-40e9-af75-db36c7703752" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="GranularCatalogReadScope_AllowsNativeCatalog" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_legacy_tokens_remain_subject_to_signature_and_scope_checks" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="b83eb3a5-b1ce-0844-fd70-26ecc0d9c86e">
+      <Execution id="d6b7bbd1-a563-4e16-b00d-83d898ed7394" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="TOKEN_LIFECYCLE_legacy_tokens_remain_subject_to_signature_and_scope_checks" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Token_issuance_requires_explicit_privileged_scope" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="643f141f-89fa-c551-b4e4-a714c0bcdf84">
+      <Execution id="32cdc168-ef25-4730-ab49-c18604e4d938" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="Token_issuance_requires_explicit_privileged_scope" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_corrupt_registration_fails_closed_on_http" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="c10ffb81-50a3-67c4-27f4-a4dfe6ba9f8d">
+      <Execution id="3f7f45ae-d8a3-4726-8a33-9c348595eb6a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="TOKEN_LIFECYCLE_corrupt_registration_fails_closed_on_http" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="12e36110-7e93-41f2-b7ee-6d161a2e533b">
+      <Execution id="58119aa3-88e5-4d8d-9a69-3783ff433dc4" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="added71b-cccd-e385-e277-620d5517354a">
+      <Execution id="3e51bd0e-51a2-4686-a3ce-324774e09ed2" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="dd7f74e4-190e-7140-45d1-3081736852ea">
+      <Execution id="8ab4c6db-cbd5-40f2-95c6-86dd36f4c1c7" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="GranularCatalogReadScope_AllowsOpenAiModels" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="026df356-d363-f38a-c430-52f57f901eed">
+      <Execution id="cd6dcdab-4f2c-4a69-a137-61cd9f5ba1e7" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="UmbrellaApiScope_AllowsOpenAiModels" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: False)" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="5486e91b-b737-b528-430f-47af7534019a">
+      <Execution id="4f0ae785-93e7-42fa-a7a2-58d3f93057f9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_SCOPES_empty_selection_never_grants_broad_api_access" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="e741d0d8-511e-56fa-1520-3678aac5699c">
+      <Execution id="eb46fa40-1dac-428c-ace1-aee89cd5bb67" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests" name="TOKEN_SCOPES_empty_selection_never_grants_broad_api_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden" storage="c:\repositories\candoitall\tests\integration\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="f42973bf-7b51-9439-df97-202906708ba2">
+      <Execution id="998047eb-b59b-48e8-9024-600a6bdfe834" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests" name="InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="5f802808-c6a5-e149-3ffa-65b6ef77941c" executionId="f80e55c3-dc70-40e9-af75-db36c7703752" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="12e36110-7e93-41f2-b7ee-6d161a2e533b" executionId="58119aa3-88e5-4d8d-9a69-3783ff433dc4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c649e657-be57-de9f-ca8f-296e7ffecb7d" executionId="2bf4fcc4-4273-4cd0-8211-611205eca5cc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="88a9d0cd-f7f0-5ea2-021a-55a2724c2ef6" executionId="1c12debd-a3a4-4c27-b462-086fae025846" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="30fe8aa5-1071-8f9e-7370-08df03859b07" executionId="13f9993c-2842-4ebe-98bd-a2ffad0acce9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c82fca80-aebc-17c7-b086-187efb1fe437" executionId="93c4d1f0-969b-4551-979b-ed1b9541b6b4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a2c38363-5e13-117a-690c-e2104470f768" executionId="9e66e668-5381-4e7c-a29b-e758bf9a14cb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="added71b-cccd-e385-e277-620d5517354a" executionId="3e51bd0e-51a2-4686-a3ce-324774e09ed2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e741d0d8-511e-56fa-1520-3678aac5699c" executionId="eb46fa40-1dac-428c-ace1-aee89cd5bb67" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="40f965e2-56c7-95ca-43f2-a69042c3d37b" executionId="b5e50888-b4e0-42ca-9369-fa391400ce40" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3981c982-c46b-4693-f754-f84c2c1ff2a1" executionId="078fdf36-5388-43b7-a7da-8dac53c1fcb3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5486e91b-b737-b528-430f-47af7534019a" executionId="4f0ae785-93e7-42fa-a7a2-58d3f93057f9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dff5a5ee-da55-d312-6c90-292698cb1149" executionId="5e2e3326-6233-4070-a869-012bf106c8d1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f42973bf-7b51-9439-df97-202906708ba2" executionId="998047eb-b59b-48e8-9024-600a6bdfe834" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="643f141f-89fa-c551-b4e4-a714c0bcdf84" executionId="32cdc168-ef25-4730-ab49-c18604e4d938" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dd7f74e4-190e-7140-45d1-3081736852ea" executionId="8ab4c6db-cbd5-40f2-95c6-86dd36f4c1c7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="026df356-d363-f38a-c430-52f57f901eed" executionId="cd6dcdab-4f2c-4a69-a137-61cd9f5ba1e7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c10ffb81-50a3-67c4-27f4-a4dfe6ba9f8d" executionId="3f7f45ae-d8a3-4726-8a33-9c348595eb6a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b83eb3a5-b1ce-0844-fd70-26ecc0d9c86e" executionId="d6b7bbd1-a563-4e16-b00d-83d898ed7394" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="19" executed="19" passed="19" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.48]   Discovering: CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.82]   Discovered:  CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.88]   Starting:    CanDoItAll.Tests.Integration&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Seeded OpenAI provider bootstrap for profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {c6905369-201b-4bc5-ae95-0cf3a0f3398b} with creation date 2026-08-27 21:04:47Z, activation date 2026-08-27 21:04:47Z, and expiration date 2026-11-25 21:04:47Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {c6905369-201b-4bc5-ae95-0cf3a0f3398b} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 866 entities to in-memory store.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 111 created and 0 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58104&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\d00fbbcda689490099d5e5c0f8ad4a3b&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]&#xD;
+      Setting HTTP status code 200.&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]&#xD;
+      Writing value of type 'LlmChatApiPage`1' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - 200 - application/json;+charset=utf-8 1083.5029ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:58104/api/llm-chats - application/json;+charset=utf-8 -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]&#xD;
+      AuthenticationScheme: Bearer was forbidden.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:58104/api/llm-chats - 403 - application/json;+charset=utf-8 58.4303ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]&#xD;
+      Failed to validate the token.&#xD;
+      Microsoft.IdentityModel.Tokens.SecurityTokenSignatureKeyNotFoundException: IDX10517: Signature validation failed. The token's kid is missing. Keys tried: 'Microsoft.IdentityModel.Tokens.SymmetricSecurityKey, KeyId: '', InternalId: 'NmVpZnc9dE9RhIlMNiDnsDFG4PyWwA8yjy7JD3vqkzE'. , KeyId: &#xD;
+      '. Number of keys in TokenValidationParameters: '1'. &#xD;
+Number of keys in Configuration: '0'. &#xD;
+Exceptions caught:&#xD;
+ '[PII of type 'System.Text.StringBuilder' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'.&#xD;
+token: '[PII of type 'Microsoft.IdentityModel.JsonWebTokens.JsonWebToken' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'. See https://aka.ms/IDX10503 for details.&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateSignature(JsonWebToken jwtToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateSignatureAndIssuerSecurityKey(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: IDX10517: Signature validation failed. The token's kid is missing. Keys tried: 'Microsoft.IdentityModel.Tokens.SymmetricSecurityKey, KeyId: '', InternalId: 'NmVpZnc9dE9RhIlMNiDnsDFG4PyWwA8yjy7JD3vqkzE'. , KeyId: &#xD;
+      '. Number of keys in TokenValidationParameters: '1'. &#xD;
+Number of keys in Configuration: '0'. &#xD;
+Exceptions caught:&#xD;
+ '[PII of type 'System.Text.StringBuilder' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'.&#xD;
+token: '[PII of type 'Microsoft.IdentityModel.JsonWebTokens.JsonWebToken' is hidden. For more details, see https://aka.ms/IdentityModel/PII.]'. See https://aka.ms/IDX10503 for details.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58104/api/llm-chats - 401 - application/json;+charset=utf-8 22.7671ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {8691d7c8-fe8c-493c-9ffb-90a89fcdcba0} with creation date 2026-08-27 21:04:52Z, activation date 2026-08-27 21:04:52Z, and expiration date 2026-11-25 21:04:52Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {8691d7c8-fe8c-493c-9ffb-90a89fcdcba0} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58106&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\e24dbb5f9d7242a7bd9f8076a48fb2bc&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - 401 - application/json;+charset=utf-8 944.3382ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58106/authorized-files/content - - -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58106/authorized-files/content - 401 - application/json;+charset=utf-8 4.9059ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]&#xD;
+      Setting HTTP status code 200.&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]&#xD;
+      Writing value of type 'LlmChatApiPage`1' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58106/api/llm-chats - 200 - application/json;+charset=utf-8 57.9759ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:58106/api/llm-chats - application/json;+charset=utf-8 -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]&#xD;
+      AuthenticationScheme: Bearer was forbidden.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:58106/api/llm-chats - 403 - application/json;+charset=utf-8 23.4342ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {124b9cf1-93d2-4eec-bb43-e23e08b48c76} with creation date 2026-08-27 21:04:54Z, activation date 2026-08-27 21:04:54Z, and expiration date 2026-11-25 21:04:54Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {124b9cf1-93d2-4eec-bb43-e23e08b48c76} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58108&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\fe46ef6eb44944c996892b24cc8801b4&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58108/api/llm-chats - - -&#xD;
+fail: ApiManagedTokenValidation[0]&#xD;
+      Cannot validate registered API token b8ccdbf7-ae08-4f25-bad8-b8d0cf6d0bce: InvalidDataException. Access denied.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: The API token registry is unavailable.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58108/api/llm-chats - 401 - application/json;+charset=utf-8 612.9723ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {150e3fee-cd61-41bf-b7e1-affb7bf1eac0} with creation date 2026-08-27 21:04:56Z, activation date 2026-08-27 21:04:56Z, and expiration date 2026-11-25 21:04:56Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {150e3fee-cd61-41bf-b7e1-affb7bf1eac0} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58110&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\5af3a3e9bea445829c53128e3cd296fb&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {8305ff49-cad9-4126-99fd-cc20f9788f33} with creation date 2026-08-27 21:04:57Z, activation date 2026-08-27 21:04:57Z, and expiration date 2026-11-25 21:04:57Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {8305ff49-cad9-4126-99fd-cc20f9788f33} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58112&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\f4fea81a556a47d8893b18e31f937509&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]&#xD;
+      Setting HTTP status code 200.&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]&#xD;
+      Writing value of type 'LlmChatApiPage`1' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - 200 - application/json;+charset=utf-8 563.2726ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: The API token is revoked, expired or deleted.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - 401 - application/json;+charset=utf-8 18.2359ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: The API token is revoked, expired or deleted.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58112/api/llm-chats - 401 - application/json;+charset=utf-8 18.8104ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {7c443085-f1a9-413d-9890-9ee36e8aa48d} with creation date 2026-08-27 21:05:00Z, activation date 2026-08-27 21:05:00Z, and expiration date 2026-11-25 21:05:00Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {7c443085-f1a9-413d-9890-9ee36e8aa48d} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58119&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\a91191582daf44be8802766dbea88ed3&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]&#xD;
+      Setting HTTP status code 200.&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]&#xD;
+      Writing value of type 'LlmChatApiPage`1' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/llm-chats/ =&gt; ListDefinitionsAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - 200 - application/json;+charset=utf-8 1085.9497ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: The API token is revoked, expired or deleted.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58119/api/llm-chats - 401 - application/json;+charset=utf-8 19.7124ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {4c2690b2-8fdf-48f2-95a9-ecfdd32a7d44} with creation date 2026-08-27 21:05:02Z, activation date 2026-08-27 21:05:02Z, and expiration date 2026-11-25 21:05:02Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {4c2690b2-8fdf-48f2-95a9-ecfdd32a7d44} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58122&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\1216ecf07ae84cd891956edc0f65c3f7&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:58122/api/access/tokens - application/json;+charset=utf-8 -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/access/tokens'&#xD;
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[1]&#xD;
+      Setting HTTP status code 400.&#xD;
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[3]&#xD;
+      Writing value of type 'ApiErrorResponse' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/access/tokens'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:58122/api/access/tokens - 400 - application/json;+charset=utf-8 646.9932ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {39666972-66f2-4356-91a4-26d88853bfbc} with creation date 2026-08-27 21:05:04Z, activation date 2026-08-27 21:05:04Z, and expiration date 2026-11-25 21:05:04Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {39666972-66f2-4356-91a4-26d88853bfbc} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:56047&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\14e5af6bfb924fc7b26443a29cf79a39&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56047/api/project-structure/node-catalog - - -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]&#xD;
+      AuthenticationScheme: Bearer was forbidden.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56047/api/project-structure/node-catalog - 403 - application/json;+charset=utf-8 1013.4287ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:56047/api/project-structure/leases/acquire - application/json;+charset=utf-8 -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/project-structure/leases/acquire'&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.AspNetCore.Http.Result.JsonResult[3]&#xD;
+      Writing value of type 'ProjectStructureLeaseSnapshot' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/project-structure/leases/acquire'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:56047/api/project-structure/leases/acquire - 200 - application/json;+charset=utf-8 183.6415ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {0bd6c9e6-df5a-4189-8aed-f4a5e6d0f4a4} with creation date 2026-08-27 21:05:06Z, activation date 2026-08-27 21:05:06Z, and expiration date 2026-11-25 21:05:06Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {0bd6c9e6-df5a-4189-8aed-f4a5e6d0f4a4} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:56049&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\edac2f9722e348b7af3204d559a3d202&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - application/json;+charset=utf-8 -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]&#xD;
+      AuthenticationScheme: Bearer was forbidden.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - 403 - application/json;+charset=utf-8 692.9052ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - application/json;+charset=utf-8 -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/access/tokens'&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]&#xD;
+      Setting HTTP status code 200.&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]&#xD;
+      Writing value of type 'ApiTokenIssueResult' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/access/tokens'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:56049/api/access/tokens - 200 - application/json;+charset=utf-8 52.2600ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {698eb868-8ee6-4a85-ab30-1881c8229a48} with creation date 2026-08-27 21:05:08Z, activation date 2026-08-27 21:05:08Z, and expiration date 2026-11-25 21:05:08Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {698eb868-8ee6-4a85-ab30-1881c8229a48} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:56051&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\869a45a06f28402ea84c8197bcbb973c&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/shared-providers/openai/v1/models =&gt; WriteOpenAiModelsAsync'&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/shared-providers/openai/v1/models =&gt; WriteOpenAiModelsAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 200 - application/json;+charset=utf-8 912.8198ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]&#xD;
+      Failed to validate the token.&#xD;
+      Microsoft.IdentityModel.Tokens.SecurityTokenMalformedException: IDX14100: JWT is not well formed, there are no dots (.).&#xD;
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken.ReadToken(ReadOnlyMemory`1 encodedTokenMemory)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken..ctor(String jwtEncodedString)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ReadToken(String token, TokenValidationParameters validationParameters)&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: IDX14100: JWT is not well formed, there are no dots (.).&#xD;
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 401 - application/json;+charset=utf-8 5.3293ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]&#xD;
+      Failed to validate the token.&#xD;
+      Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.&#xD;
+         at Microsoft.IdentityModel.Tokens.ValidatorUtilities.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)&#xD;
+         at Microsoft.IdentityModel.Tokens.Validators.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateTokenPayloadAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 401 - application/json;+charset=utf-8 2.9910ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 401 - application/json;+charset=utf-8 0.1965ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/shared-providers/v1/catalog =&gt; WriteNativeCatalogAsync'&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/shared-providers/v1/catalog =&gt; WriteNativeCatalogAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 200 - application/json 44.4891ms&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/shared-providers/openai/v1/models =&gt; WriteOpenAiModelsAsync'&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/shared-providers/openai/v1/models =&gt; WriteOpenAiModelsAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 200 - application/json;+charset=utf-8 11.0000ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/shared-providers/v1/catalog =&gt; WriteNativeCatalogAsync'&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/shared-providers/v1/catalog =&gt; WriteNativeCatalogAsync'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 200 - application/json 11.6564ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - - -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]&#xD;
+      AuthenticationScheme: Bearer was forbidden.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/v1/catalog - 403 - application/json;+charset=utf-8 10.2877ms&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]&#xD;
+      Failed to validate the token.&#xD;
+      Microsoft.IdentityModel.Tokens.SecurityTokenMalformedException: IDX14100: JWT is not well formed, there are no dots (.).&#xD;
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken.ReadToken(ReadOnlyMemory`1 encodedTokenMemory)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebToken..ctor(String jwtEncodedString)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ReadToken(String token, TokenValidationParameters validationParameters)&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: IDX14100: JWT is not well formed, there are no dots (.).&#xD;
+The token needs to be in JWS or JWE Compact Serialization Format. (JWS): 'EncodedHeader.EncodedPayload.EncodedSignature'. (JWE): 'EncodedProtectedHeader.EncodedEncryptedKey.EncodedInitializationVector.EncodedCiphertext.EncodedAuthenticationTag'.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 401 - application/json;+charset=utf-8 3.4418ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[1]&#xD;
+      Failed to validate the token.&#xD;
+      Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.&#xD;
+         at Microsoft.IdentityModel.Tokens.ValidatorUtilities.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)&#xD;
+         at Microsoft.IdentityModel.Tokens.Validators.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateTokenPayloadAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)&#xD;
+         at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[7]&#xD;
+      Bearer was not authenticated. Failure message: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '27.08.2026 19:06:10', Current time (UTC): '27.08.2026 21:05:10'.&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 401 - application/json;+charset=utf-8 0.7526ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      DenyAnonymousAuthorizationRequirement: Requires an authenticated user.&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[12]&#xD;
+      AuthenticationScheme: Bearer was challenged.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 401 - application/json;+charset=utf-8 0.4647ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - - -&#xD;
+info: Microsoft.AspNetCore.Authorization.DefaultAuthorizationService[2]&#xD;
+      Authorization failed. These requirements were not met:&#xD;
+      Handler assertion should evaluate to true.&#xD;
+info: Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerHandler[13]&#xD;
+      AuthenticationScheme: Bearer was forbidden.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:56051/api/shared-providers/openai/v1/models - 403 - application/json;+charset=utf-8 15.9271ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+[xUnit.net 00:00:31.38]   Finished:    CanDoItAll.Tests.Integration&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

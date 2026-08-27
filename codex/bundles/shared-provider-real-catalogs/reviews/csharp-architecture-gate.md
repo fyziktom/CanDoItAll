@@ -108,3 +108,14 @@ Pass. Both subbundles' dependent behavior is now verified on the rebuilt pair.
 Source audit/hashes and final canonical check are recorded by reviews/02-final-verifier.md.
 Any later catalog, route, request schema or approval-context change invalidates the related
 focused scope and real UI proof. Primary-agent review; no independent reviewer is claimed.
+
+## SB05/SB06 Administration Review
+
+Requested boundary/security gate: Pass. See bundle://proof/SB06/architecture-review.md,
+bundle://proof/SB06/codeanalytics-summary.json and bundle://proof/SB06/source-audit.txt.
+Source connections now own their modal state; the old per-provider owner shrank. Token
+UI orchestrates an authorized application service and narrow private-file registry.
+Managed-token admission is enforced after cryptographic validation on every new API
+request. No new project/package/reference cycle or runtime partial split was introduced.
+Scope picker, storage, component access checks and real HTTP denial have direct proof.
+Full-suite pricing/seed findings remain separate and explicit; no clean-repository claim.

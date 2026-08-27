@@ -21,14 +21,11 @@ public partial class SettingsPage
 
     private WorkspaceSettingsModel settingsModel = new();
     private SecretEditorModel secretModel = NewSecret();
-    private ApiTokenIssueRequest apiTokenModel = NewApiToken();
     private ApiAccessStatus? apiStatus;
-    private ApiTokenIssueResult? issuedApiToken;
     private IReadOnlyList<WorkspaceProviderOption> providers = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private string settingsTab = "workspace";
     private string secretSearch = string.Empty;
-    private string apiScopesText = "api";
 
     private IReadOnlyList<SecondaryTabItem> SettingsTabs =>
     [
@@ -65,7 +62,6 @@ public partial class SettingsPage
         providers = await ProviderCatalog.ListAsync();
         secrets = await WorkspaceService.ListSecretsAsync();
         apiStatus = ApiTokenService.GetStatus();
-        apiTokenModel = NewApiToken(apiStatus?.DefaultTokenLifetimeMinutes);
         ApplyRequestedTab();
     }
 
@@ -152,22 +148,6 @@ public partial class SettingsPage
         return Task.CompletedTask;
     }
 
-    private Task IssueApiTokenAsync()
-    {
-        try
-        {
-            apiTokenModel.Scopes = ParseApiScopes(apiScopesText);
-            issuedApiToken = ApiTokenService.IssueToken(apiTokenModel);
-            NotificationService.Success("API token created", $"Token expires at {FormatTimestamp(issuedApiToken.ExpiresAtUtc)}.");
-        }
-        catch (Exception exception)
-        {
-            issuedApiToken = null;
-            NotificationService.Error("API token failed", exception.Message);
-        }
-
-        return Task.CompletedTask;
-    }
 
     private void ApplyRequestedTab()
     {
@@ -224,16 +204,6 @@ public partial class SettingsPage
             : "Bearer tokens are not required.";
     }
 
-    private static List<string> ParseApiScopes(string value)
-    {
-        var scopes = value
-            .Split([' ', ',', ';', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return scopes.Count == 0 ? ["api"] : scopes;
-    }
 
     private static SecretEditorModel NewSecret() => new()
     {
@@ -241,12 +211,5 @@ public partial class SettingsPage
         Scope = "workspace"
     };
 
-    private static ApiTokenIssueRequest NewApiToken(int? lifetimeMinutes = null) => new()
-    {
-        Subject = "api-client",
-        DisplayName = "API client",
-        LifetimeMinutes = lifetimeMinutes,
-        Scopes = ["api"]
-    };
 
 }

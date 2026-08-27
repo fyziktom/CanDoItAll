@@ -2,6 +2,15 @@
 
 ## Status
 
+Administration extension: SB05 completed (11 tests and actual Playwright MCP at
+1920x1080); SB06 completed with 29 additional focused cases, real managed-token HTTP
+denial, all three rebuilt apps healthy and a recoverably reset 5214. See
+proof/SB05/manifest.md, proof/SB06/manifest.md and architecture/06-administration-boundaries.md.
+Previous completed sections below describe retained SB01-SB04 evidence.
+The broader Unit/Integration runs also finished: 6988/1 and 1121/17 pass/fail respectively,
+with one Integration opt-in skip. Unchanged fixture failures remain explicitly reported
+in proof/SB06/broad-regression-results.md; no whole-repository-green claim is made.
+
 Completed on 2026-08-27. SB01, SB02 and SB03 behavioral/architecture gates pass.
 Final canonical validation and hash audit are recorded in reviews/02-final-verifier.md.
 No historical failure was relabeled a pass.
@@ -46,10 +55,11 @@ fallback transport or approval bypass. Exact paths/hashes are in proof/SB01/chan
 
 ## Deployment
 
-Current SB03 deployment: both apps run local-ui-access-20260827-1 with explicit
+Historical SB03 deployment: both apps ran local-ui-access-20260827-1 with explicit
 loopback-published Docker ingress trust. Image digest and host proof are in
 bundle://proof/SB03/transcripts/runtime-evidence.txt. The following build6 details are
-the preserved SB01/SB02 checkpoint, not the current app image.
+the preserved SB01/SB02 checkpoint, not the current app image. Current SB06 image:
+admin-dialogs-20260827-2 on 5210/5212/5214; proof/SB06/runtime-image2-final.txt.
 
 Image: candoitall-shared-providers-ui:real-catalogs-20260827-6
 Image ID: sha256:3a92a5a65a81dfd2b03e8cb91a901ecdabddc836feeafc33624c1d02a4ea4800
@@ -146,6 +156,8 @@ ledger is Unavailable; this proves token/image accounting, not monetary settleme
 | SB02 | Pass after each SB01 repair | Pass | Both upstreams, all requested modalities, source usage and health | Completed | bundle://proof/SB02/manifest.md |
 | SB03 | Pass; normal-browser denial reproduced | Pass | Browser creation/execution/reload, source usage, HTTP/file rejection, both hosts | Completed | bundle://proof/SB03/manifest.md; bundle://proof/SB03/semantic-invariants.md |
 | SB04 | Pass; avatar mismatch and seeded fresh providers reproduced | Pass | Card/editor/picker persistence; default/manual provider initialization; three healthy apps | Completed | bundle://proof/SB04/manifest.md |
+| SB05 | Pass; compact layout contract | Pass | Provider toolbar/filter, source list/add/test/discovery dialogs via MCP | Completed | bundle://proof/SB05/manifest.md |
+| SB06 | Pass; empty-scope failure reproduced | Pass for requested behavior | Scoped token UI, durable registry, same-token HTTP denial and recoverable fresh reset | Completed; full-run failures recorded separately, not relabeled passes | bundle://proof/SB06/manifest.md; bundle://proof/SB06/semantic-invariants.md |
 
 ## Browser Validation Analytics
 
@@ -166,6 +178,9 @@ are independent oracles, and SQL is read-only usage evidence.
 | SB03 | 5210 Simple Chats conversation | 1920x1080 | Fresh token-free browser creation/run and MCP reload | bundle://proof/SB03/source-chat-viewport.png | Pass: source-local provider also executes |
 | SB04 | 5210/5212 Simple Chat settings | 1920x1080 | Two real-browser cases pass twice on final image; bundle://proof/SB04/avatar-browser-confirmed.trx | bundle://proof/SB04/browser/client-selected-editor.png; bundle://proof/SB04/browser/client-existing-picker.png | Pass: card/editor/picker, selected image and reset agree after save/reload |
 | SB04 | 5214 Providers/Sharing and New Simple Chat | 1920x1080 | Ordinary Playwright MCP, no injected token and no saved configuration | bundle://proof/SB04/browser/fresh-empty-sharing.png; bundle://proof/SB04/browser/fresh-simple-chat-create.png | Pass: zero providers/sources/imports, Add source and definition creation accessible |
+| SB05 | Providers toolbar/filter and nested connections dialogs | 1920x1080 | Actual Playwright MCP clicks, bounds and invalid-input/cancel/test/discover | bundle://proof/SB05/providers-after.png; bundle://proof/SB05/connections-dialog.png; bundle://proof/SB05/catalog-dialog.png | Pass: icon row and compact filter, no inline source management |
+| SB06 | 5210 namespace picker and token management | 1920x1080 | Actual MCP form/checkbox/search/revoke/delete plus same-token HTTP verification | bundle://proof/SB06/scopes-dialog.png; bundle://proof/SB06/tokens-dialog.png; bundle://proof/SB06/mcp-lifecycle-result.json | Pass: exact scopes, cancel, metadata-only list and 200/200/401/401 lifecycle |
+| SB06 | 5212 renewed credential and 5214 empty setup | 1920x1080 | Source issuance and client secret save through UI; fresh dialogs opened without save | bundle://proof/SB06/client-catalog-final.png; bundle://proof/SB06/fresh-5214-providers.png; bundle://proof/SB06/fresh-5214-add-source.png | Pass: existing catalog discoverable; fresh zero-state and accessible setup |
 
 UI composition: provider list/editor remains the primary surface; compact badges and existing
 tabs are retained. Price table owns horizontal overflow. Editor/dialog/chat bodies own
@@ -185,6 +200,9 @@ provider/Switch agent button wrapping is unchanged, not a new layout improvement
 | N005 normal local Simple Chats access | Solved | bundle://proof/SB03/transcripts/regression-red.trx; bundle://proof/SB03/transcripts/component-final.trx; bundle://proof/SB03/transcripts/integration-final.trx; bundle://proof/SB03/transcripts/browser-final.trx; bundle://proof/SB03/transcripts/runtime-evidence.txt |
 | N006 avatar mismatch | Solved | bundle://proof/SB04/avatar-red.trx; bundle://proof/SB04/avatar-green.trx; bundle://proof/SB04/avatar-browser-confirmed.trx |
 | N007 rebuilt pair and fresh manual client | Solved | bundle://proof/SB04/manifest.md; bundle://subbundles/04-avatar-and-fresh-client/HANDOFF.md |
+| N008 compact provider administration | Solved | bundle://proof/SB05/manifest.md; 11 component cases, real MCP toolbar/filter/dialog evidence |
+| N009 namespace picker and token management | Solved | bundle://proof/SB06/manifest.md; registry6/component4/HTTP19; same-token MCP revocation and deletion deny requests |
+| N010 rebuilt apps and cleared 5214 | Solved | bundle://proof/SB06/runtime-final.txt; bundle://proof/SB06/reset-5214.txt; bundle://subbundles/06-token-lifecycle-and-fresh-handoff/HANDOFF.md |
 
 ## Remaining Limits And Handoff
 
@@ -270,3 +288,33 @@ and AI-generation help showing a shared route are not changed by this bounded re
 No new avatar generation or paid inference was used. Provider defaults were not deleted.
 See bundle://proof/SB04/manifest.md for exact filters, artifacts and architecture scope,
 and bundle://subbundles/04-avatar-and-fresh-client/HANDOFF.md for URLs/scopes/lifecycle.
+
+## SB06 Semantic Adequacy Evidence
+
+- Raw note owned: N009/R9 requires exact namespace selection and searchable lazy token management with real revoke/delete; N010/R10 requires a rebuilt, empty third client without clearing the other two.
+- Shipped behavior: compact provider administration is in SB05. SB06 adds scope selection, metadata-only paged history, action-level administration checks, durable managed-token validation and a recoverable 5214 reset. Legacy JWT history is explicitly unavailable.
+- Source proof: bundle://proof/SB06/changed-files.csv; six exact pre-edit captures in bundle://proof/SB06/before-hashes.csv; typed ownership and explicit compatibility in bundle://proof/SB06/architecture-review.md.
+- Test proof: bundle://proof/SB06/transcripts/verification.txt verifies original TRX files: registry6, component4, HTTP19 and SB05 component11. Final registry cases also check shortened UI IDs. Frozen discovery and original command outputs remain in bundle://proof/SB06/manifest.md.
+- Shallow-pass trap: hide a row while accepting its JWT, clear a revocation tombstone and reactivate it, load all history with Settings, silently grant api for an empty picker, fabricate old token history or delete another client's data.
+- Adversarial negative proof: bundle://proof/SB06/regression-red.trx captures the original empty-scope grant bug; final tests deny unauthorized administration, corrupt/missing registry metadata and deleted/revoked managed JWTs. Cancel preserves scope text and token access.
+- Semantic positive proof: bundle://proof/SB06/mcp-lifecycle-result.json records the same UI-issued token at 200, cancel200, revoke401 and delete401. Source UI issuance plus existing client secret update restores real catalog discovery. bundle://proof/SB06/runtime-final.txt verifies healthy apps, fresh zero tables and isolated database grants.
+- Anti-stub audit: bundle://proof/SB06/transcripts/verification.txt and bundle://proof/SB06/source-audit.txt verify no replacement stubs, no provider/catalog fixture changes, removed old UI ownership, real registration-before-return, per-action permissions, authentication hook and exact source hashes.
+
+No new project/package or sibling source changes. The narrow registry and Web access
+adapters are real persistence/security seams. Catalog source management is extracted by
+responsibility, not split into additional runtime partial classes. No whole-solution or
+independent-review claim is made. Architecture scope, diagnostics and conservative
+test-selection fallback are in bundle://proof/SB06/codeanalytics-summary.json.
+
+Provider and token dialogs were visually inspected, including nested source editor and
+catalog overlays. The large-screen target is 1920x1080; footer controls are visible,
+provider toolbar/filter stay single-row, and dialog bodies own long-list scrolling.
+Earlier prerender, selector, URL and isolated-MCP-variable failures are documented in
+bundle://proof/SB06/browser-validation.md and are not accepted as successful runs.
+
+The existing 5212 legacy token expired during validation at 20:24:37Z. A new eight-hour
+token was issued via the picker with only catalog-read and invoke, then saved into its
+existing secret through UI. The original provider definitions and histories are retained.
+5214's previous database and data volume are recoverable; its replacements contain no
+configured provider/source/import/user secret. Bootstrap credentials are separate from
+application configuration. 5032 was not changed.

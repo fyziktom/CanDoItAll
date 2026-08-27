@@ -1,0 +1,103 @@
+@using CanDoItAll.Modules.Workspace.ApiAccess
+@inject ApiTokenAdministrationService Administration
+@inject NotificationService Notifications
+
+@if (isLoading) {
+    <EmptyState Title="Checking token administration access" Description="Verifying the current operator's permissions." />
+} else if (!canManage) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="api-token-access-denied">
+        Token administration requires the trusted local UI or the api.tokens.issue scope.
+    </Alert>
+} else {
+    <EditForm Model="model" OnValidSubmit="IssueAsync">
+        <Stack GapScale="LayoutGap.Medium">
+            <Grid ColumnsMd="2" Gap="LayoutGap.Medium">
+                <div>
+                    <label class="cda-field-label" for="api-token-subject">Subject</label>
+                    <InputText id="api-token-subject" @bind-Value="model.Subject" class="cda-input w-full" data-testid="api-token-subject" />
+                </div>
+                <div>
+                    <label class="cda-field-label" for="api-token-name">Display name</label>
+                    <InputText id="api-token-name" @bind-Value="model.DisplayName" class="cda-input w-full" data-testid="api-token-name" />
+                </div>
+                <div>
+                    <label class="cda-field-label" for="api-token-lifetime">Lifetime minutes</label>
+                    <InputNumber id="api-token-lifetime" @bind-Value="model.LifetimeMinutes" class="cda-input w-full" />
+                    <p class="cda-body-muted mt-1">Maximum: @Status.MaxTokenLifetimeMinutes minutes</p>
+                </div>
+                <div>
+                    <label class="cda-field-label" for="api-token-scopes">Scopes</label>
+                    <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
+                        <InputText id="api-token-scopes" @bind-Value="scopesText" class="cda-input min-w-0 flex-1" data-testid="api-token-scopes" />
+                        <Button Icon="checklist" title="Select API scopes" aria-label="Select API scopes"
+                                ButtonStyle="ButtonStyle.Light" Click="@(() => scopeDialogOpen = true)" data-testid="api-scopes-open" />
+                    </Cluster>
+                    <p class="cda-body-muted mt-1">Choose scopes or separate them with spaces or commas.</p>
+                </div>
+            </Grid>
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Create token" Icon="key" Type="submit" Disabled="isBusy" IsBusy="isBusy" data-testid="api-token-create" />
+                <Button Text="Manage tokens" Icon="vpn_key" ButtonStyle="ButtonStyle.Light"
+                        Click="@(() => tokensDialogOpen = true)" data-testid="api-tokens-open" />
+            </Cluster>
+            @if (!string.IsNullOrEmpty(error)) {
+                <Alert AlertStyle="AlertStyle.Danger" data-testid="api-token-error">@error</Alert>
+            }
+        </Stack>
+    </EditForm>
+    @if (issued is not null) {
+        <Alert AlertStyle="AlertStyle.Success">
+            <p>Token created for @issued.DisplayName. Expires: @issued.ExpiresAtUtc.LocalDateTime.ToString("g")</p>
+            <p>Copy it now. The token list stores metadata only and cannot reveal this value again.</p>
+            <textarea readonly class="cda-input cda-input--textarea mt-2 w-full" rows="3"
+                      aria-label="New API bearer token" data-testid="api-issued-token">@issued.Token</textarea>
+        </Alert>
+    }
+    @if (scopeDialogOpen) {
+        <ApiScopePickerDialog Value="@scopesText" Confirmed="ApplyScopes" OnClose="@(() => scopeDialogOpen = false)" />
+    }
+    @if (tokensDialogOpen) {
+        <ApiTokensDialog OnClose="@(() => tokensDialogOpen = false)" />
+    }
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ApiAccessStatus Status { get; set; } = default!;
+
+    private ApiTokenIssueRequest model = new();
+    private string scopesText = ApiAccessScopeNames.Api;
+    private string error = string.Empty;
+    private ApiTokenIssueResult? issued;
+    private bool isLoading = true;
+    private bool canManage;
+    private bool isBusy;
+    private bool scopeDialogOpen;
+    private bool tokensDialogOpen;
+
+    protected override async Task OnInitializedAsync() {
+        model.LifetimeMinutes = Status.DefaultTokenLifetimeMinutes;
+        canManage = await Administration.CanManageAsync();
+        isLoading = false;
+    }
+
+    private void ApplyScopes(string value) {
+        scopesText = value;
+        scopeDialogOpen = false;
+    }
+
+    private async Task IssueAsync() {
+        isBusy = true;
+        error = string.Empty;
+        issued = null;
+        try {
+            model.Scopes = ApiScopeCatalog.Parse(scopesText);
+            issued = await Administration.IssueAsync(model);
+            Notifications.Success("API token created", "Copy the bearer token now; it is not stored in the token list.");
+        } catch (Exception exception) {
+            error = exception.Message;
+        } finally {
+            isBusy = false;
+        }
+    }
+}

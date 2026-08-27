@@ -1,0 +1,9 @@
+Command: & proof/SB06/transcripts/Redact-TestArtifacts.ps1
+integration-suite.trx : 2 credential-shaped strings redacted; outcomes and result count unchanged.
+Original SHA256: A08226C616AC0BE731E213833DE54CDDD8C6B7257E0840CA8BE8DCF996080F30
+Redacted SHA256: 27FD6416E6F5C48AEF63AEA073F04DA1BD016D0D1E621DBB2E423A90DEEE2D2B
+unit-suite.trx : 2 credential-shaped strings redacted; outcomes and result count unchanged.
+Original SHA256: D4EACAEDDADDCDE0F54801F0C7A242A0F017A780D1F78E36AB5680476FF2BCCE
+Redacted SHA256: EDC7260E2B9440BC3EC2F007F0139C88A1E92916B89D4A7C7930E110883E451D
+No unredacted duplicate is retained in the proof directory. Values were never printed.
+ExitCode: 0

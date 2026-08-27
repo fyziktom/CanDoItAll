@@ -1,0 +1,19 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.60]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:01.43]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:01.49]   Starting:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_corrupt_records_fail_explicitly_instead_of_returning_active_state [217 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_SCOPES_catalog_covers_all_declared_scopes_and_empty_text_stays_empty [23 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_records_survive_reopen_and_deletion_never_restores_revocation [251 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_PRIVACY_search_is_paged_searchable_and_contains_only_metadata [3 s]
+[xUnit.net 00:00:06.46]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_concurrent_writes_preserve_independent_records_and_revoke_delete_order [651 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_duplicate_registration_and_unbounded_pages_are_rejected [110 ms]
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB06\unit-tests.trx
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 6
+     Úspěšné: 6
+ Celkový čas: 7,3103 Sekundy

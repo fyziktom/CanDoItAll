@@ -1,0 +1,13 @@
+{
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "active": 200,
+  "cancelled": 200,
+  "revoked": 401,
+  "deleted": 401,
+  "freshProviders": "0 / 0",
+  "sameToken": true,
+  "testTokenDeleted": true
+}

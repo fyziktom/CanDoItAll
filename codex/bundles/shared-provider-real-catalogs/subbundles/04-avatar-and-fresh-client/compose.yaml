@@ -2,7 +2,7 @@ name: candoitall-spui-fresh
 
 services:
   app:
-    image: candoitall-shared-providers-ui:avatar-blank-client-20260827-2
+    image: candoitall-shared-providers-ui:admin-dialogs-20260827-2
     user: "1654:1654"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -39,7 +39,7 @@ services:
     ports:
       - "127.0.0.1:5214:8080"
     volumes:
-      - app-data:/data
+      - app-data-reset-20260827:/data
       - credentials:/run/secrets:ro
     networks:
       - shared-app
@@ -69,7 +69,7 @@ services:
         max-file: "3"
 
 volumes:
-  app-data:
+  app-data-reset-20260827:
   credentials:
     external: true
     name: candoitall-spui-fresh-credentials

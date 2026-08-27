@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="a6fed423-4299-4dee-847f-2834e90f22c1" name="lucys@LUCYSPOWER 2026-08-27 17:02:29" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T17:02:29.9569377-04:00" queuing="2026-08-27T17:02:29.9569381-04:00" start="2026-08-27T17:02:27.8650194-04:00" finish="2026-08-27T17:03:19.8806058-04:00" />
+  <TestSettings name="default" id="614d607a-a2c0-4a81-940d-67963747afc1">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_17_02_29" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="bcc24e93-0d97-4ad9-9a76-72f752390a2f" testId="c1883644-0ff9-facf-8889-40efa40e3fa6" testName="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_access_denial_prevents_data_loading_and_rechecks_every_action" computerName="LUCYSPOWER" duration="00:00:09.1365835" startTime="2026-08-27T17:03:10.5859750-04:00" endTime="2026-08-27T17:03:19.7208369-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bcc24e93-0d97-4ad9-9a76-72f752390a2f" />
+    <UnitTestResult executionId="a71c9e79-5632-4490-b471-0793edf200f2" testId="5c4dab16-65e1-6475-bc48-caedae57c5c1" testName="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_list_is_lazy_and_revoke_delete_require_confirmation" computerName="LUCYSPOWER" duration="00:00:29.6343117" startTime="2026-08-27T17:02:40.9574734-04:00" endTime="2026-08-27T17:03:10.5831648-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a71c9e79-5632-4490-b471-0793edf200f2" />
+    <UnitTestResult executionId="cebf1fb1-3339-413a-85d5-6ff35469f532" testId="c4023ea2-3788-ba92-df81-d2ddb1844b5a" testName="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value" computerName="LUCYSPOWER" duration="00:00:11.5652269" startTime="2026-08-27T17:02:29.3687509-04:00" endTime="2026-08-27T17:02:40.9462765-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cebf1fb1-3339-413a-85d5-6ff35469f532">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs:line 96&#xD;
+   at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs:line 98&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6f3b9bb5-2b83-4692-8347-51ec6bcb712c" testId="92146a49-6242-77ef-bfd6-815a6c03cd42" testName="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply" computerName="LUCYSPOWER" duration="00:00:00.4677651" startTime="2026-08-27T17:02:28.8802768-04:00" endTime="2026-08-27T17:02:29.3567040-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6f3b9bb5-2b83-4692-8347-51ec6bcb712c" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_list_is_lazy_and_revoke_delete_require_confirmation" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="5c4dab16-65e1-6475-bc48-caedae57c5c1">
+      <Execution id="a71c9e79-5632-4490-b471-0793edf200f2" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ApiTokenAdministrationTests" name="TOKEN_ADMIN_list_is_lazy_and_revoke_delete_require_confirmation" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="c4023ea2-3788-ba92-df81-d2ddb1844b5a">
+      <Execution id="cebf1fb1-3339-413a-85d5-6ff35469f532" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ApiTokenAdministrationTests" name="TOKEN_SCOPES_picker_uses_the_current_textbox_value" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="92146a49-6242-77ef-bfd6-815a6c03cd42">
+      <Execution id="6f3b9bb5-2b83-4692-8347-51ec6bcb712c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ApiTokenAdministrationTests" name="TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_access_denial_prevents_data_loading_and_rechecks_every_action" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="c1883644-0ff9-facf-8889-40efa40e3fa6">
+      <Execution id="bcc24e93-0d97-4ad9-9a76-72f752390a2f" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ApiTokenAdministrationTests" name="TOKEN_ADMIN_access_denial_prevents_data_loading_and_rechecks_every_action" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="c1883644-0ff9-facf-8889-40efa40e3fa6" executionId="bcc24e93-0d97-4ad9-9a76-72f752390a2f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5c4dab16-65e1-6475-bc48-caedae57c5c1" executionId="a71c9e79-5632-4490-b471-0793edf200f2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c4023ea2-3788-ba92-df81-d2ddb1844b5a" executionId="cebf1fb1-3339-413a-85d5-6ff35469f532" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="92146a49-6242-77ef-bfd6-815a6c03cd42" executionId="6f3b9bb5-2b83-4692-8347-51ec6bcb712c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="4" executed="4" passed="3" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.21]   Discovering: CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.38]   Discovered:  CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.41]   Starting:    CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:12.50]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:12.50]       Expected: True&#xD;
+[xUnit.net 00:00:12.50]       Actual:   False&#xD;
+[xUnit.net 00:00:12.50]       Stack Trace:&#xD;
+[xUnit.net 00:00:12.50]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs(96,0): at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value()&#xD;
+[xUnit.net 00:00:12.51]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs(98,0): at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value()&#xD;
+[xUnit.net 00:00:12.51]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:51.29]   Finished:    CanDoItAll.Tests.Components&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T17:02:40.9498275-04:00">
+        <Text>[xUnit.net 00:00:12.50]     CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

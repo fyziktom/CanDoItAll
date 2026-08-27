@@ -27,13 +27,13 @@ public sealed class SharedProviderSourceAndImportComponentTests
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => services.AddSingleton<ISharedProviderManagementService>(service));
 
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(parameters => parameters
+        var cut = harness.Context.Render<SharedProviderSourcesDialog>(parameters => parameters
             .Add(component => component.Secrets, [secret]));
 
         cut.WaitForElement("[data-testid='shared-provider-source-add']").Click();
         cut.WaitForElement("[data-testid='shared-provider-source-dialog']");
 
-        Assert.Contains("No provider selected", cut.Markup, StringComparison.Ordinal);
+        Assert.NotNull(cut.Find("[data-testid='shared-provider-connections-dialog']"));
         Assert.Contains(secret.Name, cut.Markup, StringComparison.Ordinal);
     }
 
@@ -86,8 +86,7 @@ public sealed class SharedProviderSourceAndImportComponentTests
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => services.AddSingleton<ISharedProviderManagementService>(service));
 
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(parameters => parameters
-            .Add(component => component.ProviderProfileId, providerId)
+        var cut = harness.Context.Render<SharedProviderSourcesDialog>(parameters => parameters
             .Add(component => component.Secrets, [secret]));
 
         cut.WaitForElement("[data-testid='shared-provider-source-add']").Click();
@@ -125,8 +124,7 @@ public sealed class SharedProviderSourceAndImportComponentTests
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => services.AddSingleton<ISharedProviderManagementService>(service));
 
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(parameters => parameters
-            .Add(component => component.ProviderProfileId, providerId));
+        var cut = harness.Context.Render<SharedProviderSourcesDialog>();
 
         cut.WaitForAssertion(() =>
         {

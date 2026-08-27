@@ -1,0 +1,4 @@
+ Container candoitall-spui-fresh-app-1 Recreate 
+ Container candoitall-spui-fresh-app-1 Recreated 
+ Container candoitall-spui-fresh-app-1 Starting 
+ Container candoitall-spui-fresh-app-1 Started 

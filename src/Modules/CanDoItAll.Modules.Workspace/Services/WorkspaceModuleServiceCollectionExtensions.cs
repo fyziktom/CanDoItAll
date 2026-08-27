@@ -16,6 +16,8 @@ public static class WorkspaceModuleServiceCollectionExtensions
             WorkspaceProjectTransferTargetStateParticipant>());
         services.AddOptions<ApiAccessOptions>();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
+        services.TryAddScoped<IApiTokenAdministrationAccess, UnavailableApiTokenAdministrationAccess>();
+        services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<ConnectorPluginRegistry>();
         services.TryAddScoped<ISettingsRendererRegistry, SettingsRendererRegistry>();
         services.AddScoped<ConnectorCommandProcessor>();

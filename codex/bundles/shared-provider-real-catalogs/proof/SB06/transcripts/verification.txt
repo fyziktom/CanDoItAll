@@ -1,0 +1,94 @@
+Command: & proof/SB06/transcripts/Verify-Proof.ps1
+unit-tests-final.trx: 6 passed
+Passed: CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_concurrent_writes_preserve_independent_records_and_revoke_delete_order
+Passed: CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_SCOPES_catalog_covers_all_declared_scopes_and_empty_text_stays_empty
+Passed: CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_duplicate_registration_and_unbounded_pages_are_rejected
+Passed: CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_PRIVACY_search_is_paged_searchable_and_contains_only_metadata
+Passed: CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_records_survive_reopen_and_deletion_never_restores_revocation
+Passed: CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_corrupt_records_fail_explicitly_instead_of_returning_active_state
+component-tests-final.trx: 4 passed
+Passed: CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value
+Passed: CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_access_denial_prevents_data_loading_and_rechecks_every_action
+Passed: CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply
+Passed: CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_ADMIN_list_is_lazy_and_revoke_delete_require_confirmation
+integration-tests.trx: 19 passed
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Project_structure_routes_require_write_scope_and_bind_lease_owner_to_token_subject
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: True)
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_SCOPES_empty_selection_never_grants_broad_api_access
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.API_BOUNDARY_local_operator_ui_identity_does_not_authenticate_http_boundaries
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Authorization_disabled_token_endpoint_is_not_protected_by_the_scope_policy
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_deleted_and_revoked_tokens_fail_real_http_requests(revokeFirst: False)
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.Token_issuance_requires_explicit_privileged_scope
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels
+Passed: CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_corrupt_registration_fails_closed_on_http
+Passed: CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.TOKEN_LIFECYCLE_legacy_tokens_remain_subject_to_signature_and_scope_checks
+../SB05/component-tests.trx: 11 passed
+Passed: CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Source_list_shows_offline_state_as_unavailable_and_keeps_recovery_actions
+Passed: CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Provider_empty_instance_can_add_a_shared_provider_source
+Passed: CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Published_provider_requires_confirmation_before_unpublish
+Passed: CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Imported_profile_exposes_only_local_alias_and_enabled_intent_as_inputs
+Passed: CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Ineligible_local_provider_explains_why_publish_is_disabled
+Passed: CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.Compact_filter_can_be_cleared
+Passed: CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.Toolbar_is_icon_only_and_connections_load_only_when_opened
+Passed: CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Eligible_local_provider_can_be_published_from_provider_settings
+Passed: CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.Publication_settings_do_not_render_or_load_source_connections
+Passed: CanDoItAll.Tests.Components.AgentFramework.AgentProviderProfilesPanelPricingTests.Provider_editor_surfaces_model_prices_on_dedicated_prices_tab
+Passed: CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Source_dialog_lists_secret_names_but_never_secret_values
+TOKEN-SCOPES: exact checkbox selection, empty rejection and cancellation covered by passing tests.
+TOKEN-LIFECYCLE: same-token live HTTP 200/cancel200/revoke401/delete401; file reopen and corrupt denial pass.
+TOKEN-ADMIN: lazy registry call count and denied actions pass; real Docker UI issuance/list/actions pass.
+TOKEN-PRIVACY: metadata-only persistence assertions pass; live evidence contains no bearer value.
+FRESH-5214: Playwright zero-provider state; runtime-final.txt has four zero database counts and all three health200.
+Anti-stub source audit follows:
+warning: in the working copy of 'tests/Integration/CanDoItAll.Tests.Integration/SharedProviderAuthorizationIntegrationTests.cs', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'tests/Integration/CanDoItAll.Tests.Integration/SharedProviderOpenAiCompatibilityIntegrationTests.cs', CRLF will be replaced by LF the next time Git touches it
+ .../Api/ApiServiceCollectionExtensions.cs          |   3 +
+ .../InfrastructureServiceCollectionExtensions.cs   |   1 +
+ .../Components/AgentProviderProfilesPanel.razor    |  55 ++--
+ .../Components/AgentProviderProfilesPanel.razor.cs |   1 +
+ .../Components/SharedProviderManagementPanel.razor | 246 +---------------
+ .../SharedProviderManagementPanel.razor.cs         | 317 +--------------------
+ .../ApiAccess/ApiAccess.cs                         |  16 +-
+ .../Pages/SettingsPage.razor                       |  37 +--
+ .../Pages/SettingsPage.razor.cs                    |  37 ---
+ .../WorkspaceModuleServiceCollectionExtensions.cs  |   2 +
+ .../SharedProviderPublicationPanelTests.cs         |   8 +-
+ .../SharedProviderSourceAndImportComponentTests.cs |  10 +-
+ .../ApiAccessAuthorizationIntegrationTests.cs      |  77 +++++
+ .../SharedProviderAuthorizationIntegrationTests.cs |   3 +-
+ ...dProviderOpenAiCompatibilityIntegrationTests.cs |   3 +-
+ 15 files changed, 143 insertions(+), 673 deletions(-)
+Pricing failure owners and fixtures (expected no diff):
+Unchanged pricing diff exit: 0
+No project or package edits:
+Managed JWT registry hooks:
+src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor:273:    <SharedProviderSourcesDialog Secrets="secrets"
+src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs:183:                    OnTokenValidated = ApiManagedTokenValidation.ValidateAsync,
+src/App/CanDoItAll.Web/Api/ApiManagedTokenValidation.cs:10:        var version = context.Principal?.FindFirst(ApiManagedTokenClaims.Version)?.Value;
+src/App/CanDoItAll.Web/Api/ApiManagedTokenValidation.cs:14:        if (version != ApiManagedTokenClaims.CurrentVersion ||
+src/App/CanDoItAll.Web/Api/ApiManagedTokenValidation.cs:15:            !Guid.TryParseExact(context.Principal?.FindFirst(ApiManagedTokenClaims.TokenId)?.Value, "N", out var tokenId)) {
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:41:                        Click="@(() => tokensDialogOpen = true)" data-testid="api-tokens-open" />
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:59:    @if (tokensDialogOpen) {
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:60:        <ApiTokensDialog OnClose="@(() => tokensDialogOpen = false)" />
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:76:    private bool tokensDialogOpen;
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:23:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:28:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:33:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:38:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:42:    private async ValueTask EnsureAccessAsync(CancellationToken cancellationToken) {
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiAccess.cs:224:            [ApiManagedTokenClaims.TokenId] = tokenId.ToString("N"),
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiAccess.cs:225:            [ApiManagedTokenClaims.Version] = ApiManagedTokenClaims.CurrentVersion,
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiAccess.cs:235:        registry.Register(new ApiTokenRecord(tokenId, subject, displayName, issuedAt, expiresAt, scopes));
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiScopeCatalog.cs:27:public static class ApiManagedTokenClaims {
+Old token form and source-list ownership removed:
+All changed-source hashes match.
+ExitCode: 0

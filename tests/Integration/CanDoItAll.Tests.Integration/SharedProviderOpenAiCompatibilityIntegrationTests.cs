@@ -879,7 +879,8 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         var hostClock = fixture.SecureHost.App.Services.GetRequiredService<IClock>();
         var tokenService = new ApiTokenService(
             fixture.SecureHost.App.Services.GetRequiredService<IOptions<ApiAccessOptions>>(),
-            new FixedClock(hostClock.GetUtcNow().AddHours(-2)));
+            new FixedClock(hostClock.GetUtcNow().AddHours(-2)),
+            fixture.SecureHost.App.Services.GetRequiredService<CanDoItAll.Infrastructure.ControlPlane.IApiTokenRegistry>());
         return tokenService.IssueToken(new ApiTokenIssueRequest
         {
             Subject = "expired-relay-client",

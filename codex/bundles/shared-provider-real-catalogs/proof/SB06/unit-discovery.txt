@@ -1,0 +1,8 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_records_survive_reopen_and_deletion_never_restores_revocation
+    CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_PRIVACY_search_is_paged_searchable_and_contains_only_metadata
+    CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_corrupt_records_fail_explicitly_instead_of_returning_active_state
+    CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_concurrent_writes_preserve_independent_records_and_revoke_delete_order
+    CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_LIFECYCLE_duplicate_registration_and_unbounded_pages_are_rejected
+    CanDoItAll.Tests.Unit.ApiTokenRegistryTests.TOKEN_SCOPES_catalog_covers_all_declared_scopes_and_empty_text_stays_empty

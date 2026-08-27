@@ -44,6 +44,8 @@ public static class ApiServiceCollectionExtensions
             .Validate(options => ApiAccessOptions.Validate(options).Count == 0, "API configuration is invalid.")
             .ValidateOnStart();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
+        services.Replace(ServiceDescriptor.Scoped<IApiTokenAdministrationAccess, WebApiTokenAdministrationAccess>());
+        services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<MemoryProviderApiService>();
         services.TryAddSingleton(
             typeof(ProfileBoundedReplayEventStream<>),
@@ -178,6 +180,7 @@ public static class ApiServiceCollectionExtensions
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    OnTokenValidated = ApiManagedTokenValidation.ValidateAsync,
                     OnChallenge = context =>
                     {
                         context.HandleResponse();

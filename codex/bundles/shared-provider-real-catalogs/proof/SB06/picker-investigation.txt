@@ -1,0 +1,68 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.21]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.38]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.41]   Starting:    CanDoItAll.Tests.Components
+[xUnit.net 00:00:41.16]     CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value [FAIL]
+[xUnit.net 00:00:41.16]       Bunit.Extensions.WaitForHelpers.WaitForFailedException : The assertion did not pass within the timeout period.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 1.
+Component render count: 14.
+Total render count across all components: 0.
+[xUnit.net 00:00:41.16]       ---- <input id="api-token-scopes" data-testid="api-token-scopes" name="scopesText" class="cda-input min-w-0 flex-1 modified valid" value="api.shared-providers.invoke" blazor:onchange="33" blazor:elementreference="">
+[xUnit.net 00:00:41.16]       Stack Trace:
+[xUnit.net 00:00:41.16]         /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForState.cs(77,0): at Bunit.RenderedComponentWaitForHelperExtensions.WaitForAssertion[TComponent](IRenderedComponent`1 renderedComponent, Action assertion, Nullable`1 timeout)
+[xUnit.net 00:00:41.16]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs(96,0): at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value()
+[xUnit.net 00:00:41.16]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs(102,0): at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value()
+[xUnit.net 00:00:41.16]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:41.16]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:41.16]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs(98,0): at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.<>c__DisplayClass3_0.<TOKEN_SCOPES_picker_uses_the_current_textbox_value>b__2()
+[xUnit.net 00:00:41.16]         /_/src/bunit/Extensions/WaitForHelpers/WaitForAssertionHelper.cs(35,0): at Bunit.Extensions.WaitForHelpers.WaitForAssertionHelper`1.<>c__DisplayClass6_0.<.ctor>b__0()
+[xUnit.net 00:00:41.16]         /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs(173,0): at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args)
+[xUnit.net 00:00:41.18]   Finished:    CanDoItAll.Tests.Components
+  Neúspěšné CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value [40 s]
+  Chybová zpráva:
+   Bunit.Extensions.WaitForHelpers.WaitForFailedException : The assertion did not pass within the timeout period.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 1.
+Component render count: 14.
+Total render count across all components: 0.
+---- <input id="api-token-scopes" data-testid="api-token-scopes" name="scopesText" class="cda-input min-w-0 flex-1 modified valid" value="api.shared-providers.invoke" blazor:onchange="33" blazor:elementreference="">
+  Trasování zásobníku:
+     at Bunit.RenderedComponentWaitForHelperExtensions.WaitForAssertion[TComponent](IRenderedComponent`1 renderedComponent, Action assertion, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForState.cs:line 77
+   at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs:line 96
+   at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.TOKEN_SCOPES_picker_uses_the_current_textbox_value() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs:line 102
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at CanDoItAll.Tests.Components.ApiTokenAdministrationTests.<>c__DisplayClass3_0.<TOKEN_SCOPES_picker_uses_the_current_textbox_value>b__2() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ApiTokenAdministrationTests.cs:line 98
+   at Bunit.Extensions.WaitForHelpers.WaitForAssertionHelper`1.<>c__DisplayClass6_0.<.ctor>b__0() in /_/src/bunit/Extensions/WaitForHelpers/WaitForAssertionHelper.cs:line 35
+   at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args) in /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs:line 173
+
+Testovací běh nebyl úspěšný.
+Celkový počet testů: 1
+     Neúspěšné: 1
+ Celkový čas: 41,8631 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB06\picker-investigation.trx

@@ -1,0 +1,41 @@
+warning: in the working copy of 'tests/Integration/CanDoItAll.Tests.Integration/SharedProviderAuthorizationIntegrationTests.cs', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'tests/Integration/CanDoItAll.Tests.Integration/SharedProviderOpenAiCompatibilityIntegrationTests.cs', CRLF will be replaced by LF the next time Git touches it
+ .../Api/ApiServiceCollectionExtensions.cs          |   3 +
+ .../InfrastructureServiceCollectionExtensions.cs   |   1 +
+ .../Components/AgentProviderProfilesPanel.razor    |  55 ++--
+ .../Components/AgentProviderProfilesPanel.razor.cs |   1 +
+ .../Components/SharedProviderManagementPanel.razor | 246 +---------------
+ .../SharedProviderManagementPanel.razor.cs         | 317 +--------------------
+ .../ApiAccess/ApiAccess.cs                         |  16 +-
+ .../Pages/SettingsPage.razor                       |  37 +--
+ .../Pages/SettingsPage.razor.cs                    |  37 ---
+ .../WorkspaceModuleServiceCollectionExtensions.cs  |   2 +
+ .../SharedProviderPublicationPanelTests.cs         |   8 +-
+ .../SharedProviderSourceAndImportComponentTests.cs |  10 +-
+ .../ApiAccessAuthorizationIntegrationTests.cs      |  77 +++++
+ .../SharedProviderAuthorizationIntegrationTests.cs |   3 +-
+ ...dProviderOpenAiCompatibilityIntegrationTests.cs |   3 +-
+ 15 files changed, 143 insertions(+), 673 deletions(-)
+Pricing failure owners and fixtures (expected no diff):
+Unchanged pricing diff exit: 0
+No project or package edits:
+Managed JWT registry hooks:
+src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor:273:    <SharedProviderSourcesDialog Secrets="secrets"
+src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs:183:                    OnTokenValidated = ApiManagedTokenValidation.ValidateAsync,
+src/App/CanDoItAll.Web/Api/ApiManagedTokenValidation.cs:10:        var version = context.Principal?.FindFirst(ApiManagedTokenClaims.Version)?.Value;
+src/App/CanDoItAll.Web/Api/ApiManagedTokenValidation.cs:14:        if (version != ApiManagedTokenClaims.CurrentVersion ||
+src/App/CanDoItAll.Web/Api/ApiManagedTokenValidation.cs:15:            !Guid.TryParseExact(context.Principal?.FindFirst(ApiManagedTokenClaims.TokenId)?.Value, "N", out var tokenId)) {
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:41:                        Click="@(() => tokensDialogOpen = true)" data-testid="api-tokens-open" />
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:59:    @if (tokensDialogOpen) {
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:60:        <ApiTokensDialog OnClose="@(() => tokensDialogOpen = false)" />
+src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor:76:    private bool tokensDialogOpen;
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:23:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:28:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:33:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:38:        await EnsureAccessAsync(cancellationToken);
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiTokenAdministrationService.cs:42:    private async ValueTask EnsureAccessAsync(CancellationToken cancellationToken) {
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiAccess.cs:224:            [ApiManagedTokenClaims.TokenId] = tokenId.ToString("N"),
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiAccess.cs:225:            [ApiManagedTokenClaims.Version] = ApiManagedTokenClaims.CurrentVersion,
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiAccess.cs:235:        registry.Register(new ApiTokenRecord(tokenId, subject, displayName, issuedAt, expiresAt, scopes));
+src/Modules/CanDoItAll.Modules.Workspace/ApiAccess\ApiScopeCatalog.cs:27:public static class ApiManagedTokenClaims {
+Old token form and source-list ownership removed:

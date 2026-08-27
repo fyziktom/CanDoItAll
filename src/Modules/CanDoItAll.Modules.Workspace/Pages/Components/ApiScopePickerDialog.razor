@@ -1,0 +1,73 @@
+@using CanDoItAll.Modules.Workspace.ApiAccess
+
+<Dialog IsOpen="true" Title="API namespaces and permissions"
+        Subtitle="Select the scopes this token may use. Grant token administration only when needed."
+        Size="ModalSize.Wide" OnClose="OnClose" TestId="api-scopes-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Small">
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Select all" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="SelectAll" />
+                <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => selected.Clear())" />
+                <StatusBadge Text="@($"{selected.Count} selected")" Tone="info" />
+            </Cluster>
+            <Grid ColumnsMd="2" Gap="LayoutGap.Small">
+                @foreach (var scope in scopes) {
+                    <label class="cda-inline-option" data-testid="api-scope-option">
+                        <input type="checkbox" checked="@selected.Contains(scope.Name)"
+                               @onchange="args => SetSelected(scope.Name, args.Value is true)" value="@scope.Name" />
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                            <strong>@scope.Label</strong>
+                            <code class="text-xs break-all">@scope.Name</code>
+                            <span class="cda-body-muted">@scope.Description</span>
+                        </Stack>
+                    </label>
+                }
+            </Grid>
+            @if (selected.Count == 0) {
+                <Alert AlertStyle="AlertStyle.Warning">Select at least one scope. No permissions are selected.</Alert>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="OnClose" />
+            <Button Text="Use selection" Disabled="@(selected.Count == 0)" Click="ConfirmAsync" data-testid="api-scopes-confirm" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> Confirmed { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private readonly HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<ApiScopeDefinition> scopes = [];
+
+    protected override void OnInitialized() {
+        selected.UnionWith(ApiScopeCatalog.Parse(Value));
+        scopes = ApiScopeCatalog.All.Concat(selected
+            .Where(name => !ApiScopeCatalog.All.Any(scope => string.Equals(scope.Name, name, StringComparison.OrdinalIgnoreCase)))
+            .Select(name => new ApiScopeDefinition(name, "Custom scope", "Previously entered scope; verify that the API supports it."))).ToArray();
+    }
+
+    private void SetSelected(string scope, bool value) {
+        if (value) {
+            selected.Add(scope);
+        } else {
+            selected.Remove(scope);
+        }
+    }
+
+    private void SelectAll() => selected.UnionWith(scopes.Select(scope => scope.Name));
+
+    private Task ConfirmAsync() => selected.Count == 0
+        ? Task.CompletedTask
+        : Confirmed.InvokeAsync(string.Join(' ', scopes.Where(scope => selected.Contains(scope.Name))
+            .Select(scope => scope.Name).OrderBy(name => name, StringComparer.OrdinalIgnoreCase)));
+}

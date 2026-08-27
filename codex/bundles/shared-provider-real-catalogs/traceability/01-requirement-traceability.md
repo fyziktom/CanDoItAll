@@ -2,6 +2,9 @@
 
 | Input or requirement | Owning subbundle | Actual closure proof | Status |
 | --- | --- | --- | --- |
+| N008 / R8 compact provider administration | SB05 | proof/SB05/manifest.md; 11 tests and MCP normal/nested dialog proof | Solved |
+| N009 / R9 scope picker and token lifecycle | SB06 | proof/SB06/manifest.md; exact selection, metadata lifecycle, live 200/200/401/401 and short-ID search | Solved |
+| N010 / R10 rebuilt apps and reset 5214 | SB06 | proof/SB06/runtime-image2-final.txt; reset-5214.txt; inspected empty UI and recoverable old data | Solved |
 | N006 / R6 avatar consistency | SB04 | proof/SB04/manifest.md; 15 component and two real browser checks | Solved |
 | N007 / R7 fresh manual-setup client | SB04 | proof/SB04/manifest.md; final Docker image, canonical zero counts, isolated DB, UI setup handoff | Solved |
 | N005 / R5 local Simple Chats denied | SB03; SB02 normal-browser handoff restored | proof/SB03/manifest.md; 38 component/9 HTTP/3 real browser cases; complete source usage | Solved |
