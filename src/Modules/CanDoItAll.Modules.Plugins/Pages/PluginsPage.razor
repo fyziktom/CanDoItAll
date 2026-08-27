@@ -152,7 +152,7 @@
         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
             <Stack GapScale="LayoutGap.Medium">
                 <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-                    <h2 class="cda-title-md">Catalogue</h2>
+                    <h2 class="app-title-md">Catalogue</h2>
                     <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} package(s)")" />
                 </Cluster>
 
@@ -167,7 +167,7 @@
                     <Stack GapScale="LayoutGap.Small">
                         @foreach (var package in packageCatalog)
                         {
-                            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                            <div class="grid gap-3 rounded-lg border border-[var(--app-border-subtle)] bg-[var(--app-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                                 <Stack GapScale="LayoutGap.Tiny">
                                     <Cluster Gap="LayoutGap.Small">
                                         <StatusBadge Tone="@PluginsPageHelpers.ResolvePackageTone(package)" Text="@(package.IsInstalled ? "Installed" : "Available")" />
@@ -177,9 +177,9 @@
                                             <StatusBadge Tone="warning" Text="Restart" />
                                         }
                                     </Cluster>
-                                    <span class="text-sm font-medium text-[var(--cda-text)]">@package.DisplayName</span>
-                                    <span class="break-all text-xs text-[var(--cda-text-muted)]">@package.PackageId.Value</span>
-                                    <span class="text-sm text-[var(--cda-text-muted)]">@package.Description</span>
+                                    <span class="text-sm font-medium text-[var(--app-text)]">@package.DisplayName</span>
+                                    <span class="break-all text-xs text-[var(--app-text-muted)]">@package.PackageId.Value</span>
+                                    <span class="text-sm text-[var(--app-text-muted)]">@package.Description</span>
                                 </Stack>
                                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">
                                     <Button Text="Install"
@@ -198,7 +198,7 @@
             </Stack>
 
             <Stack GapScale="LayoutGap.Medium">
-                <h2 class="cda-title-md">Upload zip</h2>
+                <h2 class="app-title-md">Upload zip</h2>
                 <div>
                     <label class="cda-field-label" for="plugin-package-upload">Package archive</label>
                     <InputFile id="plugin-package-upload"
@@ -209,7 +209,7 @@
                 </div>
                 @if (!string.IsNullOrWhiteSpace(packageUploadFileName))
                 {
-                    <p class="cda-body-muted break-all">@packageUploadFileName</p>
+                    <p class="app-body-muted break-all">@packageUploadFileName</p>
                 }
             </Stack>
         </Grid>

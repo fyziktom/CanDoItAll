@@ -8,19 +8,19 @@
         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
             <Stack GapScale="LayoutGap.Tiny">
                 <p class="cda-eyebrow">Plugin id</p>
-                <p class="break-all text-sm font-medium text-[var(--cda-text)]">@Plugin.PluginId.Value</p>
+                <p class="break-all text-sm font-medium text-[var(--app-text)]">@Plugin.PluginId.Value</p>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
                 <p class="cda-eyebrow">Version</p>
-                <p class="text-sm font-medium text-[var(--cda-text)]">@Plugin.Version</p>
+                <p class="text-sm font-medium text-[var(--app-text)]">@Plugin.Version</p>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
                 <p class="cda-eyebrow">Vendor</p>
-                <p class="text-sm font-medium text-[var(--cda-text)]">@Plugin.Vendor</p>
+                <p class="text-sm font-medium text-[var(--app-text)]">@Plugin.Vendor</p>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
                 <p class="cda-eyebrow">Trust</p>
-                <p class="text-sm font-medium text-[var(--cda-text)]">@Plugin.TrustLevel</p>
+                <p class="text-sm font-medium text-[var(--app-text)]">@Plugin.TrustLevel</p>
             </Stack>
         </Grid>
 
@@ -38,7 +38,7 @@
             <p class="cda-eyebrow">Tags</p>
             @if (Plugin.Descriptor.Tags.Count == 0)
             {
-                <p class="cda-body-muted">No plugin descriptor tags.</p>
+                <p class="app-body-muted">No plugin descriptor tags.</p>
             }
             else
             {

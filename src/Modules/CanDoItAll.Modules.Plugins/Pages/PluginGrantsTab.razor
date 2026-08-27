@@ -15,17 +15,17 @@ else
     <Stack GapScale="LayoutGap.Medium">
         @foreach (var grant in Settings.Grants)
         {
-            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="grid gap-3 rounded-lg border border-[var(--app-border-subtle)] bg-[var(--app-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <Stack GapScale="LayoutGap.Tiny">
                     <Cluster Gap="LayoutGap.Small">
                         <StatusBadge Tone="@PluginsPageHelpers.ResolveGrantTone(grant.State)" Text="@grant.State.ToString()" />
                         <StatusBadge Tone="@PluginsPageHelpers.ResolveRiskTone(grant.RiskKind)" Text="@grant.RiskKind.ToString()" />
                         <StatusBadge Tone="neutral" Text="@grant.Capability.ToString()" />
                     </Cluster>
-                    <span class="text-sm font-medium text-[var(--cda-text)]">@PluginsPageHelpers.ResolveGrantName(grant)</span>
+                    <span class="text-sm font-medium text-[var(--app-text)]">@PluginsPageHelpers.ResolveGrantName(grant)</span>
                     @if (!string.IsNullOrWhiteSpace(grant.Reason))
                     {
-                        <span class="text-sm text-[var(--cda-text-muted)]">@grant.Reason</span>
+                        <span class="text-sm text-[var(--app-text-muted)]">@grant.Reason</span>
                     }
                 </Stack>
                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">

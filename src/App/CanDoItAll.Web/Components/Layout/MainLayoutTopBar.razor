@@ -12,11 +12,11 @@
     </div>
 }
 
-<div class="cda-shell-status-row"
+<div class="app-shell-status-row"
      data-testid="layout-compact-status-bar">
-    <HelpPopover RootClass="pf-help-popover cda-shell-status-popover-root"
-                 ToggleClass="pf-help-popover__toggle cda-shell-status-trigger"
-                 PanelClass="pf-help-popover__panel cda-shell-status-panel"
+    <HelpPopover RootClass="pf-help-popover app-shell-status-popover-root"
+                 ToggleClass="pf-help-popover__toggle app-shell-status-trigger"
+                 PanelClass="pf-help-popover__panel app-shell-status-panel"
                  PanelTestId="layout-status-popover"
                  Glyph="i"
                  AriaLabel="Workspace status"
@@ -24,18 +24,18 @@
                  OpenOnHover="true">
         <PanelContent>
             <Stack GapScale="LayoutGap.Medium"
-                   Class="cda-shell-status-popover"
+                   Class="app-shell-status-popover"
                    data-testid="layout-status-content">
                 <Cluster Gap="LayoutGap.Small"
                          Wrap="FlexWrap.NoWrap"
                          AlignItems="AlignItems.Center"
                          Class="border-b border-slate-200 pb-2.5">
-                    <span class="cda-shell-status-popover__icon" aria-hidden="true">
+                    <span class="app-shell-status-popover__icon" aria-hidden="true">
                         <Icon Name="monitor_heart" />
                     </span>
                     <Stack GapScale="LayoutGap.XSmall" Class="min-w-0">
-                        <p class="cda-shell-status-popover__title">Workspace status</p>
-                        <p class="cda-shell-status-popover__description">Current context and live shell counts</p>
+                        <p class="app-shell-status-popover__title">Workspace status</p>
+                        <p class="app-shell-status-popover__description">Current context and live shell counts</p>
                     </Stack>
                 </Cluster>
 

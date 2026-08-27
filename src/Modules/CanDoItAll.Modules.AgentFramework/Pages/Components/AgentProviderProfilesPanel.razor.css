@@ -21,12 +21,12 @@
         justify-content: center;
         width: 100%;
         min-height: 2.75rem;
-        border: 1px solid var(--cda-border-subtle, #dbe3ef);
+        border: 1px solid var(--app-border-subtle, #dbe3ef);
         border-radius: 0.5rem;
     }
 
     .agent-provider-editor-tabs-shell ::deep .cad-tabs__tab[aria-selected="true"] {
-        border-color: var(--cda-border-strong, #b7c5d8);
+        border-color: var(--app-border-strong, #b7c5d8);
     }
 
     .agent-provider-editor-tabs-shell ::deep .cad-tabs__panels,

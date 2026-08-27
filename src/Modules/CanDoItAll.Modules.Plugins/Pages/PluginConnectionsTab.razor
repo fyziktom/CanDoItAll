@@ -20,25 +20,25 @@ else
             var editor = ResolveConnectionEditor(Plugin.PluginId, Settings, connectionDescriptor);
             var oauthStatus = ResolveOAuthStatus(Plugin.PluginId, connection?.Id, connectionDescriptor.Key);
             var canStartOAuth = PluginsPageHelpers.CanStartOAuth(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator);
-            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="grid gap-3 rounded-lg border border-[var(--app-border-subtle)] bg-[var(--app-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <Stack GapScale="LayoutGap.Tiny">
                     <Cluster Gap="LayoutGap.Small">
                         <StatusBadge Tone="@PluginsPageHelpers.ResolveOAuthTone(oauthStatus?.Status)" Text="@(oauthStatus?.Status.ToString() ?? "NotConnected")" />
                         <StatusBadge Tone="neutral" Text="@connectionDescriptor.Key.Value" />
                     </Cluster>
-                    <span class="text-sm font-medium text-[var(--cda-text)]">@connectionDescriptor.DisplayName</span>
-                    <span class="text-sm text-[var(--cda-text-muted)]">@connectionDescriptor.Description</span>
+                    <span class="text-sm font-medium text-[var(--app-text)]">@connectionDescriptor.DisplayName</span>
+                    <span class="text-sm text-[var(--app-text-muted)]">@connectionDescriptor.Description</span>
                     @if (oauthStatus is not null && oauthStatus.GrantedScopes.Count > 0)
                     {
-                        <span class="text-xs text-[var(--cda-text-muted)]">@string.Join(", ", oauthStatus.GrantedScopes)</span>
+                        <span class="text-xs text-[var(--app-text-muted)]">@string.Join(", ", oauthStatus.GrantedScopes)</span>
                     }
                     @if (oauthStatus is not null && !string.IsNullOrWhiteSpace(oauthStatus.LastErrorDescription))
                     {
-                        <span class="text-sm text-[var(--cda-danger)]">@oauthStatus.LastErrorDescription</span>
+                        <span class="text-sm text-[var(--app-danger)]">@oauthStatus.LastErrorDescription</span>
                     }
                     @if (!canStartOAuth)
                     {
-                        <span class="text-sm text-[var(--cda-warning)]">@PluginsPageHelpers.ResolveOAuthActionHint(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator)</span>
+                        <span class="text-sm text-[var(--app-warning)]">@PluginsPageHelpers.ResolveOAuthActionHint(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator)</span>
                     }
                 </Stack>
                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">

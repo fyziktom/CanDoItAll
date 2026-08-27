@@ -251,7 +251,7 @@ internal static class PluginsPageHelpers
             }
 
             builder.OpenElement(4, "span");
-            builder.AddAttribute(5, "class", $"material-icons inline-flex items-center justify-center text-[var(--cda-text-muted)] {cssClass}");
+            builder.AddAttribute(5, "class", $"material-icons inline-flex items-center justify-center text-[var(--app-text-muted)] {cssClass}");
             builder.AddAttribute(6, "aria-hidden", "true");
             builder.AddContent(7, string.IsNullOrWhiteSpace(resolvedIcon.Value) ? UiIconDescriptor.Default.Value : resolvedIcon.Value);
             builder.CloseElement();
@@ -263,7 +263,7 @@ internal static class PluginsPageHelpers
             if (logs.Count == 0)
             {
                 builder.OpenElement(0, "p");
-                builder.AddAttribute(1, "class", "cda-body-muted");
+                builder.AddAttribute(1, "class", "app-body-muted");
                 builder.AddAttribute(2, "data-testid", $"plugins-logs-{testIdPrefix}-empty");
                 builder.AddContent(3, "No log records.");
                 builder.CloseElement();
@@ -275,31 +275,31 @@ internal static class PluginsPageHelpers
             foreach (var log in logs)
             {
                 builder.OpenElement(6, "div");
-                builder.AddAttribute(7, "class", "rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3");
+                builder.AddAttribute(7, "class", "rounded-lg border border-[var(--app-border-subtle)] bg-[var(--app-surface-muted)] p-3");
                 builder.AddAttribute(8, "data-testid", $"plugins-logs-{testIdPrefix}-row");
                 builder.OpenElement(9, "div");
                 builder.AddAttribute(10, "class", "mb-2 flex flex-wrap items-center gap-2 text-xs");
                 builder.OpenElement(11, "span");
-                builder.AddAttribute(12, "class", "font-semibold text-[var(--cda-text)]");
+                builder.AddAttribute(12, "class", "font-semibold text-[var(--app-text)]");
                 builder.AddContent(13, log.OperationKind.ToString());
                 builder.CloseElement();
                 builder.OpenElement(14, "span");
-                builder.AddAttribute(15, "class", "text-[var(--cda-text-muted)]");
+                builder.AddAttribute(15, "class", "text-[var(--app-text-muted)]");
                 builder.AddContent(16, log.Severity.ToString());
                 builder.CloseElement();
                 builder.OpenElement(17, "span");
-                builder.AddAttribute(18, "class", "text-[var(--cda-text-muted)]");
+                builder.AddAttribute(18, "class", "text-[var(--app-text-muted)]");
                 builder.AddContent(19, log.CreatedAtUtc.ToLocalTime().ToString("g"));
                 builder.CloseElement();
                 builder.CloseElement();
                 builder.OpenElement(20, "p");
-                builder.AddAttribute(21, "class", "text-sm text-[var(--cda-text)]");
+                builder.AddAttribute(21, "class", "text-sm text-[var(--app-text)]");
                 builder.AddContent(22, log.Message);
                 builder.CloseElement();
                 if (log.PluginId is not null || log.PackageId is not null || log.WorkflowExecutorId is not null)
                 {
                     builder.OpenElement(23, "p");
-                    builder.AddAttribute(24, "class", "mt-2 break-all text-xs text-[var(--cda-text-muted)]");
+                    builder.AddAttribute(24, "class", "mt-2 break-all text-xs text-[var(--app-text-muted)]");
                     builder.AddContent(25, string.Join(" | ", new[]
                     {
                         log.PluginId?.Value,

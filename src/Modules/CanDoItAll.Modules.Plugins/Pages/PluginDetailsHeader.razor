@@ -15,8 +15,8 @@
             <StatusBadge Tone="@PluginsPageHelpers.ResolveInstallationTone(Plugin)" Text="@Plugin.InstallationState.ToString()" />
             <StatusBadge Tone="neutral" Text="@Plugin.SourceKind.ToString()" />
         </Cluster>
-        <h2 class="cda-title-xl">@Plugin.DisplayName</h2>
-        <p class="cda-body-muted">@Plugin.Description</p>
+        <h2 class="app-title-xl">@Plugin.DisplayName</h2>
+        <p class="app-body-muted">@Plugin.Description</p>
     </Stack>
 
     <Cluster Gap="LayoutGap.Tiny" Class="shrink-0">

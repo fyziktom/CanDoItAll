@@ -22,7 +22,7 @@ else
         <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
             @foreach (var executor in Plugin.Descriptor.WorkflowExecutors.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
             {
-                <div class="rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3"
+                <div class="rounded-lg border border-[var(--app-border-subtle)] bg-[var(--app-surface-muted)] p-3"
                      data-testid="@PluginsPageHelpers.BuildExecutorRowTestId(Plugin.PluginId, executor)">
                     <Stack GapScale="LayoutGap.Small">
                         <Cluster Gap="LayoutGap.Tiny">
@@ -32,11 +32,11 @@ else
                         </Cluster>
 
                         <Stack GapScale="LayoutGap.Tiny">
-                            <span class="text-sm font-semibold text-[var(--cda-text)]">@executor.Name</span>
-                            <span class="break-all text-xs text-[var(--cda-text-muted)]">@executor.ExecutorId.Value</span>
+                            <span class="text-sm font-semibold text-[var(--app-text)]">@executor.Name</span>
+                            <span class="break-all text-xs text-[var(--app-text-muted)]">@executor.ExecutorId.Value</span>
                         </Stack>
 
-                        <p class="text-sm text-[var(--cda-text-muted)]">@executor.Description</p>
+                        <p class="text-sm text-[var(--app-text-muted)]">@executor.Description</p>
 
                         <Cluster Gap="LayoutGap.Tiny">
                             <StatusBadge Tone="neutral" Text="@PluginsPageHelpers.ResolveExecutorPolicySummary(executor)" />

@@ -43,7 +43,7 @@ else
 
                 @if (connectionDescriptor.SettingsSchema.Fields.Count == 0)
                 {
-                    <p class="cda-body-muted">This connection does not define additional settings.</p>
+                    <p class="app-body-muted">This connection does not define additional settings.</p>
                 }
                 else
                 {
@@ -56,7 +56,7 @@ else
                                     @field.Label
                                     @if (field.IsRequired)
                                     {
-                                        <span class="ml-1 text-xs font-medium text-[var(--cda-danger)]">Required</span>
+                                        <span class="ml-1 text-xs font-medium text-[var(--app-danger)]">Required</span>
                                     }
                                 </label>
 
@@ -101,7 +101,7 @@ else
 
                                 @if (field.FieldType != ConfigurationFieldType.Boolean && !string.IsNullOrWhiteSpace(field.HelpText))
                                 {
-                                    <p class="cda-body-muted mt-2">@field.HelpText</p>
+                                    <p class="app-body-muted mt-2">@field.HelpText</p>
                                 }
 
                                 @foreach (var issue in PluginsPageHelpers.ResolveValidationIssues(editor, field))

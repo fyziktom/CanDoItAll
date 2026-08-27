@@ -18,7 +18,7 @@ public sealed class MainLayoutTopBarTests : BunitContext
             .Add(component => component.TabCount, 5));
 
         Assert.DoesNotContain("Interactive Server", cut.Markup);
-        Assert.Single(cut.FindAll(".cda-shell-status-trigger"));
+        Assert.Single(cut.FindAll(".app-shell-status-trigger"));
 
         cut.FindComponent<HelpPopover>()
             .Find("div")
@@ -39,7 +39,7 @@ public sealed class MainLayoutTopBarTests : BunitContext
     public void Status_trigger_can_be_pinned_and_dismissed_from_the_keyboard()
     {
         var cut = Render<MainLayoutTopBar>();
-        var trigger = cut.Find(".cda-shell-status-trigger");
+        var trigger = cut.Find(".app-shell-status-trigger");
 
         Assert.Equal("BUTTON", trigger.TagName);
         Assert.Equal("dialog", trigger.GetAttribute("aria-haspopup"));
@@ -49,16 +49,16 @@ public sealed class MainLayoutTopBarTests : BunitContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("true", cut.Find(".cda-shell-status-trigger").GetAttribute("aria-expanded"));
+            Assert.Equal("true", cut.Find(".app-shell-status-trigger").GetAttribute("aria-expanded"));
             Assert.Contains("Workspace status", cut.Find("[data-testid='layout-status-popover']").TextContent);
         });
 
-        cut.Find(".cda-shell-status-trigger")
+        cut.Find(".app-shell-status-trigger")
             .TriggerEvent("onkeydown", new KeyboardEventArgs { Key = "Escape" });
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("false", cut.Find(".cda-shell-status-trigger").GetAttribute("aria-expanded"));
+            Assert.Equal("false", cut.Find(".app-shell-status-trigger").GetAttribute("aria-expanded"));
             Assert.Empty(cut.FindAll("[data-testid='layout-status-popover']"));
         });
     }

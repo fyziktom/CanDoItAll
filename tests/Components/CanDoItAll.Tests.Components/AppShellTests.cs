@@ -54,11 +54,11 @@ public sealed class AppShellTests : BunitContext
 
         var desktopSidebarMarkup = cut.Find("aside").InnerHtml;
 
-        Assert.DoesNotContain("cda-shell-pick-button", desktopSidebarMarkup);
+        Assert.DoesNotContain("app-shell-pick-button", desktopSidebarMarkup);
         Assert.DoesNotContain("Operational summary, provider health, and recent work.", desktopSidebarMarkup);
         Assert.DoesNotContain("project-structure / /projects/one/structure", desktopSidebarMarkup);
-        Assert.Contains("cda-shell-nav-label-row", desktopSidebarMarkup);
-        Assert.DoesNotContain("cda-shell-opened-button", desktopSidebarMarkup);
+        Assert.Contains("app-shell-nav-label-row", desktopSidebarMarkup);
+        Assert.DoesNotContain("app-shell-opened-button", desktopSidebarMarkup);
         Assert.Contains("shell-nav-opened-work", desktopSidebarMarkup);
         Assert.Contains("shell-opened-work-panel", desktopSidebarMarkup);
         Assert.Contains("shell-opened-work-project-1", desktopSidebarMarkup);
@@ -87,9 +87,9 @@ public sealed class AppShellTests : BunitContext
         var customCut = Render<AppShell>(parameters => parameters
             .Add(component => component.BrandIconName, "rocket_launch"));
 
-        Assert.Equal("apps", defaultCut.Find(".cda-shell-brand-mark").TextContent.Trim());
-        Assert.Equal("apps", blankCut.Find(".cda-shell-brand-mark").TextContent.Trim());
-        Assert.Equal("rocket_launch", customCut.Find(".cda-shell-brand-mark").TextContent.Trim());
+        Assert.Equal("apps", defaultCut.Find(".app-shell-brand-mark").TextContent.Trim());
+        Assert.Equal("apps", blankCut.Find(".app-shell-brand-mark").TextContent.Trim());
+        Assert.Equal("rocket_launch", customCut.Find(".app-shell-brand-mark").TextContent.Trim());
     }
 
     [Fact]
@@ -101,9 +101,9 @@ public sealed class AppShellTests : BunitContext
             .Add(component => component.Body, (RenderFragment)(builder =>
                 builder.AddMarkupContent(0, "<div>Standard page content</div>"))));
 
-        var root = cut.Find(".cda-shell-root");
-        var frame = cut.Find(".cda-shell-frame");
-        var surface = cut.Find(".cda-shell-body-surface");
+        var root = cut.Find(".app-shell-root");
+        var frame = cut.Find(".app-shell-frame");
+        var surface = cut.Find(".app-shell-body-surface");
         var bodyRegion = surface.ParentElement;
 
         Assert.NotNull(bodyRegion);
@@ -113,7 +113,7 @@ public sealed class AppShellTests : BunitContext
         Assert.Equal(
             "height:100%;min-height:0;overflow:hidden;",
             frame.GetAttribute("style"));
-        Assert.Contains("cda-shell-body-surface--standard", surface.ClassList);
+        Assert.Contains("app-shell-body-surface--standard", surface.ClassList);
         Assert.Contains("flex", bodyRegion.ClassList);
         Assert.Contains("min-h-0", bodyRegion.ClassList);
         Assert.Contains("flex-1", bodyRegion.ClassList);

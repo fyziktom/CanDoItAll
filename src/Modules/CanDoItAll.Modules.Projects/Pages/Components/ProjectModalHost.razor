@@ -63,21 +63,21 @@
 
                         <Cluster Gap="LayoutGap.Small"
                                  Wrap="FlexWrap.Wrap">
-                            <span class="cda-shell-pill cda-shell-pill--info">@($"Step {WizardStep + 1} / {WizardSteps.Count}: {WizardSteps[WizardStep]}")</span>
-                            <span class="cda-shell-pill cda-shell-pill--neutral">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
-                            <span class="cda-shell-pill cda-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
-                            <span class="cda-shell-pill cda-shell-pill--info">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
+                            <span class="app-shell-pill app-shell-pill--info">@($"Step {WizardStep + 1} / {WizardSteps.Count}: {WizardSteps[WizardStep]}")</span>
+                            <span class="app-shell-pill app-shell-pill--neutral">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
+                            <span class="app-shell-pill app-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
+                            <span class="app-shell-pill app-shell-pill--info">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
                             @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryCustomerName))
                             {
-                                <span class="cda-shell-pill cda-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
+                                <span class="app-shell-pill app-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
                             }
                             @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryDeliveryUnitName))
                             {
-                                <span class="cda-shell-pill cda-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
+                                <span class="app-shell-pill app-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
                             }
                             @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryOwnerName))
                             {
-                                <span class="cda-shell-pill cda-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
+                                <span class="app-shell-pill app-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
                             }
                         </Cluster>
 
@@ -343,21 +343,21 @@
                 <Stack GapScale="LayoutGap.Large">
                     <Cluster Gap="LayoutGap.Small"
                              Wrap="FlexWrap.Wrap">
-                        <span class="cda-shell-pill cda-shell-pill--info">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
-                        <span class="cda-shell-pill cda-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
-                        <span class="cda-shell-pill cda-shell-pill--neutral">@($"Updated: {ProjectsPresentation.FormatTimestamp(LastUpdatedAtUtc)}")</span>
-                        <span class="cda-shell-pill cda-shell-pill--warning">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
+                        <span class="app-shell-pill app-shell-pill--info">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
+                        <span class="app-shell-pill app-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
+                        <span class="app-shell-pill app-shell-pill--neutral">@($"Updated: {ProjectsPresentation.FormatTimestamp(LastUpdatedAtUtc)}")</span>
+                        <span class="app-shell-pill app-shell-pill--warning">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
                         @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryCustomerName))
                         {
-                            <span class="cda-shell-pill cda-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
+                            <span class="app-shell-pill app-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
                         }
                         @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryDeliveryUnitName))
                         {
-                            <span class="cda-shell-pill cda-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
+                            <span class="app-shell-pill app-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
                         }
                         @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryOwnerName))
                         {
-                            <span class="cda-shell-pill cda-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
+                            <span class="app-shell-pill app-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
                         }
                     </Cluster>
 

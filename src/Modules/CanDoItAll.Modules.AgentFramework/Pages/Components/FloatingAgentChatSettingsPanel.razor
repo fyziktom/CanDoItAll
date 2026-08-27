@@ -26,7 +26,7 @@
                 Preparation caches immutable agent activation metadata only. Live runtime agents, credentials, tool clients, and execution sessions remain per-run and are never pooled.
             </Alert>
 
-            <label class="cda-field">
+            <label class="app-field">
                 <span class="cda-field-label">Maximum prepared agents</span>
                 <InputNumber @bind-Value="maximumPreparedAgents"
                              class="ui-input"
@@ -42,7 +42,7 @@
                 <span>Adapt preparation to recent usage</span>
             </label>
 
-            <label class="cda-field">
+            <label class="app-field">
                 <span class="cda-field-label">Prepared metadata idle retention (minutes)</span>
                 <InputNumber @bind-Value="preparedResourceIdleRetentionMinutes"
                              class="ui-input"

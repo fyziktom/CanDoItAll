@@ -92,8 +92,8 @@
     <DetailHeader>
         <Stack GapScale="LayoutGap.Tiny">
             <p class="cda-eyebrow">Storage editor</p>
-            <h2 class="cda-title-xl">@(storageModel.Id.HasValue ? storageModel.Name : $"New {StoragePresentation.DescribeProvider(storageModel.ProviderKind)} target")</h2>
-            <p class="cda-body-muted">@ResolveEditorLead()</p>
+            <h2 class="app-title-xl">@(storageModel.Id.HasValue ? storageModel.Name : $"New {StoragePresentation.DescribeProvider(storageModel.ProviderKind)} target")</h2>
+            <p class="app-body-muted">@ResolveEditorLead()</p>
         </Stack>
     </DetailHeader>
 

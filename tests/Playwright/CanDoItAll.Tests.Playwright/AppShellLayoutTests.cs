@@ -70,7 +70,7 @@ public sealed class AppShellLayoutTests
 
     private static async Task<float> AssertSurfaceFillsViewportAsync(IPage page)
     {
-        var surface = page.Locator(".cda-shell-body-surface");
+        var surface = page.Locator(".app-shell-body-surface");
         await surface.WaitForAsync();
 
         var surfaceBounds = await surface.BoundingBoxAsync();
@@ -90,7 +90,7 @@ public sealed class AppShellLayoutTests
         var catalog = page.GetByTestId("crmhr-workforce-catalog");
         await catalog.WaitForAsync();
 
-        var surfaceBounds = await page.Locator(".cda-shell-body-surface").BoundingBoxAsync();
+        var surfaceBounds = await page.Locator(".app-shell-body-surface").BoundingBoxAsync();
         var catalogBounds = await catalog.BoundingBoxAsync();
         var resultsBounds = await page.GetByTestId("crmhr-workforce-results").BoundingBoxAsync();
         var pagerBounds = await page.GetByTestId("crmhr-workforce-pager").BoundingBoxAsync();

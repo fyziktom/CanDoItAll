@@ -62,8 +62,8 @@
     <DetailHeader>
         <Stack GapScale="LayoutGap.Tiny">
             <p class="cda-eyebrow">Provider editor</p>
-            <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
-            <p class="cda-body-muted">@ResolveSelectedProviderStatus()</p>
+            <h2 class="app-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
+            <p class="app-body-muted">@ResolveSelectedProviderStatus()</p>
         </Stack>
     </DetailHeader>
 
@@ -141,11 +141,11 @@
                                     </InputSelect>
                                     @if (HasUnavailableSecretReference)
                                     {
-                                        <p class="cda-body-muted mt-1">The saved secret reference is no longer available in the vault. Select another secret before saving.</p>
+                                        <p class="app-body-muted mt-1">The saved secret reference is no longer available in the vault. Select another secret before saving.</p>
                                     }
                                     else if (secrets.Count == 0)
                                     {
-                                        <p class="cda-body-muted mt-1">Add an API key in Settings → Secrets, then refresh this provider list.</p>
+                                        <p class="app-body-muted mt-1">Add an API key in Settings → Secrets, then refresh this provider list.</p>
                                     }
                                 </div>
 

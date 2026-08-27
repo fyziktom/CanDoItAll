@@ -13,17 +13,17 @@
                @ref="sidebarElement"
                data-testid="app-shell-sidebar"
                data-navigation-mode="@navigationMode.ToString().ToLowerInvariant()">
-            <div class="cda-shell-sidebar__inner">
-                <div class="cda-shell-sidebar__top">
+            <div class="app-shell-sidebar__inner">
+                <div class="app-shell-sidebar__top">
                     <div class="@ResolveBrandClass()">
-                        <span class="cda-shell-brand-mark" aria-hidden="true">
+                        <span class="app-shell-brand-mark" aria-hidden="true">
                             <Icon Name="@ResolveBrandIconName()" />
                         </span>
                         @if (IsNavigationExpanded)
                         {
                             <div class="min-w-0">
                                 <p class="cda-eyebrow text-sky-300 tracking-[0.28em]">CanDoItAll</p>
-                                <h1 class="cda-shell-brand-title">Local delivery workbench</h1>
+                                <h1 class="app-shell-brand-title">Local delivery workbench</h1>
                             </div>
                         }
                         else
@@ -35,7 +35,7 @@
                     @if (AllowNavigationExpansion)
                     {
                         <button type="button"
-                                class="cda-shell-toggle-button"
+                                class="app-shell-toggle-button"
                                 aria-label="@ResolveNavigationToggleLabel()"
                                 aria-pressed="@IsNavigationExpanded"
                                 data-testid="shell-navigation-toggle"
@@ -47,7 +47,7 @@
 
                 @if (IsNavigationExpanded && !string.IsNullOrWhiteSpace(ProjectContextTitle))
                 {
-                    <div class="cda-shell-card-info cda-shell-expanded-context">
+                    <div class="app-shell-card-info app-shell-expanded-context">
                         <p class="cda-eyebrow cda-eyebrow--tight text-sky-300 tracking-[0.28em]">Project Context</p>
                         <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
                         @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
@@ -65,15 +65,15 @@
                         <TooltipTarget Position="TooltipPosition.Right"
                                        Delay="@MenuTooltipDelay"
                                        TriggerClass="w-full justify-center"
-                                       TooltipClass="cda-shell-nav-tooltip"
+                                       TooltipClass="app-shell-nav-tooltip"
                                        TestId="@BuildNavigationTooltipTestId(item.Route)">
                             <TooltipContent Context="_">
-                                <div class="cda-shell-tooltip-card">
-                                    <p class="cda-shell-tooltip-title">@item.Title</p>
-                                    <p class="cda-shell-tooltip-body">@item.Description</p>
+                                <div class="app-shell-tooltip-card">
+                                    <p class="app-shell-tooltip-title">@item.Title</p>
+                                    <p class="app-shell-tooltip-body">@item.Description</p>
                                     @if (!string.IsNullOrWhiteSpace(item.BadgeText))
                                     {
-                                        <span class="cda-shell-tooltip-badge">@item.BadgeText</span>
+                                        <span class="app-shell-tooltip-badge">@item.BadgeText</span>
                                     }
                                 </div>
                             </TooltipContent>
@@ -83,14 +83,14 @@
                                         aria-label="@item.Title"
                                         data-testid="@BuildNavigationButtonTestId(item.Route)"
                                         @onclick="() => Navigate.InvokeAsync(item.Route)">
-                                    <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
+                                    <span class="app-shell-nav-icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
                                     @if (IsNavigationExpanded)
                                     {
-                                        <span class="cda-shell-nav-label-row">
+                                        <span class="app-shell-nav-label-row">
                                             <span class="block truncate text-sm font-semibold">@item.Title</span>
                                             @if (!string.IsNullOrWhiteSpace(item.BadgeText))
                                             {
-                                                <span class="cda-shell-nav-badge-inline"
+                                                <span class="app-shell-nav-badge-inline"
                                                       data-testid="@($"shell-nav-badge-{item.Route.Trim('/').Replace('/', '-') }")">
                                                     @item.BadgeText
                                                 </span>
@@ -99,7 +99,7 @@
                                     }
                                     else if (!string.IsNullOrWhiteSpace(item.BadgeText))
                                     {
-                                        <span class="cda-shell-nav-badge-dot"
+                                        <span class="app-shell-nav-badge-dot"
                                               data-testid="@($"shell-nav-badge-{item.Route.Trim('/').Replace('/', '-') }")">
                                             @item.BadgeText
                                         </span>
@@ -113,38 +113,38 @@
                     {
                         var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
                         var isOverflowActive = OverflowNavigationItems.Any(item => IsRouteMatch(normalizedCurrentRoute, item.Route));
-                        <div class="cda-shell-nav-overflow-anchor"
+                        <div class="app-shell-nav-overflow-anchor"
                              data-testid="shell-nav-overflow-anchor">
                             <button type="button"
                                     class="@ResolveNavigationButtonClass(isOverflowActive)"
                                     aria-haspopup="menu"
                                     aria-label="More pages"
                                     data-testid="shell-nav-more">
-                                <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="more_up" /></span>
+                                <span class="app-shell-nav-icon" aria-hidden="true"><Icon Name="more_up" /></span>
                                 @if (IsNavigationExpanded)
                                 {
-                                    <span class="cda-shell-nav-label-row">
+                                    <span class="app-shell-nav-label-row">
                                         <span class="block truncate text-sm font-semibold">More</span>
                                     </span>
                                 }
                             </button>
 
-                            <section class="cda-shell-nav-overflow-panel"
+                            <section class="app-shell-nav-overflow-panel"
                                      aria-label="More pages"
                                      data-testid="shell-nav-overflow-panel">
-                                <span class="cda-shell-nav-overflow-panel__arrow" aria-hidden="true"></span>
-                                <div class="cda-shell-nav-overflow-grid" role="menu">
+                                <span class="app-shell-nav-overflow-panel__arrow" aria-hidden="true"></span>
+                                <div class="app-shell-nav-overflow-grid" role="menu">
                                     @foreach (var item in OverflowNavigationItems)
                                     {
                                         var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
                                         <TooltipTarget Position="TooltipPosition.Right"
                                                        Delay="@FlyoutCardTooltipDelay"
-                                                       TriggerClass="cda-shell-nav-overflow-card-trigger"
-                                                       TooltipClass="cda-shell-nav-tooltip">
+                                                       TriggerClass="app-shell-nav-overflow-card-trigger"
+                                                       TooltipClass="app-shell-nav-tooltip">
                                             <TooltipContent Context="_">
-                                                <div class="cda-shell-tooltip-card">
-                                                    <p class="cda-shell-tooltip-title">@item.Title</p>
-                                                    <p class="cda-shell-tooltip-body">@item.Description</p>
+                                                <div class="app-shell-tooltip-card">
+                                                    <p class="app-shell-tooltip-title">@item.Title</p>
+                                                    <p class="app-shell-tooltip-body">@item.Description</p>
                                                 </div>
                                             </TooltipContent>
                                             <ChildContent>
@@ -153,11 +153,11 @@
                                                         role="menuitem"
                                                         data-testid="@BuildNavigationOverflowCardTestId(item.Route)"
                                                         @onclick="() => Navigate.InvokeAsync(item.Route)">
-                                                    <span class="cda-shell-nav-overflow-card__icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
-                                                    <span class="cda-shell-nav-overflow-card__label">@ResolveNavigationOverflowLabel(item.Title)</span>
+                                                    <span class="app-shell-nav-overflow-card__icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
+                                                    <span class="app-shell-nav-overflow-card__label">@ResolveNavigationOverflowLabel(item.Title)</span>
                                                     @if (!string.IsNullOrWhiteSpace(item.BadgeText))
                                                     {
-                                                        <span class="cda-shell-nav-overflow-card__badge"
+                                                        <span class="app-shell-nav-overflow-card__badge"
                                                               data-testid="@($"shell-nav-badge-{item.Route.Trim('/').Replace('/', '-') }-overflow")">
                                                             @item.BadgeText
                                                         </span>
@@ -174,19 +174,19 @@
                     @if (OpenedWorkItems.Count > 0)
                     {
                         var isOpenedActive = OpenedWorkItems.Any(item => string.Equals(item.TabId, ActiveTabId, StringComparison.Ordinal));
-                        <div class="cda-shell-opened-work-anchor"
+                        <div class="app-shell-opened-work-anchor"
                              data-testid="shell-opened-work-anchor">
                             <button type="button"
                                     class="@ResolveNavigationButtonClass(isOpenedActive)"
                                     aria-haspopup="menu"
                                     aria-label="Opened work"
                                     data-testid="shell-nav-opened-work">
-                                <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="web_asset" /></span>
+                                <span class="app-shell-nav-icon" aria-hidden="true"><Icon Name="web_asset" /></span>
                                 @if (IsNavigationExpanded)
                                 {
-                                    <span class="cda-shell-nav-label-row">
+                                    <span class="app-shell-nav-label-row">
                                         <span class="block truncate text-sm font-semibold">Opened</span>
-                                        <span class="cda-shell-nav-badge-inline"
+                                        <span class="app-shell-nav-badge-inline"
                                               data-testid="shell-opened-work-count">
                                             @OpenedWorkItems.Count
                                         </span>
@@ -194,29 +194,29 @@
                                 }
                                 else
                                 {
-                                    <span class="cda-shell-nav-badge-dot"
+                                    <span class="app-shell-nav-badge-dot"
                                           data-testid="shell-opened-work-count">
                                         @OpenedWorkItems.Count
                                     </span>
                                 }
                             </button>
 
-                            <section class="cda-shell-opened-work-panel"
+                            <section class="app-shell-opened-work-panel"
                                      aria-label="Opened work"
                                      data-testid="shell-opened-work-panel">
-                                <span class="cda-shell-opened-work-panel__arrow" aria-hidden="true"></span>
-                                <div class="cda-shell-opened-work-grid" role="menu">
+                                <span class="app-shell-opened-work-panel__arrow" aria-hidden="true"></span>
+                                <div class="app-shell-opened-work-grid" role="menu">
                                     @foreach (var item in OpenedWorkItems)
                                     {
                                         var isActive = string.Equals(item.TabId, ActiveTabId, StringComparison.Ordinal);
                                         <TooltipTarget Position="TooltipPosition.Right"
                                                        Delay="@FlyoutCardTooltipDelay"
-                                                       TriggerClass="cda-shell-opened-work-card-trigger"
-                                                       TooltipClass="cda-shell-nav-tooltip">
+                                                       TriggerClass="app-shell-opened-work-card-trigger"
+                                                       TooltipClass="app-shell-nav-tooltip">
                                             <TooltipContent Context="_">
-                                                <div class="cda-shell-tooltip-card">
-                                                    <p class="cda-shell-tooltip-title">@item.Title</p>
-                                                    <p class="cda-shell-tooltip-body">@ResolveOpenedWorkTooltip(item)</p>
+                                                <div class="app-shell-tooltip-card">
+                                                    <p class="app-shell-tooltip-title">@item.Title</p>
+                                                    <p class="app-shell-tooltip-body">@ResolveOpenedWorkTooltip(item)</p>
                                                 </div>
                                             </TooltipContent>
                                             <ChildContent>
@@ -225,8 +225,8 @@
                                                         role="menuitem"
                                                         data-testid="@BuildOpenedWorkCardTestId(item.TabId)"
                                                         @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
-                                                    <span class="cda-shell-opened-work-card__icon" aria-hidden="true"><Icon Name="@ResolveOpenedWorkIcon(item)" /></span>
-                                                    <span class="cda-shell-opened-work-card__title">@item.Title</span>
+                                                    <span class="app-shell-opened-work-card__icon" aria-hidden="true"><Icon Name="@ResolveOpenedWorkIcon(item)" /></span>
+                                                    <span class="app-shell-opened-work-card__title">@item.Title</span>
                                                 </button>
                                             </ChildContent>
                                         </TooltipTarget>
@@ -239,7 +239,7 @@
 
                 @if (BottomUtilities is not null)
                 {
-                    <div class="cda-shell-utility-area"
+                    <div class="app-shell-utility-area"
                          data-testid="shell-bottom-utilities">
                         @BottomUtilities
                     </div>
@@ -248,7 +248,7 @@
         </aside>
 
         <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-2">
-            <details class="cda-shell-mobile-panel">
+            <details class="app-shell-mobile-panel">
                 <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
                     Workspace navigation
                 </summary>
@@ -261,7 +261,7 @@
                             @foreach (var workspace in Workspaces)
                             {
                                 <button type="button"
-                                        class="cda-shell-mobile-card @(workspace.Id == ActiveWorkspaceId ? "cda-shell-mobile-card--active" : "cda-shell-mobile-card--inactive")"
+                                        class="app-shell-mobile-card @(workspace.Id == ActiveWorkspaceId ? "app-shell-mobile-card--active" : "app-shell-mobile-card--inactive")"
                                         @onclick="() => SelectWorkspace.InvokeAsync(workspace.Id)">
                                     <span class="block text-sm font-semibold">@workspace.Title</span>
                                     <span class="mt-1 block text-xs leading-5 @(workspace.Id == ActiveWorkspaceId ? "text-slate-200" : "text-slate-500")">@workspace.Description</span>
@@ -277,7 +277,7 @@
                             var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
                             var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
                             <button type="button"
-                                    class="cda-shell-mobile-card @(isActive ? "cda-shell-mobile-card--active" : "cda-shell-mobile-card--inactive")"
+                                    class="app-shell-mobile-card @(isActive ? "app-shell-mobile-card--active" : "app-shell-mobile-card--inactive")"
                                     @onclick="() => Navigate.InvokeAsync(item.Route)">
                                 <span class="cda-eyebrow inline-flex @(isActive ? "text-slate-200" : "text-slate-500")" aria-hidden="true"><Icon Name="@item.Icon" /></span>
                                 <span class="mt-2 flex items-center gap-2 text-sm font-semibold">
@@ -306,7 +306,7 @@
                                     @foreach (var item in OpenedProjects)
                                     {
                                         <button type="button"
-                                                class="cda-shell-mobile-card cda-shell-mobile-card--inactive w-full text-sm"
+                                                class="app-shell-mobile-card app-shell-mobile-card--inactive w-full text-sm"
                                                 @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
                                             <span class="block font-semibold text-slate-900">@item.Title</span>
                                             <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
@@ -322,7 +322,7 @@
                                     @foreach (var item in OpenedSessions)
                                     {
                                         <button type="button"
-                                                class="cda-shell-mobile-card cda-shell-mobile-card--inactive w-full text-sm"
+                                                class="app-shell-mobile-card app-shell-mobile-card--inactive w-full text-sm"
                                                 @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
                                             <span class="block font-semibold text-slate-900">@item.Title</span>
                                             <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
@@ -335,9 +335,9 @@
                 </Stack>
             </details>
 
-            <div class="cda-shell-workbar"
+            <div class="app-shell-workbar"
                  data-testid="app-shell-workbar">
-                <div class="cda-shell-tab-region">
+                <div class="app-shell-tab-region">
                     <AppTabStrip Items="Tabs"
                                  RecentTabs="RecentTabs"
                                  ActiveTabId="@ActiveTabId"
@@ -358,7 +358,7 @@
 
                 @if (TopBar is not null)
                 {
-                    <div class="cda-shell-topbar-region">
+                    <div class="app-shell-topbar-region">
                         @TopBar
                     </div>
                 }
@@ -373,7 +373,7 @@
                 }
                 else
                 {
-                    <section class="cda-shell-body-surface cda-shell-body-surface--standard">
+                    <section class="app-shell-body-surface app-shell-body-surface--standard">
                         @Body
                     </section>
                 }
@@ -388,7 +388,7 @@
 
             @if ((ShowRightRail || ShowCollapsedRail) && RightRail is not null)
             {
-                <details class="cda-shell-rail-collapse @(ShowRightRail ? "2xl:hidden" : string.Empty)">
+                <details class="app-shell-rail-collapse @(ShowRightRail ? "2xl:hidden" : string.Empty)">
                     <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
                         @CollapsedRailLabel
                     </summary>
@@ -639,35 +639,35 @@
     private string ResolveRightRailClass()
     {
         return Mode == AppShellMode.FocusWorkbench
-            ? "cda-shell-rail min-h-0 overflow-hidden"
-            : "cda-shell-rail";
+            ? "app-shell-rail min-h-0 overflow-hidden"
+            : "app-shell-rail";
     }
 
     private string ResolveRootClass()
     {
-        return "cda-shell-root";
+        return "app-shell-root";
     }
 
     private string ResolveFrameClass()
     {
         return Mode == AppShellMode.FocusWorkbench
-            ? "cda-shell-frame cda-shell-frame--focus"
-            : "cda-shell-frame";
+            ? "app-shell-frame app-shell-frame--focus"
+            : "app-shell-frame";
     }
 
     private string ResolveSidebarClass()
     {
         return CssClassBuilder.Join(
-            "cda-shell-sidebar",
-            Mode == AppShellMode.FocusWorkbench ? "cda-shell-sidebar--focus" : "cda-shell-sidebar--standard",
-            IsNavigationExpanded ? "cda-shell-sidebar--expanded" : "cda-shell-sidebar--collapsed");
+            "app-shell-sidebar",
+            Mode == AppShellMode.FocusWorkbench ? "app-shell-sidebar--focus" : "app-shell-sidebar--standard",
+            IsNavigationExpanded ? "app-shell-sidebar--expanded" : "app-shell-sidebar--collapsed");
     }
 
     private string ResolveBrandClass()
     {
         return IsNavigationExpanded
-            ? "cda-shell-brand cda-shell-brand--expanded"
-            : "cda-shell-brand cda-shell-brand--collapsed";
+            ? "app-shell-brand app-shell-brand--expanded"
+            : "app-shell-brand app-shell-brand--collapsed";
     }
 
     private string ResolveBrandIconName()
@@ -678,30 +678,30 @@
     private string ResolveNavigationClass()
     {
         return IsNavigationExpanded
-            ? "cda-shell-nav cda-shell-nav--expanded"
-            : "cda-shell-nav cda-shell-nav--collapsed";
+            ? "app-shell-nav app-shell-nav--expanded"
+            : "app-shell-nav app-shell-nav--collapsed";
     }
 
     private string ResolveNavigationButtonClass(bool isActive)
     {
         return CssClassBuilder.Join(
-            "cda-shell-nav-button",
-            isActive ? "cda-shell-nav-button--active" : "cda-shell-nav-button--inactive",
-            IsNavigationExpanded ? "cda-shell-nav-button--expanded" : "cda-shell-nav-button--collapsed");
+            "app-shell-nav-button",
+            isActive ? "app-shell-nav-button--active" : "app-shell-nav-button--inactive",
+            IsNavigationExpanded ? "app-shell-nav-button--expanded" : "app-shell-nav-button--collapsed");
     }
 
     private string ResolveNavigationOverflowCardClass(bool isActive)
     {
         return CssClassBuilder.Join(
-            "cda-shell-nav-overflow-card",
-            isActive ? "cda-shell-nav-overflow-card--active" : "cda-shell-nav-overflow-card--inactive");
+            "app-shell-nav-overflow-card",
+            isActive ? "app-shell-nav-overflow-card--active" : "app-shell-nav-overflow-card--inactive");
     }
 
     private string ResolveOpenedWorkCardClass(bool isActive)
     {
         return CssClassBuilder.Join(
-            "cda-shell-opened-work-card",
-            isActive ? "cda-shell-opened-work-card--active" : "cda-shell-opened-work-card--inactive");
+            "app-shell-opened-work-card",
+            isActive ? "app-shell-opened-work-card--active" : "app-shell-opened-work-card--inactive");
     }
 
     private string? ResolveRootStyle()

@@ -16,7 +16,7 @@ internal static class ProjectsPresentation
             _ => "border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
         };
 
-        return $"cda-board-card {accent}";
+        return $"app-board-card {accent}";
     }
 
     public static string GetStatusTone(ProjectStatus status)

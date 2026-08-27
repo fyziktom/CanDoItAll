@@ -155,8 +155,8 @@
                 <DetailHeader>
                     <Stack GapScale="LayoutGap.Tiny">
                         <p class="cda-eyebrow">Secret editor</p>
-                        <h2 class="cda-title-xl">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
-                        <p class="cda-body-muted">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
+                        <h2 class="app-title-xl">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
+                        <p class="app-body-muted">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
                     </Stack>
                 </DetailHeader>
 
@@ -276,8 +276,8 @@
                 <DetailHeader>
                     <Stack GapScale="LayoutGap.Tiny">
                         <p class="cda-eyebrow">Provider editor</p>
-                        <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
-                        <p class="cda-body-muted">Profiles keep connector transport, capability flags, and health status in one editor.</p>
+                        <h2 class="app-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
+                        <p class="app-body-muted">Profiles keep connector transport, capability flags, and health status in one editor.</p>
                     </Stack>
                 </DetailHeader>
 
@@ -413,12 +413,12 @@
                         <Stack GapScale="LayoutGap.Small">
                             <p class="cda-eyebrow">API</p>
                             <StatusBadge Tone="@(apiStatus?.ApiEnabled == true ? "success" : "warning")" Text="@(apiStatus?.ApiEnabled == true ? "Enabled" : "Disabled")" />
-                            <p class="cda-body-muted break-all">OpenAPI: @(apiStatus?.OpenApiEnabled == true ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
+                            <p class="app-body-muted break-all">OpenAPI: @(apiStatus?.OpenApiEnabled == true ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
                         </Stack>
                         <Stack GapScale="LayoutGap.Small">
                             <p class="cda-eyebrow">Authorization</p>
                             <StatusBadge Tone="@(apiStatus?.AuthorizationEnabled == true ? "warning" : "info")" Text="@(apiStatus?.AuthorizationEnabled == true ? "JWT required" : "JWT disabled")" />
-                            <p class="cda-body-muted break-all">@FormatApiAudience()</p>
+                            <p class="app-body-muted break-all">@FormatApiAudience()</p>
                         </Stack>
                     </Grid>
 
@@ -446,12 +446,12 @@
                                     <div>
                                         <label class="cda-field-label">Lifetime minutes</label>
                                         <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="ui-input" />
-                                        <p class="cda-body-muted mt-1">Maximum: @apiStatus.MaxTokenLifetimeMinutes minutes</p>
+                                        <p class="app-body-muted mt-1">Maximum: @apiStatus.MaxTokenLifetimeMinutes minutes</p>
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Scopes</label>
                                         <InputText @bind-Value="apiScopesText" class="ui-input" />
-                                        <p class="cda-body-muted mt-1">Separate scopes with spaces or commas.</p>
+                                        <p class="app-body-muted mt-1">Separate scopes with spaces or commas.</p>
                                     </div>
                                 </Grid>
                                 <Button Text="Create token" Icon="key" Type="submit" />

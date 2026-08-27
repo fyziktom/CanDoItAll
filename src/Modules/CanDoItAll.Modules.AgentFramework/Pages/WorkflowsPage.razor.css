@@ -350,8 +350,8 @@
     overflow: hidden;
 }
 
-.workflows-template-preview-stage :deep(.cda-canvas-stage),
-.workflows-template-preview-stage :deep(.cda-canvas-workbench) {
+.workflows-template-preview-stage :deep(.app-canvas-stage),
+.workflows-template-preview-stage :deep(.app-canvas-workbench) {
     min-height: 0;
     height: 100%;
 }

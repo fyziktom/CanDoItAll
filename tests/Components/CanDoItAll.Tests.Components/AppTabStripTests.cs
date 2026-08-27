@@ -27,12 +27,12 @@ public sealed class AppTabStripTests : BunitContext
 
         Assert.Contains("push_pin", cut.Markup);
         Assert.Contains("bedtime", cut.Markup);
-        Assert.Contains("cda-inline-tab--active", cut.Markup);
-        Assert.Contains("cda-inline-tab--inactive", cut.Markup);
-        Assert.Contains("cda-inline-tab__actions", cut.Markup);
-        Assert.DoesNotContain("cda-inline-tab__actions--active", cut.Markup);
+        Assert.Contains("app-inline-tab--active", cut.Markup);
+        Assert.Contains("app-inline-tab--inactive", cut.Markup);
+        Assert.Contains("app-inline-tab__actions", cut.Markup);
+        Assert.DoesNotContain("app-inline-tab__actions--active", cut.Markup);
         Assert.Contains("app-tab-strip-main-row", cut.Markup);
-        Assert.Contains("cda-tab-strip__controls", cut.Markup);
+        Assert.Contains("app-tab-strip__controls", cut.Markup);
         var activeTabButton = cut.Find("button[role='tab'][aria-selected='true']");
         Assert.Equal("page", activeTabButton.GetAttribute("aria-current"));
         Assert.Contains("Projects", activeTabButton.TextContent, StringComparison.Ordinal);

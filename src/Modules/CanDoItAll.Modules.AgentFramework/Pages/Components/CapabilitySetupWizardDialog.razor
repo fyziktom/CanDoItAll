@@ -351,7 +351,7 @@
                                                OnChange="UploadSkillAsync" />
                                     @if (!string.IsNullOrWhiteSpace(uploadedSkillFileName))
                                     {
-                                        <p class="cda-body-muted break-all">@uploadedSkillFileName</p>
+                                        <p class="app-body-muted break-all">@uploadedSkillFileName</p>
                                     }
                                 </div>
                             }
@@ -429,7 +429,7 @@
                                         <div>
                                             <p class="cda-field-label">@diagnostic.Category.ToString()</p>
                                             <p>@diagnostic.MaskedDetail</p>
-                                            <p class="cda-body-muted">@diagnostic.RepairHint</p>
+                                            <p class="app-body-muted">@diagnostic.RepairHint</p>
                                         </div>
                                     }
                                 </Stack>
@@ -476,7 +476,7 @@
                                         <StatusBadge Tone="warning" Text="No tags" />
                                     }
                                 </Cluster>
-                                <p class="cda-body-muted">@ResolveReviewSummary()</p>
+                                <p class="app-body-muted">@ResolveReviewSummary()</p>
                             </Stack>
                         </SurfaceCard>
                     </Grid>

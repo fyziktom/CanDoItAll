@@ -1,15 +1,15 @@
 @namespace CanDoItAll.AppComponents
 @inject TuningCoordinator TuningCoordinator
 
-<div class="cda-tunable-boundary">
+<div class="app-tunable-boundary">
     @if (IsEnabled)
     {
         <button type="button"
-                class="cda-tunable-boundary__button"
+                class="app-tunable-boundary__button"
                 title="@($"Tune {ComponentName}")"
                 aria-label="@($"Tune {ComponentName}")"
                 @onclick="OpenRequested">
-            <span class="material-icons cda-tunable-boundary__icon" aria-hidden="true">tune</span>
+            <span class="material-icons app-tunable-boundary__icon" aria-hidden="true">tune</span>
         </button>
     }
 

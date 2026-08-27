@@ -53,7 +53,7 @@
           ReopenRecentTab="HandleReopenRecentAsync"
           ClearRecentTabs="HandleClearRecentTabsAsync">
     <BottomUtilities>
-        <div class="cda-shell-utility-stack">
+        <div class="app-shell-utility-stack">
             <TooltipTarget Position="TooltipPosition.Right"
                            Delay="@ShellMenuTooltipDelay"
                            TriggerClass="w-full"
@@ -61,11 +61,11 @@
                            TestId="shell-agent-chats-tooltip">
                 <ChildContent>
                     <button type="button"
-                            class="cda-shell-utility-button"
+                            class="app-shell-utility-button"
                             data-testid="shell-agent-chats-action"
                             @onclick="OpenFloatingConversations">
-                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="smart_toy" /></span>
-                        <span class="cda-shell-utility-label">Chats</span>
+                        <span class="app-shell-utility-icon" aria-hidden="true"><Icon Name="smart_toy" /></span>
+                        <span class="app-shell-utility-label">Chats</span>
                     </button>
                 </ChildContent>
             </TooltipTarget>
@@ -77,11 +77,11 @@
                            TestId="shell-settings-tooltip">
                 <ChildContent>
                     <button type="button"
-                            class="cda-shell-utility-button"
+                            class="app-shell-utility-button"
                             data-testid="shell-settings-action"
                             @onclick="OpenSettingsFromShellAsync">
-                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="settings" /></span>
-                        <span class="cda-shell-utility-label">Settings</span>
+                        <span class="app-shell-utility-icon" aria-hidden="true"><Icon Name="settings" /></span>
+                        <span class="app-shell-utility-label">Settings</span>
                     </button>
                 </ChildContent>
             </TooltipTarget>
@@ -93,11 +93,11 @@
                            TestId="shell-runtime-capabilities-tooltip">
                 <ChildContent>
                     <button type="button"
-                            class="cda-shell-utility-button"
+                            class="app-shell-utility-button"
                             data-testid="shell-runtime-capabilities-action"
                             @onclick="OpenRuntimeCapabilitiesFromShellAsync">
-                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="health_and_safety" /></span>
-                        <span class="cda-shell-utility-label">Runtime capabilities</span>
+                        <span class="app-shell-utility-icon" aria-hidden="true"><Icon Name="health_and_safety" /></span>
+                        <span class="app-shell-utility-label">Runtime capabilities</span>
                     </button>
                 </ChildContent>
             </TooltipTarget>
@@ -106,46 +106,46 @@
                 var safeDatabaseDetails = BuildSafeDatabaseDetails(databaseSelection, currentDatabaseEditor);
                 var recentDatabaseProfiles = RecentDatabaseProfiles;
             }
-            <div class="cda-shell-db-flyout-anchor"
+            <div class="app-shell-db-flyout-anchor"
                  data-testid="database-shell-flyout-anchor">
                 <button type="button"
-                        class="cda-shell-utility-button cda-shell-utility-button--database"
+                        class="app-shell-utility-button app-shell-utility-button--database"
                         disabled="@databaseDialogBusy"
                         aria-haspopup="dialog"
                         data-testid="database-shell-action"
                         @onclick="OpenDatabaseDialogAsync">
-                    <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="database" /></span>
-                    <span class="cda-shell-utility-label">Switch Database</span>
+                    <span class="app-shell-utility-icon" aria-hidden="true"><Icon Name="database" /></span>
+                    <span class="app-shell-utility-label">Switch Database</span>
                 </button>
 
-                <section class="cda-shell-db-flyout"
+                <section class="app-shell-db-flyout"
                          aria-label="Switch database"
                          data-testid="database-shell-flyout">
-                    <span class="cda-shell-db-flyout__arrow" aria-hidden="true"></span>
+                    <span class="app-shell-db-flyout__arrow" aria-hidden="true"></span>
                     <Stack GapScale="LayoutGap.Medium"
-                           Class="cda-shell-db-flyout-card"
+                           Class="app-shell-db-flyout-card"
                            data-testid="database-shell-flyout-card">
                         <Cluster Gap="LayoutGap.Small"
                                  Wrap="FlexWrap.NoWrap"
                                  AlignItems="AlignItems.Center">
-                            <span class="cda-shell-db-flyout__icon" aria-hidden="true"><Icon Name="database" /></span>
-                            <h2 class="cda-shell-db-flyout__heading">Switch Database</h2>
+                            <span class="app-shell-db-flyout__icon" aria-hidden="true"><Icon Name="database" /></span>
+                            <h2 class="app-shell-db-flyout__heading">Switch Database</h2>
                         </Cluster>
 
                         <Stack GapScale="LayoutGap.Small"
-                               Class="cda-shell-db-flyout__section">
-                            <p class="cda-shell-db-flyout__section-title">Current Database</p>
+                               Class="app-shell-db-flyout__section">
+                            <p class="app-shell-db-flyout__section-title">Current Database</p>
                             <Cluster Gap="LayoutGap.Small"
                                      Wrap="FlexWrap.NoWrap"
                                      AlignItems="AlignItems.Center"
                                      Class="w-full">
-                                <span class="cda-shell-db-flyout__status-dot" aria-hidden="true"></span>
-                                <span class="cda-shell-db-flyout__current-name">@(databaseSelection?.DisplayName ?? "Loading runtime profile")</span>
+                                <span class="app-shell-db-flyout__status-dot" aria-hidden="true"></span>
+                                <span class="app-shell-db-flyout__current-name">@(databaseSelection?.DisplayName ?? "Loading runtime profile")</span>
                                 <StatusBadge Tone="success" Text="Active" />
                             </Cluster>
 
-                            <div class="cda-shell-db-flyout__facts">
-                                <div class="cda-shell-db-flyout__fact">
+                            <div class="app-shell-db-flyout__facts">
+                                <div class="app-shell-db-flyout__fact">
                                     <span>Server</span>
                                     <strong>@safeDatabaseDetails.Server</strong>
                                     <CopyButton Value="@safeDatabaseDetails.Server"
@@ -154,7 +154,7 @@
                                                 AriaLabel="Copy safe database server"
                                                 data-testid="database-shell-copy-server" />
                                 </div>
-                                <div class="cda-shell-db-flyout__fact">
+                                <div class="app-shell-db-flyout__fact">
                                     <span>Database</span>
                                     <strong>@safeDatabaseDetails.Database</strong>
                                     <CopyButton Value="@safeDatabaseDetails.Database"
@@ -163,7 +163,7 @@
                                                 AriaLabel="Copy safe database name"
                                                 data-testid="database-shell-copy-database" />
                                 </div>
-                                <div class="cda-shell-db-flyout__fact">
+                                <div class="app-shell-db-flyout__fact">
                                     <span>User</span>
                                     <strong>@safeDatabaseDetails.User</strong>
                                     <CopyButton Value="@safeDatabaseDetails.User"
@@ -180,25 +180,25 @@
                                         Size="CopyButtonSize.Small"
                                         Tone="ButtonTone.Info"
                                         Variant="Variant.Outlined"
-                                        Class="cda-shell-db-flyout__copy"
+                                        Class="app-shell-db-flyout__copy"
                                         AriaLabel="Copy safe database summary"
                                         data-testid="database-shell-copy-summary" />
                         </Stack>
 
                         <Stack GapScale="LayoutGap.Small"
-                               Class="cda-shell-db-flyout__section">
-                            <p class="cda-shell-db-flyout__section-title">Recent Databases</p>
+                               Class="app-shell-db-flyout__section">
+                            <p class="app-shell-db-flyout__section-title">Recent Databases</p>
                             @if (recentDatabaseProfiles.Count == 0)
                             {
-                                <p class="cda-shell-db-flyout__empty">No recent databases yet.</p>
+                                <p class="app-shell-db-flyout__empty">No recent databases yet.</p>
                             }
                             else
                             {
-                                <div class="cda-shell-db-flyout__recent-list">
+                                <div class="app-shell-db-flyout__recent-list">
                                     @foreach (var profile in recentDatabaseProfiles)
                                     {
                                         <button type="button"
-                                                class="cda-shell-db-flyout__recent-button"
+                                                class="app-shell-db-flyout__recent-button"
                                                 disabled="@(databaseDialogBusy || !CanManageDatabases)"
                                                 data-testid="@($"database-shell-recent-profile-{profile.Id:N}")"
                                                 @onclick="@(() => SwitchDatabaseProfileFromFlyoutAsync(profile.Id))">
@@ -215,7 +215,7 @@
                                 Variant="Variant.Text"
                                 Size="ButtonSize.Small"
                                 Disabled="@databaseDialogBusy"
-                                Class="cda-shell-db-flyout__dialog-button"
+                                Class="app-shell-db-flyout__dialog-button"
                                 Click="OpenDatabaseDialogAsync"
                                 data-testid="database-shell-open-dialog" />
                     </Stack>

@@ -2529,7 +2529,7 @@ public sealed partial class AppSmokeTests
             @"() => {
                 const shell = document.querySelector('.cw-workbench-shell');
                 const host = document.querySelector('.cw-canvas-host');
-                const workbar = document.querySelector('.cda-shell-workbar');
+                const workbar = document.querySelector('.app-shell-workbar');
                 const hostBounds = host?.getBoundingClientRect();
                 const workbarBounds = workbar?.getBoundingClientRect();
                 const canvasLayers = Array.from(document.querySelectorAll('.cw-workbench__canvas'));
