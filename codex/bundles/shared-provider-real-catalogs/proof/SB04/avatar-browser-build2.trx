@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="e4815bb0-a1b4-4e3c-a6fc-a10e99768a7e" name="lucys@LUCYSPOWER 2026-08-27 15:15:19" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T15:15:19.3442363-04:00" queuing="2026-08-27T15:15:19.3442368-04:00" start="2026-08-27T15:15:07.8603381-04:00" finish="2026-08-27T15:16:08.9468421-04:00" />
+  <TestSettings name="default" id="9e95f089-936e-42cf-98a2-0e3ba317809d">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_15_15_19" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="fd07647a-a724-4a6b-be9a-ccc5036388e9" testId="9fe363cc-cfa9-149a-a7df-f8d48669b706" testName="CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(urlVariable: &quot;CANDOITALL_REAL_SHARED_URL&quot;, label: &quot;source&quot;)" computerName="LUCYSPOWER" duration="00:00:49.5227972" startTime="2026-08-27T15:15:19.3227132-04:00" endTime="2026-08-27T15:16:08.8381792-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fd07647a-a724-4a6b-be9a-ccc5036388e9">
+      <Output>
+        <ErrorInfo>
+          <Message>System.TimeoutException : Timeout 45000ms exceeded.
+Call log:
+  - waiting for Locator("article[data-testid^='llm-chat-definition-']").First</Message>
+          <StackTrace>   at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 201&#xD;
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal, String title) in /_/src/Playwright/Transport/Connection.cs:line 499&#xD;
+   at Microsoft.Playwright.Core.Frame.GetAttributeAsync(String selector, String name, FrameGetAttributeOptions options) in /_/src/Playwright/Core/Frame.cs:line 397&#xD;
+   at CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(String urlVariable, String label) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SimpleChatAvatarBrowserTests.cs:line 22&#xD;
+   at CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(String urlVariable, String label) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SimpleChatAvatarBrowserTests.cs:line 61&#xD;
+   at CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(String urlVariable, String label) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SimpleChatAvatarBrowserTests.cs:line 61&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a715c157-a042-426e-ac8e-c36f3b6684fe" testId="4bccf792-27bc-2046-4f3c-fe90dc39ce79" testName="CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(urlVariable: &quot;CANDOITALL_REAL_CLIENT_URL&quot;, label: &quot;client&quot;)" computerName="LUCYSPOWER" duration="00:00:10.5562558" startTime="2026-08-27T15:15:08.7410551-04:00" endTime="2026-08-27T15:15:19.3075293-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a715c157-a042-426e-ac8e-c36f3b6684fe" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(urlVariable: &quot;CANDOITALL_REAL_CLIENT_URL&quot;, label: &quot;client&quot;)" storage="c:\repositories\candoitall\tests\playwright\candoitall.tests.playwright\bin\debug\net10.0\candoitall.tests.playwright.dll" id="4bccf792-27bc-2046-4f3c-fe90dc39ce79">
+      <Execution id="a715c157-a042-426e-ac8e-c36f3b6684fe" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests" name="Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(urlVariable: &quot;CANDOITALL_REAL_SHARED_URL&quot;, label: &quot;source&quot;)" storage="c:\repositories\candoitall\tests\playwright\candoitall.tests.playwright\bin\debug\net10.0\candoitall.tests.playwright.dll" id="9fe363cc-cfa9-149a-a7df-f8d48669b706">
+      <Execution id="fd07647a-a724-4a6b-be9a-ccc5036388e9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests" name="Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="9fe363cc-cfa9-149a-a7df-f8d48669b706" executionId="fd07647a-a724-4a6b-be9a-ccc5036388e9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4bccf792-27bc-2046-4f3c-fe90dc39ce79" executionId="a715c157-a042-426e-ac8e-c36f3b6684fe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="2" executed="2" passed="1" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.14]   Discovering: CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:00:00.24]   Discovered:  CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:00:00.28]   Starting:    CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:01:00.41]       System.TimeoutException : Timeout 45000ms exceeded.
+Call log:
+  - waiting for Locator("article[data-testid^='llm-chat-definition-']").First&#xD;
+[xUnit.net 00:01:00.41]       Stack Trace:&#xD;
+[xUnit.net 00:01:00.41]         /_/src/Playwright/Transport/Connection.cs(201,0): at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls)&#xD;
+[xUnit.net 00:01:00.41]         /_/src/Playwright/Transport/Connection.cs(499,0): at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal, String title)&#xD;
+[xUnit.net 00:01:00.41]         /_/src/Playwright/Core/Frame.cs(397,0): at Microsoft.Playwright.Core.Frame.GetAttributeAsync(String selector, String name, FrameGetAttributeOptions options)&#xD;
+[xUnit.net 00:01:00.41]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SimpleChatAvatarBrowserTests.cs(22,0): at CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(String urlVariable, String label)&#xD;
+[xUnit.net 00:01:00.41]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SimpleChatAvatarBrowserTests.cs(61,0): at CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(String urlVariable, String label)&#xD;
+[xUnit.net 00:01:00.41]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SimpleChatAvatarBrowserTests.cs(61,0): at CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(String urlVariable, String label)&#xD;
+[xUnit.net 00:01:00.41]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:01:00.42]   Finished:    CanDoItAll.Tests.Playwright&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T15:16:08.8428530-04:00">
+        <Text>[xUnit.net 00:01:00.41]     CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset(urlVariable: "CANDOITALL_REAL_SHARED_URL", label: "source") [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

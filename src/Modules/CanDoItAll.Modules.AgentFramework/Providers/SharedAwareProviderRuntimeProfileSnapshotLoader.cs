@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -15,7 +16,8 @@ internal sealed class DatabaseProviderRuntimeProfileSnapshotLoader(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ProviderProfileMapper providerMapper,
     SharedProviderProfileMapper sharedProviderMapper,
-    SharedProviderRuntimeProfileMaterializer sharedProviderMaterializer) :
+    SharedProviderRuntimeProfileMaterializer sharedProviderMaterializer,
+    IOptions<ProviderInitializationOptions> providerInitialization) :
     IProviderRuntimeProfileSnapshotLoader
 {
     public async Task<IReadOnlyList<CanonicalProviderRuntimeProfile>>
@@ -49,9 +51,11 @@ internal sealed class DatabaseProviderRuntimeProfileSnapshotLoader(
             }
         }
 
-        projected.Add(new CanonicalProviderRuntimeProfile(
-            providerMapper.CreateRuntimeFallback(),
-            ConfigurationRevision: null));
+        if (providerInitialization.Value.SeedDefaults) {
+            projected.Add(new CanonicalProviderRuntimeProfile(
+                providerMapper.CreateRuntimeFallback(),
+                ConfigurationRevision: null));
+        }
         return projected
             .OrderBy(
                 item => item.Profile.Name,
@@ -66,9 +70,9 @@ internal sealed class DatabaseProviderRuntimeProfileSnapshotLoader(
         if (providerId ==
             ProviderProfileWellKnownIds.RuntimeFallbackOllama)
         {
-            return new CanonicalProviderRuntimeProfile(
-                providerMapper.CreateRuntimeFallback(),
-                ConfigurationRevision: null);
+            return providerInitialization.Value.SeedDefaults
+                ? new CanonicalProviderRuntimeProfile(providerMapper.CreateRuntimeFallback(), ConfigurationRevision: null)
+                : null;
         }
 
         await using var dbContext =

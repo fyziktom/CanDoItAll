@@ -1,5 +1,10 @@
 # Normalized Requirements
 
+- R6 / N006: Avatar agrees across card/editor/picker, including default, rename,
+  selected/uploaded image and reset.
+- R7 / N007: Rebuild Docker pair preserving data; start isolated provider-free third
+  client and hand off exact source connection instructions.
+
 - R1 / N001: Kind change clears incompatible catalog, pricing and connection state.
   Successful Ollama discovery exactly replaces model membership with /api/tags names.
 - R2 / N002: Discovery replaces stale model membership and removes stale price rows.

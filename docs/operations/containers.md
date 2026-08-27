@@ -61,6 +61,15 @@ Normal shutdown preserves the `app-data` and `db-data` named volumes. Do not add
 
 ## Workstation Web Host
 
+### Blank provider setup
+
+For a new manual-setup client set `AgentFramework__Providers__SeedDefaults=false`.
+This skips default provider/credential bootstrap and excludes the generated runtime
+Ollama fallback from the canonical provider catalog. Default is `true` for compatibility.
+It does not delete existing providers or secrets, nor disable manually configured or
+imported shared providers. Use a fresh database and app-data volume for a blank instance.
+Keep this setting across restarts; setting it back to `true` enables normal seeding.
+
 ### Local browser access with API authorization enabled
 
 The headless container profile disables OS desktop integrations, not interactive browser

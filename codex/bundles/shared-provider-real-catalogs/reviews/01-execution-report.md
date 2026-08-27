@@ -145,6 +145,7 @@ ledger is Unavailable; this proves token/image accounting, not monetary settleme
 | SB01 | Pass | Pass | Source save/discovery/publication, exact client sync, real runtime | Completed | bundle://proof/SB01/manifest.md |
 | SB02 | Pass after each SB01 repair | Pass | Both upstreams, all requested modalities, source usage and health | Completed | bundle://proof/SB02/manifest.md |
 | SB03 | Pass; normal-browser denial reproduced | Pass | Browser creation/execution/reload, source usage, HTTP/file rejection, both hosts | Completed | bundle://proof/SB03/manifest.md; bundle://proof/SB03/semantic-invariants.md |
+| SB04 | Pass; avatar mismatch and seeded fresh providers reproduced | Pass | Card/editor/picker persistence; default/manual provider initialization; three healthy apps | Completed | bundle://proof/SB04/manifest.md |
 
 ## Browser Validation Analytics
 
@@ -163,6 +164,8 @@ are independent oracles, and SQL is read-only usage evidence.
 | SB03 | 5212 Simple Chats Definitions and New definition | 1920x1080 | Ordinary Playwright MCP browser; zero injected tokens; before/after DOM | bundle://proof/SB03/definitions-after.png; bundle://proof/SB03/new-definition-dialog.png | Pass: warning gone, create/save controls visible, dialog fits |
 | SB03 | 5212 Simple Chats conversations | 1920x1080 | bundle://proof/SB03/transcripts/browser-final.trx plus Playwright MCP reload | bundle://proof/SB03/openai-chat-viewport.png; bundle://proof/SB03/ollama-chat-viewport.png | Pass: actual OpenAI/Ollama replies persist after reload |
 | SB03 | 5210 Simple Chats conversation | 1920x1080 | Fresh token-free browser creation/run and MCP reload | bundle://proof/SB03/source-chat-viewport.png | Pass: source-local provider also executes |
+| SB04 | 5210/5212 Simple Chat settings | 1920x1080 | Two real-browser cases pass twice on final image; bundle://proof/SB04/avatar-browser-confirmed.trx | bundle://proof/SB04/browser/client-selected-editor.png; bundle://proof/SB04/browser/client-existing-picker.png | Pass: card/editor/picker, selected image and reset agree after save/reload |
+| SB04 | 5214 Providers/Sharing and New Simple Chat | 1920x1080 | Ordinary Playwright MCP, no injected token and no saved configuration | bundle://proof/SB04/browser/fresh-empty-sharing.png; bundle://proof/SB04/browser/fresh-simple-chat-create.png | Pass: zero providers/sources/imports, Add source and definition creation accessible |
 
 UI composition: provider list/editor remains the primary surface; compact badges and existing
 tabs are retained. Price table owns horizontal overflow. Editor/dialog/chat bodies own
@@ -180,6 +183,8 @@ provider/Switch agent button wrapping is unchanged, not a new layout improvement
 | N003 faithful client mirror | Solved | bundle://proof/SB02/browser/metadata-real-openai-parity.json; bundle://proof/SB02/browser/metadata-real-ollama-parity.json; exact dropdowns and real nondefault requests |
 | N004 new bundle and real validation | Solved | bundle://proof/SB01/transcripts/build6-runtime-ui.trx; bundle://proof/SB02/browser/execution-result.json; bundle://proof/SB02/transcripts/real-runtime-evidence.txt |
 | N005 normal local Simple Chats access | Solved | bundle://proof/SB03/transcripts/regression-red.trx; bundle://proof/SB03/transcripts/component-final.trx; bundle://proof/SB03/transcripts/integration-final.trx; bundle://proof/SB03/transcripts/browser-final.trx; bundle://proof/SB03/transcripts/runtime-evidence.txt |
+| N006 avatar mismatch | Solved | bundle://proof/SB04/avatar-red.trx; bundle://proof/SB04/avatar-green.trx; bundle://proof/SB04/avatar-browser-confirmed.trx |
+| N007 rebuilt pair and fresh manual client | Solved | bundle://proof/SB04/manifest.md; bundle://subbundles/04-avatar-and-fresh-client/HANDOFF.md |
 
 ## Remaining Limits And Handoff
 
@@ -227,3 +232,41 @@ CodeAnalytics before/after snapshots and limitations are in bundle://proof/SB03/
 Components MCP was unavailable; existing component source and actual browser UI were used,
 with no component-library edits. SB01/SB02 hashes remain historical checkpoints; SB03's
 index owns current changed files and explicitly distinguishes exact versus Git-blob provenance.
+
+## SB04 Avatar And Fresh-Client Closure
+
+SB04 supersedes only the deployment/hand-off checkpoint, not the earlier real-provider
+execution evidence. Source/card seeded avatars by DefinitionId while settings used Name.
+Editor and nested picker now share stable identity; explicit image URLs still win.
+Avatar red: 3 fail/12 pass; green: all 15. Final Chrome cases pass on source/client twice,
+including saved bundled avatar and reset after reload. Rename/upload cases are component
+proof, not a claim of live browser file-upload testing.
+
+Fresh bootstrap needed explicit SeedDefaults=false; default behavior stays true. Tests
+cover empty persisted/runtime providers, missing fallback, repeated initialization and
+manual save persistence. A real UI count defect was also reproduced: stale file-seed
+counts did not equal the canonical provider list. All five totals surfaces now agree.
+Two initialization plus five workspace-evidence cases pass; 12 registry cases pass.
+Total distinct focused scope: 36, with no unfiltered suite or project/schema changes.
+
+Image avatar-blank-client-20260827-2 was built and deployed on 5210, 5212 and new 5214.
+Pair volumes/history are retained with rollback containers; 5032 untouched. New database,
+role, app volume, API signing key and password are isolated. After final recreation, SQL
+shows zero providers, sources, imports and secret records. Actual UI shows matching zero
+counts. New-source and definition dialogs open without saving any fresh-client setup.
+All health endpoints return 200 Healthy; the fresh app's Docker health is healthy.
+Fresh-to-source Docker DNS works and unauthenticated catalog returns 401; existing client's
+UI Test succeeds with its stored JWT. Actual new-client import is left to the user.
+
+The test's earlier failed attempts are retained: clicks raced prerender and delayed
+database confirmation, navigation raced URL updates, and reset reads preceded rerender.
+Final helper explicitly confirms first-visit database, waits for interactive workspace
+tabs, and asserts reset state before reading the image. Final two passes and repeat
+prove the repaired test without suppressing failed assertions or changing app auth.
+
+Visual review at 1920x1080 confirms avatar/selection/action readability, editor Save/Cancel,
+picker Close, fresh zero counts and available Add source. Existing New provider wrapping
+and AI-generation help showing a shared route are not changed by this bounded repair.
+No new avatar generation or paid inference was used. Provider defaults were not deleted.
+See bundle://proof/SB04/manifest.md for exact filters, artifacts and architecture scope,
+and bundle://subbundles/04-avatar-and-fresh-client/HANDOFF.md for URLs/scopes/lifecycle.

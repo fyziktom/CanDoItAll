@@ -57,6 +57,8 @@ public static class RuntimeHostServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
 
+        services.Configure<ProviderInitializationOptions>(configuration.GetSection(ProviderInitializationOptions.SectionName));
+
         services.AddSecurityModule(configuration);
         services.AddAgentFrameworkProviderManagement();
         services.AddWorkspaceModule();
@@ -186,7 +188,8 @@ public sealed class AppDatabaseBootstrapper(
     ISecretVault secretVault,
     IEnumerable<IProviderRuntimeProfileSnapshotInitializer>
         providerRuntimeProfileSnapshotInitializers,
-    ILogger<AppDatabaseBootstrapper> logger) : IAppDatabaseBootstrapper
+    ILogger<AppDatabaseBootstrapper> logger,
+    IOptions<ProviderInitializationOptions> providerInitialization) : IAppDatabaseBootstrapper
 {
     private static readonly Guid ManagedDeliveryUnitPartyId = Guid.Parse("10BE49B1-EF4D-4A58-B9EA-B3F7D40F31A1");
     private static readonly Guid ManagedProductOwnerPartyId = Guid.Parse("A6BBAD2B-9D18-40EA-95B5-6D73C20C3078");
@@ -763,6 +766,11 @@ public sealed class AppDatabaseBootstrapper(
         AppDbContext dbContext,
         CancellationToken cancellationToken)
     {
+        if (!providerInitialization.Value.SeedDefaults) {
+            logger.LogInformation("Default provider seeding is disabled for profile {ProfileId}; explicit provider configuration is required.", profile.Profile.Id);
+            return;
+        }
+
         var timestamp = DateTimeOffset.UtcNow;
         var changed = false;
         var openAiSecretId = await EnsureDefaultOpenAiSecretAsync(dbContext, cancellationToken);

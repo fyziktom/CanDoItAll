@@ -33,6 +33,8 @@ proof/
 codex/bundles/shared-provider-real-catalogs/proof/*
 !codex/bundles/shared-provider-real-catalogs/proof/SB03/
 !codex/bundles/shared-provider-real-catalogs/proof/SB03/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB04/
+!codex/bundles/shared-provider-real-catalogs/proof/SB04/**
 *.nupkg
 *.snupkg
 *.binlog

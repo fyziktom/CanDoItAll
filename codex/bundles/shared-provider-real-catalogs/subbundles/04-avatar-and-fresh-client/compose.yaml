@@ -1,0 +1,86 @@
+name: candoitall-spui-fresh
+
+services:
+  app:
+    image: candoitall-shared-providers-ui:avatar-blank-client-20260827-2
+    user: "1654:1654"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      CANDOITALL_HOST_BINDING_ID: shared-providers-ui-fresh-client
+      AgentFramework__Providers__SeedDefaults: "false"
+      Api__Authorization__Enabled: "true"
+      Api__Authorization__Issuer: CanDoItAll.SharedProviders.UI.FreshClient
+      Api__Authorization__Audience: CanDoItAll.SharedProviders.UI.FreshClient
+      Api__Authorization__SigningKeyFile: /run/secrets/api-signing-key
+      ControlPlane__RootPath: /data/control-plane
+      ControlPlane__LogsRootPath: /data/logs
+      ControlPlane__StateRootPath: /data/state
+      ControlPlane__RuntimeTemporaryRootPath: /tmp/candoitall
+      Database__Provider: PostgreSql
+      Database__ConnectionString: Host=candoitall-spui-db;Port=5432;Database=candoitall_e2e_fresh_client;Username=candoitall_e2e_fresh_client;SSL Mode=Disable;GSS Encryption Mode=Disable
+      Database__PasswordFile: /run/secrets/db-password
+      DataProtection__KeyProtection__Provider: UnprotectedDevelopment
+      SecretVault__Provider: DataProtectionFile
+      SecretVault__UsageProfile: Headless
+      SecretVault__AllowInsecureDevelopmentProviders: "true"
+      SecretVault__VaultPath: /data/secrets
+      RuntimeHost__Profile: LinuxHeadless
+      Storage__WorkspaceRoot: /data/workspace
+      FileTools__DesktopLaunch__Enabled: "false"
+      DevelopmentManager__TuningModeEnabled: "true"
+      Workflows__ExampleSeed__Enabled: "false"
+      Workflows__ExampleSeed__SeedSampleWorkspaceFiles: "false"
+      WebHost__HttpsRedirectionEnabled: "false"
+      WebHost__LocalOperatorUi__TrustedAddresses__0: "172.31.0.1"
+      XDG_CONFIG_HOME: /data/config
+      XDG_DATA_HOME: /data
+      XDG_STATE_HOME: /data/state
+    ports:
+      - "127.0.0.1:5214:8080"
+    volumes:
+      - app-data:/data
+      - credentials:/run/secrets:ro
+    networks:
+      - shared-app
+      - database
+      - local-ingress
+    healthcheck:
+      test: [CMD, /usr/local/bin/busybox, wget, --spider, --quiet, "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 2m
+      retries: 12
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 3g
+    cpus: 3.0
+    pids_limit: 512
+    stop_grace_period: 30s
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  app-data:
+  credentials:
+    external: true
+    name: candoitall-spui-fresh-credentials
+
+networks:
+  shared-app:
+    external: true
+    name: candoitall-spui-app
+  database:
+    external: true
+    name: candoitall-spui-db
+  local-ingress:
+    external: true
+    name: candoitall-spui-host

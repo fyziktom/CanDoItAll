@@ -2,10 +2,9 @@
 
 ## Verdict
 
-Pass. SB03 now covers the previously missed token-free local browser path. Behavioral and
-architecture gates pass; the latest canonical validation transcript is under proof/SB03.
-Source and proof-artifact SHA256 indexes are refreshed after the final documentation edits
-and checked before handoff.
+Pass. SB04 adds the requested avatar correction and provider-free manual client.
+Behavioral and architecture gates pass. Latest closure evidence is proof/SB04/manifest.md;
+SB01-SB03 hashes and transcripts remain historical checkpoints, not hashes of SB04 edits.
 
 This is the primary agent's explicit adversarial review, not an independent-review claim.
 
@@ -63,6 +62,32 @@ blue-circle/orange-square input. No rendering-only label change substitutes for 
 - Exact test scopes and raw-input closure: reviews/01-execution-report.md.
 
 N001-N005 have concrete Solved rows. No required behavioral acceptance item remains open.
+
+## SB04 Final Verification
+
+- N006/N007 have concrete Solved rows, making N001-N007 complete.
+- Avatar mismatch was reproduced on the real UI and in three failing component cases.
+  Fifteen component cases pass after the fix. Final source/client browser cases pass
+  twice, with catalog/editor/picker parity, selected-image persistence and reset reload.
+- Default initialization remains compatible; opt-out is real production configuration,
+  not database deletion. Empty and manual-provider paths plus all five canonical totals
+  are asserted through real PostgreSQL. Seven affected integration cases and 12 registry
+  cases pass. Distinct focused total is 36; no full-suite claim.
+- Final image2 runs on 5210/5212/5214. Fresh DB has zero providers/sources/imports/secrets
+  after recreation. No local providers or source credentials were copied into 5214.
+- Fresh normal browser can open Add source and New definition; both remain unsaved.
+  Existing client source Test succeeds; fresh anonymous Docker-DNS catalog call gets401.
+- All three app health endpoints return 200 Healthy; new container health is healthy.
+- Inspected avatar editor, picker, fresh Sharing and new-definition screenshots. Existing
+  long-list/new-provider wrapping and shared-image help route are explicitly not changed.
+- Architecture remains within typed existing owners; scoped before/after ProviderManagement
+  graph has 245 edges and zero cycles, with eight existing Info diagnostics. Direct review
+  covers changed Core/Composition owners. No new project/interface/schema/partial split.
+- Earlier failing browser harness attempts remain in proof; final helper handles actual
+  first-visit startup and interactive rendering. No injected browser JWT or auth bypass.
+- Handoff includes all three local addresses, Docker source root, exact two token scopes,
+  secret UI, Allow HTTP setting and expiry. Fresh manual import is intentionally unperformed.
+- 5032, existing volumes/history and unrelated repositories were not modified.
 
 ## SB03 Reopened-Path Verification
 

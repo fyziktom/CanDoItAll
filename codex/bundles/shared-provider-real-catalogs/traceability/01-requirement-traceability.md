@@ -2,6 +2,8 @@
 
 | Input or requirement | Owning subbundle | Actual closure proof | Status |
 | --- | --- | --- | --- |
+| N006 / R6 avatar consistency | SB04 | proof/SB04/manifest.md; 15 component and two real browser checks | Solved |
+| N007 / R7 fresh manual-setup client | SB04 | proof/SB04/manifest.md; final Docker image, canonical zero counts, isolated DB, UI setup handoff | Solved |
 | N005 / R5 local Simple Chats denied | SB03; SB02 normal-browser handoff restored | proof/SB03/manifest.md; 38 component/9 HTTP/3 real browser cases; complete source usage | Solved |
 | N001 / R1 polluted Ollama | SB01 + SB02 | component-final.trx; build6-ollama-ui.trx; proof/SB02/browser/metadata-real-ollama-parity.json; 72 real IDs and zero invented rates | Solved |
 | N002 / R2 fake OpenAI and rates | SB01 + SB02 | failing-first.trx -> unit-final.trx; build6-openai-ui.trx; proof/SB02/browser/metadata-real-openai-parity.json | Solved |

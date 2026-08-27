@@ -97,7 +97,8 @@ public sealed class ProviderCatalogProjectionFailureTests
                         dbContextFactory,
                         providerMapper,
                         new SharedProviderProfileMapper(),
-                        new SharedProviderRuntimeProfileMaterializer()),
+                        new SharedProviderRuntimeProfileMaterializer(),
+                        Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
                     [],
                     [observer],
                     logger);
@@ -633,7 +634,8 @@ public sealed class ProviderCatalogProjectionFailureTests
                     dbContextFactory,
                     providerMapper,
                     new SharedProviderProfileMapper(),
-                    new SharedProviderRuntimeProfileMaterializer()),
+                    new SharedProviderRuntimeProfileMaterializer(),
+                    Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
                 [],
                 [new RecordingCommitObserver()],
                 new RecordingLogger<
@@ -737,7 +739,8 @@ public sealed class ProviderCatalogProjectionFailureTests
                 dbContextFactory,
                 providerMapper,
                 new SharedProviderProfileMapper(),
-                new SharedProviderRuntimeProfileMaterializer()),
+                new SharedProviderRuntimeProfileMaterializer(),
+                Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
             [],
             [new RecordingCommitObserver()],
             new RecordingLogger<

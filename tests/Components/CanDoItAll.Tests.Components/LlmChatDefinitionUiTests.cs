@@ -18,6 +18,59 @@ public sealed class LlmChatDefinitionUiTests
     private static readonly Guid DefinitionId = Guid.Parse("10101010-1010-1010-1010-101010101010");
     private static readonly Guid ProviderId = Guid.Parse("20202020-2020-2020-2020-202020202020");
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-02.jpg")]
+    [InlineData("data:image/png;base64,AQID")]
+    public void Existing_avatar_matches_catalog_in_editor_and_picker_and_is_preserved_on_save(string avatarUrl) {
+        var editor = CreateEditor(avatarUrl: avatarUrl);
+        var gateway = new StubDefinitionGateway(editor);
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var catalog = context.Render<LlmChatDefinitionCatalogPanel>();
+        var expected = catalog.WaitForElement($"[data-testid='llm-chat-definition-{DefinitionId:D}'] img").GetAttribute("src");
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId));
+
+        Assert.Equal(expected, cut.WaitForElement("[data-testid='llm-chat-definition-avatar-summary'] img").GetAttribute("src"));
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        Assert.Equal(expected, cut.WaitForElement("[data-testid='llm-chat-definition-avatar-dialog'] img").GetAttribute("src"));
+        cut.Find("[data-testid='llm-chat-definition-avatar-close']").Click();
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(avatarUrl, gateway.UpdatedMutation?.AvatarImageUrl));
+    }
+
+    [Fact]
+    public void Renaming_existing_definition_keeps_its_default_avatar_identity() {
+        var gateway = new StubDefinitionGateway(CreateEditor());
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId));
+        cut.WaitForElement("[data-testid='llm-chat-definition-name']");
+        cut.Find("[data-testid='llm-chat-definition-name']").Change("Renamed assistant");
+
+        Assert.Equal(DefinitionId.ToString("D"), Assert.IsType<ConversationAvatarPresentation>(
+            cut.FindComponent<ConversationIdentityFields>().Instance.Avatar).Seed);
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-avatar-dialog']");
+        Assert.Equal(DefinitionId.ToString("D"), cut.FindComponent<AvatarPicker>().FindComponent<Avatar>().Instance.DefaultImageSeed);
+    }
+
+    [Fact]
+    public void Resetting_explicit_avatar_restores_catalog_default_in_both_previews() {
+        var gateway = new StubDefinitionGateway(CreateEditor(avatarUrl: AgentAvatarImageCatalog.BundledAvatarUrls[1]));
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId));
+        cut.WaitForElement("[data-testid='llm-chat-definition-avatar-clear']").Click();
+
+        var avatar = Assert.IsType<ConversationAvatarPresentation>(cut.FindComponent<ConversationIdentityFields>().Instance.Avatar);
+        Assert.Equal(string.Empty, avatar.ImageUrl);
+        Assert.Equal(DefinitionId.ToString("D"), avatar.Seed);
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        var preview = cut.WaitForElement("[data-testid='llm-chat-definition-avatar-dialog'] img");
+        Assert.Equal(cut.Find("[data-testid='llm-chat-definition-avatar-summary'] img").GetAttribute("src"), preview.GetAttribute("src"));
+    }
+
     [Fact]
     public void Shared_definition_shows_labels_but_saves_nondefault_route_and_forbids_override() {
         var gateway = new StubDefinitionGateway(CreateEditor());
@@ -377,13 +430,14 @@ public sealed class LlmChatDefinitionUiTests
         long concurrencyToken = 7,
         LlmChatDefinitionStatus status = LlmChatDefinitionStatus.Draft,
         Guid? definitionId = null,
-        IReadOnlyList<string>? tags = null)
+        IReadOnlyList<string>? tags = null,
+        string avatarUrl = "")
     {
         var definition = new LlmChatDefinitionListItem(
             definitionId ?? DefinitionId,
             name,
             summary,
-            string.Empty,
+            avatarUrl,
             status,
             3,
             concurrencyToken,

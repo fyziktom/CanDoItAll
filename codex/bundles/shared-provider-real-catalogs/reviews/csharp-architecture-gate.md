@@ -1,5 +1,22 @@
 # C# Architecture Gate Result
 
+## SB04 avatar and initialization gate
+
+Pass. See architecture/05-blank-client-initialization.md and proof/SB04/manifest.md.
+Stable avatar identity stays in the editor/picker boundary. Typed default-preserving
+initialization options stay in ProviderManagement and are bound by Composition. Bootstrap
+owns persisted seeds; canonical loader alone owns fallback inclusion; existing workspace
+owner counts that canonical list. Registry loses duplicate policy. No new project,
+reference, interface, schema, partial file or service-locator composition was introduced.
+Existing Core partial cluster remains an existing facade, not a claimed extraction.
+
+Before/after scoped CodeAnalytics: 70 to 71 documents, 245 edges, zero scoped cycles,
+eight unchanged informational DI-factory diagnostics, no blocking error. Direct review
+covers the additional Composition/Core edits; no whole-solution claim. Fifteen component,
+seven integration, 12 registry and two live-browser cases pass; real zero-provider Docker
+recreation proves the production consumer. Original provider defaults remain enabled
+unless the operator explicitly opts out. No auth change or silent fallback was added.
+
 ## SB03 local browser identity gate
 
 Status: Pass. The existing Web infrastructure identity owner retains circuit principal

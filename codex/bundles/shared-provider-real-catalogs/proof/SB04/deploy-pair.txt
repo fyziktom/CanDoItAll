@@ -1,0 +1,5 @@
+sha256:86ceebd6469c3d8dc80b81b773b99cbf2dc6d8d33fc7b001d40bf639dd24f396
+candoitall-spui-shared local UI: all published bindings are loopback; explicit gateway 172.31.0.1.
+candoitall-spui-shared started; rollback retained as candoitall-spui-shared-before-avatar-20260827; named data volumes preserved.
+candoitall-spui-client local UI: all published bindings are loopback; explicit gateway 172.31.0.1.
+candoitall-spui-client started; rollback retained as candoitall-spui-client-before-avatar-20260827; named data volumes preserved.

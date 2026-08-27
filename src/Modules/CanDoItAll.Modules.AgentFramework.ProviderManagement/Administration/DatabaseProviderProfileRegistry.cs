@@ -49,31 +49,14 @@ internal sealed class DatabaseProviderProfileRegistry(
     ILogger<DatabaseProviderProfileRegistry> logger) :
     IProviderProfileRegistry
 {
-    public async Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
+    public Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
         CancellationToken cancellationToken = default)
-    {
-        var mappedProviders = await LoadDatabaseProvidersAsync(cancellationToken);
-        return mappedProviders
-            .Where(item =>
-                item.Id != ProviderProfileWellKnownIds.RuntimeFallbackOllama)
-            .Append(providerMapper.CreateRuntimeFallback())
-            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
+        => LoadDatabaseProvidersAsync(cancellationToken);
 
-    public async Task<AgentFrameworkProviderProfile?> GetProviderAsync(
+    public Task<AgentFrameworkProviderProfile?> GetProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default)
-    {
-        if (providerId ==
-            ProviderProfileWellKnownIds.RuntimeFallbackOllama)
-        {
-            return providerMapper.CreateRuntimeFallback();
-        }
-
-        var provider = await LoadDatabaseProviderAsync(providerId, cancellationToken);
-        return provider;
-    }
+        => LoadDatabaseProviderAsync(providerId, cancellationToken);
 
     public async Task<AgentFrameworkProviderProfileEditorModel> GetProviderEditorAsync(
         Guid? providerId = null,

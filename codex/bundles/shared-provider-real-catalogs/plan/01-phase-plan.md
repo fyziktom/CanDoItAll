@@ -5,6 +5,7 @@
 1. SB01 authoritative catalog/pricing refresh and kind-change isolation.
 2. SB02 rebuild both apps, UI setup against real providers, parity/execution/usage proof.
 3. SB03 repair normal-browser Simple Chats access and revalidate both deployed hosts.
+4. SB04 consistent avatars, rebuilt pair and isolated manual-setup third client.
 
 ## Subbundle Dependency Map
 
@@ -12,6 +13,7 @@
 flowchart LR
   SB01["SB01 catalog authority"] --> SB02["SB02 real two-instance proof"]
   SB02 --> SB03["SB03 normal-browser access and API boundary"]
+  SB03 --> SB04["SB04 avatar and fresh-client handoff"]
   Real["Reachable real upstreams"] --> SB02
 ```
 
