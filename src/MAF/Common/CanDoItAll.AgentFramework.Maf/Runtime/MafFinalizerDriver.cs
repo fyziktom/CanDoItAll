@@ -16,6 +16,16 @@ internal static class MafFinalizerDriver
         bool hasApprovalTools)
         => finalizerMode != AgentFinalizerMode.Required && !hasApprovalTools;
 
+    public static bool? ResolveAllowMultipleToolCalls(
+        bool hasTools,
+        bool supportsParallelFunctionTools,
+        AgentFinalizerMode finalizerMode,
+        bool hasApprovalTools)
+        => hasTools
+            ? supportsParallelFunctionTools &&
+                ShouldAllowMultipleToolCalls(finalizerMode, hasApprovalTools)
+            : null;
+
     public static bool ShouldRequestMissingRequiredFinalizerRepair(
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode,

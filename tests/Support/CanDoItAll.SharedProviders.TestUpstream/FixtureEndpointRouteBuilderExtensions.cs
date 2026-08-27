@@ -6,6 +6,7 @@ internal static class FixtureEndpointRouteBuilderExtensions
     {
         endpoints.MapGet("/health", () => TypedResults.Ok(new FixtureHealthResponse("healthy")));
         endpoints.MapOpenAiFixtureEndpoints();
+        endpoints.MapOllamaFixtureEndpoints();
         endpoints.MapComfyUiFixtureEndpoints();
         endpoints.MapTestControlEndpoints();
         return endpoints;

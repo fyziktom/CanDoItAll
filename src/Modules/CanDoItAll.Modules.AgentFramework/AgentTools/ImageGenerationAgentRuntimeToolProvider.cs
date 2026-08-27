@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -19,13 +20,15 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
     private readonly IAgentImageGenerationService imageGenerationService;
     private readonly IWorkspacePathResolutionService workspacePaths;
+    private readonly ILogger<ImageGenerationAgentRuntimeToolProvider>? logger;
     private readonly ImageGenerationToolBuilder toolBuilder;
 
     public ImageGenerationAgentRuntimeToolProvider(
         IProviderRuntimeProfileSource providerSource,
         IWorkspacePathResolutionService workspacePaths,
         IAgentImageGenerationService imageGenerationService,
-        IServiceProvider services)
+        IServiceProvider services,
+        ILogger<ImageGenerationAgentRuntimeToolProvider>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(providerSource);
         ArgumentNullException.ThrowIfNull(workspacePaths);
@@ -34,6 +37,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
         this.imageGenerationService = imageGenerationService;
         this.workspacePaths = workspacePaths;
+        this.logger = logger;
 
         toolBuilder = new ImageGenerationToolBuilder(
             this,
@@ -97,6 +101,44 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         }
 
         private async Task<ImageGenerationCreateResult> ImageGenerationCreateAsync(
+            AgentDefinition agent,
+            ProviderProfile runtimeProvider,
+            AgentImageGenerationAccessSettings access,
+            ImageGenerationCreateInput request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await ImageGenerationCreateCoreAsync(
+                        agent,
+                        runtimeProvider,
+                        access,
+                        request,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                var diagnosticFailureType = exception is
+                    ProviderFailureBoundaryException boundaryException
+                        ? boundaryException.DiagnosticFailureType
+                        : null;
+                owner.logger?.LogError(
+                    "Image-generation tool failed for agent {AgentId}. RequestedProviderProfileId={ProviderProfileId} FailureType={FailureType} DiagnosticFailureType={DiagnosticFailureType}",
+                    agent.Id,
+                    request.ProviderProfileId,
+                    exception.GetType().FullName,
+                    diagnosticFailureType ?? "Unavailable");
+                throw;
+            }
+        }
+
+        private async Task<ImageGenerationCreateResult> ImageGenerationCreateCoreAsync(
             AgentDefinition agent,
             ProviderProfile runtimeProvider,
             AgentImageGenerationAccessSettings access,

@@ -65,7 +65,8 @@ internal sealed class SharedProviderProfileMapper
                 AllowsNativeTools: false,
                 AllowsHostedMcp: false,
                 AllowsServiceManagedHistory: false,
-                AllowsCompaction: false),
+                AllowsCompaction: false,
+                AllowsParallelFunctionTools: provider.SupportsParallelTools),
             ModelSelectionConstraint =
                 new ProviderModelSelectionConstraint(allowedModels),
             IsPrivateProvider = false,

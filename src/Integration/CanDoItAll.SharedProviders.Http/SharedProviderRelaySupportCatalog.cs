@@ -69,7 +69,7 @@ public sealed class SharedProviderRelaySupportCatalog : ISharedProviderRelaySupp
                 supportsFunctionTools: true,
                 supportsParallelFunctionTools: true,
                 supportsStructuredOutput: true,
-                supportsVisionInput: false,
+                supportsVisionInput: true,
                 supportsBase64Images: false,
                 maximumRequestBytes: 4 * 1024 * 1024,
                 maximumOutputTokens: 128 * 1024,

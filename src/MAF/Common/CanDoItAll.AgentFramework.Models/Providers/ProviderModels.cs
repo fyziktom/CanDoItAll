@@ -95,7 +95,8 @@ public sealed record ProviderFeatureConstraints(
     bool AllowsNativeTools,
     bool AllowsHostedMcp,
     bool AllowsServiceManagedHistory,
-    bool AllowsCompaction);
+    bool AllowsCompaction,
+    bool AllowsParallelFunctionTools = true);
 
 public sealed record ProviderModelSelectionConstraint
 {
@@ -199,7 +200,8 @@ public sealed record ProviderFeatureMatrix(
     bool SupportsHostedTools = false,
     bool SupportsHostedMcp = false,
     bool SupportsLocalMcp = false,
-    bool SupportsImageGeneration = false);
+    bool SupportsImageGeneration = false,
+    bool SupportsParallelFunctionTools = true);
 
 public sealed record ProviderFeatureSupportResult(
     ProviderNativeToolFamily Family,

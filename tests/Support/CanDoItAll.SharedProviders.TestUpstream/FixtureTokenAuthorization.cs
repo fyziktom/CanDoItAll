@@ -104,7 +104,9 @@ internal sealed class FixtureTokenAuthorizationMiddleware(RequestDelegate next)
         HttpContext context,
         FixtureAuthenticationOptions authentication)
     {
-        if (context.Request.Path.Equals("/health") || IsComfyUiDataPath(context.Request.Path))
+        if (context.Request.Path.Equals("/health") ||
+            IsOllamaDataPath(context.Request.Path) ||
+            IsComfyUiDataPath(context.Request.Path))
         {
             await next(context);
             return;
@@ -136,6 +138,11 @@ internal sealed class FixtureTokenAuthorizationMiddleware(RequestDelegate next)
            path.Equals("/prompt") ||
            path.Equals("/view") ||
            path.StartsWithSegments("/history");
+
+    private static bool IsOllamaDataPath(PathString path)
+        => path.Equals("/api/tags") ||
+           path.Equals("/api/show") ||
+           path.Equals("/api/chat");
 
     private static bool TryReadBearerToken(HttpRequest request, out byte[] token)
     {

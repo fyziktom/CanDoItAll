@@ -10,21 +10,21 @@
                     Title="Loading sharing state"
                     Description="Reading publication, source, and import state." />
     }
-    else if (!ProviderProfileId.HasValue)
-    {
-        <EmptyState Eyebrow="Save required"
-                    Title="Save this provider before sharing it"
-                    Description="A stable provider identity is required before a public publication can be created." />
-    }
-    else if (profileState is null)
-    {
-        <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
-            Sharing state is unavailable. Refresh the provider editor and try again.
-        </Alert>
-    }
     else
     {
-        @if (profileState.Ownership == SharedProviderProfileOwnership.Local)
+        @if (!ProviderProfileId.HasValue)
+        {
+            <EmptyState Eyebrow="No provider selected"
+                        Title="Select or create a provider to publish it"
+                        Description="Shared-provider sources remain available below and do not require a local provider profile." />
+        }
+        else if (profileState is null)
+        {
+            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
+                Sharing state is unavailable. Refresh the provider editor and try again.
+            </Alert>
+        }
+        else if (profileState.Ownership == SharedProviderProfileOwnership.Local)
         {
             <SharedProviderLocalPublicationContent State="profileState"
                                                    IsBusy="isBusy"

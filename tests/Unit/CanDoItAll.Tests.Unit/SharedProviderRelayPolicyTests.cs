@@ -279,17 +279,21 @@ public sealed class SharedProviderRelayPolicyTests
             maximumOutputTokens: 4096,
             maximumImageCount: 1);
 
-        foreach (bool requestedValue in new[] { true, false })
-        {
-            AssertValidationFailure(
-                SharedProviderRelayOperation.ChatCompletions,
-                ChatJson($"\"parallel_tool_calls\":{(requestedValue ? "true" : "false")}"),
-                withoutParallel);
-        }
+        AssertValidationFailure(
+            SharedProviderRelayOperation.ChatCompletions,
+            ChatJson("\"parallel_tool_calls\":true"),
+            withoutParallel);
+
+        var sequential = Accept(
+            SharedProviderRelayOperation.ChatCompletions,
+            ChatJson("\"parallel_tool_calls\":false"),
+            withoutParallel);
+
+        Assert.DoesNotContain(SharedProviderCapability.ParallelFunctionTools, sequential.RequiredCapabilities);
 
         var accepted = Accept(
             SharedProviderRelayOperation.ChatCompletions,
-            ChatJson("\"parallel_tool_calls\":false"),
+            ChatJson("\"parallel_tool_calls\":true"),
             ChatSupport());
 
         Assert.Contains(SharedProviderCapability.ParallelFunctionTools, accepted.RequiredCapabilities);
@@ -489,6 +493,37 @@ public sealed class SharedProviderRelayPolicyTests
     }
 
     [Fact]
+    public void ChatStreamOptions_AcceptsIncludeUsageAndRejectsMalformedOrUnknownOptions()
+    {
+        var accepted = Assert.IsType<SharedProviderRelayRequestPolicyResult.Accepted>(Normalize(
+            SharedProviderRelayOperation.ChatCompletions,
+            ChatJson("\"stream\":true,\"stream_options\":{\"include_usage\":true}"),
+            ChatSupport()));
+        using (var document = JsonDocument.Parse(accepted.Request.CanonicalPayloadUtf8))
+        {
+            Assert.True(document.RootElement
+                .GetProperty("stream_options")
+                .GetProperty("include_usage")
+                .GetBoolean());
+        }
+
+        foreach (var member in new[]
+        {
+            "\"stream_options\":{\"include_usage\":true}",
+            "\"stream\":true,\"stream_options\":null",
+            "\"stream\":true,\"stream_options\":{}",
+            "\"stream\":true,\"stream_options\":{\"include_usage\":\"true\"}",
+            "\"stream\":true,\"stream_options\":{\"include_usage\":true,\"unknown\":true}"
+        })
+        {
+            AssertValidationFailure(
+                SharedProviderRelayOperation.ChatCompletions,
+                ChatJson(member),
+                ChatSupport());
+        }
+    }
+
+    [Fact]
     public void MalformedRoutingModelId_FailsClosed()
     {
         var result = Normalize(
@@ -545,6 +580,18 @@ public sealed class SharedProviderRelayPolicyTests
         Assert.DoesNotContain(descriptors, descriptor =>
             descriptor.ConnectorPluginKey.Contains("scenario", StringComparison.OrdinalIgnoreCase) ||
             descriptor.ConnectorPluginKey.Contains("mock", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Registry_OpenAiChatSupportsVisionInput()
+    {
+        var catalog = new SharedProviderRelaySupportCatalog();
+
+        Assert.True(catalog.TryGet(
+            "provider.openai",
+            SharedProviderPurpose.Chat,
+            out var descriptor));
+        Assert.True(descriptor.Support.SupportsVisionInput);
     }
 
     [Fact]

@@ -391,9 +391,7 @@ public partial class SharedProviderManagementPanel
             .ToHashSet();
         var result = await RunSourceOperationAsync(
             () => ManagementService.SynchronizeSourceAsync(source.Source.Id, selected));
-        if (result is not null &&
-            result.Outcome is SharedProviderSourceOperationOutcome.Succeeded or
-                SharedProviderSourceOperationOutcome.NotModified)
+        if (result?.IsSuccessful == true)
         {
             await ProvidersChanged.InvokeAsync();
             NotificationService.Success("Source synchronized", DescribeSourceOperation(result));
@@ -411,7 +409,7 @@ public partial class SharedProviderManagementPanel
             () => ManagementService.SynchronizeSourceAsync(
                 catalogSourceId,
                 selectedPublicationIds));
-        if (result?.Outcome != SharedProviderSourceOperationOutcome.Succeeded)
+        if (result?.IsSuccessful != true)
         {
             return;
         }
@@ -429,8 +427,7 @@ public partial class SharedProviderManagementPanel
         {
             var result = await operation();
             await LoadAsync();
-            if (result.Outcome is SharedProviderSourceOperationOutcome.Succeeded or
-                SharedProviderSourceOperationOutcome.NotModified)
+            if (result.IsSuccessful)
             {
                 return result;
             }

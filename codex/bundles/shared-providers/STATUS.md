@@ -47,3 +47,14 @@ Overall state: `BLOCKED_SB07_TEST_BUDGET_AUTHORITY`
   image build, with durable cumulative 9/9 ceilings and one lane/build still reserved for SB12.
   The authorization does not include a retry, broad, Playwright, stable-aggregate, live-provider,
   or paid-provider lane.
+- 2026-08-26 operator authorization: a separate two-instance UI/runtime acceptance lane is now
+  authorized, including focused rebuild/revalidation after a proven defect. This removes the
+  Docker authority blocker for that requested lane, but it does not yet satisfy SB07's distinct
+  three-application gate; SB07 remains `BLOCKED` until evidence proves that contract or the
+  bundle is explicitly amended.
+- 2026-08-26 two-instance UI/runtime acceptance: completed and repeated successfully. The shared
+  instance published Ollama chat, OpenAI chat, and OpenAI image providers through the UI; the
+  provider-empty client imported and used them for chat, image generation, and image analysis;
+  the central usage ledger recorded all eight repeat-run operations as successful. Evidence:
+  `evidence/two-instance-ui-acceptance/README.md`. This separate lane does not change SB07's
+  `BLOCKED` state or unlock downstream subbundles.

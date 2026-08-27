@@ -38,7 +38,8 @@ public sealed class ProviderFeatureMatrixTests
                 AllowsNativeTools: false,
                 AllowsHostedMcp: false,
                 AllowsServiceManagedHistory: false,
-                AllowsCompaction: false)
+                AllowsCompaction: false,
+                AllowsParallelFunctionTools: false)
         });
 
         Assert.False(constrained.SupportsStructuredOutput);
@@ -55,6 +56,7 @@ public sealed class ProviderFeatureMatrixTests
         Assert.False(constrained.SupportsCompaction);
         Assert.True(constrained.SupportsFunctionTools);
         Assert.True(constrained.SupportsLocalMcpBridge);
+        Assert.False(constrained.SupportsParallelFunctionTools);
     }
 
     [Fact]

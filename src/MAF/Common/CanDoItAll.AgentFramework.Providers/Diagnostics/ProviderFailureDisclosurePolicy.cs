@@ -70,10 +70,27 @@ public static class ProviderFailureDisclosurePolicy
 
     public static ProviderFailureBoundaryException CreateBoundaryException(
         ProviderProfile provider,
-        ProviderFailureOperation operation)
+        ProviderFailureOperation operation,
+        Exception? diagnosticException = null,
+        int? diagnosticStatusCode = null)
     {
         ArgumentNullException.ThrowIfNull(provider);
-        return new ProviderFailureBoundaryException(provider.Id, operation);
+        var diagnosticFailureType = diagnosticException is
+        ProviderFailureBoundaryException
+        {
+            DiagnosticFailureType: { Length: > 0 } nestedFailureType
+        }
+            ? nestedFailureType
+            : diagnosticException?.GetType().FullName ??
+              diagnosticException?.GetType().Name;
+
+        return new ProviderFailureBoundaryException(
+            provider.Id,
+            operation,
+            diagnosticFailureType,
+            diagnosticException is ProviderFailureBoundaryException nestedBoundary
+                ? nestedBoundary.DiagnosticStatusCode
+                : diagnosticStatusCode);
     }
 
     internal static string GetSanitizedMessage(ProviderFailureOperation operation)
@@ -92,6 +109,19 @@ public sealed class ProviderFailureBoundaryException : InvalidOperationException
     public ProviderFailureBoundaryException(
         Guid providerId,
         ProviderFailureOperation operation)
+        : this(
+            providerId,
+            operation,
+            diagnosticFailureType: null,
+            diagnosticStatusCode: null)
+    {
+    }
+
+    internal ProviderFailureBoundaryException(
+        Guid providerId,
+        ProviderFailureOperation operation,
+        string? diagnosticFailureType,
+        int? diagnosticStatusCode)
         : base(ProviderFailureDisclosurePolicy.GetSanitizedMessage(operation))
     {
         if (providerId == Guid.Empty)
@@ -103,9 +133,15 @@ public sealed class ProviderFailureBoundaryException : InvalidOperationException
 
         ProviderId = providerId;
         Operation = operation;
+        DiagnosticFailureType = diagnosticFailureType;
+        DiagnosticStatusCode = diagnosticStatusCode;
     }
 
     public Guid ProviderId { get; }
 
     public ProviderFailureOperation Operation { get; }
+
+    public string? DiagnosticFailureType { get; }
+
+    public int? DiagnosticStatusCode { get; }
 }

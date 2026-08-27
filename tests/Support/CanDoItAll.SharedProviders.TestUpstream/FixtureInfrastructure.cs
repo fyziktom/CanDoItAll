@@ -5,7 +5,7 @@ namespace CanDoItAll.SharedProviders.TestUpstream;
 
 internal static class FixtureLimits
 {
-    public const long MaximumRequestBodyBytes = 1_048_576;
+    public const long MaximumRequestBodyBytes = 16 * 1024 * 1024;
     public const int MaximumCapturedBodyBytes = 65_536;
     public const int MaximumCaptures = 128;
     public const int MaximumComfyUiPrompts = 128;

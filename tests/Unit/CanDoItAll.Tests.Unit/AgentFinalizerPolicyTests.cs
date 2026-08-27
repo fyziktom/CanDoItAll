@@ -805,6 +805,28 @@ public sealed class AgentFinalizerPolicyTests
             MafFinalizerDriver.ShouldAllowMultipleToolCalls(finalizerMode, hasApprovalTools));
     }
 
+    [Theory]
+    [InlineData(false, false, AgentFinalizerMode.Disabled, false, null)]
+    [InlineData(true, true, AgentFinalizerMode.Disabled, false, true)]
+    [InlineData(true, false, AgentFinalizerMode.Disabled, false, false)]
+    [InlineData(true, true, AgentFinalizerMode.Disabled, true, false)]
+    [InlineData(true, true, AgentFinalizerMode.Required, false, false)]
+    public void Runtime_tool_call_policy_omits_parallel_option_without_tools(
+        bool hasTools,
+        bool supportsParallelFunctionTools,
+        AgentFinalizerMode finalizerMode,
+        bool hasApprovalTools,
+        bool? expected)
+    {
+        Assert.Equal(
+            expected,
+            MafFinalizerDriver.ResolveAllowMultipleToolCalls(
+                hasTools,
+                supportsParallelFunctionTools,
+                finalizerMode,
+                hasApprovalTools));
+    }
+
     [Fact]
     public void Effective_finalizer_invocations_prefer_valid_json_repair_over_invalid_captured_attempt()
     {

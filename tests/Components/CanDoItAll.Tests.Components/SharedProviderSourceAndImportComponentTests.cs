@@ -11,6 +11,33 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class SharedProviderSourceAndImportComponentTests
 {
     [Fact]
+    public async Task Provider_empty_instance_can_add_a_shared_provider_source()
+    {
+        var service = new RecordingSharedProviderManagementService(
+            SharedProviderPublicationPanelTests.CreateLocalState(
+                Guid.NewGuid(),
+                isPublished: false,
+                isEligible: true));
+        var secret = new SecretListItem(
+            Guid.NewGuid(),
+            "Remote instance JWT",
+            SecretKind.ApiKey,
+            "workspace",
+            DateTimeOffset.UtcNow);
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddSingleton<ISharedProviderManagementService>(service));
+
+        var cut = harness.Context.Render<SharedProviderManagementPanel>(parameters => parameters
+            .Add(component => component.Secrets, [secret]));
+
+        cut.WaitForElement("[data-testid='shared-provider-source-add']").Click();
+        cut.WaitForElement("[data-testid='shared-provider-source-dialog']");
+
+        Assert.Contains("No provider selected", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(secret.Name, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Imported_profile_exposes_only_local_alias_and_enabled_intent_as_inputs()
     {
         var providerId = Guid.NewGuid();

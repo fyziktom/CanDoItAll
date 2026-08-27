@@ -169,6 +169,10 @@ public sealed record SharedProviderSourceOperationResult
 
     public SharedProviderFailure? Failure { get; }
 
+    public bool IsSuccessful => Outcome is
+        SharedProviderSourceOperationOutcome.Succeeded or
+        SharedProviderSourceOperationOutcome.NotModified;
+
     public static SharedProviderSourceOperationResult Succeeded(
         SharedProviderCatalogDocument catalog,
         SharedProviderCatalogEntityTag entityTag,

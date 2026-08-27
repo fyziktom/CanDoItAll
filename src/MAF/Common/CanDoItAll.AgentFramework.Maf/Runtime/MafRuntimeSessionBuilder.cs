@@ -350,7 +350,7 @@ internal static class MafRuntimeSessionBuilder
             (float)agent.Temperature,
             forceOmitTemperature,
             agent.ConfigurationJson);
-        chatOptions.AllowMultipleToolCalls = !hasApprovalTools;
+        chatOptions.AllowMultipleToolCalls = hasApprovalTools ? false : null;
         ApplyResponseFormat(chatOptions, runtimeOptions);
 
         return new ChatClientAgentRunOptions(chatOptions)

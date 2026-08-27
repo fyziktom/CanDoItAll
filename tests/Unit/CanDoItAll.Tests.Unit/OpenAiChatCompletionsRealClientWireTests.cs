@@ -1,5 +1,6 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -7,6 +8,9 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.SharedProviders.Abstractions;
+using CanDoItAll.SharedProviders.Http;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +23,48 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
 {
     private const string FunctionName = "record_value";
     private const string FunctionCallId = "call-001";
+
+    [Fact]
+    public async Task Maf_streaming_agent_request_is_accepted_by_shared_provider_policy()
+    {
+        var model = SharedProviderRoutingModelIdCodec.Create(
+            new SharedProviderPublicationId(Guid.NewGuid()),
+            "upstream-model").Value;
+        var provider = CreateProvider(model) with
+        {
+            BaseUrl = "https://shared.example.test/api/shared-providers/openai/v1"
+        };
+        var handler = new SharedProviderPolicyCaptureHandler(model);
+        using var httpClient = new HttpClient(handler);
+        var factory = new MafProviderAgentFactory(
+            new MafProviderCredentialService(
+                new ProfileCredentialResolver(new Dictionary<Guid, string>
+                {
+                    [provider.Id] = "test-source-token"
+                })),
+            NoOpMafProviderStreamingDispatchGate.Instance,
+            httpClientSelector: new FixedProviderHttpClientSelector(httpClient));
+        var agent = CreateFrameworkAgent(factory, provider);
+
+        try
+        {
+            var responseText = new StringBuilder();
+            await foreach (var update in agent.RunStreamingAsync("Verify streaming compatibility."))
+            {
+                responseText.Append(update.Text);
+            }
+
+            Assert.Equal("accepted", responseText.ToString());
+            var policyResult = Assert.IsType<SharedProviderRelayRequestPolicyResult.Accepted>(
+                handler.PolicyResult);
+            Assert.True(policyResult.Request.Stream);
+            Assert.DoesNotContain("parallel_tool_calls", handler.RawPayload, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await DisposeAgentAsync(agent);
+        }
+    }
 
     [Fact]
     public async Task Maf_factory_parallel_openai_profiles_send_profile_credentials_without_mutating_process_environment()
@@ -451,6 +497,66 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
                     }
                 },
                 SerializerOptions);
+        }
+    }
+
+    private sealed class FixedProviderHttpClientSelector(HttpClient client)
+        : IProviderHttpClientSelector
+    {
+        public bool TryGetClient(
+            ProviderProfile provider,
+            [NotNullWhen(true)]
+            out HttpClient? selectedClient)
+        {
+            selectedClient = client;
+            return true;
+        }
+    }
+
+    private sealed class SharedProviderPolicyCaptureHandler(string model)
+        : HttpMessageHandler
+    {
+        public SharedProviderRelayRequestPolicyResult? PolicyResult { get; private set; }
+
+        public string RawPayload { get; private set; } = string.Empty;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var payload = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+            RawPayload = Encoding.UTF8.GetString(payload);
+            PolicyResult = new SharedProviderRelayRequestPolicy().Normalize(
+                SharedProviderRelayOperation.ChatCompletions,
+                payload,
+                new SharedProviderRelaySupportDescriptor(
+                    new HashSet<SharedProviderRelayOperation>
+                    {
+                        SharedProviderRelayOperation.ChatCompletions
+                    },
+                    SharedProviderStreamingMode.ServerSentEvents,
+                    supportsFunctionTools: true,
+                    supportsParallelFunctionTools: false,
+                    supportsStructuredOutput: true,
+                    supportsVisionInput: true,
+                    supportsBase64Images: false,
+                    maximumRequestBytes: 4 * 1024 * 1024,
+                    maximumOutputTokens: 4096,
+                    maximumImageCount: 1));
+
+            const string bodyTemplate = """
+                data: {"id":"chatcmpl-shared-policy","object":"chat.completion.chunk","created":1785710400,"model":"__MODEL__","choices":[{"index":0,"delta":{"role":"assistant","content":"accepted"},"finish_reason":null}]}
+
+                data: {"id":"chatcmpl-shared-policy","object":"chat.completion.chunk","created":1785710400,"model":"__MODEL__","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":2,"completion_tokens":1,"total_tokens":3}}
+
+                data: [DONE]
+
+                """;
+            var body = bodyTemplate.Replace("__MODEL__", model, StringComparison.Ordinal);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "text/event-stream")
+            };
         }
     }
 

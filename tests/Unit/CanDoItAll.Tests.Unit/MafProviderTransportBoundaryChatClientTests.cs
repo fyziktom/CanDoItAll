@@ -57,6 +57,9 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         Assert.Equal(ProviderFailureOperation.RuntimeRequest,
             boundary.Operation);
         Assert.Null(boundary.InnerException);
+        Assert.Equal(
+            typeof(HttpRequestException).FullName,
+            boundary.DiagnosticFailureType);
         Assert.Contains(
             ProviderFailureDisclosurePolicy.SanitizedRuntimeFailureMessage,
             sourceException.ToString(),
@@ -72,6 +75,42 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         Assert.DoesNotContain(
             remoteMarker,
             sourceException.ToString(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Source_managed_transport_preserves_safe_nested_failure_type()
+    {
+        var provider = CreateProvider();
+        var sourceProvider = provider with
+        {
+            CredentialBinding = new ProviderCredentialBinding(
+                Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.NewGuid())
+        };
+        var sanitizedFailure = ProviderFailureDisclosurePolicy.CreateBoundaryException(
+            sourceProvider,
+            ProviderFailureOperation.RuntimeRequest,
+            new HttpRequestException("Sensitive remote detail."));
+        using var client = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(nonStreamingException: sanitizedFailure),
+            sourceProvider,
+            sourceProvider.DefaultModel);
+
+        var exception = await Assert.ThrowsAsync<MafProviderTransportException>(() =>
+            client.GetResponseAsync(CreateMessages()));
+
+        var boundary = Assert.IsType<ProviderFailureBoundaryException>(
+            exception.InnerException);
+        Assert.Null(boundary.InnerException);
+        Assert.Equal(
+            typeof(HttpRequestException).FullName,
+            boundary.DiagnosticFailureType);
+        Assert.DoesNotContain(
+            "Sensitive remote detail.",
+            exception.ToString(),
             StringComparison.Ordinal);
     }
 

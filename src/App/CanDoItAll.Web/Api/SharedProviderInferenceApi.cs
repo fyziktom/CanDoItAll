@@ -218,6 +218,13 @@ internal static class SharedProviderInferenceApi
                 await WriteStreamingAsync(httpContext, operation, streaming.Stream, logger);
                 return;
             case SharedProviderRelayDispatchResult.Failed failed:
+                logger.LogWarning(
+                    "Shared-provider relay rejected operation {Operation} for trace {TraceId}. Category={FailureCategory}, Code={FailureCode}, Parameter={FailureParameter}.",
+                    operation,
+                    httpContext.TraceIdentifier,
+                    failed.Failure.Category,
+                    failed.Failure.Code.Value,
+                    failed.Failure.Parameter);
                 await SharedProviderApiResponseWriter.WriteRelayFailureAsync(
                     httpContext,
                     failed.Failure);

@@ -435,7 +435,8 @@ public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
                         context.Query.Provider)
                         ? ProviderFailureDisclosurePolicy.CreateBoundaryException(
                             context.Query.Provider,
-                            ProviderFailureOperation.RuntimeRequest)
+                            ProviderFailureOperation.RuntimeRequest,
+                            exception)
                         : exception;
                 pending.TrySetException(disclosedException);
             }

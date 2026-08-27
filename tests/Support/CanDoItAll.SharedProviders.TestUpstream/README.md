@@ -27,6 +27,9 @@ The runtime image includes `/usr/local/bin/busybox`, so Compose can use `/usr/lo
 - `POST /v1/chat/completions`
 - `POST /v1/responses`
 - `POST /v1/images/generations`
+- `GET /api/tags`
+- `POST /api/show`
+- `POST /api/chat`
 - `GET /system_stats`
 - `POST /prompt`
 - `GET /history/{promptId}`

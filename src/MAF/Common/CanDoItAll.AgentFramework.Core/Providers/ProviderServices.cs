@@ -266,6 +266,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             && normalizedProvider.Transport == ProviderTransportKind.Responses
             && !normalizedProvider.PreferFrameworkManagedChatHistory;
         var supportsFunctionTools = normalizedProvider.SupportsTools;
+        var supportsParallelFunctionTools = supportsFunctionTools;
         var supportsResponseFormatJsonSchema = supportsOllamaStructuredOutput ||
                                                supportsOpenAiFamily &&
                                                normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
@@ -288,6 +289,8 @@ public sealed class ProviderProfileService : IProviderProfileService
             supportsServiceManagedHistory &=
                 constraints.AllowsServiceManagedHistory;
             supportsCompaction &= constraints.AllowsCompaction;
+            supportsParallelFunctionTools &=
+                constraints.AllowsParallelFunctionTools;
         }
 
         return new ProviderFeatureMatrix(
@@ -317,7 +320,8 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsHostedTools: supportsResponsesNativeTools,
             SupportsHostedMcp: supportsHostedMcpServer,
             SupportsLocalMcp: normalizedProvider.SupportsTools,
-            SupportsImageGeneration: normalizedProvider.Purpose == ProviderProfilePurpose.ImageGeneration);
+            SupportsImageGeneration: normalizedProvider.Purpose == ProviderProfilePurpose.ImageGeneration,
+            SupportsParallelFunctionTools: supportsParallelFunctionTools);
     }
 
     private static bool SupportsConfiguredVision(

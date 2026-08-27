@@ -5,6 +5,8 @@ namespace CanDoItAll.SharedProviders.TestUpstream;
 internal static class OpenAiFixtureEndpointRouteBuilderExtensions
 {
     private const long CreatedAt = 1_700_000_000;
+    private const string ImageGenerationCompletedText =
+        "deterministic fixture response: generated image at shared-provider-ui/generated.png";
     private const string StructuredJson = "{\"result\":\"fixture\",\"value\":42}";
     private static readonly TokenUsage ChatUsage = new(5, 3, 8);
     private static readonly ResponseUsage ResponsesUsage = new(5, 3, 8);
@@ -154,13 +156,11 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
 
     private static ChatCompletionResponse CreateChatCompletion(ChatCompletionRequest request)
     {
-        var tool = request.Tools?.FirstOrDefault(candidate =>
-            string.Equals(candidate.Type, "function", StringComparison.Ordinal) &&
-            !string.IsNullOrWhiteSpace(candidate.Function?.Name));
+        var tool = ResolveChatTool(request);
         var message = tool is null
             ? new ChatAssistantMessage(
                 "assistant",
-                request.ResponseFormat.HasValue ? StructuredJson : "deterministic fixture response")
+                ResolveChatResponseText(request))
             : new ChatAssistantMessage(
                 "assistant",
                 null,
@@ -168,7 +168,7 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
                     new ChatToolCall(
                         "call_fixture",
                         "function",
-                        new ChatFunctionCall(tool.Function.Name, "{\"value\":\"fixture\"}"))
+                        new ChatFunctionCall(tool.Function.Name, ResolveToolArguments(tool.Function.Name)))
                 ]);
         return new ChatCompletionResponse(
             "chatcmpl-fixture",
@@ -181,9 +181,7 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
 
     private static ResponsesResponse CreateResponse(ResponsesRequest request)
     {
-        var tool = request.Tools?.FirstOrDefault(candidate =>
-            string.Equals(candidate.Type, "function", StringComparison.Ordinal) &&
-            !string.IsNullOrWhiteSpace(candidate.Name));
+        var tool = ResolveResponseTool(request);
         var output = tool is null
             ? new ResponseOutputItem(
                 "msg_fixture",
@@ -193,7 +191,7 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
                 [
                     new ResponseOutputContent(
                         "output_text",
-                        request.Text.HasValue ? StructuredJson : "deterministic fixture response",
+                        ResolveResponseText(request),
                         [])
                 ])
             : new ResponseOutputItem(
@@ -202,7 +200,7 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
                 "completed",
                 CallId: "call_fixture",
                 Name: tool.Name,
-                Arguments: "{\"value\":\"fixture\"}");
+                Arguments: ResolveToolArguments(tool.Name));
         return new ResponsesResponse(
             "resp-fixture",
             "response",
@@ -219,9 +217,7 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
         FixtureStreamMode streamMode)
     {
         PrepareStream(context);
-        var tool = request.Tools?.FirstOrDefault(candidate =>
-            string.Equals(candidate.Type, "function", StringComparison.Ordinal) &&
-            !string.IsNullOrWhiteSpace(candidate.Function?.Name));
+        var tool = ResolveChatTool(request);
         var chunks = tool is null
             ? CreateTextChatChunks(request)
             : CreateToolChatChunks(request, tool);
@@ -232,7 +228,7 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
 
     private static IReadOnlyList<ChatStreamChunk> CreateTextChatChunks(ChatCompletionRequest request)
     {
-        var content = request.ResponseFormat.HasValue ? StructuredJson : "deterministic fixture response";
+        var content = ResolveChatResponseText(request);
         var splitIndex = Math.Max(1, content.Length / 2);
         return
         [
@@ -265,10 +261,127 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
                 [
                     new ChatStreamToolCall(
                         0,
-                        Function: new ChatStreamFunctionCall(Arguments: "{\"value\":\"fixture\"}"))
+                        Function: new ChatStreamFunctionCall(Arguments: ResolveToolArguments(tool.Function.Name)))
                 ])),
             CreateChatChunk(request.Model, new ChatStreamDelta(), "tool_calls", ChatUsage)
         ];
+
+    private static ChatToolRequest? ResolveChatTool(ChatCompletionRequest request)
+    {
+        var tools = request.Tools?
+            .Where(candidate =>
+                string.Equals(candidate.Type, "function", StringComparison.Ordinal) &&
+                !string.IsNullOrWhiteSpace(candidate.Function?.Name))
+            .ToList();
+        if (tools is null || tools.Count == 0)
+        {
+            return null;
+        }
+
+        if (HasToolResult(request.Messages))
+        {
+            return null;
+        }
+
+        var imageTool = tools.FirstOrDefault(candidate =>
+            string.Equals(candidate.Function.Name, "image_generation_create", StringComparison.Ordinal));
+        if (imageTool is null)
+        {
+            return tools[0];
+        }
+
+        return !RequestsImageGeneration(request.Messages)
+            ? null
+            : imageTool;
+    }
+
+    private static ResponseToolRequest? ResolveResponseTool(ResponsesRequest request)
+    {
+        var tools = request.Tools?
+            .Where(candidate =>
+                string.Equals(candidate.Type, "function", StringComparison.Ordinal) &&
+                !string.IsNullOrWhiteSpace(candidate.Name))
+            .ToList();
+        if (tools is null || tools.Count == 0)
+        {
+            return null;
+        }
+
+        var imageTool = tools.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, "image_generation_create", StringComparison.Ordinal));
+        if (imageTool is null)
+        {
+            return tools[0];
+        }
+
+        var input = request.Input.GetRawText();
+        return input.Contains("function_call_output", StringComparison.OrdinalIgnoreCase) ||
+               !RequestsImageGeneration(input)
+            ? null
+            : imageTool;
+    }
+
+    private static string ResolveChatResponseText(ChatCompletionRequest request)
+    {
+        if (request.ResponseFormat.HasValue)
+        {
+            return StructuredJson;
+        }
+
+        if (HasToolResult(request.Messages) && RequestsImageGeneration(request.Messages))
+        {
+            return ImageGenerationCompletedText;
+        }
+
+        return request.Messages.Any(message =>
+            GetMessageContentJson(message).Contains("image_url", StringComparison.OrdinalIgnoreCase))
+            ? "deterministic fixture analyzed the attached image"
+            : "deterministic fixture response";
+    }
+
+    private static string ResolveResponseText(ResponsesRequest request)
+    {
+        if (request.Text.HasValue)
+        {
+            return StructuredJson;
+        }
+
+        return request.Input.GetRawText().Contains("input_image", StringComparison.OrdinalIgnoreCase)
+            ? "deterministic fixture analyzed the attached image"
+            : "deterministic fixture response";
+    }
+
+    private static bool HasToolResult(IEnumerable<ChatMessageRequest> messages)
+        => messages.Any(message => string.Equals(message.Role, "tool", StringComparison.OrdinalIgnoreCase));
+
+    private static bool RequestsImageGeneration(IEnumerable<ChatMessageRequest> messages)
+        => messages
+            .Where(message => string.Equals(
+                message.Role,
+                "user",
+                StringComparison.OrdinalIgnoreCase))
+            .Any(message => RequestsImageGeneration(GetMessageContentJson(message)));
+
+    private static string GetMessageContentJson(ChatMessageRequest message)
+    {
+        if (message.Content is not { } content || content.ValueKind == JsonValueKind.Undefined)
+        {
+            return string.Empty;
+        }
+
+        return content.GetRawText();
+    }
+
+    private static bool RequestsImageGeneration(string text)
+        => text.Contains("generate an image", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("create an image", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("generate image", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("create image", StringComparison.OrdinalIgnoreCase);
+
+    private static string ResolveToolArguments(string toolName)
+        => string.Equals(toolName, "image_generation_create", StringComparison.Ordinal)
+            ? "{\"request\":{\"prompt\":\"deterministic shared provider image\",\"outputWorkspacePath\":\"shared-provider-ui/generated.png\",\"outputFormat\":\"png\"}}"
+            : "{\"value\":\"fixture\"}";
 
     private static ChatStreamChunk CreateChatChunk(
         string model,

@@ -109,7 +109,8 @@ internal sealed class ProviderRuntimeAdministrationService(
         {
             throw ProviderFailureDisclosurePolicy.CreateBoundaryException(
                 provider,
-                ProviderFailureOperation.RuntimeRequest);
+                ProviderFailureOperation.RuntimeRequest,
+                exception);
         }
     }
 

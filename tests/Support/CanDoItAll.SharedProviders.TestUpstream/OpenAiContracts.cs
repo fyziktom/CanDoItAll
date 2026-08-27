@@ -14,7 +14,7 @@ public sealed record ChatCompletionRequest(
     IReadOnlyList<ChatToolRequest>? Tools = null,
     JsonElement? ResponseFormat = null);
 
-public sealed record ChatMessageRequest(string Role, JsonElement Content);
+public sealed record ChatMessageRequest(string Role, JsonElement? Content = null);
 
 public sealed record ChatToolRequest(string Type, ChatFunctionDefinition Function);
 

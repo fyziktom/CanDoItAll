@@ -7,6 +7,7 @@
 - State: `DONE`
 - Docker authorization: `DENIED_FOR_THIS_BUNDLE`
 - Post-closure correction: `2026-08-26 provider-sharing UI integration repaired and revalidated; see BR05 result`
+- Post-closure acceptance: `2026-08-26 two-instance UI setup, relay chat/image/vision, and central usage recording passed twice; see ../shared-providers/evidence/two-instance-ui-acceptance/README.md`
 
 | Subbundle | State | Result |
 |---|---|---|

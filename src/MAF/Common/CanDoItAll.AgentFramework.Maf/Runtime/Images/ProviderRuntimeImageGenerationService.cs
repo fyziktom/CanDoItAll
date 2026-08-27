@@ -1,13 +1,15 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed class ProviderRuntimeImageGenerationService(
     IProviderRuntimeDescriptorStore descriptorStore,
     IProviderRuntimePool runtimePool,
-    IAgentProviderCredentialResolver? providerCredentialResolver = null) :
+    IAgentProviderCredentialResolver? providerCredentialResolver = null,
+    ILogger<ProviderRuntimeImageGenerationService>? logger = null) :
     IAgentImageGenerationService
 {
     public async Task<AgentImageGenerationResult> GenerateAsync(
@@ -54,24 +56,36 @@ public sealed class ProviderRuntimeImageGenerationService(
                 OutputCompression = request.OutputCompression
             };
 
-            result = await handle.DispatchAsync(
-                    new ProviderRuntimeDispatchRequest<
-                        ProviderImageGenerationRequest>(query, payload),
-                    async (context, token) =>
-                    {
-                        EnsureProviderKindMatches(
-                            context.Descriptor,
-                            context.Query.Provider);
-                        var driver = handle.ProviderFactory.Resolve<
-                            IProviderImageGenerationDriver>(
-                            context.Query.Provider.Kind);
-                        return await driver.GenerateImageAsync(
-                                context.Payload,
-                                token)
-                            .ConfigureAwait(false);
-                    },
-                    cancellationToken)
-                .ConfigureAwait(false);
+            try
+            {
+                result = await handle.DispatchAsync(
+                        new ProviderRuntimeDispatchRequest<
+                            ProviderImageGenerationRequest>(query, payload),
+                        async (context, token) =>
+                        {
+                            EnsureProviderKindMatches(
+                                context.Descriptor,
+                                context.Query.Provider);
+                            var driver = handle.ProviderFactory.Resolve<
+                                IProviderImageGenerationDriver>(
+                                context.Query.Provider.Kind);
+                            return await driver.GenerateImageAsync(
+                                    context.Payload,
+                                    token)
+                                .ConfigureAwait(false);
+                        },
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (ProviderFailureBoundaryException exception)
+            {
+                logger?.LogError(
+                    "Source-managed image generation failed for provider {ProviderProfileId}. FailureType={FailureType} StatusCode={StatusCode}",
+                    exception.ProviderId,
+                    exception.DiagnosticFailureType ?? "Unavailable",
+                    exception.DiagnosticStatusCode);
+                throw;
+            }
         }
 
         if (result.Images.Count == 0)

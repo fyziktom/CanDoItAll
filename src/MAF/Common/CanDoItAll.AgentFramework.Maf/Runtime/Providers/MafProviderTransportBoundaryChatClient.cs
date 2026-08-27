@@ -70,9 +70,17 @@ internal sealed class MafProviderTransportException : Exception
     public string Model { get; }
 
     internal static string ResolveDiagnosticFailureType(Exception exception)
-        => (exception as MafProviderTransportException)?.InnerException?.GetType().FullName ??
-           exception.GetType().FullName ??
-           exception.GetType().Name;
+    {
+        var innerException = (exception as MafProviderTransportException)?.InnerException;
+        return innerException is ProviderFailureBoundaryException
+            {
+                DiagnosticFailureType: { Length: > 0 } diagnosticFailureType
+            }
+                ? diagnosticFailureType
+                : innerException?.GetType().FullName ??
+                  exception.GetType().FullName ??
+                  exception.GetType().Name;
+    }
 }
 
 internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatClient
@@ -649,12 +657,24 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
     {
         if (ProviderFailureDisclosurePolicy.RequiresSanitization(provider))
         {
+            if (exception is MafProviderTransportException
+                {
+                    InnerException: ProviderFailureBoundaryException
+                } sanitizedException)
+            {
+                return sanitizedException;
+            }
+
             return new MafProviderTransportException(
                 provider,
                 model,
                 ProviderFailureDisclosurePolicy.CreateBoundaryException(
                     provider,
-                    ProviderFailureOperation.RuntimeRequest));
+                    ProviderFailureOperation.RuntimeRequest,
+                    exception,
+                    exception is System.ClientModel.ClientResultException clientResultException
+                        ? clientResultException.Status
+                        : null));
         }
 
         return exception as MafProviderTransportException ??

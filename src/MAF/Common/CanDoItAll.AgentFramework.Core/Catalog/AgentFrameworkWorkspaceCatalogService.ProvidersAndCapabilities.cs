@@ -115,7 +115,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         {
             throw ProviderFailureDisclosurePolicy.CreateBoundaryException(
                 provider,
-                ProviderFailureOperation.RuntimeRequest);
+                ProviderFailureOperation.RuntimeRequest,
+                exception);
         }
     }
 

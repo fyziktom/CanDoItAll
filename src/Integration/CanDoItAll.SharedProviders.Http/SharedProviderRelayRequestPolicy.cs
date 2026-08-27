@@ -19,6 +19,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         "model",
         "messages",
         "stream",
+        "stream_options",
         "tools",
         "tool_choice",
         "parallel_tool_calls",
@@ -177,6 +178,23 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             if (failure is not null)
             {
                 return failure;
+            }
+        }
+
+        if (root.TryGetProperty("stream_options", out var streamOptions))
+        {
+            var hasStreamingEnabled = root.TryGetProperty("stream", out var stream) &&
+                                      stream.ValueKind == JsonValueKind.True;
+            string? unknownOption = null;
+            if (!hasStreamingEnabled ||
+                streamOptions.ValueKind != JsonValueKind.Object ||
+                !HasOnlyProperties(streamOptions, Set("include_usage"), out unknownOption) ||
+                !streamOptions.TryGetProperty("include_usage", out var includeUsage) ||
+                includeUsage.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            {
+                return Validation(
+                    "The chat stream options are invalid.",
+                    unknownOption ?? "stream_options");
             }
         }
 
@@ -360,14 +378,18 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
                 return Validation("The parallel_tool_calls field must be a boolean.", "parallel_tool_calls");
             }
 
-            if (!support.SupportsParallelFunctionTools)
+            if (parallel.ValueKind == JsonValueKind.True &&
+                !support.SupportsParallelFunctionTools)
             {
                 return Validation(
                     "The resolved provider does not support parallel function tools.",
                     "parallel_tool_calls");
             }
 
-            requiredCapabilities.Add(SharedProviderCapability.ParallelFunctionTools);
+            if (parallel.ValueKind == JsonValueKind.True)
+            {
+                requiredCapabilities.Add(SharedProviderCapability.ParallelFunctionTools);
+            }
         }
 
         if (root.TryGetProperty(structuredPropertyName, out var structured))

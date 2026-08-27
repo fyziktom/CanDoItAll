@@ -456,6 +456,7 @@ public sealed class SharedProviderReconciliationTests
         Assert.Equal([providerId], succeeded.RetiredProviderProfileIds);
         Assert.Null(succeeded.Failure);
         Assert.Equal(SharedProviderSourceOperationOutcome.NotModified, notModified.Outcome);
+        Assert.True(notModified.IsSuccessful);
         Assert.Null(notModified.Catalog);
         Assert.Empty(notModified.AffectedProviderProfileIds);
         Assert.Null(notModified.Failure);

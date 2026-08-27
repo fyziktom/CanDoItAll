@@ -1,6 +1,6 @@
 # SB07 test-budget exception record
 
-Status: `exceeded-unapproved`
+Status: `historical-overrun; operator-authorized two-instance acceptance lane active`
 
 Recorded: 2026-08-25
 
@@ -45,3 +45,18 @@ The retained evidence contains zero passing governed lifecycle runs. SB07 theref
 No further Docker lifecycle run or application-image build is authorized by the current contract. A further closure attempt requires explicit operator approval and a durable amendment of the governing budget and associated plan/status documents before execution. Any later approval must preserve this historical ledger; it must not relabel these prior attempts as approved or passing.
 
 No broad, stable, Playwright, live-provider, or paid-provider lane is recorded as consumed by these attempts. This record contains no secret values.
+
+## Operator authorization — 2026-08-26
+
+The operator explicitly directed Codex to build and start two fresh Dockerized CanDoItAll
+instances: one shared-provider authority and one providerless desktop client. The operator also
+directed that both instances be configured through the rendered UI, that the client exercise
+chat, image generation, and image analysis through imported shared providers, that central usage
+records be verified, and that any defect be repaired and revalidated.
+
+This is durable authority for the application-image build and Docker lifecycle work reasonably
+required to complete that two-instance acceptance outcome, including focused reruns after a
+proven defect. It does not erase or relabel the seven historical failed attempts, authorize a
+stable aggregate, authorize paid/live upstream calls, or by itself satisfy SB07's separate
+three-application acceptance criterion. The new lane uses the repository-owned deterministic
+upstream and isolated E2E data only.
