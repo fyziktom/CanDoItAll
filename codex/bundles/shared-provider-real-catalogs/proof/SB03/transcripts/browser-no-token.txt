@@ -1,0 +1,78 @@
+**********************
+PowerShell transcript start
+Start time: 20260827133524
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+foreach ($port in @(5210,5212)) {
+    $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/health" -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 10
+    [pscustomobject]@{ Port=$port; Status=[int]$response.StatusCode; Body=$response.Content }
+}
+$env:CANDOITALL_REAL_SHARED_URL = 'http://127.0.0.1:5210'
+$env:CANDOITALL_REAL_CLIENT_URL = 'http://127.0.0.1:5212'
+$env:CANDOITALL_REAL_UI_EVIDENCE = 'C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB03\browser'
+& codex\bundles\shared-provider-real-catalogs\proof\SB03\Run-AccessTests.ps1 -Project tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj -Filter 'FullyQualifiedName~LocalSimpleChatBrowserAccessTests' -Label browser-no-token -ExpectedCount 3 -NoBuild
+Process ID: 4980
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Port Status Body
+---- ------ ----
+5210    200 Healthy
+5212    200 Healthy
+Invariants: LOCAL-UI-ACCESS API-BOUNDARY
+Command: dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-build --list-tests --filter FullyQualifiedName~LocalSimpleChatBrowserAccessTests
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared OpenAI Chat", model: "gpt-5.4-mini", answer: "LOCAL_OPENAI_OK")
+    CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared Ollama", model: "gemma3:4b", answer: "4")
+    CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: True, providerName: "UI Shared OpenAI Chat", model: "gpt-4.1-mini", answer: "LOCAL_SOURCE_OK")
+Expected: 3; discovered: 3
+Command: dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-build --filter FullyQualifiedName~LocalSimpleChatBrowserAccessTests --logger console;verbosity=normal --logger trx;LogFileName=browser-no-token.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB03\transcripts --nologo
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.10]   Discovering: CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.16]   Discovered:  CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.19]   Starting:    CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:06.96]       Assert.Empty() Failure: Collection was not empty
+[xUnit.net 00:00:06.96]       Collection: [Locator@internal:testid=[data-testid="llm-chat-definition-editor-dialog"] >> internal:testid=[data-testid="llm-chat-definition-model-override"] >> nth=0]
+[xUnit.net 00:00:06.96]       Stack Trace:
+[xUnit.net 00:00:06.96]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs(141,0): at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(IPage page, String baseUrl, String providerName, String defaultModel, IReadOnlyList`1 models, String selectedModel, String evidenceDirectory, String label, String expectedResponse, String prompt, Regex responsePattern)
+[xUnit.net 00:00:06.96]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\LocalSimpleChatBrowserAccessTests.cs(41,0): at CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(Boolean source, String providerName, String model, String answer)
+[xUnit.net 00:00:06.96]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\LocalSimpleChatBrowserAccessTests.cs(58,0): at CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(Boolean source, String providerName, String model, String answer)
+[xUnit.net 00:00:06.96]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\LocalSimpleChatBrowserAccessTests.cs(58,0): at CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(Boolean source, String providerName, String model, String answer)
+[xUnit.net 00:00:06.96]         --- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: True, providerName: "UI Shared OpenAI Chat", model: "gpt-4.1-mini", answer: "LOCAL_SOURCE_OK") [6 s]
+  Chybová zpráva:
+   Assert.Empty() Failure: Collection was not empty
+Collection: [Locator@internal:testid=[data-testid="llm-chat-definition-editor-dialog"] >> internal:testid=[data-testid="llm-chat-definition-model-override"] >> nth=0]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(IPage page, String baseUrl, String providerName, String defaultModel, IReadOnlyList`1 models, String selectedModel, String evidenceDirectory, String label, String expectedResponse, String prompt, Regex responsePattern) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs:line 141
+   at CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(Boolean source, String providerName, String model, String answer) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\LocalSimpleChatBrowserAccessTests.cs:line 41
+   at CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(Boolean source, String providerName, String model, String answer) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\LocalSimpleChatBrowserAccessTests.cs:line 58
+   at CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(Boolean source, String providerName, String model, String answer) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\LocalSimpleChatBrowserAccessTests.cs:line 58
+--- End of stack trace from previous location ---
+  Úspěšné CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared OpenAI Chat", model: "gpt-5.4-mini", answer: "LOCAL_OPENAI_OK") [15 s]
+[xUnit.net 00:00:42.13]   Finished:    CanDoItAll.Tests.Playwright
+  Úspěšné CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared Ollama", model: "gemma3:4b", answer: "4") [19 s]
+
+Celkový počet testů: 3
+     Úspěšné: 2
+     Neúspěšné: 1
+ Celkový čas: 42,6111 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB03\transcripts\browser-no-token.trx
+Exit code: 1
+**********************
+PowerShell transcript end
+End time: 20260827133609
+**********************

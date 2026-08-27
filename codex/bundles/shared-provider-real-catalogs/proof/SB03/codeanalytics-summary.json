@@ -1,0 +1,162 @@
+{
+  "scope": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj",
+    "scopeProjectNames": [
+      "CanDoItAll.Web"
+    ],
+    "scopeNamespacePrefixes": [
+      "CanDoItAll.Web.Infrastructure"
+    ],
+    "includeDi": true,
+    "includePersistence": false,
+    "includeRisks": true,
+    "includeXmlDocs": false,
+    "includeMermaidExports": false
+  },
+  "before": {
+    "snapshotId": "snap-20260827172158-9a0e08df",
+    "summary": {
+      "projectCount": 1,
+      "typeCount": 13,
+      "memberCount": 70,
+      "serviceRegistrationCount": 6,
+      "entityCount": 0,
+      "findingCount": 17,
+      "openQuestionCount": 0,
+      "diagnosticCount": 0
+    },
+    "cycles": []
+  },
+  "after": {
+    "snapshotId": "snap-20260827173911-9a0e08df",
+    "summary": {
+      "projectCount": 1,
+      "typeCount": 14,
+      "memberCount": 76,
+      "serviceRegistrationCount": 6,
+      "entityCount": 0,
+      "findingCount": 17,
+      "openQuestionCount": 0,
+      "diagnosticCount": 0
+    },
+    "cycles": [],
+    "diagnostics": []
+  },
+  "relevantTypes": [
+    {
+      "typeId": "type-proj-candoitall-web-candoitall-web-infrastructure-i-fdb15f990c47",
+      "projectId": "proj-candoitall-web",
+      "moduleId": "mod-proj-candoitall-web-candoitall-web-infrastructure",
+      "namespaceId": "ns-proj-candoitall-web-candoitall-web-infrastructure",
+      "displayName": "CanDoItAll.Web.Infrastructure.InteractiveServerServiceCollectionExtensions",
+      "kind": "Class",
+      "interfaceDisplayNames": [],
+      "memberIds": [
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-66ddad23badf",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-c45b49f9cdd6",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-9f03f9254250"
+      ],
+      "source": {
+        "path": "Infrastructure/InteractiveServerServiceCollectionExtensions.cs",
+        "line": 6,
+        "column": 1,
+        "endLine": 44,
+        "endColumn": 2
+      }
+    },
+    {
+      "typeId": "type-proj-candoitall-web-candoitall-web-infrastructure-l-aff1de4035e5",
+      "projectId": "proj-candoitall-web",
+      "moduleId": "mod-proj-candoitall-web-candoitall-web-infrastructure",
+      "namespaceId": "ns-proj-candoitall-web-candoitall-web-infrastructure",
+      "displayName": "CanDoItAll.Web.Infrastructure.LocalOperatorAuthenticationStateProvider",
+      "kind": "Class",
+      "baseTypeDisplayName": "Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider",
+      "interfaceDisplayNames": [
+        "CanDoItAll.Web.Infrastructure.IInteractiveAccessPrincipalProvider",
+        "Microsoft.AspNetCore.Components.Authorization.IHostEnvironmentAuthenticationStateProvider"
+      ],
+      "memberIds": [
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-f5309db9c461",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-744ba6d799b4",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-74726922b7b2",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-b0c89ed5b612",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-a3424359c081",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-427b1cb1a8df",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-c6daf74052ae",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-3ad8173a3c4d",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-1d5a3e418d6e",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-952760d8a335",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-6cae043a981c",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-8ae95e3ccc27",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-dd4e4bd30ccb",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-39e4dc647c8c",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-c489edc8b70d",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-e0e8e70d74d1"
+      ],
+      "source": {
+        "path": "Infrastructure/LocalOperatorAuthenticationStateProvider.cs",
+        "line": 28,
+        "column": 1,
+        "endLine": 122,
+        "endColumn": 2
+      }
+    },
+    {
+      "typeId": "type-proj-candoitall-web-candoitall-web-infrastructure-l-9c91eb4c2a76",
+      "projectId": "proj-candoitall-web",
+      "moduleId": "mod-proj-candoitall-web-candoitall-web-infrastructure",
+      "namespaceId": "ns-proj-candoitall-web-candoitall-web-infrastructure",
+      "displayName": "CanDoItAll.Web.Infrastructure.LocalOperatorUiOptions",
+      "kind": "Class",
+      "interfaceDisplayNames": [],
+      "memberIds": [
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-245214015266",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-5a5dac306206",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-db97cc7aaa09",
+        "member-type-proj-candoitall-web-candoitall-web-infrastruct-0f79cb6d529c"
+      ],
+      "source": {
+        "path": "Infrastructure/LocalOperatorUiOptions.cs",
+        "line": 5,
+        "column": 1,
+        "endLine": 18,
+        "endColumn": 2
+      }
+    }
+  ],
+  "relevantFindings": [
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-web-candoitall-web-i-9045274f1ba9",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Web.Infrastructure.LocalOperatorAuthenticationStateProvider exposes 16 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-web-candoitall-web-infrastructure-l-aff1de4035e5"
+      ],
+      "source": {
+        "path": "Infrastructure/LocalOperatorAuthenticationStateProvider.cs",
+        "line": 28,
+        "column": 1,
+        "endLine": 122,
+        "endColumn": 2
+      }
+    }
+  ],
+  "dependencyQuery": {
+    "snapshotId": "snap-20260827173911-9a0e08df",
+    "searchText": "LocalOperator",
+    "modules": [],
+    "dependencies": [],
+    "cycles": []
+  },
+  "limits": [
+    "Web infrastructure namespace only; not a whole-solution dependency audit.",
+    "Composition registration behavior is verified by focused tests and direct source inspection.",
+    "Components MCP catalog unavailable (Transport closed); no component markup changes were made."
+  ]
+}

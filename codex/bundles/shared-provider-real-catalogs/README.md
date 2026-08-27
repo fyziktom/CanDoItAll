@@ -18,6 +18,7 @@ actual model IDs, authoritative catalog membership and honest prices.
 
 1. SB01: authoritative catalog/pricing refresh, kind isolation and reopened runtime defects.
 2. SB02: rebuilt pair, real UI setup, full parity, execution, source usage and health.
+3. SB03: normal local browser Simple Chats access, scoped identity and API security proof.
 
 ## Dependency And Validation Map
 
@@ -34,15 +35,17 @@ their overflow. No responsive redesign or shared component-library change.
 ## Validation Summary
 
 - Bundle preparation status: Passed.
-- Execution status: Completed.
-- Subbundle gate review: SB01 Passed; SB02 Passed.
-- Final closure gate: Passed; canonical completed-stage validator exit 0.
+- Execution status: Completed, including N005 normal-browser Simple Chats access.
+- Subbundle gate review: SB01 Passed; SB02 Passed; SB03 Passed.
+- Final closure gate: Behavioral checks pass; canonical validation recorded in SB03 proof.
 - Browser validation analytics: all three build6 real UI tests passed. OpenAI has 128
   discovered IDs, the image profile five, and Ollama 72 installed IDs. Full identity,
   all nine price fields and private-flag equality are asserted, not only counts.
 - Runtime: OpenAI/Ollama simple chats and agents, approved image generation and vision
   passed; eight source invocations succeeded with complete token/image usage.
-- Deployment: both hosts run real-catalogs-20260827-6 and return HTTP 200 Healthy.
+- Deployment: both hosts run local-ui-access-20260827-1 and return HTTP 200 Healthy.
+- Normal-browser access: 50 focused tests pass; client OpenAI/Ollama and source OpenAI
+  chats were created, executed and reloaded without browser JWTs. API authorization remains intact.
 
 ## Handoff
 

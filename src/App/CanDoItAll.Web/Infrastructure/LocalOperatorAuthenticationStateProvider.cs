@@ -1,6 +1,5 @@
 using System.Net;
 using System.Security.Claims;
-using CanDoItAll.Composition;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Options;
@@ -29,7 +28,7 @@ internal sealed class AnonymousInteractiveAccessPrincipalProvider : IInteractive
 internal sealed class LocalOperatorAuthenticationStateProvider(
     IHttpContextAccessor httpContextAccessor,
     IOptions<ApiAccessOptions> apiOptions,
-    ResolvedRuntimeHostProfile hostProfile) :
+    IOptions<LocalOperatorUiOptions> uiOptions) :
     AuthenticationStateProvider,
     IHostEnvironmentAuthenticationStateProvider,
     IInteractiveAccessPrincipalProvider
@@ -38,9 +37,12 @@ internal sealed class LocalOperatorAuthenticationStateProvider(
     internal const string AuthenticationType = "CanDoItAll.LocalOperator";
 
     private readonly ClaimsPrincipal localOperator = CreateLocalOperator();
+    private readonly HashSet<IPAddress> trustedAddresses = uiOptions.Value.TrustedAddresses
+        .Select(value => LocalOperatorUiOptions.Normalize(IPAddress.Parse(value)))
+        .ToHashSet();
     private Task<AuthenticationState>? authenticationStateTask;
     private Task<ClaimsPrincipal>? accessPrincipalTask;
-    private bool? isLoopbackCircuit;
+    private bool? isTrustedCircuit;
 
     public bool IsAvailable => accessPrincipalTask is not null;
 
@@ -59,13 +61,12 @@ internal sealed class LocalOperatorAuthenticationStateProvider(
     public void SetAuthenticationState(Task<AuthenticationState> authenticationStateTask)
     {
         ArgumentNullException.ThrowIfNull(authenticationStateTask);
-        isLoopbackCircuit ??= IsLoopbackRequest(httpContextAccessor.HttpContext);
+        isTrustedCircuit ??= IsTrustedRequest(httpContextAccessor.HttpContext);
         this.authenticationStateTask = authenticationStateTask;
         accessPrincipalTask = ResolveAccessPrincipalAsync(
             authenticationStateTask,
             apiOptions.Value.Authorization.Enabled,
-            hostProfile.IsInteractive,
-            isLoopbackCircuit.Value,
+            isTrustedCircuit.Value,
             localOperator);
         NotifyAuthenticationStateChanged(this.authenticationStateTask);
     }
@@ -73,32 +74,30 @@ internal sealed class LocalOperatorAuthenticationStateProvider(
     private static async Task<ClaimsPrincipal> ResolveAccessPrincipalAsync(
         Task<AuthenticationState> authenticationStateTask,
         bool authorizationEnabled,
-        bool isInteractiveHost,
-        bool isLoopbackCircuit,
+        bool isTrustedCircuit,
         ClaimsPrincipal localOperator)
     {
         var authenticationState = await authenticationStateTask.ConfigureAwait(false);
         return authorizationEnabled &&
-               isInteractiveHost &&
-               isLoopbackCircuit &&
+               isTrustedCircuit &&
                authenticationState.User.Identity?.IsAuthenticated != true
             ? localOperator
             : authenticationState.User;
     }
 
-    private static bool IsLoopbackRequest(HttpContext? httpContext)
-    {
-        if (httpContext is null)
-        {
+    private bool IsTrustedRequest(HttpContext? httpContext) {
+        if (httpContext is null) {
             return false;
         }
 
         var originalRemoteIp = httpContext.Items[DevelopmentEndpointAccess.OriginalRemoteIpItemKey]
             as IPAddress;
-        return DevelopmentEndpointAccess.IsAnonymousLocalAccessAllowed(
-            originalRemoteIp,
-            httpContext.Connection.RemoteIpAddress);
+        return IsTrustedAddress(originalRemoteIp) &&
+               IsTrustedAddress(httpContext.Connection.RemoteIpAddress);
     }
+
+    private bool IsTrustedAddress(IPAddress? address) => address is not null &&
+        (IPAddress.IsLoopback(address) || trustedAddresses.Contains(LocalOperatorUiOptions.Normalize(address)));
 
     private static ClaimsPrincipal CreateLocalOperator()
     {

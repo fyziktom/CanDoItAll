@@ -22,6 +22,12 @@ public static class InteractiveServerServiceCollectionExtensions
         this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.AddOptions<LocalOperatorUiOptions>()
+            .BindConfiguration(LocalOperatorUiOptions.SectionName)
+            .Validate(options => options.IsValid(),
+                "WebHost:LocalOperatorUi:TrustedAddresses must contain only explicit IP addresses; " +
+                "wildcards, subnets, hostnames and unspecified addresses are not allowed.")
+            .ValidateOnStart();
         services.AddHttpContextAccessor();
         services.TryAddScoped<LocalOperatorAuthenticationStateProvider>();
         services.Replace(ServiceDescriptor.Scoped<AuthenticationStateProvider>(

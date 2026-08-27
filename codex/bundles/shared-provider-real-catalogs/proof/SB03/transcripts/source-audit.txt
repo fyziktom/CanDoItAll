@@ -1,0 +1,78 @@
+**********************
+PowerShell transcript start
+Start time: 20260827134820
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$repairPatch = @'
+*** Begin Patch
+*** Update File: C:/repositories/CanDoItAll/.gitignore
+@@
+ !codex/bundles/Simple-Llm-Chats-Hardening-Sse/proof/**
++!codex/bundles/shared-provider-real-catalogs/proof/
++codex/bundles/shared-provider-real-catalogs/proof/*
++!codex/bundles/shared-provider-real-catalogs/proof/SB03/
++!codex/bundles/shared-provider-real-catalogs/proof/SB03/**
+*** Update File: C:/repositories/CanDoItAll/codex/bundles/shared-provider-real-catalogs/proof/SB03/Audit-AccessSource.ps1
+@@
+-        $_ -match '\.(cs|md|ps1)$' -and
++        ($_ -eq '.gitignore' -or $_ -match '\.(cs|md|ps1)$') -and
+*** End Patch
+'@
+& 'C:\Users\lucys\AppData\Local\OpenAI\Codex\bin\d5f4c71927a04589\codex.exe' --codex-run-as-apply-patch $repairPatch
+& codex\bundles\shared-provider-real-catalogs\proof\SB03\Audit-AccessSource.ps1
+Start-Transcript -Path codex\bundles\shared-provider-real-catalogs\proof\SB03\transcripts\bundle-completed.txt -Force | Out-Null
+Write-Output 'Command: python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py codex/bundles/shared-provider-real-catalogs --stage completed'
+python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py codex/bundles/shared-provider-real-catalogs --stage completed | Out-Host
+$validationExit = $LASTEXITCODE
+Write-Output "Exit code: $validationExit"
+Stop-Transcript | Out-Null
+if ($validationExit -ne 0) { exit $validationExit }
+& codex\bundles\shared-provider-real-catalogs\proof\SB03\Audit-AccessSource.ps1
+$repairRoot = 'C:\repositories\CanDoItAll'
+$proofRoot = Join-Path $repairRoot 'codex\bundles\shared-provider-real-catalogs'
+$sourceIndex = @(Import-Csv (Join-Path $proofRoot 'proof\SB03\changed-files.csv'))
+foreach ($row in $sourceIndex) {
+    $path = Join-Path $repairRoot $row.Path.Substring(7)
+    if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $row.AfterSHA256) { throw "Source hash mismatch: $($row.Path)" }
+}
+$artifactIndex = @(Import-Csv (Join-Path $proofRoot 'proof\SB03\proof-artifacts.csv'))
+foreach ($row in $artifactIndex) {
+    $path = Join-Path $proofRoot $row.Path.Substring(9)
+    if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $row.SHA256) { throw "Artifact hash mismatch: $($row.Path)" }
+}
+Write-Output "PASS $($sourceIndex.Count) source hashes and $($artifactIndex.Count) artifact hashes verified."
+git status --short
+Process ID: 32260
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+LOCAL-UI-ACCESS API-BOUNDARY production source and provenance audit
+PASS identity assertion: IOptions<LocalOperatorUiOptions>
+PASS identity assertion: apiOptions.Value.Authorization.Enabled
+PASS identity assertion: IsTrustedAddress(originalRemoteIp) &&
+PASS identity assertion: IsTrustedAddress(httpContext.Connection.RemoteIpAddress)
+PASS identity assertion: authenticationState.User.Identity?.IsAuthenticated != true
+PASS identity assertion: ApiAccessScopeNames.ReadLlmChats
+PASS identity assertion: ApiAccessScopeNames.ManageLlmChats
+PASS identity assertion: ApiAccessScopeNames.ExecuteLlmChats
+Command: rg -n TODO|NotImplemented|e2e-|deterministic.fixture|AllowAnonymous against the three owned production files
+PASS no fixture, stub or anonymous HTTP bypass in owned production
+Command: git diff --exit-code -- API/dev/middleware/file-access owners and project files
+PASS HTTP, dev, application-policy and project boundaries unchanged
+Command: git diff --check
+PASS current SHA256 for 27 changed code/test/document files; seven initial captures include two absent new files.
+Exit code: 0
+**********************
+PowerShell transcript end
+End time: 20260827134822
+**********************

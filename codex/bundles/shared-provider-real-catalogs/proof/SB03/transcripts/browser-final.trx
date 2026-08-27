@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="6450cba4-faf3-44d5-b085-3098aedd732c" name="lucys@LUCYSPOWER 2026-08-27 13:37:22" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T13:37:22.3469027-04:00" queuing="2026-08-27T13:37:22.3469031-04:00" start="2026-08-27T13:37:09.5841342-04:00" finish="2026-08-27T13:37:44.4526431-04:00" />
+  <TestSettings name="default" id="8d6ba388-4433-40f4-9797-eabb07207f05">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_13_37_22" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="0cb09d84-ba5a-4805-a52e-f0bee7ddcba9" testId="4dd321c4-512d-b8a8-d9e8-b7f1fcec3bd9" testName="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: &quot;UI Shared OpenAI Chat&quot;, model: &quot;gpt-5.4-mini&quot;, answer: &quot;LOCAL_OPENAI_OK&quot;)" computerName="LUCYSPOWER" duration="00:00:12.1091827" startTime="2026-08-27T13:37:10.2035672-04:00" endTime="2026-08-27T13:37:22.3219463-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0cb09d84-ba5a-4805-a52e-f0bee7ddcba9" />
+    <UnitTestResult executionId="6a2d74c1-a1f8-44bf-b6c3-b1720acff9d0" testId="2495abd8-2365-00fb-e294-792f66090044" testName="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: True, providerName: &quot;UI Shared OpenAI Chat&quot;, model: &quot;gpt-5.4-mini&quot;, answer: &quot;LOCAL_SOURCE_OK&quot;)" computerName="LUCYSPOWER" duration="00:00:11.3222127" startTime="2026-08-27T13:37:33.0582112-04:00" endTime="2026-08-27T13:37:44.3778931-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6a2d74c1-a1f8-44bf-b6c3-b1720acff9d0" />
+    <UnitTestResult executionId="ebd0245e-8269-4dce-86b9-93b7b54f1eb4" testId="68a24b54-583b-cbfa-0f02-5fff2b025f66" testName="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: &quot;UI Shared Ollama&quot;, model: &quot;gemma3:4b&quot;, answer: &quot;4&quot;)" computerName="LUCYSPOWER" duration="00:00:10.7323191" startTime="2026-08-27T13:37:22.3344853-04:00" endTime="2026-08-27T13:37:33.0551967-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ebd0245e-8269-4dce-86b9-93b7b54f1eb4" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: &quot;UI Shared Ollama&quot;, model: &quot;gemma3:4b&quot;, answer: &quot;4&quot;)" storage="c:\repositories\candoitall\tests\playwright\candoitall.tests.playwright\bin\debug\net10.0\candoitall.tests.playwright.dll" id="68a24b54-583b-cbfa-0f02-5fff2b025f66">
+      <Execution id="ebd0245e-8269-4dce-86b9-93b7b54f1eb4" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests" name="LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: True, providerName: &quot;UI Shared OpenAI Chat&quot;, model: &quot;gpt-5.4-mini&quot;, answer: &quot;LOCAL_SOURCE_OK&quot;)" storage="c:\repositories\candoitall\tests\playwright\candoitall.tests.playwright\bin\debug\net10.0\candoitall.tests.playwright.dll" id="2495abd8-2365-00fb-e294-792f66090044">
+      <Execution id="6a2d74c1-a1f8-44bf-b6c3-b1720acff9d0" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests" name="LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: &quot;UI Shared OpenAI Chat&quot;, model: &quot;gpt-5.4-mini&quot;, answer: &quot;LOCAL_OPENAI_OK&quot;)" storage="c:\repositories\candoitall\tests\playwright\candoitall.tests.playwright\bin\debug\net10.0\candoitall.tests.playwright.dll" id="4dd321c4-512d-b8a8-d9e8-b7f1fcec3bd9">
+      <Execution id="0cb09d84-ba5a-4805-a52e-f0bee7ddcba9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests" name="LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="4dd321c4-512d-b8a8-d9e8-b7f1fcec3bd9" executionId="0cb09d84-ba5a-4805-a52e-f0bee7ddcba9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2495abd8-2365-00fb-e294-792f66090044" executionId="6a2d74c1-a1f8-44bf-b6c3-b1720acff9d0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="68a24b54-583b-cbfa-0f02-5fff2b025f66" executionId="ebd0245e-8269-4dce-86b9-93b7b54f1eb4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="3" executed="3" passed="3" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.10]   Discovering: CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:00:00.16]   Discovered:  CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:00:00.18]   Starting:    CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:00:34.39]   Finished:    CanDoItAll.Tests.Playwright&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

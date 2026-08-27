@@ -11,3 +11,6 @@
 - R4 / N004: New durable bundle, targeted regression proof and two rebuilt Docker apps.
   UI configuration and real chat/agent/image/vision execution plus source usage proof.
   Final handed-off apps must not use fixture URLs or synthetic catalogs.
+- R5 / N005: normal local browser users can create, save and execute Simple Chats on
+  the Docker client. Headless OS does not imply non-interactive browser. Explicit
+  local Docker ingress trust is isolated from remote/API and dev-route authorization.

@@ -1,4 +1,8 @@
-param([Parameter(Mandatory)] [string] $Image, [Parameter(Mandatory)] [string] $BackupSuffix)
+param(
+    [Parameter(Mandatory)] [string] $Image,
+    [Parameter(Mandatory)] [string] $BackupSuffix,
+    [switch] $TrustLoopbackPublishedUi
+)
 $ErrorActionPreference = 'Stop'
 $names = @('candoitall-spui-shared', 'candoitall-spui-client')
 $replaced = [System.Collections.Generic.List[string]]::new()
@@ -16,6 +20,27 @@ try {
         $networks = @($configuration.NetworkSettings.Networks.PSObject.Properties.Name)
         if ($networks -notcontains 'candoitall-spui-app') {
             throw "Expected isolated application network is missing: $name"
+        }
+        $trustedGateway = $null
+        if ($TrustLoopbackPublishedUi) {
+            $publishedPorts = @($configuration.HostConfig.PortBindings.PSObject.Properties | ForEach-Object { $_.Value })
+            if ($publishedPorts.Count -eq 0) {
+                throw 'Explicit local UI trust requires loopback-published ports.'
+            }
+            foreach ($port in $publishedPorts) {
+                $hostAddress = $null
+                if (-not [System.Net.IPAddress]::TryParse($port.HostIp, [ref] $hostAddress) -or
+                    -not [System.Net.IPAddress]::IsLoopback($hostAddress)) {
+                    throw "Cannot enable anonymous local UI access for a non-loopback binding: $name"
+                }
+            }
+            $gateways = @($configuration.NetworkSettings.Networks.PSObject.Properties |
+                ForEach-Object { $_.Value.Gateway } | Where-Object { $_ } | Sort-Object -Unique)
+            if ($gateways.Count -ne 1) {
+                throw "Cannot determine one explicit Docker ingress gateway: $name"
+            }
+            $trustedGateway = [System.Net.IPAddress]::Parse($gateways[0]).ToString()
+            Write-Output "$name local UI: all published bindings are loopback; explicit gateway $trustedGateway."
         }
         docker stop $name | Out-Host
         if ($LASTEXITCODE -ne 0) {
@@ -44,7 +69,13 @@ try {
             $arguments += @('--volume', $volume)
         }
         foreach ($setting in $configuration.Config.Env) {
+            if ($TrustLoopbackPublishedUi -and $setting.StartsWith('WebHost__LocalOperatorUi__TrustedAddresses__')) {
+                continue
+            }
             $arguments += @('--env', $setting)
+        }
+        if ($trustedGateway) {
+            $arguments += @('--env', "WebHost__LocalOperatorUi__TrustedAddresses__0=$trustedGateway")
         }
         $arguments += $Image
         & docker @arguments | Out-Host

@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="816f50f7-46da-44a0-bd2b-7d1061ab6f63" name="lucys@LUCYSPOWER 2026-08-27 13:27:07" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T13:27:07.4342712-04:00" queuing="2026-08-27T13:27:07.4342714-04:00" start="2026-08-27T13:27:06.4825311-04:00" finish="2026-08-27T13:27:07.4434498-04:00" />
+  <TestSettings name="default" id="95c99a3b-b9b5-49cf-bf2f-f3d035ceba61">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_13_27_07" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d690813b-d143-4750-8969-35177bb2125b" testId="78122c90-1d41-d928-41f3-53b5118ebeff" testName="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: True, original: &quot;172.31.0.1&quot;, effective: &quot;172.31.0.1&quot;, trustedAddress: &quot;172.31.0.1&quot;)" computerName="LUCYSPOWER" duration="00:00:00.0396791" startTime="2026-08-27T13:27:07.2384351-04:00" endTime="2026-08-27T13:27:07.2936819-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d690813b-d143-4750-8969-35177bb2125b">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs:line 37&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="34537982-1085-4093-85ef-bccda1de1ab2" testId="ae9ea310-c33a-8554-615f-926e47d0df6f" testName="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: &quot;127.0.0.1&quot;, effective: &quot;127.0.0.1&quot;, trustedAddress: null)" computerName="LUCYSPOWER" duration="00:00:00.0020498" startTime="2026-08-27T13:27:07.3088984-04:00" endTime="2026-08-27T13:27:07.3089575-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="34537982-1085-4093-85ef-bccda1de1ab2">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs:line 37&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ed283d8a-2df0-4524-8ed8-f6cac555199d" testId="f6aaf034-408f-9458-c24b-9d6ba125733e" testName="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: &quot;::ffff:172.31.0.1&quot;, effective: &quot;::ffff:172.31.0.1&quot;, trustedAddress: &quot;172.31.0.1&quot;)" computerName="LUCYSPOWER" duration="00:00:00.0053870" startTime="2026-08-27T13:27:07.3097899-04:00" endTime="2026-08-27T13:27:07.3098175-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ed283d8a-2df0-4524-8ed8-f6cac555199d">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs:line 37&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f137d457-da72-4cc4-b84c-77b8781527b3" testId="37022add-aec2-682b-79c0-3212cf62009d" testName="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: &quot;172.31.0.1&quot;, effective: &quot;172.31.0.1&quot;, trustedAddress: &quot;172.31.0.1&quot;)" computerName="LUCYSPOWER" duration="00:00:00.0001596" startTime="2026-08-27T13:27:07.3102910-04:00" endTime="2026-08-27T13:27:07.3103175-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f137d457-da72-4cc4-b84c-77b8781527b3">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs:line 37&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: &quot;127.0.0.1&quot;, effective: &quot;127.0.0.1&quot;, trustedAddress: null)" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="ae9ea310-c33a-8554-615f-926e47d0df6f">
+      <Execution id="34537982-1085-4093-85ef-bccda1de1ab2" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests" name="LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: True, original: &quot;172.31.0.1&quot;, effective: &quot;172.31.0.1&quot;, trustedAddress: &quot;172.31.0.1&quot;)" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="78122c90-1d41-d928-41f3-53b5118ebeff">
+      <Execution id="d690813b-d143-4750-8969-35177bb2125b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests" name="LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: &quot;172.31.0.1&quot;, effective: &quot;172.31.0.1&quot;, trustedAddress: &quot;172.31.0.1&quot;)" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="37022add-aec2-682b-79c0-3212cf62009d">
+      <Execution id="f137d457-da72-4cc4-b84c-77b8781527b3" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests" name="LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: &quot;::ffff:172.31.0.1&quot;, effective: &quot;::ffff:172.31.0.1&quot;, trustedAddress: &quot;172.31.0.1&quot;)" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="f6aaf034-408f-9458-c24b-9d6ba125733e">
+      <Execution id="ed283d8a-2df0-4524-8ed8-f6cac555199d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests" name="LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="78122c90-1d41-d928-41f3-53b5118ebeff" executionId="d690813b-d143-4750-8969-35177bb2125b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ae9ea310-c33a-8554-615f-926e47d0df6f" executionId="34537982-1085-4093-85ef-bccda1de1ab2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f6aaf034-408f-9458-c24b-9d6ba125733e" executionId="ed283d8a-2df0-4524-8ed8-f6cac555199d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="37022add-aec2-682b-79c0-3212cf62009d" executionId="f137d457-da72-4cc4-b84c-77b8781527b3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="4" executed="4" passed="0" failed="4" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.18]   Discovering: CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.29]   Discovered:  CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.32]   Starting:    CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.40]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:00.40]       Expected: True&#xD;
+[xUnit.net 00:00:00.40]       Actual:   False&#xD;
+[xUnit.net 00:00:00.40]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.40]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs(37,0): at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress)&#xD;
+[xUnit.net 00:00:00.40]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:00.41]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:00.41]       Expected: True&#xD;
+[xUnit.net 00:00:00.41]       Actual:   False&#xD;
+[xUnit.net 00:00:00.41]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.41]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs(37,0): at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress)&#xD;
+[xUnit.net 00:00:00.41]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:00.41]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:00.41]       Expected: True&#xD;
+[xUnit.net 00:00:00.41]       Actual:   False&#xD;
+[xUnit.net 00:00:00.41]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.41]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs(37,0): at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress)&#xD;
+[xUnit.net 00:00:00.41]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:00.41]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:00.41]       Expected: True&#xD;
+[xUnit.net 00:00:00.41]       Actual:   False&#xD;
+[xUnit.net 00:00:00.41]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.41]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\LocalOperatorUiAccessTests.cs(37,0): at CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(Boolean interactiveOs, String original, String effective, String trustedAddress)&#xD;
+[xUnit.net 00:00:00.41]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:00.41]   Finished:    CanDoItAll.Tests.Components&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T13:27:07.2981363-04:00">
+        <Text>[xUnit.net 00:00:00.39]     CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: True, original: "172.31.0.1", effective: "172.31.0.1", trustedAddress: "172.31.0.1") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T13:27:07.3094486-04:00">
+        <Text>[xUnit.net 00:00:00.41]     CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: "127.0.0.1", effective: "127.0.0.1", trustedAddress: null) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T13:27:07.3100706-04:00">
+        <Text>[xUnit.net 00:00:00.41]     CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: "::ffff:172.31.0.1", effective: "::ffff:172.31.0.1", trustedAddress: "172.31.0.1") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T13:27:07.3105106-04:00">
+        <Text>[xUnit.net 00:00:00.41]     CanDoItAll.Tests.Components.Shell.LocalOperatorUiAccessTests.LOCAL_UI_ACCESS_local_browser_gets_chat_scopes_independently_of_os_profile(interactiveOs: False, original: "172.31.0.1", effective: "172.31.0.1", trustedAddress: "172.31.0.1") [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

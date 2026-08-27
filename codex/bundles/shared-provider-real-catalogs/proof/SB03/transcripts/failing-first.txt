@@ -1,0 +1,51 @@
+**********************
+PowerShell transcript start
+Start time: 20260827132411
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$ErrorActionPreference = 'Stop'
+$proofDir = 'C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB03\transcripts'
+Start-Transcript -Path (Join-Path $proofDir 'failing-first.txt') -Force | Out-Null
+Write-Output 'Invariant: LOCAL-UI-ACCESS'
+Write-Output 'Command: dotnet --version'
+dotnet --version
+Write-Output 'Command: dotnet build tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-restore --nologo'
+dotnet build tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-restore --nologo
+Write-Output "Exit code: $LASTEXITCODE"
+if ($LASTEXITCODE -ne 0) { Stop-Transcript | Out-Null; exit 1 }
+Write-Output 'Command: dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --list-tests --filter FullyQualifiedName~LocalOperatorUiAccessTests'
+$discovery = dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --list-tests --filter 'FullyQualifiedName~LocalOperatorUiAccessTests'
+$discovery | Write-Output
+$count = @($discovery | Where-Object { $_.Trim().StartsWith('CanDoItAll.Tests.') }).Count
+Write-Output "Expected: 4; discovered: $count"
+if ($LASTEXITCODE -ne 0 -or $count -ne 4) { Stop-Transcript | Out-Null; exit 1 }
+Write-Output 'Command: dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --filter FullyQualifiedName~LocalOperatorUiAccessTests --logger trx;LogFileName=failing-first.trx'
+dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --filter 'FullyQualifiedName~LocalOperatorUiAccessTests' --logger 'console;verbosity=normal' --logger 'trx;LogFileName=failing-first.trx' --results-directory $proofDir --nologo
+$testExit = $LASTEXITCODE
+Write-Output "Exit code: $testExit"
+Stop-Transcript | Out-Null
+exit $testExit
+Process ID: 31572
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Invariant: LOCAL-UI-ACCESS
+Command: dotnet --version
+
+Command: dotnet build tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-restore --nologo
+
+Exit code: 1
+**********************
+PowerShell transcript end
+End time: 20260827132547
+**********************

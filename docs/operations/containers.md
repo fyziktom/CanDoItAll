@@ -61,6 +61,31 @@ Normal shutdown preserves the `app-data` and `db-data` named volumes. Do not add
 
 ## Workstation Web Host
 
+### Local browser access with API authorization enabled
+
+The headless container profile disables OS desktop integrations, not interactive browser
+features. Simple Chats grants its read/manage/execute permissions to an anonymous local
+browser circuit; it does not authenticate HTTP API calls or grant broader API scopes.
+
+Native loopback connections work without extra configuration. Docker may present a
+loopback-published browser connection as its NAT gateway. For that deployment, explicitly
+configure `WebHost:LocalOperatorUi:TrustedAddresses` with the inspected ingress IP, for
+example the environment entry `WebHost__LocalOperatorUi__TrustedAddresses__0`. The default
+list is empty. Hostnames, CIDR ranges, wildcards and unspecified addresses fail startup.
+
+Only enable this for an ingress exclusively reachable by trusted local users. Verify
+every published app port binds to `127.0.0.1` or `::1`; never trust a gateway that also
+forwards anonymous remote clients. This is not a substitute for remote user authentication.
+Both the original transport IP and the effective forwarded IP must be loopback or in
+the explicit list. A forwarded loopback header alone cannot confer local access.
+
+The two-instance validation helper `Restart-TestInstances.ps1` accepts
+`-TrustLoopbackPublishedUi`: it checks loopback bindings and one inspected gateway before
+replacing each test app's configuration. Ordinary deployments must configure their
+own verified address. Recheck this setting when changing Docker networks or ingress.
+
+### Native workstation process
+
 To run `CanDoItAll.Web` directly on the workstation while keeping PostgreSQL in Compose:
 
 ```powershell

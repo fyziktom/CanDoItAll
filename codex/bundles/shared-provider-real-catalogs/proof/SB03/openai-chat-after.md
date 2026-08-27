@@ -1,0 +1,36 @@
+- article [ref=f6e681]:
+  - generic [ref=f6e684]:
+    - img "UI shared catalog local-client-local_openai_ok" [ref=f6e685]
+    - generic [ref=f6e686]:
+      - generic [ref=f6e687]:
+        - generic [ref=f6e688]: Active
+        - generic "Pinned definition revision" [ref=f6e689]: Revision 2
+      - generic [ref=f6e691]:
+        - heading "Catalog validation local-client-local_openai_ok 2026-08-27T17:37:17.8063935+00:00" [level=2] [ref=f6e692]
+        - paragraph [ref=f6e693]: UI shared catalog local-client-local_openai_ok
+  - generic [ref=f6e695]:
+    - generic [ref=f6e697]:
+      - generic [ref=f6e698]:
+        - generic [ref=f6e699]: You
+        - generic [ref=f6e700]: 08/27/2026 17:37
+      - generic [ref=f6e701]:
+        - paragraph [ref=f6e702]: Reply with exactly LOCAL_OPENAI_OK and nothing else.
+        - button "Copy your message" [ref=f6e705] [cursor=pointer]:
+          - generic [ref=f6e706]: content_copy
+    - generic [ref=f6e710]:
+      - generic [ref=f6e711]:
+        - generic [ref=f6e712]: Assistant
+        - generic [ref=f6e713]: 08/27/2026 17:37
+      - generic [ref=f6e714]:
+        - paragraph [ref=f6e716]: LOCAL_OPENAI_OK
+        - button "Copy assistant response" [ref=f6e719] [cursor=pointer]:
+          - generic [ref=f6e720]: content_copy
+  - generic [ref=f6e727]:
+    - textbox "Message this Simple Chat" [ref=f6e728]
+    - generic [ref=f6e729]:
+      - button "Insert from prompt gallery" [ref=f6e730]:
+        - generic [ref=f6e731]: library_books
+        - generic [ref=f6e732]: library books
+      - button "Send Simple Chat message" [disabled] [ref=f6e733]:
+        - generic [ref=f6e734]: send
+        - generic [ref=f6e735]: send

@@ -1,5 +1,30 @@
 # C# Architecture Gate Result
 
+## SB03 local browser identity gate
+
+Status: Pass. The existing Web infrastructure identity owner retains circuit principal
+resolution; LocalOperatorUiOptions owns only exact deployment ingress configuration.
+No new interface, project, package, partial class, domain dependency or service locator.
+Construction remains the existing scoped DI registration, with validated options.
+
+Snapshots snap-20260827172158-9a0e08df and snap-20260827173911-9a0e08df cover only
+Web.Infrastructure: types 13 to 14, members 70 to 76, zero diagnostics and scoped cycles.
+Seventeen findings remain; the existing identity owner has an informational member-count
+finding. Splitting this cohesive owner would not improve the boundary. The filtered
+dependency query returned no matching edges; direct project-reference inspection and
+unchanged-project assertions are the dependency evidence, not a full-graph claim.
+
+38 component tests cover positive/negative principal, options and registration behavior;
+9 HTTP tests protect API/dev/file boundaries; 3 real browser cases prove actual production
+consumers and post-reload runtime access. All pass. The four new regression cases failed
+before the repair. Evidence: bundle://proof/SB03/manifest.md and codeanalytics-summary.json.
+
+Anonymous trust is constrained to both captured transport addresses; authenticated scopes
+and HttpContext.User are not augmented. Docker trust is explicit, validated and enabled
+only after verifying local port bindings. No silent authentication fallback was introduced.
+
+## SB01/SB02 checkpoint review
+
 Status: Pass for the final deployed repair and its real dependent execution.
 
 ## Findings

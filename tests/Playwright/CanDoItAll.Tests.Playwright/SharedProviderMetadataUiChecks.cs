@@ -119,7 +119,7 @@ internal static class SharedProviderMetadataUiChecks {
     public static async Task ExerciseSimpleChatAsync(IPage page, string baseUrl, string providerName,
         string defaultModel, IReadOnlyList<string> models, string selectedModel, string evidenceDirectory, string label,
         string expectedResponse = "deterministic fixture response", string? prompt = null,
-        Regex? responsePattern = null) {
+        Regex? responsePattern = null, bool importedProvider = true) {
         var definitionName = $"UI shared catalog {label}";
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page,
             $"{baseUrl}/agents?tab=simple-chats&simpleChatView=definitions");
@@ -138,7 +138,12 @@ internal static class SharedProviderMetadataUiChecks {
         await Assertions.Expect(selector.Locator("option")).ToHaveCountAsync(models.Count);
         Assert.Equal(models.Where(model => model != defaultModel).Append($"Provider default ({defaultModel})").Order(),
             (await selector.Locator("option").AllTextContentsAsync()).Order());
-        Assert.Empty(await dialog.GetByTestId("llm-chat-definition-model-override").AllAsync());
+        var overrides = await dialog.GetByTestId("llm-chat-definition-model-override").AllAsync();
+        if (importedProvider) {
+            Assert.Empty(overrides);
+        } else {
+            Assert.Single(overrides);
+        }
         await selector.ClickAsync();
         await ScreenshotAsync(page, evidenceDirectory, $"metadata-simple-chat-{label}-open.png");
         await selector.PressAsync("Escape");

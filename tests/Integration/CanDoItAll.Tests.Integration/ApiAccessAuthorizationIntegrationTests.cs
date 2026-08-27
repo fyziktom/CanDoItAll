@@ -12,11 +12,14 @@ namespace CanDoItAll.Tests.Integration.Api;
 public sealed class ApiAccessAuthorizationIntegrationTests
 {
     [Fact]
-    public async Task Local_operator_ui_identity_does_not_authenticate_http_boundaries()
-    {
+    public async Task API_BOUNDARY_local_operator_ui_identity_does_not_authenticate_http_boundaries() {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: true,
-            configureServices: services => services.AddCanDoItAllLocalOperatorUiAuthentication(),
+            configureServices: services => {
+                services.AddCanDoItAllLocalOperatorUiAuthentication();
+                services.Configure<LocalOperatorUiOptions>(options =>
+                    options.TrustedAddresses = ["127.0.0.1", "172.31.0.1"]);
+            },
             useInMemoryDatabase: true);
 
         using var llmChatsResponse = await host.Client.GetAsync("/api/llm-chats");
@@ -24,6 +27,18 @@ public sealed class ApiAccessAuthorizationIntegrationTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, llmChatsResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, authorizedFileResponse.StatusCode);
+
+        SetBearerToken(host, host.App.Services.GetRequiredService<IApiTokenService>()
+            .IssueToken(new ApiTokenIssueRequest {
+                Subject = "read-only-ui-boundary-test",
+                DisplayName = "Read only UI boundary test",
+                Scopes = [ApiAccessScopeNames.ReadLlmChats]
+            }));
+        using var readResponse = await host.Client.GetAsync("/api/llm-chats");
+        using var createResponse = await host.Client.PostAsJsonAsync("/api/llm-chats", new { });
+
+        Assert.Equal(HttpStatusCode.OK, readResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, createResponse.StatusCode);
     }
 
     [Fact]

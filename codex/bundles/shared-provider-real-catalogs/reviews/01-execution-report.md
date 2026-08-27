@@ -2,7 +2,7 @@
 
 ## Status
 
-Completed on 2026-08-27. SB01 and SB02 behavioral/architecture gates pass.
+Completed on 2026-08-27. SB01, SB02 and SB03 behavioral/architecture gates pass.
 Final canonical validation and hash audit are recorded in reviews/02-final-verifier.md.
 No historical failure was relabeled a pass.
 
@@ -45,6 +45,11 @@ Thirteen production files; no new project, interface, DI registration, generic m
 fallback transport or approval bypass. Exact paths/hashes are in proof/SB01/changed-files.csv.
 
 ## Deployment
+
+Current SB03 deployment: both apps run local-ui-access-20260827-1 with explicit
+loopback-published Docker ingress trust. Image digest and host proof are in
+bundle://proof/SB03/transcripts/runtime-evidence.txt. The following build6 details are
+the preserved SB01/SB02 checkpoint, not the current app image.
 
 Image: candoitall-shared-providers-ui:real-catalogs-20260827-6
 Image ID: sha256:3a92a5a65a81dfd2b03e8cb91a901ecdabddc836feeafc33624c1d02a4ea4800
@@ -139,6 +144,7 @@ ledger is Unavailable; this proves token/image accounting, not monetary settleme
 | --- | --- | --- | --- | --- | --- |
 | SB01 | Pass | Pass | Source save/discovery/publication, exact client sync, real runtime | Completed | bundle://proof/SB01/manifest.md |
 | SB02 | Pass after each SB01 repair | Pass | Both upstreams, all requested modalities, source usage and health | Completed | bundle://proof/SB02/manifest.md |
+| SB03 | Pass; normal-browser denial reproduced | Pass | Browser creation/execution/reload, source usage, HTTP/file rejection, both hosts | Completed | bundle://proof/SB03/manifest.md; bundle://proof/SB03/semantic-invariants.md |
 
 ## Browser Validation Analytics
 
@@ -154,6 +160,9 @@ are independent oracles, and SQL is read-only usage evidence.
 | SB02 | 5212 agents/chat image approval/completion | 1920x1080 | bundle://proof/SB01/transcripts/build6-runtime-ui.trx | bundle://proof/SB02/browser/real-image-approval.png; bundle://proof/SB02/browser/real-image-response.png | Pass: Approve once, Completed and successful final message/thread summary |
 | SB02 | Client managed workspace generated image | 1024x1024 artifact | Real provider invocation plus PNG signature, time and hash in source verifier | bundle://proof/SB02/browser/real-generated-lighthouse.png | Pass: inspected blue geometric lighthouse, genuine fresh PNG |
 | SB02 | 5212 agents/chat vision | 1920x1080 | bundle://proof/SB01/transcripts/build6-runtime-ui.trx | bundle://proof/SB02/browser/real-vision-response.png; bundle://proof/SB02/browser/vision-input.png | Pass: actual assistant recognizes both shapes/colors and Completed |
+| SB03 | 5212 Simple Chats Definitions and New definition | 1920x1080 | Ordinary Playwright MCP browser; zero injected tokens; before/after DOM | bundle://proof/SB03/definitions-after.png; bundle://proof/SB03/new-definition-dialog.png | Pass: warning gone, create/save controls visible, dialog fits |
+| SB03 | 5212 Simple Chats conversations | 1920x1080 | bundle://proof/SB03/transcripts/browser-final.trx plus Playwright MCP reload | bundle://proof/SB03/openai-chat-viewport.png; bundle://proof/SB03/ollama-chat-viewport.png | Pass: actual OpenAI/Ollama replies persist after reload |
+| SB03 | 5210 Simple Chats conversation | 1920x1080 | Fresh token-free browser creation/run and MCP reload | bundle://proof/SB03/source-chat-viewport.png | Pass: source-local provider also executes |
 
 UI composition: provider list/editor remains the primary surface; compact badges and existing
 tabs are retained. Price table owns horizontal overflow. Editor/dialog/chat bodies own
@@ -170,17 +179,51 @@ provider/Switch agent button wrapping is unchanged, not a new layout improvement
 | N002 invented OpenAI names/prices | Solved | bundle://proof/SB01/transcripts/build6-openai-ui.trx; bundle://proof/SB02/browser/metadata-real-openai-parity.json; authoritative discovery/pricing regressions |
 | N003 faithful client mirror | Solved | bundle://proof/SB02/browser/metadata-real-openai-parity.json; bundle://proof/SB02/browser/metadata-real-ollama-parity.json; exact dropdowns and real nondefault requests |
 | N004 new bundle and real validation | Solved | bundle://proof/SB01/transcripts/build6-runtime-ui.trx; bundle://proof/SB02/browser/execution-result.json; bundle://proof/SB02/transcripts/real-runtime-evidence.txt |
+| N005 normal local Simple Chats access | Solved | bundle://proof/SB03/transcripts/regression-red.trx; bundle://proof/SB03/transcripts/component-final.trx; bundle://proof/SB03/transcripts/integration-final.trx; bundle://proof/SB03/transcripts/browser-final.trx; bundle://proof/SB03/transcripts/runtime-evidence.txt |
 
 ## Remaining Limits And Handoff
 
 - Source and client are ready on 5210/5212. This does not redeploy 5032.
 - Source JWT issued by the UI has a four-hour lifetime. Renew through source Settings/API
   authentication and update the client source secret if testing continues after expiry.
-- Simple Chats UI acceptance used a scoped client JWT. Anonymous Simple Chats access is
-  not claimed. Source catalog/invocation authentication was not weakened.
+- SB03 supersedes the earlier token-injected Simple Chats UI acceptance. Ordinary trusted
+  local browsers now pass without a JWT; remote API/catalog/invocation auth is unchanged.
 - Upstream inventory can include models for other operations. Full catalog mirroring does
   not imply that every OpenAI ID supports chat, or that every Ollama model supports vision.
 - Unknown rates remain unpriced. Do not claim a free service or infer unverified prices.
 - Source hashes distinguish 15 exact pre-edit captures from historical/HEAD recovery.
 - No full-suite, whole-solution architecture, independent reviewer or all-model execution
   claim is made. Historical shared-providers SB07 is not closed by this bundle.
+
+## SB03 Semantic Adequacy Evidence
+
+- Raw note owned: N005 requires an ordinary local browser to create and execute Simple Chats, without weakening API permissions.
+- Shipped behavior: scoped local UI identity is independent of OS desktop capabilities; validated exact gateway trust covers the loopback-published Docker browser path. Both transport addresses must be trusted.
+- Source proof: bundle://proof/SB03/changed-files.csv; three Web infrastructure files and explicit deployment configuration; bundle://proof/SB03/semantic-invariants.md.
+- Test proof: bundle://proof/SB03/transcripts/component-final.txt (38), bundle://proof/SB03/transcripts/integration-final.txt (9), bundle://proof/SB03/transcripts/browser-final.txt (3); exact discovery is recorded.
+- Shallow-pass trap: issuing a browser JWT to bypass the user's actual path, hiding the warning, accepting all private networks or turning API auth off.
+- Adversarial negative proof: bundle://proof/SB03/transcripts/regression-red.txt contains four real authentication assertion failures; final tests cover spoofed/missing addresses, malformed trust, read-only principals and live anonymous API/file 401 plus read-only create 403.
+- Semantic positive proof: fresh contexts create/save/activate/reload chats, receive LOCAL_OPENAI_OK, 4 and LOCAL_SOURCE_OK, and assert zero browser Authorization requests; bundle://proof/SB03/transcripts/runtime-evidence.txt verifies both actual shared invocations.
+- Anti-stub audit: bundle://proof/SB03/transcripts/source-audit.txt verifies exact existing policy use, no HTTP identity mutation, no OS desktop gate, startup validation, no stub or hard-coded gateway, and unchanged API/dev owners.
+
+Final browser run: 17:37:09.5841342Z through 17:37:44.4526431Z. Source ledger contains
+gpt-5.4-mini (27 input / 7 output tokens) and gemma3:4b (34 / 3), both Succeeded/Complete.
+Source-local OpenAI also replies through its own Simple Chat. Both hosts return Healthy;
+zero fail/crit/unhandled log headings within this exact run. No SQL mutations supply proof.
+
+Only the identity provider, its registration and one typed options class change production.
+Tests and operator docs cover the trust boundary. No new projects/interfaces or Razor changes.
+The existing metadata UI helper retains its strict imported-provider assertion by default;
+the source-local case explicitly expects the existing local model override control.
+Earlier helper/discovery/import failures are retained and do not count as passing evidence.
+
+UI review: Definitions and New definition are readable and usable without the access gate.
+The dialog fits its first viewport with Save/Cancel visible. Conversation list and message
+body retain their existing scroll owners; long generated test titles wrap in the header,
+and the composer stays at the bottom. Full-page captures include existing blank document
+space; inspected viewport captures own the visual claim. No layout redesign is claimed.
+
+CodeAnalytics before/after snapshots and limitations are in bundle://proof/SB03/codeanalytics-summary.json.
+Components MCP was unavailable; existing component source and actual browser UI were used,
+with no component-library edits. SB01/SB02 hashes remain historical checkpoints; SB03's
+index owns current changed files and explicitly distinguishes exact versus Git-blob provenance.

@@ -1,0 +1,86 @@
+**********************
+PowerShell transcript start
+Start time: 20260827133645
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$repairPatch = @'
+*** Begin Patch
+*** Update File: C:/repositories/CanDoItAll/tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderMetadataUiChecks.cs
+@@
+-        Regex? responsePattern = null) {
++        Regex? responsePattern = null, bool importedProvider = true) {
+@@
+-        Assert.Empty(await dialog.GetByTestId("llm-chat-definition-model-override").AllAsync());
++        var overrides = await dialog.GetByTestId("llm-chat-definition-model-override").AllAsync();
++        if (importedProvider) {
++            Assert.Empty(overrides);
++        } else {
++            Assert.Single(overrides);
++        }
+*** Update File: C:/repositories/CanDoItAll/tests/Playwright/CanDoItAll.Tests.Playwright/LocalSimpleChatBrowserAccessTests.cs
+@@
+-    [InlineData(true, "UI Shared OpenAI Chat", "gpt-4.1-mini", "LOCAL_SOURCE_OK")]
++    [InlineData(true, "UI Shared OpenAI Chat", "gpt-5.4-mini", "LOCAL_SOURCE_OK")]
+@@
+-            answer == "4" ? "What is two plus two? Reply using only the number." : null);
++            answer == "4" ? "What is two plus two? Reply using only the number." : null,
++            importedProvider: !source);
+*** End Patch
+'@
+& 'C:\Users\lucys\AppData\Local\OpenAI\Codex\bin\d5f4c71927a04589\codex.exe' --codex-run-as-apply-patch $repairPatch
+$env:CANDOITALL_REAL_SHARED_URL = 'http://127.0.0.1:5210'
+$env:CANDOITALL_REAL_CLIENT_URL = 'http://127.0.0.1:5212'
+$env:CANDOITALL_REAL_UI_EVIDENCE = 'C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB03\browser'
+& codex\bundles\shared-provider-real-catalogs\proof\SB03\Run-AccessTests.ps1 -Project tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj -Filter 'FullyQualifiedName~LocalSimpleChatBrowserAccessTests' -Label browser-final -ExpectedCount 3
+Process ID: 4516
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Invariants: LOCAL-UI-ACCESS API-BOUNDARY
+Command: dotnet build tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-restore --nologo -v:q
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:20.56
+Exit code: 0
+Command: dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-build --list-tests --filter FullyQualifiedName~LocalSimpleChatBrowserAccessTests
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared OpenAI Chat", model: "gpt-5.4-mini", answer: "LOCAL_OPENAI_OK")
+    CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared Ollama", model: "gemma3:4b", answer: "4")
+    CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: True, providerName: "UI Shared OpenAI Chat", model: "gpt-5.4-mini", answer: "LOCAL_SOURCE_OK")
+Expected: 3; discovered: 3
+Command: dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-build --filter FullyQualifiedName~LocalSimpleChatBrowserAccessTests --logger console;verbosity=normal --logger trx;LogFileName=browser-final.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB03\transcripts --nologo
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.10]   Discovering: CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.16]   Discovered:  CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.18]   Starting:    CanDoItAll.Tests.Playwright
+  Úspěšné CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared OpenAI Chat", model: "gpt-5.4-mini", answer: "LOCAL_OPENAI_OK") [12 s]
+  Úspěšné CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: False, providerName: "UI Shared Ollama", model: "gemma3:4b", answer: "4") [10 s]
+[xUnit.net 00:00:34.39]   Finished:    CanDoItAll.Tests.Playwright
+  Úspěšné CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(source: True, providerName: "UI Shared OpenAI Chat", model: "gpt-5.4-mini", answer: "LOCAL_SOURCE_OK") [11 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 3
+     Úspěšné: 3
+ Celkový čas: 34,8578 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB03\transcripts\browser-final.trx
+Exit code: 0
+**********************
+PowerShell transcript end
+End time: 20260827133744
+**********************

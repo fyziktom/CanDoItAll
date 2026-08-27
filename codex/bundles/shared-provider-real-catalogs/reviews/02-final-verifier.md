@@ -2,7 +2,8 @@
 
 ## Verdict
 
-Pass. Behavioral and architecture gates pass; canonical completed-stage validation exits 0.
+Pass. SB03 now covers the previously missed token-free local browser path. Behavioral and
+architecture gates pass; the latest canonical validation transcript is under proof/SB03.
 Source and proof-artifact SHA256 indexes are refreshed after the final documentation edits
 and checked before handoff.
 
@@ -48,8 +49,8 @@ blue-circle/orange-square input. No rendering-only label change substitutes for 
   copied from their original captured Host Application headers. Their original transcript
   bodies and exit results are unchanged; these annotations do not imply another deployment.
 - No full-suite, whole-solution, independent reviewer or every-model execution claim.
-- Four-hour source JWT must be renewed through the UI after expiry; Simple Chats
-  acceptance uses a scoped client JWT, not anonymous API access.
+- Four-hour source JWT must be renewed through the UI after expiry. SB03 Simple Chats
+  browser acceptance uses no JWT; anonymous HTTP API access remains denied.
 - Relay monetary pricing is Unavailable; complete usage means tokens/images, not settlement.
 - Existing volumes/history/rollback containers are preserved; 5032 and unrelated work untouched.
 - Historical shared-providers SB07 is not closed by this new bundle.
@@ -61,4 +62,23 @@ blue-circle/orange-square input. No rendering-only label change substitutes for 
 - Real source accounting/artifact/health: proof/SB02/transcripts/real-runtime-evidence.txt.
 - Exact test scopes and raw-input closure: reviews/01-execution-report.md.
 
-N001-N004 have concrete Solved rows. No required behavioral acceptance item remains open.
+N001-N005 have concrete Solved rows. No required behavioral acceptance item remains open.
+
+## SB03 Reopened-Path Verification
+
+- Four regression cases failed before production repair at missing authentication.
+- 38 component, 9 HTTP/security and 3 real browser cases pass with frozen discovery.
+- Browsers start without cookies and issue zero Authorization headers. Both client models
+  and the source-local provider create/save/activate/run/reload real conversations.
+- API and authorized-file HTTP routes still return 401. A read-only token can read but
+  cannot create (403). Missing/spoofed/untrusted transport and invalid config are rejected.
+- The exact final run has two successful complete source shared invocations; no new
+  application failure headings. Both rebuilt apps remain Healthy.
+- Normal Definitions, New definition dialog and all three conversation replies were
+  visually inspected at 1920x1080. No UI bypass or fixture supplies acceptance.
+- Three production owner files only; no API/dev policy or project dependency changes.
+- Web.Infrastructure snapshots have zero diagnostics/scoped cycles. The existing
+  informational member-count finding does not justify splitting the cohesive identity owner.
+- Latest provenance, source assertions and artifacts: proof/SB03/manifest.md and indexes.
+- Source trust stays explicit and deployment-specific; it must never be enabled for a
+  gateway that also relays untrusted remote users. Test ports are loopback-only.

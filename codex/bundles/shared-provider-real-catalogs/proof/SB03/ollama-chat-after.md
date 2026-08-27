@@ -1,0 +1,36 @@
+- article [ref=f4e680]:
+  - generic [ref=f4e683]:
+    - img "UI shared catalog local-client-4" [ref=f4e684]
+    - generic [ref=f4e685]:
+      - generic [ref=f4e686]:
+        - generic [ref=f4e687]: Active
+        - generic "Pinned definition revision" [ref=f4e688]: Revision 2
+      - generic [ref=f4e690]:
+        - heading "Catalog validation local-client-4 2026-08-27T17:37:29.4393938+00:00" [level=2] [ref=f4e691]
+        - paragraph [ref=f4e692]: UI shared catalog local-client-4
+  - generic [ref=f4e694]:
+    - generic [ref=f4e696]:
+      - generic [ref=f4e697]:
+        - generic [ref=f4e698]: You
+        - generic [ref=f4e699]: 08/27/2026 17:37
+      - generic [ref=f4e700]:
+        - paragraph [ref=f4e701]: What is two plus two? Reply using only the number.
+        - button "Copy your message" [ref=f4e704] [cursor=pointer]:
+          - generic [ref=f4e705]: content_copy
+    - generic [ref=f4e709]:
+      - generic [ref=f4e710]:
+        - generic [ref=f4e711]: Assistant
+        - generic [ref=f4e712]: 08/27/2026 17:37
+      - generic [ref=f4e713]:
+        - paragraph [ref=f4e715]: "4"
+        - button "Copy assistant response" [ref=f4e717] [cursor=pointer]:
+          - generic [ref=f4e718]: content_copy
+  - generic [ref=f4e725]:
+    - textbox "Message this Simple Chat" [ref=f4e726]
+    - generic [ref=f4e727]:
+      - button "Insert from prompt gallery" [ref=f4e728]:
+        - generic [ref=f4e729]: library_books
+        - generic [ref=f4e730]: library books
+      - button "Send Simple Chat message" [disabled] [ref=f4e731]:
+        - generic [ref=f4e732]: send
+        - generic [ref=f4e733]: send

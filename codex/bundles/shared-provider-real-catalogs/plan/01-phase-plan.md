@@ -4,12 +4,14 @@
 
 1. SB01 authoritative catalog/pricing refresh and kind-change isolation.
 2. SB02 rebuild both apps, UI setup against real providers, parity/execution/usage proof.
+3. SB03 repair normal-browser Simple Chats access and revalidate both deployed hosts.
 
 ## Subbundle Dependency Map
 
 ```mermaid
 flowchart LR
   SB01["SB01 catalog authority"] --> SB02["SB02 real two-instance proof"]
+  SB02 --> SB03["SB03 normal-browser access and API boundary"]
   Real["Reachable real upstreams"] --> SB02
 ```
 
@@ -19,6 +21,7 @@ flowchart LR
 save/reload source, publish/synchronize, assert exact client catalog and prices.
 SB02 Proof tier: Governed because prior acceptance was disputed.
 No full-suite gate. Dependency criticality does not broaden test scope.
+SB03 Proof tier: Governed. N005 reopens normal-browser handoff, not catalog correctness.
 
 ## Phase Gates
 

@@ -69,14 +69,14 @@ public sealed class LocalOperatorAuthenticationStateProviderTests
     }
 
     [Fact]
-    public async Task Headless_host_does_not_elevate_an_anonymous_loopback_circuit()
+    public async Task Missing_http_context_does_not_elevate_an_anonymous_circuit()
     {
         var provider = CreateProvider(
             authorizationEnabled: true,
             IPAddress.Loopback,
             IPAddress.Loopback,
-            out _,
-            isInteractiveHost: false);
+            out var accessor);
+        accessor.HttpContext = null;
         SetAuthenticationState(provider, AnonymousPrincipal());
 
         var principal = await provider.GetCurrentAsync();
@@ -158,6 +158,7 @@ public sealed class LocalOperatorAuthenticationStateProviderTests
     {
         var services = new ServiceCollection();
         services.AddCanDoItAllInteractiveServer(detailedErrors: true);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         services.AddSingleton(Options.Create(new ApiAccessOptions()));
         services.AddSingleton(InteractiveHostProfile());
         services.AddCanDoItAllLocalOperatorUiAuthentication();
@@ -297,8 +298,7 @@ public sealed class LocalOperatorAuthenticationStateProviderTests
         bool authorizationEnabled,
         IPAddress originalRemoteIp,
         IPAddress effectiveRemoteIp,
-        out HttpContextAccessor httpContextAccessor,
-        bool isInteractiveHost = true)
+        out HttpContextAccessor httpContextAccessor)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Connection.RemoteIpAddress = effectiveRemoteIp;
@@ -313,9 +313,7 @@ public sealed class LocalOperatorAuthenticationStateProviderTests
                     Enabled = authorizationEnabled
                 }
             }),
-            isInteractiveHost
-                ? InteractiveHostProfile()
-                : InteractiveHostProfile() with { IsInteractive = false });
+            Options.Create(new LocalOperatorUiOptions()));
     }
 
     private static ResolvedRuntimeHostProfile InteractiveHostProfile() => new(
