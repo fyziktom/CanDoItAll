@@ -209,7 +209,7 @@
                                              Description="Keep employment type, commercial rate context, and org-structure metadata attached to the same Party identity used by CRM and project flows.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                         <div>
-                                            <label class="cda-field-label">Workforce kind</label>
+                                            <FormField Text="Workforce kind">
                                             <InputSelect @bind-Value="profileEditor.WorkforceKind"
                                                          class="ui-input"
                                                          data-testid="crmhr-workforce-kind">
@@ -218,9 +218,10 @@
                                                     <option value="@workforceKind">@workforceKind</option>
                                                 }
                                             </InputSelect>
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Status</label>
+                                            <FormField Text="Status">
                                             <InputSelect @bind-Value="profileEditor.Status"
                                                          class="ui-input"
                                                          data-testid="crmhr-workforce-status">
@@ -229,30 +230,34 @@
                                                     <option value="@status">@status</option>
                                                 }
                                             </InputSelect>
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Employee code</label>
+                                            <FormField Text="Employee code">
                                             <InputText @bind-Value="profileEditor.EmployeeCode"
                                                        class="ui-input"
                                                        data-testid="crmhr-workforce-employee-code" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
-                                            <label class="cda-field-label">Job title</label>
+                                            <FormField Text="Job title">
                                             <InputText @bind-Value="profileEditor.JobTitle"
                                                        class="ui-input"
                                                        data-testid="crmhr-workforce-job-title" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Discipline</label>
+                                            <FormField Text="Discipline">
                                             <InputText @bind-Value="profileEditor.Discipline"
                                                        class="ui-input"
                                                        data-testid="crmhr-workforce-discipline" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Seniority</label>
+                                            <FormField Text="Seniority">
                                             <InputSelect @bind-Value="profileEditor.Seniority"
                                                          class="ui-input"
                                                          data-testid="crmhr-workforce-seniority">
@@ -261,6 +266,7 @@
                                                     <option value="@seniority">@seniority</option>
                                                 }
                                             </InputSelect>
+                                            </FormField>
                                         </div>
                                     </Grid>
 
@@ -283,76 +289,86 @@
 
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
-                                            <label class="cda-field-label">Start date</label>
+                                            <FormField Text="Start date">
                                             <InputDate @bind-Value="profileEditor.StartDate"
                                                        class="ui-input"
                                                        data-testid="crmhr-workforce-start-date" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">End date</label>
+                                            <FormField Text="End date">
                                             <InputDate @bind-Value="profileEditor.EndDate"
                                                        class="ui-input"
                                                        data-testid="crmhr-workforce-end-date" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Capacity hours / week</label>
+                                            <FormField Text="Capacity hours / week">
                                             <InputNumber @bind-Value="profileEditor.CapacityHoursPerWeek"
                                                          class="ui-input"
                                                          data-testid="crmhr-workforce-capacity" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
                                         <div>
-                                            <label class="cda-field-label">Location</label>
+                                            <FormField Text="Location">
                                             <InputText @bind-Value="profileEditor.Location"
                                                        class="ui-input"
                                                        data-testid="crmhr-workforce-location" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Time zone</label>
+                                            <FormField Text="Time zone">
                                             <InputText @bind-Value="profileEditor.TimeZone"
                                                        class="ui-input"
                                                        data-testid="crmhr-workforce-timezone" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="4" Class="mt-5">
                                         <div>
-                                            <label class="cda-field-label">Internal cost rate</label>
+                                            <FormField Text="Internal cost rate">
                                             <InputNumber @bind-Value="profileEditor.InternalCostRate"
                                                          class="ui-input"
                                                          data-testid="crmhr-workforce-internal-rate" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">External billing rate</label>
+                                            <FormField Text="External billing rate">
                                             <InputNumber @bind-Value="profileEditor.ExternalBillingRate"
                                                          class="ui-input"
                                                          data-testid="crmhr-workforce-external-rate" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Rate unit</label>
+                                            <FormField Text="Rate unit">
                                             <InputSelect @bind-Value="profileEditor.RateUnit"
                                                          class="ui-input"
                                                          data-testid="crmhr-workforce-rate-unit">
                                                 <option value="@ProjectResourceRateUnit.Hour">Per hour</option>
                                                 <option value="@ProjectResourceRateUnit.ManDay">Per man-day</option>
                                             </InputSelect>
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Rate currency</label>
+                                            <FormField Text="Rate currency">
                                             <InputText @bind-Value="profileEditor.RateCurrencyCode"
                                                        class="ui-input"
                                                        maxlength="3"
                                                        data-testid="crmhr-workforce-rate-currency" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
                                     <div class="mt-5">
-                                        <label class="cda-field-label">Notes</label>
+                                        <FormField Text="Notes">
                                         <TextArea @bind-Value="profileEditor.Notes"
                                                        Rows="6"
                                                        data-testid="crmhr-workforce-notes" />
+                                        </FormField>
                                     </div>
 
                                 </FormSection>

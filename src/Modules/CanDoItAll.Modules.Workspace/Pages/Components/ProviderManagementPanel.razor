@@ -59,17 +59,19 @@
                         <FormSection Title="Connector identity" Description="Choose the connector plugin first, then fill only the schema fields that plugin exposes.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Profile name</label>
+                                    <FormField Text="Profile name">
                                     <InputText @bind-Value="providerModel.Name" class="ui-input" data-testid="provider-name-input" />
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Connector plugin</label>
+                                    <FormField Text="Connector plugin">
                                     <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="ui-input" data-testid="provider-plugin-select">
                                         @foreach (var manifest in providerManifests)
                                         {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
 
@@ -120,7 +122,7 @@
                         <FormSection Title="Auth and capabilities" Description="Attach the secret reference and advertise what the profile supports.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">API key secret</label>
+                                    <FormField Text="API key secret">
                                     <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="ui-input" data-testid="provider-secret-select">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
@@ -128,6 +130,7 @@
                                             <option value="@secret.Id">@secret.Name</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
 

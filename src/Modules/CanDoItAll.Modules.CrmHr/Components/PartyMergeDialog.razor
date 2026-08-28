@@ -26,10 +26,11 @@
                 </div>
 
                 <div>
-                    <label class="cda-field-label">Merge note</label>
+                    <FormField Text="Merge note">
                     <TextArea @bind-Value="mergeReason"
                                    Rows="4"
                                    data-testid="crmhr-merge-reason" />
+                    </FormField>
                 </div>
             </Stack>
         </ChildContent>

@@ -192,7 +192,7 @@
                         <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose the connector plugin before editing manifest fields.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Project</label>
+                                    <FormField Text="Project">
                                     <InputSelect @bind-Value="editor.ProjectId" class="ui-input" data-testid="resource-project-select" @bind-Value:after="RefreshResponsiblePartyOptionsAsync">
                                         <option value="">Select a project</option>
                                         @foreach (var project in projects)
@@ -200,25 +200,28 @@
                                             <option value="@project.Id">@project.Name</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Connector plugin</label>
+                                    <FormField Text="Connector plugin">
                                     <InputSelect @bind-Value="editor.ConnectorPluginKey" class="ui-input" data-testid="resource-plugin-select" @bind-Value:after="HandleConnectorPluginChangedAsync">
                                         @foreach (var manifest in EditableResourceManifests)
                                         {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Name</label>
+                                    <FormField Text="Name">
                                     <InputText @bind-Value="editor.Name" class="ui-input" data-testid="resource-name-input" />
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Linked secret</label>
+                                    <FormField Text="Linked secret">
                                     <InputSelect @bind-Value="editor.LinkedSecretId" class="ui-input">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
@@ -226,12 +229,13 @@
                                             <option value="@secret.Id">@secret.Name</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Owner</label>
+                                    <FormField Text="Owner">
                                     <InputSelect @bind-Value="editor.OwnerPartyId" class="ui-input" data-testid="resource-owner-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
@@ -239,9 +243,10 @@
                                             <option value="@option.PartyId">@option.DisplayName</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Maintainer</label>
+                                    <FormField Text="Maintainer">
                                     <InputSelect @bind-Value="editor.MaintainerPartyId" class="ui-input" data-testid="resource-maintainer-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
@@ -249,6 +254,7 @@
                                             <option value="@option.PartyId">@option.DisplayName</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
                         </FormSection>
@@ -273,28 +279,31 @@
 
                         <FormSection Title="Metadata and capabilities" Description="Keep validation, sensitivity, and handling flags explicit on every resource record.">
                             <div>
-                                <label class="cda-field-label">Description</label>
+                                <FormField Text="Description">
                                 <TextArea @bind-Value="editor.Description" Rows="4" />
+                                </FormField>
                             </div>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Validation</label>
+                                    <FormField Text="Validation">
                                     <InputSelect @bind-Value="editor.ValidationStatus" class="ui-input">
                                         @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
                                         {
                                             <option value="@status">@status</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Sensitivity</label>
+                                    <FormField Text="Sensitivity">
                                     <InputSelect @bind-Value="editor.Sensitivity" class="ui-input">
                                         @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>())
                                         {
                                             <option value="@sensitivity">@sensitivity</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
 
@@ -334,4 +343,3 @@
         </Tabs>
     </ChildContent>
 </PageScaffold>
-

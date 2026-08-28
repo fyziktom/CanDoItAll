@@ -9,7 +9,7 @@
            JustifyContent="JustifyContent.SpaceBetween"
            Wrap="FlexWrap.Wrap">
         <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
-            <p class="cda-field-label m-0">@Label</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="m-0" Value="@Label" />
             @if (!string.IsNullOrWhiteSpace(Description))
             {
                 <p class="m-0 text-sm leading-5 text-slate-600">@Description</p>

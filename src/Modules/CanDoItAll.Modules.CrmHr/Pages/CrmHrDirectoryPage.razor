@@ -142,7 +142,7 @@
                                          Description="Capture the durable identity fields that let one record participate in CRM, HR, recruiting, and AI-agent flows.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                     <div>
-                                        <label class="cda-field-label">Type</label>
+                                        <FormField Text="Type">
                                         <InputSelect @bind-Value="editor.PartyType"
                                                      class="ui-input"
                                                      data-testid="crmhr-party-type">
@@ -151,9 +151,10 @@
                                                 <option value="@partyType">@partyType</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Status</label>
+                                        <FormField Text="Status">
                                         <InputSelect @bind-Value="editor.LifecycleStatus"
                                                      class="ui-input"
                                                      data-testid="crmhr-party-status">
@@ -162,35 +163,40 @@
                                                 <option value="@lifecycleStatus">@lifecycleStatus</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">External code</label>
+                                        <FormField Text="External code">
                                         <InputText @bind-Value="editor.ExternalCode"
                                                    class="ui-input"
                                                    data-testid="crmhr-party-external-code" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Display name</label>
+                                        <FormField Text="Display name">
                                         <InputText @bind-Value="editor.DisplayName"
                                                    class="ui-input"
                                                    data-testid="crmhr-party-display-name" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Preferred name</label>
+                                        <FormField Text="Preferred name">
                                         <InputText @bind-Value="editor.PreferredName"
                                                    class="ui-input"
                                                    data-testid="crmhr-party-preferred-name" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <div>
-                                    <label class="cda-field-label">Legal name</label>
+                                    <FormField Text="Legal name">
                                     <InputText @bind-Value="editor.LegalName"
                                                class="ui-input"
                                                data-testid="crmhr-party-legal-name" />
+                                    </FormField>
                                 </div>
                             </FormSection>
 
@@ -198,7 +204,7 @@
                                          Description="Keep role, tags, and direct contact details near the core identity so CRM, HR, and recruiting flows all start from the same party record.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Primary role</label>
+                                        <FormField Text="Primary role">
                                         <InputSelect @bind-Value="editor.PrimaryRoleKindText"
                                                      class="ui-input"
                                                      data-testid="crmhr-party-role">
@@ -208,30 +214,34 @@
                                                 <option value="@roleKind.ToString()">@roleKind</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Tags</label>
+                                        <FormField Text="Tags">
                                         <TagEditor Value="@editor.Tags"
                                                    ValueChanged="value => editor.Tags = value"
                                                    Placeholder="Add customer, priority, or region tags"
                                                    MaxTags="20"
                                                    TestId="crmhr-party-tags-editor"
                                                    InputTestId="crmhr-party-tags" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Primary email</label>
+                                        <FormField Text="Primary email">
                                         <InputText @bind-Value="editor.PrimaryEmail"
                                                    class="ui-input"
                                                    data-testid="crmhr-party-email" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Primary phone</label>
+                                        <FormField Text="Primary phone">
                                         <InputText @bind-Value="editor.PrimaryPhone"
                                                    class="ui-input"
                                                    data-testid="crmhr-party-phone" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
@@ -264,7 +274,7 @@
                                             <PanelCard Soft="true">
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                                                     <div>
-                                                        <label class="cda-field-label">Role kind</label>
+                                                        <FormField Text="Role kind">
                                                         <InputSelect @bind-Value="role.RoleKind"
                                                                      class="ui-input"
                                                                      data-testid="@($"crmhr-party-extra-role-kind-{index}")">
@@ -273,12 +283,14 @@
                                                                 <option value="@roleKind">@roleKind</option>
                                                             }
                                                         </InputSelect>
+                                                        </FormField>
                                                     </div>
                                                     <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Role title</label>
+                                                        <FormField Text="Role title">
                                                         <InputText @bind-Value="role.Title"
                                                                    class="ui-input"
                                                                    data-testid="@($"crmhr-party-extra-role-title-{index}")" />
+                                                        </FormField>
                                                     </div>
                                                     <div class="flex items-end justify-end">
                                                         <Button Text="Remove"
@@ -291,22 +303,25 @@
 
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                                                     <div>
-                                                        <label class="cda-field-label">Valid from</label>
+                                                        <FormField Text="Valid from">
                                                         <InputDate @bind-Value="role.ValidFromUtc"
                                                                    class="ui-input"
                                                                    data-testid="@($"crmhr-party-extra-role-start-{index}")" />
+                                                        </FormField>
                                                     </div>
                                                     <div>
-                                                        <label class="cda-field-label">Valid to</label>
+                                                        <FormField Text="Valid to">
                                                         <InputDate @bind-Value="role.ValidToUtc"
                                                                    class="ui-input"
                                                                    data-testid="@($"crmhr-party-extra-role-end-{index}")" />
+                                                        </FormField>
                                                     </div>
                                                     <div>
-                                                        <label class="cda-field-label">Notes</label>
+                                                        <FormField Text="Notes">
                                                         <InputText @bind-Value="role.Notes"
                                                                    class="ui-input"
                                                                    data-testid="@($"crmhr-party-extra-role-notes-{index}")" />
+                                                        </FormField>
                                                     </div>
                                                 </Grid>
                                             </PanelCard>
@@ -315,10 +330,11 @@
                                 </Stack>
 
                                 <div>
-                                    <label class="cda-field-label">Summary</label>
+                                    <FormField Text="Summary">
                                     <TextArea @bind-Value="editor.Summary"
                                                    Rows="4"
                                                    data-testid="crmhr-party-summary" />
+                                    </FormField>
                                 </div>
                             </FormSection>
                                     </Stack>
@@ -336,22 +352,25 @@
 
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                             <div>
-                                                <label class="cda-field-label">Region</label>
+                                                <FormField Text="Region">
                                                 <InputText @bind-Value="editor.Region"
                                                            class="ui-input"
                                                            data-testid="crmhr-party-region" />
+                                                </FormField>
                                             </div>
                                             <div>
-                                                <label class="cda-field-label">Country code</label>
+                                                <FormField Text="Country code">
                                                 <InputText @bind-Value="editor.CountryCode"
                                                            class="ui-input"
                                                            data-testid="crmhr-party-country" />
+                                                </FormField>
                                             </div>
                                             <div>
-                                                <label class="cda-field-label">Time zone</label>
+                                                <FormField Text="Time zone">
                                                 <InputText @bind-Value="editor.TimeZone"
                                                            class="ui-input"
                                                            data-testid="crmhr-party-timezone" />
+                                                </FormField>
                                             </div>
                                         </Grid>
                                     </FormSection>
@@ -377,10 +396,11 @@
                                 </label>
 
                                 <div>
-                                    <label class="cda-field-label">Operational notes</label>
+                                    <FormField Text="Operational notes">
                                     <TextArea @bind-Value="editor.Notes"
 
                                                    data-testid="crmhr-party-notes" />
+                                    </FormField>
                                 </div>
 
                                 <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
@@ -426,7 +446,7 @@
                                                      data-testid="crmhr-confidential-note-item">
                                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                                                         <div>
-                                                            <label class="cda-field-label">Category</label>
+                                                            <FormField Text="Category">
                                                             <InputSelect @bind-Value="note.Category"
                                                                          class="ui-input"
                                                                          data-testid="@($"crmhr-confidential-note-category-{index}")">
@@ -435,6 +455,7 @@
                                                                     <option value="@category">@category</option>
                                                                 }
                                                             </InputSelect>
+                                                            </FormField>
                                                         </div>
                                                         <div class="md:col-span-2">
                                                             <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Stewardship</p>
@@ -456,10 +477,11 @@
                                                     </Grid>
 
                                                     <div class="mt-4">
-                                                        <label class="cda-field-label">Confidential note</label>
+                                                        <FormField Text="Confidential note">
                                                         <TextArea @bind-Value="note.NoteText"
                                                                        Rows="4"
                                                                        data-testid="@($"crmhr-confidential-note-text-{index}")" />
+                                                        </FormField>
                                                     </div>
                                                 </div>
                                             }

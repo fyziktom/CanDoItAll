@@ -62,16 +62,17 @@
 
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
                         <div>
-                            <label class="cda-field-label">Company</label>
+                            <FormField Text="Company">
                             <Button Text="Choose company"
                                     Icon="business"
                                     Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="@(() => OpenPicker(item, AffiliationPartyField.Organization))"
                                     data-testid="@($"crmhr-affiliation-company-{rowIndex}")" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Affiliation kind</label>
+                            <FormField Text="Affiliation kind">
                             <InputSelect TValue="PartyOrganizationAffiliationKind"
                                          Value="@item.AffiliationKind"
                                          ValueChanged="@((PartyOrganizationAffiliationKind value) => UpdateKindAsync(item, value))"
@@ -82,37 +83,42 @@
                                     <option value="@kind">@FormatAffiliationKind(kind)</option>
                                 }
                             </InputSelect>
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Job title</label>
+                            <FormField Text="Job title">
                             <TextBox Value="@item.JobTitle"
                                      ValueChanged="@((string? value) => UpdateJobTitleAsync(item, value))"
                                        data-testid="@($"crmhr-affiliation-title-{rowIndex}")" />
+                            </FormField>
                         </div>
                     </Grid>
 
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
                         <div>
-                            <label class="cda-field-label">Employee / engagement code</label>
+                            <FormField Text="Employee / engagement code">
                             <TextBox Value="@item.EmployeeCode"
                                      ValueChanged="@((string? value) => UpdateEmployeeCodeAsync(item, value))"
                                        data-testid="@($"crmhr-affiliation-code-{rowIndex}")" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Valid from</label>
+                            <FormField Text="Valid from">
                             <InputDate TValue="DateOnly?"
                                        Value="@item.ValidFrom"
                                        ValueChanged="@((DateOnly? value) => UpdateValidFromAsync(item, value))"
                                        class="ui-input"
                                        data-testid="@($"crmhr-affiliation-start-{rowIndex}")" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Valid to</label>
+                            <FormField Text="Valid to">
                             <InputDate TValue="DateOnly?"
                                        Value="@item.ValidTo"
                                        ValueChanged="@((DateOnly? value) => UpdateValidToAsync(item, value))"
                                        class="ui-input"
                                        data-testid="@($"crmhr-affiliation-end-{rowIndex}")" />
+                            </FormField>
                         </div>
                     </Grid>
 
@@ -123,7 +129,7 @@
                                    AlignItems="AlignItems.Center"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0">
-                                    <p class="cda-field-label">Organization unit</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Organization unit" />
                                     <p class="truncate text-sm text-slate-700"
                                        data-testid="@($"crmhr-affiliation-unit-name-{rowIndex}")">
                                         @ResolveOptionalPartyName(item.OrganizationUnitPartyId)
@@ -155,7 +161,7 @@
                                    AlignItems="AlignItems.Center"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0">
-                                    <p class="cda-field-label">Manager</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Manager" />
                                     <p class="truncate text-sm text-slate-700"
                                        data-testid="@($"crmhr-affiliation-manager-name-{rowIndex}")">
                                         @ResolveOptionalPartyName(item.ManagerPartyId)
@@ -184,11 +190,12 @@
 
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
                         <div>
-                            <label class="cda-field-label">Notes</label>
+                            <FormField Text="Notes">
                             <TextArea Value="@item.Notes"
                                            ValueChanged="@((string? value) => UpdateNotesAsync(item, value))"
                                            class="ui-input min-h-24"
                                            data-testid="@($"crmhr-affiliation-notes-{rowIndex}")" />
+                            </FormField>
                         </div>
                         <div class="flex items-end justify-between gap-3">
                             <label class="cda-inline-option">

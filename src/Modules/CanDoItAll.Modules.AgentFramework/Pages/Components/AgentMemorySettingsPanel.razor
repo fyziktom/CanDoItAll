@@ -10,7 +10,7 @@
              Description="Bind stable aliases to external memory providers and choose when the agent may query them.">
     <Grid Gap="LayoutGap.Large" ColumnsMd="3">
         <div>
-            <label class="cda-field-label">Invocation mode</label>
+            <FormField Text="Invocation mode">
             <InputSelect TValue="AgentMemoryInvocationMode"
                          Value="@Value.InvocationMode"
                          ValueChanged="state.HandleInvocationModeChanged"
@@ -22,6 +22,7 @@
                     <option value="@mode">@AgentMemorySettingsPanelState.DescribeMode(mode)</option>
                 }
             </InputSelect>
+            </FormField>
         </div>
 
         <SurfaceCard Soft="true" Class="md:col-span-2">
@@ -56,14 +57,15 @@
 
     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
         <div>
-            <label class="cda-field-label">Alias</label>
+            <FormField Text="Alias">
             <InputText @bind-Value="state.NewAlias"
                        class="ui-input"
                        placeholder="team-memory"
                        data-testid="agents-catalog-memory-new-alias" />
+            </FormField>
         </div>
         <div>
-            <label class="cda-field-label">Configured provider</label>
+            <FormField Text="Configured provider">
             <InputSelect @bind-Value="state.NewProviderInstanceId"
                          class="ui-input"
                          disabled="@(!state.AvailableProviders.Any())"
@@ -74,9 +76,10 @@
                     <option value="@provider.InstanceId.Value">@provider.DisplayName (@provider.InstanceId.Value)</option>
                 }
             </InputSelect>
+            </FormField>
         </div>
         <div>
-            <label class="cda-field-label">Failure behavior</label>
+            <FormField Text="Failure behavior">
             <InputSelect @bind-Value="state.NewRequirement"
                          class="ui-input"
                          data-testid="agents-catalog-memory-new-requirement">
@@ -85,6 +88,7 @@
                     <option value="@requirement">@requirement</option>
                 }
             </InputSelect>
+            </FormField>
         </div>
         <Stack GapScale="LayoutGap.Small" JustifyContent="JustifyContent.End">
             <label class="cda-inline-option">

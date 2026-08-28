@@ -17,7 +17,7 @@
         <Stack GapScale="LayoutGap.Medium">
             <SurfaceCard Soft="true">
                 <div>
-                    <label class="cda-field-label">Agent filter</label>
+                    <FormField Text="Agent filter">
                     <InputSelect TValue="Guid?"
                                  Value="@selectedAgentId"
                                  ValueChanged="HandleAgentFilterChangedAsync"
@@ -29,6 +29,7 @@
                             <option value="@agent.Id">@agent.Name</option>
                         }
                     </InputSelect>
+                    </FormField>
                 </div>
             </SurfaceCard>
 

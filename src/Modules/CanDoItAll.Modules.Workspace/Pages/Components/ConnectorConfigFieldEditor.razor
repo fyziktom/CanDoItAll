@@ -3,7 +3,7 @@
 @using CanDoItAll.SharedKernel.Configuration
 
 <div>
-    <label class="cda-field-label">@Field.Label</label>
+    <FormField Text="@Field.Label">
 @switch (Field.FieldType)
     {
         case ConnectorConfigFieldType.Number:
@@ -66,6 +66,7 @@
     {
         <p class="app-body-muted mt-2">@Field.HelpText</p>
     }
+    </FormField>
 </div>
 
 @code {

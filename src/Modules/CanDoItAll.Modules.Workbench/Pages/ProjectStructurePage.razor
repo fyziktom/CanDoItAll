@@ -678,31 +678,35 @@ else
                              Description="@SecretReferenceCreateSectionDescription">
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
-                            <label class="cda-field-label">Name</label>
+                            <FormField Text="Name">
                             <InputText @bind-Value="secretReferenceCreateModel.Name" class="ui-input" data-testid="project-structure-secret-create-name" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Kind</label>
+                            <FormField Text="Kind">
                             <InputSelect @bind-Value="secretReferenceCreateModel.Kind" class="ui-input">
                                 @foreach (var kind in Enum.GetValues<SecretKind>())
                                 {
                                     <option value="@kind">@kind</option>
                                 }
                             </InputSelect>
+                            </FormField>
                         </div>
                     </Grid>
                     <div class="mt-3">
-                        <label class="cda-field-label">Value</label>
+                        <FormField Text="Value">
                         <SecretField @bind-Value="secretReferenceCreateModel.SecretValue"
                                      SecretName="@secretReferenceCreateModel.Name"
                                      ShowNameCopy="true"
                                      ShowValueCopy="true"
                                      RevealDurationSeconds="30"
                                      data-testid="project-structure-secret-create-value" />
+                        </FormField>
                     </div>
                     <div class="mt-3">
-                        <label class="cda-field-label">Purpose</label>
+                        <FormField Text="Purpose">
                         <InputText @bind-Value="secretReferenceCreateModel.RotationNote" class="ui-input" />
+                        </FormField>
                     </div>
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
                         <Button Text="Create and use"

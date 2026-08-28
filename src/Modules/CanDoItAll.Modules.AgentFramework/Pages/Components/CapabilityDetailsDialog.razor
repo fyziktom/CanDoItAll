@@ -30,7 +30,7 @@ else
                                      Description="@ResolveIdentityDescription()">
                             <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                 <div>
-                                    <label class="cda-field-label">Kind</label>
+                                    <FormField Text="Kind">
                                     <InputSelect TValue="CapabilityKind"
                                                  Value="@editorModel.Kind"
                                                  ValueChanged="HandleKindChangedAsync"
@@ -43,37 +43,42 @@ else
                                             <option value="@kind">@ResolveCapabilityKindLabel(kind)</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Key</label>
+                                    <FormField Text="Key">
                                     <InputText @bind-Value="editorModel.Key"
                                                class="ui-input"
                                                disabled="@IsIdentityLocked"
                                                data-testid="agents-capability-details-key" />
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Name</label>
+                                    <FormField Text="Name">
                                     <InputText @bind-Value="editorModel.Name"
                                                class="ui-input"
                                                disabled="@IsIdentityLocked"
                                                data-testid="agents-capability-details-name" />
+                                    </FormField>
                                 </div>
                             </Grid>
 
                             <div>
-                                <label class="cda-field-label">Description</label>
+                                <FormField Text="Description">
                                 <TextArea @bind-Value="editorModel.Description"
                                                Class="capability-details-dialog__textarea"
                                                disabled="@IsIdentityLocked"
                                                data-testid="agents-capability-details-description" />
+                                </FormField>
                             </div>
 
                             <div>
-                                <label class="cda-field-label">Endpoint or path</label>
+                                <FormField Text="Endpoint or path">
                                 <InputText @bind-Value="editorModel.EndpointOrPath"
                                            class="ui-input"
                                            disabled="@IsEndpointLocked"
                                            data-testid="agents-capability-details-endpoint" />
+                                </FormField>
                             </div>
 
                             <TagEditor Value="@capabilityTags"
@@ -93,7 +98,7 @@ else
                                          Description="Edit the launch or remote endpoint parameters that the runtime uses when this capability is attached. Store only bindings, not raw secrets.">
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
-                                        <label class="cda-field-label">Transport</label>
+                                        <FormField Text="Transport">
                                         <InputSelect @bind-Value="mcpState.Transport"
                                                      class="ui-input"
                                                      data-testid="agents-capability-details-mcp-transport">
@@ -102,12 +107,14 @@ else
                                             <option value="sse">SSE</option>
                                             <option value="logical">Logical seam</option>
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Server name</label>
+                                        <FormField Text="Server name">
                                         <InputText @bind-Value="mcpState.ServerName"
                                                    class="ui-input"
                                                    data-testid="agents-capability-details-mcp-server" />
+                                        </FormField>
                                     </div>
                                     <label class="cda-inline-option capability-details-dialog__inline-option">
                                         <InputCheckbox @bind-Value="mcpState.Hosted"
@@ -118,70 +125,79 @@ else
 
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                     <div>
-                                        <label class="cda-field-label">Endpoint</label>
+                                        <FormField Text="Endpoint">
                                         <InputText @bind-Value="mcpState.Endpoint"
                                                    class="ui-input"
                                                    data-testid="agents-capability-details-mcp-endpoint" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Command</label>
+                                        <FormField Text="Command">
                                         <InputText @bind-Value="mcpState.Command"
                                                    class="ui-input"
                                                    data-testid="agents-capability-details-mcp-command" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                     <div>
-                                        <label class="cda-field-label">Arguments</label>
+                                        <FormField Text="Arguments">
                                         <TextArea @bind-Value="mcpState.ArgumentsText"
                                                        Class="capability-details-dialog__textarea"
                                                        data-testid="agents-capability-details-mcp-arguments" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Allowed tools</label>
+                                        <FormField Text="Allowed tools">
                                         <TextArea @bind-Value="mcpState.AllowedToolsText"
                                                        Class="capability-details-dialog__textarea"
                                                        data-testid="agents-capability-details-mcp-tools" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
-                                        <label class="cda-field-label">Working directory</label>
+                                        <FormField Text="Working directory">
                                         <InputText @bind-Value="mcpState.WorkingDirectory"
                                                    class="ui-input"
                                                    data-testid="agents-capability-details-mcp-working-directory" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Approval mode</label>
+                                        <FormField Text="Approval mode">
                                         <InputSelect @bind-Value="mcpState.ApprovalMode"
                                                      class="ui-input"
                                                      data-testid="agents-capability-details-mcp-approval">
                                             <option value="NeverRequire">Never Require</option>
                                             <option value="AlwaysRequire">Always Require</option>
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Allowed working roots</label>
+                                        <FormField Text="Allowed working roots">
                                         <TextArea @bind-Value="mcpState.AllowedWorkingDirectoriesText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-mcp-roots" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                     <div>
-                                        <label class="cda-field-label">Environment variable bindings</label>
+                                        <FormField Text="Environment variable bindings">
                                         <TextArea @bind-Value="mcpState.EnvironmentVariableBindingsText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-mcp-env-bindings" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Header bindings</label>
+                                        <FormField Text="Header bindings">
                                         <TextArea @bind-Value="mcpState.HeaderBindingsText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-mcp-header-bindings" />
+                                        </FormField>
                                     </div>
                                 </Grid>
                             </FormSection>
@@ -192,7 +208,7 @@ else
                                          Description="Configure a file-backed, inline, or registered skill entry. File skills may require script approval before execution.">
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
-                                        <label class="cda-field-label">Source</label>
+                                        <FormField Text="Source">
                                         <InputSelect @bind-Value="skillState.SkillSource"
                                                      class="ui-input"
                                                      data-testid="agents-capability-details-skill-source">
@@ -200,6 +216,7 @@ else
                                             <option value="inline">Inline skill</option>
                                             <option value="registered">Registered service</option>
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <label class="cda-inline-option capability-details-dialog__inline-option">
                                         <InputCheckbox @bind-Value="skillState.ScriptApproval"
@@ -207,10 +224,11 @@ else
                                         Require script approval
                                     </label>
                                     <div>
-                                        <label class="cda-field-label">Trust level</label>
+                                        <FormField Text="Trust level">
                                         <InputText @bind-Value="skillState.ScriptTrustLevel"
                                                    class="ui-input"
                                                    data-testid="agents-capability-details-skill-trust" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
@@ -218,48 +236,54 @@ else
                                 {
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                         <div>
-                                            <label class="cda-field-label">Inline name</label>
+                                            <FormField Text="Inline name">
                                             <InputText @bind-Value="skillState.InlineName"
                                                        class="ui-input"
                                                        data-testid="agents-capability-details-inline-name" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Inline description</label>
+                                            <FormField Text="Inline description">
                                             <InputText @bind-Value="skillState.InlineDescription"
                                                        class="ui-input"
                                                        data-testid="agents-capability-details-inline-description" />
+                                            </FormField>
                                         </div>
                                     </Grid>
                                     <div>
-                                        <label class="cda-field-label">Instructions</label>
+                                        <FormField Text="Instructions">
                                         <TextArea @bind-Value="skillState.InlineInstructions"
                                                        Class="capability-details-dialog__large-textarea"
                                                        data-testid="agents-capability-details-inline-instructions" />
+                                        </FormField>
                                     </div>
                                 }
                                 else if (string.Equals(skillState.SkillSource, "registered", StringComparison.OrdinalIgnoreCase))
                                 {
                                     <div>
-                                        <label class="cda-field-label">Registered service type</label>
+                                        <FormField Text="Registered service type">
                                         <InputText @bind-Value="skillState.RegisteredSkillServiceType"
                                                    class="ui-input"
                                                    data-testid="agents-capability-details-skill-registered-type" />
+                                        </FormField>
                                     </div>
                                 }
                                 else
                                 {
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                         <div>
-                                            <label class="cda-field-label">Skill root or SKILL.md path</label>
+                                            <FormField Text="Skill root or SKILL.md path">
                                             <InputText @bind-Value="skillState.SkillRoot"
                                                        class="ui-input"
                                                        data-testid="agents-capability-details-skill-root" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Allowed external roots</label>
+                                            <FormField Text="Allowed external roots">
                                             <TextArea @bind-Value="skillState.AllowedExternalRootsText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            data-testid="agents-capability-details-skill-roots" />
+                                            </FormField>
                                         </div>
                                     </Grid>
                                 }
@@ -271,7 +295,7 @@ else
                                          Description="Edit external process or HTTP runtime parameters, bounded execution, and setup-test input.">
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
-                                        <label class="cda-field-label">Tool setup kind</label>
+                                        <FormField Text="Tool setup kind">
                                         <InputSelect @bind-Value="toolState.ToolKind"
                                                      class="ui-input"
                                                      disabled="@editorModel.IsBuiltIn"
@@ -279,37 +303,42 @@ else
                                             <option value="externalProcess">External process</option>
                                             <option value="externalHttp">External HTTP</option>
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Runtime tool name</label>
+                                        <FormField Text="Runtime tool name">
                                         <InputText @bind-Value="toolState.RuntimeToolName"
                                                    class="ui-input"
                                                    disabled="@editorModel.IsBuiltIn"
                                                    data-testid="agents-capability-details-tool-runtime-name" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Implementation key</label>
+                                        <FormField Text="Implementation key">
                                         <InputText @bind-Value="toolState.ImplementationKey"
                                                    class="ui-input"
                                                    disabled="@editorModel.IsBuiltIn"
                                                    data-testid="agents-capability-details-tool-implementation-key" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
-                                        <label class="cda-field-label">Operation classifications</label>
+                                        <FormField Text="Operation classifications">
                                         <TextArea @bind-Value="toolState.OperationClassificationsText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-classifications" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Side-effect kind</label>
+                                        <FormField Text="Side-effect kind">
                                         <InputText @bind-Value="toolState.SideEffectKind"
                                                    class="ui-input"
                                                    disabled="@editorModel.IsBuiltIn"
                                                    data-testid="agents-capability-details-tool-side-effect" />
+                                        </FormField>
                                     </div>
                                     <Stack Gap="0.5rem">
                                         <label class="cda-inline-option capability-details-dialog__inline-option">
@@ -331,49 +360,55 @@ else
                                 {
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
-                                            <label class="cda-field-label">HTTP method</label>
+                                            <FormField Text="HTTP method">
                                             <InputText @bind-Value="toolState.HttpMethod"
                                                        class="ui-input"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-http-method" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Endpoint</label>
+                                            <FormField Text="Endpoint">
                                             <InputText @bind-Value="toolState.Endpoint"
                                                        class="ui-input"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-http-endpoint" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Timeout seconds</label>
+                                            <FormField Text="Timeout seconds">
                                             <InputNumber @bind-Value="toolState.HttpTimeoutSeconds"
                                                          class="ui-input"
                                                          disabled="@editorModel.IsBuiltIn"
                                                          data-testid="agents-capability-details-tool-http-timeout" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
-                                            <label class="cda-field-label">Header bindings</label>
+                                            <FormField Text="Header bindings">
                                             <TextArea @bind-Value="toolState.HeaderBindingsText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-http-header-bindings" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Required output properties</label>
+                                            <FormField Text="Required output properties">
                                             <TextArea @bind-Value="toolState.HttpRequiredOutputPropertiesText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-http-output" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Max response bytes</label>
+                                            <FormField Text="Max response bytes">
                                             <InputNumber @bind-Value="toolState.MaxResponseBytes"
                                                          class="ui-input"
                                                          disabled="@editorModel.IsBuiltIn"
                                                          data-testid="agents-capability-details-tool-http-max-response" />
+                                            </FormField>
                                         </div>
                                     </Grid>
                                 }
@@ -381,58 +416,65 @@ else
                                 {
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
-                                            <label class="cda-field-label">Command</label>
+                                            <FormField Text="Command">
                                             <InputText @bind-Value="toolState.Command"
                                                        class="ui-input"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-process-command" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Working directory</label>
+                                            <FormField Text="Working directory">
                                             <InputText @bind-Value="toolState.WorkingDirectory"
                                                        class="ui-input"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-process-working-directory" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Timeout seconds</label>
+                                            <FormField Text="Timeout seconds">
                                             <InputNumber @bind-Value="toolState.ProcessTimeoutSeconds"
                                                          class="ui-input"
                                                          disabled="@editorModel.IsBuiltIn"
                                                          data-testid="agents-capability-details-tool-process-timeout" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
-                                            <label class="cda-field-label">Arguments</label>
+                                            <FormField Text="Arguments">
                                             <TextArea @bind-Value="toolState.ArgumentsText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-process-arguments" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Allowed executable names</label>
+                                            <FormField Text="Allowed executable names">
                                             <TextArea @bind-Value="toolState.AllowedExecutableNamesText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-process-allowed-executables" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Required output properties</label>
+                                            <FormField Text="Required output properties">
                                             <TextArea @bind-Value="toolState.ProcessRequiredOutputPropertiesText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-process-output" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
                                     <div>
-                                        <label class="cda-field-label">Max output bytes</label>
+                                        <FormField Text="Max output bytes">
                                         <InputNumber @bind-Value="toolState.MaxOutputBytes"
                                                      class="ui-input"
                                                      disabled="@editorModel.IsBuiltIn"
                                                      data-testid="agents-capability-details-tool-process-max-output" />
+                                        </FormField>
                                     </div>
                                 }
                             </FormSection>
@@ -455,10 +497,11 @@ else
                                 @if (editorModel.Kind == CapabilityKind.Tool)
                                 {
                                     <div>
-                                        <label class="cda-field-label">Tool test input JSON</label>
+                                        <FormField Text="Tool test input JSON">
                                         <TextArea @bind-Value="toolState.TestInputJson"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-tool-test-input" />
+                                        </FormField>
                                     </div>
                                 }
 
@@ -494,7 +537,7 @@ else
                                             @foreach (var diagnostic in CurrentSetupDiagnostics.Take(4))
                                             {
                                                 <div>
-                                                    <p class="cda-field-label">@diagnostic.Category.ToString()</p>
+                                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@diagnostic.Category.ToString()" />
                                                     <p>@diagnostic.MaskedDetail</p>
                                                     <p class="app-body-muted">@diagnostic.RepairHint</p>
                                                 </div>
@@ -513,22 +556,23 @@ else
                                 <FactTable>
                                     <div class="grid gap-3">
                                         <div>
-                                            <p class="cda-field-label">Capability id</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Capability id" />
                                             <p class="capability-details-dialog__mono">@editorModel.Id</p>
                                         </div>
                                         <div>
-                                            <p class="cda-field-label">Built-in</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Built-in" />
                                             <p>@(editorModel.IsBuiltIn ? "Yes" : "No")</p>
                                         </div>
                                     </div>
                                 </FactTable>
                                 <div>
-                                    <label class="cda-field-label">Configuration JSON</label>
+                                    <FormField Text="Configuration JSON">
                                     <TextArea Value="@rawConfigurationJson"
                                                    ValueChanged="HandleRawConfigurationChangedAsync"
                                                    Class="capability-details-dialog__large-textarea"
                                                    disabled="@IsRawConfigurationLocked"
                                                    data-testid="agents-capability-details-raw-json" />
+                                    </FormField>
                                 </div>
                             </Grid>
                         </FormSection>

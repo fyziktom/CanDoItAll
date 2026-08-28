@@ -123,7 +123,7 @@
                              Description="Validate one capability access rule against the selected agent capability set before changing runtime policy templates.">
                     <Grid Gap="LayoutGap.Large" ColumnsLg="5">
                         <div>
-                            <label class="cda-field-label">Effect</label>
+                            <FormField Text="Effect">
                             <InputSelect @bind-Value="accessRuleEffect"
                                          class="ui-input"
                                          data-testid="agents-capability-access-effect">
@@ -131,9 +131,10 @@
                                 <option value="allow">Allow</option>
                                 <option value="require">Require</option>
                             </InputSelect>
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Scope</label>
+                            <FormField Text="Scope">
                             <InputSelect @bind-Value="accessRuleScope"
                                          class="ui-input"
                                          data-testid="agents-capability-access-scope">
@@ -144,9 +145,10 @@
                                 <option value="processDefinition">Process definition</option>
                                 <option value="processStep">Process step</option>
                             </InputSelect>
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Selector</label>
+                            <FormField Text="Selector">
                             <InputSelect @bind-Value="accessRuleSelectorKind"
                                          class="ui-input"
                                          data-testid="agents-capability-access-selector">
@@ -160,27 +162,31 @@
                                 <option value="mcpToolName">MCP tool name</option>
                                 <option value="implementationKey">Implementation key</option>
                             </InputSelect>
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">Value</label>
+                            <FormField Text="Value">
                             <InputText @bind-Value="accessRuleSelectorValue"
                                        class="ui-input"
                                        data-testid="agents-capability-access-value" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="cda-field-label">MCP server key</label>
+                            <FormField Text="MCP server key">
                             <InputText @bind-Value="accessRuleSelectorServerKey"
                                        class="ui-input"
                                        data-testid="agents-capability-access-server-key" />
+                            </FormField>
                         </div>
                     </Grid>
 
                     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                         <div>
-                            <label class="cda-field-label">Reason</label>
+                            <FormField Text="Reason">
                             <InputText @bind-Value="accessRuleReason"
                                        class="ui-input"
                                        data-testid="agents-capability-access-reason" />
+                            </FormField>
                         </div>
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.End">
                             <Button Text="Preview access"
@@ -207,7 +213,7 @@
                                 @foreach (var issue in accessPreviewResult.ValidationResult.Issues.Take(4))
                                 {
                                     <div>
-                                        <p class="cda-field-label">@issue.FieldPath</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@issue.FieldPath" />
                                         <p>@issue.Message</p>
                                         <p class="app-body-muted">@issue.RepairHint</p>
                                     </div>
@@ -222,7 +228,7 @@
                                 @foreach (var diagnostic in accessPreviewResult.EffectiveSet.Diagnostics.Take(4))
                                 {
                                     <div>
-                                        <p class="cda-field-label">@diagnostic.Identity.Key.Value</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@diagnostic.Identity.Key.Value" />
                                         <p>@diagnostic.Reason</p>
                                         <p class="app-body-muted">@diagnostic.RepairHint</p>
                                     </div>

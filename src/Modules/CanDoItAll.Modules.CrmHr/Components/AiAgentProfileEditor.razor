@@ -3,7 +3,7 @@
                  Description="Bind the agent to the shared Workspace provider registry, name a human steward, and make the operational review state explicit before the agent is reused elsewhere.">
         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
             <div>
-                <label class="cda-field-label">Provider profile</label>
+                <FormField Text="Provider profile">
                 <InputSelect @bind-Value="Model.ProviderProfileId"
                              class="ui-input"
                              data-testid="crmhr-agent-provider">
@@ -13,19 +13,21 @@
                         <option value="@option.Id">@BuildProviderLabel(option)</option>
                     }
                 </InputSelect>
+                </FormField>
                 <p class="mt-2 text-xs leading-5 text-slate-500">@ProviderHintText</p>
             </div>
             <div>
-                <label class="cda-field-label">Default model</label>
+                <FormField Text="Default model">
                 <InputText @bind-Value="Model.DefaultModel"
                            class="ui-input"
                            data-testid="crmhr-agent-default-model" />
+                </FormField>
             </div>
         </Grid>
 
         <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
             <div>
-                <label class="cda-field-label">Execution mode</label>
+                <FormField Text="Execution mode">
                 <InputSelect @bind-Value="Model.ExecutionMode"
                              class="ui-input"
                              data-testid="crmhr-agent-execution-mode">
@@ -34,9 +36,10 @@
                         <option value="@executionMode">@executionMode</option>
                     }
                 </InputSelect>
+                </FormField>
             </div>
             <div>
-                <label class="cda-field-label">Owner / steward</label>
+                <FormField Text="Owner / steward">
                 <InputSelect @bind-Value="Model.OwnerPartyId"
                              class="ui-input"
                              data-testid="crmhr-agent-owner">
@@ -46,9 +49,10 @@
                         <option value="@owner.Id">@owner.DisplayName</option>
                     }
                 </InputSelect>
+                </FormField>
             </div>
             <div>
-                <label class="cda-field-label">Validation status</label>
+                <FormField Text="Validation status">
                 <InputSelect @bind-Value="Model.ValidationStatus"
                              class="ui-input"
                              data-testid="crmhr-agent-validation-status">
@@ -57,21 +61,24 @@
                         <option value="@validationStatus">@validationStatus</option>
                     }
                 </InputSelect>
+                </FormField>
             </div>
         </Grid>
 
         <div class="mt-5 max-w-sm">
-            <label class="cda-field-label">Last reviewed on</label>
+            <FormField Text="Last reviewed on">
             <InputDate @bind-Value="Model.LastReviewedOn"
                        class="ui-input"
                        data-testid="crmhr-agent-last-reviewed-on" />
+            </FormField>
         </div>
 
         <div class="mt-5">
-            <label class="cda-field-label">Governance notes</label>
+            <FormField Text="Governance notes">
             <TextArea @bind-Value="Model.Notes"
                            Rows="6"
                            data-testid="crmhr-agent-notes" />
+            </FormField>
         </div>
     </FormSection>
 

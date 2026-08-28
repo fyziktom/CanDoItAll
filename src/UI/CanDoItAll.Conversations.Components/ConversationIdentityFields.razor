@@ -47,7 +47,7 @@
                             Size="AvatarSize.Large"
                             Shape="AvatarShape.Rounded" />
                     <Stack GapScale="LayoutGap.XSmall">
-                        <span class="cda-field-label">@AvatarLabel</span>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@AvatarLabel" />
                         @if (!string.IsNullOrWhiteSpace(AvatarStatus))
                         {
                             <strong>@AvatarStatus</strong>

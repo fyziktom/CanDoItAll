@@ -124,7 +124,7 @@
                             <FormSection Title="Plan overview" Description="Anchor the plan to the correct project and phase before editing cases and evidence.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Project</label>
+                                        <FormField Text="Project">
                                         <InputSelect @bind-Value="editor.ProjectId" class="ui-input" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
@@ -132,15 +132,17 @@
                                                 <option value="@project.Id">@project.Name</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Phase</label>
+                                        <FormField Text="Phase">
                                         <InputText @bind-Value="editor.Phase" class="ui-input" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <div class="max-w-xl">
-                                    <label class="cda-field-label">Responsible party</label>
+                                    <FormField Text="Responsible party">
                                     <InputSelect @bind-Value="editor.ResponsiblePartyId" class="ui-input" data-testid="testlab-responsible-party-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
@@ -148,21 +150,25 @@
                                             <option value="@option.PartyId">@option.DisplayName</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">Title</label>
+                                    <FormField Text="Title">
                                         <InputText @bind-Value="editor.Title" class="ui-input" data-testid="testlab-title-input" />
+                                    </FormField>
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">Coverage goal</label>
+                                    <FormField Text="Coverage goal">
                                     <TextArea @bind-Value="editor.CoverageGoal" Rows="4" />
+                                    </FormField>
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">Playwright spec path</label>
+                                    <FormField Text="Playwright spec path">
                                     <InputText @bind-Value="editor.PlaywrightSpecPath" class="ui-input" />
+                                    </FormField>
                                 </div>
                             </FormSection>
                         }
@@ -434,4 +440,3 @@
         _ => "neutral"
     };
 }
-

@@ -28,40 +28,45 @@
             <PanelCard Soft="true">
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
                     <div>
-                        <label class="cda-field-label">Capability</label>
+                        <FormField Text="Capability">
                         <InputText @bind-Value="capability.Name"
                                    class="ui-input"
                                    data-testid="@($"crmhr-agent-capability-name-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="cda-field-label">Scope</label>
+                        <FormField Text="Scope">
                         <InputText @bind-Value="capability.Scope"
                                    class="ui-input"
                                    data-testid="@($"crmhr-agent-capability-scope-{rowIndex}")" />
+                        </FormField>
                     </div>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
-                        <label class="cda-field-label">Tool access</label>
+                        <FormField Text="Tool access">
                         <InputText @bind-Value="capability.ToolAccess"
                                    class="ui-input"
                                    data-testid="@($"crmhr-agent-capability-tool-access-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="cda-field-label">Limitations</label>
+                        <FormField Text="Limitations">
                         <InputText @bind-Value="capability.Limitations"
                                    class="ui-input"
                                    data-testid="@($"crmhr-agent-capability-limitations-{rowIndex}")" />
+                        </FormField>
                     </div>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
-                        <label class="cda-field-label">Notes</label>
+                        <FormField Text="Notes">
                         <TextArea @bind-Value="capability.Notes"
 
                                        data-testid="@($"crmhr-agent-capability-notes-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div class="flex items-end justify-end">
                         <Button Text="Remove"

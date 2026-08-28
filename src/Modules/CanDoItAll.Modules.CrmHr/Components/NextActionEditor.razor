@@ -2,13 +2,14 @@
              Description="Capture the follow-up commitment explicitly so overdue work is visible on the CRM surface instead of hiding in notes.">
     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
         <div>
-            <label class="cda-field-label">Next action</label>
+            <FormField Text="Next action">
             <InputText @bind-Value="Model.NextActionText"
                        class="ui-input"
                        data-testid="crmhr-next-action-text" />
+            </FormField>
         </div>
         <div>
-            <label class="cda-field-label">Owner</label>
+            <FormField Text="Owner">
             <InputSelect @bind-Value="Model.NextActionOwnerPartyId"
                          class="ui-input"
                          data-testid="crmhr-next-action-owner">
@@ -18,14 +19,16 @@
                     <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
                 }
             </InputSelect>
+            </FormField>
         </div>
     </Grid>
 
     <div class="mt-5 max-w-sm">
-        <label class="cda-field-label">Due on</label>
+        <FormField Text="Due on">
         <InputDate @bind-Value="Model.NextActionDueOn"
                    class="ui-input"
                    data-testid="crmhr-next-action-due-on" />
+        </FormField>
     </div>
 </FormSection>
 

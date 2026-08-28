@@ -82,19 +82,21 @@
                                 <FormSection Title="Identity" Description="Provider identity, endpoint, model, and grouping tags. Tags drive the tree and future capability search.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2" ColumnsXl="4">
                                     <div>
-                                        <label class="cda-field-label">Name</label>
+                                        <FormField Text="Name">
                                         <InputText @bind-Value="providerModel.Name"
                                                    class="ui-input"
                                                    data-testid="providers-name-input" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Default model</label>
+                                        <FormField Text="Default model">
                                         <InputText @bind-Value="providerModel.DefaultModel"
                                                    class="ui-input"
                                                    data-testid="providers-model-input" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Provider kind</label>
+                                        <FormField Text="Provider kind">
                                         <InputSelect @bind-Value="providerModel.Kind"
                                                      class="ui-input"
                                                      data-testid="providers-kind-select">
@@ -103,9 +105,10 @@
                                                 <option value="@kind">@kind</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Purpose</label>
+                                        <FormField Text="Purpose">
                                         <InputSelect @bind-Value="providerModel.Purpose"
                                                      class="ui-input"
                                                      data-testid="providers-purpose-select">
@@ -114,18 +117,20 @@
                                                 <option value="@purpose">@purpose</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <div>
-                                    <label class="cda-field-label">Base URL</label>
+                                    <FormField Text="Base URL">
                                     <InputText @bind-Value="providerModel.BaseUrl"
                                                class="ui-input"
                                                data-testid="providers-base-url-input" />
+                                    </FormField>
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">API key secret</label>
+                                    <FormField Text="API key secret">
                                     <InputSelect @bind-Value="providerModel.ApiKeyEnvironmentVariable"
                                                  class="ui-input"
                                                  data-testid="providers-api-key-input">
@@ -139,6 +144,7 @@
                                             <option value="@AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id)">@secret.Name</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                     @if (HasUnavailableSecretReference)
                                     {
                                         <p class="app-body-muted mt-1">The saved secret reference is no longer available in the vault. Select another secret before saving.</p>
@@ -173,7 +179,7 @@
                                 <FormSection Title="Runtime behavior" Description="Keep transport and advertised runtime capabilities explicit.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
-                                            <label class="cda-field-label">Transport</label>
+                                            <FormField Text="Transport">
                                             <InputSelect @bind-Value="providerModel.Transport"
                                                          class="ui-input"
                                                          data-testid="providers-transport-select">
@@ -182,12 +188,14 @@
                                                     <option value="@transport">@transport</option>
                                                 }
                                             </InputSelect>
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Suggested models</label>
+                                            <FormField Text="Suggested models">
                                             <textarea @bind="suggestedModelsText"
                                                       class="ui-input min-h-[7rem]"
                                                       data-testid="providers-suggested-models"></textarea>
+                                            </FormField>
                                         </div>
                                     </Grid>
 
@@ -203,16 +211,18 @@
                                 <FormSection Title="Configuration and notes" Description="Advanced provider metadata. Keep JSON valid and explicit.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
-                                            <label class="cda-field-label">Configuration JSON</label>
+                                            <FormField Text="Configuration JSON">
                                             <TextArea @bind-Value="providerModel.ConfigurationJson"
                                                            class="ui-input min-h-[12rem] font-mono text-xs"
                                                            data-testid="providers-config-json" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Notes</label>
+                                            <FormField Text="Notes">
                                             <TextArea @bind-Value="providerModel.Notes"
                                                            class="ui-input min-h-[12rem]"
                                                            data-testid="providers-notes" />
+                                            </FormField>
                                         </div>
                                     </Grid>
                                 </FormSection>

@@ -112,13 +112,14 @@
                                      Description="Keep the label concrete. This catalog drives routing and UI labels across workbench attachments and prompt exports.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Name</label>
+                                    <FormField Text="Name">
                                     <InputText @bind-Value="storageModel.Name"
                                                class="ui-input"
                                                data-testid="storage-settings-name" />
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Provider kind</label>
+                                    <FormField Text="Provider kind">
                                     <InputSelect Value="storageModel.ProviderKind"
                                                  ValueChanged="@((StorageProviderKind value) => HandleProviderKindChangedAsync(value))"
                                                  ValueExpression="() => storageModel.ProviderKind"
@@ -129,12 +130,13 @@
                                             <option value="@providerKind">@StoragePresentation.DescribeProvider(providerKind)</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Connection mode</label>
+                                    <FormField Text="Connection mode">
                                     <InputSelect @bind-Value="storageModel.ConnectionMode"
                                                  class="ui-input"
                                                  disabled="@(storageModel.ProviderKind == StorageProviderKind.FileSystem)"
@@ -144,9 +146,10 @@
                                             <option value="@connectionMode">@StoragePresentation.DescribeConnectionMode(connectionMode)</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Credential secret</label>
+                                    <FormField Text="Credential secret">
                                     <InputSelect @bind-Value="storageModel.CredentialSecretId"
                                                  class="ui-input"
                                                  data-testid="storage-settings-secret">
@@ -156,6 +159,7 @@
                                             <option value="@secret.Id">@secret.Name</option>
                                         }
                                     </InputSelect>
+                                    </FormField>
                                 </div>
                             </Grid>
 
@@ -173,10 +177,11 @@
                             </Grid>
 
                             <div>
-                                <label class="cda-field-label">Display order</label>
+                                <FormField Text="Display order">
                                 <InputNumber @bind-Value="storageModel.DisplayOrder"
                                              class="ui-input"
                                              data-testid="storage-settings-display-order" />
+                                </FormField>
                             </div>
                         </FormSection>
                     </StepsItem>
@@ -186,26 +191,29 @@
                         <FormSection Title="Driver configuration"
                                      Description="Use exact host or root values. Test connection should fail loudly when the catalog entry is incomplete or the driver is unavailable.">
                             <div>
-                                <label class="cda-field-label">@(storageModel.ProviderKind == StorageProviderKind.FileSystem ? "Root path" : "Endpoint or host")</label>
+                                <FormField Text="@(storageModel.ProviderKind == StorageProviderKind.FileSystem ? "Root path" : "Endpoint or host")">
                                 <InputText @bind-Value="storageModel.EndpointOrRoot"
                                            class="ui-input"
                                            data-testid="storage-settings-endpoint" />
+                                </FormField>
                             </div>
 
                             @if (storageModel.ProviderKind == StorageProviderKind.Ipfs)
                             {
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Gateway base URL</label>
+                                        <FormField Text="Gateway base URL">
                                         <InputText @bind-Value="storageModel.GatewayBaseUrl"
                                                    class="ui-input"
                                                    data-testid="storage-settings-ipfs-gateway" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Base path</label>
+                                        <FormField Text="Base path">
                                         <InputText @bind-Value="storageModel.BasePath"
                                                    class="ui-input"
                                                    data-testid="storage-settings-base-path" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
@@ -219,24 +227,27 @@
                             {
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Port</label>
+                                        <FormField Text="Port">
                                         <InputNumber @bind-Value="storageModel.Port"
                                                      class="ui-input"
                                                      data-testid="storage-settings-ftp-port" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Username</label>
+                                        <FormField Text="Username">
                                         <InputText @bind-Value="storageModel.Username"
                                                    class="ui-input"
                                                    data-testid="storage-settings-ftp-username" />
+                                        </FormField>
                                     </div>
                                 </Grid>
 
                                 <div>
-                                    <label class="cda-field-label">Base path</label>
+                                    <FormField Text="Base path">
                                     <InputText @bind-Value="storageModel.BasePath"
                                                class="ui-input"
                                                data-testid="storage-settings-base-path" />
+                                    </FormField>
                                 </div>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">

@@ -200,12 +200,14 @@
             <Stack GapScale="LayoutGap.Medium">
                 <h2 class="app-title-md">Upload zip</h2>
                 <div>
-                    <label class="cda-field-label" for="plugin-package-upload">Package archive</label>
+                    <FormField Text="Package archive">
                     <InputFile id="plugin-package-upload"
                                class="ui-input"
                                accept=".zip,application/zip"
+                               aria-label="Package archive"
                                data-testid="plugin-package-upload"
                                OnChange="UploadPackageAsync" />
+                    </FormField>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(packageUploadFileName))
                 {

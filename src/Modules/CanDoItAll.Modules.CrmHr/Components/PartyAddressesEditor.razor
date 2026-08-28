@@ -28,16 +28,18 @@
             <PanelCard @key="item" Soft="true">
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                     <div>
-                        <label class="cda-field-label">Type</label>
+                        <FormField Text="Type">
                         <InputText @bind-Value="item.AddressType"
                                    class="ui-input"
                                    data-testid="@($"crmhr-address-type-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div class="lg:col-span-2">
-                        <label class="cda-field-label">Line 1</label>
+                        <FormField Text="Line 1">
                         <InputText @bind-Value="item.Line1"
                                    class="ui-input"
                                    data-testid="@($"crmhr-address-line1-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div class="flex items-end">
                         <Button Text="Remove"
@@ -50,37 +52,42 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4" Class="mt-4">
                     <div>
-                        <label class="cda-field-label">Line 2</label>
+                        <FormField Text="Line 2">
                         <InputText @bind-Value="item.Line2"
                                    class="ui-input"
                                    data-testid="@($"crmhr-address-line2-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="cda-field-label">City</label>
+                        <FormField Text="City">
                         <InputText @bind-Value="item.City"
                                    class="ui-input"
                                    data-testid="@($"crmhr-address-city-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="cda-field-label">Region</label>
+                        <FormField Text="Region">
                         <InputText @bind-Value="item.Region"
                                    class="ui-input"
                                    data-testid="@($"crmhr-address-region-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="cda-field-label">Postal code</label>
+                        <FormField Text="Postal code">
                         <InputText @bind-Value="item.PostalCode"
                                    class="ui-input"
                                    data-testid="@($"crmhr-address-postal-{rowIndex}")" />
+                        </FormField>
                     </div>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
-                        <label class="cda-field-label">Country code</label>
+                        <FormField Text="Country code">
                         <InputText @bind-Value="item.CountryCode"
                                    class="ui-input"
                                    data-testid="@($"crmhr-address-country-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <label class="cda-inline-option">
                         <InputCheckbox @bind-Value="item.IsPrimary"

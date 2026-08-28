@@ -18,18 +18,20 @@
             <Stack GapScale="LayoutGap.Large">
                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                     <div>
-                        <label class="cda-field-label">File extension</label>
+                        <FormField Text="File extension">
                         <InputText @bind-Value="editor.Extension"
                                    class="ui-input"
                                    placeholder=".xlsx"
                                    data-testid="file-application-extension" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="cda-field-label">Application executable</label>
+                        <FormField Text="Application executable">
                         <InputText @bind-Value="editor.ExecutablePath"
                                    class="ui-input"
                                    placeholder="C:\Program Files\...\application.exe"
                                    data-testid="file-application-executable" />
+                        </FormField>
                     </div>
                 </Grid>
 

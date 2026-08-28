@@ -29,7 +29,7 @@
                 </Alert>
             }
             <div class="w-full">
-                <label class="cda-field-label">Target project</label>
+                <FormField Text="Target project">
                 <InputSelect @bind-Value="projectId" class="ui-input w-full" data-testid="resources-promotion-project">
                     <option value="">Select a project</option>
                     @foreach (KeyValuePair<Guid, string> project in projects.OrderBy(project => project.Value))
@@ -37,19 +37,22 @@
                         <option value="@project.Key">@project.Value</option>
                     }
                 </InputSelect>
+                </FormField>
             </div>
             <div class="w-full">
-                <label class="cda-field-label">Resource name</label>
+                <FormField Text="Resource name">
                 <InputText @bind-Value="resourceName" class="ui-input w-full" data-testid="resources-promotion-name" />
+                </FormField>
             </div>
             <div class="w-full">
-                <label class="cda-field-label">Sensitivity</label>
+                <FormField Text="Sensitivity">
                 <InputSelect @bind-Value="sensitivity" class="ui-input w-full" data-testid="resources-promotion-sensitivity">
                     @foreach (ResourceSensitivity option in Enum.GetValues<ResourceSensitivity>())
                     {
                         <option value="@option">@option</option>
                     }
                 </InputSelect>
+                </FormField>
             </div>
         </Stack>
     </ChildContent>

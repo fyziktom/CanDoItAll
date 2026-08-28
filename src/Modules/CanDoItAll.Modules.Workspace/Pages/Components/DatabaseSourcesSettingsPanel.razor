@@ -189,17 +189,19 @@
                                  Description="Choose a clear name and workspace root for this PostgreSQL runtime profile.">
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
-                                <label class="cda-field-label">Profile name</label>
+                                <FormField Text="Profile name">
                                 <InputText @bind-Value="databaseProfileModel.DisplayName"
                                            class="ui-input"
                                            data-testid="database-profile-name" />
+                                </FormField>
                             </div>
 
                             <div>
-                                <label class="cda-field-label">Workspace root</label>
+                                <FormField Text="Workspace root">
                                 <InputText @bind-Value="databaseProfileModel.WorkspaceRoot"
                                            class="ui-input"
                                            data-testid="database-profile-workspace-root" />
+                                </FormField>
                             </div>
                         </Grid>
 
@@ -223,50 +225,56 @@
                                      Description="Save the profile first, then use Test connection to verify the target database or Create empty to provision it before activation.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Host</label>
+                                    <FormField Text="Host">
                                     <InputText @bind-Value="databaseProfileModel.PostgresHost"
                                                class="ui-input"
                                                data-testid="database-profile-postgres-host" />
+                                    </FormField>
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">Port</label>
+                                    <FormField Text="Port">
                                     <InputNumber @bind-Value="databaseProfileModel.PostgresPort"
                                                  class="ui-input"
                                                  data-testid="database-profile-postgres-port" />
+                                    </FormField>
                                 </div>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Database</label>
+                                    <FormField Text="Database">
                                     <InputText @bind-Value="databaseProfileModel.PostgresDatabaseName"
                                                class="ui-input"
                                                data-testid="database-profile-postgres-database" />
+                                    </FormField>
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">Admin database</label>
+                                    <FormField Text="Admin database">
                                     <InputText @bind-Value="databaseProfileModel.PostgresAdminDatabaseName"
                                                class="ui-input"
                                                data-testid="database-profile-postgres-admin-database" />
+                                    </FormField>
                                 </div>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
-                                    <label class="cda-field-label">Username</label>
+                                    <FormField Text="Username">
                                     <InputText @bind-Value="databaseProfileModel.PostgresUsername"
                                                class="ui-input"
                                                data-testid="database-profile-postgres-user" />
+                                    </FormField>
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">Password</label>
+                                    <FormField Text="Password">
                                     <InputText @bind-Value="databaseProfileModel.PostgresPassword"
                                                type="password"
                                                class="ui-input"
                                                data-testid="database-profile-postgres-password" />
+                                    </FormField>
                                 </div>
                             </Grid>
 
@@ -454,7 +462,7 @@
                 </div>
 
                 <div>
-                    <label class="cda-field-label">Copy settings from</label>
+                    <FormField Text="Copy settings from">
                     <select class="ui-input"
                             value="@transferSourceProfileId?.ToString()"
                             disabled="@(transferBusy || transferSources.Count == 0)"
@@ -466,6 +474,7 @@
                             <option value="@source.ProfileId">@source.DisplayName (@DescribeSource(source.SourceKind))</option>
                         }
                     </select>
+                    </FormField>
                     @if (transferSources.Count == 0)
                     {
                         <p class="mt-2 text-sm leading-6 text-slate-600">No other saved database profiles are available as a source.</p>

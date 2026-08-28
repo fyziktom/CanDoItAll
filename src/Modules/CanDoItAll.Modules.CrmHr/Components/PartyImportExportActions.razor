@@ -40,18 +40,20 @@
 
     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
         <div>
-            <label class="cda-field-label">Export preview</label>
+            <FormField Text="Export preview">
             <TextArea @bind-Value="exportText"
                            Rows="8"
                            readonly
                            data-testid="crmhr-export-textarea" />
+            </FormField>
         </div>
         <div>
-            <label class="cda-field-label">Import CSV</label>
+            <FormField Text="Import CSV">
             <TextArea @bind-Value="importText"
                            Rows="8"
                            placeholder="DisplayName,PartyType,LifecycleStatus,ExternalCode,..."
                            data-testid="crmhr-import-textarea" />
+            </FormField>
         </div>
     </Grid>
 

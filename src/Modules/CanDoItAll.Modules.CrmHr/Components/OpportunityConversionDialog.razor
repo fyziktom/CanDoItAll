@@ -87,28 +87,32 @@
                                 else
                                 {
                                     <Stack GapScale="LayoutGap.XSmall">
-                                        <label class="cda-field-label">Project name</label>
+                                        <FormField Text="Project name">
                                         <InputText @bind-Value="draft.ProjectName"
                                                    class="ui-input"
                                                    data-testid="crmhr-opportunity-conversion-name" />
+                                        </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
-                                        <label class="cda-field-label">Description</label>
+                                        <FormField Text="Description">
                                         <TextArea @bind-Value="draft.ProjectDescription"
 
                                                        data-testid="crmhr-opportunity-conversion-description" />
+                                        </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
-                                        <label class="cda-field-label">Objective</label>
+                                        <FormField Text="Objective">
                                         <TextArea @bind-Value="draft.ProjectObjective"
 
                                                        data-testid="crmhr-opportunity-conversion-objective" />
+                                        </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
-                                        <label class="cda-field-label">Current phase</label>
+                                        <FormField Text="Current phase">
                                         <InputText @bind-Value="draft.CurrentPhase"
                                                    class="ui-input"
                                                    data-testid="crmhr-opportunity-conversion-phase" />
+                                        </FormField>
                                     </Stack>
                                 }
                             </Stack>

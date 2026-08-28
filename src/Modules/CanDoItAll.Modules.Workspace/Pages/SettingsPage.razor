@@ -37,16 +37,18 @@
                                  Icon="settings"
                                  Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
                         <div>
-                            <label class="cda-field-label">Workspace name</label>
+                            <FormField Text="Workspace name">
                             <InputText @bind-Value="settingsModel.WorkspaceName" class="ui-input" />
+                            </FormField>
                         </div>
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
-                                <label class="cda-field-label">Default output format</label>
+                                <FormField Text="Default output format">
                                 <InputText @bind-Value="settingsModel.DefaultPromptOutputFormat" class="ui-input" />
+                                </FormField>
                             </div>
                             <div>
-                                <label class="cda-field-label">Default provider</label>
+                                <FormField Text="Default provider">
                                 <InputSelect @bind-Value="settingsModel.DefaultProviderProfileId" class="ui-input">
                                     <option value="">None</option>
                                     @foreach (var provider in providers)
@@ -54,16 +56,19 @@
                                         <option value="@provider.Id">@provider.Name</option>
                                     }
                                 </InputSelect>
+                                </FormField>
                             </div>
                         </Grid>
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
-                                <label class="cda-field-label">Currency code</label>
+                                <FormField Text="Currency code">
                                 <InputText @bind-Value="settingsModel.CurrencyCode" class="ui-input" maxlength="3" />
+                                </FormField>
                             </div>
                             <div>
-                                <label class="cda-field-label">Currency culture</label>
+                                <FormField Text="Currency culture">
                                 <InputText @bind-Value="settingsModel.CurrencyCultureName" class="ui-input" />
+                                </FormField>
                             </div>
                         </Grid>
                     </FormSection>
@@ -72,8 +77,9 @@
                                  Icon="note"
                                  Description="Keep any operating notes or setup caveats close to the defaults.">
                         <div>
-                            <label class="cda-field-label">Notes</label>
+                            <FormField Text="Notes">
                             <TextArea @bind-Value="settingsModel.Notes" Class="min-h-32" />
+                            </FormField>
                         </div>
                     </FormSection>
 
@@ -168,27 +174,31 @@
                                          Description="Name the secret clearly and capture its usage scope.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Name</label>
+                                        <FormField Text="Name">
                                         <InputText @bind-Value="secretModel.Name" class="ui-input" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Kind</label>
+                                        <FormField Text="Kind">
                                         <InputSelect @bind-Value="secretModel.Kind" class="ui-input">
                                             @foreach (var kind in Enum.GetValues<SecretKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                 </Grid>
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Scope</label>
+                                        <FormField Text="Scope">
                                         <InputText @bind-Value="secretModel.Scope" class="ui-input" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Rotation note</label>
+                                        <FormField Text="Rotation note">
                                         <InputText @bind-Value="secretModel.RotationNote" class="ui-input" />
+                                        </FormField>
                                     </div>
                                 </Grid>
                             </FormSection>
@@ -197,7 +207,7 @@
                                          Icon="lock"
                                          Description="The raw value is only edited here, while other areas consume references to the saved record.">
                                 <div>
-                                    <label class="cda-field-label">Secret value</label>
+                                    <FormField Text="Secret value">
                                     <SecretField @bind-Value="secretModel.SecretValue"
                                                  SecretName="@secretModel.Name"
                                                  ShowNameCopy="true"
@@ -205,10 +215,12 @@
                                                  RevealDurationSeconds="30"
                                                  Placeholder="Enter or update secret value"
                                                  data-testid="settings-secret-value" />
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Metadata JSON</label>
+                                    <FormField Text="Metadata JSON">
                                     <TextArea @bind-Value="secretModel.MetadataJson" />
+                                    </FormField>
                                 </div>
                             </FormSection>
 
@@ -295,17 +307,19 @@
                                                  Description="Choose the connector plugin first, then fill only the schema fields that plugin exposes.">
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             <div>
-                                                <label class="cda-field-label">Profile name</label>
+                                                <FormField Text="Profile name">
                                                 <InputText @bind-Value="providerModel.Name" class="ui-input" data-testid="provider-name-input" />
+                                                </FormField>
                                             </div>
                                             <div>
-                                                <label class="cda-field-label">Connector plugin</label>
+                                                <FormField Text="Connector plugin">
                                                 <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="ui-input" data-testid="provider-plugin-select">
                                                     @foreach (var manifest in providerManifests)
                                                     {
                                                         <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                                     }
                                                 </InputSelect>
+                                                </FormField>
                                             </div>
                                         </Grid>
 
@@ -358,7 +372,7 @@
                                                  Description="Attach the secret reference and advertise what the profile supports.">
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             <div>
-                                                <label class="cda-field-label">API key secret</label>
+                                                <FormField Text="API key secret">
                                                 <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="ui-input" data-testid="provider-secret-select">
                                                     <option value="">None</option>
                                                     @foreach (var secret in secrets)
@@ -366,6 +380,7 @@
                                                         <option value="@secret.Id">@secret.Name</option>
                                                     }
                                                 </InputSelect>
+                                                </FormField>
                                             </div>
                                         </Grid>
 
@@ -434,23 +449,27 @@
                             <Stack GapScale="LayoutGap.Large">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Subject</label>
+                                        <FormField Text="Subject">
                                         <InputText @bind-Value="apiTokenModel.Subject" class="ui-input" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Display name</label>
+                                        <FormField Text="Display name">
                                         <InputText @bind-Value="apiTokenModel.DisplayName" class="ui-input" />
+                                        </FormField>
                                     </div>
                                 </Grid>
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="cda-field-label">Lifetime minutes</label>
+                                        <FormField Text="Lifetime minutes">
                                         <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="ui-input" />
+                                        </FormField>
                                         <p class="app-body-muted mt-1">Maximum: @apiStatus.MaxTokenLifetimeMinutes minutes</p>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Scopes</label>
+                                        <FormField Text="Scopes">
                                         <InputText @bind-Value="apiScopesText" class="ui-input" />
+                                        </FormField>
                                         <p class="app-body-muted mt-1">Separate scopes with spaces or commas.</p>
                                     </div>
                                 </Grid>

@@ -23,14 +23,15 @@ else
                          Description="@connectionDescriptor.Description">
                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                     <div>
-                        <label class="cda-field-label">Connection name</label>
+                        <FormField Text="Connection name">
                         <input class="ui-input"
                                value="@editor.DisplayName"
                                data-testid="@PluginsPageHelpers.BuildConnectionNameTestId(Plugin.PluginId, connectionDescriptor)"
                                @onchange="@((ChangeEventArgs args) => HandleDisplayNameChanged(editor, args))" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="cda-field-label">State</label>
+                        <FormField Text="State">
                         <label class="cda-inline-option">
                             <input type="checkbox"
                                    checked="@editor.IsEnabled"
@@ -38,6 +39,7 @@ else
                                    @onchange="@((ChangeEventArgs args) => HandleEnabledChanged(editor, args))" />
                             Enabled
                         </label>
+                        </FormField>
                     </div>
                 </Grid>
 
@@ -52,16 +54,16 @@ else
                         {
                             var fieldValue = editor.State.GetText(field.Key);
                             <div>
-                                <label class="cda-field-label">
-                                    @field.Label
+                                <FormField Text="@field.Label">
                                     @if (field.IsRequired)
                                     {
-                                        <span class="ml-1 text-xs font-medium text-[var(--app-danger)]">Required</span>
+                                        <TextBlock TextStyle="TextStyle.Caption"
+                                                   Class="text-[var(--app-danger)]"
+                                                   Value="Required" />
                                     }
-                                </label>
 
-                                @switch (field.FieldType)
-                                {
+                                    @switch (field.FieldType)
+                                    {
                                     case ConfigurationFieldType.Boolean:
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
@@ -97,7 +99,8 @@ else
                                                data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
                                                @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))" />
                                         break;
-                                }
+                                    }
+                                </FormField>
 
                                 @if (field.FieldType != ConfigurationFieldType.Boolean && !string.IsNullOrWhiteSpace(field.HelpText))
                                 {

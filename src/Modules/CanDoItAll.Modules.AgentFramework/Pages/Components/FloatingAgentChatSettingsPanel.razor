@@ -26,14 +26,13 @@
                 Preparation caches immutable agent activation metadata only. Live runtime agents, credentials, tool clients, and execution sessions remain per-run and are never pooled.
             </Alert>
 
-            <label class="app-field">
-                <span class="cda-field-label">Maximum prepared agents</span>
+            <FormField Text="Maximum prepared agents" ContainerClass="app-field">
                 <InputNumber @bind-Value="maximumPreparedAgents"
                              class="ui-input"
                              min="0"
                              max="@FloatingAgentChatSettingsValidator.MaximumPreparedAgentLimit"
                              data-testid="floating-agent-chat-maximum-prepared" />
-            </label>
+            </FormField>
             <TextBlock TextStyle="TextStyle.Caption"
                        Value="Use 0 to disable background preparation. The stock favors agents used most often in this circuit." />
 
@@ -42,14 +41,13 @@
                 <span>Adapt preparation to recent usage</span>
             </label>
 
-            <label class="app-field">
-                <span class="cda-field-label">Prepared metadata idle retention (minutes)</span>
+            <FormField Text="Prepared metadata idle retention (minutes)" ContainerClass="app-field">
                 <InputNumber @bind-Value="preparedResourceIdleRetentionMinutes"
                              class="ui-input"
                              min="1"
                              max="@FloatingAgentChatSettingsValidator.MaximumRetentionMinutes"
                              data-testid="floating-agent-chat-prepared-retention" />
-            </label>
+            </FormField>
         </Stack>
     </SurfaceCard>
 </Grid>

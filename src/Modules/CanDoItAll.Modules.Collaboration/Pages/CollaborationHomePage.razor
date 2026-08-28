@@ -106,42 +106,48 @@
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">New collaboration item</h3>
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
-                                        <label class="cda-field-label">Subject</label>
+                                        <FormField Text="Subject">
                                         <InputText @bind-Value="newThreadEditor.Subject" class="ui-input" data-testid="collaboration-thread-subject" />
+                                        </FormField>
                                         <ValidationMessage For="@(() => newThreadEditor.Subject)" />
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Item kind</label>
+                                        <FormField Text="Item kind">
                                         <InputSelect @bind-Value="newThreadEditor.ItemKind" class="ui-input" data-testid="collaboration-thread-kind">
                                             @foreach (var kind in Enum.GetValues<CollaborationInboxItemKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                 </Grid>
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
-                                        <label class="cda-field-label">Context kind</label>
+                                        <FormField Text="Context kind">
                                         <InputSelect @bind-Value="newThreadEditor.ContextKind" class="ui-input" data-testid="collaboration-thread-context-kind">
                                             @foreach (var kind in Enum.GetValues<CollaborationContextKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
                                         </InputSelect>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Context label</label>
+                                        <FormField Text="Context label">
                                         <InputText @bind-Value="newThreadEditor.ContextLabel" class="ui-input" data-testid="collaboration-thread-context-label" />
+                                        </FormField>
                                     </div>
                                 </Grid>
                                 <div class="mt-4">
-                                    <label class="cda-field-label">Context route</label>
+                                    <FormField Text="Context route">
                                     <InputText @bind-Value="newThreadEditor.ContextRoute" class="ui-input" placeholder="/processes" data-testid="collaboration-thread-context-route" />
+                                    </FormField>
                                 </div>
                                 <div class="mt-4">
-                                    <label class="cda-field-label">First message</label>
+                                    <FormField Text="First message">
                                     <TextArea @bind-Value="newThreadEditor.MessageBody" Rows="4" data-testid="collaboration-thread-message" />
+                                    </FormField>
                                     <ValidationMessage For="@(() => newThreadEditor.MessageBody)" />
                                 </div>
                                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
@@ -320,13 +326,14 @@
                                     <DataAnnotationsValidator />
                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                         <div>
-                                            <label class="cda-field-label">Message kind</label>
+                                            <FormField Text="Message kind">
                                             <InputSelect @bind-Value="replyEditor.MessageKind" class="ui-input" data-testid="collaboration-reply-kind">
                                                 @foreach (var kind in Enum.GetValues<CollaborationMessageKind>())
                                                 {
                                                     <option value="@kind">@kind</option>
                                                 }
                                             </InputSelect>
+                                            </FormField>
                                         </div>
                                         <div class="flex items-end">
                                             @if (!string.IsNullOrWhiteSpace(workspace.SelectedThread.ContextRoute))
@@ -336,8 +343,9 @@
                                         </div>
                                     </Grid>
                                     <div class="mt-4">
-                                        <label class="cda-field-label">Reply</label>
+                                        <FormField Text="Reply">
                                         <TextArea @bind-Value="replyEditor.MessageBody" Rows="4" data-testid="collaboration-reply-message" />
+                                        </FormField>
                                         <ValidationMessage For="@(() => replyEditor.MessageBody)" />
                                     </div>
                                     <Cluster Gap="LayoutGap.Small" Class="mt-4">

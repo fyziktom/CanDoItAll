@@ -50,12 +50,14 @@
                 <SurfaceCard Soft="true">
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
-                            <label class="cda-field-label" for="@UploadInputId">Custom image</label>
+                            <FormField Text="Custom image">
                             <InputFile id="@UploadInputId"
                                        class="ui-input"
                                        accept="image/png,image/jpeg,image/webp,image/gif"
+                                       aria-label="Custom image"
                                        OnChange="LoadCustomAvatarAsync"
                                        data-testid="@($"{TestIdPrefix}-upload")" />
+                            </FormField>
                             @if (!string.IsNullOrWhiteSpace(customAvatarFileName))
                             {
                                 <p class="mt-2 break-all text-sm text-slate-600" data-testid="@($"{TestIdPrefix}-upload-file")">@customAvatarFileName</p>

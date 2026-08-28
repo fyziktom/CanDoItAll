@@ -98,7 +98,7 @@
                                              Description="Keep prospect conversion, commercial context, and timing risk on the same account record instead of scattering it across notes.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
-                                            <label class="cda-field-label">Relationship stage</label>
+                                            <FormField Text="Relationship stage">
                                             <InputSelect @bind-Value="profileEditor.RelationshipStage"
                                                          class="ui-input"
                                                          data-testid="crmhr-account-stage">
@@ -107,6 +107,7 @@
                                                     <option value="@stage">@stage</option>
                                                 }
                                             </InputSelect>
+                                            </FormField>
                                         </div>
                                         <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current scope" />
@@ -118,22 +119,25 @@
 
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
-                                            <label class="cda-field-label">Commercial notes</label>
+                                            <FormField Text="Commercial notes">
                                             <TextArea @bind-Value="profileEditor.CommercialNotes"
                                                            Rows="6"
                                                            data-testid="crmhr-account-commercial-notes" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Constraints</label>
+                                            <FormField Text="Constraints">
                                             <TextArea @bind-Value="profileEditor.ConstraintNotes"
                                                            Rows="6"
                                                            data-testid="crmhr-account-constraints" />
+                                            </FormField>
                                         </div>
                                         <div>
-                                            <label class="cda-field-label">Timing risks</label>
+                                            <FormField Text="Timing risks">
                                             <TextArea @bind-Value="profileEditor.TimingRiskNotes"
                                                            Rows="6"
                                                            data-testid="crmhr-account-timing-risks" />
+                                            </FormField>
                                         </div>
                                     </Grid>
 
@@ -192,7 +196,7 @@
                                             <PanelCard Soft="true">
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                                                     <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Connected directory record</label>
+                                                        <FormField Text="Connected directory record">
                                                         <SurfaceCard Soft="true">
                                                             <Split Breakpoint="LayoutBreakpoint.None"
                                                                    Gap="LayoutGap.Medium"
@@ -218,9 +222,10 @@
                                                                 </Cluster>
                                                             </Split>
                                                         </SurfaceCard>
+                                                        </FormField>
                                                     </div>
                                                     <div>
-                                                        <label class="cda-field-label">Relationship role</label>
+                                                        <FormField Text="Relationship role">
                                                         <InputSelect @bind-Value="connection.Role"
                                                                      class="ui-input"
                                                                      data-testid="@($"crmhr-connection-role-{rowIndex}")">
@@ -229,6 +234,7 @@
                                                                 <option value="@role">@FormatConnectionRole(role)</option>
                                                             }
                                                         </InputSelect>
+                                                        </FormField>
                                                     </div>
                                                     <div class="flex items-end justify-end">
                                                         <Button Text="Remove"
@@ -247,10 +253,11 @@
 
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                                                     <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Relationship notes</label>
+                                                        <FormField Text="Relationship notes">
                                                         <InputText @bind-Value="connection.Notes"
                                                                    class="ui-input"
                                                                    data-testid="@($"crmhr-connection-notes-{rowIndex}")" />
+                                                        </FormField>
                                                     </div>
                                                     <div class="flex items-end gap-3">
                                                         <InputCheckbox @bind-Value="connection.IsPrimary"
@@ -320,7 +327,7 @@
                                                  Description="Record calls, meetings, emails, and messages against the account so recent context survives handoffs and reloads.">
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                             <div>
-                                                <label class="cda-field-label">Interaction type</label>
+                                                <FormField Text="Interaction type">
                                                 <InputSelect @bind-Value="interactionEditor.InteractionType"
                                                              class="ui-input"
                                                              data-testid="crmhr-interaction-type">
@@ -329,15 +336,17 @@
                                                         <option value="@interactionType">@interactionType</option>
                                                     }
                                                 </InputSelect>
+                                                </FormField>
                                             </div>
                                             <div>
-                                                <label class="cda-field-label">Occurred on</label>
+                                                <FormField Text="Occurred on">
                                                 <InputDate @bind-Value="interactionEditor.OccurredOn"
                                                            class="ui-input"
                                                            data-testid="crmhr-interaction-occurred-on" />
+                                                </FormField>
                                             </div>
                                             <div>
-                                                <label class="cda-field-label">Linked opportunity</label>
+                                                <FormField Text="Linked opportunity">
                                                 <InputSelect @bind-Value="interactionEditor.RelatedOpportunityId"
                                                              class="ui-input"
                                                              data-testid="crmhr-interaction-opportunity">
@@ -347,6 +356,7 @@
                                                         <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
                                                     }
                                                 </InputSelect>
+                                                </FormField>
                                                 <p class="mt-1 text-xs leading-5 text-slate-500">
                                                     Select an opportunity from the paged Opportunities tab before linking it here.
                                                 </p>
@@ -354,29 +364,32 @@
                                         </Grid>
 
                                         <div class="mt-5">
-                                            <label class="cda-field-label">Subject</label>
+                                            <FormField Text="Subject">
                                             <InputText @bind-Value="interactionEditor.Subject"
                                                        class="ui-input"
                                                        data-testid="crmhr-interaction-subject" />
+                                            </FormField>
                                         </div>
 
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
                                             <div>
-                                                <label class="cda-field-label">Summary</label>
+                                                <FormField Text="Summary">
                                                 <TextArea @bind-Value="interactionEditor.Summary"
                                                                Rows="6"
                                                                data-testid="crmhr-interaction-summary" />
+                                                </FormField>
                                             </div>
                                             <div>
-                                                <label class="cda-field-label">Notes</label>
+                                                <FormField Text="Notes">
                                                 <TextArea @bind-Value="interactionEditor.Notes"
                                                                Rows="6"
                                                                data-testid="crmhr-interaction-notes" />
+                                                </FormField>
                                             </div>
                                         </Grid>
 
                                         <div class="mt-5">
-                                            <p class="cda-field-label">Participants</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Participants" />
                                             @if (ParticipantOptions.Count == 0)
                                             {
                                                 <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">

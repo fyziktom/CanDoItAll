@@ -3,14 +3,12 @@
        Class="external-workspace-root-selection-field"
        data-testid="@($"{DataTestId}-field")">
     <div>
-        <label class="cda-field-label"
-               for="@InputId">
-            External workspace root
-        </label>
+        <FormField Text="External workspace root">
         <div class="external-workspace-root-selection-field__entry mt-2">
             <input id="@InputId"
                    type="text"
                    class="ui-input"
+                   aria-label="External workspace root"
                    value="@candidate"
                    disabled="@Disabled"
                    placeholder="C:\repositories\OtherRepo or external-target/v1/..."
@@ -26,6 +24,7 @@
                     Click="AddCandidateAsync"
                     data-testid="@($"{DataTestId}-add")" />
         </div>
+        </FormField>
         <p id="@HintId"
            class="mt-2 text-sm leading-6 text-slate-600">
             Enter one native absolute folder path or canonical <code>external-target/v1/...</code> alias.
