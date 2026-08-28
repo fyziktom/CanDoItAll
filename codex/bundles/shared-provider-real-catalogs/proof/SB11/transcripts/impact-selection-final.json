@@ -1,0 +1,134 @@
+{
+  "request": {
+    "repositoryRootPath": "C:\\repositories\\CanDoItAll",
+    "changes": [
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentProviderFailureDisplayFormatter.cs",
+        "behaviorIntent": "BehaviorChange",
+        "lineRanges": [
+          {
+            "startLine": 3,
+            "endLine": 3
+          },
+          {
+            "startLine": 96,
+            "endLine": 107
+          },
+          {
+            "startLine": 323,
+            "endLine": 326
+          }
+        ]
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderTransportBoundaryChatClient.cs",
+        "behaviorIntent": "BehaviorChange",
+        "lineRanges": [
+          {
+            "startLine": 675,
+            "endLine": 679
+          }
+        ]
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentProviderFailureDisplayFormatterTests.cs",
+        "behaviorIntent": "BehaviorChange",
+        "lineRanges": [
+          {
+            "startLine": 3,
+            "endLine": 4
+          },
+          {
+            "startLine": 198,
+            "endLine": 281
+          }
+        ]
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/MafProviderTransportBoundaryChatClientTests.cs",
+        "behaviorIntent": "BehaviorChange",
+        "lineRanges": [
+          {
+            "startLine": 81,
+            "endLine": 111
+          }
+        ]
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs",
+        "behaviorIntent": "ContractOrShapeChange",
+        "lineRanges": [
+          {
+            "startLine": 1,
+            "endLine": 1
+          },
+          {
+            "startLine": 18,
+            "endLine": 18
+          },
+          {
+            "startLine": 381,
+            "endLine": 384
+          },
+          {
+            "startLine": 741,
+            "endLine": 745
+          }
+        ]
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ImageGenerationAgentRuntimeToolProviderTests.cs",
+        "behaviorIntent": "BehaviorChange",
+        "lineRanges": [
+          {
+            "startLine": 16,
+            "endLine": 76
+          }
+        ]
+      }
+    ],
+    "testWorkspaces": [
+      {
+        "name": "Unit",
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj"
+      }
+    ],
+    "maxSelectors": 40,
+    "maxReasonPaths": 6
+  },
+  "timestamp": "2026-08-28T11:03:19.1268089+00:00",
+  "correlationId": "code-analytics_3abbd026074f4b6faf98c228b5eb3e50",
+  "isComplete": false,
+  "confidence": "Low",
+  "fallbackKind": "AllSuppliedSuites",
+  "fallbackReason": "At least one relationship uses dispatch that cannot be resolved completely by static analysis.",
+  "requiredSelections": [
+    {
+      "suiteName": "All supplied suites",
+      "workspacePath": "",
+      "projectName": "All test projects",
+      "projectPath": "",
+      "scopeKind": "AllSuppliedSuites",
+      "selectors": [],
+      "impactedSourceTestCount": 5524,
+      "selectedSourceTestCount": 5524,
+      "additionalSourceTestCount": 0,
+      "representativeReasons": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "TIA3001",
+      "message": "Changes 1, 2, 5 did not resolve in any supplied test workspace."
+    },
+    {
+      "code": "TIA3002",
+      "message": "At least one change overlaps a contract or declaration shape. The member graph cannot prove type, binding, serialization, or activation compatibility, so all supplied suites are required."
+    },
+    {
+      "code": "TIA3004",
+      "message": "Dynamic, reflection, expression-tree, or function-pointer dispatch prevents a complete static relationship proof. All supplied suites are required."
+    }
+  ],
+  "note": "Image-tool scope invalidated the earlier Unit checkpoint; final-unit-complete reruns the required entire Unit suite. API/Razor/project references remain unchanged."
+}

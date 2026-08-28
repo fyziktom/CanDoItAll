@@ -1,0 +1,26 @@
+**********************
+PowerShell transcript start
+Start time: 20260828071836
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -NoProfile -File codex/bundles/shared-provider-real-catalogs/proof/SB11/Run-Tests.ps1 -Label vision-budget-red -Filter FullyQualifiedName~SharedProviderRelayPolicyTests.VisionDataUri
+Process ID: 40608
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB11\transcripts\vision-budget-red.txt
+SB11-I1: safe shared status and source guidance; directory: C:\repositories\CanDoItAll
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --list-tests --filter "FullyQualifiedName~SharedProviderRelayPolicyTests.VisionDataUri" -v quiet
+**********************
+PowerShell transcript end
+End time: 20260828071915
+**********************

@@ -1,0 +1,341 @@
+- main [ref=f1e4]:
+  - group [ref=f1e5]:
+    - generic "Workspace navigation" [ref=f1e6] [cursor=pointer]
+  - generic [ref=f1e7]:
+    - generic [ref=f1e10]:
+      - tablist "Open workspace tabs" [ref=f1e11]:
+        - tab "Dashboard" [ref=f1e13]:
+          - generic [ref=f1e15]: push_pin
+        - tab "Agents" [selected] [ref=f1e18]
+        - tab "Settings" [ref=f1e21]:
+          - generic [ref=f1e23]: push_pin
+        - tab "Calculator · Structure" [ref=f1e26]
+      - textbox "Search tabs" [ref=f1e29]
+    - button "Workspace status" [ref=f1e33] [cursor=pointer]:
+      - generic [ref=f1e34]: i
+  - generic [ref=f1e37]:
+    - generic [ref=f1e39]:
+      - generic [ref=f1e40]:
+        - generic [ref=f1e41]:
+          - paragraph [ref=f1e42]: AgentFramework
+          - heading "Integrated technical agent runtime" [level=1] [ref=f1e43]
+          - paragraph [ref=f1e44]: This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.
+        - generic [ref=f1e45]:
+          - generic [ref=f1e46]: 28 technical agents
+          - generic [ref=f1e49]: 3 providers
+          - generic [ref=f1e52]: 28 bound resources
+          - generic [ref=f1e55]: 126 capabilities
+          - generic [ref=f1e58]: 0 active runs
+          - generic [ref=f1e61]: 2 failed runs
+      - generic [ref=f1e64]:
+        - button "Open HR Agent" [ref=f1e66]:
+          - img "HR Agent" [ref=f1e68]
+        - button "Show AgentFramework shell help" [ref=f1e70] [cursor=pointer]:
+          - generic [ref=f1e71]: "?"
+        - button "Open CRM / HR agents" [ref=f1e73]:
+          - generic [ref=f1e74]: groups
+          - generic [ref=f1e75]: groups
+        - button "Open workflows" [ref=f1e77]:
+          - generic [ref=f1e78]: account_tree
+          - generic [ref=f1e79]: flow
+        - button "Open processes" [ref=f1e81]:
+          - generic [ref=f1e82]: account_tree
+          - generic [ref=f1e83]: flow
+    - generic [ref=f1e85]:
+      - generic [ref=f1e87]:
+        - button "Overview" [ref=f1e88]
+        - button "Agents28" [ref=f1e89]
+        - button "Simple Chats" [ref=f1e90]
+        - button "Providers3" [ref=f1e91]
+        - button "Voice" [ref=f1e92]
+        - button "Floating chat" [ref=f1e93]
+        - button "Chat" [ref=f1e94]
+        - button "Capabilities126" [ref=f1e95]
+        - button "Governance0" [ref=f1e96]
+        - button "Diagnostics2" [ref=f1e97]
+      - button "Load default agents and providers" [ref=f1e99]:
+        - generic [ref=f1e100]: sync
+        - generic [ref=f1e101]: cloud sync
+    - generic [ref=f1e102]:
+      - generic [ref=f1e104]:
+        - generic [ref=f1e105]:
+          - generic [ref=f1e107]:
+            - generic [ref=f1e108]:
+              - heading "Provider profiles" [level=2] [ref=f1e112]
+              - generic [ref=f1e114]:
+                - button "New provider" [ref=f1e115]:
+                  - generic [ref=f1e116]: add
+                  - generic [ref=f1e117]: add
+                - button "Refresh providers" [ref=f1e118]:
+                  - generic [ref=f1e119]: refresh
+                  - generic [ref=f1e120]: refresh
+                - button "Shared provider connections" [ref=f1e121]:
+                  - generic [ref=f1e122]: hub
+                  - generic [ref=f1e123]: hub
+            - generic [ref=f1e125]:
+              - textbox "Search providers" [ref=f1e126]
+              - button "Reset provider filter" [ref=f1e127]:
+                - generic [ref=f1e128]: filter_alt_off
+                - generic [ref=f1e129]: filter alt off
+              - generic "Provider results" [ref=f1e130]: 3 / 3
+          - tree "Provider profiles grouped by tag" [ref=f1e133]:
+            - generic [ref=f1e134]:
+              - button "Collapse available" [ref=f1e135]:
+                - generic [ref=f1e136]: expand_more
+              - treeitem "available 3" [expanded] [level=1] [ref=f1e138]:
+                - generic [ref=f1e139]: label
+                - generic [ref=f1e141]: available
+                - generic [ref=f1e142]: "3"
+            - group [ref=f1e143]:
+              - treeitem "UI Shared Ollama Enabled" [level=2] [selected] [ref=f1e147]:
+                - generic [ref=f1e148]: auto_awesome
+                - generic [ref=f1e150]: UI Shared Ollama
+                - generic [ref=f1e151]: Ena...
+              - treeitem "UI Shared OpenAI Chat Enabled" [level=2] [ref=f1e155]:
+                - generic [ref=f1e156]: auto_awesome
+                - generic [ref=f1e158]: UI Shared OpenAI Chat
+                - generic [ref=f1e159]: Ena...
+              - treeitem "UI Shared OpenAI Image Enabled" [level=2] [ref=f1e163]:
+                - generic [ref=f1e164]: image
+                - generic [ref=f1e166]: UI Shared OpenAI Image
+                - generic [ref=f1e167]: Ena...
+            - generic [ref=f1e168]:
+              - button "Collapse chat" [ref=f1e169]:
+                - generic [ref=f1e170]: expand_more
+              - treeitem "chat 2" [expanded] [level=1] [ref=f1e172]:
+                - generic [ref=f1e173]: label
+                - generic [ref=f1e175]: chat
+                - generic [ref=f1e176]: "2"
+            - group [ref=f1e177]:
+              - treeitem "UI Shared Ollama Enabled" [level=2] [selected] [ref=f1e181]:
+                - generic [ref=f1e182]: auto_awesome
+                - generic [ref=f1e184]: UI Shared Ollama
+                - generic [ref=f1e185]: Ena...
+              - treeitem "UI Shared OpenAI Chat Enabled" [level=2] [ref=f1e189]:
+                - generic [ref=f1e190]: auto_awesome
+                - generic [ref=f1e192]: UI Shared OpenAI Chat
+                - generic [ref=f1e193]: Ena...
+            - generic [ref=f1e194]:
+              - button "Collapse chat-completions" [ref=f1e195]:
+                - generic [ref=f1e196]: expand_more
+              - treeitem "chat-completions 2" [expanded] [level=1] [ref=f1e198]:
+                - generic [ref=f1e199]: label
+                - generic [ref=f1e201]: chat-completions
+                - generic [ref=f1e202]: "2"
+            - group [ref=f1e203]:
+              - treeitem "UI Shared Ollama Enabled" [level=2] [selected] [ref=f1e207]:
+                - generic [ref=f1e208]: auto_awesome
+                - generic [ref=f1e210]: UI Shared Ollama
+                - generic [ref=f1e211]: Ena...
+              - treeitem "UI Shared OpenAI Chat Enabled" [level=2] [ref=f1e215]:
+                - generic [ref=f1e216]: auto_awesome
+                - generic [ref=f1e218]: UI Shared OpenAI Chat
+                - generic [ref=f1e219]: Ena...
+            - generic [ref=f1e220]:
+              - button "Collapse image-generation" [ref=f1e221]:
+                - generic [ref=f1e222]: expand_more
+              - treeitem "image-generation 1" [expanded] [level=1] [ref=f1e224]:
+                - generic [ref=f1e225]: image
+                - generic [ref=f1e227]: image-generation
+                - generic [ref=f1e228]: "1"
+            - group [ref=f1e229]:
+              - treeitem "UI Shared OpenAI Image Enabled" [level=2] [ref=f1e233]:
+                - generic [ref=f1e234]: image
+                - generic [ref=f1e236]: UI Shared OpenAI Image
+                - generic [ref=f1e237]: Ena...
+            - generic [ref=f1e238]:
+              - button "Collapse publication:4db7eea3-ee7a-4742-a540-7ae29a37fac4" [ref=f1e239]:
+                - generic [ref=f1e240]: expand_more
+              - treeitem "publication:4db7eea3-ee7a-4742-a540-7ae29a37fac4 1" [expanded] [level=1] [ref=f1e242]:
+                - generic [ref=f1e243]: label
+                - generic [ref=f1e245]: publication:4db7eea3-ee7a-4742-a540-7ae29a37fac4
+                - generic [ref=f1e246]: "1"
+            - group [ref=f1e247]:
+              - treeitem "UI Shared OpenAI Image Enabled" [level=2] [ref=f1e251]:
+                - generic [ref=f1e252]: image
+                - generic [ref=f1e254]: UI Shared OpenAI Image
+                - generic [ref=f1e255]: Ena...
+            - generic [ref=f1e256]:
+              - button "Collapse publication:c8e82f21-d15b-422e-bfcc-2ad216d6096e" [ref=f1e257]:
+                - generic [ref=f1e258]: expand_more
+              - treeitem "publication:c8e82f21-d15b-422e-bfcc-2ad216d6096e 1" [expanded] [level=1] [ref=f1e260]:
+                - generic [ref=f1e261]: label
+                - generic [ref=f1e263]: publication:c8e82f21-d15b-422e-bfcc-2ad216d6096e
+                - generic [ref=f1e264]: "1"
+            - group [ref=f1e265]:
+              - treeitem "UI Shared Ollama Enabled" [level=2] [selected] [ref=f1e269]:
+                - generic [ref=f1e270]: auto_awesome
+                - generic [ref=f1e272]: UI Shared Ollama
+                - generic [ref=f1e273]: Ena...
+            - generic [ref=f1e274]:
+              - button "Collapse publication:ed7e5491-f04b-4ca4-90f1-25f9bce3cc62" [ref=f1e275]:
+                - generic [ref=f1e276]: expand_more
+              - treeitem "publication:ed7e5491-f04b-4ca4-90f1-25f9bce3cc62 1" [expanded] [level=1] [ref=f1e278]:
+                - generic [ref=f1e279]: label
+                - generic [ref=f1e281]: publication:ed7e5491-f04b-4ca4-90f1-25f9bce3cc62
+                - generic [ref=f1e282]: "1"
+            - group [ref=f1e283]:
+              - treeitem "UI Shared OpenAI Chat Enabled" [level=2] [ref=f1e287]:
+                - generic [ref=f1e288]: auto_awesome
+                - generic [ref=f1e290]: UI Shared OpenAI Chat
+                - generic [ref=f1e291]: Ena...
+            - generic [ref=f1e292]:
+              - button "Collapse responses" [ref=f1e293]:
+                - generic [ref=f1e294]: expand_more
+              - treeitem "responses 1" [expanded] [level=1] [ref=f1e296]:
+                - generic [ref=f1e297]: label
+                - generic [ref=f1e299]: responses
+                - generic [ref=f1e300]: "1"
+            - group [ref=f1e301]:
+              - treeitem "UI Shared OpenAI Image Enabled" [level=2] [ref=f1e305]:
+                - generic [ref=f1e306]: image
+                - generic [ref=f1e308]: UI Shared OpenAI Image
+                - generic [ref=f1e309]: Ena...
+            - generic [ref=f1e310]:
+              - button "Collapse shared" [ref=f1e311]:
+                - generic [ref=f1e312]: expand_more
+              - treeitem "shared 3" [expanded] [level=1] [ref=f1e314]:
+                - generic [ref=f1e315]: label
+                - generic [ref=f1e317]: shared
+                - generic [ref=f1e318]: "3"
+            - group [ref=f1e319]:
+              - treeitem "UI Shared Ollama Enabled" [level=2] [selected] [ref=f1e323]:
+                - generic [ref=f1e324]: auto_awesome
+                - generic [ref=f1e326]: UI Shared Ollama
+                - generic [ref=f1e327]: Ena...
+              - treeitem "UI Shared OpenAI Chat Enabled" [level=2] [ref=f1e331]:
+                - generic [ref=f1e332]: auto_awesome
+                - generic [ref=f1e334]: UI Shared OpenAI Chat
+                - generic [ref=f1e335]: Ena...
+              - treeitem "UI Shared OpenAI Image Enabled" [level=2] [ref=f1e339]:
+                - generic [ref=f1e340]: image
+                - generic [ref=f1e342]: UI Shared OpenAI Image
+                - generic [ref=f1e343]: Ena...
+            - generic [ref=f1e344]:
+              - button "Collapse source:161f7e12-ebf2-41d9-8755-9391f131669d" [ref=f1e345]:
+                - generic [ref=f1e346]: expand_more
+              - treeitem "source:161f7e12-ebf2-41d9-8755-9391f131669d 3" [expanded] [level=1] [ref=f1e348]:
+                - generic [ref=f1e349]: label
+                - generic [ref=f1e351]: source:161f7e12-ebf2-41d9-8755-9391f131669d
+                - generic [ref=f1e352]: "3"
+            - group [ref=f1e353]:
+              - treeitem "UI Shared Ollama Enabled" [level=2] [selected] [ref=f1e357]:
+                - generic [ref=f1e358]: auto_awesome
+                - generic [ref=f1e360]: UI Shared Ollama
+                - generic [ref=f1e361]: Ena...
+              - treeitem "UI Shared OpenAI Chat Enabled" [level=2] [ref=f1e365]:
+                - generic [ref=f1e366]: auto_awesome
+                - generic [ref=f1e368]: UI Shared OpenAI Chat
+                - generic [ref=f1e369]: Ena...
+              - treeitem "UI Shared OpenAI Image Enabled" [level=2] [ref=f1e373]:
+                - generic [ref=f1e374]: image
+                - generic [ref=f1e376]: UI Shared OpenAI Image
+                - generic [ref=f1e377]: Ena...
+        - generic [ref=f1e378]:
+          - generic [ref=f1e380]:
+            - paragraph [ref=f1e381]: Provider editor
+            - heading "UI Shared Ollama" [level=2] [ref=f1e382]
+            - paragraph [ref=f1e383]: OpenAi / ChatCompletions / Available. Health has not been checked.
+          - generic [ref=f1e526]:
+            - generic [ref=f1e528]:
+              - tablist "Provider editor tabs" [ref=f1e529]:
+                - tab "Connection" [selected] [ref=f1e530]:
+                  - generic [ref=f1e531]: power
+                - tab "Prices" [ref=f1e533]:
+                  - generic [ref=f1e534]: paid
+                - tab "Runtime" [ref=f1e536]:
+                  - generic [ref=f1e537]: tune
+                - tab "Thinking" [ref=f1e539]:
+                  - generic [ref=f1e540]: psychology
+                - tab "Sharing" [ref=f1e542]:
+                  - generic [ref=f1e543]: share
+              - tabpanel "Connection" [ref=f1e546]:
+                - group [ref=f1e547]:
+                  - generic [ref=f1e549]:
+                    - generic [ref=f1e551]:
+                      - heading "Identity" [level=2] [ref=f1e553]
+                      - paragraph [ref=f1e554]: Provider identity, endpoint, model, and grouping tags. Tags drive the tree and future capability search.
+                    - generic [ref=f1e555]:
+                      - generic [ref=f1e556]:
+                        - generic [ref=f1e557]: Name
+                        - textbox [disabled] [ref=f1e558]: UI Shared Ollama
+                      - generic [ref=f1e559]:
+                        - generic [ref=f1e560]: Default model
+                        - textbox [disabled] [ref=f1e561]: gptoss20b64k:latest
+                      - generic [ref=f1e562]:
+                        - generic [ref=f1e563]: Provider kind
+                        - combobox [disabled] [ref=f1e564]:
+                          - option "OpenAi" [disabled] [selected]
+                          - option "AzureOpenAi" [disabled]
+                          - option "Ollama" [disabled]
+                          - option "ComfyUi" [disabled]
+                      - generic [ref=f1e565]:
+                        - generic [ref=f1e566]: Purpose
+                        - combobox [disabled] [ref=f1e567]:
+                          - option "Chat" [disabled] [selected]
+                          - option "ImageGeneration" [disabled]
+                    - generic [ref=f1e568]:
+                      - generic [ref=f1e569]: Base URL
+                      - textbox [disabled] [ref=f1e570]: http://candoitall-spui-shared:8080/api/shared-providers/openai/v1
+                    - generic [ref=f1e571]:
+                      - generic [ref=f1e572]: API key secret
+                      - combobox [disabled] [ref=f1e573]:
+                        - option "None" [disabled]
+                        - option "shared instance" [disabled] [selected]
+                    - generic [ref=f1e574]:
+                      - generic [ref=f1e575]:
+                        - button "available" [disabled] [ref=f1e576]:
+                          - generic [ref=f1e578]: close
+                        - button "chat" [disabled] [ref=f1e580]:
+                          - generic [ref=f1e582]: close
+                        - button "chat-completions" [disabled] [ref=f1e584]:
+                          - generic [ref=f1e586]: close
+                        - button "publication:c8e82f21-d15b-422e-bfcc-2ad216d6096e" [disabled] [ref=f1e588]:
+                          - generic [ref=f1e590]: close
+                        - button "shared" [disabled] [ref=f1e592]:
+                          - generic [ref=f1e594]: close
+                        - button "source:161f7e12-ebf2-41d9-8755-9391f131669d" [disabled] [ref=f1e596]:
+                          - generic [ref=f1e598]: close
+                        - textbox "Add provider tag" [disabled] [ref=f1e600]
+                      - generic [ref=f1e601]: Use tags such as openai, ollama, local, cloud, chat, image, or fallback.
+            - generic [ref=f1e603]:
+              - paragraph [ref=f1e605]: Provider profiles
+              - button "Clear" [ref=f1e607]
+      - dialog [ref=f1e469]:
+        - generic [ref=f1e472]:
+          - generic [ref=f1e474]:
+            - generic [ref=f1e475]:
+              - heading "Shared provider connections" [level=2] [ref=f1e477]
+              - paragraph [ref=f1e478]: Connect another CanDoItAll instance and import its shared providers.
+            - button "Close" [ref=f1e480]:
+              - generic [ref=f1e481]: close
+          - generic [ref=f1e484]:
+            - generic [ref=f1e485]:
+              - generic [ref=f1e486]:
+                - generic [ref=f1e487]: 1 source(s)
+                - generic [ref=f1e488]: 3 import(s)
+              - generic [ref=f1e489]:
+                - button "Add source" [ref=f1e490]:
+                  - generic [ref=f1e491]: add_link
+                - button "Refresh" [ref=f1e493]:
+                  - generic [ref=f1e494]: refresh
+            - generic [ref=f1e498]:
+              - generic [ref=f1e499]:
+                - generic [ref=f1e500]:
+                  - paragraph [ref=f1e501]: Shared instance
+                  - paragraph [ref=f1e502]: http://candoitall-spui-shared:8080/
+                - generic [ref=f1e503]:
+                  - generic [ref=f1e504]: available
+                  - generic [ref=f1e505]: Enabled
+                  - generic [ref=f1e506]: 3 import(s)
+              - paragraph [ref=f1e507]: Catalog connection verified.
+              - generic [ref=f1e508]:
+                - button "Edit" [ref=f1e509]
+                - button "Test" [ref=f1e511]
+                - button "Discover and import" [ref=f1e513]:
+                  - generic [ref=f1e514]: travel_explore
+                - button "Sync selected" [ref=f1e516]:
+                  - generic [ref=f1e517]: sync
+                - button "Disable" [ref=f1e519]
+            - alert [ref=f1e521]: Catalog and inference access follow the remote instance's API Access settings. The source model always references a stored credential; open APIs ignore it and JWT-enabled APIs use it as a Bearer token. Upstream provider credentials never leave the publishing instance.
+          - button "Close" [ref=f1e523]

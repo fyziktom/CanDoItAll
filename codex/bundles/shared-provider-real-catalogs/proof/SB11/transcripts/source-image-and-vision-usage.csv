@@ -1,0 +1,12 @@
+RequestId,AuthenticatedSubject,Operation,UpstreamModelId,StartedAtUtc,CompletedAtUtc,Outcome,FailureCategory,InputTokenCount,OutputTokenCount,ImageCount,UsageCompleteness,Price,PricingCompleteness
+0HNO4UGTKO5E8:00000001,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:08:02.778437+00,2026-08-28 11:08:05.939523+00,Succeeded,,14290,105,,Complete,,Unavailable
+0HNO4UGTKO5E8:00000002,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:08:06.75128+00,2026-08-28 11:08:10.927243+00,Succeeded,,15584,244,,Complete,,Unavailable
+0HNO4UGTKO5E8:00000003,desktop-client-5214,ImageGenerations,gpt-image-1-mini,2026-08-28 11:08:11.631455+00,2026-08-28 11:08:54.570569+00,Succeeded,,,,1,Complete,,Unavailable
+0HNO4UGTKO5E8:00000004,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:08:54.733834+00,2026-08-28 11:08:58.407259+00,Succeeded,,16230,166,,Complete,,Unavailable
+0HNO4UGTKO5E8:00000005,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:08:59.508222+00,2026-08-28 11:09:01.782394+00,Succeeded,,17425,148,,Complete,,Unavailable
+0HNO4UGTKO5E8:00000006,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:09:03.11141+00,2026-08-28 11:09:05.286141+00,Succeeded,,19080,102,,Complete,,Unavailable
+0HNO4UGTKO5E8:00000008,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:09:05.875928+00,2026-08-28 11:09:11.131203+00,Succeeded,,19205,135,,Complete,,Unavailable
+0HNO4UVG53I7U:00000001,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:34:57.27616+00,2026-08-28 11:35:00.563236+00,Succeeded,,14340,164,,Complete,,Unavailable
+0HNO4UVG53I7U:00000002,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:35:02.496294+00,2026-08-28 11:35:04.695366+00,Succeeded,,16127,123,,Complete,,Unavailable
+0HNO4UVG53I7U:00000003,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:35:05.650006+00,2026-08-28 11:35:09.816405+00,Succeeded,,1952,279,,Complete,,Unavailable
+0HNO4UVG53I7U:00000004,desktop-client-5214,ChatCompletions,gpt-5.6-luna,2026-08-28 11:35:09.962435+00,2026-08-28 11:35:12.746704+00,Succeeded,,17324,146,,Complete,,Unavailable

@@ -1,0 +1,62 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Function_tools_accept_optional_sdk_description_and_strict(description: "\"\"", strict: "null")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Function_tools_accept_optional_sdk_description_and_strict(description: "\"A function\"", strict: "false")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ChatCompletionsSupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"none\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"minimal\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"low\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"medium\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"high\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"xhigh\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"max\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "null")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "[\"none\"]")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "{}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "true")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "1")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"NONE\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"bogus\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\" none \"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"none\",\"reasoning_effort\":\"high\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_is_not_accepted_on_other_operations
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponsesSupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "none")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "low")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "high")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "max")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "\"high\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "{\"effort\":\"ultra\"}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "{\"effort\":2}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "{\"effort\":\"low\",\"summary\":\"auto\"}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ImagesBase64SupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.UnknownMembers_AreRejectedOnEverySurface
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.MalformedDuplicateAndExcessivelyDeepJson_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BodyMessagesToolsSchemasAndImages_AreBoundedBeforeDispatch
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.InvalidGenerationNumbersEnumsAndConflicts_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BuiltInAndHostedTools_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.FunctionToolsAndToolChoice_RoundTripCanonically
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ParallelTools_RequireAdvertisedCapability
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.StructuredOutput_RequiresAdvertisedCapability
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: ChatCompletions)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: Responses)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: ChatCompletions)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: Responses)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: ChatCompletions)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: Responses)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.StoreFalse_IsAcceptedWhilePersistenceAndUnsupportedServerFeaturesAreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ChatStreamOptions_AcceptsIncludeUsageAndRejectsMalformedOrUnknownOptions
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.MalformedRoutingModelId_FailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.DuplicateUpstreamNames_RemainSeparatedByPublication
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.RelayTarget_RechecksPurposeOperationAndCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.RelayTarget_UsesOnlyStoredUriModelTimeoutAndCredential
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Registry_ContainsExactlyFiveProductionRowsAndNoSyntheticAdapter
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Registry_OpenAiChatSupportsVisionInput
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.TargetNormalization_PreservesBasePathAndRejectsCallerUriOrHeaders
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.UpstreamFailures_AreSanitizedAndRetryAfterIsBounded
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponseHeaderAllowlist_StripsUnsafeAndPrivateHeaders
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BufferedChatUsage_MapsCompletePartialAndUnavailableTruthfully
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponsesAndTerminalSseUsage_MapWithoutInventingZero
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.InvocationAuditTransition_StoresMetadataOnlyAndRecoversInterruptedFinalizationIdempotently

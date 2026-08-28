@@ -441,6 +441,50 @@ public sealed class SharedProviderRelayPolicyTests
         }
     }
 
+    [Theory]
+    [InlineData(SharedProviderRelayOperation.ChatCompletions)]
+    [InlineData(SharedProviderRelayOperation.Responses)]
+    public void VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(SharedProviderRelayOperation operation) {
+        var dataUri = "data:image/png;base64," + Convert.ToBase64String(new byte[1_720_707]);
+        var support = Support(supportsStructuredOutput: true, supportsVisionInput: true);
+        var payload = VisionJson(operation, dataUri);
+
+        Assert.True(dataUri.Length > 1024 * 1024);
+        Assert.True(Encoding.UTF8.GetByteCount(payload) < support.MaximumRequestBytes);
+        var accepted = Assert.IsType<SharedProviderRelayRequestPolicyResult.Accepted>(Normalize(operation, payload, support));
+
+        Assert.Contains(SharedProviderCapability.VisionInput, accepted.Request.RequiredCapabilities);
+        Assert.Contains(dataUri, Encoding.UTF8.GetString(accepted.Request.CanonicalPayloadUtf8.Span), StringComparison.Ordinal);
+        AssertValidationFailure(operation, payload, ChatSupport());
+    }
+
+    [Theory]
+    [InlineData(SharedProviderRelayOperation.ChatCompletions)]
+    [InlineData(SharedProviderRelayOperation.Responses)]
+    public void VisionDataUri_PreservesExactRequestBudget(SharedProviderRelayOperation operation) {
+        var dataUri = "data:image/png;base64," + Convert.ToBase64String(new byte[1_720_707]);
+        var support = Support(supportsStructuredOutput: true, supportsVisionInput: true);
+        var payload = VisionJson(operation, dataUri);
+        var atLimit = payload + new string(' ', support.MaximumRequestBytes - Encoding.UTF8.GetByteCount(payload));
+
+        Assert.IsType<SharedProviderRelayRequestPolicyResult.Accepted>(Normalize(operation, atLimit, support));
+        var rejected = Assert.IsType<SharedProviderRelayRequestPolicyResult.Rejected>(Normalize(operation, atLimit + " ", support));
+
+        Assert.Equal("shared_provider_request_too_large", rejected.Failure.Code.Value);
+    }
+
+    [Theory]
+    [InlineData(SharedProviderRelayOperation.ChatCompletions)]
+    [InlineData(SharedProviderRelayOperation.Responses)]
+    public void VisionDataUri_DoesNotIncreaseTextFieldLimit(SharedProviderRelayOperation operation) {
+        var dataUri = "data:image/png;base64," + Convert.ToBase64String(new byte[1_720_707]);
+        var support = Support(supportsStructuredOutput: true, supportsVisionInput: true);
+        var payload = VisionJson(operation, dataUri, new string('a', 1024 * 1024 + 1));
+
+        Assert.True(Encoding.UTF8.GetByteCount(payload) < support.MaximumRequestBytes);
+        AssertValidationFailure(operation, payload, support);
+    }
+
     [Fact]
     public void VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields()
     {
@@ -506,7 +550,10 @@ public sealed class SharedProviderRelayPolicyTests
         foreach (string invalidDataUri in new[]
         {
             "data:image/png;base64,",
-            "data:image/png;base64,%%%"
+            "data:image/png;base64,%%%",
+            "data:image/png;base64,iVBOR w0KGgo=",
+            "data:image/svg+xml;base64,iVBORw0KGgo=",
+            "https://private.example.test/image.png"
         })
         {
             AssertValidationFailure(
@@ -1010,6 +1057,20 @@ public sealed class SharedProviderRelayPolicyTests
             maximumRequestBytes: 1024 * 1024,
             maximumOutputTokens: 1,
             maximumImageCount: 4);
+
+    private static string VisionJson(SharedProviderRelayOperation operation, string dataUri, string text = "describe") {
+        var imageJson = JsonSerializer.Serialize(dataUri);
+        var textJson = JsonSerializer.Serialize(text);
+        return operation switch {
+            SharedProviderRelayOperation.ChatCompletions => $$$"""
+                {"model":"{{{RoutingModelId.Value}}}","messages":[{"role":"user","content":[{"type":"text","text":{{{textJson}}}},{"type":"image_url","image_url":{"url":{{{imageJson}}}}}]}]}
+                """,
+            SharedProviderRelayOperation.Responses => $$$"""
+                {"model":"{{{RoutingModelId.Value}}}","input":[{"role":"user","content":[{"type":"input_text","text":{{{textJson}}}},{"type":"input_image","image_url":{{{imageJson}}}}]}]}
+                """,
+            _ => throw new ArgumentOutOfRangeException(nameof(operation))
+        };
+    }
 
     private static string ChatJson(string extra)
         => $$"""

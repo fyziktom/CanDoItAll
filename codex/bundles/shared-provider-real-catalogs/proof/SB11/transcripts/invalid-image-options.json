@@ -1,0 +1,18 @@
+[
+  {
+    "Tool": "image_generation_create",
+    "Size": "1536x864",
+    "Quality": "high",
+    "Format": "png",
+    "CallId": "call_Qx7VLwo211zpYd5zoGHl6zsg",
+    "Result": "Error: Function failed."
+  },
+  {
+    "Tool": "image_generation_create",
+    "Size": "1536x864",
+    "Quality": "high",
+    "Format": "png",
+    "CallId": "call_uJTvcgONYFW2Wxe7wpqj0HiA",
+    "Result": "Error: Function failed."
+  }
+]

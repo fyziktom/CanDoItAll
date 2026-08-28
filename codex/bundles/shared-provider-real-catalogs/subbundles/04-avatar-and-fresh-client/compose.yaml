@@ -2,7 +2,7 @@ name: candoitall-spui-fresh
 
 services:
   app:
-    image: candoitall-shared-providers-ui:model-thinking-20260828-2
+    image: candoitall-shared-providers-ui:shared-access-20260828-3
     user: "1654:1654"
     environment:
       ASPNETCORE_ENVIRONMENT: Development

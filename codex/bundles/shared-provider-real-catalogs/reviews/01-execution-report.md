@@ -2,12 +2,24 @@
 
 ## Status
 
-Current extension SB09/SB10: implementation, 229 focused tests, eight actual upstream
+SB11 is completed for N015; requested behavior and final regression review pass with
+documented unchanged baseline failures. Original HTTP 401 was an expired source token hidden by the formatter.
+Bounded UI credential renewal exposed invalid image dimensions and an image/text
+size-limit fault; all three are repaired. Portfolio Architect generated and attached
+Calculator UI Proposal, and analyzed its pixels through the shared provider on the
+final image. 129 focused cases pass; final Unit is 7059 pass/1 known fixture failure.
+Final Integration is 1133 pass/10 fail/1 opt-in skip. Exact failed identities and
+reviewed complete messages match SB09 after normalizing generated GUIDs and one
+ephemeral localhost port. Eleven baseline failures remain; the repository is not green.
+All three hosts run shared-access-20260828-3 with existing data preserved. Exact
+run IDs, UI proof, source usage, token expiry and limits are in proof/SB11/manifest.md.
+
+Historical extension SB09/SB10: implementation, 229 focused tests, eight actual upstream
 requests and source/5212/5214 UI acceptance pass. All required broad suites finished:
 Unit 7037/1, Components 1110/52, Integration 1133/10 pass/fail plus one skip. All
 failed identities and reviewed causes are present in SB07. The requested-scope closure
 gate passes; the full repository is not green. See proof/SB09/manifest.md and proof/SB10/manifest.md.
-All apps now run model-thinking-20260828-2 with retained data. Older status/deployment
+At that checkpoint all apps ran model-thinking-20260828-2 with retained data. Older status/deployment
 sections below are historical checkpoints, not the current image.
 
 Administration extension: SB05 completed (11 tests and actual Playwright MCP at

@@ -78,6 +78,37 @@ public sealed class MafProviderTransportBoundaryChatClientTests
             StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Shared_authentication_failure_reaches_display_through_real_transport_boundary(bool streaming) {
+        var provider = CreateProvider() with {
+            CredentialBinding = new ProviderCredentialBinding(Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid())
+        };
+        var upstream = new HttpRequestException("private-source-secret", null, System.Net.HttpStatusCode.Unauthorized);
+        using var client = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(nonStreamingException: upstream, streamingException: upstream), provider, provider.DefaultModel);
+        var failure = await Assert.ThrowsAsync<MafProviderTransportException>(async () => {
+            if (streaming) {
+                await foreach (var _ in client.GetStreamingResponseAsync(CreateMessages())) {
+                }
+            } else {
+                await client.GetResponseAsync(CreateMessages());
+            }
+        });
+        var boundary = Assert.IsType<ProviderFailureBoundaryException>(failure.InnerException);
+        Assert.Equal(401, boundary.DiagnosticStatusCode);
+        Assert.Null(boundary.InnerException);
+        var usage = new AgentRuntimeUsageException("Provider failed.", failure, [],
+            failureOrigin: AgentRuntimeFailureOrigin.Provider);
+
+        Assert.True(AgentProviderFailureDisplayFormatter.TryFormat(provider, usage, out var display));
+        Assert.Contains("HTTP 401", display.ProviderDetail, StringComparison.Ordinal);
+        Assert.Contains("Shared provider connections", display.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-source-secret", display.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Source_managed_transport_preserves_safe_nested_failure_type()
     {

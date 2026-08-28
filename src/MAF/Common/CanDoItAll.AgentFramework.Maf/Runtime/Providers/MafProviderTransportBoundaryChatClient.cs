@@ -672,9 +672,11 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
                     provider,
                     ProviderFailureOperation.RuntimeRequest,
                     exception,
-                    exception is System.ClientModel.ClientResultException clientResultException
-                        ? clientResultException.Status
-                        : null));
+                    exception switch {
+                        System.ClientModel.ClientResultException result => result.Status,
+                        HttpRequestException { StatusCode: { } status } => (int)status,
+                        _ => null
+                    }));
         }
 
         return exception as MafProviderTransportException ??

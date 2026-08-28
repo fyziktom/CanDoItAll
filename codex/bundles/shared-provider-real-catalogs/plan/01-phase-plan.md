@@ -12,6 +12,7 @@
 8. SB08 final real multi-agent proof and preserved three-container handoff.
 9. SB09 provider model thinking settings and explicit stale import recovery.
 10. SB10 real UI proof on source and both clients, with all data preserved.
+11. SB11 shared-access diagnostics, bounded UI credential recovery and actual project image asset.
 
 ## Subbundle Dependency Map
 
@@ -26,6 +27,7 @@ flowchart LR
   SB07 --> SB08["SB08 actual per-agent upstream proof"]
   SB08 --> SB09["SB09 model thinking settings and stale import recovery"]
   SB09 --> SB10["SB10 source and both-client UI proof"]
+  SB10 --> SB11["SB11 source access and project image recovery"]
   Real["Reachable real upstreams"] --> SB02
 ```
 
@@ -65,6 +67,16 @@ SB03 Proof tier: Governed. N005 reopens normal-browser handoff, not catalog corr
   of each supplied suite at the SB07 frozen checkpoint; failures are classified in
   proof/SB07/broad-regression-results.md. Later temperature/envelope/terminal changes
   used bounded focused invalidations and real final-image requests, not repeated broad gates.
+
+## SB11 closure
+
+N015 is solved: safe shared authentication diagnostics, bounded UI token renewal,
+safe image-option feedback and independent image/text request validation.
+Actual Calculator image creation/attachment/preview and final-image vision analysis
+pass with source usage. All three data-preserving deployments are HTTP healthy.
+129 focused cases pass; final Unit 7059/1 and Integration 1133/10 pass/fail plus
+one opt-in skip. Every failed identity and reviewed cause matches the SB09 baseline.
+See proof/SB11/manifest.md and reviews/05-project-image-final-verifier.md.
 
 ## UI Target Policy
 

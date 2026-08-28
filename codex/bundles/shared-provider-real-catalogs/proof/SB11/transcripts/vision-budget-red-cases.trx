@@ -1,0 +1,156 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="2eefe212-3f89-4b2b-9c84-c383773d0126" name="lucys@LUCYSPOWER 2026-08-28 07:22:49" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-28T07:22:49.0367929-04:00" queuing="2026-08-28T07:22:49.0367931-04:00" start="2026-08-28T07:22:46.9682309-04:00" finish="2026-08-28T07:22:49.0427190-04:00" />
+  <TestSettings name="default" id="e1c53895-c257-4665-970d-8395d325a1de">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-28_07_22_49" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="ff0b174c-590e-4220-b0ff-98a998c191f6" testId="5da7515e-bc02-aef9-8b6f-827c2d0e12ea" testName="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: ChatCompletions)" computerName="LUCYSPOWER" duration="00:00:00.0102647" startTime="2026-08-28T07:22:48.8627294-04:00" endTime="2026-08-28T07:22:48.8720144-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ff0b174c-590e-4220-b0ff-98a998c191f6">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.IsType() Failure: Value is not the exact type&#xD;
+Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(SharedProviderRelayOperation operation) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs:line 454&#xD;
+   at InvokeStub_SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="479d7489-901b-407f-87d3-e0de4c61e2bc" testId="798beae4-ca12-a1a9-6956-60ae1f6fb2dc" testName="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: ChatCompletions)" computerName="LUCYSPOWER" duration="00:00:00.0107983" startTime="2026-08-28T07:22:48.8388754-04:00" endTime="2026-08-28T07:22:48.8486033-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="479d7489-901b-407f-87d3-e0de4c61e2bc" />
+    <UnitTestResult executionId="55d12ddd-316f-4f25-952b-a773463d598f" testId="a5ce4ef8-9dfe-302f-4ae7-97d278e2549e" testName="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields" computerName="LUCYSPOWER" duration="00:00:00.0077474" startTime="2026-08-28T07:22:48.8727136-04:00" endTime="2026-08-28T07:22:48.8798769-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="55d12ddd-316f-4f25-952b-a773463d598f" />
+    <UnitTestResult executionId="ce5852bd-d590-4e74-9dcc-fc60732d8d2b" testId="f1fdd711-fe99-f4bd-3240-2ffe85d140fd" testName="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: Responses)" computerName="LUCYSPOWER" duration="00:00:00.0191644" startTime="2026-08-28T07:22:48.8218682-04:00" endTime="2026-08-28T07:22:48.8379329-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ce5852bd-d590-4e74-9dcc-fc60732d8d2b" />
+    <UnitTestResult executionId="06e329db-3c18-4796-a4af-7a39e4662cb1" testId="fedfb6e5-75cc-21f5-2277-f690896abb31" testName="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: Responses)" computerName="LUCYSPOWER" duration="00:00:00.0169639" startTime="2026-08-28T07:22:48.8154888-04:00" endTime="2026-08-28T07:22:48.8179227-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="06e329db-3c18-4796-a4af-7a39e4662cb1">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.IsType() Failure: Value is not the exact type&#xD;
+Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(SharedProviderRelayOperation operation) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs:line 470&#xD;
+   at InvokeStub_SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="cbefe064-7788-4b95-bd26-e0469133da45" testId="f8356925-aa52-7ee1-fabd-383e8474074f" testName="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: Responses)" computerName="LUCYSPOWER" duration="00:00:00.0125365" startTime="2026-08-28T07:22:48.8490644-04:00" endTime="2026-08-28T07:22:48.8617032-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cbefe064-7788-4b95-bd26-e0469133da45">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.IsType() Failure: Value is not the exact type&#xD;
+Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(SharedProviderRelayOperation operation) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs:line 454&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b8fc7004-d73f-4951-b820-df173de34689" testId="8a67b323-5d85-8874-1584-3e3b7e569313" testName="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: ChatCompletions)" computerName="LUCYSPOWER" duration="00:00:00.0720522" startTime="2026-08-28T07:22:48.7141170-04:00" endTime="2026-08-28T07:22:48.8004468-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b8fc7004-d73f-4951-b820-df173de34689">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.IsType() Failure: Value is not the exact type&#xD;
+Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(SharedProviderRelayOperation operation) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs:line 470&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: ChatCompletions)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="8a67b323-5d85-8874-1584-3e3b7e569313">
+      <Execution id="b8fc7004-d73f-4951-b820-df173de34689" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests" name="VisionDataUri_PreservesExactRequestBudget" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: Responses)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="f8356925-aa52-7ee1-fabd-383e8474074f">
+      <Execution id="cbefe064-7788-4b95-bd26-e0469133da45" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests" name="VisionDataUri_AcceptsGeneratedImageWithinRequestBudget" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: Responses)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="fedfb6e5-75cc-21f5-2277-f690896abb31">
+      <Execution id="06e329db-3c18-4796-a4af-7a39e4662cb1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests" name="VisionDataUri_PreservesExactRequestBudget" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: ChatCompletions)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="798beae4-ca12-a1a9-6956-60ae1f6fb2dc">
+      <Execution id="479d7489-901b-407f-87d3-e0de4c61e2bc" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests" name="VisionDataUri_DoesNotIncreaseTextFieldLimit" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: ChatCompletions)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="5da7515e-bc02-aef9-8b6f-827c2d0e12ea">
+      <Execution id="ff0b174c-590e-4220-b0ff-98a998c191f6" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests" name="VisionDataUri_AcceptsGeneratedImageWithinRequestBudget" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: Responses)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="f1fdd711-fe99-f4bd-3240-2ffe85d140fd">
+      <Execution id="ce5852bd-d590-4e74-9dcc-fc60732d8d2b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests" name="VisionDataUri_DoesNotIncreaseTextFieldLimit" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="a5ce4ef8-9dfe-302f-4ae7-97d278e2549e">
+      <Execution id="55d12ddd-316f-4f25-952b-a773463d598f" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests" name="VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="5da7515e-bc02-aef9-8b6f-827c2d0e12ea" executionId="ff0b174c-590e-4220-b0ff-98a998c191f6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="798beae4-ca12-a1a9-6956-60ae1f6fb2dc" executionId="479d7489-901b-407f-87d3-e0de4c61e2bc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a5ce4ef8-9dfe-302f-4ae7-97d278e2549e" executionId="55d12ddd-316f-4f25-952b-a773463d598f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f1fdd711-fe99-f4bd-3240-2ffe85d140fd" executionId="ce5852bd-d590-4e74-9dcc-fc60732d8d2b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fedfb6e5-75cc-21f5-2277-f690896abb31" executionId="06e329db-3c18-4796-a4af-7a39e4662cb1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f8356925-aa52-7ee1-fabd-383e8474074f" executionId="cbefe064-7788-4b95-bd26-e0469133da45" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a67b323-5d85-8874-1584-3e3b7e569313" executionId="b8fc7004-d73f-4951-b820-df173de34689" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="7" executed="7" passed="3" failed="4" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.36]   Discovering: CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.14]   Discovered:  CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.17]   Starting:    CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.29]       Assert.IsType() Failure: Value is not the exact type&#xD;
+[xUnit.net 00:00:01.29]       Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+[xUnit.net 00:00:01.29]       Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)&#xD;
+[xUnit.net 00:00:01.29]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.29]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs(470,0): at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(SharedProviderRelayOperation operation)&#xD;
+[xUnit.net 00:00:01.29]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.29]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.30]       Assert.IsType() Failure: Value is not the exact type&#xD;
+[xUnit.net 00:00:01.30]       Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+[xUnit.net 00:00:01.30]       Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)&#xD;
+[xUnit.net 00:00:01.30]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.30]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs(470,0): at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(SharedProviderRelayOperation operation)&#xD;
+[xUnit.net 00:00:01.30]            at InvokeStub_SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.30]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.35]       Assert.IsType() Failure: Value is not the exact type&#xD;
+[xUnit.net 00:00:01.35]       Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+[xUnit.net 00:00:01.35]       Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)&#xD;
+[xUnit.net 00:00:01.35]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.35]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs(454,0): at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(SharedProviderRelayOperation operation)&#xD;
+[xUnit.net 00:00:01.35]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.35]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.36]       Assert.IsType() Failure: Value is not the exact type&#xD;
+[xUnit.net 00:00:01.36]       Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Accepted)&#xD;
+[xUnit.net 00:00:01.36]       Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayRequestPolicyResult+Rejected)&#xD;
+[xUnit.net 00:00:01.36]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.36]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRelayPolicyTests.cs(454,0): at CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(SharedProviderRelayOperation operation)&#xD;
+[xUnit.net 00:00:01.36]            at InvokeStub_SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.36]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.37]   Finished:    CanDoItAll.Tests.Unit&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-28T07:22:48.8031621-04:00">
+        <Text>[xUnit.net 00:00:01.29]     CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: ChatCompletions) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-28T07:22:48.8191018-04:00">
+        <Text>[xUnit.net 00:00:01.30]     CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: Responses) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-28T07:22:48.8625250-04:00">
+        <Text>[xUnit.net 00:00:01.35]     CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: Responses) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-28T07:22:48.8724088-04:00">
+        <Text>[xUnit.net 00:00:01.36]     CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: ChatCompletions) [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

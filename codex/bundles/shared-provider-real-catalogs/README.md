@@ -26,6 +26,7 @@ actual model IDs, authoritative catalog membership and honest prices.
 8. SB08: real multi-agent thinking proof; preserve all three instances.
 9. SB09: provider model thinking configuration and stale import recovery.
 10. SB10: actual source and both-client UI proof, including 5214.
+11. SB11: actionable shared-access failures and project-context image recovery.
 
 ## Dependency And Validation Map
 
@@ -45,15 +46,22 @@ their overflow. No responsive redesign or shared component-library change.
 ## Validation Summary
 
 - Bundle preparation status: Passed.
-- Execution status: SB09/SB10 completed with actual source and both-client validation.
+- Execution status: SB11 completed for N015; requested behavior and final regression review pass.
+- Current incident: expired source JWT, lost safe status, opaque invalid image options,
+  and image/text size-limit confusion are repaired. Real Calculator image creation,
+  attachment, governed preview and shared image analysis passed; see proof/SB11/manifest.md.
 - Subbundle gate review: Passed for requested behavioral/architecture scope.
-- Final closure gate: N013/N014 closed by reviews/04-model-thinking-final-verifier.md;
-  previous verifiers remain historical evidence.
+- Final closure gate: N015 closed by reviews/05-project-image-final-verifier.md.
+  N013/N014 remain closed by reviews/04-model-thinking-final-verifier.md; earlier
+  verifiers remain historical evidence.
+- SB11: 129 focused cases pass. Final Unit 7059 pass/1 fail; Integration 1133 pass/
+  10 fail/1 opt-in skip. All failed identities and reviewed causes match SB09;
+  see proof/SB11/broad-regression-results.md. The full repository is not green.
 - SB07/SB08: 308 focused cases pass with exact discovery. Seven UI-configured agents
   completed nine real requests with expected independent efforts and complete source usage.
   Source/client real model labels, natural order and supported efforts match exactly.
   See proof/SB08/manifest.md, including the OpenAI Chat Completions transport limitation.
-- Current deployment: all three hosts run model-thinking-20260828-2, HTTP 200 Healthy, data intact.
+- Current deployment: all three hosts run shared-access-20260828-3, HTTP 200 Healthy, data intact.
   5214 was NOT reset in this follow-up. The history below describes earlier checkpoints.
 - SB09/SB10: source-owned per-model Thinking settings, explicit stale import refresh,
   229 focused passing tests, exact agent/Simple Chat model choices and eight real
@@ -71,7 +79,7 @@ their overflow. No responsive redesign or shared component-library change.
 - Historical SB06 broader runs: Unit 6988 pass/1 fail; Integration 1121 pass/17 fail/1 skip.
   Unchanged fixture failures and scope limits are in proof/SB06/broad-regression-results.md.
   No clean-whole-repository claim is made.
-- Current SB09 broad checkpoint: Unit 7037 pass/1 fail; Components 1110 pass/52 fail;
+- Historical SB09 broad checkpoint: Unit 7037 pass/1 fail; Components 1110 pass/52 fail;
   Integration 1133 pass/10 fail/1 skip. Every failed identity occurs in SB07;
   exact reviewed causes and deferred-theory discovery are in proof/SB09/broad-regression-results.md.
 - Historical SB07 broad checkpoint: Unit 7014 pass/1 fail; Components 1103 pass/53 fail;
@@ -90,5 +98,6 @@ their overflow. No responsive redesign or shared component-library change.
 - [Exact manual connection instructions](subbundles/06-token-lifecycle-and-fresh-handoff/HANDOFF.md).
 - Details, exact test scopes, evidence and limitations:
   [execution report](reviews/01-execution-report.md).
-- The renewed 5212 source JWT is scoped and expires after eight hours. Renew it through
-  source Settings/API and update the client source secret for later testing.
+- The recovered 5214 source JWT expires 2026-08-29 10:50 UTC (06:50 America/La_Paz).
+  The separate 5212 token is expired and was not renewed by this incident repair.
+  Renew tokens through source Settings/API and update the corresponding client secret.

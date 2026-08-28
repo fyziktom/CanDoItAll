@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -14,6 +15,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolProvider
 {
     private const int ProviderOrder = 950;
+    private const string UnsupportedImageOptionErrorCode = "ImageOptionUnsupported";
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly ProviderProfileService ProviderFeatureService = new();
@@ -376,7 +378,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 return value;
             }
 
-            throw new InvalidOperationException($"Unsupported {label} '{value}'. Allowed values: {string.Join(", ", allowedValues.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
+            throw new ImageGenerationToolException(
+                UnsupportedImageOptionErrorCode,
+                $"Unsupported {label}. Allowed values: {string.Join(", ", allowedValues.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}. Choose a supported value or omit this option to use the provider default, then retry.",
+                canRetryWithCorrectedInput: true);
         }
 
         private static void ValidateRequest(ImageGenerationCreateInput request)
@@ -733,8 +738,11 @@ public sealed record ImageGenerationCreateInput(
     string OutputWorkspacePath,
     Guid? ProviderProfileId = null,
     string? Model = null,
+    [property: Description("Image size: auto, 1024x1024, 1024x1536, or 1536x1024. Omit to use the provider default. Other dimensions are unsupported; describe desired composition in the prompt.")]
     string? Size = null,
+    [property: Description("Image quality: auto, low, medium, or high. Omit to use the provider default.")]
     string? Quality = null,
+    [property: Description("Image output format: png, jpeg, or webp. Omit to use the provider default.")]
     string? OutputFormat = null,
     IReadOnlyList<string>? SourceWorkspacePaths = null,
     IReadOnlyList<ImageGenerationProjectAssetSource>? SourceProjectAssets = null,

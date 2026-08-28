@@ -47,6 +47,8 @@ codex/bundles/shared-provider-real-catalogs/proof/*
 !codex/bundles/shared-provider-real-catalogs/proof/SB09/**
 !codex/bundles/shared-provider-real-catalogs/proof/SB10/
 !codex/bundles/shared-provider-real-catalogs/proof/SB10/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB11/
+!codex/bundles/shared-provider-real-catalogs/proof/SB11/**
 *.nupkg
 *.snupkg
 *.binlog

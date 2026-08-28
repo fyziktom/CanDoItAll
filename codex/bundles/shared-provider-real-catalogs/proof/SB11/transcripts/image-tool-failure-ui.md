@@ -1,0 +1,1017 @@
+- generic [ref=f4e1]:
+  - generic [ref=f4e3]:
+    - complementary [ref=f4e4]:
+      - generic [ref=f4e5]:
+        - generic [ref=f4e6]:
+          - generic [ref=f4e7]:
+            - generic [ref=f4e8]: apps
+            - generic [ref=f4e10]: CanDoItAll local delivery workbench
+          - button "Expand navigation" [ref=f4e11]:
+            - generic [ref=f4e12]: chevron_right
+        - navigation "Primary navigation" [ref=f4e13]:
+          - button "Dashboard" [ref=f4e15]:
+            - generic [ref=f4e16]: dashboard
+          - button "Projects" [ref=f4e19]:
+            - generic [ref=f4e20]: folder_open
+          - button "Collaboration" [ref=f4e23]:
+            - generic [ref=f4e24]: forum
+          - button "CRM / HR" [ref=f4e27]:
+            - generic [ref=f4e28]: groups
+          - button "Agents" [ref=f4e31]:
+            - generic [ref=f4e32]: smart_toy
+          - button "Workflows" [ref=f4e35]:
+            - generic [ref=f4e36]: account_tree
+          - button "Processes" [ref=f4e39]:
+            - generic [ref=f4e40]: account_tree
+          - button "Live Processes" [ref=f4e43]:
+            - generic [ref=f4e44]: monitor_heart
+          - button "Memory Providers" [ref=f4e47]:
+            - generic [ref=f4e48]: psychology
+          - button "Resources" [ref=f4e51]:
+            - generic [ref=f4e52]: inventory_2
+          - button "Plugins" [ref=f4e55]:
+            - generic [ref=f4e56]: extension
+          - button "Prompt Gallery" [ref=f4e59]:
+            - generic [ref=f4e60]: library_books
+          - button "More pages" [ref=f4e63]:
+            - generic [ref=f4e64]: expand_less
+          - button "Opened work" [ref=f4e67]:
+            - generic [ref=f4e68]: web_asset
+            - generic [ref=f4e70]: "1"
+        - generic [ref=f4e72]:
+          - button "Chats" [ref=f4e74]:
+            - generic [ref=f4e75]: smart_toy
+          - button "Settings" [ref=f4e79]:
+            - generic [ref=f4e80]: settings
+          - button "Runtime capabilities" [ref=f4e84]:
+            - generic [ref=f4e85]: health_and_safety
+          - button "Switch Database" [ref=f4e89]:
+            - generic [ref=f4e90]: storage
+    - main [ref=f4e93]:
+      - generic [ref=f4e94]:
+        - generic [ref=f4e97]:
+          - tablist "Open workspace tabs" [ref=f4e98]:
+            - tab "Dashboard" [ref=f4e100]:
+              - generic [ref=f4e102]: push_pin
+            - tab "Agents" [ref=f4e105]
+            - tab "Settings" [ref=f4e108]:
+              - generic [ref=f4e110]: push_pin
+            - tab "Calculator · Structure" [selected] [ref=f4e113]
+          - textbox "Search tabs" [ref=f4e116]
+        - button "Workspace status" [ref=f4e120] [cursor=pointer]:
+          - generic [ref=f4e121]: i
+      - generic [ref=f4e126]:
+        - tablist "Project structure views" [ref=f4e127]:
+          - tab "Canvas" [selected] [ref=f4e128]:
+            - generic [ref=f4e129]: account_tree
+          - tab "Gantt" [ref=f4e131]:
+            - generic [ref=f4e132]: view_timeline
+          - tab "Manager Summary" [ref=f4e134]:
+            - generic [ref=f4e135]: monitoring
+        - tabpanel "Canvas" [ref=f4e138]:
+          - generic [ref=f4e143]:
+            - generic [ref=f4e144]:
+              - generic [ref=f4e145]:
+                - button "Open quick create actions" [ref=f4e146] [cursor=pointer]:
+                  - generic [ref=f4e147]: add
+                - button "Focus root" [ref=f4e149] [cursor=pointer]:
+                  - generic [ref=f4e150]: center_focus_strong
+                - generic [ref=f4e152]:
+                  - generic [ref=f4e153]:
+                    - button "Select" [ref=f4e154] [cursor=pointer]:
+                      - generic [ref=f4e155]: near_me
+                      - generic [ref=f4e156]: arrow selector tool
+                    - button "Dependency" [ref=f4e157] [cursor=pointer]:
+                      - generic [ref=f4e158]: call_split
+                      - generic [ref=f4e159]: call split
+                    - button "Delete" [ref=f4e160] [cursor=pointer]:
+                      - generic [ref=f4e161]: delete
+                      - generic [ref=f4e162]: delete
+                  - button "Inspector" [ref=f4e163] [cursor=pointer]:
+                    - generic [ref=f4e164]: visibility
+                    - generic [ref=f4e165]: visibility
+                  - button "Health" [ref=f4e166] [cursor=pointer]:
+                    - generic [ref=f4e167]: assessment
+                    - generic [ref=f4e168]: assessment
+                  - button "Blocks" [ref=f4e169] [cursor=pointer]:
+                    - generic [ref=f4e170]: dashboard
+                    - generic [ref=f4e171]: dashboard
+                  - button "Object index" [ref=f4e172] [cursor=pointer]:
+                    - generic [ref=f4e173]: list_alt
+                    - generic [ref=f4e174]: list alt
+                  - button "Files" [ref=f4e175] [cursor=pointer]:
+                    - generic [ref=f4e176]: folder_open
+                    - generic [ref=f4e177]: folder open
+                  - button "Signals" [ref=f4e178] [cursor=pointer]:
+                    - generic [ref=f4e179]: notifications_active
+                    - generic [ref=f4e180]: notifications active
+                  - button "Agents" [ref=f4e181] [cursor=pointer]:
+                    - generic [ref=f4e182]: smart_toy
+                    - generic [ref=f4e183]: smart toy
+                  - button "Gantt" [ref=f4e184] [cursor=pointer]:
+                    - generic [ref=f4e185]: view_timeline
+                    - generic [ref=f4e186]: view timeline
+                  - button "Recompose" [ref=f4e187] [cursor=pointer]
+                - generic [ref=f4e189]:
+                  - generic [ref=f4e190]: Nodes 5
+                  - generic [ref=f4e191]: Selection 1
+              - generic [ref=f4e192]:
+                - button "Fit canvas" [ref=f4e193] [cursor=pointer]:
+                  - generic [ref=f4e194]: fit_screen
+                - button "Toggle maximize" [ref=f4e196] [cursor=pointer]:
+                  - generic [ref=f4e197]: open_in_full
+                  - generic [ref=f4e198]: Maximize canvas
+                - button "Toggle minimap" [ref=f4e199] [cursor=pointer]:
+                  - generic [ref=f4e200]: map
+                - button "Toggle diagnostics" [ref=f4e202] [cursor=pointer]:
+                  - generic [ref=f4e203]: monitor_heart
+                - button "Toggle help" [ref=f4e205] [cursor=pointer]:
+                  - generic [ref=f4e206]: help
+                  - generic [ref=f4e207]: Canvas help
+                - button "Toggle settings" [ref=f4e208] [cursor=pointer]:
+                  - generic [ref=f4e209]: settings
+                  - generic [ref=f4e210]: Canvas settings
+                - generic [ref=f4e211]:
+                  - button "Zoom out" [ref=f4e212] [cursor=pointer]:
+                    - generic [ref=f4e213]: remove
+                  - slider "Canvas zoom" [ref=f4e215]: "100"
+                  - button "Zoom in" [ref=f4e216] [cursor=pointer]:
+                    - generic [ref=f4e217]: add
+                  - generic [ref=f4e219]: 100%
+            - generic [ref=f4e220]:
+              - generic "Canvas workbench" [ref=f4e221]:
+                - generic [ref=f4e222]:
+                  - generic:
+                    - generic "Main Input" [ref=f4e1133]
+                    - generic "Main Output" [ref=f4e1134]
+                    - generic "Main Input" [ref=f4e1135]
+                    - generic "Main Output" [ref=f4e1136]
+              - generic [ref=f4e228]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure selection panel" [ref=f4e229]:
+                - generic [ref=f4e230]:
+                  - generic [ref=f4e231]:
+                    - paragraph [ref=f4e232]: Selection panel
+                    - heading "Main" [level=3] [ref=f4e233]
+                    - paragraph [ref=f4e234]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=f4e235]:
+                    - button "Minimize window" [ref=f4e236]:
+                      - generic [ref=f4e237]: minimize
+                    - button "Restart window position and size" [disabled] [ref=f4e238]:
+                      - generic [ref=f4e239]: restart_alt
+                    - button "Hide window" [ref=f4e240]:
+                      - generic [ref=f4e241]: visibility_off
+                - generic [ref=f4e243]:
+                  - generic [ref=f4e244]:
+                    - paragraph [ref=f4e245]: Research block
+                    - heading "Main" [level=3] [ref=f4e246]
+                    - paragraph [ref=f4e247]: "Status: Draft"
+                    - generic [ref=f4e248]:
+                      - generic [ref=f4e249]: Draft
+                      - generic [ref=f4e251]: Research block
+                    - generic [ref=f4e253]:
+                      - generic [ref=f4e254]:
+                        - text: Progress
+                        - strong [ref=f4e255]: 28%
+                      - generic [ref=f4e256]:
+                        - text: Priority
+                        - strong [ref=f4e257]: None
+                      - generic [ref=f4e258]:
+                        - text: Marker
+                        - strong [ref=f4e259]: None
+                  - generic [ref=f4e260]:
+                    - paragraph [ref=f4e261]: Node actions
+                    - generic [ref=f4e262]:
+                      - button [ref=f4e263]:
+                        - generic [ref=f4e264]:
+                          - generic [ref=f4e265]: draw
+                          - text: Edit
+                      - button [ref=f4e267]:
+                        - generic [ref=f4e268]:
+                          - generic [ref=f4e269]: copy
+                          - text: Copy id
+                      - button [ref=f4e271]:
+                        - generic [ref=f4e272]:
+                          - generic [ref=f4e273]: copy
+                          - text: Copy info
+                      - button [ref=f4e275]:
+                        - generic [ref=f4e276]:
+                          - generic [ref=f4e277]: copy
+                          - text: Copy tree ids
+                      - button [ref=f4e279]:
+                        - generic [ref=f4e280]:
+                          - generic [ref=f4e281]: open_in_new
+                          - text: Open
+                      - button [ref=f4e283]:
+                        - generic [ref=f4e284]:
+                          - generic [ref=f4e285]: science
+                          - text: Test
+                      - button [ref=f4e287]:
+                        - generic [ref=f4e288]:
+                          - generic [ref=f4e289]: pie_chart
+                          - text: Summary
+                      - button [ref=f4e291]:
+                        - generic [ref=f4e292]:
+                          - generic [ref=f4e293]: account_tree
+                          - text: Add process
+                      - button [ref=f4e295]:
+                        - generic [ref=f4e296]:
+                          - generic [ref=f4e297]: account_tree
+                          - text: Add workflow
+                      - button [ref=f4e299]:
+                        - generic [ref=f4e300]:
+                          - generic [ref=f4e301]: link
+                          - text: Connect selected
+                      - button [ref=f4e303]:
+                        - generic [ref=f4e304]:
+                          - generic [ref=f4e305]: sync_alt
+                          - text: Reconnect
+                      - button [ref=f4e307]:
+                        - generic [ref=f4e308]:
+                          - generic [ref=f4e309]: link_off
+                          - text: Disconnect
+                      - button [ref=f4e311]:
+                        - generic [ref=f4e312]:
+                          - generic [ref=f4e313]: call_split
+                          - text: To subproject
+                      - button [ref=f4e315]:
+                        - generic [ref=f4e316]:
+                          - generic [ref=f4e317]: image
+                          - text: Export image
+                      - button [ref=f4e319]:
+                        - generic [ref=f4e320]:
+                          - generic [ref=f4e321]: swap_horiz
+                          - text: Change block
+                      - button [ref=f4e323]:
+                        - generic [ref=f4e324]:
+                          - generic [ref=f4e325]: delete
+                          - text: Delete
+                  - generic [ref=f4e327]:
+                    - paragraph [ref=f4e328]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=f4e329]
+                    - paragraph [ref=f4e330]:
+                      - text: The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from
+                      - strong [ref=f4e331]: Main
+                      - text: .
+                    - generic [ref=f4e332]:
+                      - generic [ref=f4e333]: "Source: Main"
+                      - generic [ref=f4e335]: "Mode: child placement"
+                    - button "Open standard blocks" [ref=f4e338]
+                  - group [ref=f4e340]:
+                    - generic [ref=f4e341]:
+                      - generic [ref=f4e343]:
+                        - strong [ref=f4e344]: Advanced details
+                        - button "Show advanced details help" [ref=f4e347] [cursor=pointer]:
+                          - generic [ref=f4e348]: "?"
+                      - generic [ref=f4e349]: expand_more
+              - generic:
+                - generic: Main is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 5 canvas nodes
+                  - list:
+                    - listitem: MainStatus Draft • 3 annotations
+                    - listitem: blazor PWA wasm appStatus Draft • 3 annotations
+                    - listitem: CalculatorStatus Active • 3 annotations
+                    - listitem: calculator as in windowsStatus Draft • 3 annotations
+                    - listitem: with history of calculations right columnStatus Draft • 3 annotations
+  - generic:
+    - region "Floating conversations" [ref=f4e356]:
+      - generic [ref=f4e357]:
+        - generic [ref=f4e358]:
+          - paragraph [ref=f4e359]: Conversations
+          - heading "Chats" [level=3] [ref=f4e360]
+          - paragraph [ref=f4e361]: Start a conversation or reopen an active window.
+        - generic [ref=f4e362]:
+          - button "Minimize window" [ref=f4e363]:
+            - generic [ref=f4e364]: minimize
+          - button "Restart window position and size" [disabled] [ref=f4e365]:
+            - generic [ref=f4e366]: restart_alt
+          - button "Hide window" [ref=f4e367]:
+            - generic [ref=f4e368]: visibility_off
+      - generic [ref=f4e371]:
+        - tablist "Conversation catalog" [ref=f4e372]:
+          - tab "Available" [selected] [ref=f4e373]:
+            - generic [ref=f4e374]: add_comment
+          - tab "Active" [ref=f4e376]:
+            - generic [ref=f4e377]: forum
+        - tabpanel "Available" [ref=f4e380]:
+          - generic [ref=f4e381]:
+            - generic [ref=f4e382]:
+              - generic [ref=f4e383]:
+                - button "All" [ref=f4e384]:
+                  - generic [ref=f4e385]: forum
+                - button "Agents" [ref=f4e387]:
+                  - generic [ref=f4e388]: smart_toy
+                - button "Chats" [ref=f4e390]:
+                  - generic [ref=f4e391]: chat
+              - textbox "Search floating conversations" [ref=f4e393]:
+                - /placeholder: Search conversations
+            - list "Available conversation participants" [ref=f4e1137]:
+              - listitem [ref=f4e1138]:
+                - button "Select .NET Application Developer" [ref=f4e1139] [cursor=pointer]:
+                  - img ".NET Application Developer" [ref=f4e1140]
+                  - generic [ref=f4e1141]:
+                    - generic [ref=f4e1142]: .NET Application Developer
+                    - generic [ref=f4e1144]: .NET implementation specialist
+                    - generic [ref=f4e1145]:
+                      - generic [ref=f4e1146]: Programming
+                      - generic [ref=f4e1147]: gpt-5.6-luna
+                - generic [ref=f4e1148]:
+                  - button "Start a new chat with .NET Application Developer" [ref=f4e1150]:
+                    - generic [ref=f4e1151]: add_comment
+                    - generic [ref=f4e1152]: add comment
+                  - button "Open chat history for .NET Application Developer" [ref=f4e1154]:
+                    - generic [ref=f4e1155]: history
+                    - generic [ref=f4e1156]: history
+              - listitem [ref=f4e1157]:
+                - button "Select .NET QA Review Lead" [ref=f4e1158] [cursor=pointer]:
+                  - img ".NET QA Review Lead" [ref=f4e1159]
+                  - generic [ref=f4e1160]:
+                    - generic [ref=f4e1161]: .NET QA Review Lead
+                    - generic [ref=f4e1163]: .NET QA specialist
+                    - generic [ref=f4e1164]:
+                      - generic [ref=f4e1165]: QA
+                      - generic [ref=f4e1166]: gpt-5.6-luna
+                - generic [ref=f4e1167]:
+                  - button "Start a new chat with .NET QA Review Lead" [ref=f4e1169]:
+                    - generic [ref=f4e1170]: add_comment
+                    - generic [ref=f4e1171]: add comment
+                  - button "Open chat history for .NET QA Review Lead" [ref=f4e1173]:
+                    - generic [ref=f4e1174]: history
+                    - generic [ref=f4e1175]: history
+              - listitem [ref=f4e1176]:
+                - button "Select .NET Runtime Failure Analyst" [ref=f4e1177] [cursor=pointer]:
+                  - img ".NET Runtime Failure Analyst" [ref=f4e1178]
+                  - generic [ref=f4e1179]:
+                    - generic [ref=f4e1180]: .NET Runtime Failure Analyst
+                    - generic [ref=f4e1182]: .NET and Blazor QA diagnostic specialist
+                    - generic [ref=f4e1183]:
+                      - generic [ref=f4e1184]: QA
+                      - generic [ref=f4e1185]: gpt-5.6-luna
+                - generic [ref=f4e1186]:
+                  - button "Start a new chat with .NET Runtime Failure Analyst" [ref=f4e1188]:
+                    - generic [ref=f4e1189]: add_comment
+                    - generic [ref=f4e1190]: add comment
+                  - button "Open chat history for .NET Runtime Failure Analyst" [ref=f4e1192]:
+                    - generic [ref=f4e1193]: history
+                    - generic [ref=f4e1194]: history
+              - listitem [ref=f4e1195]:
+                - button "Select .NET Solution Architect" [ref=f4e1196] [cursor=pointer]:
+                  - img ".NET Solution Architect" [ref=f4e1197]
+                  - generic [ref=f4e1198]:
+                    - generic [ref=f4e1199]: .NET Solution Architect
+                    - generic [ref=f4e1201]: .NET architecture specialist
+                    - generic [ref=f4e1202]:
+                      - generic [ref=f4e1203]: Research
+                      - generic [ref=f4e1204]: gpt-5.6-luna
+                - generic [ref=f4e1205]:
+                  - button "Start a new chat with .NET Solution Architect" [ref=f4e1207]:
+                    - generic [ref=f4e1208]: add_comment
+                    - generic [ref=f4e1209]: add comment
+                  - button "Open chat history for .NET Solution Architect" [ref=f4e1211]:
+                    - generic [ref=f4e1212]: history
+                    - generic [ref=f4e1213]: history
+              - listitem [ref=f4e1214]:
+                - button "Select Blazor Application Developer" [ref=f4e1215] [cursor=pointer]:
+                  - img "Blazor Application Developer" [ref=f4e1216]
+                  - generic [ref=f4e1217]:
+                    - generic [ref=f4e1218]: Blazor Application Developer
+                    - generic [ref=f4e1220]: Blazor implementation specialist
+                    - generic [ref=f4e1221]:
+                      - generic [ref=f4e1222]: Programming
+                      - generic [ref=f4e1223]: gpt-5.6-luna
+                - generic [ref=f4e1224]:
+                  - button "Start a new chat with Blazor Application Developer" [ref=f4e1226]:
+                    - generic [ref=f4e1227]: add_comment
+                    - generic [ref=f4e1228]: add comment
+                  - button "Open chat history for Blazor Application Developer" [ref=f4e1230]:
+                    - generic [ref=f4e1231]: history
+                    - generic [ref=f4e1232]: history
+              - listitem [ref=f4e1233]:
+                - button "Select Business Strategist" [ref=f4e1234] [cursor=pointer]:
+                  - img "Business Strategist" [ref=f4e1235]
+                  - generic [ref=f4e1236]:
+                    - generic [ref=f4e1237]: Business Strategist
+                    - generic [ref=f4e1239]: Business planning specialist
+                    - generic [ref=f4e1240]:
+                      - generic [ref=f4e1241]: Management
+                      - generic [ref=f4e1242]: gpt-5.4-mini
+                - generic [ref=f4e1243]:
+                  - button "Start a new chat with Business Strategist" [ref=f4e1245]:
+                    - generic [ref=f4e1246]: add_comment
+                    - generic [ref=f4e1247]: add comment
+                  - button "Open chat history for Business Strategist" [ref=f4e1249]:
+                    - generic [ref=f4e1250]: history
+                    - generic [ref=f4e1251]: history
+              - listitem [ref=f4e1252]:
+                - button "Select Code Review Lead" [ref=f4e1253] [cursor=pointer]:
+                  - img "Code Review Lead" [ref=f4e1254]
+                  - generic [ref=f4e1255]:
+                    - generic [ref=f4e1256]: Code Review Lead
+                    - generic [ref=f4e1258]: Code reviewer
+                    - generic [ref=f4e1259]:
+                      - generic [ref=f4e1260]: QA
+                      - generic [ref=f4e1261]: gpt-5.6-luna
+                - generic [ref=f4e1262]:
+                  - button "Start a new chat with Code Review Lead" [ref=f4e1264]:
+                    - generic [ref=f4e1265]: add_comment
+                    - generic [ref=f4e1266]: add comment
+                  - button "Open chat history for Code Review Lead" [ref=f4e1268]:
+                    - generic [ref=f4e1269]: history
+                    - generic [ref=f4e1270]: history
+              - listitem [ref=f4e1271]:
+                - button "Select Delivery Manager" [ref=f4e1272] [cursor=pointer]:
+                  - img "Delivery Manager" [ref=f4e1273]
+                  - generic [ref=f4e1274]:
+                    - generic [ref=f4e1275]: Delivery Manager
+                    - generic [ref=f4e1277]: Delivery manager
+                    - generic [ref=f4e1278]:
+                      - generic [ref=f4e1279]: Management
+                      - generic [ref=f4e1280]: gpt-5.4-mini
+                - generic [ref=f4e1281]:
+                  - button "Start a new chat with Delivery Manager" [ref=f4e1283]:
+                    - generic [ref=f4e1284]: add_comment
+                    - generic [ref=f4e1285]: add comment
+                  - button "Open chat history for Delivery Manager" [ref=f4e1287]:
+                    - generic [ref=f4e1288]: history
+                    - generic [ref=f4e1289]: history
+              - listitem [ref=f4e1290]:
+                - button "Select Delivery QA Observer" [ref=f4e1291] [cursor=pointer]:
+                  - img "Delivery QA Observer" [ref=f4e1292]
+                  - generic [ref=f4e1293]:
+                    - generic [ref=f4e1294]: Delivery QA Observer
+                    - generic [ref=f4e1296]: QA lead and browser-proof reviewer
+                    - generic [ref=f4e1297]:
+                      - generic [ref=f4e1298]: QA
+                      - generic [ref=f4e1299]: gpt-5.6-luna
+                - generic [ref=f4e1300]:
+                  - button "Start a new chat with Delivery QA Observer" [ref=f4e1302]:
+                    - generic [ref=f4e1303]: add_comment
+                    - generic [ref=f4e1304]: add comment
+                  - button "Open chat history for Delivery QA Observer" [ref=f4e1306]:
+                    - generic [ref=f4e1307]: history
+                    - generic [ref=f4e1308]: history
+              - listitem [ref=f4e1309]:
+                - button "Select Financial Strategist" [ref=f4e1310] [cursor=pointer]:
+                  - img "Financial Strategist" [ref=f4e1311]
+                  - generic [ref=f4e1312]:
+                    - generic [ref=f4e1313]: Financial Strategist
+                    - generic [ref=f4e1315]: Financial planning specialist
+                    - generic [ref=f4e1316]:
+                      - generic [ref=f4e1317]: Spreadsheet
+                      - generic [ref=f4e1318]: gpt-5.4-mini
+                - generic [ref=f4e1319]:
+                  - button "Start a new chat with Financial Strategist" [ref=f4e1321]:
+                    - generic [ref=f4e1322]: add_comment
+                    - generic [ref=f4e1323]: add comment
+                  - button "Open chat history for Financial Strategist" [ref=f4e1325]:
+                    - generic [ref=f4e1326]: history
+                    - generic [ref=f4e1327]: history
+              - listitem [ref=f4e1328]:
+                - button "Select HR Staffing Manager" [ref=f4e1329] [cursor=pointer]:
+                  - img "HR Staffing Manager" [ref=f4e1330]
+                  - generic [ref=f4e1331]:
+                    - generic [ref=f4e1332]: HR Staffing Manager
+                    - generic [ref=f4e1334]: HR staffing and assignment manager
+                    - generic [ref=f4e1335]:
+                      - generic [ref=f4e1336]: Management
+                      - generic [ref=f4e1337]: gpt-5.4-mini
+                - generic [ref=f4e1338]:
+                  - button "Start a new chat with HR Staffing Manager" [ref=f4e1340]:
+                    - generic [ref=f4e1341]: add_comment
+                    - generic [ref=f4e1342]: add comment
+                  - button "Open chat history for HR Staffing Manager" [ref=f4e1344]:
+                    - generic [ref=f4e1345]: history
+                    - generic [ref=f4e1346]: history
+              - listitem [ref=f4e1347]:
+                - button "Select JavaScript Application Developer" [ref=f4e1348] [cursor=pointer]:
+                  - img "JavaScript Application Developer" [ref=f4e1349]
+                  - generic [ref=f4e1350]:
+                    - generic [ref=f4e1351]: JavaScript Application Developer
+                    - generic [ref=f4e1353]: JavaScript implementation specialist
+                    - generic [ref=f4e1354]:
+                      - generic [ref=f4e1355]: Programming
+                      - generic [ref=f4e1356]: gpt-5.6-luna
+                - generic [ref=f4e1357]:
+                  - button "Start a new chat with JavaScript Application Developer" [ref=f4e1359]:
+                    - generic [ref=f4e1360]: add_comment
+                    - generic [ref=f4e1361]: add comment
+                  - button "Open chat history for JavaScript Application Developer" [ref=f4e1363]:
+                    - generic [ref=f4e1364]: history
+                    - generic [ref=f4e1365]: history
+              - listitem [ref=f4e1366]:
+                - button "Select JavaScript QA Review Lead" [ref=f4e1367] [cursor=pointer]:
+                  - img "JavaScript QA Review Lead" [ref=f4e1368]
+                  - generic [ref=f4e1369]:
+                    - generic [ref=f4e1370]: JavaScript QA Review Lead
+                    - generic [ref=f4e1372]: JavaScript QA specialist
+                    - generic [ref=f4e1373]:
+                      - generic [ref=f4e1374]: QA
+                      - generic [ref=f4e1375]: gpt-5.6-luna
+                - generic [ref=f4e1376]:
+                  - button "Start a new chat with JavaScript QA Review Lead" [ref=f4e1378]:
+                    - generic [ref=f4e1379]: add_comment
+                    - generic [ref=f4e1380]: add comment
+                  - button "Open chat history for JavaScript QA Review Lead" [ref=f4e1382]:
+                    - generic [ref=f4e1383]: history
+                    - generic [ref=f4e1384]: history
+              - listitem [ref=f4e1385]:
+                - button "Select JavaScript Solution Architect" [ref=f4e1386] [cursor=pointer]:
+                  - img "JavaScript Solution Architect" [ref=f4e1387]
+                  - generic [ref=f4e1388]:
+                    - generic [ref=f4e1389]: JavaScript Solution Architect
+                    - generic [ref=f4e1391]: JavaScript architecture specialist
+                    - generic [ref=f4e1392]:
+                      - generic [ref=f4e1393]: Research
+                      - generic [ref=f4e1394]: gpt-5.6-luna
+                - generic [ref=f4e1395]:
+                  - button "Start a new chat with JavaScript Solution Architect" [ref=f4e1397]:
+                    - generic [ref=f4e1398]: add_comment
+                    - generic [ref=f4e1399]: add comment
+                  - button "Open chat history for JavaScript Solution Architect" [ref=f4e1401]:
+                    - generic [ref=f4e1402]: history
+                    - generic [ref=f4e1403]: history
+              - listitem [ref=f4e1404]:
+                - button "Select Mail Triage Analyst" [ref=f4e1405] [cursor=pointer]:
+                  - img "Mail Triage Analyst" [ref=f4e1406]
+                  - generic [ref=f4e1407]:
+                    - generic [ref=f4e1408]: Mail Triage Analyst
+                    - generic [ref=f4e1410]: Mail and inbox worker
+                    - generic [ref=f4e1411]:
+                      - generic [ref=f4e1412]: Mail
+                      - generic [ref=f4e1413]: gpt-5.4-mini
+                - generic [ref=f4e1414]:
+                  - button "Start a new chat with Mail Triage Analyst" [ref=f4e1416]:
+                    - generic [ref=f4e1417]: add_comment
+                    - generic [ref=f4e1418]: add comment
+                  - button "Open chat history for Mail Triage Analyst" [ref=f4e1420]:
+                    - generic [ref=f4e1421]: history
+                    - generic [ref=f4e1422]: history
+              - listitem [ref=f4e1423]:
+                - button "Select Marketing Specialist" [ref=f4e1424] [cursor=pointer]:
+                  - img "Marketing Specialist" [ref=f4e1425]
+                  - generic [ref=f4e1426]:
+                    - generic [ref=f4e1427]: Marketing Specialist
+                    - generic [ref=f4e1429]: Marketing planning specialist
+                    - generic [ref=f4e1430]:
+                      - generic [ref=f4e1431]: Sales
+                      - generic [ref=f4e1432]: gpt-5.4-mini
+                - generic [ref=f4e1433]:
+                  - button "Start a new chat with Marketing Specialist" [ref=f4e1435]:
+                    - generic [ref=f4e1436]: add_comment
+                    - generic [ref=f4e1437]: add comment
+                  - button "Open chat history for Marketing Specialist" [ref=f4e1439]:
+                    - generic [ref=f4e1440]: history
+                    - generic [ref=f4e1441]: history
+              - listitem [ref=f4e1442]:
+                - button "Select Portfolio Architect" [ref=f4e1443] [cursor=pointer]:
+                  - img "Portfolio Architect" [ref=f4e1444]
+                  - generic [ref=f4e1445]:
+                    - generic [ref=f4e1446]: Portfolio Architect
+                    - generic [ref=f4e1448]: Architecture steward
+                    - generic [ref=f4e1449]:
+                      - generic [ref=f4e1450]: Research
+                      - generic [ref=f4e1451]: No model configured
+                - generic [ref=f4e1452]:
+                  - button "Start a new chat with Portfolio Architect" [ref=f4e1454]:
+                    - generic [ref=f4e1455]: add_comment
+                    - generic [ref=f4e1456]: add comment
+                  - button "Open chat history for Portfolio Architect" [ref=f4e1458]:
+                    - generic [ref=f4e1459]: history
+                    - generic [ref=f4e1460]: history
+              - listitem [ref=f4e1461]:
+                - button "Select Programming Workspace Analyst" [ref=f4e1462] [cursor=pointer]:
+                  - img "Programming Workspace Analyst" [ref=f4e1463]
+                  - generic [ref=f4e1464]:
+                    - generic [ref=f4e1465]: Programming Workspace Analyst
+                    - generic [ref=f4e1467]: Programming and repository worker
+                    - generic [ref=f4e1468]:
+                      - generic [ref=f4e1469]: Programming
+                      - generic [ref=f4e1470]: gpt-5.6-luna
+                - generic [ref=f4e1471]:
+                  - button "Start a new chat with Programming Workspace Analyst" [ref=f4e1473]:
+                    - generic [ref=f4e1474]: add_comment
+                    - generic [ref=f4e1475]: add comment
+                  - button "Open chat history for Programming Workspace Analyst" [ref=f4e1477]:
+                    - generic [ref=f4e1478]: history
+                    - generic [ref=f4e1479]: history
+              - listitem [ref=f4e1480]:
+                - button "Select Release Readiness Manager" [ref=f4e1481] [cursor=pointer]:
+                  - img "Release Readiness Manager" [ref=f4e1482]
+                  - generic [ref=f4e1483]:
+                    - generic [ref=f4e1484]: Release Readiness Manager
+                    - generic [ref=f4e1486]: Release readiness manager
+                    - generic [ref=f4e1487]:
+                      - generic [ref=f4e1488]: Management
+                      - generic [ref=f4e1489]: gpt-5.4-mini
+                - generic [ref=f4e1490]:
+                  - button "Start a new chat with Release Readiness Manager" [ref=f4e1492]:
+                    - generic [ref=f4e1493]: add_comment
+                    - generic [ref=f4e1494]: add comment
+                  - button "Open chat history for Release Readiness Manager" [ref=f4e1496]:
+                    - generic [ref=f4e1497]: history
+                    - generic [ref=f4e1498]: history
+              - listitem [ref=f4e1499]:
+                - button "Select Research Deep Dive Analyst" [ref=f4e1500] [cursor=pointer]:
+                  - img "Research Deep Dive Analyst" [ref=f4e1501]
+                  - generic [ref=f4e1502]:
+                    - generic [ref=f4e1503]: Research Deep Dive Analyst
+                    - generic [ref=f4e1505]: Research and long-context worker
+                    - generic [ref=f4e1506]:
+                      - generic [ref=f4e1507]: Research
+                      - generic [ref=f4e1508]: gpt-5.4-mini
+                - generic [ref=f4e1509]:
+                  - button "Start a new chat with Research Deep Dive Analyst" [ref=f4e1511]:
+                    - generic [ref=f4e1512]: add_comment
+                    - generic [ref=f4e1513]: add comment
+                  - button "Open chat history for Research Deep Dive Analyst" [ref=f4e1515]:
+                    - generic [ref=f4e1516]: history
+                    - generic [ref=f4e1517]: history
+              - listitem [ref=f4e1518]:
+                - button "Select Security Reviewer" [ref=f4e1519] [cursor=pointer]:
+                  - img "Security Reviewer" [ref=f4e1520]
+                  - generic [ref=f4e1521]:
+                    - generic [ref=f4e1522]: Security Reviewer
+                    - generic [ref=f4e1524]: Security reviewer
+                    - generic [ref=f4e1525]:
+                      - generic [ref=f4e1526]: QA
+                      - generic [ref=f4e1527]: gpt-5.6-luna
+                - generic [ref=f4e1528]:
+                  - button "Start a new chat with Security Reviewer" [ref=f4e1530]:
+                    - generic [ref=f4e1531]: add_comment
+                    - generic [ref=f4e1532]: add comment
+                  - button "Open chat history for Security Reviewer" [ref=f4e1534]:
+                    - generic [ref=f4e1535]: history
+                    - generic [ref=f4e1536]: history
+              - listitem [ref=f4e1537]:
+                - button "Select Spreadsheet Analyst" [ref=f4e1538] [cursor=pointer]:
+                  - img "Spreadsheet Analyst" [ref=f4e1539]
+                  - generic [ref=f4e1540]:
+                    - generic [ref=f4e1541]: Spreadsheet Analyst
+                    - generic [ref=f4e1543]: Spreadsheet and tabular-data worker
+                    - generic [ref=f4e1544]:
+                      - generic [ref=f4e1545]: Spreadsheet
+                      - generic [ref=f4e1546]: gpt-5.4-mini
+                - generic [ref=f4e1547]:
+                  - button "Start a new chat with Spreadsheet Analyst" [ref=f4e1549]:
+                    - generic [ref=f4e1550]: add_comment
+                    - generic [ref=f4e1551]: add comment
+                  - button "Open chat history for Spreadsheet Analyst" [ref=f4e1553]:
+                    - generic [ref=f4e1554]: history
+                    - generic [ref=f4e1555]: history
+              - listitem [ref=f4e1556]:
+                - button "Select UI Review Lead" [ref=f4e1557] [cursor=pointer]:
+                  - img "UI Review Lead" [ref=f4e1558]
+                  - generic [ref=f4e1559]:
+                    - generic [ref=f4e1560]: UI Review Lead
+                    - generic [ref=f4e1562]: UI reviewer
+                    - generic [ref=f4e1563]:
+                      - generic [ref=f4e1564]: QA
+                      - generic [ref=f4e1565]: gpt-5.6-luna
+                - generic [ref=f4e1566]:
+                  - button "Start a new chat with UI Review Lead" [ref=f4e1568]:
+                    - generic [ref=f4e1569]: add_comment
+                    - generic [ref=f4e1570]: add comment
+                  - button "Open chat history for UI Review Lead" [ref=f4e1572]:
+                    - generic [ref=f4e1573]: history
+                    - generic [ref=f4e1574]: history
+    - region "Chat with Portfolio Architect" [ref=f4e833]:
+      - generic [ref=f4e834]:
+        - generic [ref=f4e835]:
+          - paragraph [ref=f4e836]: Active agent chat
+          - heading "Portfolio Architect" [level=3] [ref=f4e837]
+          - paragraph [ref=f4e838]: Architecture steward
+        - generic [ref=f4e839]:
+          - button "Minimize window" [ref=f4e840]:
+            - generic [ref=f4e841]: minimize
+          - button "Restart window position and size" [disabled] [ref=f4e842]:
+            - generic [ref=f4e843]: restart_alt
+          - button "Hide window" [ref=f4e844]:
+            - generic [ref=f4e845]: visibility_off
+      - generic [ref=f4e847]:
+        - generic [ref=f4e848]:
+          - generic [ref=f4e849]: Project structure · Calculator
+          - generic [ref=f4e850]: Context access allowed
+          - generic [ref=f4e851]: "Following: Project structure · Calculator / canvas"
+          - button "Detach" [ref=f4e852]:
+            - generic [ref=f4e853]: link_off
+        - article [ref=f4e858]:
+          - generic [ref=f4e860]:
+            - generic [ref=f4e861]:
+              - img "Portfolio Architect" [ref=f4e862]
+              - generic [ref=f4e863]:
+                - generic [ref=f4e864]:
+                  - generic [ref=f4e865]: Active
+                  - generic [ref=f4e866]: Completed
+                  - generic [ref=f4e867]: Auto Approve
+                  - generic [ref=f4e868]: 3 messages
+                  - generic [ref=f4e869]: 08/28/2026 10:53
+                - generic [ref=f4e872]:
+                  - paragraph [ref=f4e873]: New exploration thread
+                  - button "Edit Title" [ref=f4e874]:
+                    - generic [ref=f4e875]: edit
+                    - generic [ref=f4e876]: edit
+            - generic [ref=f4e877]:
+              - button "New thread" [ref=f4e878]:
+                - generic [ref=f4e879]: add_comment
+              - button "Runtime details" [ref=f4e881]:
+                - generic [ref=f4e882]: terminal
+          - generic [ref=f4e885]:
+            - generic [ref=f4e887]:
+              - generic [ref=f4e888]:
+                - generic [ref=f4e889]: User
+                - generic [ref=f4e890]: 08/28/2026 10:49
+              - generic [ref=f4e891]:
+                - paragraph [ref=f4e892]: Generate one UI proposal image for this Calculator project and add it here as an image asset. Read the project structure for its requirements.
+                - generic [ref=f4e893]:
+                  - generic [ref=f4e894]: ~35 tokens
+                  - button "Copy user message" [ref=f4e896] [cursor=pointer]:
+                    - generic [ref=f4e897]: content_copy
+            - generic [ref=f4e1576]:
+              - generic [ref=f4e1577]:
+                - generic [ref=f4e1578]: User
+                - generic [ref=f4e1579]: 08/28/2026 10:53
+              - generic [ref=f4e1580]:
+                - paragraph [ref=f4e1581]: "The shared connection credential has been renewed. Please retry: generate one UI proposal image for this Calculator project based on its existing project structure and add the image as a project asset. Do not alter the existing requirements."
+                - generic [ref=f4e1582]:
+                  - generic [ref=f4e1583]: ~60 tokens
+                  - button "Copy user message" [ref=f4e1585] [cursor=pointer]:
+                    - generic [ref=f4e1586]: content_copy
+            - generic [ref=f4e1590]:
+              - generic [ref=f4e1591]:
+                - img "Portfolio Architect" [ref=f4e1592]
+                - generic [ref=f4e1593]: Assistant
+                - generic [ref=f4e1594]: 08/28/2026 10:53
+              - generic [ref=f4e1595]:
+                - generic [ref=f4e1596]:
+                  - paragraph [ref=f4e1597]:
+                    - text: Unable to complete the image asset creation. I read the selected
+                    - strong [ref=f4e1598]: Main
+                    - text: "branch and confirmed the requirements:"
+                  - list [ref=f4e1599]:
+                    - listitem [ref=f4e1600]: Blazor PWA WebAssembly app
+                    - listitem [ref=f4e1601]: Windows-inspired calculator UI
+                    - listitem [ref=f4e1602]: Calculation history in a right-side column
+                  - paragraph [ref=f4e1603]: The image-generation provider reported a failure on both attempts, including a retry after confirming the shared provider credential is present. No project asset was created, and the existing project requirements were not modified.
+                - generic [ref=f4e1604]:
+                  - generic [ref=f4e1605]: ~554 tokens
+                  - button "Copy assistant message" [ref=f4e1607] [cursor=pointer]:
+                    - generic [ref=f4e1608]: content_copy
+            - button "Worked for 24s 19 steps Completed. Execution run response persisted..." [ref=f4e1611] [cursor=pointer]:
+              - generic [ref=f4e902]:
+                - generic [ref=f4e903]: Worked for 24s
+                - generic [ref=f4e904]: 19 steps
+                - generic [ref=f4e905]: Completed. Execution run response persisted...
+          - status [ref=f4e1612]:
+            - generic [ref=f4e1613]: Completed
+            - generic [ref=f4e1614]: The agent operation completed.
+          - generic [ref=f4e913]:
+            - textbox "Ask for a plan, a diagnosis, or a concrete next step." [ref=f4e1615]
+            - generic [ref=f4e915]:
+              - button "Insert from prompt gallery" [ref=f4e916]:
+                - generic [ref=f4e917]: library_books
+                - generic [ref=f4e918]: library books
+              - generic "Attach image file" [ref=f4e919] [cursor=pointer]: image
+              - button "Attach workspace artifact" [ref=f4e921]:
+                - generic [ref=f4e922]: add
+                - generic [ref=f4e923]: add
+              - button "Send prompt" [ref=f4e924]:
+                - generic [ref=f4e925]: send
+                - generic [ref=f4e1616]: send
+              - button "Start voice recording" [disabled] [ref=f4e927]:
+                - generic [ref=f4e928]: mic
+                - generic [ref=f4e929]: mic
+              - button "Speak latest assistant message" [disabled] [ref=f4e930]:
+                - generic [ref=f4e931]: volume_up
+                - generic [ref=f4e932]: volume up
+              - button "Toggle audio mode" [disabled] [ref=f4e933]:
+                - generic [ref=f4e934]: hearing
+                - generic [ref=f4e935]: hearing
+  - dialog "Agent work history" [ref=f4e1617]:
+    - generic [ref=f4e1620]:
+      - generic [ref=f4e1622]:
+        - generic [ref=f4e1623]:
+          - generic [ref=f4e1624]: Agent work
+          - heading "Agent work history" [level=2] [ref=f4e1626]
+          - paragraph [ref=f4e1627]: 19 step(s) captured from 08/28/2026 10:53 to 08/28/2026 10:53.
+        - button "Close" [active] [ref=f4e1629]:
+          - generic [ref=f4e1630]: close
+      - generic [ref=f4e1634]:
+        - generic [ref=f4e1636]:
+          - generic [ref=f4e1637]:
+            - generic [ref=f4e1638]: Completed
+            - generic [ref=f4e1639]: 19 steps
+            - generic [ref=f4e1640]: 24s
+            - generic [ref=f4e1641]: UI Shared OpenAI Chat
+          - paragraph [ref=f4e1642]: New exploration thread
+          - generic [ref=f4e1643]: sp1.ed7e5491f04b4ca490f125f9bce3cc62.4zIw2z3X0vAVPevLufq8M4b6rABUd1cZMa-FXXDErps / project-structure / revision 2
+        - generic [ref=f4e1644]:
+          - article [ref=f4e1645]:
+            - generic [ref=f4e1646]:
+              - generic [ref=f4e1647]:
+                - generic [ref=f4e1648]: Preparing
+                - paragraph [ref=f4e1649]: Planning
+                - generic [ref=f4e1650]: 08/28/2026 10:53
+              - generic [ref=f4e1651]: Preparing provider UI Shared OpenAI Chat.
+              - generic [ref=f4e1652]:
+                - generic [ref=f4e1653]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1654] [cursor=pointer]:
+                  - generic [ref=f4e1655]: content_copy
+          - article [ref=f4e1658]:
+            - generic [ref=f4e1659]:
+              - generic [ref=f4e1660]:
+                - generic [ref=f4e1661]: Preparing
+                - paragraph [ref=f4e1662]: Framework
+                - generic [ref=f4e1663]: 08/28/2026 10:53
+              - generic [ref=f4e1664]: Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.
+              - generic [ref=f4e1665]:
+                - generic [ref=f4e1666]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1667] [cursor=pointer]:
+                  - generic [ref=f4e1668]: content_copy
+          - article [ref=f4e1671]:
+            - generic [ref=f4e1672]:
+              - generic [ref=f4e1673]:
+                - generic [ref=f4e1674]: Preparing
+                - paragraph [ref=f4e1675]: Approval policy
+                - generic [ref=f4e1676]: 08/28/2026 10:53
+              - generic [ref=f4e1677]: Auto-approve is active for this run, so future tool approval gates will be suppressed.
+              - generic [ref=f4e1678]:
+                - generic [ref=f4e1679]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1680] [cursor=pointer]:
+                  - generic [ref=f4e1681]: content_copy
+          - article [ref=f4e1684]:
+            - generic [ref=f4e1685]:
+              - generic [ref=f4e1686]:
+                - generic [ref=f4e1687]: Preparing
+                - paragraph [ref=f4e1688]: Context contributors
+                - generic [ref=f4e1689]: 08/28/2026 10:53
+              - generic [ref=f4e1690]: Attached 2 registered agent context contributor(s) in deterministic order.
+              - generic [ref=f4e1691]:
+                - generic [ref=f4e1692]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1693] [cursor=pointer]:
+                  - generic [ref=f4e1694]: content_copy
+          - article [ref=f4e1697]:
+            - generic [ref=f4e1698]:
+              - generic [ref=f4e1699]:
+                - generic [ref=f4e1700]: Preparing
+                - paragraph [ref=f4e1701]: Skills
+                - generic [ref=f4e1702]: 08/28/2026 10:53
+              - generic [ref=f4e1703]: Loaded 0 file skill root(s), 5 inline skill(s), and 0 DI-provided skill(s) through AgentSkillsProvider.
+              - generic [ref=f4e1704]:
+                - generic [ref=f4e1705]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1706] [cursor=pointer]:
+                  - generic [ref=f4e1707]: content_copy
+          - article [ref=f4e1710]:
+            - generic [ref=f4e1711]:
+              - generic [ref=f4e1712]:
+                - generic [ref=f4e1713]: Preparing
+                - paragraph [ref=f4e1714]: Workspace tools
+                - generic [ref=f4e1715]: 08/28/2026 10:53
+              - generic [ref=f4e1716]: Attached workspace and storage tools from the unified agent-settings, catalog, and context-policy composition.
+              - generic [ref=f4e1717]:
+                - generic [ref=f4e1718]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1719] [cursor=pointer]:
+                  - generic [ref=f4e1720]: content_copy
+          - article [ref=f4e1723]:
+            - generic [ref=f4e1724]:
+              - generic [ref=f4e1725]:
+                - generic [ref=f4e1726]: Preparing
+                - paragraph [ref=f4e1727]: Runtime tool providers
+                - generic [ref=f4e1728]: 08/28/2026 10:53
+              - generic [ref=f4e1729]: "Attached 54 tool(s) from 10 registered runtime tool provider(s). Providers: project-structure.runtime-tools (Project structure runtime tools, 51 tool(s)); memory.runtime-tools (Memory runtime tools, 0 tool(s)); hr-agent.runtime-tools (HR agent runtime tools, 0 tool(s)); prompt-gallery.runtime-tools (Prompt Gallery tools, 2 tool(s)); prompts-curator.runtime-tools (Prompts Curator runtime tools, 0 tool(s)); workflow-curator.runtime-tools (Workflow Curator runtime tools, 0 tool(s)); scheduler-agent.runtime-tools (Scheduler Agent runtime tools, 0 tool(s)); capability-curator.runtime-tools (Capability Curator runtime tools, 0 tool(s)); workflows.runtime-tools (Workflow runtime tools, 0 tool(s)); image-generation.runtime-tools (Image generation runtime tools, 1 tool(s))."
+              - generic [ref=f4e1730]:
+                - generic [ref=f4e1731]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1732] [cursor=pointer]:
+                  - generic [ref=f4e1733]: content_copy
+          - article [ref=f4e1736]:
+            - generic [ref=f4e1737]:
+              - generic [ref=f4e1738]:
+                - generic [ref=f4e1739]: Preparing
+                - paragraph [ref=f4e1740]: Capability compatibility
+                - generic [ref=f4e1741]: 08/28/2026 10:53
+              - generic [ref=f4e1742]: Skipping capability 'Provider-Native Web Search' for provider 'UI Shared OpenAI Chat'. Provider 'UI Shared OpenAI Chat' uses the ChatCompletions transport, but provider-native web search is exposed only through Responses-backed OpenAI or Azure OpenAI providers in this repository. Switch this provider profile to the Responses transport, or use a host-provided external-search integration instead of inventing a local shell workaround.
+              - generic [ref=f4e1743]:
+                - generic [ref=f4e1744]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1745] [cursor=pointer]:
+                  - generic [ref=f4e1746]: content_copy
+          - article [ref=f4e1749]:
+            - generic [ref=f4e1750]:
+              - generic [ref=f4e1751]:
+                - generic [ref=f4e1752]: Preparing
+                - paragraph [ref=f4e1753]: Compaction
+                - generic [ref=f4e1754]: 08/28/2026 10:53
+              - generic [ref=f4e1755]: Attached Microsoft Agent Framework compaction for InteractiveChat context with defaults of 32 turns, 64000 tokens, and 40 tool messages unless overridden by agent configuration.
+              - generic [ref=f4e1756]:
+                - generic [ref=f4e1757]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1758] [cursor=pointer]:
+                  - generic [ref=f4e1759]: content_copy
+          - article [ref=f4e1762]:
+            - generic [ref=f4e1763]:
+              - generic [ref=f4e1764]:
+                - generic [ref=f4e1765]: Preparing
+                - paragraph [ref=f4e1766]: Model parameters
+                - generic [ref=f4e1767]: 08/28/2026 10:53
+              - generic [ref=f4e1768]: The runtime will omit temperature for model 'sp1.ed7e5491f04b4ca490f125f9bce3cc62.4zIw2z3X0vAVPevLufq8M4b6rABUd1cZMa-FXXDErps' and use the provider default.
+              - generic [ref=f4e1769]:
+                - generic [ref=f4e1770]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1771] [cursor=pointer]:
+                  - generic [ref=f4e1772]: content_copy
+          - article [ref=f4e1775]:
+            - generic [ref=f4e1776]:
+              - generic [ref=f4e1777]:
+                - generic [ref=f4e1778]: Preparing
+                - paragraph [ref=f4e1779]: Session
+                - generic [ref=f4e1780]: 08/28/2026 10:53
+              - generic [ref=f4e1781]: Creating a new Microsoft Agent Framework session and hydrating it from the sandbox transcript.
+              - generic [ref=f4e1782]:
+                - generic [ref=f4e1783]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1784] [cursor=pointer]:
+                  - generic [ref=f4e1785]: content_copy
+          - article [ref=f4e1788]:
+            - generic [ref=f4e1789]:
+              - generic [ref=f4e1790]:
+                - generic [ref=f4e1791]: Running
+                - paragraph [ref=f4e1792]: Run
+                - generic [ref=f4e1793]: 08/28/2026 10:53
+              - generic [ref=f4e1794]: Executing the run through Microsoft Agent Framework streaming.
+              - generic [ref=f4e1795]:
+                - generic [ref=f4e1796]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1797] [cursor=pointer]:
+                  - generic [ref=f4e1798]: content_copy
+          - article [ref=f4e1801]:
+            - generic [ref=f4e1802]:
+              - generic [ref=f4e1803]:
+                - generic [ref=f4e1804]: WaitingOnTool
+                - paragraph [ref=f4e1805]: Tool
+                - generic [ref=f4e1806]: 08/28/2026 10:53
+              - generic [ref=f4e1807]: "Invoking tool 'project_structure_read' with projectId=\"bbed9156-6935-469a-a357-d2eb4c3c028b\", request=\"{\"subtreeRootIds\":[\"custom:4a0df0fde0bc42599d651c9ffae9d5d1\"],\"includeAssets\":\"\\u003Credacted\\u003E#b5bea41b6c62\",\"inclu...#68869bcf725c\"."
+              - generic [ref=f4e1808]:
+                - generic [ref=f4e1809]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1810] [cursor=pointer]:
+                  - generic [ref=f4e1811]: content_copy
+          - article [ref=f4e1814]:
+            - generic [ref=f4e1815]:
+              - generic [ref=f4e1816]:
+                - generic [ref=f4e1817]: WaitingOnTool
+                - paragraph [ref=f4e1818]: Tool
+                - generic [ref=f4e1819]: 08/28/2026 10:53
+              - generic [ref=f4e1820]: "Invoking tool 'image_generation_create' with request=\"{\"outputFormat\":\"\\u003Credacted\\u003E#6e8a45b42249\",\"outputWorkspacePath\":\"\\u003Credacted\\u003E#00155de19f07\",\"projectAs...#e07776f3c081\"."
+              - generic [ref=f4e1821]:
+                - generic [ref=f4e1822]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1823] [cursor=pointer]:
+                  - generic [ref=f4e1824]: content_copy
+          - article [ref=f4e1827]:
+            - generic [ref=f4e1828]:
+              - generic [ref=f4e1829]:
+                - generic [ref=f4e1830]: WaitingOnTool
+                - paragraph [ref=f4e1831]: Tool
+                - generic [ref=f4e1832]: 08/28/2026 10:53
+              - generic [ref=f4e1833]: Invoking tool 'provider_health'.
+              - generic [ref=f4e1834]:
+                - generic [ref=f4e1835]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1836] [cursor=pointer]:
+                  - generic [ref=f4e1837]: content_copy
+          - article [ref=f4e1840]:
+            - generic [ref=f4e1841]:
+              - generic [ref=f4e1842]:
+                - generic [ref=f4e1843]: WaitingOnTool
+                - paragraph [ref=f4e1844]: Tool
+                - generic [ref=f4e1845]: 08/28/2026 10:53
+              - generic [ref=f4e1846]: "Invoking tool 'image_generation_create' with request=\"{\"outputFormat\":\"\\u003Credacted\\u003E#6e8a45b42249\",\"outputWorkspacePath\":\"\\u003Credacted\\u003E#00155de19f07\",\"prompt\":\"...#acb0ee396227\"."
+              - generic [ref=f4e1847]:
+                - generic [ref=f4e1848]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1849] [cursor=pointer]:
+                  - generic [ref=f4e1850]: content_copy
+          - article [ref=f4e1853]:
+            - generic [ref=f4e1854]:
+              - generic [ref=f4e1855]:
+                - generic [ref=f4e1856]: Running
+                - paragraph [ref=f4e1857]: Streaming
+                - generic [ref=f4e1858]: 08/28/2026 10:53
+              - generic [ref=f4e1859]: The agent is producing streamed output.
+              - generic [ref=f4e1860]:
+                - generic [ref=f4e1861]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1862] [cursor=pointer]:
+                  - generic [ref=f4e1863]: content_copy
+          - article [ref=f4e1866]:
+            - generic [ref=f4e1867]:
+              - generic [ref=f4e1868]:
+                - generic [ref=f4e1869]: Persisting
+                - paragraph [ref=f4e1870]: Session
+                - generic [ref=f4e1871]: 08/28/2026 10:53
+              - generic [ref=f4e1872]: Serializing the Microsoft Agent Framework session.
+              - generic [ref=f4e1873]:
+                - generic [ref=f4e1874]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1875] [cursor=pointer]:
+                  - generic [ref=f4e1876]: content_copy
+          - article [ref=f4e1879]:
+            - generic [ref=f4e1880]:
+              - generic [ref=f4e1881]:
+                - generic [ref=f4e1882]: Completed
+                - paragraph [ref=f4e1883]: Completed
+                - generic [ref=f4e1884]: 08/28/2026 10:53
+              - generic [ref=f4e1885]: Execution run response persisted.
+              - generic [ref=f4e1886]:
+                - generic [ref=f4e1887]: Run 349c6e81-8472-4923-9eec-e6b6abcf52a7
+                - button "Copy execution step details" [ref=f4e1888] [cursor=pointer]:
+                  - generic [ref=f4e1889]: content_copy

@@ -1,0 +1,6 @@
+{
+  "Name": "CanDoItAll.Tests.Unit.AgentFramework.WorkflowCatalogTests.ComponentLibraryAcceptsStructuredOutputForOllama",
+  "Outcome": "Failed",
+  "Message": "System.InvalidOperationException : LLM Call Component 'c1ee6b64-4380-4a87-9cd3-a3001bd28cb7' model 'llama3.2' requires a model price row on provider 'Ollama chat'.",
+  "Stack": "   at CanDoItAll.AgentFramework.Core.InMemoryWorkflowCatalogService.SaveComponentAsync(LlmCallComponentSaveRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Core\\WorkflowCatalogServices.cs:line 508\r\n   at CanDoItAll.Tests.Unit.AgentFramework.WorkflowCatalogTests.ComponentLibraryAcceptsStructuredOutputForOllama() in C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\WorkflowCatalogTests.cs:line 398\r\n--- End of stack trace from previous location ---"
+}

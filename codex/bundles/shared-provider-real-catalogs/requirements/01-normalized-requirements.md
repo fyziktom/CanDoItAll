@@ -1,5 +1,9 @@
 # Normalized Requirements
 
+- R15 / N015: diagnose the exact 5214 project run, repair the shared connection and
+  actionable error reporting, and prove project-context image creation/attachment
+  through UI without weakening authentication, changing user agent policies or exposing secrets.
+
 - R13 / N013: explicitly refresh stale shared capabilities on 5214 without discarding
   unsaved agent settings; distinguish absent metadata from unsupported thinking.
 - R14 / N014: provider per-model thinking configuration, built-in/discovered defaults,

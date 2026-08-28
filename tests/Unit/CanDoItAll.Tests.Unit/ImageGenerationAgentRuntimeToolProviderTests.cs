@@ -14,6 +14,67 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = new(JsonSerializerDefaults.Web);
 
     [Theory]
+    [InlineData("1536x864", null, null, "image size")]
+    [InlineData(null, "private-secret-marker", null, "image quality")]
+    [InlineData(null, null, "gif", "image output format")]
+    public async Task Invalid_image_options_are_safe_retryable_and_corrected_requests_succeed(
+        string? size, string? quality, string? format, string label) {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var imageService = new FakeAgentImageGenerationService();
+        var provider = CreateSharedImageProvider();
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([provider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path), imageService, services);
+        var agent = CreateAgent(provider.Id, AgentImageGenerationAccessMetadata.Write("{}", new() {
+            CanGenerateImages = true
+        }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(
+            CreateContext(agent, CreateProvider(ProviderProfilePurpose.Chat)), CancellationToken.None));
+        var request = new ImageGenerationCreateInput("A calculator UI", "images/calculator.png",
+            Size: size, Quality: quality, OutputFormat: format);
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() => InvokeImageGenerationToolAsync(tool, request));
+
+        Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
+        Assert.Equal("ImageOptionUnsupported", failure.ErrorCode);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Contains(label, failure.Message, StringComparison.Ordinal);
+        Assert.Contains("Allowed values:", failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(size ?? quality ?? format!, failure.Message, StringComparison.Ordinal);
+        Assert.Empty(imageService.Requests);
+
+        var result = await InvokeImageGenerationToolAsync(tool,
+            request with { Size = "1536x1024", Quality = "low", OutputFormat = "png" });
+
+        Assert.True(result.Success);
+        Assert.Equal("1536x1024", Assert.Single(imageService.Requests).Size);
+        Assert.Equal("gpt-image-1-mini", result.Model);
+    }
+
+    [Fact]
+    public async Task Image_tool_schema_explains_supported_options_and_provider_defaults() {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var provider = CreateSharedImageProvider();
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([provider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path),
+            new FakeAgentImageGenerationService(), services);
+        var agent = CreateAgent(provider.Id, AgentImageGenerationAccessMetadata.Write("{}", new() {
+            CanGenerateImages = true
+        }));
+        var tool = Assert.IsAssignableFrom<AIFunction>(Assert.Single(await toolProvider.CreateToolsAsync(
+            CreateContext(agent, provider), CancellationToken.None)));
+        var properties = tool.JsonSchema.GetProperty("properties").GetProperty("request").GetProperty("properties");
+
+        Assert.Contains("1536x1024", properties.GetProperty("size").GetProperty("description").GetString());
+        Assert.Contains("provider default", properties.GetProperty("size").GetProperty("description").GetString());
+        Assert.Contains("medium", properties.GetProperty("quality").GetProperty("description").GetString());
+        Assert.Contains("webp", properties.GetProperty("outputFormat").GetProperty("description").GetString());
+    }
+
+    [Theory]
     [InlineData(null, "image-route-default", "gpt-image-1-mini")]
     [InlineData("gpt-image-1-mini", "image-route-default", "gpt-image-1-mini")]
     [InlineData("gpt-image-1", "image-route-secondary", "gpt-image-1")]

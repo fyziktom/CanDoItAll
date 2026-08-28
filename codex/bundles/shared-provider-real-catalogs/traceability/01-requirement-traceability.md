@@ -2,6 +2,7 @@
 
 | Input or requirement | Owning subbundle | Actual closure proof | Status |
 | --- | --- | --- | --- |
+| N015 / R15 project image request fails with opaque boundary error | SB11 | Expired JWT renewed through UI; safe status, image option feedback and image-data budget repaired. Actual image creation/attachment/preview/analysis and source usage pass; 129 focused cases and reviewed full Unit/Integration baseline comparison. See proof/SB11/manifest.md and reviews/05-project-image-final-verifier.md. | Solved |
 | N013 / R13 stale 5214 capability snapshot | SB09 + SB10 | proof/SB10/manifest.md; actual 5214 refresh preserves Sol/Medium draft; both-client exact option matrices | Solved |
 | N014 / R14 per-model thinking administration | SB09 + SB10 | proof/SB09/manifest.md; 229 focused passes; proof/SB10/manifest.md actual source save/discovery/reset, read-only mirrors and eight real requests with source usage | Solved |
 | N011 / R11 shared thinking choices and actual application | SB07 + SB08 | proof/SB07/manifest.md; proof/SB08/manifest.md: 308 focused cases, seven UI-configured agents, nine real successful/complete requests; explicit transport limits | Solved |

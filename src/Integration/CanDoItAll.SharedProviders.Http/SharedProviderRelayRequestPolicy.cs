@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.Collections.Frozen;
 using System.Text;
 using System.Text.Json;
@@ -1026,12 +1027,9 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         return false;
     }
 
-    private static bool IsDataImageUrl(JsonElement url)
-    {
+    private static bool IsDataImageUrl(JsonElement url) {
         if (url.ValueKind != JsonValueKind.String ||
-            url.GetString() is not { } value ||
-            value.Length > MaximumTextCharacters)
-        {
+            url.GetString() is not { } value) {
             return false;
         }
 
@@ -1053,8 +1051,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
                 return false;
             }
 
-            var decoded = new byte[(encoded.Length + 3) / 4 * 3];
-            return Convert.TryFromBase64Chars(encoded, decoded, out var bytesWritten) && bytesWritten > 0;
+            return Base64.IsValid(encoded, out var imageBytes) && imageBytes > 0;
         }
 
         return false;

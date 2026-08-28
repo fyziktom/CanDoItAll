@@ -1,0 +1,944 @@
+- generic [active] [ref=f8e1]:
+  - generic [ref=f8e3]:
+    - complementary [ref=f8e4]:
+      - generic [ref=f8e5]:
+        - generic [ref=f8e6]:
+          - generic [ref=f8e7]:
+            - generic [ref=f8e8]: apps
+            - generic [ref=f8e10]: CanDoItAll local delivery workbench
+          - button "Expand navigation" [ref=f8e11]:
+            - generic [ref=f8e12]: chevron_right
+        - navigation "Primary navigation" [ref=f8e13]:
+          - button "Dashboard" [ref=f8e15]:
+            - generic [ref=f8e16]: dashboard
+          - button "Projects" [ref=f8e19]:
+            - generic [ref=f8e20]: folder_open
+          - button "Collaboration" [ref=f8e23]:
+            - generic [ref=f8e24]: forum
+          - button "CRM / HR" [ref=f8e27]:
+            - generic [ref=f8e28]: groups
+          - button "Agents" [ref=f8e31]:
+            - generic [ref=f8e32]: smart_toy
+          - button "Workflows" [ref=f8e35]:
+            - generic [ref=f8e36]: account_tree
+          - button "Processes" [ref=f8e39]:
+            - generic [ref=f8e40]: account_tree
+          - button "Live Processes" [ref=f8e43]:
+            - generic [ref=f8e44]: monitor_heart
+          - button "Memory Providers" [ref=f8e47]:
+            - generic [ref=f8e48]: psychology
+          - button "Resources" [ref=f8e51]:
+            - generic [ref=f8e52]: inventory_2
+          - button "Plugins" [ref=f8e55]:
+            - generic [ref=f8e56]: extension
+          - button "Prompt Gallery" [ref=f8e59]:
+            - generic [ref=f8e60]: library_books
+          - button "More pages" [ref=f8e63]:
+            - generic [ref=f8e64]: expand_less
+          - button "Opened work" [ref=f8e67]:
+            - generic [ref=f8e68]: web_asset
+            - generic [ref=f8e70]: "1"
+        - generic [ref=f8e72]:
+          - button "Chats" [ref=f8e74]:
+            - generic [ref=f8e75]: smart_toy
+          - button "Settings" [ref=f8e79]:
+            - generic [ref=f8e80]: settings
+          - button "Runtime capabilities" [ref=f8e84]:
+            - generic [ref=f8e85]: health_and_safety
+          - button "Switch Database" [ref=f8e89]:
+            - generic [ref=f8e90]: storage
+    - main [ref=f8e93]:
+      - generic [ref=f8e94]:
+        - generic [ref=f8e97]:
+          - tablist "Open workspace tabs" [ref=f8e98]:
+            - tab "Dashboard" [ref=f8e100]:
+              - generic [ref=f8e102]: push_pin
+            - tab "Agents" [ref=f8e105]
+            - tab "Settings" [ref=f8e108]:
+              - generic [ref=f8e110]: push_pin
+            - tab "Calculator · Structure" [selected] [ref=f8e113]
+          - textbox "Search tabs" [ref=f8e116]
+        - button "Workspace status" [ref=f8e120] [cursor=pointer]:
+          - generic [ref=f8e121]: i
+      - generic [ref=f8e126]:
+        - tablist "Project structure views" [ref=f8e127]:
+          - tab "Canvas" [selected] [ref=f8e128]:
+            - generic [ref=f8e129]: account_tree
+          - tab "Gantt" [ref=f8e131]:
+            - generic [ref=f8e132]: view_timeline
+          - tab "Manager Summary" [ref=f8e134]:
+            - generic [ref=f8e135]: monitoring
+        - tabpanel "Canvas" [ref=f8e138]:
+          - generic [ref=f8e143]:
+            - generic [ref=f8e144]:
+              - generic [ref=f8e145]:
+                - button "Open quick create actions" [ref=f8e146] [cursor=pointer]:
+                  - generic [ref=f8e147]: add
+                - button "Focus root" [ref=f8e149] [cursor=pointer]:
+                  - generic [ref=f8e150]: center_focus_strong
+                - generic [ref=f8e152]:
+                  - generic [ref=f8e153]:
+                    - button "Select" [ref=f8e154] [cursor=pointer]:
+                      - generic [ref=f8e155]: near_me
+                      - generic [ref=f8e156]: arrow selector tool
+                    - button "Dependency" [ref=f8e157] [cursor=pointer]:
+                      - generic [ref=f8e158]: call_split
+                      - generic [ref=f8e159]: call split
+                    - button "Delete" [ref=f8e160] [cursor=pointer]:
+                      - generic [ref=f8e161]: delete
+                      - generic [ref=f8e162]: delete
+                  - button "Inspector" [ref=f8e163] [cursor=pointer]:
+                    - generic [ref=f8e164]: visibility
+                    - generic [ref=f8e165]: visibility
+                  - button "Health" [ref=f8e166] [cursor=pointer]:
+                    - generic [ref=f8e167]: assessment
+                    - generic [ref=f8e168]: assessment
+                  - button "Blocks" [ref=f8e169] [cursor=pointer]:
+                    - generic [ref=f8e170]: dashboard
+                    - generic [ref=f8e171]: dashboard
+                  - button "Object index" [ref=f8e172] [cursor=pointer]:
+                    - generic [ref=f8e173]: list_alt
+                    - generic [ref=f8e174]: list alt
+                  - button "Files" [ref=f8e175] [cursor=pointer]:
+                    - generic [ref=f8e176]: folder_open
+                    - generic [ref=f8e177]: folder open
+                  - button "Signals" [ref=f8e178] [cursor=pointer]:
+                    - generic [ref=f8e179]: notifications_active
+                    - generic [ref=f8e180]: notifications active
+                  - button "Agents" [ref=f8e181] [cursor=pointer]:
+                    - generic [ref=f8e182]: smart_toy
+                    - generic [ref=f8e183]: smart toy
+                  - button "Gantt" [ref=f8e184] [cursor=pointer]:
+                    - generic [ref=f8e185]: view_timeline
+                    - generic [ref=f8e186]: view timeline
+                  - button "Recompose" [disabled] [ref=f8e187]
+                - generic [ref=f8e189]:
+                  - generic [ref=f8e190]: Nodes 6
+                  - generic [ref=f8e191]: Selection 1
+              - generic [ref=f8e192]:
+                - button "Fit canvas" [ref=f8e193] [cursor=pointer]:
+                  - generic [ref=f8e194]: fit_screen
+                - button "Toggle maximize" [ref=f8e196] [cursor=pointer]:
+                  - generic [ref=f8e197]: open_in_full
+                  - generic [ref=f8e198]: Maximize canvas
+                - button "Toggle minimap" [ref=f8e199] [cursor=pointer]:
+                  - generic [ref=f8e200]: map
+                - button "Toggle diagnostics" [ref=f8e202] [cursor=pointer]:
+                  - generic [ref=f8e203]: monitor_heart
+                - button "Toggle help" [ref=f8e205] [cursor=pointer]:
+                  - generic [ref=f8e206]: help
+                  - generic [ref=f8e207]: Canvas help
+                - button "Toggle settings" [ref=f8e208] [cursor=pointer]:
+                  - generic [ref=f8e209]: settings
+                  - generic [ref=f8e210]: Canvas settings
+                - generic [ref=f8e211]:
+                  - button "Zoom out" [ref=f8e212] [cursor=pointer]:
+                    - generic [ref=f8e213]: remove
+                  - slider "Canvas zoom" [ref=f8e215]: "100"
+                  - button "Zoom in" [ref=f8e216] [cursor=pointer]:
+                    - generic [ref=f8e217]: add
+                  - generic [ref=f8e219]: 100%
+            - generic [ref=f8e220]:
+              - generic "Canvas workbench" [ref=f8e221]:
+                - generic [ref=f8e222]:
+                  - generic:
+                    - generic "Calculator UI Proposal Input" [ref=f8e1022]
+                    - generic "Calculator UI Proposal Output" [ref=f8e1023]
+                    - generic "Calculator UI Proposal Input" [ref=f8e1024]
+                    - generic "Calculator UI Proposal Output" [ref=f8e1025]
+                    - generic "Calculator Input" [ref=f8e1026]
+                    - generic "Calculator Output" [ref=f8e1027]
+                    - generic "Calculator Input" [ref=f8e1028]
+                    - generic "Calculator Output" [ref=f8e1029]
+              - generic [ref=f8e228]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure standard blocks toolbox" [ref=f8e229]:
+                - generic [ref=f8e230]:
+                  - generic [ref=f8e231]:
+                    - paragraph [ref=f8e232]: Standard Blocks Toolbox
+                    - heading [level=3]
+                  - generic [ref=f8e233]:
+                    - button "Minimize window" [ref=f8e234]:
+                      - generic [ref=f8e235]: minimize
+                    - button "Restart window position and size" [disabled] [ref=f8e236]:
+                      - generic [ref=f8e237]: restart_alt
+                    - button "Hide window" [ref=f8e238]:
+                      - generic [ref=f8e239]: visibility_off
+                - region "Project structure standard blocks toolbox" [ref=f8e241]:
+                  - generic [ref=f8e242]:
+                    - generic [ref=f8e243]: Calculator UI Proposal
+                    - generic [ref=f8e244]: 68 items
+                  - searchbox "Search blocks, files, runtime, or infrastructure" [ref=f8e245]
+                  - generic [ref=f8e248]:
+                    - button "Project structure Standard blocks 68" [ref=f8e249] [cursor=pointer]:
+                      - generic [ref=f8e250]:
+                        - strong [ref=f8e251]: Project structure
+                        - generic [ref=f8e252]: Standard blocks
+                      - generic [ref=f8e253]: "68"
+                    - generic [ref=f8e254]:
+                      - generic [ref=f8e255]:
+                        - button "Capture Fast notes and decisions that keep the mindmap moving. 2" [ref=f8e256] [cursor=pointer]:
+                          - generic [ref=f8e257]:
+                            - strong [ref=f8e258]: Capture
+                            - generic [ref=f8e259]: Fast notes and decisions that keep the mindmap moving.
+                          - generic [ref=f8e260]: "2"
+                        - generic [ref=f8e261]:
+                          - button "Note Capture a lightweight note and keep the mindmap moving." [ref=f8e263] [cursor=pointer]:
+                            - generic [ref=f8e264]: note
+                            - generic [ref=f8e266]:
+                              - strong [ref=f8e267]: Note
+                              - generic [ref=f8e268]: Capture a lightweight note and keep the mindmap moving.
+                          - button "Decision Record a decision and its first rationale while you are still in the canvas." [ref=f8e270] [cursor=pointer]:
+                            - generic [ref=f8e271]: gavel
+                            - generic [ref=f8e273]:
+                              - strong [ref=f8e274]: Decision
+                              - generic [ref=f8e275]: Record a decision and its first rationale while you are still in the canvas.
+                      - button "Runtime Repositories, scripts, environments, and local execution context. 12" [ref=f8e277] [cursor=pointer]:
+                        - generic [ref=f8e278]:
+                          - strong [ref=f8e279]: Runtime
+                          - generic [ref=f8e280]: Repositories, scripts, environments, and local execution context.
+                        - generic [ref=f8e281]: "12"
+                      - button "Assets Repositories, files, uploads, links, and system touchpoints. 15" [ref=f8e283] [cursor=pointer]:
+                        - generic [ref=f8e284]:
+                          - strong [ref=f8e285]: Assets
+                          - generic [ref=f8e286]: Repositories, files, uploads, links, and system touchpoints.
+                        - generic [ref=f8e287]: "15"
+                      - button "Infrastructure Servers, domains, deployment details, keys, and AI references. 9" [ref=f8e289] [cursor=pointer]:
+                        - generic [ref=f8e290]:
+                          - strong [ref=f8e291]: Infrastructure
+                          - generic [ref=f8e292]: Servers, domains, deployment details, keys, and AI references.
+                        - generic [ref=f8e293]: "9"
+                      - button "Planning Phases and milestones that shape delivery. 2" [ref=f8e295] [cursor=pointer]:
+                        - generic [ref=f8e296]:
+                          - strong [ref=f8e297]: Planning
+                          - generic [ref=f8e298]: Phases and milestones that shape delivery.
+                        - generic [ref=f8e299]: "2"
+                      - button "Blocks Typed project blocks for common planning and management areas. 23" [ref=f8e301] [cursor=pointer]:
+                        - generic [ref=f8e302]:
+                          - strong [ref=f8e303]: Blocks
+                          - generic [ref=f8e304]: Typed project blocks for common planning and management areas.
+                        - generic [ref=f8e305]: "23"
+                      - button "Prompts Prompt flows, sessions, and executable steps. 3" [ref=f8e307] [cursor=pointer]:
+                        - generic [ref=f8e308]:
+                          - strong [ref=f8e309]: Prompts
+                          - generic [ref=f8e310]: Prompt flows, sessions, and executable steps.
+                        - generic [ref=f8e311]: "3"
+                      - button "Assurance Test planning and supporting evidence. 2" [ref=f8e313] [cursor=pointer]:
+                        - generic [ref=f8e314]:
+                          - strong [ref=f8e315]: Assurance
+                          - generic [ref=f8e316]: Test planning and supporting evidence.
+                        - generic [ref=f8e317]: "2"
+              - region "Project object index" [ref=f8e318]:
+                - generic [ref=f8e319]:
+                  - generic [ref=f8e320]:
+                    - paragraph [ref=f8e321]: Object index
+                    - heading "Project object index" [level=3] [ref=f8e322]
+                    - paragraph [ref=f8e323]: 6 nodes - 1 selected
+                  - generic [ref=f8e324]:
+                    - button "Minimize window" [ref=f8e325]:
+                      - generic [ref=f8e326]: minimize
+                    - button "Restart window position and size" [disabled] [ref=f8e327]:
+                      - generic [ref=f8e328]: restart_alt
+                    - button "Hide window" [ref=f8e329]:
+                      - generic [ref=f8e330]: visibility_off
+                - generic [ref=f8e332]:
+                  - generic [ref=f8e333]:
+                    - searchbox "Search project object index" [ref=f8e334]
+                    - generic "Project object index summary" [ref=f8e335]:
+                      - generic [ref=f8e336]: 6 nodes
+                      - generic [ref=f8e337]: 1 selected
+                  - tree "Project object index" [ref=f8e340]:
+                    - treeitem "Calculator Active" [level=1] [ref=f8e344]:
+                      - generic [ref=f8e345]: folder
+                      - generic [ref=f8e347]: Calculator
+                      - generic [ref=f8e348]: Act...
+                    - treeitem "Main Draft" [level=1] [ref=f8e352]:
+                      - generic [ref=f8e353]: view_in_ar
+                      - generic [ref=f8e355]: Main
+                      - generic [ref=f8e356]: Dra...
+                    - treeitem "blazor PWA wasm app Draft" [level=1] [ref=f8e360]:
+                      - generic [ref=f8e361]: grid_view
+                      - generic [ref=f8e363]: blazor PWA wasm app
+                      - generic [ref=f8e364]: Dra...
+                    - treeitem "calculator as in windows Draft" [level=1] [ref=f8e368]:
+                      - generic [ref=f8e369]: grid_view
+                      - generic [ref=f8e371]: calculator as in windows
+                      - generic [ref=f8e372]: Dra...
+                    - treeitem "Calculator UI Proposal Draft" [level=1] [selected] [ref=f8e376]:
+                      - generic [ref=f8e377]: image
+                      - generic [ref=f8e379]: Calculator UI Proposal
+                      - generic [ref=f8e380]: Dra...
+                    - treeitem "with history of calculations right column Draft" [level=1] [ref=f8e384]:
+                      - generic [ref=f8e385]: grid_view
+                      - generic [ref=f8e387]: with history of calculations right column
+                      - generic [ref=f8e388]: Dra...
+              - region "Project structure selection panel" [ref=f8e389]:
+                - generic [ref=f8e390]:
+                  - generic [ref=f8e391]:
+                    - paragraph [ref=f8e392]: Selection panel
+                    - heading "Calculator UI Proposal" [level=3] [ref=f8e393]
+                    - paragraph [ref=f8e394]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=f8e395]:
+                    - button "Minimize window" [ref=f8e396]:
+                      - generic [ref=f8e397]: minimize
+                    - button "Restart window position and size" [disabled] [ref=f8e398]:
+                      - generic [ref=f8e399]: restart_alt
+                    - button "Hide window" [ref=f8e400]:
+                      - generic [ref=f8e401]: visibility_off
+                - generic [ref=f8e403]:
+                  - generic [ref=f8e404]:
+                    - paragraph [ref=f8e405]: generated
+                    - heading "Calculator UI Proposal" [level=3] [ref=f8e406]
+                    - paragraph [ref=f8e407]: Windows-inspired calculator with calculation history column
+                    - generic [ref=f8e408]:
+                      - generic [ref=f8e409]: Draft
+                      - generic [ref=f8e411]: generated
+                      - generic [ref=f8e413]: Uploaded
+                    - generic [ref=f8e415]:
+                      - generic [ref=f8e416]:
+                        - text: Progress
+                        - strong [ref=f8e417]: 28%
+                      - generic [ref=f8e418]:
+                        - text: Priority
+                        - strong [ref=f8e419]: None
+                      - generic [ref=f8e420]:
+                        - text: Marker
+                        - strong [ref=f8e421]: None
+                  - generic [ref=f8e423]:
+                    - paragraph [ref=f8e424]: Stored artifact
+                    - generic [ref=f8e425]:
+                      - generic [ref=f8e426]:
+                        - paragraph [ref=f8e427]: calculator-ui-proposal.png
+                        - paragraph [ref=f8e428]: File system via Relative path
+                      - generic [ref=f8e429]:
+                        - generic [ref=f8e430]: Healthy
+                        - generic [ref=f8e431]: File system
+                        - generic [ref=f8e432]: System default
+                    - generic [ref=f8e434]:
+                      - generic [ref=f8e435]:
+                        - paragraph [ref=f8e436]: Catalog
+                        - paragraph [ref=f8e437]: Workspace file system
+                      - generic [ref=f8e438]:
+                        - paragraph [ref=f8e439]: Locator
+                        - paragraph [ref=f8e440]: managed-files/project-media/images/bbed91566935469aa357d2eb4c3c028b/calculator-ui-proposal-5cc9a95a1f0b4babbc29cb916f9b1348.png
+                      - generic [ref=f8e441]:
+                        - paragraph [ref=f8e442]: Route
+                        - paragraph [ref=f8e443]: /managed-files/project-media/images/bbed91566935469aa357d2eb4c3c028b/calculator-ui-proposal-5cc9a95a1f0b4babbc29cb916f9b1348.png
+                      - generic [ref=f8e444]:
+                        - paragraph [ref=f8e445]: Content type
+                        - paragraph [ref=f8e446]: image/png
+                    - paragraph [ref=f8e447]: "Stored size: 1.6 MB"
+                  - generic [ref=f8e448]:
+                    - paragraph [ref=f8e449]: Attachment preview
+                    - heading "calculator-ui-proposal.png" [level=3] [ref=f8e450]
+                    - paragraph [ref=f8e451]: The image opens through current file authority without an unsigned route.
+                    - alert [ref=f8e452]: Content opens only through the current authorized FileInteraction. Unsupported formats stay inert instead of loading an unsigned route.
+                    - generic [ref=f8e453]:
+                      - generic [ref=f8e454]: calculator-ui-proposal.png
+                      - generic [ref=f8e455]: image/png
+                    - button "Expand preview" [ref=f8e457] [cursor=pointer]
+                  - generic [ref=f8e458]:
+                    - paragraph [ref=f8e459]: Node actions
+                    - generic [ref=f8e460]:
+                      - button [ref=f8e461]:
+                        - generic [ref=f8e462]:
+                          - generic [ref=f8e463]: draw
+                          - text: Edit
+                      - button [ref=f8e465]:
+                        - generic [ref=f8e466]:
+                          - generic [ref=f8e467]: copy
+                          - text: Copy id
+                      - button [ref=f8e469]:
+                        - generic [ref=f8e470]:
+                          - generic [ref=f8e471]: copy
+                          - text: Copy info
+                      - button [ref=f8e473]:
+                        - generic [ref=f8e474]:
+                          - generic [ref=f8e475]: copy
+                          - text: Copy tree ids
+                      - button [ref=f8e477]:
+                        - generic [ref=f8e478]:
+                          - generic [ref=f8e479]: open_in_new
+                          - text: Open
+                      - button [ref=f8e481]:
+                        - generic [ref=f8e482]:
+                          - generic [ref=f8e483]: science
+                          - text: Test
+                      - button [ref=f8e485]:
+                        - generic [ref=f8e486]:
+                          - generic [ref=f8e487]: pie_chart
+                          - text: Summary
+                      - button [ref=f8e489]:
+                        - generic [ref=f8e490]:
+                          - generic [ref=f8e491]: account_tree
+                          - text: Add process
+                      - button [ref=f8e493]:
+                        - generic [ref=f8e494]:
+                          - generic [ref=f8e495]: account_tree
+                          - text: Add workflow
+                      - button [ref=f8e497]:
+                        - generic [ref=f8e498]:
+                          - generic [ref=f8e499]: link
+                          - text: Connect selected
+                      - button [ref=f8e501]:
+                        - generic [ref=f8e502]:
+                          - generic [ref=f8e503]: sync_alt
+                          - text: Reconnect
+                      - button [ref=f8e505]:
+                        - generic [ref=f8e506]:
+                          - generic [ref=f8e507]: link_off
+                          - text: Disconnect
+                      - button [ref=f8e509]:
+                        - generic [ref=f8e510]:
+                          - generic [ref=f8e511]: call_split
+                          - text: To subproject
+                      - button [ref=f8e513]:
+                        - generic [ref=f8e514]:
+                          - generic [ref=f8e515]: image
+                          - text: Export image
+                      - button [ref=f8e517]:
+                        - generic [ref=f8e518]:
+                          - generic [ref=f8e519]: delete
+                          - text: Delete
+                  - generic [ref=f8e521]:
+                    - paragraph [ref=f8e522]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=f8e523]
+                    - paragraph [ref=f8e524]:
+                      - text: The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from
+                      - strong [ref=f8e525]: Calculator UI Proposal
+                      - text: .
+                    - generic [ref=f8e526]:
+                      - generic [ref=f8e527]: "Source: Calculator UI Proposal"
+                      - generic [ref=f8e529]: "Mode: child placement"
+                    - button "Open standard blocks" [ref=f8e532]
+                  - group [ref=f8e534]:
+                    - generic [ref=f8e535]:
+                      - generic [ref=f8e537]:
+                        - strong [ref=f8e538]: Advanced details
+                        - button "Show advanced details help" [ref=f8e541] [cursor=pointer]:
+                          - generic [ref=f8e542]: "?"
+                      - generic [ref=f8e543]: expand_more
+              - generic:
+                - generic: Calculator UI Proposal is the primary selection.
+                - region "Canvas accessibility mirror":
+                  - heading "Canvas accessibility mirror" [level=3]
+                  - paragraph: 1 selected nodes across 6 canvas nodes
+                  - list:
+                    - listitem: Calculator UI ProposalWindows-inspired calculator with calculation history column • Status Draft • 3 annotations
+                    - listitem: blazor PWA wasm appStatus Draft • 3 annotations
+                    - listitem: CalculatorStatus Active • 3 annotations
+                    - listitem: calculator as in windowsStatus Draft • 3 annotations
+                    - listitem: MainStatus Draft • 3 annotations
+                    - listitem: with history of calculations right columnStatus Draft • 3 annotations
+  - generic:
+    - region "Floating conversations" [ref=f8e546]:
+      - generic [ref=f8e547]:
+        - generic [ref=f8e548]:
+          - paragraph [ref=f8e549]: Conversations
+          - heading "Chats" [level=3] [ref=f8e550]
+          - paragraph [ref=f8e551]: Start a conversation or reopen an active window.
+        - generic [ref=f8e552]:
+          - button "Minimize window" [ref=f8e553]:
+            - generic [ref=f8e554]: minimize
+          - button "Restart window position and size" [disabled] [ref=f8e555]:
+            - generic [ref=f8e556]: restart_alt
+          - button "Hide window" [ref=f8e557]:
+            - generic [ref=f8e558]: visibility_off
+      - generic [ref=f8e561]:
+        - tablist "Conversation catalog" [ref=f8e562]:
+          - tab "Available" [selected] [ref=f8e563]:
+            - generic [ref=f8e564]: add_comment
+          - tab "Active" [ref=f8e566]:
+            - generic [ref=f8e567]: forum
+        - tabpanel "Available" [ref=f8e570]:
+          - generic [ref=f8e571]:
+            - generic [ref=f8e572]:
+              - generic [ref=f8e573]:
+                - button "All" [ref=f8e574]:
+                  - generic [ref=f8e575]: forum
+                - button "Agents" [ref=f8e577]:
+                  - generic [ref=f8e578]: smart_toy
+                - button "Chats" [ref=f8e580]:
+                  - generic [ref=f8e581]: chat
+              - textbox "Search floating conversations" [ref=f8e583]:
+                - /placeholder: Search conversations
+            - list "Available conversation participants" [ref=f8e1030]:
+              - listitem [ref=f8e1031]:
+                - button "Select .NET Application Developer" [ref=f8e1032] [cursor=pointer]:
+                  - img ".NET Application Developer" [ref=f8e1033]
+                  - generic [ref=f8e1034]:
+                    - generic [ref=f8e1035]: .NET Application Developer
+                    - generic [ref=f8e1037]: .NET implementation specialist
+                    - generic [ref=f8e1038]:
+                      - generic [ref=f8e1039]: Programming
+                      - generic [ref=f8e1040]: gpt-5.6-luna
+                - generic [ref=f8e1041]:
+                  - button "Start a new chat with .NET Application Developer" [ref=f8e1043]:
+                    - generic [ref=f8e1044]: add_comment
+                    - generic [ref=f8e1045]: add comment
+                  - button "Open chat history for .NET Application Developer" [ref=f8e1047]:
+                    - generic [ref=f8e1048]: history
+                    - generic [ref=f8e1049]: history
+              - listitem [ref=f8e1050]:
+                - button "Select .NET QA Review Lead" [ref=f8e1051] [cursor=pointer]:
+                  - img ".NET QA Review Lead" [ref=f8e1052]
+                  - generic [ref=f8e1053]:
+                    - generic [ref=f8e1054]: .NET QA Review Lead
+                    - generic [ref=f8e1056]: .NET QA specialist
+                    - generic [ref=f8e1057]:
+                      - generic [ref=f8e1058]: QA
+                      - generic [ref=f8e1059]: gpt-5.6-luna
+                - generic [ref=f8e1060]:
+                  - button "Start a new chat with .NET QA Review Lead" [ref=f8e1062]:
+                    - generic [ref=f8e1063]: add_comment
+                    - generic [ref=f8e1064]: add comment
+                  - button "Open chat history for .NET QA Review Lead" [ref=f8e1066]:
+                    - generic [ref=f8e1067]: history
+                    - generic [ref=f8e1068]: history
+              - listitem [ref=f8e1069]:
+                - button "Select .NET Runtime Failure Analyst" [ref=f8e1070] [cursor=pointer]:
+                  - img ".NET Runtime Failure Analyst" [ref=f8e1071]
+                  - generic [ref=f8e1072]:
+                    - generic [ref=f8e1073]: .NET Runtime Failure Analyst
+                    - generic [ref=f8e1075]: .NET and Blazor QA diagnostic specialist
+                    - generic [ref=f8e1076]:
+                      - generic [ref=f8e1077]: QA
+                      - generic [ref=f8e1078]: gpt-5.6-luna
+                - generic [ref=f8e1079]:
+                  - button "Start a new chat with .NET Runtime Failure Analyst" [ref=f8e1081]:
+                    - generic [ref=f8e1082]: add_comment
+                    - generic [ref=f8e1083]: add comment
+                  - button "Open chat history for .NET Runtime Failure Analyst" [ref=f8e1085]:
+                    - generic [ref=f8e1086]: history
+                    - generic [ref=f8e1087]: history
+              - listitem [ref=f8e1088]:
+                - button "Select .NET Solution Architect" [ref=f8e1089] [cursor=pointer]:
+                  - img ".NET Solution Architect" [ref=f8e1090]
+                  - generic [ref=f8e1091]:
+                    - generic [ref=f8e1092]: .NET Solution Architect
+                    - generic [ref=f8e1094]: .NET architecture specialist
+                    - generic [ref=f8e1095]:
+                      - generic [ref=f8e1096]: Research
+                      - generic [ref=f8e1097]: gpt-5.6-luna
+                - generic [ref=f8e1098]:
+                  - button "Start a new chat with .NET Solution Architect" [ref=f8e1100]:
+                    - generic [ref=f8e1101]: add_comment
+                    - generic [ref=f8e1102]: add comment
+                  - button "Open chat history for .NET Solution Architect" [ref=f8e1104]:
+                    - generic [ref=f8e1105]: history
+                    - generic [ref=f8e1106]: history
+              - listitem [ref=f8e1107]:
+                - button "Select Blazor Application Developer" [ref=f8e1108] [cursor=pointer]:
+                  - img "Blazor Application Developer" [ref=f8e1109]
+                  - generic [ref=f8e1110]:
+                    - generic [ref=f8e1111]: Blazor Application Developer
+                    - generic [ref=f8e1113]: Blazor implementation specialist
+                    - generic [ref=f8e1114]:
+                      - generic [ref=f8e1115]: Programming
+                      - generic [ref=f8e1116]: gpt-5.6-luna
+                - generic [ref=f8e1117]:
+                  - button "Start a new chat with Blazor Application Developer" [ref=f8e1119]:
+                    - generic [ref=f8e1120]: add_comment
+                    - generic [ref=f8e1121]: add comment
+                  - button "Open chat history for Blazor Application Developer" [ref=f8e1123]:
+                    - generic [ref=f8e1124]: history
+                    - generic [ref=f8e1125]: history
+              - listitem [ref=f8e1126]:
+                - button "Select Business Strategist" [ref=f8e1127] [cursor=pointer]:
+                  - img "Business Strategist" [ref=f8e1128]
+                  - generic [ref=f8e1129]:
+                    - generic [ref=f8e1130]: Business Strategist
+                    - generic [ref=f8e1132]: Business planning specialist
+                    - generic [ref=f8e1133]:
+                      - generic [ref=f8e1134]: Management
+                      - generic [ref=f8e1135]: gpt-5.4-mini
+                - generic [ref=f8e1136]:
+                  - button "Start a new chat with Business Strategist" [ref=f8e1138]:
+                    - generic [ref=f8e1139]: add_comment
+                    - generic [ref=f8e1140]: add comment
+                  - button "Open chat history for Business Strategist" [ref=f8e1142]:
+                    - generic [ref=f8e1143]: history
+                    - generic [ref=f8e1144]: history
+              - listitem [ref=f8e1145]:
+                - button "Select Code Review Lead" [ref=f8e1146] [cursor=pointer]:
+                  - img "Code Review Lead" [ref=f8e1147]
+                  - generic [ref=f8e1148]:
+                    - generic [ref=f8e1149]: Code Review Lead
+                    - generic [ref=f8e1151]: Code reviewer
+                    - generic [ref=f8e1152]:
+                      - generic [ref=f8e1153]: QA
+                      - generic [ref=f8e1154]: gpt-5.6-luna
+                - generic [ref=f8e1155]:
+                  - button "Start a new chat with Code Review Lead" [ref=f8e1157]:
+                    - generic [ref=f8e1158]: add_comment
+                    - generic [ref=f8e1159]: add comment
+                  - button "Open chat history for Code Review Lead" [ref=f8e1161]:
+                    - generic [ref=f8e1162]: history
+                    - generic [ref=f8e1163]: history
+              - listitem [ref=f8e1164]:
+                - button "Select Delivery Manager" [ref=f8e1165] [cursor=pointer]:
+                  - img "Delivery Manager" [ref=f8e1166]
+                  - generic [ref=f8e1167]:
+                    - generic [ref=f8e1168]: Delivery Manager
+                    - generic [ref=f8e1170]: Delivery manager
+                    - generic [ref=f8e1171]:
+                      - generic [ref=f8e1172]: Management
+                      - generic [ref=f8e1173]: gpt-5.4-mini
+                - generic [ref=f8e1174]:
+                  - button "Start a new chat with Delivery Manager" [ref=f8e1176]:
+                    - generic [ref=f8e1177]: add_comment
+                    - generic [ref=f8e1178]: add comment
+                  - button "Open chat history for Delivery Manager" [ref=f8e1180]:
+                    - generic [ref=f8e1181]: history
+                    - generic [ref=f8e1182]: history
+              - listitem [ref=f8e1183]:
+                - button "Select Delivery QA Observer" [ref=f8e1184] [cursor=pointer]:
+                  - img "Delivery QA Observer" [ref=f8e1185]
+                  - generic [ref=f8e1186]:
+                    - generic [ref=f8e1187]: Delivery QA Observer
+                    - generic [ref=f8e1189]: QA lead and browser-proof reviewer
+                    - generic [ref=f8e1190]:
+                      - generic [ref=f8e1191]: QA
+                      - generic [ref=f8e1192]: gpt-5.6-luna
+                - generic [ref=f8e1193]:
+                  - button "Start a new chat with Delivery QA Observer" [ref=f8e1195]:
+                    - generic [ref=f8e1196]: add_comment
+                    - generic [ref=f8e1197]: add comment
+                  - button "Open chat history for Delivery QA Observer" [ref=f8e1199]:
+                    - generic [ref=f8e1200]: history
+                    - generic [ref=f8e1201]: history
+              - listitem [ref=f8e1202]:
+                - button "Select Financial Strategist" [ref=f8e1203] [cursor=pointer]:
+                  - img "Financial Strategist" [ref=f8e1204]
+                  - generic [ref=f8e1205]:
+                    - generic [ref=f8e1206]: Financial Strategist
+                    - generic [ref=f8e1208]: Financial planning specialist
+                    - generic [ref=f8e1209]:
+                      - generic [ref=f8e1210]: Spreadsheet
+                      - generic [ref=f8e1211]: gpt-5.4-mini
+                - generic [ref=f8e1212]:
+                  - button "Start a new chat with Financial Strategist" [ref=f8e1214]:
+                    - generic [ref=f8e1215]: add_comment
+                    - generic [ref=f8e1216]: add comment
+                  - button "Open chat history for Financial Strategist" [ref=f8e1218]:
+                    - generic [ref=f8e1219]: history
+                    - generic [ref=f8e1220]: history
+              - listitem [ref=f8e1221]:
+                - button "Select HR Staffing Manager" [ref=f8e1222] [cursor=pointer]:
+                  - img "HR Staffing Manager" [ref=f8e1223]
+                  - generic [ref=f8e1224]:
+                    - generic [ref=f8e1225]: HR Staffing Manager
+                    - generic [ref=f8e1227]: HR staffing and assignment manager
+                    - generic [ref=f8e1228]:
+                      - generic [ref=f8e1229]: Management
+                      - generic [ref=f8e1230]: gpt-5.4-mini
+                - generic [ref=f8e1231]:
+                  - button "Start a new chat with HR Staffing Manager" [ref=f8e1233]:
+                    - generic [ref=f8e1234]: add_comment
+                    - generic [ref=f8e1235]: add comment
+                  - button "Open chat history for HR Staffing Manager" [ref=f8e1237]:
+                    - generic [ref=f8e1238]: history
+                    - generic [ref=f8e1239]: history
+              - listitem [ref=f8e1240]:
+                - button "Select JavaScript Application Developer" [ref=f8e1241] [cursor=pointer]:
+                  - img "JavaScript Application Developer" [ref=f8e1242]
+                  - generic [ref=f8e1243]:
+                    - generic [ref=f8e1244]: JavaScript Application Developer
+                    - generic [ref=f8e1246]: JavaScript implementation specialist
+                    - generic [ref=f8e1247]:
+                      - generic [ref=f8e1248]: Programming
+                      - generic [ref=f8e1249]: gpt-5.6-luna
+                - generic [ref=f8e1250]:
+                  - button "Start a new chat with JavaScript Application Developer" [ref=f8e1252]:
+                    - generic [ref=f8e1253]: add_comment
+                    - generic [ref=f8e1254]: add comment
+                  - button "Open chat history for JavaScript Application Developer" [ref=f8e1256]:
+                    - generic [ref=f8e1257]: history
+                    - generic [ref=f8e1258]: history
+              - listitem [ref=f8e1259]:
+                - button "Select JavaScript QA Review Lead" [ref=f8e1260] [cursor=pointer]:
+                  - img "JavaScript QA Review Lead" [ref=f8e1261]
+                  - generic [ref=f8e1262]:
+                    - generic [ref=f8e1263]: JavaScript QA Review Lead
+                    - generic [ref=f8e1265]: JavaScript QA specialist
+                    - generic [ref=f8e1266]:
+                      - generic [ref=f8e1267]: QA
+                      - generic [ref=f8e1268]: gpt-5.6-luna
+                - generic [ref=f8e1269]:
+                  - button "Start a new chat with JavaScript QA Review Lead" [ref=f8e1271]:
+                    - generic [ref=f8e1272]: add_comment
+                    - generic [ref=f8e1273]: add comment
+                  - button "Open chat history for JavaScript QA Review Lead" [ref=f8e1275]:
+                    - generic [ref=f8e1276]: history
+                    - generic [ref=f8e1277]: history
+              - listitem [ref=f8e1278]:
+                - button "Select JavaScript Solution Architect" [ref=f8e1279] [cursor=pointer]:
+                  - img "JavaScript Solution Architect" [ref=f8e1280]
+                  - generic [ref=f8e1281]:
+                    - generic [ref=f8e1282]: JavaScript Solution Architect
+                    - generic [ref=f8e1284]: JavaScript architecture specialist
+                    - generic [ref=f8e1285]:
+                      - generic [ref=f8e1286]: Research
+                      - generic [ref=f8e1287]: gpt-5.6-luna
+                - generic [ref=f8e1288]:
+                  - button "Start a new chat with JavaScript Solution Architect" [ref=f8e1290]:
+                    - generic [ref=f8e1291]: add_comment
+                    - generic [ref=f8e1292]: add comment
+                  - button "Open chat history for JavaScript Solution Architect" [ref=f8e1294]:
+                    - generic [ref=f8e1295]: history
+                    - generic [ref=f8e1296]: history
+              - listitem [ref=f8e1297]:
+                - button "Select Mail Triage Analyst" [ref=f8e1298] [cursor=pointer]:
+                  - img "Mail Triage Analyst" [ref=f8e1299]
+                  - generic [ref=f8e1300]:
+                    - generic [ref=f8e1301]: Mail Triage Analyst
+                    - generic [ref=f8e1303]: Mail and inbox worker
+                    - generic [ref=f8e1304]:
+                      - generic [ref=f8e1305]: Mail
+                      - generic [ref=f8e1306]: gpt-5.4-mini
+                - generic [ref=f8e1307]:
+                  - button "Start a new chat with Mail Triage Analyst" [ref=f8e1309]:
+                    - generic [ref=f8e1310]: add_comment
+                    - generic [ref=f8e1311]: add comment
+                  - button "Open chat history for Mail Triage Analyst" [ref=f8e1313]:
+                    - generic [ref=f8e1314]: history
+                    - generic [ref=f8e1315]: history
+              - listitem [ref=f8e1316]:
+                - button "Select Marketing Specialist" [ref=f8e1317] [cursor=pointer]:
+                  - img "Marketing Specialist" [ref=f8e1318]
+                  - generic [ref=f8e1319]:
+                    - generic [ref=f8e1320]: Marketing Specialist
+                    - generic [ref=f8e1322]: Marketing planning specialist
+                    - generic [ref=f8e1323]:
+                      - generic [ref=f8e1324]: Sales
+                      - generic [ref=f8e1325]: gpt-5.4-mini
+                - generic [ref=f8e1326]:
+                  - button "Start a new chat with Marketing Specialist" [ref=f8e1328]:
+                    - generic [ref=f8e1329]: add_comment
+                    - generic [ref=f8e1330]: add comment
+                  - button "Open chat history for Marketing Specialist" [ref=f8e1332]:
+                    - generic [ref=f8e1333]: history
+                    - generic [ref=f8e1334]: history
+              - listitem [ref=f8e1335]:
+                - button "Select Portfolio Architect" [ref=f8e1336] [cursor=pointer]:
+                  - img "Portfolio Architect" [ref=f8e1337]
+                  - generic [ref=f8e1338]:
+                    - generic [ref=f8e1339]: Portfolio Architect
+                    - generic [ref=f8e1341]: Architecture steward
+                    - generic [ref=f8e1342]:
+                      - generic [ref=f8e1343]: Research
+                      - generic [ref=f8e1344]: No model configured
+                - generic [ref=f8e1345]:
+                  - button "Start a new chat with Portfolio Architect" [ref=f8e1347]:
+                    - generic [ref=f8e1348]: add_comment
+                    - generic [ref=f8e1349]: add comment
+                  - button "Open chat history for Portfolio Architect" [ref=f8e1351]:
+                    - generic [ref=f8e1352]: history
+                    - generic [ref=f8e1353]: history
+              - listitem [ref=f8e1354]:
+                - button "Select Programming Workspace Analyst" [ref=f8e1355] [cursor=pointer]:
+                  - img "Programming Workspace Analyst" [ref=f8e1356]
+                  - generic [ref=f8e1357]:
+                    - generic [ref=f8e1358]: Programming Workspace Analyst
+                    - generic [ref=f8e1360]: Programming and repository worker
+                    - generic [ref=f8e1361]:
+                      - generic [ref=f8e1362]: Programming
+                      - generic [ref=f8e1363]: gpt-5.6-luna
+                - generic [ref=f8e1364]:
+                  - button "Start a new chat with Programming Workspace Analyst" [ref=f8e1366]:
+                    - generic [ref=f8e1367]: add_comment
+                    - generic [ref=f8e1368]: add comment
+                  - button "Open chat history for Programming Workspace Analyst" [ref=f8e1370]:
+                    - generic [ref=f8e1371]: history
+                    - generic [ref=f8e1372]: history
+              - listitem [ref=f8e1373]:
+                - button "Select Release Readiness Manager" [ref=f8e1374] [cursor=pointer]:
+                  - img "Release Readiness Manager" [ref=f8e1375]
+                  - generic [ref=f8e1376]:
+                    - generic [ref=f8e1377]: Release Readiness Manager
+                    - generic [ref=f8e1379]: Release readiness manager
+                    - generic [ref=f8e1380]:
+                      - generic [ref=f8e1381]: Management
+                      - generic [ref=f8e1382]: gpt-5.4-mini
+                - generic [ref=f8e1383]:
+                  - button "Start a new chat with Release Readiness Manager" [ref=f8e1385]:
+                    - generic [ref=f8e1386]: add_comment
+                    - generic [ref=f8e1387]: add comment
+                  - button "Open chat history for Release Readiness Manager" [ref=f8e1389]:
+                    - generic [ref=f8e1390]: history
+                    - generic [ref=f8e1391]: history
+              - listitem [ref=f8e1392]:
+                - button "Select Research Deep Dive Analyst" [ref=f8e1393] [cursor=pointer]:
+                  - img "Research Deep Dive Analyst" [ref=f8e1394]
+                  - generic [ref=f8e1395]:
+                    - generic [ref=f8e1396]: Research Deep Dive Analyst
+                    - generic [ref=f8e1398]: Research and long-context worker
+                    - generic [ref=f8e1399]:
+                      - generic [ref=f8e1400]: Research
+                      - generic [ref=f8e1401]: gpt-5.4-mini
+                - generic [ref=f8e1402]:
+                  - button "Start a new chat with Research Deep Dive Analyst" [ref=f8e1404]:
+                    - generic [ref=f8e1405]: add_comment
+                    - generic [ref=f8e1406]: add comment
+                  - button "Open chat history for Research Deep Dive Analyst" [ref=f8e1408]:
+                    - generic [ref=f8e1409]: history
+                    - generic [ref=f8e1410]: history
+              - listitem [ref=f8e1411]:
+                - button "Select Security Reviewer" [ref=f8e1412] [cursor=pointer]:
+                  - img "Security Reviewer" [ref=f8e1413]
+                  - generic [ref=f8e1414]:
+                    - generic [ref=f8e1415]: Security Reviewer
+                    - generic [ref=f8e1417]: Security reviewer
+                    - generic [ref=f8e1418]:
+                      - generic [ref=f8e1419]: QA
+                      - generic [ref=f8e1420]: gpt-5.6-luna
+                - generic [ref=f8e1421]:
+                  - button "Start a new chat with Security Reviewer" [ref=f8e1423]:
+                    - generic [ref=f8e1424]: add_comment
+                    - generic [ref=f8e1425]: add comment
+                  - button "Open chat history for Security Reviewer" [ref=f8e1427]:
+                    - generic [ref=f8e1428]: history
+                    - generic [ref=f8e1429]: history
+              - listitem [ref=f8e1430]:
+                - button "Select Spreadsheet Analyst" [ref=f8e1431] [cursor=pointer]:
+                  - img "Spreadsheet Analyst" [ref=f8e1432]
+                  - generic [ref=f8e1433]:
+                    - generic [ref=f8e1434]: Spreadsheet Analyst
+                    - generic [ref=f8e1436]: Spreadsheet and tabular-data worker
+                    - generic [ref=f8e1437]:
+                      - generic [ref=f8e1438]: Spreadsheet
+                      - generic [ref=f8e1439]: gpt-5.4-mini
+                - generic [ref=f8e1440]:
+                  - button "Start a new chat with Spreadsheet Analyst" [ref=f8e1442]:
+                    - generic [ref=f8e1443]: add_comment
+                    - generic [ref=f8e1444]: add comment
+                  - button "Open chat history for Spreadsheet Analyst" [ref=f8e1446]:
+                    - generic [ref=f8e1447]: history
+                    - generic [ref=f8e1448]: history
+              - listitem [ref=f8e1449]:
+                - button "Select UI Review Lead" [ref=f8e1450] [cursor=pointer]:
+                  - img "UI Review Lead" [ref=f8e1451]
+                  - generic [ref=f8e1452]:
+                    - generic [ref=f8e1453]: UI Review Lead
+                    - generic [ref=f8e1455]: UI reviewer
+                    - generic [ref=f8e1456]:
+                      - generic [ref=f8e1457]: QA
+                      - generic [ref=f8e1458]: gpt-5.6-luna
+                - generic [ref=f8e1459]:
+                  - button "Start a new chat with UI Review Lead" [ref=f8e1461]:
+                    - generic [ref=f8e1462]: add_comment
+                    - generic [ref=f8e1463]: add comment
+                  - button "Open chat history for UI Review Lead" [ref=f8e1465]:
+                    - generic [ref=f8e1466]: history
+                    - generic [ref=f8e1467]: history
+    - region "Chat with Portfolio Architect" [ref=f8e1469]:
+      - generic [ref=f8e1470]:
+        - generic [ref=f8e1471]:
+          - paragraph [ref=f8e1472]: Active agent chat
+          - heading "Portfolio Architect" [level=3] [ref=f8e1473]
+          - paragraph [ref=f8e1474]: Architecture steward
+        - generic [ref=f8e1475]:
+          - button "Minimize window" [ref=f8e1476]:
+            - generic [ref=f8e1477]: minimize
+          - button "Restart window position and size" [disabled] [ref=f8e1478]:
+            - generic [ref=f8e1479]: restart_alt
+          - button "Hide window" [ref=f8e1480]:
+            - generic [ref=f8e1481]: visibility_off
+      - generic [ref=f8e1483]:
+        - generic [ref=f8e1484]:
+          - generic [ref=f8e1485]: Project structure · Calculator
+          - generic [ref=f8e1486]: Context access allowed
+          - generic [ref=f8e1487]: "Following: Project structure · Calculator / canvas"
+          - button "Detach" [ref=f8e1488]:
+            - generic [ref=f8e1489]: link_off
+        - article [ref=f8e1494]:
+          - generic [ref=f8e1496]:
+            - generic [ref=f8e1497]:
+              - img "Portfolio Architect" [ref=f8e1498]
+              - generic [ref=f8e1499]:
+                - generic [ref=f8e1500]:
+                  - generic [ref=f8e1501]: Active
+                  - generic [ref=f8e1502]: Completed
+                  - generic [ref=f8e1503]: Auto Approve
+                  - generic [ref=f8e1504]: 2 messages
+                  - generic [ref=f8e1505]: 08/28/2026 11:35
+                - generic [ref=f8e1508]:
+                  - paragraph [ref=f8e1509]: New exploration thread
+                  - button "Edit Title" [ref=f8e1510]:
+                    - generic [ref=f8e1511]: edit
+                    - generic [ref=f8e1512]: edit
+            - generic [ref=f8e1513]:
+              - button "New thread" [ref=f8e1514]:
+                - generic [ref=f8e1515]: add_comment
+              - button "Runtime details" [ref=f8e1517]:
+                - generic [ref=f8e1518]: terminal
+          - generic [ref=f8e1521]:
+            - generic [ref=f8e1523]:
+              - generic [ref=f8e1524]:
+                - generic [ref=f8e1525]: User
+                - generic [ref=f8e1526]: 08/28/2026 11:34
+              - generic [ref=f8e1527]:
+                - paragraph [ref=f8e1528]: Analyze the existing Calculator UI Proposal image asset in this project (node custom:e06c5abebeb9430c9f623b7b56e4d39b). Use image analysis to inspect its actual pixels, not just its title or notes. Briefly describe the calculator layout and whether a right-side calculation history is visible. Do not generate another image or change any project content.
+                - generic [ref=f8e1529]:
+                  - generic [ref=f8e1530]: ~88 tokens
+                  - button "Copy user message" [ref=f8e1532] [cursor=pointer]:
+                    - generic [ref=f8e1533]: content_copy
+            - generic [ref=f8e1537]:
+              - generic [ref=f8e1538]:
+                - img "Portfolio Architect" [ref=f8e1539]
+                - generic [ref=f8e1540]: Assistant
+                - generic [ref=f8e1541]: 08/28/2026 11:35
+              - generic [ref=f8e1542]:
+                - generic [ref=f8e1543]:
+                  - paragraph [ref=f8e1544]: "The image shows a centered, rounded calculator UI on a light-gray background. It has:"
+                  - list [ref=f8e1545]:
+                    - listitem [ref=f8e1546]:
+                      - text: A large display showing
+                      - strong [ref=f8e1547]: “2,484”
+                    - listitem [ref=f8e1548]: A four-column keypad with clear/sign controls, arithmetic operators, digits, decimal, and equals buttons
+                    - listitem [ref=f8e1549]: A blue-highlighted plus button
+                    - listitem [ref=f8e1550]:
+                      - text: A separate panel on the right labeled
+                      - strong [ref=f8e1551]: “History”
+                      - text: ", containing prior calculations such as"
+                      - strong [ref=f8e1552]: “60 + 8 → 68”
+                      - text: and
+                      - strong [ref=f8e1553]: “32 × 78 → 2,496”
+                  - paragraph [ref=f8e1554]:
+                    - strong [ref=f8e1555]: Yes—the right-side calculation history column is clearly visible
+                    - text: ", occupying roughly the right third of the interface. I inspected the raster image through"
+                    - code [ref=f8e1556]: project_structure_asset_image_analyze
+                    - text: ; no project content was changed.
+                - generic [ref=f8e1557]:
+                  - generic [ref=f8e1558]: ~433 tokens
+                  - button "Copy assistant message" [ref=f8e1560] [cursor=pointer]:
+                    - generic [ref=f8e1561]: content_copy
+            - button "Worked for 27s 18 steps Completed. Execution run response persisted..." [ref=f8e1565] [cursor=pointer]:
+              - generic [ref=f8e1566]:
+                - generic [ref=f8e1567]: Worked for 27s
+                - generic [ref=f8e1568]: 18 steps
+                - generic [ref=f8e1569]: Completed. Execution run response persisted...
+          - status [ref=f8e1570]:
+            - generic [ref=f8e1571]: Completed
+            - generic [ref=f8e1572]: The agent operation completed.
+          - generic [ref=f8e1577]:
+            - textbox "Ask for a plan, a diagnosis, or a concrete next step." [ref=f8e1578]
+            - generic [ref=f8e1579]:
+              - button "Insert from prompt gallery" [ref=f8e1580]:
+                - generic [ref=f8e1581]: library_books
+                - generic [ref=f8e1582]: library books
+              - generic "Attach image file" [ref=f8e1583] [cursor=pointer]: image
+              - button "Attach workspace artifact" [ref=f8e1585]:
+                - generic [ref=f8e1586]: add
+                - generic [ref=f8e1587]: add
+              - button "Send prompt" [ref=f8e1588]:
+                - generic [ref=f8e1589]: send
+                - generic [ref=f8e1590]: send
+              - button "Start voice recording" [disabled] [ref=f8e1591]:
+                - generic [ref=f8e1592]: mic
+                - generic [ref=f8e1593]: mic
+              - button "Speak latest assistant message" [disabled] [ref=f8e1594]:
+                - generic [ref=f8e1595]: volume_up
+                - generic [ref=f8e1596]: volume up
+              - button "Toggle audio mode" [disabled] [ref=f8e1597]:
+                - generic [ref=f8e1598]: hearing
+                - generic [ref=f8e1599]: hearing
