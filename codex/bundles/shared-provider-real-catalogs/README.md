@@ -24,6 +24,8 @@ actual model IDs, authoritative catalog membership and honest prices.
 6. SB06: scope picker, durable token lifecycle and fresh 5214 handoff.
 7. SB07: shared thinking capabilities, request enforcement and main model suggestions.
 8. SB08: real multi-agent thinking proof; preserve all three instances.
+9. SB09: provider model thinking configuration and stale import recovery.
+10. SB10: actual source and both-client UI proof, including 5214.
 
 ## Dependency And Validation Map
 
@@ -43,15 +45,20 @@ their overflow. No responsive redesign or shared component-library change.
 ## Validation Summary
 
 - Bundle preparation status: Passed.
-- Execution status: SB01-SB08 completed for owned behavior; broader test limitations remain explicit.
+- Execution status: SB09/SB10 completed with actual source and both-client validation.
 - Subbundle gate review: Passed for requested behavioral/architecture scope.
-- Final closure gate: N011/N012 solved; see reviews/03-thinking-final-verifier.md.
+- Final closure gate: N013/N014 closed by reviews/04-model-thinking-final-verifier.md;
+  previous verifiers remain historical evidence.
 - SB07/SB08: 308 focused cases pass with exact discovery. Seven UI-configured agents
   completed nine real requests with expected independent efforts and complete source usage.
   Source/client real model labels, natural order and supported efforts match exactly.
   See proof/SB08/manifest.md, including the OpenAI Chat Completions transport limitation.
-- Current deployment: all three hosts run thinking-20260827-6, HTTP 200 Healthy, data intact.
+- Current deployment: all three hosts run model-thinking-20260828-2, HTTP 200 Healthy, data intact.
   5214 was NOT reset in this follow-up. The history below describes earlier checkpoints.
+- SB09/SB10: source-owned per-model Thinking settings, explicit stale import refresh,
+  229 focused passing tests, exact agent/Simple Chat model choices and eight real
+  requests with source usage. See proof/SB10/manifest.md and
+  subbundles/10-model-thinking-ui-proof/HANDOFF.md. Broad failures remain separate.
 - Browser validation analytics: all three build6 real UI tests passed. OpenAI has 128
   discovered IDs, the image profile five, and Ollama 72 installed IDs. Full identity,
   all nine price fields and private-flag equality are asserted, not only counts.
@@ -64,7 +71,10 @@ their overflow. No responsive redesign or shared component-library change.
 - Historical SB06 broader runs: Unit 6988 pass/1 fail; Integration 1121 pass/17 fail/1 skip.
   Unchanged fixture failures and scope limits are in proof/SB06/broad-regression-results.md.
   No clean-whole-repository claim is made.
-- Latest broad checkpoint: Unit 7014 pass/1 fail; Components 1103 pass/53 fail;
+- Current SB09 broad checkpoint: Unit 7037 pass/1 fail; Components 1110 pass/52 fail;
+  Integration 1133 pass/10 fail/1 skip. Every failed identity occurs in SB07;
+  exact reviewed causes and deferred-theory discovery are in proof/SB09/broad-regression-results.md.
+- Historical SB07 broad checkpoint: Unit 7014 pass/1 fail; Components 1103 pass/53 fail;
   Integration 1121 pass/18 fail/1 skip. Related failures were repaired in the final
   focused scope; exact limits are in proof/SB07/broad-regression-results.md.
 - SB04: 36 focused cases pass; fresh client has zero providers/sources/imports/secrets

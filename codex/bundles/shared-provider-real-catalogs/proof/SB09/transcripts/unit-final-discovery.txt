@@ -1,0 +1,140 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Per_model_default_is_used_locally_and_published_without_freezing_client_inheritance
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Reset_removes_only_the_selected_override_and_recovers_discovery
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Shared_import_never_uses_local_override_to_guess_missing_source_metadata
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Default_outside_allowed_efforts_and_openai_boolean_controls_are_rejected
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_overrides_discovery_and_survives_health_refresh
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_is_published_and_enforced_for_shared_model
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Explicit_unsupported_overrides_a_known_model_default
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"supported\",\"contr"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"unsupported\",\"con"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"supported\",\"contr"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"supported\",\"contr"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"unsupported\",\"con"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":0,\"controlMode\":\"e"···)
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SharedThinkingEffort_Publication_copies_support_default_and_main_suggestions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationDoesNotInventOpenAiModelsWithoutPersistedSuggestions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationModelSetMatchesSourceRuntimeMapper(connector: "provider.openai", kind: OpenAi, purpose: Chat)
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationModelSetMatchesSourceRuntimeMapper(connector: "provider.openai", kind: OpenAi, purpose: ImageGeneration)
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationModelSetMatchesSourceRuntimeMapper(connector: "provider.ollama.local", kind: Ollama, purpose: Chat)
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationRejectsConfiguredCatalogBeyondProtocolModelLimit
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationPricesMatchEffectiveSourcePricesWithoutPersistedPricing
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.EligibleChatProfileIntersectsTypedMetadataProfileAndRelayCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.DisabledProfileIsIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SyntheticImportedAndRuntimeFallbackProfilesAreIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnknownOrNonExecutionConnectorIsIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MissingRelayDescriptorIsIneligibleWithActionableReason
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MalformedMetadataMissingSecretOrInvalidModelsAreIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ImageProfileRequiresImageRelayAndAdvertisesOnlyImageCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnsupportedOptionalProfileCapabilitiesAreOmittedFromIntersection
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorExcludesUnpublishedAndIneligibleProfiles
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorCreatesStablePublicIdentitiesAndDistinctDuplicateModelRoutes
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorProducesCanonicalOrderingAndDeterministicRevisions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PrivateProfileChangesDoNotChangePublicRevisionOrEntityTag
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicProfileChangesChangePublicationAndCatalogRevisions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SerializedCatalogContainsNoPrivateProviderFieldsOrValues
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.RoutingIndexResolvesExactPublishedModelAndRejectsUnknownModel
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationPublishesAndUnpublishesWithPostCommitActivityAndInvalidation
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationRejectsIneligibleAndStaleRequestsWithoutPostCommitSideEffects
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.QueryCacheUsesPersistedStampAcrossInstancesAndRechecksCurrentEligibility
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Upstream_diagnostics_only_expose_allowlisted_protocol_tokens(body: "{\"error\":{\"code\":\"unsupported_value\",\"param"···, code: "unsupported_value", parameter: "temperature")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Upstream_diagnostics_only_expose_allowlisted_protocol_tokens(body: "{\"error\":{\"code\":\"private code\",\"param\":\""···, code: "unclassified", parameter: "unclassified")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Upstream_diagnostics_only_expose_allowlisted_protocol_tokens(body: "not json", code: "unclassified", parameter: "unclassified")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Upstream_diagnostics_only_expose_allowlisted_protocol_tokens(body: "[]", code: "unclassified", parameter: "unclassified")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Shared_temperature_follows_source_model_policy(kind: OpenAi, model: "gpt-5.6-sol", omit: True)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Shared_temperature_follows_source_model_policy(kind: OpenAi, model: "gpt-5.4-mini", omit: True)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Shared_temperature_follows_source_model_policy(kind: OpenAi, model: "gpt-4.1", omit: False)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Shared_temperature_follows_source_model_policy(kind: Ollama, model: "gptoss20b64k:latest", omit: False)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Source_capability_survives_wire_and_client_override(model: "gpt-5.6-sol", token: "low")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Source_capability_survives_wire_and_client_override(model: "gpt-5.6-sol", token: "max")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Source_capability_survives_wire_and_client_override(model: "gpt-5.4-mini", token: "high")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Source_capability_survives_wire_and_client_override(model: "gpt-5.4-mini", token: "none")
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Discovered_ollama_alias_does_not_use_client_openai_family_guessing
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Source_default_is_displayed_but_not_sent_as_a_client_override
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Per_request_override_wins_and_omission_uses_current_source_default(operation: ChatCompletions)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Per_request_override_wins_and_omission_uses_current_source_default(operation: Responses)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Unsupported_and_unknown_reject_explicit_override(support: Unknown)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Unsupported_and_unknown_reject_explicit_override(support: Unsupported)
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Missing_metadata_never_infers_reasoning_from_a_known_model_name
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Capability_changes_invalidate_prepared_agent_cache
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Boolean_controls_and_invalid_defaults_are_not_silently_downgraded
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Invalid_wire_capability_rejects_duplicates_and_numeric_enum_values
+    CanDoItAll.Tests.Unit.SharedThinkingEffortTests.Main_model_suggestions_exclude_snapshots_and_obsolete_models
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_models_omit_temperature(model: "gpt-5")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_models_omit_temperature(model: "gpt-5.4-mini")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_models_omit_temperature(model: "gpt-5.2")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_models_omit_temperature(model: "o1-mini")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_models_omit_temperature(model: "o3")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_models_omit_temperature(model: "o4-mini")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Non_reasoning_models_keep_temperature_unless_forced(model: "gpt-4o-mini")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Non_reasoning_models_keep_temperature_unless_forced(model: "gpt-4.1")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Non_reasoning_models_keep_temperature_unless_forced(model: "qwen3.5:9b")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Forced_omission_applies_to_non_openai_providers
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_model_uses_agent_reasoning_effort_over_provider
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_reasoning_model_reads_nested_provider_reasoning_effort
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_non_reasoning_model_rejects_agent_override
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_non_reasoning_model_ignores_provider_default
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Invalid_reasoning_effort_fails_explicitly
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_supported_transports_apply_reasoning_effort(transport: Responses)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_supported_transports_apply_reasoning_effort(transport: ChatCompletions)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_model_capability_distinguishes_supported_unsupported_and_unknown(model: "gpt-5.4", expectedStatus: Supported)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_model_capability_distinguishes_supported_unsupported_and_unknown(model: "gpt-4.1", expectedStatus: Unsupported)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_model_capability_distinguishes_supported_unsupported_and_unknown(model: "custom-deployment-west", expectedStatus: Unknown)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_model_matrix_exposes_only_documented_effort_levels
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_registry_rows_are_unique_complete_and_internally_valid
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_pro_model_requires_responses_transport_and_uses_its_narrow_level_set
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_unknown_variant_is_not_misclassified_by_a_broad_prefix
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_registry_matches_only_exact_models_or_strict_date_snapshots(model: "gpt-5.4-2026-03-05", expectedStatus: Supported)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_registry_matches_only_exact_models_or_strict_date_snapshots(model: "gpt-4.1-2025-04-14", expectedStatus: Unsupported)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_registry_matches_only_exact_models_or_strict_date_snapshots(model: "gpt-5.4-2026", expectedStatus: Unknown)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_registry_matches_only_exact_models_or_strict_date_snapshots(model: "gpt-5.4-2026----", expectedStatus: Unknown)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_registry_matches_only_exact_models_or_strict_date_snapshots(model: "gpt-5.4-custom", expectedStatus: Unknown)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Azure_deployment_requires_exact_provider_scoped_capability_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Effort_enum_preserves_existing_values_and_capability_normalization_uses_semantic_order
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Max_reasoning_effort_is_parsed_and_formatted_for_openai_models
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Max_reasoning_effort_fails_before_calling_unsupported_openai_models(model: "gpt-5.4")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Max_reasoning_effort_fails_before_calling_unsupported_openai_models(model: "gpt-5.5")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Max_reasoning_effort_fails_before_calling_unsupported_openai_models(model: "o3")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_defined_capability_exposes_only_the_models_native_control_shape(model: "qwen3.5:2b", usesLevels: False)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_defined_capability_exposes_only_the_models_native_control_shape(model: "gemma4:12b", usesLevels: False)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_defined_capability_exposes_only_the_models_native_control_shape(model: "deepseek-r1:14b", usesLevels: False)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_defined_capability_exposes_only_the_models_native_control_shape(model: "gpt-oss:20b", usesLevels: True)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_defined_capability_exposes_only_the_models_native_control_shape(model: "gptoss32k:latest", usesLevels: True)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_discovered_capability_overrides_defined_model_family_fallback(model: "custom-thinking:latest", family: "custom", discoveredStatus: Supported, expectsAllowedEfforts: True)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_discovered_capability_overrides_defined_model_family_fallback(model: "gpt-oss:20b", family: "gptoss", discoveredStatus: Unsupported, expectsAllowedEfforts: False)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_discovered_capability_overrides_defined_model_family_fallback(model: "custom-unknown", family: "custom", discoveredStatus: Unknown, expectsAllowedEfforts: False)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_discovered_gptoss_capability_exposes_levels_without_disable(model: "gpt-oss:20b", family: "gptoss")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_discovered_gptoss_capability_exposes_levels_without_disable(model: "gptoss32k:latest", family: "gptoss")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_unknown_discovery_does_not_eclipse_a_known_family_definition
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Override_support_query_uses_the_same_provider_model_capability_as_save_and_ui
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Thinking_effort_reader_supports_legacy_root_nested_and_ollama_aliases(configurationJson: "{\"reasoningEffort\":\"high\"}", expectedEffort: High)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Thinking_effort_reader_supports_legacy_root_nested_and_ollama_aliases(configurationJson: "{\"reasoningEffort\":\"minimal\"}", expectedEffort: Minimal)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Thinking_effort_reader_supports_legacy_root_nested_and_ollama_aliases(configurationJson: "{\"modelParameters\":{\"reasoningEffort\":\"low\"}"···, expectedEffort: Low)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Thinking_effort_reader_supports_legacy_root_nested_and_ollama_aliases(configurationJson: "{\"think\":true}", expectedEffort: Medium)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Thinking_effort_reader_supports_legacy_root_nested_and_ollama_aliases(configurationJson: "{\"modelParameters\":{\"think\":false}}", expectedEffort: None)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Thinking_effort_writer_canonicalizes_and_resets_without_losing_unrelated_configuration
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Provider_default_writer_uses_the_same_canonical_nested_contract
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Max_output_tokens_prefers_agent_configuration_over_provider_configuration
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Gpt5_max_output_tokens_accepts_128k_and_rejects_larger_values
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Older_openai_models_keep_the_conservative_output_token_limit(model: "gpt-4.1")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Older_openai_models_keep_the_conservative_output_token_limit(model: "gpt-4o")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_num_predict_is_treated_as_max_output_tokens
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_legacy_think_false_maps_to_explicit_none
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_runtime_ignores_legacy_ollama_think_aliases(providerConfigurationJson: "{\"think\":true}", agentConfigurationJson: "{}")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Openai_runtime_ignores_legacy_ollama_think_aliases(providerConfigurationJson: "{}", agentConfigurationJson: "{\"modelParameters\":{\"think\":false}}")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Ollama_defaults_bound_generation_and_inherit_thinking_effort
+    CanDoItAll.Tests.Unit.AgentFramework.AgentProviderModelParameterPolicyTests.Invalid_max_output_tokens_fails_explicitly
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_PersistsNormalizedPerModelThinkingCapabilities
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_PreservesAzureCapabilitiesWhenRefreshDoesNotProvideMetadata
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_ClearsAzureCapabilitiesWhenRefreshProvidesAuthoritativeEmptyMetadata
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_PreservesDiscoveredThinkingCapabilitiesDuringNonIdentityEdit
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.EditorRoundTrip_PreservesThinkingCapabilitiesWithoutCurrentProfileFallback
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_PreservesExplicitAzureKindForOrdinaryAzureName
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_InvalidatesDiscoveredThinkingCapabilitiesWhenBaseUrlChanges
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_InvalidatesOllamaDiscoveryWhenProviderKindChangesToOpenAi
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ResolveCapability_IgnoresStoredOllamaDiscoveryForOpenAiProvider
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_RejectsDuplicateModelThinkingCapabilitiesCaseInsensitively

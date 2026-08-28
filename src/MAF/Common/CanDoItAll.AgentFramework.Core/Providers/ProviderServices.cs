@@ -44,6 +44,14 @@ public sealed class ProviderProfileService : IProviderProfileService
         var normalizedBaseUrl = NormalizeEditorBaseUrl(model.BaseUrl);
         var normalizedConfigurationJson =
             NormalizeEditorConfigurationJson(model.ConfigurationJson);
+        try {
+            ProviderModelThinkingConfiguration.ValidateForProvider(normalizedConfigurationJson, model.Kind, model.Transport, model.Purpose);
+            if (current is not null && current.Kind != model.Kind && ProviderModelThinkingConfiguration.Read(normalizedConfigurationJson).Count > 0) {
+                throw new InvalidOperationException("Clear model thinking overrides before changing provider kind.");
+            }
+        } catch (InvalidOperationException exception) {
+            throw new ProviderProfileValidationException(exception.Message);
+        }
         var providerIdentityChanged = current is not null &&
                                       (current.Kind != model.Kind ||
                                        !string.Equals(

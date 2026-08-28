@@ -2,6 +2,14 @@
 
 ## Status
 
+Current extension SB09/SB10: implementation, 229 focused tests, eight actual upstream
+requests and source/5212/5214 UI acceptance pass. All required broad suites finished:
+Unit 7037/1, Components 1110/52, Integration 1133/10 pass/fail plus one skip. All
+failed identities and reviewed causes are present in SB07. The requested-scope closure
+gate passes; the full repository is not green. See proof/SB09/manifest.md and proof/SB10/manifest.md.
+All apps now run model-thinking-20260828-2 with retained data. Older status/deployment
+sections below are historical checkpoints, not the current image.
+
 Administration extension: SB05 completed (11 tests and actual Playwright MCP at
 1920x1080); SB06 completed with 29 additional focused cases, real managed-token HTTP
 denial, all three rebuilt apps healthy and a recoverably reset 5214. See
@@ -152,6 +160,8 @@ ledger is Unavailable; this proves token/image accounting, not monetary settleme
 
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 | --- | --- | --- | --- | --- | --- |
+| SB09 | Pass; missing source configuration and stale import reproduced | Pass; 229 focused cases, broad failures classified | Source save, discovery, publication, defaults, runtime and explicit refresh | Pass; reviews/04-model-thinking-final-verifier.md | bundle://proof/SB09/manifest.md |
+| SB10 | Pass; SB09 focused scope green | Pass; actual UI/runtime | All three hosts, source settings, exact model choices, eight real requests | Pass; reviews/04-model-thinking-final-verifier.md | bundle://proof/SB10/manifest.md |
 | SB01 | Pass | Pass | Source save/discovery/publication, exact client sync, real runtime | Completed | bundle://proof/SB01/manifest.md |
 | SB02 | Pass after each SB01 repair | Pass | Both upstreams, all requested modalities, source usage and health | Completed | bundle://proof/SB02/manifest.md |
 | SB03 | Pass; normal-browser denial reproduced | Pass | Browser creation/execution/reload, source usage, HTTP/file rejection, both hosts | Completed | bundle://proof/SB03/manifest.md; bundle://proof/SB03/semantic-invariants.md |
@@ -160,6 +170,11 @@ ledger is Unavailable; this proves token/image accounting, not monetary settleme
 | SB06 | Pass; empty-scope failure reproduced | Pass for requested behavior | Scoped token UI, durable registry, same-token HTTP denial and recoverable fresh reset | Completed; full-run failures recorded separately, not relabeled passes | bundle://proof/SB06/manifest.md; bundle://proof/SB06/semantic-invariants.md |
 
 ## Browser Validation Analytics
+
+Current SB10: 1920x1080 Playwright MCP; source automatic/manual/reset and health,
+both-client synchronization, model-dependent agent and Simple Chat dropdowns,
+source runtime evidence and eight successful requests. Final five-tab row and
+three-column checkbox dialog inspected; exact findings in proof/SB10/browser-validation.md.
 
 All screenshots below are under proof/SB02/browser and were inspected by the primary agent.
 Desktop viewport is 1920x1080. Playwright uses actual Chromium UI actions; API inventory reads
@@ -190,6 +205,10 @@ upwards and scroll; selected names and Save agent remain readable. Existing narr
 provider/Switch agent button wrapping is unchanged, not a new layout improvement claim.
 
 ## Raw Note Closure
+
+N013/R13 and N014/R14: solved and live-validated; final broad regression review
+complete with existing failures classified. Exact original artifacts are in proof/SB09
+and proof/SB10. No full-repository-green claim is made.
 
 | Raw note | Status | Proof |
 | --- | --- | --- |

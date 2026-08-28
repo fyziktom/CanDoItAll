@@ -95,6 +95,12 @@ public partial class AgentDetailsDialog
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
 
+    private async Task RefreshRuntimeProvidersAsync() {
+        providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
+        areProvidersLoaded = true;
+        providerLoadErrorMessage = null;
+    }
+
     private IReadOnlyList<ConversationProviderOption> RuntimeProviderOptions
         => AgentProviderPresentationMapper.Map(providers);
 

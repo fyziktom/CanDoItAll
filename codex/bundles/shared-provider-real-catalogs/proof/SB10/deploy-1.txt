@@ -1,0 +1,49 @@
+**********************
+PowerShell transcript start
+Start time: 20260827215706
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+Start-Transcript -Path codex/bundles/shared-provider-real-catalogs/proof/SB10/deploy-1.txt
+Write-Output 'SB10-I1: replace only the three test apps; preserve all named volumes and databases.'
+& codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/Restart-TestInstances.ps1 -Image candoitall-shared-providers-ui:model-thinking-20260828-1 -BackupSuffix pre-model-thinking-20260828-1
+docker compose -f codex/bundles/shared-provider-real-catalogs/subbundles/04-avatar-and-fresh-client/compose.yaml up -d --no-deps app
+Write-Output "Compose exit code: $LASTEXITCODE"
+Stop-Transcript
+Process ID: 30816
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is codex/bundles/shared-provider-real-catalogs/proof/SB10/deploy-1.txt
+SB10-I1: replace only the three test apps; preserve all named volumes and databases.
+
+candoitall-spui-shared
+
+8d3266b4d5ffe39206389fd3a8090a38ccb7634dc9da8262ce0163ba29306338
+
+
+
+candoitall-spui-shared
+candoitall-spui-shared started; rollback retained as candoitall-spui-shared-pre-model-thinking-20260828-1; named data volumes preserved.
+candoitall-spui-client
+
+b3cea0bbb61ddda96ffae5c27f82842aebd19d768427ddfddd10e82b440f1bd5
+
+
+candoitall-spui-client
+candoitall-spui-client started; rollback retained as candoitall-spui-client-pre-model-thinking-20260828-1; named data volumes preserved.
+
+Compose exit code: 0
+**********************
+PowerShell transcript end
+End time: 20260827215714
+**********************

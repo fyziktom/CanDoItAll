@@ -1,0 +1,184 @@
+{
+  "ok": true,
+  "isComplete": false,
+  "fallbackKind": "AllSuppliedSuites",
+  "fallbackReason": "At least one relationship uses dispatch that cannot be resolved completely by static analysis.",
+  "requiredSelections": [
+    {
+      "suite": "All supplied suites",
+      "scopeKind": "AllSuppliedSuites",
+      "selectors": []
+    }
+  ],
+  "workspaceHealth": [
+    {
+      "suite": "Unit",
+      "isHealthy": true,
+      "projectCount": 1,
+      "sourceTestCount": 5516
+    },
+    {
+      "suite": "Components",
+      "isHealthy": true,
+      "projectCount": 1,
+      "sourceTestCount": 1059
+    },
+    {
+      "suite": "Integration",
+      "isHealthy": true,
+      "projectCount": 1,
+      "sourceTestCount": 964
+    }
+  ],
+  "changes": [
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentThinkingEffortSettings.razor",
+      "lineRanges": [
+        {
+          "startLine": 150,
+          "endLine": 152
+        },
+        {
+          "startLine": 193,
+          "endLine": 193
+        },
+        {
+          "startLine": 195,
+          "endLine": 195
+        }
+      ],
+      "behaviorIntent": "BehaviorChange"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs",
+      "lineRanges": [
+        {
+          "startLine": 47,
+          "endLine": 54
+        }
+      ],
+      "behaviorIntent": "BehaviorChange"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentThinkingEffortPolicy.cs",
+      "lineRanges": [
+        {
+          "startLine": 13,
+          "endLine": 14
+        },
+        {
+          "startLine": 78,
+          "endLine": 78
+        },
+        {
+          "startLine": 104,
+          "endLine": 108
+        },
+        {
+          "startLine": 308,
+          "endLine": 308
+        },
+        {
+          "startLine": 312,
+          "endLine": 313
+        },
+        {
+          "startLine": 331,
+          "endLine": 331
+        },
+        {
+          "startLine": 333,
+          "endLine": 333
+        },
+        {
+          "startLine": 501,
+          "endLine": 501
+        },
+        {
+          "startLine": 503,
+          "endLine": 503
+        }
+      ],
+      "behaviorIntent": "ContractOrShapeChange"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderThinkingCapabilityMapper.cs",
+      "lineRanges": [
+        {
+          "startLine": 27,
+          "endLine": 27
+        }
+      ],
+      "behaviorIntent": "BehaviorChange"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
+      "lineRanges": [
+        {
+          "startLine": 111,
+          "endLine": 113
+        }
+      ],
+      "behaviorIntent": "BehaviorChange"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+      "lineRanges": [
+        {
+          "startLine": 98,
+          "endLine": 103
+        }
+      ],
+      "behaviorIntent": "BehaviorChange"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
+      "lineRanges": [
+        {
+          "startLine": 232,
+          "endLine": 235
+        }
+      ],
+      "behaviorIntent": "BehaviorChange"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderModelThinkingConfiguration.cs",
+      "behaviorIntent": "ContractOrShapeChange"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelThinkingEditor.razor",
+      "behaviorIntent": "ContractOrShapeChange"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderRefreshButton.razor",
+      "behaviorIntent": "ContractOrShapeChange"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProviderModelThinkingEditorTests.cs",
+      "behaviorIntent": "ContractOrShapeChange"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRefreshButtonTests.cs",
+      "behaviorIntent": "ContractOrShapeChange"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProviderModelThinkingConfigurationTests.cs",
+      "behaviorIntent": "ContractOrShapeChange"
+    }
+  ],
+  "diagnosticCounts": {
+    "TIA1006": 486,
+    "TIA3001": 1,
+    "TIA3004": 1
+  },
+  "finalDiagnostics": [
+    {
+      "code": "TIA3001",
+      "message": "Changes 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 did not resolve in any supplied test workspace."
+    },
+    {
+      "code": "TIA3004",
+      "message": "Dynamic, reflection, expression-tree, or function-pointer dispatch prevents a complete static relationship proof. All supplied suites are required."
+    }
+  ]
+}

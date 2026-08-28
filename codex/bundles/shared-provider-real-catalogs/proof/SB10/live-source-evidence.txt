@@ -1,0 +1,16 @@
+SB10 image1 UI-configured real requests. Source dispatch logs and read-only PostgreSQL evidence.
+2026-08-28T02:12:11.588727147Z       Shared-provider request 0HNO4KUPCJ5EA:00000001: model gpt-5.6-sol, thinking low, agent override False, upstream HTTP 200, upstream request req_183da32acaff489ea168e2241af95b08.
+2026-08-28T02:12:38.537539194Z       Shared-provider request 0HNO4KUPCJ5EA:00000002: model gpt-5.6-sol, thinking high, agent override True, upstream HTTP 200, upstream request req_b256f43a54624d0da2622e1e165466c3.
+2026-08-28T02:13:11.752229510Z       Shared-provider request 0HNO4KUPCJ5EA:00000003: model gpt-5.4-mini, thinking low, agent override True, upstream HTTP 200, upstream request req_154d08ba2b6f4477b6f0ee460db66ddc.
+2026-08-28T02:13:39.743855433Z       Shared-provider request 0HNO4KUPCJ5EA:00000004: model gpt-5.4-mini, thinking high, agent override True, upstream HTTP 200, upstream request req_6c009353468e43d7bd0c0b3353a8161c.
+2026-08-28T02:16:48.419065205Z       Shared-provider request 0HNO4KUPCJ5ED:00000001: model gptoss20b64k:latest, thinking low, agent override True, upstream HTTP 200, upstream request (null).
+2026-08-28T02:17:07.595105432Z       Shared-provider request 0HNO4KUPCJ5ED:00000002: model gptoss20b64k:latest, thinking high, agent override True, upstream HTTP 200, upstream request (null).
+       RequestId        |         StartedAtUtc          |   UpstreamModelId   |  Outcome  | InputTokenCount | OutputTokenCount | UsageCompleteness 
+------------------------+-------------------------------+---------------------+-----------+-----------------+------------------+-------------------
+ 0HNO4KUPCJ5EA:00000001 | 2026-08-28 02:12:09.340332+00 | gpt-5.6-sol         | Succeeded |            1640 |               12 | Complete
+ 0HNO4KUPCJ5EA:00000002 | 2026-08-28 02:12:38.121226+00 | gpt-5.6-sol         | Succeeded |            1634 |               12 | Complete
+ 0HNO4KUPCJ5EA:00000003 | 2026-08-28 02:13:11.018985+00 | gpt-5.4-mini        | Succeeded |            1638 |               40 | Complete
+ 0HNO4KUPCJ5EA:00000004 | 2026-08-28 02:13:39.179789+00 | gpt-5.4-mini        | Succeeded |            1637 |               69 | Complete
+ 0HNO4KUPCJ5ED:00000001 | 2026-08-28 02:16:22.336804+00 | gptoss20b64k:latest | Succeeded |            1514 |               29 | Complete
+ 0HNO4KUPCJ5ED:00000002 | 2026-08-28 02:17:06.841949+00 | gptoss20b64k:latest | Succeeded |            1515 |              182 | Complete
+(6 rows)

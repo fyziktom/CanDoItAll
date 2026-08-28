@@ -1,0 +1,5 @@
+2026-08-28T02:29:15.288515527Z       Shared-provider request 0HNO4LF30SO0M:00000001: model gpt-5.6-sol, thinking high, agent override True, upstream HTTP 200, upstream request req_3d795c13355f40ea95deb3be8cd3258d.
+       RequestId        |         StartedAtUtc          | UpstreamModelId |  Outcome  | InputTokenCount | OutputTokenCount | UsageCompleteness 
+------------------------+-------------------------------+-----------------+-----------+-----------------+------------------+-------------------
+ 0HNO4LF30SO0M:00000001 | 2026-08-28 02:29:13.031877+00 | gpt-5.6-sol     | Succeeded |            1637 |               15 | Complete
+(1 row)

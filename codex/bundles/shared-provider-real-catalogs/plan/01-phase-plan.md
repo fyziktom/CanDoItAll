@@ -10,6 +10,8 @@
 6. SB06 scope selection, durable token administration and recoverably reset 5214.
 7. SB07 typed shared thinking, per-agent enforcement and real main-model suggestions.
 8. SB08 final real multi-agent proof and preserved three-container handoff.
+9. SB09 provider model thinking settings and explicit stale import recovery.
+10. SB10 real UI proof on source and both clients, with all data preserved.
 
 ## Subbundle Dependency Map
 
@@ -22,6 +24,8 @@ flowchart LR
   SB05 --> SB06["SB06 managed tokens and fresh handoff"]
   SB06 --> SB07["SB07 shared thinking and suggestions"]
   SB07 --> SB08["SB08 actual per-agent upstream proof"]
+  SB08 --> SB09["SB09 model thinking settings and stale import recovery"]
+  SB09 --> SB10["SB10 source and both-client UI proof"]
   Real["Reachable real upstreams"] --> SB02
 ```
 
@@ -34,6 +38,15 @@ No full-suite gate. Dependency criticality does not broaden test scope.
 SB03 Proof tier: Governed. N005 reopens normal-browser handoff, not catalog correctness.
 
 ## Phase Gates
+
+- SB09 frozen checkpoint: CodeAnalytics TIA3001/TIA3004 cannot resolve actual changed
+  members across reference-backed test workspaces; required AllSuppliedSuites is honored
+  with one broad Unit/Components/Integration run. Focused discovery is 138 Unit and 35
+  Components plus 56 Integration, all passing. UI acceptance and broad review are
+  complete. Unit: 7037/1, Components: 1110/52, Integration: 1133/10 pass/fail plus
+  one opt-in skip. All failed identities occur in SB07, with reviewed unchanged causes.
+  Final layout-only invalidation has
+  35 passing component cases and repeated final-image UI plus Sol High inference.
 
 - Prepared validator and architecture entry review before production edits.
 - SB01 targeted discovery/tests/build and semantic proof before SB02 deployment.

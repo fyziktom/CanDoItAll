@@ -1,0 +1,49 @@
+**********************
+PowerShell transcript start
+Start time: 20260827222616
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+Start-Transcript -Path codex/bundles/shared-provider-real-catalogs/proof/SB10/deploy-2.txt
+& codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/Restart-TestInstances.ps1 -Image candoitall-shared-providers-ui:model-thinking-20260828-2 -BackupSuffix pre-model-thinking-20260828-2
+docker compose -f codex/bundles/shared-provider-real-catalogs/subbundles/04-avatar-and-fresh-client/compose.yaml up -d --no-deps app
+$taskExit = $LASTEXITCODE
+Write-Output "Compose exit code: $taskExit"
+Stop-Transcript
+exit $taskExit
+Process ID: 37340
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is codex/bundles/shared-provider-real-catalogs/proof/SB10/deploy-2.txt
+
+candoitall-spui-shared
+
+2ac57a4a6f7b88c4eeb3af812634369d63c0d87417e75ae138014755a9d83e41
+
+
+
+candoitall-spui-shared
+candoitall-spui-shared started; rollback retained as candoitall-spui-shared-pre-model-thinking-20260828-2; named data volumes preserved.
+candoitall-spui-client
+
+eaa9b4f5cc8ade9bedbee86f44c085cba3640e922610e74ff85924e9a68a9c5b
+
+
+candoitall-spui-client
+candoitall-spui-client started; rollback retained as candoitall-spui-client-pre-model-thinking-20260828-2; named data volumes preserved.
+
+Compose exit code: 0
+**********************
+PowerShell transcript end
+End time: 20260827222625
+**********************

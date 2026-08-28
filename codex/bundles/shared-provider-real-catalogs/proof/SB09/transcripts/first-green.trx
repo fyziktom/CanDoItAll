@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="42dc9f30-d0ab-4d2c-b997-12672e48b5ba" name="lucys@LUCYSPOWER 2026-08-27 21:44:05" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T21:44:05.9610537-04:00" queuing="2026-08-27T21:44:05.9610543-04:00" start="2026-08-27T21:44:03.6659293-04:00" finish="2026-08-27T21:44:05.9673932-04:00" />
+  <TestSettings name="default" id="e73a3f48-3aa9-41d0-81fe-d5791941bdb5">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_21_44_05" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="e3fb029d-2e52-44d4-aa55-1860e0334b2d" testId="8481c3f6-bc3a-0a1a-2a8e-d681edf3ca1a" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;supported\&quot;,\&quot;contr&quot;···)" computerName="LUCYSPOWER" duration="00:00:00.0004647" startTime="2026-08-27T21:44:05.7319304-04:00" endTime="2026-08-27T21:44:05.7322193-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e3fb029d-2e52-44d4-aa55-1860e0334b2d" />
+    <UnitTestResult executionId="3baaa466-d440-4bdf-bab8-99b5e4c8268c" testId="d6f1b8e9-d7e3-4c68-8879-2e19e34dec24" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;supported\&quot;,\&quot;contr&quot;···)" computerName="LUCYSPOWER" duration="00:00:00.0012719" startTime="2026-08-27T21:44:05.7316470-04:00" endTime="2026-08-27T21:44:05.7317148-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3baaa466-d440-4bdf-bab8-99b5e4c8268c" />
+    <UnitTestResult executionId="2ef132bf-06c7-4c81-baa3-0fa67d4a407c" testId="d7be6e49-fe4b-1829-17e4-75bd65b3be95" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;supported\&quot;,\&quot;contr&quot;···)" computerName="LUCYSPOWER" duration="00:00:00.0007671" startTime="2026-08-27T21:44:05.7323382-04:00" endTime="2026-08-27T21:44:05.7331324-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2ef132bf-06c7-4c81-baa3-0fa67d4a407c" />
+    <UnitTestResult executionId="30493d74-997b-43db-8a4f-045d979d7b06" testId="db3175ed-4e66-4a4d-ab18-dac01e43781d" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;unsupported\&quot;,\&quot;con&quot;···)" computerName="LUCYSPOWER" duration="00:00:00.0274006" startTime="2026-08-27T21:44:05.7191599-04:00" endTime="2026-08-27T21:44:05.7300818-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="30493d74-997b-43db-8a4f-045d979d7b06" />
+    <UnitTestResult executionId="f64712cb-6fd6-4892-8cd8-55022c2a8ac4" testId="5717cd13-b34b-d434-c14d-70abff4f1f88" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Explicit_unsupported_overrides_a_known_model_default" computerName="LUCYSPOWER" duration="00:00:00.1185425" startTime="2026-08-27T21:44:05.6167751-04:00" endTime="2026-08-27T21:44:05.7023600-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f64712cb-6fd6-4892-8cd8-55022c2a8ac4" />
+    <UnitTestResult executionId="940653c1-d32a-4b5b-83fc-a30bf2a4db8c" testId="bc78aa0f-0c07-860f-e5f9-059bce01ef92" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:0,\&quot;controlMode\&quot;:\&quot;e&quot;···)" computerName="LUCYSPOWER" duration="00:00:00.0024641" startTime="2026-08-27T21:44:05.7333050-04:00" endTime="2026-08-27T21:44:05.7358040-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="940653c1-d32a-4b5b-83fc-a30bf2a4db8c" />
+    <UnitTestResult executionId="03bf36d9-dd32-46b1-9dc5-6dfb7468f80d" testId="8a3a8db9-c3e8-24c4-026e-99a2b12eeb89" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_is_published_and_enforced_for_shared_model" computerName="LUCYSPOWER" duration="00:00:00.0501684" startTime="2026-08-27T21:44:05.7361002-04:00" endTime="2026-08-27T21:44:05.7862226-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03bf36d9-dd32-46b1-9dc5-6dfb7468f80d" />
+    <UnitTestResult executionId="3ff0ce39-7074-4eca-b10e-a0ee12e86f95" testId="540a9898-3d97-157a-8751-39bb85345380" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;unsupported\&quot;,\&quot;con&quot;···)" computerName="LUCYSPOWER" duration="00:00:00.0002640" startTime="2026-08-27T21:44:05.7318319-04:00" endTime="2026-08-27T21:44:05.7318665-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3ff0ce39-7074-4eca-b10e-a0ee12e86f95" />
+    <UnitTestResult executionId="cac822ea-042f-434a-b622-b32b52199ce5" testId="3f9f5606-0b2f-036d-8b9f-030110698ef9" testName="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_overrides_discovery_and_survives_health_refresh" computerName="LUCYSPOWER" duration="00:00:00.0162275" startTime="2026-08-27T21:44:05.7864394-04:00" endTime="2026-08-27T21:44:05.8028288-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cac822ea-042f-434a-b622-b32b52199ce5" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;unsupported\&quot;,\&quot;con&quot;···)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="540a9898-3d97-157a-8751-39bb85345380">
+      <Execution id="3ff0ce39-7074-4eca-b10e-a0ee12e86f95" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Save_rejects_invalid_manual_capabilities" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:0,\&quot;controlMode\&quot;:\&quot;e&quot;···)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="bc78aa0f-0c07-860f-e5f9-059bce01ef92">
+      <Execution id="940653c1-d32a-4b5b-83fc-a30bf2a4db8c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Save_rejects_invalid_manual_capabilities" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;unsupported\&quot;,\&quot;con&quot;···)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="db3175ed-4e66-4a4d-ab18-dac01e43781d">
+      <Execution id="30493d74-997b-43db-8a4f-045d979d7b06" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Save_rejects_invalid_manual_capabilities" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Explicit_unsupported_overrides_a_known_model_default" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="5717cd13-b34b-d434-c14d-70abff4f1f88">
+      <Execution id="f64712cb-6fd6-4892-8cd8-55022c2a8ac4" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Explicit_unsupported_overrides_a_known_model_default" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;supported\&quot;,\&quot;contr&quot;···)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="d6f1b8e9-d7e3-4c68-8879-2e19e34dec24">
+      <Execution id="3baaa466-d440-4bdf-bab8-99b5e4c8268c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Save_rejects_invalid_manual_capabilities" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;supported\&quot;,\&quot;contr&quot;···)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="8481c3f6-bc3a-0a1a-2a8e-d681edf3ca1a">
+      <Execution id="e3fb029d-2e52-44d4-aa55-1860e0334b2d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Save_rejects_invalid_manual_capabilities" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: &quot;[{\&quot;model\&quot;:\&quot;x\&quot;,\&quot;status\&quot;:\&quot;supported\&quot;,\&quot;contr&quot;···)" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="d7be6e49-fe4b-1829-17e4-75bd65b3be95">
+      <Execution id="2ef132bf-06c7-4c81-baa3-0fa67d4a407c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Save_rejects_invalid_manual_capabilities" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_overrides_discovery_and_survives_health_refresh" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="3f9f5606-0b2f-036d-8b9f-030110698ef9">
+      <Execution id="cac822ea-042f-434a-b622-b32b52199ce5" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Manual_configuration_overrides_discovery_and_survives_health_refresh" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_is_published_and_enforced_for_shared_model" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="8a3a8db9-c3e8-24c4-026e-99a2b12eeb89">
+      <Execution id="03bf36d9-dd32-46b1-9dc5-6dfb7468f80d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests" name="Manual_configuration_is_published_and_enforced_for_shared_model" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="8481c3f6-bc3a-0a1a-2a8e-d681edf3ca1a" executionId="e3fb029d-2e52-44d4-aa55-1860e0334b2d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d6f1b8e9-d7e3-4c68-8879-2e19e34dec24" executionId="3baaa466-d440-4bdf-bab8-99b5e4c8268c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d7be6e49-fe4b-1829-17e4-75bd65b3be95" executionId="2ef132bf-06c7-4c81-baa3-0fa67d4a407c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="db3175ed-4e66-4a4d-ab18-dac01e43781d" executionId="30493d74-997b-43db-8a4f-045d979d7b06" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5717cd13-b34b-d434-c14d-70abff4f1f88" executionId="f64712cb-6fd6-4892-8cd8-55022c2a8ac4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc78aa0f-0c07-860f-e5f9-059bce01ef92" executionId="940653c1-d32a-4b5b-83fc-a30bf2a4db8c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a3a8db9-c3e8-24c4-026e-99a2b12eeb89" executionId="03bf36d9-dd32-46b1-9dc5-6dfb7468f80d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="540a9898-3d97-157a-8751-39bb85345380" executionId="3ff0ce39-7074-4eca-b10e-a0ee12e86f95" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3f9f5606-0b2f-036d-8b9f-030110698ef9" executionId="cac822ea-042f-434a-b622-b32b52199ce5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="9" executed="9" passed="9" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.38]   Discovering: CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.33]   Discovered:  CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.42]   Starting:    CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.69]   Finished:    CanDoItAll.Tests.Unit&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

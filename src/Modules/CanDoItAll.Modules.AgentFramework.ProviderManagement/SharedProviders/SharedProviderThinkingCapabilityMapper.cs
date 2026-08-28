@@ -24,7 +24,7 @@ public static class SharedProviderThinkingCapabilityMapper {
         var capability = AgentThinkingEffortPolicy.ResolveCapability(provider, model);
         var supported = capability.Status == AgentThinkingEffortSupportStatus.Supported;
         var providerDefault = supported
-            ? AgentThinkingEffortConfiguration.Read(provider.ConfigurationJson, "provider", provider.Kind == RuntimeKind.Ollama)
+            ? ProviderModelThinkingConfiguration.ReadDefault(provider.ConfigurationJson, model, provider.Kind == RuntimeKind.Ollama)
             : null;
         return new SharedProviderThinkingCapability(
             capability.Status switch {

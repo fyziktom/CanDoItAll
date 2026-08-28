@@ -147,7 +147,9 @@
 
             supportMessage =
                 $"The configured thinking-effort override '{FormatEffortLabel(Value!.Value)}' cannot be applied to {ResolveProviderModelLabel()}. " +
-                $"Select Provider default to remove this override. {capability.Summary}";
+                $"{capability.Summary} " + (capability.Status == AgentThinkingEffortSupportStatus.Unknown
+                    ? ResolveUnknownCapabilityAction()
+                    : "Select Provider default to remove this override.");
             return;
         }
 
@@ -188,9 +190,9 @@
             ProviderKind.AzureOpenAi =>
                 "Define this deployment's allowed thinking-effort values in the provider configuration before setting an override.",
             ProviderKind.Ollama =>
-                "Test the provider to refresh this model's advertised capabilities before setting an override.",
+                "Test the provider to discover capabilities, or configure this model in the provider's Thinking tab.",
             ProviderKind.OpenAi =>
-                "Use a model with a verified capability definition before setting an override.",
+                "Configure this model in the provider's Thinking tab, or use a model with a verified capability definition.",
             _ => "Use a provider and model with verified thinking-effort capabilities before setting an override."
         };
     }

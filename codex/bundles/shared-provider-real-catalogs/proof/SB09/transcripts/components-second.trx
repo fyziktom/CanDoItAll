@@ -1,0 +1,243 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="ae2b5ce5-935b-4e14-b897-abd097727ad2" name="lucys@LUCYSPOWER 2026-08-27 21:48:42" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T21:48:42.0730783-04:00" queuing="2026-08-27T21:48:42.0730794-04:00" start="2026-08-27T21:48:40.3439786-04:00" finish="2026-08-27T21:49:12.4034168-04:00" />
+  <TestSettings name="default" id="85d54645-670b-4564-9a03-422603e60ebe">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_21_48_42" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="0cbf6348-c6b6-4343-8c1f-c1553ed4736d" testId="f04ad6c9-963d-5aae-ec66-f2fd740600dc" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save" computerName="LUCYSPOWER" duration="00:00:00.1101675" startTime="2026-08-27T21:49:12.1024121-04:00" endTime="2026-08-27T21:49:12.2099019-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0cbf6348-c6b6-4343-8c1f-c1553ed4736d" />
+    <UnitTestResult executionId="d5c61584-e45d-4e5f-8b49-d5f2c7d22876" testId="f8f7c27a-f94c-732c-8dcc-14698275b44d" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_gptoss_capability_lists_levels_without_disable" computerName="LUCYSPOWER" duration="00:00:00.0037116" startTime="2026-08-27T21:48:42.0139952-04:00" endTime="2026-08-27T21:48:42.0176087-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d5c61584-e45d-4e5f-8b49-d5f2c7d22876" />
+    <UnitTestResult executionId="af92e774-0e94-4382-b3da-17a3a10e32d5" testId="2e27610a-51b8-72bc-39dd-ad05981041cc" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_openai_model_disables_inherited_selector_and_requests_verified_definition" computerName="LUCYSPOWER" duration="00:00:00.0019970" startTime="2026-08-27T21:48:42.0480497-04:00" endTime="2026-08-27T21:48:42.0480675-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="af92e774-0e94-4382-b3da-17a3a10e32d5" />
+    <UnitTestResult executionId="6efb48fd-1dcc-4823-95c7-3e37afe42520" testId="2f2797b8-97db-41d1-00b9-22066afd861b" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(fail: False)" computerName="LUCYSPOWER" duration="00:00:30.0290839" startTime="2026-08-27T21:48:42.0482469-04:00" endTime="2026-08-27T21:49:12.0945797-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6efb48fd-1dcc-4823-95c7-3e37afe42520">
+      <Output>
+        <ErrorInfo>
+          <Message>Bunit.Extensions.WaitForHelpers.WaitForFailedException : The assertion did not pass within the timeout period.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 1.
+Component render count: 3.
+Total render count across all components: 0.&#xD;
+---- Assert.Equal() Failure: Values differ&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at Bunit.RenderedComponentWaitForHelperExtensions.WaitForAssertion[TComponent](IRenderedComponent`1 renderedComponent, Action assertion, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForState.cs:line 77&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRefreshButtonTests.cs:line 26&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+----- Inner Stack Trace -----&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.&lt;&gt;c__DisplayClass0_0.&lt;Refresh_preserves_selected_imports_and_notifies_only_on_success&gt;b__1() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRefreshButtonTests.cs:line 28&#xD;
+   at Bunit.Extensions.WaitForHelpers.WaitForAssertionHelper`1.&lt;&gt;c__DisplayClass6_0.&lt;.ctor&gt;b__0() in /_/src/bunit/Extensions/WaitForHelpers/WaitForAssertionHelper.cs:line 35&#xD;
+   at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args) in /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs:line 173</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f6c8f036-34ca-4eca-b0ed-62a91a3ba916" testId="1de7e7cf-6ad5-cce1-37dc-24f81f0ef687" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Incompatible_override_does_not_recommend_an_unavailable_provider_default" computerName="LUCYSPOWER" duration="00:00:00.0054974" startTime="2026-08-27T21:48:42.0474335-04:00" endTime="2026-08-27T21:48:42.0474733-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f6c8f036-34ca-4eca-b0ed-62a91a3ba916" />
+    <UnitTestResult executionId="233a11b9-2507-491e-904a-905cfba41339" testId="313e1ba2-6852-4d9b-6630-52efa7ae2188" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_lists_allowed_efforts_and_configured_provider_default" computerName="LUCYSPOWER" duration="00:00:00.0038722" startTime="2026-08-27T21:48:42.0479107-04:00" endTime="2026-08-27T21:48:42.0479292-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="233a11b9-2507-491e-904a-905cfba41339" />
+    <UnitTestResult executionId="fb3fe14c-008d-483a-a635-8a16b9c51806" testId="11530af4-25fb-791f-f27d-b259a999580c" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_ollama_capability_lists_only_native_allowed_efforts" computerName="LUCYSPOWER" duration="00:00:00.0018784" startTime="2026-08-27T21:48:42.0481244-04:00" endTime="2026-08-27T21:48:42.0481434-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fb3fe14c-008d-483a-a635-8a16b9c51806" />
+    <UnitTestResult executionId="d9c474fb-9074-43dd-b1ea-3797a9c12ff0" testId="81ba7cbb-e490-9cff-d8bd-fc641a028e83" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_emits_override_and_provider_default_reset" computerName="LUCYSPOWER" duration="00:00:00.0065811" startTime="2026-08-27T21:48:42.0478497-04:00" endTime="2026-08-27T21:48:42.0478675-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d9c474fb-9074-43dd-b1ea-3797a9c12ff0" />
+    <UnitTestResult executionId="100829e5-8552-4e90-822d-3c75ea6fe37c" testId="9732533a-20ae-035e-8c9f-a0571b1776ed" testName="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Known_defaults_are_visible_and_manual_configuration_can_be_reset" computerName="LUCYSPOWER" duration="00:00:00.1049471" startTime="2026-08-27T21:48:41.8391632-04:00" endTime="2026-08-27T21:48:41.9346482-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="100829e5-8552-4e90-822d-3c75ea6fe37c" />
+    <UnitTestResult executionId="38b0e885-d660-4957-af9d-0a19e30a5bcf" testId="25305725-f367-dbb6-aafb-9dfa2b6ad08f" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Missing_provider_disables_selector_and_requests_provider_selection" computerName="LUCYSPOWER" duration="00:00:00.0016836" startTime="2026-08-27T21:48:42.0094502-04:00" endTime="2026-08-27T21:48:42.0111008-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="38b0e885-d660-4957-af9d-0a19e30a5bcf" />
+    <UnitTestResult executionId="aaade7ce-6902-4332-bec3-3ee5f78e91ac" testId="67a8a51c-7a7e-03bd-4a8c-d3c4d60b3fd8" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_azure_deployment_requests_provider_scoped_definition" computerName="LUCYSPOWER" duration="00:00:00.0031987" startTime="2026-08-27T21:48:42.0479826-04:00" endTime="2026-08-27T21:48:42.0480019-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="aaade7ce-6902-4332-bec3-3ee5f78e91ac" />
+    <UnitTestResult executionId="93af62e1-8578-4a04-bf5a-b73ce664ea97" testId="d9bf62c9-4b56-f646-c947-e02cf3a6d5f7" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence" computerName="LUCYSPOWER" duration="00:00:00.0228623" startTime="2026-08-27T21:49:12.2567661-04:00" endTime="2026-08-27T21:49:12.2796321-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="93af62e1-8578-4a04-bf5a-b73ce664ea97" />
+    <UnitTestResult executionId="e52bf128-ddbc-4db2-b8d7-2db1a6ab4bfc" testId="9c6852f9-0d35-b257-0529-3bfc36f0e48c" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.SharedThinkingEffort_UsesPublishedCapabilitiesForOpaqueModelId" computerName="LUCYSPOWER" duration="00:00:00.0032368" startTime="2026-08-27T21:48:42.0477856-04:00" endTime="2026-08-27T21:48:42.0478050-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e52bf128-ddbc-4db2-b8d7-2db1a6ab4bfc" />
+    <UnitTestResult executionId="d5f8486f-9069-4246-9a1a-9c476c74b163" testId="3550410a-768e-9580-3bb8-18c6f6096df7" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default" computerName="LUCYSPOWER" duration="00:00:00.0191234" startTime="2026-08-27T21:49:12.2981200-04:00" endTime="2026-08-27T21:49:12.3171603-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d5f8486f-9069-4246-9a1a-9c476c74b163" />
+    <UnitTestResult executionId="1b8f8ae5-a091-43f3-a57c-67ab3c51d654" testId="3538c2d7-ffcd-e145-9db9-5570d51eecf4" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unsupported_model_disables_inherited_selector_and_explains_the_limitation" computerName="LUCYSPOWER" duration="00:00:00.0148163" startTime="2026-08-27T21:48:41.9830590-04:00" endTime="2026-08-27T21:48:41.9976380-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1b8f8ae5-a091-43f3-a57c-67ab3c51d654" />
+    <UnitTestResult executionId="4b57bd13-1b82-404c-928e-b3d9a1e38a72" testId="ece4cd62-672f-2ec6-b3f2-e81af91a8e74" testName="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Explicit_unsupported_has_no_effort_or_default_controls" computerName="LUCYSPOWER" duration="00:00:00.0166509" startTime="2026-08-27T21:48:41.9352944-04:00" endTime="2026-08-27T21:48:41.9513509-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4b57bd13-1b82-404c-928e-b3d9a1e38a72" />
+    <UnitTestResult executionId="60d38731-268d-43fa-9d7e-51ecadce1abe" testId="b775eede-3a2e-fc8f-bed5-57bdeee350be" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Invalid_provider_default_is_visible_and_can_be_replaced_by_a_valid_override" computerName="LUCYSPOWER" duration="00:00:00.0022547" startTime="2026-08-27T21:48:42.0476976-04:00" endTime="2026-08-27T21:48:42.0477219-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="60d38731-268d-43fa-9d7e-51ecadce1abe" />
+    <UnitTestResult executionId="3448f409-8e39-4d52-b0df-72d439b600b6" testId="e81bba21-df95-d2f8-d3e4-aa79586d85a8" testName="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Empty_manual_efforts_are_rejected_and_cancel_keeps_original_configuration" computerName="LUCYSPOWER" duration="00:00:00.4386064" startTime="2026-08-27T21:48:41.3846550-04:00" endTime="2026-08-27T21:48:41.8295190-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3448f409-8e39-4d52-b0df-72d439b600b6" />
+    <UnitTestResult executionId="a73ffe07-b954-45be-bad1-0c6a8cc5684d" testId="db257dc2-1fd3-8a05-13b8-63a457c9a6e5" testName="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Custom_ollama_model_supports_explicit_boolean_controls" computerName="LUCYSPOWER" duration="00:00:00.0293536" startTime="2026-08-27T21:48:41.9515611-04:00" endTime="2026-08-27T21:48:41.9808444-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a73ffe07-b954-45be-bad1-0c6a8cc5684d" />
+    <UnitTestResult executionId="33fa7fcf-a3a9-4d0e-b59e-f5390c3d9f9a" testId="8190dd77-55d2-5830-edb4-5b7e3080100f" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(fail: True)" computerName="LUCYSPOWER" duration="00:00:00.0055283" startTime="2026-08-27T21:49:12.1020439-04:00" endTime="2026-08-27T21:49:12.1021062-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="33fa7fcf-a3a9-4d0e-b59e-f5390c3d9f9a" />
+    <UnitTestResult executionId="8e8d1df3-7068-4769-aa45-d29c0c3f4deb" testId="ec28c196-f22d-b534-11d9-5fab980b8637" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Original_gpt5_lists_minimal_and_does_not_offer_none" computerName="LUCYSPOWER" duration="00:00:00.0026943" startTime="2026-08-27T21:48:42.0112441-04:00" endTime="2026-08-27T21:48:42.0138935-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8e8d1df3-7068-4769-aa45-d29c0c3f4deb" />
+    <UnitTestResult executionId="c206a6ab-9859-464b-a717-b2f1e6e7e7c9" testId="cbc1418a-d3eb-7aa0-736b-35c531875be0" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null" computerName="LUCYSPOWER" duration="00:00:00.0182235" startTime="2026-08-27T21:49:12.2799096-04:00" endTime="2026-08-27T21:49:12.2979783-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c206a6ab-9859-464b-a717-b2f1e6e7e7c9" />
+    <UnitTestResult executionId="e035c674-5125-4461-a565-0edb807408c1" testId="b849ce50-f7af-a56a-692c-de3c6c4a4130" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected" computerName="LUCYSPOWER" duration="00:00:00.0258634" startTime="2026-08-27T21:49:12.3173189-04:00" endTime="2026-08-27T21:49:12.3431287-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e035c674-5125-4461-a565-0edb807408c1" />
+    <UnitTestResult executionId="a306f389-022b-47cb-96e8-4db9bfd30233" testId="01a7f409-f054-82cd-f1ab-ce321c04c719" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Existing_incompatible_override_is_preserved_until_user_resets_to_provider_default" computerName="LUCYSPOWER" duration="00:00:00.0116565" startTime="2026-08-27T21:48:41.9978871-04:00" endTime="2026-08-27T21:48:42.0093424-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a306f389-022b-47cb-96e8-4db9bfd30233" />
+    <UnitTestResult executionId="5dd441b8-7ff9-4d96-8da0-f0916ee3daea" testId="3adc4c01-b744-3755-4539-ab47f46ee60c" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved" computerName="LUCYSPOWER" duration="00:00:00.0466665" startTime="2026-08-27T21:49:12.2101535-04:00" endTime="2026-08-27T21:49:12.2566307-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5dd441b8-7ff9-4d96-8da0-f0916ee3daea" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.SharedThinkingEffort_UsesPublishedCapabilitiesForOpaqueModelId" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="9c6852f9-0d35-b257-0529-3bfc36f0e48c">
+      <Execution id="e52bf128-ddbc-4db2-b8d7-2db1a6ab4bfc" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="SharedThinkingEffort_UsesPublishedCapabilitiesForOpaqueModelId" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Invalid_provider_default_is_visible_and_can_be_replaced_by_a_valid_override" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="b775eede-3a2e-fc8f-bed5-57bdeee350be">
+      <Execution id="60d38731-268d-43fa-9d7e-51ecadce1abe" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Invalid_provider_default_is_visible_and_can_be_replaced_by_a_valid_override" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="3550410a-768e-9580-3bb8-18c6f6096df7">
+      <Execution id="d5f8486f-9069-4246-9a1a-9c476c74b163" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Switching_provider_clears_custom_model_before_validating_the_new_default" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="3adc4c01-b744-3755-4539-ab47f46ee60c">
+      <Execution id="5dd441b8-7ff9-4d96-8da0-f0916ee3daea" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Supported_override_selection_updates_the_editor_and_can_be_saved" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Explicit_unsupported_has_no_effort_or_default_controls" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="ece4cd62-672f-2ec6-b3f2-e81af91a8e74">
+      <Execution id="4b57bd13-1b82-404c-928e-b3d9a1e38a72" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests" name="Explicit_unsupported_has_no_effort_or_default_controls" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(fail: True)" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="8190dd77-55d2-5830-edb4-5b7e3080100f">
+      <Execution id="33fa7fcf-a3a9-4d0e-b59e-f5390c3d9f9a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests" name="Refresh_preserves_selected_imports_and_notifies_only_on_success" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_ollama_capability_lists_only_native_allowed_efforts" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="11530af4-25fb-791f-f27d-b259a999580c">
+      <Execution id="fb3fe14c-008d-483a-a635-8a16b9c51806" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Discovered_ollama_capability_lists_only_native_allowed_efforts" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(fail: False)" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="2f2797b8-97db-41d1-00b9-22066afd861b">
+      <Execution id="6efb48fd-1dcc-4823-95c7-3e37afe42520" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests" name="Refresh_preserves_selected_imports_and_notifies_only_on_success" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="f04ad6c9-963d-5aae-ec66-f2fd740600dc">
+      <Execution id="0cbf6348-c6b6-4343-8c1f-c1553ed4736d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_lists_allowed_efforts_and_configured_provider_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="313e1ba2-6852-4d9b-6630-52efa7ae2188">
+      <Execution id="233a11b9-2507-491e-904a-905cfba41339" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Supported_model_lists_allowed_efforts_and_configured_provider_default" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="b849ce50-f7af-a56a-692c-de3c6c4a4130">
+      <Execution id="e035c674-5125-4461-a565-0edb807408c1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_openai_model_disables_inherited_selector_and_requests_verified_definition" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="2e27610a-51b8-72bc-39dd-ad05981041cc">
+      <Execution id="af92e774-0e94-4382-b3da-17a3a10e32d5" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Unknown_openai_model_disables_inherited_selector_and_requests_verified_definition" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Original_gpt5_lists_minimal_and_does_not_offer_none" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="ec28c196-f22d-b534-11d9-5fab980b8637">
+      <Execution id="8e8d1df3-7068-4769-aa45-d29c0c3f4deb" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Original_gpt5_lists_minimal_and_does_not_offer_none" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="d9bf62c9-4b56-f646-c947-e02cf3a6d5f7">
+      <Execution id="93af62e1-8578-4a04-bf5a-b73ce664ea97" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Empty_manual_efforts_are_rejected_and_cancel_keeps_original_configuration" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="e81bba21-df95-d2f8-d3e4-aa79586d85a8">
+      <Execution id="3448f409-8e39-4d52-b0df-72d439b600b6" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests" name="Empty_manual_efforts_are_rejected_and_cancel_keeps_original_configuration" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Custom_ollama_model_supports_explicit_boolean_controls" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="db257dc2-1fd3-8a05-13b8-63a457c9a6e5">
+      <Execution id="a73ffe07-b954-45be-bad1-0c6a8cc5684d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests" name="Custom_ollama_model_supports_explicit_boolean_controls" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_gptoss_capability_lists_levels_without_disable" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="f8f7c27a-f94c-732c-8dcc-14698275b44d">
+      <Execution id="d5c61584-e45d-4e5f-8b49-d5f2c7d22876" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Discovered_gptoss_capability_lists_levels_without_disable" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_emits_override_and_provider_default_reset" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="81ba7cbb-e490-9cff-d8bd-fc641a028e83">
+      <Execution id="d9c474fb-9074-43dd-b1ea-3797a9c12ff0" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Supported_model_emits_override_and_provider_default_reset" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="cbc1418a-d3eb-7aa0-736b-35c531875be0">
+      <Execution id="c206a6ab-9859-464b-a717-b2f1e6e7e7c9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Selecting_provider_default_clears_an_incompatible_override_and_saves_null" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Incompatible_override_does_not_recommend_an_unavailable_provider_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="1de7e7cf-6ad5-cce1-37dc-24f81f0ef687">
+      <Execution id="f6c8f036-34ca-4eca-b0ed-62a91a3ba916" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Incompatible_override_does_not_recommend_an_unavailable_provider_default" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Missing_provider_disables_selector_and_requests_provider_selection" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="25305725-f367-dbb6-aafb-9dfa2b6ad08f">
+      <Execution id="38b0e885-d660-4957-af9d-0a19e30a5bcf" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Missing_provider_disables_selector_and_requests_provider_selection" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_azure_deployment_requests_provider_scoped_definition" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="67a8a51c-7a7e-03bd-4a8c-d3c4d60b3fd8">
+      <Execution id="aaade7ce-6902-4332-bec3-3ee5f78e91ac" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Unknown_azure_deployment_requests_provider_scoped_definition" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.Known_defaults_are_visible_and_manual_configuration_can_be_reset" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="9732533a-20ae-035e-8c9f-a0571b1776ed">
+      <Execution id="100829e5-8552-4e90-822d-3c75ea6fe37c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests" name="Known_defaults_are_visible_and_manual_configuration_can_be_reset" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unsupported_model_disables_inherited_selector_and_explains_the_limitation" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="3538c2d7-ffcd-e145-9db9-5570d51eecf4">
+      <Execution id="1b8f8ae5-a091-43f3-a57c-67ab3c51d654" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Unsupported_model_disables_inherited_selector_and_explains_the_limitation" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Existing_incompatible_override_is_preserved_until_user_resets_to_provider_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="01a7f409-f054-82cd-f1ab-ce321c04c719">
+      <Execution id="a306f389-022b-47cb-96e8-4db9bfd30233" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Existing_incompatible_override_is_preserved_until_user_resets_to_provider_default" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="f04ad6c9-963d-5aae-ec66-f2fd740600dc" executionId="0cbf6348-c6b6-4343-8c1f-c1553ed4736d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f8f7c27a-f94c-732c-8dcc-14698275b44d" executionId="d5c61584-e45d-4e5f-8b49-d5f2c7d22876" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2e27610a-51b8-72bc-39dd-ad05981041cc" executionId="af92e774-0e94-4382-b3da-17a3a10e32d5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2f2797b8-97db-41d1-00b9-22066afd861b" executionId="6efb48fd-1dcc-4823-95c7-3e37afe42520" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1de7e7cf-6ad5-cce1-37dc-24f81f0ef687" executionId="f6c8f036-34ca-4eca-b0ed-62a91a3ba916" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="313e1ba2-6852-4d9b-6630-52efa7ae2188" executionId="233a11b9-2507-491e-904a-905cfba41339" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="11530af4-25fb-791f-f27d-b259a999580c" executionId="fb3fe14c-008d-483a-a635-8a16b9c51806" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="81ba7cbb-e490-9cff-d8bd-fc641a028e83" executionId="d9c474fb-9074-43dd-b1ea-3797a9c12ff0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9732533a-20ae-035e-8c9f-a0571b1776ed" executionId="100829e5-8552-4e90-822d-3c75ea6fe37c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="25305725-f367-dbb6-aafb-9dfa2b6ad08f" executionId="38b0e885-d660-4957-af9d-0a19e30a5bcf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="67a8a51c-7a7e-03bd-4a8c-d3c4d60b3fd8" executionId="aaade7ce-6902-4332-bec3-3ee5f78e91ac" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d9bf62c9-4b56-f646-c947-e02cf3a6d5f7" executionId="93af62e1-8578-4a04-bf5a-b73ce664ea97" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9c6852f9-0d35-b257-0529-3bfc36f0e48c" executionId="e52bf128-ddbc-4db2-b8d7-2db1a6ab4bfc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3550410a-768e-9580-3bb8-18c6f6096df7" executionId="d5f8486f-9069-4246-9a1a-9c476c74b163" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3538c2d7-ffcd-e145-9db9-5570d51eecf4" executionId="1b8f8ae5-a091-43f3-a57c-67ab3c51d654" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ece4cd62-672f-2ec6-b3f2-e81af91a8e74" executionId="4b57bd13-1b82-404c-928e-b3d9a1e38a72" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b775eede-3a2e-fc8f-bed5-57bdeee350be" executionId="60d38731-268d-43fa-9d7e-51ecadce1abe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e81bba21-df95-d2f8-d3e4-aa79586d85a8" executionId="3448f409-8e39-4d52-b0df-72d439b600b6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="db257dc2-1fd3-8a05-13b8-63a457c9a6e5" executionId="a73ffe07-b954-45be-bad1-0c6a8cc5684d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8190dd77-55d2-5830-edb4-5b7e3080100f" executionId="33fa7fcf-a3a9-4d0e-b59e-f5390c3d9f9a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ec28c196-f22d-b534-11d9-5fab980b8637" executionId="8e8d1df3-7068-4769-aa45-d29c0c3f4deb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cbc1418a-d3eb-7aa0-736b-35c531875be0" executionId="c206a6ab-9859-464b-a717-b2f1e6e7e7c9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b849ce50-f7af-a56a-692c-de3c6c4a4130" executionId="e035c674-5125-4461-a565-0edb807408c1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="01a7f409-f054-82cd-f1ab-ce321c04c719" executionId="a306f389-022b-47cb-96e8-4db9bfd30233" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3adc4c01-b744-3755-4539-ab47f46ee60c" executionId="5dd441b8-7ff9-4d96-8da0-f0916ee3daea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="25" executed="25" passed="24" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.31]   Discovering: CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.49]   Discovered:  CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.53]   Starting:    CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:31.27]       Bunit.Extensions.WaitForHelpers.WaitForFailedException : The assertion did not pass within the timeout period.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 1.
+Component render count: 3.
+Total render count across all components: 0.&#xD;
+[xUnit.net 00:00:31.27]       ---- Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:31.27]       Expected: True&#xD;
+[xUnit.net 00:00:31.27]       Actual:   False&#xD;
+[xUnit.net 00:00:31.27]       Stack Trace:&#xD;
+[xUnit.net 00:00:31.27]         /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForState.cs(77,0): at Bunit.RenderedComponentWaitForHelperExtensions.WaitForAssertion[TComponent](IRenderedComponent`1 renderedComponent, Action assertion, Nullable`1 timeout)&#xD;
+[xUnit.net 00:00:31.27]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRefreshButtonTests.cs(26,0): at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(Boolean fail)&#xD;
+[xUnit.net 00:00:31.27]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:31.27]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:31.27]         ----- Inner Stack Trace -----&#xD;
+[xUnit.net 00:00:31.27]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRefreshButtonTests.cs(28,0): at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.&lt;&gt;c__DisplayClass0_0.&lt;Refresh_preserves_selected_imports_and_notifies_only_on_success&gt;b__1()&#xD;
+[xUnit.net 00:00:31.27]         /_/src/bunit/Extensions/WaitForHelpers/WaitForAssertionHelper.cs(35,0): at Bunit.Extensions.WaitForHelpers.WaitForAssertionHelper`1.&lt;&gt;c__DisplayClass6_0.&lt;.ctor&gt;b__0()&#xD;
+[xUnit.net 00:00:31.27]         /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs(173,0): at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args)&#xD;
+[xUnit.net 00:00:31.52]   Finished:    CanDoItAll.Tests.Components&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T21:49:12.0978502-04:00">
+        <Text>[xUnit.net 00:00:31.27]     CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(fail: False) [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

@@ -2,6 +2,8 @@
 
 | Input or requirement | Owning subbundle | Actual closure proof | Status |
 | --- | --- | --- | --- |
+| N013 / R13 stale 5214 capability snapshot | SB09 + SB10 | proof/SB10/manifest.md; actual 5214 refresh preserves Sol/Medium draft; both-client exact option matrices | Solved |
+| N014 / R14 per-model thinking administration | SB09 + SB10 | proof/SB09/manifest.md; 229 focused passes; proof/SB10/manifest.md actual source save/discovery/reset, read-only mirrors and eight real requests with source usage | Solved |
 | N011 / R11 shared thinking choices and actual application | SB07 + SB08 | proof/SB07/manifest.md; proof/SB08/manifest.md: 308 focused cases, seven UI-configured agents, nine real successful/complete requests; explicit transport limits | Solved |
 | N012 / R12 main naturally sorted model choices | SB07 + SB08 | proof/SB08/source-client-parity.json; real source/client labels/order/efforts match; selector and saved-legacy regressions | Solved |
 | N008 / R8 compact provider administration | SB05 | proof/SB05/manifest.md; 11 tests and MCP normal/nested dialog proof | Solved |

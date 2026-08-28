@@ -1,0 +1,31 @@
+**********************
+PowerShell transcript start
+Start time: 20260827215959
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& codex/bundles/shared-provider-real-catalogs/proof/SB09/Run-Broad.ps1 -Suite Integration
+Process ID: 33408
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB09\transcripts\integration-broad.txt
+SB09 frozen checkpoint; required AllSuppliedSuites due TIA3001/TIA3004 unresolved dispatch; directory: C:\repositories\CanDoItAll
+dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --no-restore --list-tests -v quiet
+dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --no-restore --logger trx;LogFileName=integration-broad.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB09\transcripts -v quiet
+
+Exit code: 1
+[]
+**********************
+PowerShell transcript end
+End time: 20260827230211
+**********************

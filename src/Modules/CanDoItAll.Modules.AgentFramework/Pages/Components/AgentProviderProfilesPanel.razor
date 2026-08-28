@@ -229,6 +229,10 @@
                             </div>
                             </fieldset>
                         </TabsItem>
+                        <TabsItem Text="Thinking" Icon="psychology" data-testid="provider-editor-tab-thinking">
+                            <ProviderModelThinkingEditor @key="providerModel" Model="providerModel" Provider="SelectedProvider"
+                                                         Refreshed="RefreshProvidersAfterSharedChangeAsync" />
+                        </TabsItem>
                         <TabsItem Text="Sharing" Icon="share" data-testid="provider-editor-tab-sharing">
                             <SharedProviderManagementPanel ProviderProfileId="providerModel.Id"
                                                            ProvidersChanged="RefreshProvidersAfterSharedChangeAsync" />

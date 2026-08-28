@@ -1,5 +1,10 @@
 # Normalized Requirements
 
+- R13 / N013: explicitly refresh stale shared capabilities on 5214 without discarding
+  unsaved agent settings; distinguish absent metadata from unsupported thinking.
+- R14 / N014: provider per-model thinking configuration, built-in/discovered defaults,
+  administrator overrides for custom models, visible provenance and source-owned sharing.
+
 - R11 / N011: source-owned per-model thinking support/defaults mirrored to client;
   per-agent overrides validated and applied independently through the real source relay.
 - R12 / N012: concise main OpenAI suggestions and natural name ordering; full catalog
