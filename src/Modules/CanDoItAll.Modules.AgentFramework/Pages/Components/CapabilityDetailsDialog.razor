@@ -116,11 +116,8 @@ else
                                                    data-testid="agents-capability-details-mcp-server" />
                                         </FormField>
                                     </div>
-                                    <label class="cda-inline-option capability-details-dialog__inline-option">
-                                        <InputCheckbox @bind-Value="mcpState.Hosted"
-                                                       data-testid="agents-capability-details-mcp-hosted" />
-                                        Hosted provider MCP
-                                    </label>
+                                    <CheckboxOption @bind-Value="mcpState.Hosted"
+                                                       data-testid="agents-capability-details-mcp-hosted"  Class="capability-details-dialog__inline-option" Text="Hosted provider MCP" />
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="2">
@@ -218,11 +215,8 @@ else
                                         </InputSelect>
                                         </FormField>
                                     </div>
-                                    <label class="cda-inline-option capability-details-dialog__inline-option">
-                                        <InputCheckbox @bind-Value="skillState.ScriptApproval"
-                                                       data-testid="agents-capability-details-skill-approval" />
-                                        Require script approval
-                                    </label>
+                                    <CheckboxOption @bind-Value="skillState.ScriptApproval"
+                                                       data-testid="agents-capability-details-skill-approval"  Class="capability-details-dialog__inline-option" Text="Require script approval" />
                                     <div>
                                         <FormField Text="Trust level">
                                         <InputText @bind-Value="skillState.ScriptTrustLevel"
@@ -341,18 +335,12 @@ else
                                         </FormField>
                                     </div>
                                     <Stack Gap="0.5rem">
-                                        <label class="cda-inline-option capability-details-dialog__inline-option">
-                                            <InputCheckbox @bind-Value="toolState.RequiresApprovalByDefault"
+                                        <CheckboxOption @bind-Value="toolState.RequiresApprovalByDefault"
                                                            disabled="@editorModel.IsBuiltIn"
-                                                           data-testid="agents-capability-details-tool-approval" />
-                                            Requires approval
-                                        </label>
-                                        <label class="cda-inline-option capability-details-dialog__inline-option">
-                                            <InputCheckbox @bind-Value="toolState.IsStateChanging"
+                                                           data-testid="agents-capability-details-tool-approval"  Class="capability-details-dialog__inline-option" Text="Requires approval" />
+                                        <CheckboxOption @bind-Value="toolState.IsStateChanging"
                                                            disabled="@editorModel.IsBuiltIn"
-                                                           data-testid="agents-capability-details-tool-state-changing" />
-                                            State changing
-                                        </label>
+                                                           data-testid="agents-capability-details-tool-state-changing"  Class="capability-details-dialog__inline-option" Text="State changing" />
                                     </Stack>
                                 </Grid>
 

@@ -278,11 +278,8 @@
                                 </div>
                             </Grid>
 
-                            <label class="cda-inline-option">
-                                <InputCheckbox @bind-Value="databaseProfileModel.PostgresTrustServerCertificate"
-                                               data-testid="database-profile-postgres-trust-server-certificate" />
-                                Trust server certificate
-                            </label>
+                            <CheckboxOption @bind-Value="databaseProfileModel.PostgresTrustServerCertificate"
+                                               data-testid="database-profile-postgres-trust-server-certificate"  Text="Trust server certificate" />
                         </FormSection>
                     }
                     else

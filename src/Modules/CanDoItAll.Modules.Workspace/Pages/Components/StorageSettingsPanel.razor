@@ -164,16 +164,10 @@
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <label class="cda-inline-option">
-                                    <InputCheckbox @bind-Value="storageModel.IsEnabled"
-                                                   data-testid="storage-settings-enabled" />
-                                    Enabled
-                                </label>
-                                <label class="cda-inline-option">
-                                    <InputCheckbox @bind-Value="storageModel.IsReadOnly"
-                                                   data-testid="storage-settings-read-only" />
-                                    Read only
-                                </label>
+                                <CheckboxOption @bind-Value="storageModel.IsEnabled"
+                                                   data-testid="storage-settings-enabled"  Text="Enabled" />
+                                <CheckboxOption @bind-Value="storageModel.IsReadOnly"
+                                                   data-testid="storage-settings-read-only"  Text="Read only" />
                             </Grid>
 
                             <div>
@@ -217,11 +211,8 @@
                                     </div>
                                 </Grid>
 
-                                <label class="cda-inline-option">
-                                    <InputCheckbox @bind-Value="storageModel.PinOnUpload"
-                                                   data-testid="storage-settings-pin-on-upload" />
-                                    Pin on upload
-                                </label>
+                                <CheckboxOption @bind-Value="storageModel.PinOnUpload"
+                                                   data-testid="storage-settings-pin-on-upload"  Text="Pin on upload" />
                             }
                             else if (storageModel.ProviderKind == StorageProviderKind.Ftp)
                             {
@@ -251,16 +242,10 @@
                                 </div>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <label class="cda-inline-option">
-                                        <InputCheckbox @bind-Value="storageModel.UseSsl"
-                                                       data-testid="storage-settings-use-ssl" />
-                                        Use SSL
-                                    </label>
-                                    <label class="cda-inline-option">
-                                        <InputCheckbox @bind-Value="storageModel.UsePassiveMode"
-                                                       data-testid="storage-settings-use-passive" />
-                                        Passive mode
-                                    </label>
+                                    <CheckboxOption @bind-Value="storageModel.UseSsl"
+                                                       data-testid="storage-settings-use-ssl"  Text="Use SSL" />
+                                    <CheckboxOption @bind-Value="storageModel.UsePassiveMode"
+                                                       data-testid="storage-settings-use-passive"  Text="Passive mode" />
                                 </Grid>
                             }
 
@@ -277,13 +262,9 @@
                             <div class="grid gap-3 md:grid-cols-2" data-testid="storage-settings-purpose-grid">
                                 @foreach (var purpose in WorkspaceStorageDefaults.TrackedPurposes)
                                 {
-                                    <label class="cda-inline-option rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
-                                        <input type="checkbox"
-                                               checked="@storageModel.DefaultPurposes.Contains(purpose)"
-                                               @onchange="@((ChangeEventArgs args) => TogglePurpose(purpose, args.Value is bool selected && selected))"
-                                               data-testid="@($"storage-settings-purpose-{purpose.ToString().ToLowerInvariant()}")" />
+                                    <CheckboxOption TValue="bool" Value="@storageModel.DefaultPurposes.Contains(purpose)" ValueChanged="value => TogglePurpose(purpose, new ChangeEventArgs { Value = value }.Value is bool selected && selected)" data-testid="@($"storage-settings-purpose-{purpose.ToString().ToLowerInvariant()}")" Class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
                                         @StoragePresentation.DescribeUsagePurpose(purpose)
-                                    </label>
+                                    </CheckboxOption>
                                 }
                             </div>
 

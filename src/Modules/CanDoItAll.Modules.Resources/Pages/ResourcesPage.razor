@@ -308,8 +308,8 @@
                             </Grid>
 
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsIndexing" /> Indexing capable</label>
+                                <CheckboxOption @bind-Value="editor.SupportsPreview"  Text="Preview capable" />
+                                <CheckboxOption @bind-Value="editor.SupportsIndexing"  Text="Indexing capable" />
                             </Grid>
                         </FormSection>
 

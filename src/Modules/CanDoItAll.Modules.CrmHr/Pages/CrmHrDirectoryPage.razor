@@ -389,11 +389,8 @@
                                                          DataTestId="crmhr-directory-sensitive-callout" />
                                 }
 
-                                <label class="cda-inline-option">
-                                    <InputCheckbox @bind-Value="editor.IsSensitive"
-                                                   data-testid="crmhr-party-sensitive" />
-                                    Mark as sensitive
-                                </label>
+                                <CheckboxOption @bind-Value="editor.IsSensitive"
+                                                   data-testid="crmhr-party-sensitive"  Text="Mark as sensitive" />
 
                                 <div>
                                     <FormField Text="Operational notes">

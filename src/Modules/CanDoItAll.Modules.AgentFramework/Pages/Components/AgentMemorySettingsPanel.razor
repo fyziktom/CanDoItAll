@@ -27,22 +27,12 @@
 
         <SurfaceCard Soft="true" Class="md:col-span-2">
             <Stack GapScale="LayoutGap.Small">
-                <label class="cda-inline-option">
-                    <input type="checkbox"
-                           checked="@Value.RequireContextContributions"
-                           disabled="@(Value.InvocationMode == AgentMemoryInvocationMode.Disabled)"
-                           @onchange="eventArgs => Value.RequireContextContributions = AgentMemorySettingsPanelState.ReadCheckbox(eventArgs.Value)"
-                           data-testid="agents-catalog-memory-required" />
+                <CheckboxOption TValue="bool" Value="@Value.RequireContextContributions" ValueChanged="value => Value.RequireContextContributions = AgentMemorySettingsPanelState.ReadCheckbox(value)" Disabled="@(Value.InvocationMode == AgentMemoryInvocationMode.Disabled)" data-testid="agents-catalog-memory-required">
                     Fail the request when no configured memory provider returns context
-                </label>
-                <label class="cda-inline-option">
-                    <input type="checkbox"
-                           checked="@(Value.InvocationMode == AgentMemoryInvocationMode.Automatic && Value.CanUseMemoryTools)"
-                           disabled="@(Value.InvocationMode != AgentMemoryInvocationMode.Automatic)"
-                           @onchange="state.HandleMemoryToolsChanged"
-                           data-testid="agents-catalog-memory-tools" />
+                </CheckboxOption>
+                <CheckboxOption TValue="bool" Value="@(Value.InvocationMode == AgentMemoryInvocationMode.Automatic && Value.CanUseMemoryTools)" ValueChanged="value => state.HandleMemoryToolsChanged(new ChangeEventArgs { Value = value })" Disabled="@(Value.InvocationMode != AgentMemoryInvocationMode.Automatic)" data-testid="agents-catalog-memory-tools">
                     Expose memory tools to this agent
-                </label>
+                </CheckboxOption>
             </Stack>
         </SurfaceCard>
     </Grid>
@@ -91,10 +81,9 @@
             </FormField>
         </div>
         <Stack GapScale="LayoutGap.Small" JustifyContent="JustifyContent.End">
-            <label class="cda-inline-option">
-                <input type="checkbox" @bind="state.IncludeInAutomaticContext" />
+            <CheckboxOption TValue="bool" @bind-Value="state.IncludeInAutomaticContext">
                 Include in automatic fan-out
-            </label>
+            </CheckboxOption>
             <Button Text="Add provider binding"
                     Icon="add"
                     Tone="ButtonTone.Default"

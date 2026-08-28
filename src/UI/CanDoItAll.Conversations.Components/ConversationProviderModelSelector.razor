@@ -11,15 +11,14 @@
                       Disabled="@(Disabled || isOverrideEnabled)"
                       data-testid="@ChoiceTestId" />
 
-            <label class="cda-inline-option">
-                <CheckBox TValue="bool"
-                          Value="@isOverrideEnabled"
-                          ValueChanged="HandleOverrideChangedAsync"
-                          Disabled="@Disabled"
-                          aria-label="Override model name"
-                          data-testid="@OverrideTestId" />
+            <CheckboxOption TValue="bool"
+                            Value="@isOverrideEnabled"
+                            ValueChanged="HandleOverrideChangedAsync"
+                            Disabled="@Disabled"
+                            aria-label="Override model name"
+                            data-testid="@OverrideTestId">
                 <span>Override model name</span>
-            </label>
+            </CheckboxOption>
 
             @if (isOverrideEnabled)
             {

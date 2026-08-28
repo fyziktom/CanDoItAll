@@ -200,11 +200,11 @@
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2" ColumnsXl="3">
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.IsEnabled" /> Enabled</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStreaming" /> Streaming</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsTools" /> Tool calling</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.PreferFrameworkManagedChatHistory" /> Framework-managed history</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsBackgroundResponses" /> Background responses</label>
+                                        <CheckboxOption @bind-Value="providerModel.IsEnabled"  Text="Enabled" />
+                                        <CheckboxOption @bind-Value="providerModel.SupportsStreaming"  Text="Streaming" />
+                                        <CheckboxOption @bind-Value="providerModel.SupportsTools"  Text="Tool calling" />
+                                        <CheckboxOption @bind-Value="providerModel.PreferFrameworkManagedChatHistory"  Text="Framework-managed history" />
+                                        <CheckboxOption @bind-Value="providerModel.SupportsBackgroundResponses"  Text="Background responses" />
                                     </Grid>
                                 </FormSection>
 

@@ -7,12 +7,9 @@
             <Stack Class="provider-pricing-main" GapScale="LayoutGap.Medium">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <Cluster Gap="LayoutGap.Small">
-                        <label class="cda-inline-option">
-                            <InputCheckbox @bind-Value="Model.IsPrivateProvider"
+                        <CheckboxOption @bind-Value="Model.IsPrivateProvider"
                                            disabled="@PrivateProviderLocked"
-                                           data-testid="provider-private-input" />
-                            Private provider
-                        </label>
+                                           data-testid="provider-private-input"  Text="Private provider" />
                         <StatusBadge Tone="info" Text="@($"{Model.ModelPrices.Count} model(s)")" />
                     </Cluster>
                     <p class="app-body-muted">Prices are USD per one million tokens.</p>

@@ -58,11 +58,8 @@
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
-                    <label class="cda-inline-option">
-                        <InputCheckbox @bind-Value="item.IsPublic"
-                                       data-testid="@($"crmhr-contact-public-{rowIndex}")" />
-                        Publicly shareable
-                    </label>
+                    <CheckboxOption @bind-Value="item.IsPublic"
+                                       data-testid="@($"crmhr-contact-public-{rowIndex}")"  Text="Publicly shareable" />
                     <div>
                         <FormField Text="Notes">
                         <InputText @bind-Value="item.Notes"
@@ -149,11 +146,8 @@
                                        InputTestId="crmhr-contact-wizard-tags-input" />
                         </FormField>
 
-                        <label class="cda-inline-option">
-                            <InputCheckbox @bind-Value="contactDraft.IsPublic"
-                                           data-testid="crmhr-contact-wizard-public" />
-                            Publicly shareable
-                        </label>
+                        <CheckboxOption @bind-Value="contactDraft.IsPublic"
+                                           data-testid="crmhr-contact-wizard-public"  Text="Publicly shareable" />
 
                         <FormField Text="Notes">
                             <TextArea Value="@contactDraft.Notes"

@@ -89,11 +89,8 @@
                                    data-testid="@($"crmhr-address-country-{rowIndex}")" />
                         </FormField>
                     </div>
-                    <label class="cda-inline-option">
-                        <InputCheckbox @bind-Value="item.IsPrimary"
-                                       data-testid="@($"crmhr-address-primary-{rowIndex}")" />
-                        Primary address
-                    </label>
+                    <CheckboxOption @bind-Value="item.IsPrimary"
+                                       data-testid="@($"crmhr-address-primary-{rowIndex}")"  Text="Primary address" />
                 </Grid>
             </PanelCard>
         }

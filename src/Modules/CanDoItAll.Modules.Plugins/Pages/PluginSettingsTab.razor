@@ -32,13 +32,9 @@ else
                     </div>
                     <div>
                         <FormField Text="State">
-                        <label class="cda-inline-option">
-                            <input type="checkbox"
-                                   checked="@editor.IsEnabled"
-                                   data-testid="@PluginsPageHelpers.BuildConnectionEnabledTestId(Plugin.PluginId, connectionDescriptor)"
-                                   @onchange="@((ChangeEventArgs args) => HandleEnabledChanged(editor, args))" />
+                        <CheckboxOption TValue="bool" Value="@editor.IsEnabled" ValueChanged="value => HandleEnabledChanged(editor, new ChangeEventArgs { Value = value })" data-testid="@PluginsPageHelpers.BuildConnectionEnabledTestId(Plugin.PluginId, connectionDescriptor)">
                             Enabled
-                        </label>
+                        </CheckboxOption>
                         </FormField>
                     </div>
                 </Grid>
@@ -65,13 +61,9 @@ else
                                     @switch (field.FieldType)
                                     {
                                     case ConfigurationFieldType.Boolean:
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editor.State.GetBoolean(field.Key)"
-                                                   data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
-                                                   @onchange="@((ChangeEventArgs args) => HandleBooleanSettingChanged(editor, field.Key, args))" />
+                                        <CheckboxOption TValue="bool" Value="@editor.State.GetBoolean(field.Key)" ValueChanged="value => HandleBooleanSettingChanged(editor, field.Key, new ChangeEventArgs { Value = value })" data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)">
                                             @field.HelpText
-                                        </label>
+                                        </CheckboxOption>
                                         break;
                                     case ConfigurationFieldType.Json:
                                     case ConfigurationFieldType.MultilineText:

@@ -135,11 +135,11 @@
                             </Grid>
 
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.IsEnabled" /> Enabled</label>
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStreaming" /> Streaming</label>
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsToolCalling" /> Tool calling</label>
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStructuredOutput" /> Structured output</label>
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsVision" /> Vision</label>
+                                <CheckboxOption @bind-Value="providerModel.IsEnabled"  Text="Enabled" />
+                                <CheckboxOption @bind-Value="providerModel.SupportsStreaming"  Text="Streaming" />
+                                <CheckboxOption @bind-Value="providerModel.SupportsToolCalling"  Text="Tool calling" />
+                                <CheckboxOption @bind-Value="providerModel.SupportsStructuredOutput"  Text="Structured output" />
+                                <CheckboxOption @bind-Value="providerModel.SupportsVision"  Text="Vision" />
                             </Grid>
                         </FormSection>
                     </TabsItem>

@@ -153,22 +153,13 @@ else
                             <SurfaceCard Soft="true" data-testid="agents-catalog-approval-policy">
                                 <Stack GapScale="LayoutGap.Small">
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Approval policy" />
-                                    <label class="cda-inline-option">
-                                        <input type="checkbox"
-                                               checked="@editorModel.Permissions.RequiresApprovalForExternalCalls"
-                                               @onchange="args => ToggleExternalCallApprovalRequirement(args.Value)"
-                                               data-testid="agents-catalog-require-external-approval" />
+                                    <CheckboxOption TValue="bool" Value="@editorModel.Permissions.RequiresApprovalForExternalCalls" ValueChanged="value => ToggleExternalCallApprovalRequirement(value)" data-testid="agents-catalog-require-external-approval">
                                         Require approval for external calls
-                                    </label>
-                                    <label class="cda-inline-option">
-                                        <input @key="autoApprovalInputVersion"
-                                               type="checkbox"
-                                               checked="@editorModel.Permissions.AutoApproveExternalCallsByDefault"
-                                               disabled="@isConfirmingAutoApproval"
-                                               @onchange="args => HandleAutoApprovalChangedAsync(args.Value)"
-                                               data-testid="agents-catalog-auto-approval" />
+                                    </CheckboxOption>
+                                    <CheckboxOption TValue="bool" Value="@editorModel.Permissions.AutoApproveExternalCallsByDefault" ValueChanged="value => HandleAutoApprovalChangedAsync(value)" Disabled="@isConfirmingAutoApproval" @key="autoApprovalInputVersion"
+                                               data-testid="agents-catalog-auto-approval">
                                         Auto-approve approval-required tool calls by default
-                                    </label>
+                                    </CheckboxOption>
                                     <TextBlock TextStyle="TextStyle.Body2"
                                                Value="Per-run approval choices remain available in chat. This setting changes the default for every new run of this agent." />
 
@@ -194,20 +185,12 @@ else
                                 <div class="app-admin-subpanel">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mb-2" Value="Access" />
                                     <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ImageGenerationAccess.CanGenerateImages"
-                                                   @onchange="args => ToggleImageGenerationAccess(args.Value)"
-                                                   data-testid="agents-catalog-image-generation-enabled" />
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ImageGenerationAccess.CanGenerateImages" ValueChanged="value => ToggleImageGenerationAccess(value)" data-testid="agents-catalog-image-generation-enabled">
                                             Can generate images
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ImageGenerationAccess.CanStoreImagesAsProjectAssets"
-                                                   @onchange="args => ToggleImageProjectAssetStorage(args.Value)"
-                                                   data-testid="agents-catalog-image-generation-project-assets" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ImageGenerationAccess.CanStoreImagesAsProjectAssets" ValueChanged="value => ToggleImageProjectAssetStorage(value)" data-testid="agents-catalog-image-generation-project-assets">
                                             Can store generated images as project assets
-                                        </label>
+                                        </CheckboxOption>
                                     </Stack>
                                 </div>
                                 <div class="app-admin-subpanel md:col-span-2">
@@ -261,57 +244,27 @@ else
                                 <div class="app-admin-subpanel">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mb-2" Value="Access mode" />
                                     <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProjectStructureAccess.CanRead"
-                                                   @onchange="args => ToggleProjectStructureRead(args.Value)"
-                                                   data-testid="agents-catalog-project-structure-read" />
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProjectStructureAccess.CanRead" ValueChanged="value => ToggleProjectStructureRead(value)" data-testid="agents-catalog-project-structure-read">
                                             Can read project structure
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProjectStructureAccess.CanCreateProjects"
-                                                   @onchange="args => ToggleProjectCreation(args.Value)"
-                                                   data-testid="agents-catalog-project-create" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProjectStructureAccess.CanCreateProjects" ValueChanged="value => ToggleProjectCreation(value)" data-testid="agents-catalog-project-create">
                                             Can create standalone projects
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProjectStructureAccess.CanCreateSubprojects"
-                                                   @onchange="args => ToggleSubprojectCreation(args.Value)"
-                                                   data-testid="agents-catalog-subproject-create" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProjectStructureAccess.CanCreateSubprojects" ValueChanged="value => ToggleSubprojectCreation(value)" data-testid="agents-catalog-subproject-create">
                                             Can create subprojects under allowed projects
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteNonTaskStructure)"
-                                                   disabled="@editorModel.ProjectStructureAccess.CanWrite"
-                                                   @onchange="args => ToggleProjectStructureNonTaskWrite(args.Value)"
-                                                   data-testid="agents-catalog-project-structure-non-task-write" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteNonTaskStructure)" ValueChanged="value => ToggleProjectStructureNonTaskWrite(value)" Disabled="@editorModel.ProjectStructureAccess.CanWrite" data-testid="agents-catalog-project-structure-non-task-write">
                                             Can write project structure except tasks
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteTasks)"
-                                                   disabled="@editorModel.ProjectStructureAccess.CanWrite"
-                                                   @onchange="args => ToggleProjectStructureTaskWrite(args.Value)"
-                                                   data-testid="agents-catalog-project-structure-task-write" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteTasks)" ValueChanged="value => ToggleProjectStructureTaskWrite(value)" Disabled="@editorModel.ProjectStructureAccess.CanWrite" data-testid="agents-catalog-project-structure-task-write">
                                             Can write project tasks
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProjectStructureAccess.CanWrite"
-                                                   @onchange="args => ToggleProjectStructureWrite(args.Value)"
-                                                   data-testid="agents-catalog-project-structure-write" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProjectStructureAccess.CanWrite" ValueChanged="value => ToggleProjectStructureWrite(value)" data-testid="agents-catalog-project-structure-write">
                                             Can write entire project structure (includes tasks)
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProjectStructureAccess.AllowAllProjects"
-                                                   @onchange="args => ToggleProjectStructureAllowAll(args.Value)"
-                                                   data-testid="agents-catalog-project-structure-all" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProjectStructureAccess.AllowAllProjects" ValueChanged="value => ToggleProjectStructureAllowAll(value)" data-testid="agents-catalog-project-structure-all">
                                             Allow all current and future projects
-                                        </label>
+                                        </CheckboxOption>
                                     </Stack>
                                 </div>
                                 <div class="app-admin-subpanel md:col-span-2">
@@ -399,12 +352,9 @@ else
                                             <Stack GapScale="LayoutGap.Small">
                                                 @foreach (var project in projectStructureProjects)
                                                 {
-                                                    <label class="cda-inline-option cda-inline-option--muted">
-                                                        <input type="checkbox"
-                                                               checked="@HasProjectStructureProjectAccess(project.Id)"
-                                                               @onchange="args => ToggleProjectStructureProject(project.Id, args.Value)" />
+                                                    <CheckboxOption TValue="bool" Value="@HasProjectStructureProjectAccess(project.Id)" ValueChanged="value => ToggleProjectStructureProject(project.Id, value)" Muted="true">
                                                         @project.Name
-                                                    </label>
+                                                    </CheckboxOption>
                                                 }
                                             </Stack>
                                         </div>
@@ -438,60 +388,32 @@ else
                                 <div class="app-admin-subpanel md:col-span-2">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mb-2" Value="Execution tools" />
                                     <Grid Gap="LayoutGap.Small" ColumnsMd="2">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanRunValidationCommands"
-                                                   @onchange="args => ToggleWorkspaceValidationCommands(args.Value)"
-                                                   data-testid="agents-catalog-workspace-validation" />
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanRunValidationCommands" ValueChanged="value => ToggleWorkspaceValidationCommands(value)" data-testid="agents-catalog-workspace-validation">
                                             Can run build, test, and app commands
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanRunLocalScripts"
-                                                   @onchange="args => ToggleWorkspaceLocalScripts(args.Value)"
-                                                   data-testid="agents-catalog-workspace-scripts" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanRunLocalScripts" ValueChanged="value => ToggleWorkspaceLocalScripts(value)" data-testid="agents-catalog-workspace-scripts">
                                             Can run local scripts
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanScaffoldProjects"
-                                                   @onchange="args => ToggleWorkspaceScaffoldProjects(args.Value)"
-                                                   data-testid="agents-catalog-workspace-scaffold" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanScaffoldProjects" ValueChanged="value => ToggleWorkspaceScaffoldProjects(value)" data-testid="agents-catalog-workspace-scaffold">
                                             Can scaffold projects
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanManageWorkspacePaths"
-                                                   @onchange="args => ToggleWorkspaceManagePaths(args.Value)"
-                                                   data-testid="agents-catalog-workspace-manage-paths" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanManageWorkspacePaths" ValueChanged="value => ToggleWorkspaceManagePaths(value)" data-testid="agents-catalog-workspace-manage-paths">
                                             Can move, copy, and delete paths
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanTransformArtifacts"
-                                                   @onchange="args => ToggleWorkspaceTransformArtifacts(args.Value)"
-                                                   data-testid="agents-catalog-workspace-transform" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanTransformArtifacts" ValueChanged="value => ToggleWorkspaceTransformArtifacts(value)" data-testid="agents-catalog-workspace-transform">
                                             Can transform artifacts
-                                        </label>
+                                        </CheckboxOption>
                                     </Grid>
                                 </div>
                                 <div class="app-admin-subpanel">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mb-2" Value="File access" />
                                     <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanReadFiles"
-                                                   @onchange="args => ToggleWorkspaceFileRead(args.Value)"
-                                                   data-testid="agents-catalog-workspace-read" />
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanReadFiles" ValueChanged="value => ToggleWorkspaceFileRead(value)" data-testid="agents-catalog-workspace-read">
                                             Can browse and read files
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanWriteFiles"
-                                                   @onchange="args => ToggleWorkspaceFileWrite(args.Value)"
-                                                   data-testid="agents-catalog-workspace-write" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanWriteFiles" ValueChanged="value => ToggleWorkspaceFileWrite(value)" data-testid="agents-catalog-workspace-write">
                                             Can write files
-                                        </label>
+                                        </CheckboxOption>
                                     </Stack>
                                     <p class="mt-3 text-sm leading-6 text-slate-600">
                                         @DescribeWorkspaceFileScope(editorModel)
@@ -507,27 +429,15 @@ else
                                 <div class="app-admin-subpanel">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mb-2" Value="Storage access" />
                                     <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanReadStorage"
-                                                   @onchange="args => ToggleStorageRead(args.Value)"
-                                                   data-testid="agents-catalog-storage-read" />
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanReadStorage" ValueChanged="value => ToggleStorageRead(value)" data-testid="agents-catalog-storage-read">
                                             Can read storage driver catalogs
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.CanWriteStorage"
-                                                   @onchange="args => ToggleStorageWrite(args.Value)"
-                                                   data-testid="agents-catalog-storage-write" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.CanWriteStorage" ValueChanged="value => ToggleStorageWrite(value)" data-testid="agents-catalog-storage-write">
                                             Can write storage driver objects
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
-                                                   @onchange="args => ToggleStorageAllowAll(args.Value)"
-                                                   data-testid="agents-catalog-storage-all" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs" ValueChanged="value => ToggleStorageAllowAll(value)" data-testid="agents-catalog-storage-all">
                                             Allow all storage catalogs
-                                        </label>
+                                        </CheckboxOption>
                                     </Stack>
                                     <p class="mt-3 text-sm leading-6 text-slate-600">
                                         @DescribeStorageScope(editorModel)
@@ -579,13 +489,10 @@ else
                                             <Stack GapScale="LayoutGap.Small">
                                                 @foreach (var secret in secrets)
                                                 {
-                                                    <label class="cda-inline-option cda-inline-option--muted">
-                                                        <input type="checkbox"
-                                                               checked="@HasAllowedSecret(secret.Id)"
-                                                               @onchange="args => ToggleAllowedSecret(secret, args.Value)" />
+                                                    <CheckboxOption TValue="bool" Value="@HasAllowedSecret(secret.Id)" ValueChanged="value => ToggleAllowedSecret(secret, value)" Muted="true">
                                                         @secret.Name
                                                         <span class="text-slate-500">(@secret.Kind)</span>
-                                                    </label>
+                                                    </CheckboxOption>
                                                 }
                                             </Stack>
                                         </div>
@@ -601,27 +508,15 @@ else
                                 <div class="app-admin-subpanel">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mb-2" Value="Access mode" />
                                     <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProcessAccess.CanRead"
-                                                   @onchange="args => ToggleProcessRead(args.Value)"
-                                                   data-testid="agents-catalog-process-read" />
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProcessAccess.CanRead" ValueChanged="value => ToggleProcessRead(value)" data-testid="agents-catalog-process-read">
                                             Can read processes
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProcessAccess.CanWrite"
-                                                   @onchange="args => ToggleProcessWrite(args.Value)"
-                                                   data-testid="agents-catalog-process-write" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProcessAccess.CanWrite" ValueChanged="value => ToggleProcessWrite(value)" data-testid="agents-catalog-process-write">
                                             Can write processes
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ProcessAccess.AllowAllDefinitions"
-                                                   @onchange="args => ToggleProcessAllowAll(args.Value)"
-                                                   data-testid="agents-catalog-process-all" />
+                                        </CheckboxOption>
+                                        <CheckboxOption TValue="bool" Value="@editorModel.ProcessAccess.AllowAllDefinitions" ValueChanged="value => ToggleProcessAllowAll(value)" data-testid="agents-catalog-process-all">
                                             Allow all current and future processes
-                                        </label>
+                                        </CheckboxOption>
                                     </Stack>
                                 </div>
                                 <div class="app-admin-subpanel md:col-span-2">
@@ -756,13 +651,9 @@ else
                                 <div class="app-admin-subpanel">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mb-2" Value="Voice access" />
                                     <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.VoiceAccess.CanUseVoiceMode"
-                                                   @onchange="args => ToggleVoiceModeAccess(args.Value)"
-                                                   data-testid="agents-catalog-voice-enabled" />
+                                        <CheckboxOption TValue="bool" Value="@editorModel.VoiceAccess.CanUseVoiceMode" ValueChanged="value => ToggleVoiceModeAccess(value)" data-testid="agents-catalog-voice-enabled">
                                             Can use audio mode
-                                        </label>
+                                        </CheckboxOption>
                                     </Stack>
                                 </div>
                                 <div class="app-admin-subpanel">

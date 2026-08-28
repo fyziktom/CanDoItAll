@@ -36,10 +36,9 @@
             <TextBlock TextStyle="TextStyle.Caption"
                        Value="Use 0 to disable background preparation. The stock favors agents used most often in this circuit." />
 
-            <label class="cda-inline-option">
-                <InputCheckbox @bind-Value="adaptivePreparationEnabled" />
+            <CheckboxOption @bind-Value="adaptivePreparationEnabled" >
                 <span>Adapt preparation to recent usage</span>
-            </label>
+            </CheckboxOption>
 
             <FormField Text="Prepared metadata idle retention (minutes)" ContainerClass="app-field">
                 <InputNumber @bind-Value="preparedResourceIdleRetentionMinutes"

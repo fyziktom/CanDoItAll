@@ -85,11 +85,8 @@
                                            data-testid="agents-capability-setup-mcp-server" />
                                 </FormField>
                             </div>
-                            <label class="cda-inline-option capability-setup-wizard__inline-option">
-                                <InputCheckbox @bind-Value="mcpState.Hosted"
-                                               data-testid="agents-capability-setup-mcp-hosted" />
-                                Hosted provider MCP
-                            </label>
+                            <CheckboxOption @bind-Value="mcpState.Hosted"
+                                               data-testid="agents-capability-setup-mcp-hosted"  Class="capability-setup-wizard__inline-option" Text="Hosted provider MCP" />
                         </Grid>
 
                         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
@@ -201,16 +198,10 @@
                                 </FormField>
                             </div>
                             <Stack Gap="0.5rem">
-                                <label class="cda-inline-option capability-setup-wizard__inline-option">
-                                    <InputCheckbox @bind-Value="toolState.RequiresApprovalByDefault"
-                                                   data-testid="agents-capability-setup-tool-approval" />
-                                    Requires approval
-                                </label>
-                                <label class="cda-inline-option capability-setup-wizard__inline-option">
-                                    <InputCheckbox @bind-Value="toolState.IsStateChanging"
-                                                   data-testid="agents-capability-setup-tool-state-changing" />
-                                    State changing
-                                </label>
+                                <CheckboxOption @bind-Value="toolState.RequiresApprovalByDefault"
+                                                   data-testid="agents-capability-setup-tool-approval"  Class="capability-setup-wizard__inline-option" Text="Requires approval" />
+                                <CheckboxOption @bind-Value="toolState.IsStateChanging"
+                                                   data-testid="agents-capability-setup-tool-state-changing"  Class="capability-setup-wizard__inline-option" Text="State changing" />
                             </Stack>
                         </Grid>
 
@@ -340,11 +331,8 @@
                                 </InputSelect>
                                 </FormField>
                             </div>
-                            <label class="cda-inline-option capability-setup-wizard__inline-option">
-                                <InputCheckbox @bind-Value="skillState.ScriptApproval"
-                                               data-testid="agents-capability-setup-skill-approval" />
-                                Require script approval
-                            </label>
+                            <CheckboxOption @bind-Value="skillState.ScriptApproval"
+                                               data-testid="agents-capability-setup-skill-approval"  Class="capability-setup-wizard__inline-option" Text="Require script approval" />
                             <div>
                                 <FormField Text="Trust level">
                                 <InputText @bind-Value="skillState.ScriptTrustLevel"

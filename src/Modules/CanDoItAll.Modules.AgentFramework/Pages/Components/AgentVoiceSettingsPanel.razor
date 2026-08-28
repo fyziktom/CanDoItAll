@@ -13,10 +13,9 @@
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="General voice" />
         <h2 class="mt-1 text-lg font-semibold text-slate-950">Speech to text</h2>
         <Stack GapScale="LayoutGap.Medium" Class="mt-4">
-            <label class="cda-inline-option">
-                <InputCheckbox @bind-Value="settings.SpeechToText.IsEnabled" />
+            <CheckboxOption @bind-Value="settings.SpeechToText.IsEnabled" >
                 <span>Enable speech input</span>
-            </label>
+            </CheckboxOption>
             <FormField Text="Driver" ContainerClass="app-field">
                 <InputSelect @bind-Value="settings.SpeechToText.DriverKind" class="ui-input">
                     <option value="@AgentVoiceDriverKind.OpenAi">OpenAI</option>
@@ -49,10 +48,9 @@
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="General voice" />
         <h2 class="mt-1 text-lg font-semibold text-slate-950">Text to speech</h2>
         <Stack GapScale="LayoutGap.Medium" Class="mt-4">
-            <label class="cda-inline-option">
-                <InputCheckbox @bind-Value="settings.TextToSpeech.IsEnabled" />
+            <CheckboxOption @bind-Value="settings.TextToSpeech.IsEnabled" >
                 <span>Enable spoken responses</span>
-            </label>
+            </CheckboxOption>
             <FormField Text="Driver" ContainerClass="app-field">
                 <InputSelect @bind-Value="settings.TextToSpeech.DriverKind" class="ui-input">
                     <option value="@AgentVoiceDriverKind.OpenAi">OpenAI</option>

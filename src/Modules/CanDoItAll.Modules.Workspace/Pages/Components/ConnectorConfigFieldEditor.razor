@@ -14,12 +14,10 @@
                          data-testid="@TestId" />
             break;
         case ConnectorConfigFieldType.Boolean:
-            <label class="cda-inline-option">
-                <InputCheckbox Value="BooleanValue"
+            <CheckboxOption TValue="bool"
+                               Value="@BooleanValue"
                                ValueChanged="HandleBooleanChanged"
-                               data-testid="@TestId" />
-                @Field.HelpText
-            </label>
+                               data-testid="@TestId"  Text="@Field.HelpText" />
             break;
         case ConnectorConfigFieldType.Json:
         case ConnectorConfigFieldType.MultilineText:

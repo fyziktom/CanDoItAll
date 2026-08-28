@@ -95,11 +95,8 @@
                                    data-testid="@($"crmhr-relationship-end-{rowIndex}")" />
                         </FormField>
                     </div>
-                    <label class="cda-inline-option">
-                        <InputCheckbox @bind-Value="item.IsPrimary"
-                                       data-testid="@($"crmhr-relationship-primary-{rowIndex}")" />
-                        Primary relationship
-                    </label>
+                    <CheckboxOption @bind-Value="item.IsPrimary"
+                                       data-testid="@($"crmhr-relationship-primary-{rowIndex}")"  Text="Primary relationship" />
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">

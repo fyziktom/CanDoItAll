@@ -198,12 +198,12 @@
                             </FormField>
                         </div>
                         <div class="flex items-end justify-between gap-3">
-                            <label class="cda-inline-option">
-                                <InputCheckbox Value="@item.IsPrimary"
-                                               ValueChanged="@((bool value) => UpdatePrimaryAsync(item, value))"
-                                               data-testid="@($"crmhr-affiliation-primary-{rowIndex}")" />
+                            <CheckboxOption TValue="bool"
+                                            Value="@item.IsPrimary"
+                                            ValueChanged="@((bool value) => UpdatePrimaryAsync(item, value))"
+                                            data-testid="@($"crmhr-affiliation-primary-{rowIndex}")">
                                 Primary affiliation
-                            </label>
+                            </CheckboxOption>
                             <Button Text="Remove"
                                     Tone="ButtonTone.Danger"
                                     Size="ButtonSize.Small"
