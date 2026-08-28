@@ -17,10 +17,6 @@
     line-height: 1.25;
 }
 
-.agents-runtime-badges-shell ::deep .cda-eyebrow {
-    letter-spacing: 0.14em;
-}
-
 @media (min-width: 1280px) {
     .agents-runtime-badges-shell ::deep .cda-summary-tile--badge {
         flex-basis: 13rem;

@@ -154,7 +154,7 @@
 
                 <DetailHeader>
                     <Stack GapScale="LayoutGap.Tiny">
-                        <p class="cda-eyebrow">Secret editor</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Secret editor" />
                         <h2 class="app-title-xl">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
                         <p class="app-body-muted">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
                     </Stack>
@@ -275,7 +275,7 @@
 
                 <DetailHeader>
                     <Stack GapScale="LayoutGap.Tiny">
-                        <p class="cda-eyebrow">Provider editor</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Provider editor" />
                         <h2 class="app-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
                         <p class="app-body-muted">Profiles keep connector transport, capability flags, and health status in one editor.</p>
                     </Stack>
@@ -411,12 +411,12 @@
                              Description="Control the local API surface and create JWT bearer tokens when authorization is active.">
                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                         <Stack GapScale="LayoutGap.Small">
-                            <p class="cda-eyebrow">API</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="API" />
                             <StatusBadge Tone="@(apiStatus?.ApiEnabled == true ? "success" : "warning")" Text="@(apiStatus?.ApiEnabled == true ? "Enabled" : "Disabled")" />
                             <p class="app-body-muted break-all">OpenAPI: @(apiStatus?.OpenApiEnabled == true ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
                         </Stack>
                         <Stack GapScale="LayoutGap.Small">
-                            <p class="cda-eyebrow">Authorization</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Authorization" />
                             <StatusBadge Tone="@(apiStatus?.AuthorizationEnabled == true ? "warning" : "info")" Text="@(apiStatus?.AuthorizationEnabled == true ? "JWT required" : "JWT disabled")" />
                             <p class="app-body-muted break-all">@FormatApiAudience()</p>
                         </Stack>
@@ -478,4 +478,3 @@
         }
     </ChildContent>
 </PageScaffold>
-

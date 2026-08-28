@@ -5,7 +5,7 @@
            AlignItems="AlignItems.Start"
            JustifyContent="JustifyContent.SpaceBetween">
         <Stack GapScale="LayoutGap.Small">
-            <p class="cda-eyebrow">Bulk import and export</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Bulk import and export" />
             <h2 class="text-lg font-semibold text-slate-950">CSV stewardship tools</h2>
             <p class="text-sm leading-6 text-slate-600">
                 @ExportDescription
@@ -58,7 +58,7 @@
     @if (preview is not null)
     {
         <Stack GapScale="LayoutGap.Medium">
-            <p class="cda-eyebrow">Import preview</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Import preview" />
             <p class="text-sm leading-6 text-slate-600">@($"{preview.ReadyRowCount} ready row(s), {preview.BlockingRowCount} blocking row(s).")</p>
 
             @foreach (var row in preview.Rows)

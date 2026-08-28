@@ -87,7 +87,7 @@
                             <Split Gap="LayoutGap.Medium"
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
-                                    <p class="cda-eyebrow">Selected workforce record</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Selected workforce record" />
                                     <h2 class="mt-1 text-lg font-semibold text-slate-950">@selectedWorkspace.DisplayName</h2>
                                     @if (!string.IsNullOrWhiteSpace(selectedWorkspace.Summary))
                                     {
@@ -124,7 +124,7 @@
                             <SurfaceCard Soft="true" data-testid="crmhr-workforce-no-staffable-profile">
                                 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Start">
                                     <div>
-                                        <p class="cda-eyebrow">External contact</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="External contact" />
                                         <h3 class="mt-1 text-lg font-semibold text-slate-950">No staffable profile</h3>
                                         <p class="mt-2 text-sm leading-6 text-slate-700">
                                             This person can participate in project work, but has no employee, contractor, or freelancer profile. Creating staffing, rate, skill, or capacity data is a deliberate action.
@@ -160,39 +160,39 @@
 
                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Home unit</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Home unit" />
                                             <p class="mt-1 text-sm font-medium text-slate-950"
                                                data-testid="crmhr-workforce-summary-home-unit">@FormatValue(selectedWorkspace.HomeUnitName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Manager</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Manager" />
                                             <p class="mt-1 text-sm font-medium text-slate-950"
                                                data-testid="crmhr-workforce-summary-manager">@FormatValue(selectedWorkspace.ManagerName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Primary email</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Primary email" />
                                             <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Primary phone</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Primary phone" />
                                             <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Available now</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Available now" />
                                             <p class="mt-1 text-sm font-medium text-slate-950"
                                                data-testid="crmhr-workforce-summary-available">@FormatOptionalPercent(SelectedAvailablePercent)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Next availability</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Next availability" />
                                             <p class="mt-1 text-sm font-medium text-slate-950"
                                                data-testid="crmhr-workforce-summary-next-availability">@(HasSelectedAvailabilityDetails ? FormatDate(SelectedNextAvailabilityOn) : "Not loaded")</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Contract end</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Contract end" />
                                             <p class="mt-1 text-sm font-medium text-slate-950">@FormatDate(selectedWorkspace.Profile.EndDate)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
-                                            <p class="cda-eyebrow">Searchable skills</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Searchable skills" />
                                             <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(BuildSkillCoverage(selectedWorkspace.Skills))</p>
                                         </SurfaceCard>
                                     </Grid>
@@ -381,7 +381,7 @@
                                     {
                                         <SurfaceCard Soft="true"
                                                      data-testid="crmhr-workforce-allocations-loading">
-                                            <p class="cda-eyebrow">Loading allocation workspace</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Loading allocation workspace" />
                                             <p class="mt-2 text-sm leading-6 text-slate-600">
                                                 Reading capacity blocks, project assignments, and the allocation timeline for this record.
                                             </p>
@@ -391,7 +391,7 @@
                                     {
                                         <SurfaceCard Soft="true"
                                                      data-testid="crmhr-workforce-allocations-error">
-                                            <p class="cda-eyebrow text-rose-700">Allocation workspace unavailable</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Allocation workspace unavailable" />
                                             <p class="mt-2 text-sm leading-6 text-slate-700">@capacityWorkspaceError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
@@ -422,7 +422,7 @@
                                     @if (!string.IsNullOrWhiteSpace(historyLoadError))
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-workforce-history-error">
-                                            <p class="cda-eyebrow text-rose-700">History unavailable</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="History unavailable" />
                                             <p class="mt-2 text-sm leading-6 text-slate-700">@historyLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"

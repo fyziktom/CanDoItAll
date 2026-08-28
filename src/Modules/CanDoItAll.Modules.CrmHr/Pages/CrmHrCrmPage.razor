@@ -109,7 +109,7 @@
                                             </InputSelect>
                                         </div>
                                         <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                            <p class="cda-eyebrow">Current scope</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current scope" />
                                             <p class="mt-2 text-sm leading-6 text-slate-700">
                                                 Account context, connected people, follow-up history, opportunity progression, and recognized sold value stay grounded on the shared party record.
                                             </p>
@@ -164,7 +164,7 @@
                                        AlignItems="AlignItems.Center"
                                        JustifyContent="JustifyContent.SpaceBetween">
                                     <div>
-                                        <p class="cda-eyebrow">Company relationship map</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Company relationship map" />
                                         <p class="mt-1 text-sm leading-6 text-slate-600">Use typed relationship roles for employees, contacts, sponsors, partners, and delivery participants. Project links are optional.</p>
                                     </div>
                                     <Button Text="Add connection"
@@ -279,7 +279,7 @@
                                 @if (!string.IsNullOrWhiteSpace(accountActivityLoadError))
                                 {
                                     <SurfaceCard Soft="true" data-testid="crmhr-account-activity-error">
-                                        <p class="cda-eyebrow text-rose-700">Account activity unavailable</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Account activity unavailable" />
                                         <p class="mt-2 text-sm leading-6 text-slate-700">@accountActivityLoadError</p>
                                         <Button Text="Retry"
                                                 Icon="refresh"
@@ -298,7 +298,7 @@
                                 }
 
                                 <SurfaceCard Soft="true">
-                                    <p class="cda-eyebrow">Next actions</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Next actions" />
                                     <h3 class="mt-1 text-lg font-semibold text-slate-950">Follow-up pressure</h3>
                                     <p class="mt-4 text-sm leading-6 text-slate-600">
                                         Counts cover the complete account history while the timeline renders only the active page.

@@ -8,7 +8,7 @@
     <Stack GapScale="LayoutGap.Tiny">
         <Cluster Gap="LayoutGap.Small">
             @PluginsPageHelpers.RenderPluginIcon(Plugin.Icon, "h-8 w-8")
-            <span class="cda-eyebrow">@PluginsPageHelpers.ResolveIconLabel(Plugin.Icon)</span>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@PluginsPageHelpers.ResolveIconLabel(Plugin.Icon)" />
         </Cluster>
         <Cluster Gap="LayoutGap.Small">
             <StatusBadge Tone="@PluginsPageHelpers.ResolveAvailabilityTone(Plugin)" Text="@Plugin.Availability.ToString()" />

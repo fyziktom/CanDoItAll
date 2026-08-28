@@ -14,15 +14,15 @@
             <Stack GapScale="LayoutGap.Medium">
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Role</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Role" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(Assignment.Role)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Allocation</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Allocation" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@(Assignment.AllocationPercent.HasValue ? $"{Assignment.AllocationPercent.Value:0.##}%" : "Not set")</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Period</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Period" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@($"{FormatDate(Assignment.StartsAtUtc)} → {FormatDate(Assignment.EndsAtUtc)}")</p>
                     </SurfaceCard>
                 </Grid>
@@ -36,7 +36,7 @@
                                AlignItems="AlignItems.Start"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div class="min-w-0">
-                                <p class="cda-eyebrow">Party affiliation</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Party affiliation" />
                                 <p class="mt-1 text-sm font-semibold text-slate-950">
                                     @(string.IsNullOrWhiteSpace(Assignment.Affiliation.PrimaryDisplayText)
                                         ? "No organization recorded"
@@ -58,7 +58,7 @@
                 @if (!string.IsNullOrWhiteSpace(Assignment.Notes))
                 {
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Assignment notes</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Assignment notes" />
                         <p class="mt-1 text-sm leading-6 text-slate-700">@Assignment.Notes</p>
                     </SurfaceCard>
                 }
@@ -72,7 +72,7 @@
                                JustifyContent="JustifyContent.SpaceBetween"
                                Wrap="FlexWrap.Wrap">
                             <div class="min-w-0">
-                                <p class="cda-eyebrow">Linked project work item</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Linked project work item" />
                                 @if (IsTaskLoading)
                                 {
                                     <p class="mt-2 text-sm text-slate-600">Loading work-item details…</p>

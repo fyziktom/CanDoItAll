@@ -42,7 +42,7 @@
                  data-testid="live-processes-command-strip">
             <ToolbarRow Class="live-processes-command-strip__row">
                 <CompactStatStrip Class="min-w-0">
-                    <p class="cda-eyebrow whitespace-nowrap">Processes</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="whitespace-nowrap" Value="Processes" />
                     <h1 class="live-processes-title">@PageTitleText</h1>
                     <CompactStat Tone="info"
                                  Text="@FormatCount(shell?.LiveRuns.ActiveRunCount ?? 0, "active", "active")"

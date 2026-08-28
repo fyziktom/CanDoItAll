@@ -8,7 +8,7 @@
                    AlignItems="AlignItems.Center"
                    JustifyContent="JustifyContent.SpaceBetween">
                 <div class="min-w-0">
-                    <p class="cda-eyebrow cda-eyebrow--tight">Current allocations</p>
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current allocations" />
                     <h2 class="mt-1 truncate text-lg font-semibold tracking-tight text-slate-950">
                         @(string.IsNullOrWhiteSpace(ProjectName) ? "Project resource plan" : ProjectName)
                     </h2>
@@ -88,7 +88,7 @@
                 <SurfaceCard Soft="true" data-testid="crmhr-allocation-candidates-surface">
                     <Stack GapScale="LayoutGap.Medium">
                         <div>
-                            <p class="cda-eyebrow cda-eyebrow--tight">Candidate finder</p>
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Candidate finder" />
                             <h3 class="mt-1 text-base font-semibold text-slate-950">Available staffing candidates</h3>
                         </div>
 

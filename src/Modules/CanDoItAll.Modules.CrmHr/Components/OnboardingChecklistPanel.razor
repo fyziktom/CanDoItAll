@@ -10,7 +10,7 @@
     {
         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
             <SurfaceCard>
-                <p class="cda-eyebrow">Support network</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Support network" />
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Manager, buddy, and mentor</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
@@ -44,7 +44,7 @@
                 </Cluster>
 
                 <div class="mt-5">
-                    <p class="cda-eyebrow">Current assignments</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current assignments" />
                     <Cluster Gap="LayoutGap.Small" Class="mt-2">
                         <StatusBadge Tone="primary"
                                      Text="@BuildSupportBadge("Manager", CurrentAssignments.ManagerName)" />
@@ -57,7 +57,7 @@
             </SurfaceCard>
 
             <SurfaceCard Soft="true">
-                <p class="cda-eyebrow">Checklist item</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Checklist item" />
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Training or lifecycle task</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
@@ -131,7 +131,7 @@
         </Grid>
 
         <SurfaceCard Soft="true" Class="mt-6">
-            <p class="cda-eyebrow">Lifecycle board</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Lifecycle board" />
             <h3 class="mt-1 text-lg font-semibold text-slate-950">@Tasks.Count task(s)</h3>
 
             @if (Tasks.Count == 0)

@@ -61,7 +61,7 @@
                    AlignItems="AlignItems.Start"
                    JustifyContent="JustifyContent.SpaceBetween">
                 <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
-                    <p class="cda-eyebrow">Allocation schedule</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Allocation schedule" />
                     <h3 class="text-lg font-semibold text-slate-950">Project commitment timeline</h3>
                     <p class="text-sm leading-6 text-slate-600">
                         Read-only project assignments. Allocation percentages remain in the task titles and are not interpreted as delivery progress.
@@ -102,7 +102,7 @@
 
     <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-6">
         <SurfaceCard>
-            <p class="cda-eyebrow">Capacity block</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Capacity block" />
             <h3 class="mt-1 text-lg font-semibold text-slate-950">Add leave or reserve time</h3>
             <p class="mt-2 text-sm leading-6 text-slate-600">
                 Use partial blocks for leave, reserve, or temporary unavailability so availability math stays explicit.
@@ -152,7 +152,7 @@
         </SurfaceCard>
 
         <SurfaceCard Soft="true">
-            <p class="cda-eyebrow">Forward look</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Forward look" />
             <h3 class="mt-1 text-lg font-semibold text-slate-950">Availability outlook</h3>
             <p class="mt-2 text-sm leading-6 text-slate-600">
                 Project allocations are read directly from project-party assignments, so this view is already bidirectional with the project module.
@@ -185,7 +185,7 @@
 
     <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-6">
         <SurfaceCard Soft="true">
-            <p class="cda-eyebrow">Capacity blocks</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Capacity blocks" />
             <h3 class="mt-1 text-lg font-semibold text-slate-950">@CapacityBlocks.Count block(s)</h3>
 
             @if (CapacityBlocks.Count == 0)
@@ -232,7 +232,7 @@
         </SurfaceCard>
 
         <SurfaceCard>
-            <p class="cda-eyebrow">Project allocations</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Project allocations" />
             <h3 class="mt-1 text-lg font-semibold text-slate-950">@ProjectAllocations.Count project-linked commitment(s)</h3>
 
             @if (ProjectAllocations.Count == 0)

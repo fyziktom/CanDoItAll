@@ -34,7 +34,7 @@
     <Grid Gap="LayoutGap.Large"
           ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
         <SurfaceCard>
-            <p class="cda-eyebrow">Execution boundary</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Execution boundary" />
             <h3 class="mt-1 text-lg font-semibold text-slate-950">@dashboard.ToolExecutionBoundary.HostLabel</h3>
             <Stack GapScale="LayoutGap.Small" Class="mt-4">
                 <SelectionListItem Title="Mode"
@@ -54,7 +54,7 @@
         </SurfaceCard>
 
         <SurfaceCard Soft="true">
-            <p class="cda-eyebrow">Recent failures</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Recent failures" />
             @if (recentFailures.Count == 0)
             {
                 <p class="mt-3 text-sm leading-6 text-slate-600">No failed execution runs are currently visible in the latest diagnostics window.</p>
@@ -80,7 +80,7 @@
     </Grid>
 
     <SurfaceCard Soft="true">
-        <p class="cda-eyebrow">Recent execution activity</p>
+        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Recent execution activity" />
         @if (recentRuns.Count == 0)
         {
             <p class="mt-3 text-sm leading-6 text-slate-600">No execution runs have been recorded yet.</p>

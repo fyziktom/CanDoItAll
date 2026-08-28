@@ -240,7 +240,7 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                                             <PanelCard>
-                                                <p class="cda-eyebrow cda-eyebrow--tight">Project summary</p>
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Project summary" />
                                                 <p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Editor.Name) ? "Unnamed project" : Editor.Name)</p>
                                                 <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description captured yet." : Editor.Description)</p>
                                             </PanelCard>
@@ -267,7 +267,7 @@
                            AlignItems="AlignItems.Center"
                            JustifyContent="JustifyContent.SpaceBetween">
                         <Stack GapScale="LayoutGap.Tiny">
-                            <p class="cda-eyebrow">Project save state</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Project save state" />
                             <p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-slate-600")">@(string.IsNullOrWhiteSpace(Message) ? "Save keeps the grid in sync without leaving the page." : Message)</p>
                         </Stack>
 
@@ -368,15 +368,15 @@
                     <Grid Gap="LayoutGap.Large"
                           ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                         <SurfaceCard>
-                            <p class="cda-eyebrow">Description</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Description" />
                             <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description has been captured for this project yet." : Editor.Description)</p>
 
-                            <p class="mt-6 cda-eyebrow">Objective</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mt-6" Value="Objective" />
                             <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(Editor.Objective) ? "No explicit objective has been recorded yet." : Editor.Objective)</p>
                         </SurfaceCard>
 
                         <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Next actions</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Next actions" />
                             <Grid Gap="LayoutGap.Medium"
                                   Class="mt-4">
                                 <Button Class="w-full"
@@ -411,7 +411,7 @@
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div>
-                                <p class="cda-eyebrow">Phase plan</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Phase plan" />
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery sequence</h3>
                             </div>
                             <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
@@ -436,7 +436,7 @@
                                                Wrap="FlexWrap.Wrap">
                                             <div class="min-w-0">
                                                 <p class="text-sm font-semibold text-slate-950">@phase.Name</p>
-                                                <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@phase.Status</p>
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Class="mt-1" Value="@phase.Status.ToString()" />
                                             </div>
                                             <StatusBadge Tone="@ProjectsPresentation.GetPhaseStatusTone(phase.Status)" Text="@phase.Status.ToString()" />
                                         </Split>
@@ -454,7 +454,7 @@
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div>
-                                <p class="cda-eyebrow">Stack profile</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Stack profile" />
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Captured platform choices</h3>
                             </div>
                             <StatusBadge Tone="warning" Text="@($"{MeaningfulOptions.Count} filled")" />
@@ -472,7 +472,7 @@
                                 @foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName))
                                 {
                                     <PanelCard Soft="true">
-                                        <p class="cda-eyebrow cda-eyebrow--tight">@option.Category</p>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="@option.Category.ToString()" />
                                         <p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
                                         <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
                                     </PanelCard>
@@ -488,7 +488,7 @@
                        AlignItems="AlignItems.Center"
                        JustifyContent="JustifyContent.SpaceBetween">
                     <Stack GapScale="LayoutGap.Tiny">
-                        <p class="cda-eyebrow">Project dashboard</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Project dashboard" />
                         <p class="text-sm text-slate-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
                     </Stack>
 

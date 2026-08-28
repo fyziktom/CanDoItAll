@@ -10,7 +10,7 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <div class="min-w-0">
-                    <p class="cda-eyebrow cda-eyebrow--tight">Project demand</p>
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Project demand" />
                     <h3 class="mt-1 truncate text-lg font-semibold text-slate-950">Staffing requests</h3>
                     <SmallText Text="@ProjectContextText" />
                 </div>
@@ -74,7 +74,7 @@
                                AlignItems="AlignItems.Start"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div class="min-w-0">
-                                <p class="cda-eyebrow cda-eyebrow--tight">Project</p>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Project" />
                                 <p class="truncate text-xs font-semibold text-slate-600">@ResolveProjectName(request)</p>
                                 <h3 class="mt-2 line-clamp-2 text-base font-semibold text-slate-950">@request.Title</h3>
                             </div>
@@ -302,32 +302,32 @@
             <Stack GapScale="LayoutGap.Medium">
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Needed role</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Needed role" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.NeededRole)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Allocation</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Allocation" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@($"{selectedRequest.AllocationPercent:0.##}%")</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Period</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Period" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@BuildPeriod(selectedRequest)</p>
                     </SurfaceCard>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Requested by</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Requested by" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.RequestedByName)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Delivery unit</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Delivery unit" />
                         <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.DeliveryUnitName)</p>
                     </SurfaceCard>
                 </Grid>
 
                 <SurfaceCard Soft="true">
-                    <p class="cda-eyebrow">Needed skills</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Needed skills" />
                     @if (selectedRequest.NeededSkills.Count == 0)
                     {
                         <SmallText Text="No skills were specified." Class="mt-2" />
@@ -346,7 +346,7 @@
                 @if (!string.IsNullOrWhiteSpace(selectedRequest.Notes))
                 {
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Notes</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Notes" />
                         <p class="mt-2 text-sm leading-6 text-slate-700">@selectedRequest.Notes</p>
                     </SurfaceCard>
                 }

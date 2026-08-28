@@ -47,7 +47,7 @@
                        JustifyContent="JustifyContent.SpaceBetween"
                        Wrap="FlexWrap.Wrap">
                     <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
-                        <p class="cda-eyebrow">Current runtime selection</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current runtime selection" />
                         <p class="text-base font-semibold text-slate-950">@currentSelection.DisplayName</p>
                         <p class="text-sm leading-6 text-slate-600">@currentSelection.Descriptor</p>
                         @if (currentSelection.HasPendingRestartActivation)
@@ -141,7 +141,7 @@
 
     <DetailHeader>
         <Stack GapScale="LayoutGap.Tiny">
-            <p class="cda-eyebrow">Data source editor</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Data source editor" />
             <h2 class="app-title-xl">@(databaseProfileModel.Id.HasValue ? databaseProfileModel.DisplayName : "New data source")</h2>
             <p class="app-body-muted">@DescribeEditorLead(databaseProfileModel)</p>
         </Stack>
@@ -447,7 +447,7 @@
                 <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3"
                      data-testid="database-transfer-target-summary">
                     <Stack GapScale="LayoutGap.Tiny">
-                        <p class="cda-eyebrow">Target database</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Target database" />
                         <p class="text-base font-semibold text-slate-950">@TransferTargetName</p>
                         <p class="text-sm leading-6 text-slate-600 break-all">@TransferTargetDescriptor</p>
                     </Stack>

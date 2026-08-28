@@ -41,7 +41,7 @@
                                        JustifyContent="JustifyContent.SpaceBetween"
                                        Wrap="FlexWrap.Wrap">
                                     <div class="min-w-0">
-                                        <p class="cda-eyebrow">Agent summary</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Agent summary" />
                                         <h2 class="mt-1 text-lg font-semibold text-slate-950">@Item.Agent.Name</h2>
                                         <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                             @FormatValue(Item.Agent.RoleTitle)
@@ -84,7 +84,7 @@
                             @if (visibleTags.Count > 0)
                             {
                                 <SurfaceCard Soft="true">
-                                    <p class="cda-eyebrow">Technical tags</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Technical tags" />
                                     <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="mt-3">
                                         @foreach (var tag in visibleTags)
                                         {
@@ -120,7 +120,7 @@
                             </Grid>
 
                             <SurfaceCard Soft="true">
-                                <p class="cda-eyebrow">Business notes</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Business notes" />
                                 <p class="mt-3 text-sm leading-6 text-slate-700">@FormatValue(Workspace.Profile.Notes)</p>
                             </SurfaceCard>
                         </Stack>
@@ -131,7 +131,7 @@
                               data-testid="crmhr-agent-record-tab-projection">
                         <Stack GapScale="LayoutGap.Large">
                             <SurfaceCard Soft="true">
-                                <p class="cda-eyebrow">Source of truth</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Source of truth" />
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">AgentFramework owns this runtime</h3>
                                 <p class="mt-3 text-sm leading-6 text-slate-600">
                                     CRM-HR consumes the invalidation-aware catalog snapshot. Instructions, provider selection,
@@ -161,7 +161,7 @@
                             @if (Item.Agent.Capabilities.Count > 0)
                             {
                                 <SurfaceCard Soft="true">
-                                    <p class="cda-eyebrow">Capabilities</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Capabilities" />
                                     <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="mt-3">
                                         @foreach (var capability in Item.Agent.Capabilities)
                                         {

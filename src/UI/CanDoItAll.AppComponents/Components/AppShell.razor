@@ -22,7 +22,7 @@
                         @if (IsNavigationExpanded)
                         {
                             <div class="min-w-0">
-                                <p class="cda-eyebrow text-sky-300 tracking-[0.28em]">CanDoItAll</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-sky-300 tracking-[0.28em]" Value="CanDoItAll" />
                                 <h1 class="app-shell-brand-title">Local delivery workbench</h1>
                             </div>
                         }
@@ -48,7 +48,7 @@
                 @if (IsNavigationExpanded && !string.IsNullOrWhiteSpace(ProjectContextTitle))
                 {
                     <div class="app-shell-card-info app-shell-expanded-context">
-                        <p class="cda-eyebrow cda-eyebrow--tight text-sky-300 tracking-[0.28em]">Project Context</p>
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Class="text-sky-300 tracking-[0.28em]" Value="Project Context" />
                         <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
                         @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
                         {
@@ -279,7 +279,7 @@
                             <button type="button"
                                     class="app-shell-mobile-card @(isActive ? "app-shell-mobile-card--active" : "app-shell-mobile-card--inactive")"
                                     @onclick="() => Navigate.InvokeAsync(item.Route)">
-                                <span class="cda-eyebrow inline-flex @(isActive ? "text-slate-200" : "text-slate-500")" aria-hidden="true"><Icon Name="@item.Icon" /></span>
+                                <span class="inline-flex @(isActive ? "text-slate-200" : "text-slate-500")" aria-hidden="true"><Icon Name="@item.Icon" /></span>
                                 <span class="mt-2 flex items-center gap-2 text-sm font-semibold">
                                     <span>@item.Title</span>
                                     @if (!string.IsNullOrWhiteSpace(item.BadgeText))
@@ -302,7 +302,7 @@
                             @if (OpenedProjects.Count > 0)
                             {
                                 <Stack GapScale="LayoutGap.Small">
-                                    <p class="cda-eyebrow">Opened Projects</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Opened Projects" />
                                     @foreach (var item in OpenedProjects)
                                     {
                                         <button type="button"
@@ -318,7 +318,7 @@
                             @if (OpenedSessions.Count > 0)
                             {
                                 <Stack GapScale="LayoutGap.Small">
-                                    <p class="cda-eyebrow">Prompt Sessions</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Prompt Sessions" />
                                     @foreach (var item in OpenedSessions)
                                     {
                                         <button type="button"

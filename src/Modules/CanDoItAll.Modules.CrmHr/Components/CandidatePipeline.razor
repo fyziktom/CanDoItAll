@@ -4,7 +4,7 @@
     <Grid Gap="LayoutGap.Large"
           ColumnTemplateXl="minmax(0,1.65fr) minmax(18rem,0.75fr)">
         <SurfaceCard>
-            <p class="cda-eyebrow">Application editor</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Application editor" />
             <h3 class="mt-1 text-lg font-semibold text-slate-950">Candidate and stage</h3>
             <p class="mt-2 text-sm leading-6 text-slate-600">
                 Select an existing person or bound AI agent, or create a new human candidate inline, then keep role, ownership, stage, and decision on the same record.
@@ -178,7 +178,7 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <div>
-                    <p class="cda-eyebrow">Stage history</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Stage history" />
                     <h3 class="mt-1 text-lg font-semibold text-slate-950">@StageHistory.Count update(s)</h3>
                 </div>
                 @if (HasWorkforceProfile)

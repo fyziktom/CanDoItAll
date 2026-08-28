@@ -52,7 +52,7 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <div class="min-w-0">
-                    <p class="cda-eyebrow">Current technical candidate</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current technical candidate" />
                     <h3 class="mt-1 text-lg font-semibold text-slate-950">@candidate.Name</h3>
                     <p class="mt-1 text-sm text-slate-600">@FormatValue(candidate.RoleTitle) / configuration @readiness.CurrentConfigurationVersion</p>
                 </div>
@@ -109,7 +109,7 @@
                            JustifyContent="JustifyContent.SpaceBetween"
                            Wrap="FlexWrap.Wrap">
                         <div>
-                            <p class="cda-eyebrow">Assessment cycles</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Assessment cycles" />
                             <h3 class="mt-1 text-lg font-semibold text-slate-950">@interviews.Count assessment(s)</h3>
                         </div>
                         <StatusBadge Tone="neutral" Text="Append-only evidence" />
@@ -267,7 +267,7 @@
 
                 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Current readiness</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current readiness" />
                         <h3 class="mt-1 text-lg font-semibold text-slate-950">@FormatReadiness(readiness.Status)</h3>
                         <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch" Class="mt-4">
                             @foreach (var reason in readiness.Reasons)
@@ -278,7 +278,7 @@
                     </SurfaceCard>
 
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Authority boundary</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Authority boundary" />
                         <h3 class="mt-1 text-lg font-semibold text-slate-950">Separate activation required</h3>
                         <p class="mt-3 text-sm leading-6 text-slate-600">
                             Even a ready assessment leaves the agent lifecycle unchanged. Activation remains a separately authorized AgentFramework command.
@@ -394,7 +394,7 @@
                 </Grid>
 
                 <SurfaceCard Soft="true">
-                    <p class="cda-eyebrow">Typed analysis</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Typed analysis" />
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                         <FormField Text="Classification">
                             <InputSelect @bind-Value="attemptDraft.Classification"
@@ -445,7 +445,7 @@
                 </SurfaceCard>
 
                 <SurfaceCard Soft="true">
-                    <p class="cda-eyebrow">Automated evaluator provenance</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Automated evaluator provenance" />
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
                         <FormField Text="Decision">
                             <InputSelect @bind-Value="attemptDraft.AutomatedDecision"
@@ -491,7 +491,7 @@
                 </SurfaceCard>
 
                 <SurfaceCard Soft="true">
-                    <p class="cda-eyebrow">Evidence integrity</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Evidence integrity" />
                     <p class="mt-2 text-sm leading-6 text-slate-600">
                         Hashes and structured-output provenance are optional for attachment, but readiness stays incomplete until all required evidence is present.
                     </p>

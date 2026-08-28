@@ -39,7 +39,7 @@
                  data-testid="processes-command-strip">
             <ToolbarRow Class="processes-command-strip__row">
                 <CompactStatStrip Class="min-w-0">
-                    <p class="cda-eyebrow whitespace-nowrap">@ScopeEyebrow</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="whitespace-nowrap" Value="@ScopeEyebrow" />
                     <CompactStat Tone="info"
                                  Text="@($"{DefinitionTotalText} definition(s)")"
                                  TooltipText="@DefinitionTooltip" />
@@ -1159,7 +1159,7 @@
             <Cluster Gap="LayoutGap.Small"
                      Wrap="FlexWrap.NoWrap"
                      Class="processes-workspace-identity__copy">
-                <p class="cda-eyebrow">Process</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Process" />
                 <h2 class="processes-workspace-identity__title">@(DefinitionCatalog.SelectedItem?.Name ?? HeaderTitle)</h2>
             </Cluster>
             <CompactStatStrip Class="processes-workspace-identity__badges">

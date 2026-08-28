@@ -10,12 +10,12 @@
         <ChildContent>
             <Stack GapScale="LayoutGap.Large">
                 <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                    <p class="cda-eyebrow">Surviving record</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Surviving record" />
                     <p class="mt-2 text-base font-semibold text-slate-950">@CurrentPartyDisplayName</p>
                 </div>
 
                 <div class="rounded-[1.25rem] border border-amber-200 bg-amber-50/80 px-4 py-4">
-                    <p class="cda-eyebrow">Duplicate candidate</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Duplicate candidate" />
                     <p class="mt-2 text-base font-semibold text-slate-950">@Candidate.DisplayName</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">@Candidate.PartyType / @Candidate.LifecycleStatus</p>
                     @if (!string.IsNullOrWhiteSpace(Candidate.Summary))

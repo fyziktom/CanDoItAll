@@ -29,7 +29,7 @@
                            JustifyContent="JustifyContent.SpaceBetween"
                            Wrap="FlexWrap.Wrap">
                         <div>
-                            <p class="cda-eyebrow">Parents</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Parents" />
                             <h3 class="mt-1 text-lg font-semibold text-slate-950">Direct parent projects</h3>
                         </div>
                         <StatusBadge Tone="neutral" Text="@($"{State.ParentProjects.Count} linked")" />
@@ -53,7 +53,7 @@
                                            Wrap="FlexWrap.Wrap">
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-slate-950">@parentProject.Name</p>
-                                            <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@(string.IsNullOrWhiteSpace(parentProject.CurrentPhase) ? "Parent project" : parentProject.CurrentPhase)</p>
+                                            <TextBlock TextStyle="TextStyle.Eyebrow" Class="mt-1" Value="@(string.IsNullOrWhiteSpace(parentProject.CurrentPhase) ? "Parent project" : parentProject.CurrentPhase)" />
                                         </div>
                                         <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(parentProject.Status)" Text="@parentProject.Status.ToString()" />
                                     </Split>
@@ -80,7 +80,7 @@
                            JustifyContent="JustifyContent.SpaceBetween"
                            Wrap="FlexWrap.Wrap">
                         <div>
-                            <p class="cda-eyebrow">Subprojects</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Subprojects" />
                             <h3 class="mt-1 text-lg font-semibold text-slate-950">Direct child projects</h3>
                         </div>
                         <StatusBadge Tone="info" Text="@($"{State.Subprojects.Count} linked")" />
@@ -105,7 +105,7 @@
                                            Wrap="FlexWrap.Wrap">
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-slate-950">@subproject.Name</p>
-                                            <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@(string.IsNullOrWhiteSpace(subproject.CurrentPhase) ? "Subproject" : subproject.CurrentPhase)</p>
+                                            <TextBlock TextStyle="TextStyle.Eyebrow" Class="mt-1" Value="@(string.IsNullOrWhiteSpace(subproject.CurrentPhase) ? "Subproject" : subproject.CurrentPhase)" />
                                         </div>
                                         <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(subproject.Status)" Text="@subproject.Status.ToString()" />
                                     </Split>

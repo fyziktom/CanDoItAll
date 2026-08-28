@@ -10,7 +10,7 @@
     {
         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
             <SurfaceCard>
-                <p class="cda-eyebrow">Schedule step</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Schedule step" />
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Interview details</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
@@ -80,7 +80,7 @@
             </SurfaceCard>
 
             <SurfaceCard Soft="true">
-                <p class="cda-eyebrow">Interview log</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Interview log" />
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">@Interviews.Count interview(s)</h3>
 
                 @if (Interviews.Count == 0)

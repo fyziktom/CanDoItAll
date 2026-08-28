@@ -88,7 +88,7 @@
                     <ChildContent>
                     <Split Gap="LayoutGap.Medium">
                         <Stack GapScale="LayoutGap.Tiny">
-                            <p class="cda-eyebrow">Party editor</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Party editor" />
                             <h2 class="app-title-xl">@EditorTitle</h2>
                             <p class="app-body-muted">Shared identity and stewardship record.</p>
                             @if (editor.PartyType == PartyType.Person && editor.Id.HasValue)
@@ -240,7 +240,7 @@
                                            AlignItems="AlignItems.Center"
                                            JustifyContent="JustifyContent.SpaceBetween">
                                         <div>
-                                            <p class="cda-eyebrow">Additional role assignments</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Additional role assignments" />
                                             <p class="mt-1 text-sm leading-6 text-slate-600">Keep more than one business role on the same party instead of creating duplicate directory records.</p>
                                         </div>
                                         <Button Text="Add role"
@@ -389,7 +389,7 @@
                                            AlignItems="AlignItems.Start"
                                            JustifyContent="JustifyContent.SpaceBetween">
                                         <div class="min-w-0">
-                                            <p class="cda-eyebrow">Confidential notes</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Confidential notes" />
                                             <h3 class="mt-1 text-lg font-semibold text-slate-950">HR-only and sensitive note stream</h3>
                                             <p class="mt-3 text-sm leading-6 text-slate-600">
                                                 Keep high-sensitivity notes separate from broad operational context so downstream CRM-HR screens do not overexpose private detail.
@@ -483,7 +483,7 @@
                                     else if (!string.IsNullOrWhiteSpace(activityLoadError))
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-directory-activity-error">
-                                            <p class="cda-eyebrow text-rose-700">Activity unavailable</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Activity unavailable" />
                                             <p class="mt-2 text-sm leading-6 text-slate-700">@activityLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
@@ -510,7 +510,7 @@
                                                         EmptyDescription="Save the party and related CRM-HR workflows to start building a shared history." />
 
                                     <SurfaceCard>
-                                        <p class="cda-eyebrow">Project assignments</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Project assignments" />
                                         <h3 class="mt-1 text-lg font-semibold text-slate-950">Assignments and delivery context</h3>
                                         <p class="mt-3 text-sm leading-6 text-slate-600">
                                             Project-party links stay visible here so staffing, ownership, and stakeholder context do not require a separate workbench pass.
@@ -527,7 +527,7 @@
                                         else if (!string.IsNullOrWhiteSpace(projectAssignmentsLoadError))
                                         {
                                             <SurfaceCard Soft="true" Class="mt-5">
-                                                <p class="cda-eyebrow text-rose-700">Project assignments unavailable</p>
+                                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Project assignments unavailable" />
                                                 <h4 class="mt-1 text-base font-semibold text-slate-950">Assignment history could not be loaded</h4>
                                                 <p class="mt-2 text-sm leading-6 text-slate-700">Retry to load the requested assignment page for this party.</p>
                                                 <Button Text="Retry"
@@ -623,7 +623,7 @@
                                     else if (!string.IsNullOrWhiteSpace(relationshipsLoadError))
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-directory-relationships-error">
-                                            <p class="cda-eyebrow text-rose-700">Relationship data unavailable</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Relationship data unavailable" />
                                             <p class="mt-2 text-sm leading-6 text-slate-700">@relationshipsLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
@@ -662,7 +662,7 @@
                                                    AlignItems="AlignItems.Center"
                                                    JustifyContent="JustifyContent.SpaceBetween">
                                                 <div>
-                                                    <p class="cda-eyebrow">Potential duplicates</p>
+                                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Potential duplicates" />
                                                     <p class="mt-1 text-sm leading-6 text-slate-600">Candidates are ranked by external code, normalized names, and contact value overlap.</p>
                                                 </div>
                                                 <StatusBadge Tone="@(duplicateCandidates.Count == 0 ? "success" : "warning")"

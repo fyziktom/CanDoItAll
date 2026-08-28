@@ -7,25 +7,25 @@
     <FormSection Title="Plugin identity" Description="Manifest data that determines where this plugin comes from and what it can request.">
         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
             <Stack GapScale="LayoutGap.Tiny">
-                <p class="cda-eyebrow">Plugin id</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Plugin id" />
                 <p class="break-all text-sm font-medium text-[var(--app-text)]">@Plugin.PluginId.Value</p>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
-                <p class="cda-eyebrow">Version</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Version" />
                 <p class="text-sm font-medium text-[var(--app-text)]">@Plugin.Version</p>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
-                <p class="cda-eyebrow">Vendor</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Vendor" />
                 <p class="text-sm font-medium text-[var(--app-text)]">@Plugin.Vendor</p>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
-                <p class="cda-eyebrow">Trust</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Trust" />
                 <p class="text-sm font-medium text-[var(--app-text)]">@Plugin.TrustLevel</p>
             </Stack>
         </Grid>
 
         <Stack GapScale="LayoutGap.Tiny">
-            <p class="cda-eyebrow">Capabilities</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Capabilities" />
             <Cluster Gap="LayoutGap.Tiny">
                 @foreach (var capability in PluginsPageHelpers.ResolveDeclaredCapabilities(Plugin))
                 {
@@ -35,7 +35,7 @@
         </Stack>
 
         <Stack GapScale="LayoutGap.Tiny">
-            <p class="cda-eyebrow">Tags</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Tags" />
             @if (Plugin.Descriptor.Tags.Count == 0)
             {
                 <p class="app-body-muted">No plugin descriptor tags.</p>

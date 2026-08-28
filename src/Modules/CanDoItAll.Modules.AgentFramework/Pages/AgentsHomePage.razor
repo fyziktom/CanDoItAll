@@ -150,7 +150,7 @@
                 {
                     <SurfaceCard Soft="true"
                                  data-testid="agents-overview-load-error">
-                        <p class="cda-eyebrow">Overview unavailable</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Overview unavailable" />
                         <h2 class="mt-1 text-base font-semibold text-slate-950">Agent runtime summary could not be refreshed</h2>
                         <p class="mt-2 text-sm leading-6 text-slate-600">@overviewLoadError</p>
                     </SurfaceCard>
@@ -162,7 +162,7 @@
                              Gap="LayoutGap.Medium"
                              Wrap="FlexWrap.Wrap">
                         <Stack Gap="0.2rem">
-                            <p class="cda-eyebrow">Usage scope</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Usage scope" />
                             <span class="text-sm text-slate-600">Catalog counts stay workspace-wide. Usage, tokens, cost, rankings, charts, and dialogs use this scope.</span>
                         </Stack>
                         <SecondaryTabs Items="UsageScopeTabs"
@@ -208,7 +208,7 @@
                                  Gap="LayoutGap.Medium"
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.25rem">
-                                <p class="cda-eyebrow">Most used consumers</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Most used consumers" />
                                 <h2 class="text-base font-semibold text-slate-950">Top 5 @UsageScopeLabel by execution count</h2>
                             </Stack>
                             <StatusBadge Tone="info"
@@ -254,7 +254,7 @@
                                  Gap="LayoutGap.Medium"
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.25rem">
-                                <p class="cda-eyebrow">Most failing consumers</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Most failing consumers" />
                                 <h2 class="text-base font-semibold text-slate-950">Top 5 @UsageScopeLabel by failed executions</h2>
                             </Stack>
                             <StatusBadge Tone="danger"
@@ -281,7 +281,7 @@
                                  Gap="LayoutGap.Medium"
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.35rem">
-                                <p class="cda-eyebrow">Teams</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Teams" />
                             </Stack>
                             <StatusBadge Tone="info"
                                          Text="@(isLoaded ? $"{overview.TeamShortcuts.Count} team(s)" : "Loading")" />
@@ -328,7 +328,7 @@
                                  data-testid="agents-overview-demand-details">
                         <Stack GapScale="LayoutGap.Small">
                             <Stack Gap="0.25rem">
-                                <p class="cda-eyebrow">Load on demand</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Load on demand" />
                                 <h2 class="text-base font-semibold text-slate-950">Deeper usage views stay out of default load</h2>
                             </Stack>
                             <Cluster Gap="LayoutGap.Small"

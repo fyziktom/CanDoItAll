@@ -102,7 +102,7 @@
                         <EditForm Model="newThreadEditor" OnValidSubmit="CreateThreadAsync">
                             <SurfaceCard Soft="true">
                                 <DataAnnotationsValidator />
-                                <p class="cda-eyebrow">Quick create</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Quick create" />
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">New collaboration item</h3>
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
@@ -247,7 +247,7 @@
                         <SurfaceCard>
                             <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
-                                    <p class="cda-eyebrow">@workspace.SelectedThread.ContextKind / @workspace.SelectedThread.ContextLabel</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@($"{workspace.SelectedThread.ContextKind} / {workspace.SelectedThread.ContextLabel}")" />
                                     <h2 class="mt-1 text-lg font-semibold text-slate-950" data-testid="collaboration-thread-title">@workspace.SelectedThread.Subject</h2>
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">
