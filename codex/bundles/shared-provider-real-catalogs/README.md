@@ -22,6 +22,8 @@ actual model IDs, authoritative catalog membership and honest prices.
 4. SB04: consistent avatars, canonical fresh-provider counts and isolated manual client.
 5. SB05: compact provider toolbar/filter and shared connections dialog.
 6. SB06: scope picker, durable token lifecycle and fresh 5214 handoff.
+7. SB07: shared thinking capabilities, request enforcement and main model suggestions.
+8. SB08: real multi-agent thinking proof; preserve all three instances.
 
 ## Dependency And Validation Map
 
@@ -41,21 +43,30 @@ their overflow. No responsive redesign or shared component-library change.
 ## Validation Summary
 
 - Bundle preparation status: Passed.
-- Execution status: SB01-SB06 completed.
-- Subbundle gate review: SB01-SB06 Passed for their requested behavioral/architecture scope.
-- Final closure gate: Passed for requested behavior; broader suite failures remain explicit.
+- Execution status: SB01-SB08 completed for owned behavior; broader test limitations remain explicit.
+- Subbundle gate review: Passed for requested behavioral/architecture scope.
+- Final closure gate: N011/N012 solved; see reviews/03-thinking-final-verifier.md.
+- SB07/SB08: 308 focused cases pass with exact discovery. Seven UI-configured agents
+  completed nine real requests with expected independent efforts and complete source usage.
+  Source/client real model labels, natural order and supported efforts match exactly.
+  See proof/SB08/manifest.md, including the OpenAI Chat Completions transport limitation.
+- Current deployment: all three hosts run thinking-20260827-6, HTTP 200 Healthy, data intact.
+  5214 was NOT reset in this follow-up. The history below describes earlier checkpoints.
 - Browser validation analytics: all three build6 real UI tests passed. OpenAI has 128
   discovered IDs, the image profile five, and Ollama 72 installed IDs. Full identity,
   all nine price fields and private-flag equality are asserted, not only counts.
 - Historical SB02 runtime: OpenAI/Ollama simple chats and agents, approved image generation and vision
   passed; eight source invocations succeeded with complete token/image usage.
-- Deployment: 5210/5212/5214 run admin-dialogs-20260827-2 and return HTTP 200 Healthy.
+- Historical SB06 deployment: admin-dialogs-20260827-2 (superseded by thinking-20260827-6).
 - SB05/SB06: 40 focused cases pass; actual desktop Playwright MCP confirms compact controls,
   modal connections, exact scope selection, lazy token management and live revoke/delete denial.
-  5214 was reset recoverably and remains empty. See proof/SB06/manifest.md.
-- Broader runs completed: Unit 6988 pass/1 fail; Integration 1121 pass/17 fail/1 skip.
+  5214 was reset recoverably at that checkpoint. Later user setup is preserved. See proof/SB06/manifest.md.
+- Historical SB06 broader runs: Unit 6988 pass/1 fail; Integration 1121 pass/17 fail/1 skip.
   Unchanged fixture failures and scope limits are in proof/SB06/broad-regression-results.md.
   No clean-whole-repository claim is made.
+- Latest broad checkpoint: Unit 7014 pass/1 fail; Components 1103 pass/53 fail;
+  Integration 1121 pass/18 fail/1 skip. Related failures were repaired in the final
+  focused scope; exact limits are in proof/SB07/broad-regression-results.md.
 - SB04: 36 focused cases pass; fresh client has zero providers/sources/imports/secrets
   after recreation. Existing volumes/history preserved; see proof/SB04/manifest.md.
 - Normal-browser access: 50 focused tests pass; client OpenAI/Ollama and source OpenAI

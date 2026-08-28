@@ -13,6 +13,7 @@ public sealed record LlmChatModelOptionPresentation(
     string Model,
     LlmChatThinkingEffortPresentation ThinkingEffort) {
     public string DisplayName { get; init; } = Model;
+    public bool IsSuggested { get; init; } = true;
 }
 
 public sealed record LlmChatProviderOptionPresentation(
@@ -58,7 +59,8 @@ public sealed class LlmChatProviderUiGateway(
                     LlmChatThinkingEffortMapper.FromProvider(model.ThinkingEffort.ControlMode),
                     [.. model.ThinkingEffort.AllowedEfforts.Select(LlmChatThinkingEffortMapper.FromProvider)],
                     LlmChatThinkingEffortMapper.FromProvider(model.ThinkingEffort.ProviderDefault))) {
-                DisplayName = model.DisplayName
+                DisplayName = model.DisplayName,
+                IsSuggested = model.IsSuggested
             })]) {
             IsSourceManaged = option.IsSourceManaged
         };

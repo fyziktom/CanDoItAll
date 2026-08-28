@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using CanDoItAll.SharedProviders.Abstractions;
 
 namespace CanDoItAll.SharedProviders.Http;
@@ -7,6 +8,9 @@ namespace CanDoItAll.SharedProviders.Http;
 internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
 {
     private const int MaximumFrames = 100_000;
+    private const string ResponseCompleted = "response.completed";
+    private const string ResponseFailed = "response.failed";
+    private const string ResponseIncomplete = "response.incomplete";
 
     private readonly IDisposable transportLifetime;
     private readonly CancellationTokenSource lifetimeSource;
@@ -165,15 +169,18 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
                         usage = frameUsage;
                     }
 
-                    yield return frame;
-                    eventName = null;
-                    data = null;
-                    if (frame.IsDone)
-                    {
-                        completion.TrySetResult(new SharedProviderRelayStreamCompletion(usage));
+                    var terminal = ResolveTerminalCompletion(frame, usage);
+                    if (terminal is not null) {
+                        completion.TrySetResult(terminal);
+                        if (terminal.Failure is null) {
+                            yield return frame;
+                        }
                         yield break;
                     }
 
+                    yield return frame;
+                    eventName = null;
+                    data = null;
                     continue;
                 }
 
@@ -228,6 +235,32 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
         }
 
         await DisposeCoreAsync().ConfigureAwait(false);
+    }
+
+    private SharedProviderRelayStreamCompletion? ResolveTerminalCompletion(
+        SharedProviderRelayStreamFrame frame, SharedProviderRelayUsage usage) {
+        if (frame.IsDone) {
+            return new(usage);
+        }
+        if (operation != SharedProviderRelayOperation.Responses) {
+            return null;
+        }
+        using var document = JsonDocument.Parse(frame.Data);
+        var root = document.RootElement;
+        if (!root.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String ||
+            type.GetString() is not (ResponseCompleted or ResponseFailed or ResponseIncomplete)) {
+            return null;
+        }
+        var succeeds = type.GetString() == ResponseCompleted &&
+            (frame.EventName is null or ResponseCompleted) &&
+            root.TryGetProperty("response", out var response) && response.ValueKind == JsonValueKind.Object &&
+            response.TryGetProperty("status", out var status) && status.ValueKind == JsonValueKind.String &&
+            status.GetString() == "completed" &&
+            (!response.TryGetProperty("error", out var error) || error.ValueKind == JsonValueKind.Null);
+        return new(usage, succeeds ? null : new SharedProviderFailure(
+            SharedProviderFailureCategory.UpstreamFailure,
+            new SharedProviderFailureCode("shared_provider_response_not_completed"),
+            "The upstream provider did not complete the response."));
     }
 
     private void CompleteInvalidStream(SharedProviderRelayUsage usage)

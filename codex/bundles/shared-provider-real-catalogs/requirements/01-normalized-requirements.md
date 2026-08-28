@@ -1,5 +1,10 @@
 # Normalized Requirements
 
+- R11 / N011: source-owned per-model thinking support/defaults mirrored to client;
+  per-agent overrides validated and applied independently through the real source relay.
+- R12 / N012: concise main OpenAI suggestions and natural name ordering; full catalog
+  and existing assignments remain valid. No invented models or prices.
+
 - R8 / N008: compact icon toolbar/filter; shared connections only in a dedicated dialog.
 - R9 / N009: scope checkbox picker and lazy searchable token management with enforced revocation.
 - R10 / N010: rebuild test apps, preserve 5210/5212 and recoverably reset only 5214.

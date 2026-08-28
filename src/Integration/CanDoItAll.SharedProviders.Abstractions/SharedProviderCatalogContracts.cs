@@ -119,6 +119,13 @@ public sealed record SharedProviderCatalogModel(
     IReadOnlyList<SharedProviderCapability> Capabilities) {
     [JsonPropertyName("price")]
     public SharedProviderCatalogPrice? Price { get; init; }
+
+    [JsonPropertyName("thinking")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SharedProviderThinkingCapability? Thinking { get; init; }
+
+    [JsonPropertyName("isSuggested")]
+    public bool IsSuggested { get; init; } = true;
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
@@ -303,6 +310,11 @@ public static class SharedProviderProtocolJson
 
         ValidateCapabilityCoherence(purpose, capabilities);
         model.Price?.Validate();
+        model.Thinking?.Validate();
+        if (purpose != SharedProviderPurpose.Chat &&
+            model.Thinking?.Support == SharedProviderThinkingSupport.Supported) {
+            throw new JsonException("Only chat models can declare thinking support.");
+        }
     }
 
     private static void ValidateCapabilityCoherence(
@@ -373,6 +385,7 @@ public static class SharedProviderProtocolJson
                         .OrderBy(model => model.Id.Value, StringComparer.Ordinal)
                         .Select(model => model with
                         {
+                            Thinking = model.Thinking?.Snapshot(),
                             Capabilities = ReadOnlyCopy(model.Capabilities
                                 .OrderBy(
                                     SharedProviderCapabilityJsonConverter.GetToken,

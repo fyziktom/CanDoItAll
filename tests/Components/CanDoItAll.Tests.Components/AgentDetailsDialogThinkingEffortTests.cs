@@ -111,7 +111,8 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         var cut = RenderRuntimeTab(context, editor, [provider]);
 
         ChangeSelectToLabel(cut, ThinkingEffortTestId, "High");
-        ChangeSelectToLabel(cut, ModelChoiceTestId, UnknownModel);
+        cut.Find($"[data-testid='{ModelOverrideTestId}']").Change(true);
+        cut.Find($"[data-testid='{ModelInputTestId}']").Input(UnknownModel);
 
         Assert.Equal(UnknownModel, editor.Model);
         Assert.Equal(AgentReasoningEffortLevel.High, editor.ThinkingEffortOverride);

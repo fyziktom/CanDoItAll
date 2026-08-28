@@ -469,6 +469,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
             .OrderBy(model => model.Id.Value, StringComparer.Ordinal)
             .Select(model => model with
             {
+                Thinking = model.Thinking?.Snapshot(),
                 Capabilities = Array.AsReadOnly(model.Capabilities
                     .OrderBy(capability => capability)
                     .ToArray())

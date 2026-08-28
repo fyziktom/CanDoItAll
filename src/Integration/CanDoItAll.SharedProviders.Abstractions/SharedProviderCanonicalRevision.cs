@@ -80,6 +80,13 @@ public static class SharedProviderCanonicalRevision
             writer.WriteString("displayName", model.DisplayName);
             writer.WritePropertyName("price");
             JsonSerializer.Serialize(writer, model.Price, SharedProviderProtocolJson.Options);
+            if (model.Thinking is not null) {
+                writer.WritePropertyName("thinking");
+                JsonSerializer.Serialize(writer, model.Thinking.Snapshot(), SharedProviderProtocolJson.Options);
+            }
+            if (!model.IsSuggested) {
+                writer.WriteBoolean("isSuggested", false);
+            }
             writer.WriteStartArray("capabilities");
             foreach (var capability in model.Capabilities
                 .Select(SharedProviderCapabilityJsonConverter.GetToken)

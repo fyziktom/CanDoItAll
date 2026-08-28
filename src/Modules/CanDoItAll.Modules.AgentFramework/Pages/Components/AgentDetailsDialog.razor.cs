@@ -851,7 +851,7 @@ public partial class AgentDetailsDialog
             return $"Configured model parameters are sent for {modelLabel}.";
         }
 
-        if (AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider.Kind, model))
+        if (AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider, model))
         {
             return $"Temperature will be omitted for {modelLabel}. Provider defaults apply.";
         }

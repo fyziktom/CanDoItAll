@@ -1,0 +1,6 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:04.14]     CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.FunctionToolsAndToolChoice_RoundTripCanonically [FAIL]
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB07\relay-final.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:    77, Přeskočeno:     0, Celkem:    78, Doba trvání: 756 ms - CanDoItAll.Tests.Unit.dll (net10.0)

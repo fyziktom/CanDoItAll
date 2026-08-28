@@ -180,6 +180,9 @@
 
     private string ResolveUnknownCapabilityAction()
     {
+        if (Provider?.IsSourceManaged == true) {
+            return "Refresh capabilities on the source, then synchronize the shared connection.";
+        }
         return Provider?.Kind switch
         {
             ProviderKind.AzureOpenAi =>
@@ -222,7 +225,7 @@
             : $"provider '{Provider.Name}'";
         return string.IsNullOrWhiteSpace(effectiveModel)
             ? providerName
-            : $"{providerName} model '{effectiveModel}'";
+            : $"{providerName} model '{Provider?.GetModelDisplayName(effectiveModel) ?? effectiveModel}'";
     }
 
     private static ProviderModelThinkingEffortCapability CreateUnknownCapability()

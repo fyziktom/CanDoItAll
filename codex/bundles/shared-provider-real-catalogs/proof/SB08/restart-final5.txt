@@ -1,0 +1,3 @@
+sha256:5d10fa7e0cbcabf3b825c5e2d1ba3f48e140821a10e1751457c9416525d9d02d
+candoitall-spui-shared started; rollback retained as candoitall-spui-shared-before-thinking-final-20260827; named data volumes preserved.
+candoitall-spui-client started; rollback retained as candoitall-spui-client-before-thinking-final-20260827; named data volumes preserved.

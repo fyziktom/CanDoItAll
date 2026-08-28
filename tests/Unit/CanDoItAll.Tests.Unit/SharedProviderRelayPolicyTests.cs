@@ -10,6 +10,20 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class SharedProviderRelayPolicyTests
 {
+    [Theory]
+    [InlineData("\"\"", "null")]
+    [InlineData("\"A function\"", "false")]
+    public void Function_tools_accept_optional_sdk_description_and_strict(string description, string strict) {
+        var definition = $"\"name\":\"probe\",\"description\":{description},\"parameters\":{{}},\"strict\":{strict}";
+        var chat = Accept(SharedProviderRelayOperation.ChatCompletions,
+            ChatJson($"\"tools\":[{{\"type\":\"function\",\"function\":{{{definition}}}}}]"));
+        var responses = Accept(SharedProviderRelayOperation.Responses,
+            ResponsesJson($"\"tools\":[{{\"type\":\"function\",{definition}}}]"));
+
+        Assert.Contains(SharedProviderCapability.FunctionTools, chat.RequiredCapabilities);
+        Assert.Contains(SharedProviderCapability.FunctionTools, responses.RequiredCapabilities);
+    }
+
     private static readonly SharedProviderPublicationId PublicationId = new(
         Guid.Parse("2f17e4bd-8078-4ff2-a2e2-f910223027e6"));
     private static readonly SharedProviderRoutingModelId RoutingModelId =
@@ -106,6 +120,16 @@ public sealed class SharedProviderRelayPolicyTests
             """);
 
         Assert.Equal(SharedProviderRelayOperation.Responses, request.Operation);
+        var foreground = Accept(SharedProviderRelayOperation.Responses,
+            ResponsesJson("\"background\":false,\"reasoning\":{\"effort\":\"high\"}"));
+        Assert.Contains("\"background\":false", RewriteForUpstream(foreground));
+        foreach (var value in new[] { "true", "false" }) {
+            Assert.Contains($"\"parallel_tool_calls\":{value}", RewriteForUpstream(Accept(
+                SharedProviderRelayOperation.Responses, ResponsesJson($"\"parallel_tool_calls\":{value}"))));
+        }
+        foreach (var value in new[] { "true", "null", "\"false\"", "0" }) {
+            AssertValidationFailure(SharedProviderRelayOperation.Responses, ResponsesJson($"\"background\":{value}"));
+        }
         Assert.Contains("\"input\":\"hello\"", Encoding.UTF8.GetString(request.CanonicalPayloadUtf8.Span));
 
         var messageRequest = Accept(
@@ -134,6 +158,26 @@ public sealed class SharedProviderRelayPolicyTests
                 SharedProviderRelayOperation.Responses,
                 $"{{\"model\":\"{RoutingModelId.Value}\",\"input\":[{item}]}}");
         }
+    }
+
+    [Theory]
+    [InlineData("none")]
+    [InlineData("low")]
+    [InlineData("high")]
+    [InlineData("max")]
+    public void SharedThinkingEffort_Responses_reasoning_round_trips(string effort) {
+        var request = Accept(SharedProviderRelayOperation.Responses,
+            ResponsesJson($"\"reasoning\":{{\"effort\":\"{effort}\"}}"));
+        Assert.Contains($"\"effort\":\"{effort}\"", RewriteForUpstream(request));
+    }
+
+    [Theory]
+    [InlineData("\"high\"")]
+    [InlineData("{\"effort\":\"ultra\"}")]
+    [InlineData("{\"effort\":2}")]
+    [InlineData("{\"effort\":\"low\",\"summary\":\"auto\"}")]
+    public void SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(string value) {
+        AssertValidationFailure(SharedProviderRelayOperation.Responses, ResponsesJson($"\"reasoning\":{value}"));
     }
 
     [Fact]

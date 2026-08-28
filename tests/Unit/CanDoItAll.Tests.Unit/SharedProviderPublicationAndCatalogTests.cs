@@ -27,6 +27,32 @@ public sealed class SharedProviderPublicationAndCatalogTests
         new(Guid.Parse("10000000-0000-0000-0000-000000000001"));
 
     [Fact]
+    public void SharedThinkingEffort_Publication_copies_support_default_and_main_suggestions() {
+        var profile = CreateProfile(defaultModel: "gpt-5.6-sol", suggestedModels: ["gpt-4.1", "gpt-3.5-turbo"]);
+        profile.ExtraSettingsJson = AgentThinkingEffortPolicy.WriteProviderDefault(
+            profile.ExtraSettingsJson, AgentReasoningEffortLevel.Low);
+        var source = CreateProjectionSource(profile, CreatePolicy(), isPublished: true);
+        var before = SharedProviderCatalogProjector.Project(SourceInstanceId, [source]);
+        var models = before.Catalog.Providers[0].Models;
+        var thinking = models.Single(model => model.DisplayName == "gpt-5.6-sol").Thinking!;
+        Assert.Equal(SharedProviderReasoningEffort.Low, thinking.DefaultEffort);
+        Assert.Contains(SharedProviderReasoningEffort.Max, thinking.AllowedEfforts);
+        Assert.Equal(SharedProviderThinkingSupport.Unsupported,
+            models.Single(model => model.DisplayName == "gpt-4.1").Thinking!.Support);
+        Assert.False(models.Single(model => model.DisplayName == "gpt-3.5-turbo").IsSuggested);
+        Assert.True(models.Single(model => model.DisplayName == "gpt-5.6-sol").IsSuggested);
+
+        profile.ExtraSettingsJson = AgentThinkingEffortPolicy.WriteProviderDefault(
+            profile.ExtraSettingsJson, AgentReasoningEffortLevel.High);
+        var after = SharedProviderCatalogProjector.Project(SourceInstanceId, [source]);
+        Assert.NotEqual(before.EntityTag, after.EntityTag);
+        Assert.Equal(before.Catalog.Providers[0].DefaultModelId, after.Catalog.Providers[0].DefaultModelId);
+        var publication = after.Catalog.Providers[0];
+        var changedSuggestions = publication with { Models = publication.Models.Select(model => model with { IsSuggested = true }).ToArray() };
+        Assert.NotEqual(publication.Revision, SharedProviderCanonicalRevision.ComputePublication(changedSuggestions));
+    }
+
+    [Fact]
     public void PublicationDoesNotInventOpenAiModelsWithoutPersistedSuggestions() {
         var profile = CreateProfile(defaultModel: "custom-default");
         var decision = CreatePolicy().Evaluate(profile, CreateManifest(profile.ConnectorPluginKey), true);

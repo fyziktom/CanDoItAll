@@ -87,6 +87,29 @@ public sealed class LlmInvocationPortCompositionTests
 public sealed class LlmChatProviderResolutionTests
 {
     [Fact]
+    public async Task SharedThinkingEffort_Unsuggested_published_model_remains_valid_for_saved_simple_chat() {
+        var provider = ProviderRuntimeTestData.CreateProvider("Shared provider") with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            SuggestedModels = ["model-fast"],
+            ModelSelectionConstraint = new(["model-fast", "model-deep"]),
+            ModelCatalog = [new("model-fast", "Fast"), new("model-deep", "Deep")],
+            ModelThinkingEffortCapabilities = [
+                new("model-fast", AgentThinkingEffortSupportStatus.Unsupported, AgentThinkingEffortCapabilitySource.Defined, []),
+                new("model-deep", AgentThinkingEffortSupportStatus.Supported, AgentThinkingEffortCapabilitySource.Defined,
+                    [AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.High],
+                    ControlMode: AgentThinkingEffortControlMode.EffortLevels)]
+        };
+        var resolver = ProviderRuntimeTestData.CreateResolver(provider);
+        var options = await resolver.ListOptionsAsync();
+        Assert.True(options.IsSuccess);
+        var option = Assert.Single(options.Value!);
+        Assert.False(option.Models.Single(model => model.Model == "model-deep").IsSuggested);
+        Assert.Equal([AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.High],
+            option.Models.Single(model => model.Model == "model-deep").ThinkingEffort.AllowedEfforts);
+        Assert.True((await resolver.ResolveAsync(provider.Id, "model-deep", AgentReasoningEffortLevel.High)).IsSuccess);
+    }
+    [Fact]
     public async Task Shared_options_preserve_model_labels_and_source_ownership() {
         var provider = ProviderRuntimeTestData.CreateProvider("Shared provider") with {
             CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,

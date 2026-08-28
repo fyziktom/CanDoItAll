@@ -244,6 +244,8 @@ public sealed class SharedProviderRelayTarget
 
     public SharedProviderRelaySupportDescriptor Support { get; }
 
+    public SharedProviderThinkingCapability? Thinking { get; init; }
+
     public bool Supports(SharedProviderRelayOperation operation)
         => Enum.IsDefined(operation) && Support.Operations.Contains(operation);
 
@@ -507,6 +509,8 @@ public sealed record SharedProviderRelayDispatchRequest
     public SharedProviderRelayTarget Target { get; }
 
     public SharedProviderRelayNormalizedRequest Request { get; }
+
+    public SharedProviderRelayRequestContext? Context { get; init; }
 }
 
 public abstract record SharedProviderRelayDispatchResult

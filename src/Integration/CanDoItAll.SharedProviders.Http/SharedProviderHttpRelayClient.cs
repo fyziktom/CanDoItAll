@@ -20,16 +20,31 @@ internal sealed class SharedProviderHttpRelayClient(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var thinking = SharedProviderRelayThinkingPolicy.Apply(
+            request.Request.Operation,
+            request.Request.CreateUpstreamPayload(request.Target.UpstreamModelId),
+            request.Target.Thinking);
+        if (thinking.Failure is not null) {
+            return new SharedProviderRelayDispatchResult.Failed(thinking.Failure);
+        }
         var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutSource.CancelAfter(request.Target.Timeout);
         ProviderInferenceRelayTransportResponse? transportResponse = null;
         try
         {
             transportResponse = await inferenceRelayRuntime.SendAsync(
-                CreateRuntimeRequest(request),
+                CreateRuntimeRequest(request, thinking.Payload),
                 timeoutSource.Token).ConfigureAwait(false);
             var response = transportResponse.Response;
             var headers = SharedProviderRelayResponseHeaderPolicy.Project(response);
+            logger.LogInformation(
+                "Shared-provider request {RequestId}: model {Model}, thinking {ThinkingEffort}, agent override {IsOverride}, upstream HTTP {StatusCode}, upstream request {UpstreamRequestId}.",
+                request.Context?.RequestId,
+                request.Target.UpstreamModelId,
+                thinking.Effort.HasValue ? SharedProviderThinkingCapability.FormatEffort(thinking.Effort.Value) : "omitted",
+                thinking.IsOverride,
+                (int)response.StatusCode,
+                headers.UpstreamRequestId);
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await ReadBoundedAsync(
@@ -44,11 +59,14 @@ internal sealed class SharedProviderHttpRelayClient(
                             : null
                         : null,
                     System.Text.Encoding.UTF8.GetString(errorBody));
+                var diagnostic = SharedProviderRelayFailureMapper.DescribeUpstreamFailure(errorBody);
                 logger.LogWarning(
-                    "Shared-provider upstream rejected {Operation} for connector {ConnectorPluginKey} with HTTP {StatusCode}.",
+                    "Shared-provider upstream rejected {Operation} for connector {ConnectorPluginKey} with HTTP {StatusCode}: {Code}, parameter {Parameter}.",
                     request.Request.Operation,
                     request.Target.ConnectorPluginKey,
-                    (int)response.StatusCode);
+                    (int)response.StatusCode,
+                    diagnostic.Code,
+                    diagnostic.Parameter);
                 return new SharedProviderRelayDispatchResult.Failed(failure);
             }
 
@@ -187,9 +205,9 @@ internal sealed class SharedProviderHttpRelayClient(
     }
 
     private static ProviderInferenceRelayRequest CreateRuntimeRequest(
-        SharedProviderRelayDispatchRequest dispatch)
+        SharedProviderRelayDispatchRequest dispatch,
+        ReadOnlyMemory<byte> payload)
     {
-        var payload = dispatch.Request.CreateUpstreamPayload(dispatch.Target.UpstreamModelId);
         var kind = dispatch.Target.ConnectorPluginKey switch
         {
             SharedProviderConnectorPluginKeys.OpenAi => ProviderKind.OpenAi,

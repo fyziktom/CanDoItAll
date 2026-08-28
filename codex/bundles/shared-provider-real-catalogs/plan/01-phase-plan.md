@@ -8,6 +8,8 @@
 4. SB04 consistent avatars, rebuilt pair and isolated manual-setup third client.
 5. SB05 compact provider controls and modal shared connections.
 6. SB06 scope selection, durable token administration and recoverably reset 5214.
+7. SB07 typed shared thinking, per-agent enforcement and real main-model suggestions.
+8. SB08 final real multi-agent proof and preserved three-container handoff.
 
 ## Subbundle Dependency Map
 
@@ -18,6 +20,8 @@ flowchart LR
   SB03 --> SB04["SB04 avatar and fresh-client handoff"]
   SB04 --> SB05["SB05 compact provider administration"]
   SB05 --> SB06["SB06 managed tokens and fresh handoff"]
+  SB06 --> SB07["SB07 shared thinking and suggestions"]
+  SB07 --> SB08["SB08 actual per-agent upstream proof"]
   Real["Reachable real upstreams"] --> SB02
 ```
 
@@ -42,6 +46,12 @@ SB03 Proof tier: Governed. N005 reopens normal-browser handoff, not catalog corr
   all dispatch and requested both supplied Unit/Integration suites; these were expanded
   beyond the prepared bounded scope. Both runs completed. Record unchanged pricing/seed/relay fixture failures,
   rather than changing catalog fixtures or claiming a clean full suite.
+- SB07/SB08 completed: exact final discovery 206 Unit/46 Components/56 Integration,
+  nine real upstream requests with complete source usage and final same-image health.
+  CodeAnalytics public-contract/dynamic-dispatch invalidation required one broad run
+  of each supplied suite at the SB07 frozen checkpoint; failures are classified in
+  proof/SB07/broad-regression-results.md. Later temperature/envelope/terminal changes
+  used bounded focused invalidations and real final-image requests, not repeated broad gates.
 
 ## UI Target Policy
 

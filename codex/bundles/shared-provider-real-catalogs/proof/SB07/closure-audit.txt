@@ -1,0 +1,59 @@
+Closure audit UTC: 2026-08-28T01:02:20.1935960Z
+Working directory: C:/repositories/CanDoItAll
+Command: pwsh -File codex/bundles/shared-provider-real-catalogs/proof/SB07/Collect-Closure.ps1
+Unit: exact discovery matched; all 206 original records Passed.
+Components: exact discovery matched; all 46 original records Passed.
+Integration: exact discovery matched; all 56 original records Passed.
+warning: in the working copy of 'tests/Integration/CanDoItAll.Tests.Integration/SharedProviderOpenAiCompatibilityIntegrationTests.cs', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRelayPolicyTests.cs', CRLF will be replaced by LF the next time Git touches it
+Changed-file hashes: 52. HEAD blob provenance is distinct from exact captured pre-edit bytes.
+Anti-stub command: rg -n TODO|NotImplementedException|e2e-secondary-model|THINK-|Thinking Proof [changed production files]
+No production placeholder or validation-agent special case found.
+Source assertions (supplementary to behavioral tests):
+src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderThinkingCapability.cs:32:    public bool OmitTemperature { get; init; }
+src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCatalogContracts.cs:128:    public bool IsSuggested { get; init; } = true;
+src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCanonicalRevision.cs:87:            if (!model.IsSuggested) {
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderSseRelayStream.cs:172:                    var terminal = ResolveTerminalCompletion(frame, usage);
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderSseRelayStream.cs:240:    private SharedProviderRelayStreamCompletion? ResolveTerminalCompletion(
+src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs:44:            provider.Models.Where(model => model.IsSuggested).Select(model => model.Id.Value).ToArray(),
+src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs:75:                .Select(model => SharedProviderThinkingCapabilityMapper.ToRuntime(model.Id.Value, model.Thinking!)).ToArray()),
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentThinkingEffortPolicy.cs:32:    public bool OmitTemperature { get; init; }
+src/MAF/Common/CanDoItAll.AgentFramework.Core/Preparation/AgentExecutionPreparationCache.cs:225:        IReadOnlyList<ProviderModelThinkingEffortCapability> ThinkingCapabilities);
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRelayApplicationService.cs:327:                    Thinking = SharedProviderThinkingCapabilityMapper.ToCatalog(
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRelayApplicationService.cs:328:                        SharedProviderThinkingCapabilityMapper.CreateSourceProvider(persisted.Profile),
+src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime/CanonicalLlmChatProviderResolver.cs:91:                    IsSuggested = provider.IsSourceManaged
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs:20:    public static bool ShouldOmitTemperature(ProviderProfile provider, string model, bool forceOmitTemperature = false) {
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs:22:        if (forceOmitTemperature) {
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs:27:                string.Equals(capability.Model, model, StringComparison.Ordinal) && capability.OmitTemperature)
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs:28:            : ShouldOmitTemperature(provider.Kind, model);
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs:31:    public static bool ShouldOmitTemperature(
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs:34:        bool forceOmitTemperature = false)
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs:36:        if (forceOmitTemperature)
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayThinkingPolicy.cs:28:        if (capability?.OmitTemperature == true) {
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafModelParametersBuilder.cs:28:        bool forceOmitTemperature,
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafModelParametersBuilder.cs:32:        if (!ShouldOmitTemperature(provider, model, forceOmitTemperature))
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafModelParametersBuilder.cs:84:    public static bool ShouldOmitTemperature(
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafModelParametersBuilder.cs:87:        bool forceOmitTemperature)
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafModelParametersBuilder.cs:89:        if (forceOmitTemperature)
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafModelParametersBuilder.cs:101:        return AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider, model);
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafModelParametersBuilder.cs:110:               !ShouldOmitTemperature(provider, model, forceOmitTemperature: false) &&
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs:156:        var thinkingProvider = SharedProviderThinkingCapabilityMapper.CreateSourceProvider(profile);
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs:170:                    Thinking = SharedProviderThinkingCapabilityMapper.ToCatalog(thinkingProvider, model.UpstreamModelId),
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs:171:                    IsSuggested = metadata.ProviderKind != CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi ||
+src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor:42:            System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.NumericOrdering));
+src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs:854:        if (AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider, model))
+src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatProviderUiGateway.cs:16:    public bool IsSuggested { get; init; } = true;
+src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatProviderUiGateway.cs:63:                IsSuggested = model.IsSuggested
+src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/Ports/LlmChatProviderPorts.cs:16:    public bool IsSuggested { get; init; } = true;
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderThinkingCapabilityMapper.cs:9:public static class SharedProviderThinkingCapabilityMapper {
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderThinkingCapabilityMapper.cs:44:            OmitTemperature = AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider.Kind, model)
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderThinkingCapabilityMapper.cs:71:            OmitTemperature = thinking.OmitTemperature
+src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionPresentationMapper.cs:63:            provider.Models.Where(model => model.IsSuggested).Select(model => model.Model).ToArray()) {
+SB07-I1: typed capability/independent override producer and consumer verified by original focused tests.
+SB07-I2: actual-catalog suggestions, sorted names and preserved legacy choices verified by original focused tests.
+SB07-I3: temperature/SDK envelope/Responses terminal regressions verified by original focused tests.
+SB08-I1: see original MCP results plus correlated source dispatch/usage; no fixture invocation counts as live proof.
+SB08-I2: see source-client-parity.json, inspected screenshots and final-health.json.
+warning: in the working copy of 'tests/Integration/CanDoItAll.Tests.Integration/SharedProviderOpenAiCompatibilityIntegrationTests.cs', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRelayPolicyTests.cs', CRLF will be replaced by LF the next time Git touches it
+Closure collector exit: 0. Broader suite failures remain explicitly reported separately.

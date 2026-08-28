@@ -191,6 +191,10 @@ public static class ProviderConfigurationFingerprintFactory
             provider.FeatureConstraints,
             provider.ModelSelectionConstraint?.AllowedModels
                 .Order(StringComparer.Ordinal)
+                .ToArray(),
+            provider.ModelThinkingEffortCapabilities
+                .OrderBy(item => item.Model, StringComparer.Ordinal)
+                .Select(item => item with { AllowedEfforts = item.AllowedEfforts.Order().ToArray() })
                 .ToArray());
         var serialized = JsonSerializer.Serialize(material);
 
@@ -217,7 +221,8 @@ public static class ProviderConfigurationFingerprintFactory
         ProviderCredentialBinding? CredentialBinding,
         ProviderNetworkAccessPolicy NetworkAccessPolicy,
         ProviderFeatureConstraints? FeatureConstraints,
-        IReadOnlyList<string>? AllowedModels);
+        IReadOnlyList<string>? AllowedModels,
+        IReadOnlyList<ProviderModelThinkingEffortCapability> ThinkingCapabilities);
 
     private static string CanonicalizeConfigurationJson(
         ProviderProfile provider)

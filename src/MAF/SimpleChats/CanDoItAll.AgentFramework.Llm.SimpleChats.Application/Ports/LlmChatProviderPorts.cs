@@ -13,6 +13,7 @@ public sealed record LlmChatModelOption(
     string Model,
     LlmChatThinkingEffortOption ThinkingEffort) {
     public string DisplayName { get; init; } = Model;
+    public bool IsSuggested { get; init; } = true;
 }
 
 public sealed record LlmChatProviderOption(

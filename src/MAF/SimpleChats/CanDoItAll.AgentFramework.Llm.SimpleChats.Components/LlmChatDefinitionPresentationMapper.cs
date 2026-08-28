@@ -60,7 +60,7 @@ internal static class LlmChatDefinitionPresentationMapper
             provider.ProviderName,
             true,
             models.FirstOrDefault() ?? string.Empty,
-            models) {
+            provider.Models.Where(model => model.IsSuggested).Select(model => model.Model).ToArray()) {
             ModelDisplayNames = provider.Models.ToImmutableDictionary(model => model.Model, model => model.DisplayName),
             AllowsModelOverride = !provider.IsSourceManaged
         };

@@ -2,6 +2,8 @@
 
 | Input or requirement | Owning subbundle | Actual closure proof | Status |
 | --- | --- | --- | --- |
+| N011 / R11 shared thinking choices and actual application | SB07 + SB08 | proof/SB07/manifest.md; proof/SB08/manifest.md: 308 focused cases, seven UI-configured agents, nine real successful/complete requests; explicit transport limits | Solved |
+| N012 / R12 main naturally sorted model choices | SB07 + SB08 | proof/SB08/source-client-parity.json; real source/client labels/order/efforts match; selector and saved-legacy regressions | Solved |
 | N008 / R8 compact provider administration | SB05 | proof/SB05/manifest.md; 11 tests and MCP normal/nested dialog proof | Solved |
 | N009 / R9 scope picker and token lifecycle | SB06 | proof/SB06/manifest.md; exact selection, metadata lifecycle, live 200/200/401/401 and short-ID search | Solved |
 | N010 / R10 rebuilt apps and reset 5214 | SB06 | proof/SB06/runtime-image2-final.txt; reset-5214.txt; inspected empty UI and recoverable old data | Solved |

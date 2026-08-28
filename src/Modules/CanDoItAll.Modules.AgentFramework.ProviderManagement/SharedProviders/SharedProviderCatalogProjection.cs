@@ -153,6 +153,7 @@ public static class SharedProviderCatalogProjector
             throw new InvalidOperationException(failure);
         }
         var pricing = ProviderPricingMetadata.Read(profile.ExtraSettingsJson);
+        var thinkingProvider = SharedProviderThinkingCapabilityMapper.CreateSourceProvider(profile);
         var prices = ProviderPricingDefaults.NormalizeModelPrices(
                 metadata.ProviderKind, profile.DefaultModel, pricing.ModelPrices)
             .ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
@@ -166,6 +167,10 @@ public static class SharedProviderCatalogProjector
                     routingModelId,
                     model.UpstreamModelId,
                     Array.AsReadOnly(model.Capabilities.ToArray())) {
+                    Thinking = SharedProviderThinkingCapabilityMapper.ToCatalog(thinkingProvider, model.UpstreamModelId),
+                    IsSuggested = metadata.ProviderKind != CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi ||
+                        metadata.Purpose != ProviderProfilePurpose.Chat ||
+                        OpenAiModelSuggestions.IsMainModel(model.UpstreamModelId),
                     Price = prices.TryGetValue(model.UpstreamModelId, out var price)
                         ? SharedProviderPriceMapper.ToCatalog(price)
                         : null

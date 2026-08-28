@@ -318,3 +318,47 @@ existing secret through UI. The original provider definitions and histories are 
 5214's previous database and data volume are recoverable; its replacements contain no
 configured provider/source/import/user secret. Bootstrap credentials are separate from
 application configuration. 5032 was not changed.
+
+## SB07/SB08 Thinking Effort And Main Models Closure
+
+N011/R11 is Solved: the source now publishes typed model-specific support, allowed
+efforts, default and temperature policy. The client renders those controls and carries
+each agent override through the relay; unknown/unsupported values fail closed. Omitted
+effort uses the current source default, not a cached client copy. Preparation caches
+include metadata changes. The screenshot was a missing-contract/explicit-guard defect.
+
+Actual execution exposed additional temperature, SDK envelope and Responses stream
+termination defects. Each was repaired in its owning boundary and revalidated; no new
+project layer, runtime partial split or silent fallback was introduced. The source now
+finishes Responses on valid response.completed and persists complete usage.
+
+N012/R12 is Solved: main OpenAI suggestions intersect actual inventory and sort naturally
+by real name. Source/client publish and consume the same suggestion membership. Full
+catalog/pricing and saved legacy choices remain valid; no models or prices are invented.
+
+Final focused proof is 206 Unit + 46 Components + 56 Integration, all passing, exact
+discovery matched. Original red tests, final TRX, hashes, source assertions and scoped
+architecture review are in bundle://proof/SB07/manifest.md. The once-only broad checkpoint
+is not green; its explicit classification and post-checkpoint invalidations are in
+bundle://proof/SB07/broad-regression-results.md. There is no whole-repository pass claim.
+
+Seven dedicated agents were configured and reopened through real Playwright MCP UI.
+Nine final OpenAI/Ollama requests prove same-model/different-effort, different-model/
+matching-effort, source-default change without client reload/sync, and explicit Low
+over source High. Every request has HTTP 200, actual response and Succeeded/Complete
+source usage. Original UI Shared OpenAI Chat source/client lists and Sol choices match
+exactly; GPT-4.1 is correctly disabled. See bundle://proof/SB08/manifest.md.
+
+OpenAI Chat Completions rejects some reasoning/tools combinations and its existing
+Mini/Luna compatibility policy can select None. Those attempts are not passing thinking
+proof. The UI-created shared Thinking Proof OpenAI Responses profile proves Mini/Luna/
+Sol overrides unchanged. The original source transport and approval policies were not
+silently changed. Ollama Low/High also pass through its supported transport.
+
+All three hosts run thinking-20260827-6 and return HTTP 200 Healthy with retained named
+volumes; no reset of 5214, deletion of history or change to 5032. Source test default
+was restored to Medium. The renewed client JWT expires around 2026-08-28 05:22 UTC;
+renew via source Settings/API and update the client's existing source secret after expiry.
+Inspected normal/dialog desktop findings, native-popup capture limit and historical
+failed attempts are recorded in bundle://proof/SB08/browser-validation.md. Final semantic
+review: bundle://reviews/03-thinking-final-verifier.md.

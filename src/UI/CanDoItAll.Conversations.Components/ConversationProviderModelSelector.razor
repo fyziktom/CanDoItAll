@@ -37,6 +37,9 @@
 </div>
 
 @code {
+    private static readonly IComparer<string> ModelNameComparer = Comparer<string>.Create((left, right) =>
+        System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(left, right,
+            System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.NumericOrdering));
     private readonly List<ProviderModelSelectorOption> modelChoices = [];
     private ProviderModelSelectorOption? selectedChoice;
     private string customModelName = string.Empty;
@@ -139,11 +142,17 @@
 
     private IReadOnlyList<string> ResolveModelOptions()
     {
-        return Provider?.SuggestedModels
+        var models = Provider?.SuggestedModels ?? [];
+        var selected = NormalizeModel(Value);
+        if (Provider?.ModelDisplayNames.ContainsKey(selected) == true) {
+            models = [.. models, selected];
+        }
+        return models
             .Where(model => !string.IsNullOrWhiteSpace(model))
             .Select(model => model.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList() ?? [];
+            .OrderBy(model => Provider?.GetModelDisplayName(model) ?? model, ModelNameComparer)
+            .ToList();
     }
 
     private void ApplyExternalValue(string currentValue)

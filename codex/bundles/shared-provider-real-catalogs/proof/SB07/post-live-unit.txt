@@ -1,0 +1,5 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB07\post-live-unit.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:   186, Přeskočeno:     0, Celkem:   186, Doba trvání: 720 ms - CanDoItAll.Tests.Unit.dll (net10.0)

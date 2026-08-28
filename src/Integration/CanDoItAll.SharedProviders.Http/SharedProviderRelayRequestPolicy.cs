@@ -14,7 +14,8 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
     private const int MaximumTextCharacters = 1024 * 1024;
     private const int MaximumSchemaCharacters = 256 * 1024;
     private const string ResponsesStorePropertyName = "store";
-    private const string ChatReasoningEffortPropertyName = "reasoning_effort";
+    private const string ResponsesBackgroundPropertyName = "background";
+    private const string ChatReasoningEffortPropertyName = SharedProviderRelayThinkingPolicy.ChatEffortProperty;
 
     private static readonly FrozenSet<string> ChatProperties = Set(
         "model",
@@ -37,13 +38,16 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         "input",
         "instructions",
         "stream",
+        "parallel_tool_calls",
         "tools",
         "tool_choice",
         "text",
         ResponsesStorePropertyName,
+        ResponsesBackgroundPropertyName,
         "temperature",
         "top_p",
-        "max_output_tokens");
+        "max_output_tokens",
+        SharedProviderRelayThinkingPolicy.ResponsesReasoningProperty);
 
     private static readonly FrozenSet<string> ImagesProperties = Set(
         "model",
@@ -170,7 +174,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         if (root.TryGetProperty(ChatReasoningEffortPropertyName, out var reasoningEffort) &&
             reasoningEffort.ValueKind != JsonValueKind.Null &&
             (reasoningEffort.ValueKind != JsonValueKind.String ||
-             reasoningEffort.GetString() is not ("none" or "minimal" or "low" or "medium" or "high" or "xhigh" or "max"))) {
+             !SharedProviderThinkingCapability.TryParseEffort(reasoningEffort.GetString(), out _))) {
             return Validation("The reasoning effort is unsupported or invalid.", ChatReasoningEffortPropertyName);
         }
 
@@ -221,6 +225,18 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         ISet<SharedProviderCapability> requiredCapabilities)
     {
         requiredCapabilities.Add(SharedProviderCapability.Responses);
+        if (root.TryGetProperty(SharedProviderRelayThinkingPolicy.ResponsesReasoningProperty, out var reasoning) &&
+            reasoning.ValueKind != JsonValueKind.Null) {
+            if (reasoning.ValueKind != JsonValueKind.Object ||
+                !HasOnlyProperties(reasoning, Set(SharedProviderRelayThinkingPolicy.ResponsesEffortProperty), out _) ||
+                reasoning.TryGetProperty(SharedProviderRelayThinkingPolicy.ResponsesEffortProperty, out var effort) &&
+                effort.ValueKind != JsonValueKind.Null &&
+                (effort.ValueKind != JsonValueKind.String ||
+                 !SharedProviderThinkingCapability.TryParseEffort(effort.GetString(), out _))) {
+                return Validation("The Responses reasoning control is invalid.",
+                    SharedProviderRelayThinkingPolicy.ResponsesReasoningProperty);
+            }
+        }
         if (!root.TryGetProperty("input", out var input))
         {
             return Validation("The Responses input field is required.", "input");
@@ -259,6 +275,11 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
                 !IsBoundedText(instructions.GetString(), MaximumTextCharacters)))
         {
             return Validation("The Responses instructions field is invalid.", "instructions");
+        }
+
+        if (root.TryGetProperty(ResponsesBackgroundPropertyName, out var background) &&
+            background.ValueKind != JsonValueKind.False) {
+            return Validation("Only foreground Responses requests are supported.", ResponsesBackgroundPropertyName);
         }
 
         if (root.TryGetProperty(ResponsesStorePropertyName, out var store) &&
@@ -752,8 +773,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         }
 
         if (tool.TryGetProperty("description", out var description) &&
-            (description.ValueKind != JsonValueKind.String ||
-                !IsBoundedText(description.GetString(), 4096)))
+            (description.ValueKind != JsonValueKind.String || description.GetString()!.Length > 4096))
         {
             return false;
         }
@@ -766,7 +786,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         }
 
         if (tool.TryGetProperty("strict", out var strict) &&
-            strict.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            strict.ValueKind is not (JsonValueKind.True or JsonValueKind.False or JsonValueKind.Null))
         {
             return false;
         }
@@ -786,8 +806,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         }
 
         if (function.TryGetProperty("description", out var description) &&
-            (description.ValueKind != JsonValueKind.String ||
-                !IsBoundedText(description.GetString(), 4096)))
+            (description.ValueKind != JsonValueKind.String || description.GetString()!.Length > 4096))
         {
             return false;
         }
@@ -799,7 +818,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         }
 
         return !function.TryGetProperty("strict", out var strict) ||
-            strict.ValueKind is JsonValueKind.True or JsonValueKind.False;
+            strict.ValueKind is JsonValueKind.True or JsonValueKind.False or JsonValueKind.Null;
     }
 
     private static bool IsValidToolChoice(

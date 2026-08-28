@@ -15,8 +15,11 @@ public static class AgentProviderPresentationMapper
             provider.Name,
             provider.IsEnabled,
             provider.DefaultModel,
-            provider.SuggestedModels) {
-            ModelDisplayNames = provider.ModelCatalog.ToImmutableDictionary(model => model.Id, model => model.DisplayName),
+            !provider.IsSourceManaged && provider.Kind == ProviderKind.OpenAi && provider.Purpose == ProviderProfilePurpose.Chat
+                ? provider.SuggestedModels.Where(OpenAiModelSuggestions.IsMainModel).ToArray()
+                : provider.SuggestedModels) {
+            ModelDisplayNames = provider.SuggestedModels.ToImmutableDictionary(model => model, model => model)
+                .SetItems(provider.ModelCatalog.Select(model => KeyValuePair.Create(model.Id, model.DisplayName))),
             AllowsModelOverride = !provider.IsSourceManaged
         };
     }

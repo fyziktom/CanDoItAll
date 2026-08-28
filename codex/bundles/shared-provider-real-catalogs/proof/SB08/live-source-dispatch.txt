@@ -1,0 +1,9 @@
+2026-08-28T00:21:15.496344983Z       Shared-provider request 0HNO4J8ONG1NV:00000002: model gpt-5.4-mini, thinking low, agent override True, upstream HTTP 200, upstream request req_9bc6b1f28c1745609638929451907876.
+2026-08-28T00:21:44.508494193Z       Shared-provider request 0HNO4J8ONG1NV:00000003: model gpt-5.4-mini, thinking high, agent override True, upstream HTTP 200, upstream request req_542079892e214168b28896ab9a257a84.
+2026-08-28T00:22:21.824441276Z       Shared-provider request 0HNO4J8ONG1NV:00000004: model gpt-5.6-luna, thinking low, agent override True, upstream HTTP 200, upstream request req_1fff93f068ab4a5d92094251911e4e54.
+2026-08-28T00:22:42.098515140Z       Shared-provider request 0HNO4J8ONG1NV:00000005: model gpt-5.6-sol, thinking high, agent override True, upstream HTTP 200, upstream request req_b8f6834c34b94d78bee0f90b85e7f57a.
+2026-08-28T00:23:08.522552614Z       Shared-provider request 0HNO4J8ONG1NV:00000006: model gpt-5.4-mini, thinking medium, agent override False, upstream HTTP 200, upstream request req_ca0fb722c969487f9e6b9fcab93d2415.
+2026-08-28T00:26:01.239851578Z       Shared-provider request 0HNO4J8ONG1O5:00000001: model gpt-5.4-mini, thinking high, agent override False, upstream HTTP 200, upstream request req_9bf192f881fb4cbb8fad7fb26df56ff2.
+2026-08-28T00:26:24.538809687Z       Shared-provider request 0HNO4J8ONG1O5:00000002: model gpt-5.4-mini, thinking low, agent override True, upstream HTTP 200, upstream request req_ce914e8d80e941da81cbc6b80af6ccca.
+2026-08-28T00:27:17.737580461Z       Shared-provider request 0HNO4J8ONG1O5:00000003: model gptoss20b64k:latest, thinking low, agent override True, upstream HTTP 200, upstream request (null).
+2026-08-28T00:28:13.627306710Z       Shared-provider request 0HNO4J8ONG1O5:00000004: model gptoss20b64k:latest, thinking high, agent override True, upstream HTTP 200, upstream request (null).

@@ -1,0 +1,5 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB07\relay-integration-verification.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    56, Přeskočeno:     0, Celkem:    56, Doba trvání: 34 s - CanDoItAll.Tests.Integration.dll (net10.0)

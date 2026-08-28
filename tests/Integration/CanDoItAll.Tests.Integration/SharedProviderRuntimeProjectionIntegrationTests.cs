@@ -12,6 +12,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedProviders.Abstractions;
+using CanDoItAll.SharedProviders.Http;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Builder;
@@ -42,6 +43,28 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     private const string SourceToken = "shared-source-token";
     private static readonly DateTimeOffset Now =
         new(2026, 8, 25, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task SharedThinkingEffort_Persisted_snapshot_materializes_capabilities_and_preserves_hidden_model_membership() {
+        var thinking = new SharedProviderThinkingCapability(SharedProviderThinkingSupport.Supported,
+            SharedProviderThinkingControl.EffortLevels,
+            [SharedProviderReasoningEffort.Low, SharedProviderReasoningEffort.High], SharedProviderReasoningEffort.Low);
+        var seed = await SeedGraphAsync(modelCapabilities: [
+            [SharedProviderCapability.ChatCompletions], [SharedProviderCapability.ChatCompletions]
+        ], thinking: thinking, suggestAllModels: false);
+        var projected = (await LoadCanonicalAsync(seed.ProfileId)).Profile;
+
+        Assert.Single(projected.SuggestedModels);
+        Assert.Equal(2, projected.ModelSelectionConstraint!.AllowedModels.Count);
+        foreach (var model in seed.Publication.Models) {
+            Assert.True(projected.ModelSelectionConstraint.Allows(model.Id.Value));
+            var capability = AgentThinkingEffortPolicy.ResolveCapability(projected, model.Id.Value);
+            Assert.Equal([AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.High], capability.AllowedEfforts);
+            Assert.Equal(AgentReasoningEffortLevel.Low, AgentThinkingEffortPolicy.ResolveProviderDefault(projected, model.Id.Value));
+            Assert.Equal(AgentReasoningEffortLevel.High, AgentThinkingEffortPolicy.ResolveEffectiveEffort(
+                projected, model.Id.Value, AgentThinkingEffortPolicy.WriteAgentOverride("{}", AgentReasoningEffortLevel.High)));
+        }
+    }
 
     [Fact]
     public async Task Persisted_shared_graph_projects_through_materializer_mapper_snapshot_and_catalog()
@@ -551,9 +574,24 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             exception.Message);
         Assert.Empty(server.Requests);
 
-        var text = await RunMafAgentAsync(profile, "send a responses request");
+        var text = await RunMafAgentAsync(profile, "send a responses request", options: new ChatOptions {
+            Reasoning = new ReasoningOptions { Effort = ReasoningEffort.High },
+            AllowMultipleToolCalls = false,
+            Tools = [AIFunctionFactory.Create(() => "available", "probe")]
+        });
 
         Assert.Equal("sdk shared response", text);
+        var support = new SharedProviderRelaySupportDescriptor(
+            new HashSet<SharedProviderRelayOperation> { SharedProviderRelayOperation.Responses },
+            SharedProviderStreamingMode.ServerSentEvents, true, true, true, true, false,
+            maximumRequestBytes: 4 * 1024 * 1024, maximumOutputTokens: 4096, maximumImageCount: 1);
+        var normalized = new SharedProviderRelayRequestPolicy().Normalize(SharedProviderRelayOperation.Responses,
+            Encoding.UTF8.GetBytes(Assert.Single(server.Requests).Body), support);
+        Assert.True(normalized is SharedProviderRelayRequestPolicyResult.Accepted,
+            $"SDK request rejected: {normalized}. Payload: {Assert.Single(server.Requests).Body}");
+        using var payload = JsonDocument.Parse(Assert.Single(server.Requests).Body);
+        Assert.Equal("high", payload.RootElement.GetProperty("reasoning").GetProperty("effort").GetString());
+        Assert.False(payload.RootElement.GetProperty("parallel_tool_calls").GetBoolean());
         AssertRuntimeRequest(
             Assert.Single(server.Requests),
             SharedProviderRoutes.Responses,
@@ -769,7 +807,8 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     private async Task<string> RunMafAgentAsync(
         AgentProviderProfile profile,
         string prompt,
-        string? requestedModel = null)
+        string? requestedModel = null,
+        ChatOptions? options = null)
     {
         var factory = new MafProviderAgentFactory(
             new MafProviderCredentialService(FixedAgentCredentialResolver.Instance),
@@ -779,7 +818,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         var agent = factory.CreateFrameworkAgent(
             profile,
             requestedModel ?? profile.DefaultModel,
-            MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
+            MafChatClientAgentOptionsFactory.Create(options ?? new ChatOptions()),
             frameworkManagedHistory: true,
             allowBackgroundResponses: false);
         try
@@ -798,14 +837,16 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         SharedProviderSourceStatus sourceStatus =
             SharedProviderSourceStatus.Available,
         IReadOnlyList<IReadOnlyList<SharedProviderCapability>>?
-            modelCapabilities = null)
+            modelCapabilities = null,
+        SharedProviderThinkingCapability? thinking = null,
+        bool suggestAllModels = true)
     {
         var graph = CreateGraph(
             sourceBaseUri ?? new Uri(
                 $"https://central.example.test/{Guid.NewGuid():N}/"),
             purpose,
             sourceStatus,
-            modelCapabilities);
+            modelCapabilities, thinking, suggestAllModels);
         await using var dbContext = await fixture.Factory.CreateDbContextAsync();
         dbContext.AddRange(graph.Secret, graph.Source, graph.Profile, graph.Import);
         await dbContext.SaveChangesAsync();
@@ -835,7 +876,9 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         SharedProviderPurpose purpose,
         SharedProviderSourceStatus sourceStatus,
         IReadOnlyList<IReadOnlyList<SharedProviderCapability>>?
-            modelCapabilities)
+            modelCapabilities,
+        SharedProviderThinkingCapability? thinking = null,
+        bool suggestAllModels = true)
     {
         var secret = new SecretRecord
         {
@@ -868,7 +911,11 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
                     publicationId,
                     $"upstream-model-{index + 1}"),
                 $"Remote model {index + 1}",
-                Array.AsReadOnly(capabilities.ToArray())) { Price = new(1.25m, 0m, 2.75m) })
+                Array.AsReadOnly(capabilities.ToArray())) {
+                    Price = new(1.25m, 0m, 2.75m),
+                    Thinking = thinking,
+                    IsSuggested = index == 0 || suggestAllModels
+                })
             .ToArray();
         var publication = new SharedProviderCatalogPublication(
             publicationId,

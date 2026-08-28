@@ -27,7 +27,10 @@ public sealed record ProviderModelThinkingEffortCapability(
     IReadOnlyList<AgentReasoningEffortLevel> AllowedEfforts,
     string ModelFamily = "",
     string Summary = "",
-    AgentThinkingEffortControlMode ControlMode = AgentThinkingEffortControlMode.Unspecified);
+    AgentThinkingEffortControlMode ControlMode = AgentThinkingEffortControlMode.Unspecified) {
+    public AgentReasoningEffortLevel? SourceDefaultEffort { get; init; }
+    public bool OmitTemperature { get; init; }
+}
 
 public static class AgentThinkingEffortPolicy
 {
@@ -63,10 +66,15 @@ public static class AgentThinkingEffortPolicy
 
         var normalizedModel = NormalizeModel(model);
         if (provider.IsSourceManaged) {
+            var published = provider.ModelThinkingEffortCapabilities.FirstOrDefault(item =>
+                string.Equals(item.Model, normalizedModel, StringComparison.Ordinal));
+            if (published is not null) {
+                return NormalizeCapability(published);
+            }
             return CreateUnknownCapability(
                 normalizedModel,
                 AgentThinkingEffortCapabilitySource.Defined,
-                $"Thinking effort for shared model '{provider.GetModelDisplayName(normalizedModel)}' is managed by the source instance. Use Provider default.");
+                $"The source has not published thinking capabilities for '{provider.GetModelDisplayName(normalizedModel)}'.");
         }
         if (string.IsNullOrWhiteSpace(normalizedModel))
         {
@@ -279,7 +287,7 @@ public static class AgentThinkingEffortPolicy
             provider.Name,
             model,
             ResolveCapability(provider, model),
-            provider.ConfigurationJson,
+            provider.IsSourceManaged ? null : provider.ConfigurationJson,
             agentConfigurationJson,
             includeLegacyOllamaThink: provider.Kind == ProviderKind.Ollama);
     }
@@ -312,7 +320,7 @@ public static class AgentThinkingEffortPolicy
             return null;
         }
 
-        var providerDefault = ReadConfiguredEffort(
+        var providerDefault = provider.IsSourceManaged ? capability.SourceDefaultEffort : ReadConfiguredEffort(
             provider.ConfigurationJson,
             "provider",
             includeLegacyOllamaThink: provider.Kind == ProviderKind.Ollama);

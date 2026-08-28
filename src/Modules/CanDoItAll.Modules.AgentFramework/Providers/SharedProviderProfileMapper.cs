@@ -41,7 +41,7 @@ internal sealed class SharedProviderProfileMapper
             "Source-managed CanDoItAll shared provider.",
             materialization.Availability.ToString(),
             null,
-            allowedModels,
+            provider.Models.Where(model => model.IsSuggested).Select(model => model.Id.Value).ToArray(),
             provider.Purpose)
         {
             ConnectorPluginKey = provider.ConnectorPluginKey,
@@ -70,6 +70,9 @@ internal sealed class SharedProviderProfileMapper
             ModelSelectionConstraint =
                 new ProviderModelSelectionConstraint(allowedModels),
             IsPrivateProvider = provider.IsPrivateProvider,
+            ModelThinkingEffortCapabilities = Array.AsReadOnly(provider.Models
+                .Where(model => model.Thinking is not null)
+                .Select(model => SharedProviderThinkingCapabilityMapper.ToRuntime(model.Id.Value, model.Thinking!)).ToArray()),
             ModelCatalog = Array.AsReadOnly(provider.Models
                 .Select(model => new ProviderModelDisplayMetadata(model.Id.Value, model.DisplayName)).ToArray()),
             ModelPrices = Array.AsReadOnly(provider.Models

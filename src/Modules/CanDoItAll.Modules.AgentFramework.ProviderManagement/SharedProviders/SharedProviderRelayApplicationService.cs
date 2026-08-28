@@ -143,7 +143,7 @@ public sealed class SharedProviderRelayApplicationService(
         try
         {
             dispatchResult = await dispatcher.DispatchAsync(
-                new SharedProviderRelayDispatchRequest(target, normalizedRequest),
+                new SharedProviderRelayDispatchRequest(target, normalizedRequest) { Context = request.Context },
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -323,7 +323,11 @@ public sealed class SharedProviderRelayApplicationService(
                     TimeSpan.FromSeconds(persisted.Profile.TimeoutSeconds),
                     persisted.Profile.ExtraSettingsJson,
                     credential,
-                    persisted.Support),
+                    persisted.Support) {
+                    Thinking = SharedProviderThinkingCapabilityMapper.ToCatalog(
+                        SharedProviderThinkingCapabilityMapper.CreateSourceProvider(persisted.Profile),
+                        persisted.Model.UpstreamModelId)
+                },
                 null);
         }
         catch (ArgumentException)

@@ -481,7 +481,9 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
             "provider.openai",
             SharedProviderPurpose.Chat,
             SharedProviderRelayOperation.ChatCompletions,
-            payload);
+            payload,
+            new SharedProviderThinkingCapability(SharedProviderThinkingSupport.Supported,
+                SharedProviderThinkingControl.EffortLevels, [SharedProviderReasoningEffort.None], null));
 
         Assert.IsType<SharedProviderRelayDispatchResult.Buffered>(result);
         string upstream = Assert.Single(relay.Handler.Requests).Body;
@@ -1639,7 +1641,8 @@ internal sealed class DirectRelayFixture : IAsyncDisposable
         string connectorPluginKey,
         SharedProviderPurpose purpose,
         SharedProviderRelayOperation operation,
-        string payload)
+        string payload,
+        SharedProviderThinkingCapability? thinking = null)
     {
         Assert.True(Catalog.TryGet(connectorPluginKey, purpose, out var descriptor));
         var normalized = new SharedProviderRelayRequestPolicy().Normalize(
@@ -1663,7 +1666,9 @@ internal sealed class DirectRelayFixture : IAsyncDisposable
             TimeSpan.FromSeconds(10),
             "{}",
             new SharedProviderRelayCredential("central-secret"),
-            descriptor.Support);
+            descriptor.Support) {
+            Thinking = thinking
+        };
         return await Dispatcher.DispatchAsync(
             new SharedProviderRelayDispatchRequest(target, request));
     }

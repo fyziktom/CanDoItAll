@@ -77,6 +77,36 @@ public static class SharedProviderRelayUriPolicy
 
 public static class SharedProviderRelayFailureMapper
 {
+    public static (string Code, string Parameter) DescribeUpstreamFailure(ReadOnlyMemory<byte> body) {
+        try {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Object) {
+                return ("unclassified", "unclassified");
+            }
+            var code = error.TryGetProperty("code", out var codeValue) && codeValue.ValueKind == JsonValueKind.String
+                ? codeValue.GetString() switch {
+                    "unsupported_value" => "unsupported_value",
+                    "unsupported_parameter" => "unsupported_parameter",
+                    "invalid_value" => "invalid_value",
+                    "invalid_request_error" => "invalid_request_error",
+                    _ => "unclassified"
+                } : "unclassified";
+            var parameter = error.TryGetProperty("param", out var parameterValue) && parameterValue.ValueKind == JsonValueKind.String
+                ? parameterValue.GetString() switch {
+                    "temperature" => "temperature",
+                    "reasoning_effort" => "reasoning_effort",
+                    "reasoning.effort" => "reasoning.effort",
+                    "tools" => "tools",
+                    "model" => "model",
+                    _ => "unclassified"
+                } : "unclassified";
+            return (code, parameter);
+        } catch (JsonException) {
+            return ("unclassified", "unclassified");
+        }
+    }
+
     public static SharedProviderFailure FromUpstream(
         HttpStatusCode statusCode,
         string? retryAfter,

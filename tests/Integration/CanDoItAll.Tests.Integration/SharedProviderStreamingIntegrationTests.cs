@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.SharedProviders.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,27 @@ public sealed class SharedProviderStreamingIntegrationTests(
     IClassFixture<SharedProviderStreamingApiFixture>
 {
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(5);
+
+    [Theory]
+    [InlineData("response.completed", "completed", true)]
+    [InlineData("response.failed", "failed", false)]
+    [InlineData("response.incomplete", "incomplete", false)]
+    [InlineData("response.completed", "in_progress", false)]
+    public async Task Responses_terminal_event_completes_without_chat_done_marker(string type, string status, bool succeeds) {
+        var upstreamStream = ChunkSequenceStream.FromUtf8(
+            $"event: {type}\ndata: {{\"type\":\"{type}\",\"response\":{{\"id\":\"resp_terminal\",\"status\":\"{status}\",\"usage\":{{\"input_tokens\":7,\"output_tokens\":11}}}}}}\n\n");
+        await using var dispatcher = DispatcherHarness.Create(_ => CreateSseResponse(upstreamStream));
+
+        var (frames, completion) = await ReadStreamAsync(await dispatcher.DispatchAsync(SharedProviderRelayOperation.Responses));
+
+        Assert.Equal(succeeds, completion.Failure is null);
+        Assert.DoesNotContain(frames, frame => frame.IsDone);
+        Assert.Equal(7, completion.Usage.InputTokens);
+        Assert.Equal(11, completion.Usage.OutputTokens);
+        Assert.Equal(SharedProviderRelayUsageCompleteness.Complete, completion.Usage.Completeness);
+        Assert.Equal(succeeds ? 1 : 0, frames.Count);
+        Assert.True(upstreamStream.IsDisposed);
+    }
 
     [Fact]
     public Task ChatCompletions_FlushesFirstChunkBeforeStreamCompletes()
@@ -134,7 +156,7 @@ public sealed class SharedProviderStreamingIntegrationTests(
     {
         var upstreamStream = ChunkSequenceStream.FromUtf8(
             "event: response.completed\n" +
-            "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp-no-usage\",\"model\":\"upstream-model\"}}\n\n" +
+            "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp-no-usage\",\"status\":\"completed\",\"model\":\"upstream-model\"}}\n\n" +
             "data: [DONE]\n\n");
         await using var dispatcher = DispatcherHarness.Create(
             _ => CreateSseResponse(upstreamStream));
@@ -773,6 +795,7 @@ internal sealed class DispatcherHarness : IAsyncDisposable
         services.AddLogging();
         services.AddSingleton<ISharedProviderImageCapabilityRelay, EmptyImageCapabilityRelay>();
         services.AddSharedProviderHttpDescriptors();
+        services.AddSingleton<IProviderInferenceRelayRuntime, DirectProviderInferenceRelayRuntime>();
         services.RemoveAll<IHttpClientFactory>();
         services.AddSingleton<IHttpClientFactory>(new DeterministicHttpClientFactory(handler));
         provider = services.BuildServiceProvider();

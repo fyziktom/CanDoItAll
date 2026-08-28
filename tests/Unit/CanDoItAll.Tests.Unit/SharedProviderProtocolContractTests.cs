@@ -15,6 +15,27 @@ public sealed class SharedProviderProtocolContractTests
         new($"sha256:{new string('a', 64)}");
 
     [Fact]
+    public void SharedThinkingEffort_Legacy_catalogs_remain_valid_and_new_metadata_is_revision_bound() {
+        var legacy = CreateCatalog();
+        var legacyJson = SharedProviderProtocolJson.SerializeCatalog(legacy).Replace(",\"isSuggested\":true", "");
+        Assert.Equal(legacy.CatalogRevision, SharedProviderProtocolJson.DeserializeCatalog(legacyJson).CatalogRevision);
+        var thinking = new SharedProviderThinkingCapability(SharedProviderThinkingSupport.Supported,
+            SharedProviderThinkingControl.EffortLevels,
+            [SharedProviderReasoningEffort.High, SharedProviderReasoningEffort.Low], SharedProviderReasoningEffort.Low);
+        var publication = legacy.Providers[0] with {
+            Models = [legacy.Providers[0].Models[0] with { Thinking = thinking }]
+        };
+        var catalog = WithComputedRevisions(legacy with { Providers = [publication] });
+        var json = SharedProviderProtocolJson.SerializeCatalog(catalog);
+        var restored = SharedProviderProtocolJson.DeserializeCatalog(json);
+        Assert.Equal([SharedProviderReasoningEffort.Low, SharedProviderReasoningEffort.High],
+            restored.Providers[0].Models[0].Thinking!.AllowedEfforts);
+        Assert.NotEqual(legacy.CatalogRevision, restored.CatalogRevision);
+        Assert.Throws<JsonException>(() => SharedProviderProtocolJson.DeserializeCatalog(
+            json.Replace("\"defaultEffort\":\"low\"", "\"defaultEffort\":\"high\"")));
+    }
+
+    [Fact]
     public void MetadataPricesRoundTripExactlyAndEveryFieldParticipatesInRevision() {
         var price = new SharedProviderCatalogPrice(1.23m, 0m, 4.56m) {
             CacheWritePerMillionTokensUsd = 0.50m,
@@ -118,7 +139,7 @@ public sealed class SharedProviderProtocolContractTests
             $"{publication.Revision.Value}|{catalog.CatalogRevision.Value}");
         var expected = $"{{\"schemaVersion\":\"1.1\",\"sourceInstanceId\":\"{SourceInstanceId}\",\"catalogRevision\":\"{catalog.CatalogRevision}\",\"protocols\":{{\"openAiCompatibleBasePath\":\"/api/shared-providers/openai/v1\"}},\"providers\":[{{\"publicationId\":\"{PublicationId}\",\"revision\":\"{publication.Revision}\",\"displayName\":\"Central OpenAI\",\"purpose\":\"chat\",\"transport\":\"openai-compatible\",\"defaultModelId\":\"{publication.DefaultModelId}\",\"models\":[{{\"id\":\"{publication.DefaultModelId}\",\"displayName\":\"GPT 4.1\",\"capabilities\":[\"chat-completions\",\"function-tools\",\"responses\",\"streaming\",\"structured-output\"],\"price\":null}}],\"health\":{{\"state\":\"available\"}},\"isPrivateProvider\":false}}]}}";
 
-        Assert.Equal(expected, json);
+        Assert.Equal(expected.Replace("\"price\":null", "\"price\":null,\"isSuggested\":true", StringComparison.Ordinal), json);
 
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
