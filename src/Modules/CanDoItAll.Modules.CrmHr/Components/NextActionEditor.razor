@@ -3,30 +3,27 @@
     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
         <div>
             <FormField Text="Next action">
-            <InputText @bind-Value="Model.NextActionText"
-                       class="ui-input"
+            <TextInput @bind-Value="Model.NextActionText"
                        data-testid="crmhr-next-action-text" />
             </FormField>
         </div>
         <div>
             <FormField Text="Owner">
-            <InputSelect @bind-Value="Model.NextActionOwnerPartyId"
-                         class="ui-input"
+            <SelectInput @bind-Value="Model.NextActionOwnerPartyId"
                          data-testid="crmhr-next-action-owner">
                 <option value="">Select owner</option>
                 @foreach (var option in OwnerOptions)
                 {
                     <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
                 }
-            </InputSelect>
+            </SelectInput>
             </FormField>
         </div>
     </Grid>
 
     <div class="mt-5 max-w-sm">
         <FormField Text="Due on">
-        <InputDate @bind-Value="Model.NextActionDueOn"
-                   class="ui-input"
+        <DateInput @bind-Value="Model.NextActionDueOn"
                    data-testid="crmhr-next-action-due-on" />
         </FormField>
     </div>

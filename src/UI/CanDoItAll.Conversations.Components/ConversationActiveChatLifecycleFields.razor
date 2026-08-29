@@ -2,7 +2,7 @@
        Class="@Class"
        data-testid="@TestId">
     <FormField Text="Keep hidden chats active (minutes)">
-        <Numeric TValue="int"
+        <NumberInput TValue="int"
                  Value="@HiddenChatRetentionMinutes"
                  ValueChanged="@HiddenChatRetentionMinutesChanged"
                  Min="1"
@@ -14,7 +14,7 @@
                Value="Idle hidden handles are stopped after this interval. Durable conversation history is not deleted." />
 
     <FormField Text="Maximum active chats">
-        <Numeric TValue="int"
+        <NumberInput TValue="int"
                  Value="@MaximumActiveChats"
                  ValueChanged="@MaximumActiveChatsChanged"
                  Min="1"

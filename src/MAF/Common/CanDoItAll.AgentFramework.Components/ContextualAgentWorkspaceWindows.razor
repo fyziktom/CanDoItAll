@@ -34,7 +34,7 @@
                           StateChanged="WindowStateChanged">
         <div class="contextual-agent-window" data-testid="@($"{TestId}-content")">
             <div class="contextual-agent-window__filters">
-                <TextBox Value="@searchText"
+                <TextInput Value="@searchText"
                          ValueChanged="HandleSearchChangedAsync"
                          Placeholder="Search agents"
                          Immediate="true"

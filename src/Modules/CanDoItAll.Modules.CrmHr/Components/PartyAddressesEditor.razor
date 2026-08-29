@@ -29,15 +29,13 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                     <div>
                         <FormField Text="Type">
-                        <InputText @bind-Value="item.AddressType"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.AddressType"
                                    data-testid="@($"crmhr-address-type-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div class="lg:col-span-2">
                         <FormField Text="Line 1">
-                        <InputText @bind-Value="item.Line1"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.Line1"
                                    data-testid="@($"crmhr-address-line1-{rowIndex}")" />
                         </FormField>
                     </div>
@@ -53,29 +51,25 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4" Class="mt-4">
                     <div>
                         <FormField Text="Line 2">
-                        <InputText @bind-Value="item.Line2"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.Line2"
                                    data-testid="@($"crmhr-address-line2-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="City">
-                        <InputText @bind-Value="item.City"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.City"
                                    data-testid="@($"crmhr-address-city-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="Region">
-                        <InputText @bind-Value="item.Region"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.Region"
                                    data-testid="@($"crmhr-address-region-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="Postal code">
-                        <InputText @bind-Value="item.PostalCode"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.PostalCode"
                                    data-testid="@($"crmhr-address-postal-{rowIndex}")" />
                         </FormField>
                     </div>
@@ -84,8 +78,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
                         <FormField Text="Country code">
-                        <InputText @bind-Value="item.CountryCode"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.CountryCode"
                                    data-testid="@($"crmhr-address-country-{rowIndex}")" />
                         </FormField>
                     </div>

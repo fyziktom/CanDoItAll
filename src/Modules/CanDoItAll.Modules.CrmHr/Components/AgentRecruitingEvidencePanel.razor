@@ -307,10 +307,10 @@
         <ChildContent>
             <FormStack>
                 <FormField Text="Candidate">
-                    <InputText @bind-Value="createCandidateName" class="ui-input" disabled />
+                    <TextInput @bind-Value="createCandidateName" disabled />
                 </FormField>
                 <FormField Text="Purpose">
-                    <TextArea @bind-Value="createPurpose"
+                    <TextAreaInput @bind-Value="createPurpose"
 
                                    data-testid="crmhr-assessment-purpose" />
                 </FormField>
@@ -348,28 +348,25 @@
             <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Assessment">
-                        <InputSelect @bind-Value="attemptDraft.InterviewId"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="attemptDraft.InterviewId"
                                      data-testid="crmhr-assessment-interview">
                             @foreach (var interview in interviews)
                             {
                                 <option value="@interview.Id">@interview.Purpose</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Target kind">
-                        <InputSelect @bind-Value="attemptDraft.TargetKind"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="attemptDraft.TargetKind"
                                      data-testid="crmhr-assessment-target-kind">
                             @foreach (var targetKind in Enum.GetValues<AgentRecruitingTargetKind>())
                             {
                                 <option value="@targetKind">@FormatTargetKind(targetKind)</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Target run ID">
-                        <InputText @bind-Value="attemptDraft.TargetId"
-                                   class="ui-input"
+                        <TextInput @bind-Value="attemptDraft.TargetId"
                                    placeholder="00000000-0000-0000-0000-000000000000"
                                    data-testid="crmhr-assessment-target-id" />
                     </FormField>
@@ -377,18 +374,15 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Challenge key">
-                        <InputText @bind-Value="attemptDraft.ChallengeKey"
-                                   class="ui-input"
+                        <TextInput @bind-Value="attemptDraft.ChallengeKey"
                                    data-testid="crmhr-assessment-challenge-key" />
                     </FormField>
                     <FormField Text="Challenge version">
-                        <InputText @bind-Value="attemptDraft.ChallengeVersion"
-                                   class="ui-input"
+                        <TextInput @bind-Value="attemptDraft.ChallengeVersion"
                                    data-testid="crmhr-assessment-challenge-version" />
                     </FormField>
                     <FormField Text="Rubric version">
-                        <InputText @bind-Value="attemptDraft.RubricVersion"
-                                   class="ui-input"
+                        <TextInput @bind-Value="attemptDraft.RubricVersion"
                                    data-testid="crmhr-assessment-rubric-version" />
                     </FormField>
                 </Grid>
@@ -397,48 +391,45 @@
                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Typed analysis" />
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                         <FormField Text="Classification">
-                            <InputSelect @bind-Value="attemptDraft.Classification"
-                                         class="ui-input"
+                            <SelectInput @bind-Value="attemptDraft.Classification"
                                          data-testid="crmhr-assessment-classification">
                                 @foreach (var classification in Enum.GetValues<AgentRecruitingAssessmentClassification>())
                                 {
                                     <option value="@classification">@FormatClassification(classification)</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                         </FormField>
                         <FormField Text="Confidence (0-1)">
-                            <InputNumber @bind-Value="attemptDraft.Confidence"
-                                         class="ui-input"
+                            <NumberInput @bind-Value="attemptDraft.Confidence"
                                          min="0"
                                          max="1"
                                          step="0.01"
                                          data-testid="crmhr-assessment-confidence" />
                         </FormField>
                         <FormField Text="Proposed next step">
-                            <InputSelect @bind-Value="attemptDraft.ProposedNextStep"
-                                         class="ui-input"
+                            <SelectInput @bind-Value="attemptDraft.ProposedNextStep"
                                          data-testid="crmhr-assessment-next-step">
                                 @foreach (var nextStep in Enum.GetValues<AgentRecruitingProposedNextStep>())
                                 {
                                     <option value="@nextStep">@FormatNextStep(nextStep)</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                         </FormField>
                     </Grid>
                     <FormField Text="Analysis summary" Class="mt-4">
-                        <TextArea @bind-Value="attemptDraft.AnalysisSummary"
-                                       Rows="4"
+                        <TextAreaInput @bind-Value="attemptDraft.AnalysisSummary"
+                                       rows="4"
                                        data-testid="crmhr-assessment-analysis-summary" />
                     </FormField>
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                         <FormField Text="Strengths (one per line)">
-                            <TextArea @bind-Value="attemptDraft.Strengths"
-                                           Rows="4"
+                            <TextAreaInput @bind-Value="attemptDraft.Strengths"
+                                           rows="4"
                                            data-testid="crmhr-assessment-strengths" />
                         </FormField>
                         <FormField Text="Gaps (one per line)">
-                            <TextArea @bind-Value="attemptDraft.Gaps"
-                                           Rows="4"
+                            <TextAreaInput @bind-Value="attemptDraft.Gaps"
+                                           rows="4"
                                            data-testid="crmhr-assessment-gaps" />
                         </FormField>
                     </Grid>
@@ -448,44 +439,42 @@
                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Automated evaluator provenance" />
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
                         <FormField Text="Decision">
-                            <InputSelect @bind-Value="attemptDraft.AutomatedDecision"
-                                         class="ui-input">
+                            <SelectInput @bind-Value="attemptDraft.AutomatedDecision"
+>
                                 @foreach (var decision in Enum.GetValues<AgentRecruitingAutomatedDecision>())
                                 {
                                     <option value="@decision">@decision</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                         </FormField>
                         <FormField Text="Score (0-100)">
-                            <InputNumber @bind-Value="attemptDraft.Score"
-                                         class="ui-input"
+                            <NumberInput @bind-Value="attemptDraft.Score"
                                          min="0"
                                          max="100" />
                         </FormField>
                         <FormField Text="Evaluator agent">
-                            <InputSelect @bind-Value="attemptDraft.EvaluatorAgentId"
-                                         class="ui-input">
+                            <SelectInput @bind-Value="attemptDraft.EvaluatorAgentId"
+>
                                 <option value="">Not supplied</option>
                                 @foreach (var option in evaluatorAgents)
                                 {
                                     <option value="@option.Id">@option.Name</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                         </FormField>
                         <FormField Text="Provider">
-                            <InputSelect @bind-Value="attemptDraft.ProviderProfileId"
-                                         class="ui-input">
+                            <SelectInput @bind-Value="attemptDraft.ProviderProfileId"
+>
                                 <option value="">Not supplied</option>
                                 @foreach (var provider in providers)
                                 {
                                     <option value="@provider.Id">@provider.Name</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                         </FormField>
                     </Grid>
                     <FormField Text="Model" Class="mt-4">
-                        <InputText @bind-Value="attemptDraft.Model"
-                                   class="ui-input"
+                        <TextInput @bind-Value="attemptDraft.Model"
                                    placeholder="Evaluator model name" />
                     </FormField>
                 </SurfaceCard>
@@ -497,16 +486,16 @@
                     </p>
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                         <FormField Text="Input SHA-256">
-                            <InputText @bind-Value="attemptDraft.InputHash" class="ui-input" />
+                            <TextInput @bind-Value="attemptDraft.InputHash" />
                         </FormField>
                         <FormField Text="Output SHA-256">
-                            <InputText @bind-Value="attemptDraft.OutputHash" class="ui-input" />
+                            <TextInput @bind-Value="attemptDraft.OutputHash" />
                         </FormField>
                         <FormField Text="Structured output contract">
-                            <InputText @bind-Value="attemptDraft.StructuredOutputContractKey" class="ui-input" />
+                            <TextInput @bind-Value="attemptDraft.StructuredOutputContractKey" />
                         </FormField>
                         <FormField Text="Schema SHA-256">
-                            <InputText @bind-Value="attemptDraft.StructuredOutputSchemaHash" class="ui-input" />
+                            <TextInput @bind-Value="attemptDraft.StructuredOutputSchemaHash" />
                         </FormField>
                     </Grid>
                 </SurfaceCard>

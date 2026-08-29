@@ -113,28 +113,30 @@
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Schedules" />
                                 <h2 class="text-base font-semibold text-slate-900">Saved scheduled runs</h2>
                             </div>
-                            <InputText @bind-Value="scheduleSearchText"
-                                       class="ui-input scheduler-list-toolbar__search"
+                            <TextInput @bind-Value="scheduleSearchText"
+                                       Class="scheduler-list-toolbar__search"
                                        placeholder="Search schedules"
                                        data-testid="scheduler-schedules-search" />
-                            <select value="@FormatScheduleTargetKindFilter()"
-                                    class="ui-input scheduler-list-toolbar__select"
-                                    @onchange="HandleScheduleTargetKindFilterChanged"
+                            <SelectInput TValue="SchedulerPlanTargetKind?"
+                                    Value="@scheduleTargetKindFilter"
+                                    ValueChanged="@(value => HandleScheduleTargetKindFilterChanged(new ChangeEventArgs { Value = value?.ToString() }))"
+                                    ValueExpression="@(() => scheduleTargetKindFilter)"
+                                    Class="scheduler-list-toolbar__select"
                                     data-testid="scheduler-schedules-target-kind">
                                 <option value="">All targets</option>
                                 @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
                                 {
                                     <option value="@kind">@kind</option>
                                 }
-                            </select>
-                            <InputSelect @bind-Value="scheduleStateFilter"
-                                         class="ui-input scheduler-list-toolbar__select"
+                            </SelectInput>
+                            <SelectInput @bind-Value="scheduleStateFilter"
+                                         Class="scheduler-list-toolbar__select"
                                          data-testid="scheduler-schedules-state">
                                 @foreach (var state in Enum.GetValues<ScheduleStateFilter>())
                                 {
                                     <option value="@state">@FormatScheduleStateFilter(state)</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             <span class="scheduler-list-toolbar__result">@ScheduleFilterResultText</span>
                             <div class="scheduler-list-toolbar__actions">
                                 <Button Text="Clear"
@@ -253,8 +255,8 @@
                             <Stack GapScale="LayoutGap.Medium" Class="mt-4">
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Name" />
-                                    <InputText @bind-Value="editor.Name"
-                                               class="ui-input mt-1"
+                                    <TextInput @bind-Value="editor.Name"
+                                               Class="mt-1"
                                                data-testid="scheduler-name" />
                                 </label>
 
@@ -276,8 +278,8 @@
 
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Quartz CRON" />
-                                    <InputText @bind-Value="editor.CronExpression"
-                                               class="ui-input mt-1 font-mono"
+                                    <TextInput @bind-Value="editor.CronExpression"
+                                               Class="mt-1 font-mono"
                                                data-testid="scheduler-cron" />
                                 </label>
 
@@ -304,21 +306,21 @@
 
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Time zone" />
-                                    <InputText @bind-Value="editor.TimeZoneId"
-                                               class="ui-input mt-1"
+                                    <TextInput @bind-Value="editor.TimeZoneId"
+                                               Class="mt-1"
                                                data-testid="scheduler-timezone" />
                                 </label>
 
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Misfire policy" />
-                                    <InputSelect @bind-Value="editor.MisfirePolicy"
-                                                 class="ui-input mt-1"
+                                    <SelectInput @bind-Value="editor.MisfirePolicy"
+                                                 Class="mt-1"
                                                  data-testid="scheduler-misfire">
                                         @foreach (var policy in Enum.GetValues<SchedulerPlanMisfirePolicy>())
                                         {
                                             <option value="@policy">@policy</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                 </label>
 
                                 @if (workflowInputSchema is not null && workflowInputSchema.Parameters.Count > 0)
@@ -354,37 +356,36 @@
                                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@parameter.Label" />
                                                     @if (ShouldRenderSelect(parameter, options))
                                                     {
-                                                        <select value="@GetWorkflowInputValue(parameter.Key)"
-                                                                class="ui-input mt-1"
+                                                        <SelectInput Value="@GetWorkflowInputValue(parameter.Key)"
+                                                                Class="mt-1"
                                                                 aria-required="@parameter.IsRequired"
-                                                                @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                                ValueChanged="@(async (string? value) => await HandleWorkflowInputValueChangedAsync(parameter, value ?? string.Empty))"
                                                                 data-testid="@BuildWorkflowInputTestId(parameter)">
                                                             <option value="">@ResolveEmptyOptionText(parameter)</option>
                                                             @foreach (var option in options)
                                                             {
                                                                 <option value="@option.Value">@option.Label</option>
                                                             }
-                                                        </select>
+                                                        </SelectInput>
                                                     }
                                                     else if (parameter.Kind is WorkflowInputParameterKind.Integer or WorkflowInputParameterKind.DurationMinutes)
                                                     {
-                                                        <input type="number"
+                                                        <NumberInput TValue="decimal?"
+                                                               Value="@GetWorkflowInputNumberValue(parameter.Key)"
+                                                               ValueChanged="@(async value => await HandleWorkflowInputValueChangedAsync(parameter, value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty))"
                                                                min="@parameter.MinimumValue"
                                                                max="@parameter.MaximumValue"
-                                                               value="@GetWorkflowInputValue(parameter.Key)"
-                                                               class="ui-input mt-1"
+                                                               Class="mt-1"
                                                                placeholder="@parameter.Placeholder"
                                                                aria-required="@parameter.IsRequired"
-                                                               @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
-                                                               @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
                                                                data-testid="@BuildWorkflowInputTestId(parameter)" />
                                                     }
                                                     else
                                                     {
-                                                        <input type="text"
+                                                        <TextInput
                                                                list="@BuildWorkflowInputDatalistId(parameter)"
-                                                               value="@GetWorkflowInputValue(parameter.Key)"
-                                                               class="ui-input mt-1"
+                                                               Value="@GetWorkflowInputValue(parameter.Key)"
+                                                               Class="mt-1"
                                                                placeholder="@parameter.Placeholder"
                                                                aria-required="@parameter.IsRequired"
                                                                @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
@@ -418,7 +419,7 @@
 
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Advanced input JSON" />
-                                    <TextArea Value="@editor.InputJson"
+                                    <TextAreaInput Value="@editor.InputJson"
                                                    ValueChanged="HandleRawInputJsonChangedAsync"
                                                    Class="mt-1 font-mono"
                                                    data-testid="scheduler-input-json" />
@@ -466,28 +467,28 @@
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="History" />
                                 <h2 class="text-base font-semibold text-slate-900">Dispatched scheduled runs</h2>
                             </div>
-                            <InputText @bind-Value="historyQuery.Search"
-                                       class="ui-input scheduler-list-toolbar__search"
+                            <TextInput @bind-Value="historyQuery.Search"
+                                       Class="scheduler-list-toolbar__search"
                                        placeholder="Search history"
                                        data-testid="scheduler-history-search" />
-                            <InputSelect @bind-Value="historyQuery.Status"
-                                         class="ui-input scheduler-list-toolbar__select"
+                            <SelectInput @bind-Value="historyQuery.Status"
+                                         Class="scheduler-list-toolbar__select"
                                          data-testid="scheduler-history-status">
                                 <option value="">All statuses</option>
                                 @foreach (var status in Enum.GetValues<SchedulerPlanRunDispatchStatus>())
                                 {
                                     <option value="@status">@status</option>
                                 }
-                            </InputSelect>
-                            <InputSelect @bind-Value="historyQuery.TargetKind"
-                                         class="ui-input scheduler-list-toolbar__select"
+                            </SelectInput>
+                            <SelectInput @bind-Value="historyQuery.TargetKind"
+                                         Class="scheduler-list-toolbar__select"
                                          data-testid="scheduler-history-kind">
                                 <option value="">All targets</option>
                                 @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
                                 {
                                     <option value="@kind">@kind</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             <span class="scheduler-list-toolbar__result">@($"{History.Count} run(s)")</span>
                             <div class="scheduler-list-toolbar__actions">
                                 <Button Text="Search"
@@ -568,7 +569,7 @@
                        AlignItems="AlignItems.Stretch"
                        Class="scheduler-target-picker">
                     <div class="scheduler-target-picker__filters">
-                        <TextBox Value="@targetSearchText"
+                        <TextInput Value="@targetSearchText"
                                  ValueChanged="HandleTargetSearchChangedAsync"
                                  Placeholder="Search workflows and processes"
                                  Immediate="true"
@@ -687,22 +688,22 @@
                             <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Name" />
-                                    <InputText @bind-Value="editScheduleEditor.Name"
-                                               class="ui-input mt-1"
+                                    <TextInput @bind-Value="editScheduleEditor.Name"
+                                               Class="mt-1"
                                                data-testid="scheduler-edit-name" />
                                 </label>
 
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Description" />
-                                    <TextArea @bind-Value="editScheduleEditor.Description"
+                                    <TextAreaInput @bind-Value="editScheduleEditor.Description"
                                                    Class="mt-1"
                                                    data-testid="scheduler-edit-description" />
                                 </label>
 
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Quartz CRON" />
-                                    <InputText @bind-Value="editScheduleEditor.CronExpression"
-                                               class="ui-input mt-1 font-mono"
+                                    <TextInput @bind-Value="editScheduleEditor.CronExpression"
+                                               Class="mt-1 font-mono"
                                                data-testid="scheduler-edit-cron" />
                                 </label>
 
@@ -729,27 +730,27 @@
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                     <label class="block">
                                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Time zone" />
-                                        <InputText @bind-Value="editScheduleEditor.TimeZoneId"
-                                                   class="ui-input mt-1"
+                                        <TextInput @bind-Value="editScheduleEditor.TimeZoneId"
+                                                   Class="mt-1"
                                                    data-testid="scheduler-edit-timezone" />
                                     </label>
 
                                     <label class="block">
                                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Misfire policy" />
-                                        <InputSelect @bind-Value="editScheduleEditor.MisfirePolicy"
-                                                     class="ui-input mt-1"
+                                        <SelectInput @bind-Value="editScheduleEditor.MisfirePolicy"
+                                                     Class="mt-1"
                                                      data-testid="scheduler-edit-misfire">
                                             @foreach (var policy in Enum.GetValues<SchedulerPlanMisfirePolicy>())
                                             {
                                                 <option value="@policy">@policy</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                     </label>
                                 </Grid>
 
                                 <label class="block">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Advanced input JSON" />
-                                    <TextArea @bind-Value="editScheduleEditor.InputJson"
+                                    <TextAreaInput @bind-Value="editScheduleEditor.InputJson"
                                                    Class="mt-1 font-mono"
                                                    data-testid="scheduler-edit-input-json" />
                                 </label>
@@ -1864,6 +1865,11 @@
 
     private string GetWorkflowInputValue(string parameterKey)
         => workflowInputValues.TryGetValue(parameterKey, out var value) ? value : string.Empty;
+
+    private decimal? GetWorkflowInputNumberValue(string parameterKey)
+        => decimal.TryParse(GetWorkflowInputValue(parameterKey), NumberStyles.Number, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
 
     private string ResolveWorkflowInputIssue(string parameterKey)
         => workflowInputIssues

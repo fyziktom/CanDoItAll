@@ -55,34 +55,32 @@ else if (snapshot is not null)
                          AlignItems="AlignItems.End"
                          Wrap="FlexWrap.Wrap">
                     <FormField Text="Scope">
-                        <InputSelect TValue="WorkflowAnalyticsScopeKind"
+                        <SelectInput TValue="WorkflowAnalyticsScopeKind"
                                      Value="@scopeKind"
                                      ValueChanged="HandleScopeChangedAsync"
                                      ValueExpression="@(() => scopeKind)"
-                                     class="ui-input"
                                      data-testid="workflow-analytics-scope">
                             <option value="@WorkflowAnalyticsScopeKind.All">All workflows</option>
                             @if (Workflows.Count > 0)
                             {
                                 <option value="@WorkflowAnalyticsScopeKind.SelectedWorkflow">Selected workflow</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
 
                     @if (scopeKind == WorkflowAnalyticsScopeKind.SelectedWorkflow)
                     {
                         <FormField Text="Workflow">
-                            <InputSelect TValue="Guid?"
+                            <SelectInput TValue="Guid?"
                                          Value="@selectedWorkflowValue"
                                          ValueChanged="HandleSelectedWorkflowChangedAsync"
                                          ValueExpression="@(() => selectedWorkflowValue)"
-                                         class="ui-input"
                                          data-testid="workflow-analytics-workflow">
                                 @foreach (var workflow in OrderedWorkflows)
                                 {
                                     <option value="@workflow.Id.Value">@workflow.Name</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                         </FormField>
                     }
 

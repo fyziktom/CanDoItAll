@@ -41,16 +41,16 @@
     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
         <div>
             <FormField Text="Export preview">
-            <TextArea @bind-Value="exportText"
-                           Rows="8"
+            <TextAreaInput @bind-Value="exportText"
+                           rows="8"
                            readonly
                            data-testid="crmhr-export-textarea" />
             </FormField>
         </div>
         <div>
             <FormField Text="Import CSV">
-            <TextArea @bind-Value="importText"
-                           Rows="8"
+            <TextAreaInput @bind-Value="importText"
+                           rows="8"
                            placeholder="DisplayName,PartyType,LifecycleStatus,ExternalCode,..."
                            data-testid="crmhr-import-textarea" />
             </FormField>

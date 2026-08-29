@@ -13,7 +13,7 @@
     <FilterBar ResultText="@ResultText">
         <div class="paged-record-browser__filters"
              data-testid="@($"{DataTestId}-filters")">
-            <TextBox Value="@searchText"
+            <TextInput Value="@searchText"
                      ValueChanged="HandleSearchChangedAsync"
                      Placeholder="@SearchPlaceholder"
                      Immediate="true"

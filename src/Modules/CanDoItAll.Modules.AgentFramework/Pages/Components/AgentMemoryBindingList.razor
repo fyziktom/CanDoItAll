@@ -21,17 +21,16 @@ else
                         <small class="text-slate-500">
                             @(binding.IncludeInAutomaticContext ? "Included in automatic context" : "Explicit directive only")
                         </small>
-                        <InputSelect TValue="AgentMemoryProviderRequirement"
+                        <SelectInput TValue="AgentMemoryProviderRequirement"
                                      Value="binding.Requirement"
                                      ValueChanged="requirement => UpdateRequirement.InvokeAsync(new(binding.Alias, requirement))"
                                      ValueExpression="@(() => binding.Requirement)"
-                                     class="ui-input"
                                      data-testid="@($"agents-catalog-memory-requirement-{binding.Alias.Value}")">
                             @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>())
                             {
                                 <option value="@requirement">@requirement</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </Stack>
                     <Cluster Gap="LayoutGap.XSmall"
                              Wrap="FlexWrap.Wrap"

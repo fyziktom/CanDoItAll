@@ -15,24 +15,22 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Interview type">
-                        <InputSelect @bind-Value="Draft.InterviewType"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="Draft.InterviewType"
                                      data-testid="crmhr-recruiting-interview-type">
                             @foreach (var interviewType in Enum.GetValues<RecruitmentInterviewType>())
                             {
                                 <option value="@interviewType">@interviewType</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Outcome">
-                        <InputSelect @bind-Value="Draft.Outcome"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="Draft.Outcome"
                                      data-testid="crmhr-recruiting-interview-outcome">
                             @foreach (var outcome in Enum.GetValues<RecruitmentInterviewOutcome>())
                             {
                                 <option value="@outcome">@outcome</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
@@ -41,7 +39,7 @@
                         <input type="datetime-local"
                                value="@ScheduledAtLocalValue"
                                @onchange="OnScheduledAtChanged"
-                               class="ui-input"
+                               class="form-input"
                                data-testid="crmhr-recruiting-interview-scheduled" />
                     </FormField>
                     <PartyPicker Label="Interviewer"
@@ -54,16 +52,15 @@
 
                 <div class="mt-4">
                     <FormField Text="Recommendation">
-                        <InputText @bind-Value="Draft.Recommendation"
-                                   class="ui-input"
+                        <TextInput @bind-Value="Draft.Recommendation"
                                    data-testid="crmhr-recruiting-interview-recommendation" />
                     </FormField>
                 </div>
 
                 <div class="mt-4">
                     <FormField Text="Feedback">
-                        <TextArea @bind-Value="Draft.Feedback"
-                                       Rows="6"
+                        <TextAreaInput @bind-Value="Draft.Feedback"
+                                       rows="6"
                                        data-testid="crmhr-recruiting-interview-feedback" />
                     </FormField>
                 </div>

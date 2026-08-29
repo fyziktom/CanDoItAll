@@ -99,14 +99,13 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <FormField Text="Relationship stage">
-                                            <InputSelect @bind-Value="profileEditor.RelationshipStage"
-                                                         class="ui-input"
+                                            <SelectInput @bind-Value="profileEditor.RelationshipStage"
                                                          data-testid="crmhr-account-stage">
                                                 @foreach (var stage in Enum.GetValues<CrmAccountRelationshipStage>())
                                                 {
                                                     <option value="@stage">@stage</option>
                                                 }
-                                            </InputSelect>
+                                            </SelectInput>
                                             </FormField>
                                         </div>
                                         <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
@@ -120,22 +119,22 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
                                             <FormField Text="Commercial notes">
-                                            <TextArea @bind-Value="profileEditor.CommercialNotes"
-                                                           Rows="6"
+                                            <TextAreaInput @bind-Value="profileEditor.CommercialNotes"
+                                                           rows="6"
                                                            data-testid="crmhr-account-commercial-notes" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Constraints">
-                                            <TextArea @bind-Value="profileEditor.ConstraintNotes"
-                                                           Rows="6"
+                                            <TextAreaInput @bind-Value="profileEditor.ConstraintNotes"
+                                                           rows="6"
                                                            data-testid="crmhr-account-constraints" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Timing risks">
-                                            <TextArea @bind-Value="profileEditor.TimingRiskNotes"
-                                                           Rows="6"
+                                            <TextAreaInput @bind-Value="profileEditor.TimingRiskNotes"
+                                                           rows="6"
                                                            data-testid="crmhr-account-timing-risks" />
                                             </FormField>
                                         </div>
@@ -226,14 +225,13 @@
                                                     </div>
                                                     <div>
                                                         <FormField Text="Relationship role">
-                                                        <InputSelect @bind-Value="connection.Role"
-                                                                     class="ui-input"
+                                                        <SelectInput @bind-Value="connection.Role"
                                                                      data-testid="@($"crmhr-connection-role-{rowIndex}")">
                                                             @foreach (var role in Enum.GetValues<CrmAccountConnectionRole>())
                                                             {
                                                                 <option value="@role">@FormatConnectionRole(role)</option>
                                                             }
-                                                        </InputSelect>
+                                                        </SelectInput>
                                                         </FormField>
                                                     </div>
                                                     <div class="flex items-end justify-end">
@@ -254,8 +252,7 @@
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                                                     <div class="lg:col-span-2">
                                                         <FormField Text="Relationship notes">
-                                                        <InputText @bind-Value="connection.Notes"
-                                                                   class="ui-input"
+                                                        <TextInput @bind-Value="connection.Notes"
                                                                    data-testid="@($"crmhr-connection-notes-{rowIndex}")" />
                                                         </FormField>
                                                     </div>
@@ -328,34 +325,31 @@
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                             <div>
                                                 <FormField Text="Interaction type">
-                                                <InputSelect @bind-Value="interactionEditor.InteractionType"
-                                                             class="ui-input"
+                                                <SelectInput @bind-Value="interactionEditor.InteractionType"
                                                              data-testid="crmhr-interaction-type">
                                                     @foreach (var interactionType in Enum.GetValues<InteractionType>())
                                                     {
                                                         <option value="@interactionType">@interactionType</option>
                                                     }
-                                                </InputSelect>
+                                                </SelectInput>
                                                 </FormField>
                                             </div>
                                             <div>
                                                 <FormField Text="Occurred on">
-                                                <InputDate @bind-Value="interactionEditor.OccurredOn"
-                                                           class="ui-input"
+                                                <DateInput @bind-Value="interactionEditor.OccurredOn"
                                                            data-testid="crmhr-interaction-occurred-on" />
                                                 </FormField>
                                             </div>
                                             <div>
                                                 <FormField Text="Linked opportunity">
-                                                <InputSelect @bind-Value="interactionEditor.RelatedOpportunityId"
-                                                             class="ui-input"
+                                                <SelectInput @bind-Value="interactionEditor.RelatedOpportunityId"
                                                              data-testid="crmhr-interaction-opportunity">
                                                     <option value="">No linked opportunity</option>
                                                     @if (SelectedOpportunity is { } selectedOpportunity)
                                                     {
                                                         <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
                                                     }
-                                                </InputSelect>
+                                                </SelectInput>
                                                 </FormField>
                                                 <p class="mt-1 text-xs leading-5 text-slate-500">
                                                     Select an opportunity from the paged Opportunities tab before linking it here.
@@ -365,8 +359,7 @@
 
                                         <div class="mt-5">
                                             <FormField Text="Subject">
-                                            <InputText @bind-Value="interactionEditor.Subject"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="interactionEditor.Subject"
                                                        data-testid="crmhr-interaction-subject" />
                                             </FormField>
                                         </div>
@@ -374,15 +367,15 @@
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
                                             <div>
                                                 <FormField Text="Summary">
-                                                <TextArea @bind-Value="interactionEditor.Summary"
-                                                               Rows="6"
+                                                <TextAreaInput @bind-Value="interactionEditor.Summary"
+                                                               rows="6"
                                                                data-testid="crmhr-interaction-summary" />
                                                 </FormField>
                                             </div>
                                             <div>
                                                 <FormField Text="Notes">
-                                                <TextArea @bind-Value="interactionEditor.Notes"
-                                                               Rows="6"
+                                                <TextAreaInput @bind-Value="interactionEditor.Notes"
+                                                               rows="6"
                                                                data-testid="crmhr-interaction-notes" />
                                                 </FormField>
                                             </div>

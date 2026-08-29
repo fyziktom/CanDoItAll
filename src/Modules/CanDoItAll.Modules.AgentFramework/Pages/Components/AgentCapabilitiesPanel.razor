@@ -124,19 +124,17 @@
                     <Grid Gap="LayoutGap.Large" ColumnsLg="5">
                         <div>
                             <FormField Text="Effect">
-                            <InputSelect @bind-Value="accessRuleEffect"
-                                         class="ui-input"
+                            <SelectInput @bind-Value="accessRuleEffect"
                                          data-testid="agents-capability-access-effect">
                                 <option value="deny">Deny</option>
                                 <option value="allow">Allow</option>
                                 <option value="require">Require</option>
-                            </InputSelect>
+                            </SelectInput>
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="Scope">
-                            <InputSelect @bind-Value="accessRuleScope"
-                                         class="ui-input"
+                            <SelectInput @bind-Value="accessRuleScope"
                                          data-testid="agents-capability-access-scope">
                                 <option value="uiPreview">UI preview</option>
                                 <option value="agentDefault">Agent default</option>
@@ -144,13 +142,12 @@
                                 <option value="workflowNode">Workflow node</option>
                                 <option value="processDefinition">Process definition</option>
                                 <option value="processStep">Process step</option>
-                            </InputSelect>
+                            </SelectInput>
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="Selector">
-                            <InputSelect @bind-Value="accessRuleSelectorKind"
-                                         class="ui-input"
+                            <SelectInput @bind-Value="accessRuleSelectorKind"
                                          data-testid="agents-capability-access-selector">
                                 <option value="all">All</option>
                                 <option value="kind">Kind</option>
@@ -161,20 +158,18 @@
                                 <option value="mcpServerKey">MCP server key</option>
                                 <option value="mcpToolName">MCP tool name</option>
                                 <option value="implementationKey">Implementation key</option>
-                            </InputSelect>
+                            </SelectInput>
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="Value">
-                            <InputText @bind-Value="accessRuleSelectorValue"
-                                       class="ui-input"
+                            <TextInput @bind-Value="accessRuleSelectorValue"
                                        data-testid="agents-capability-access-value" />
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="MCP server key">
-                            <InputText @bind-Value="accessRuleSelectorServerKey"
-                                       class="ui-input"
+                            <TextInput @bind-Value="accessRuleSelectorServerKey"
                                        data-testid="agents-capability-access-server-key" />
                             </FormField>
                         </div>
@@ -183,8 +178,7 @@
                     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                         <div>
                             <FormField Text="Reason">
-                            <InputText @bind-Value="accessRuleReason"
-                                       class="ui-input"
+                            <TextInput @bind-Value="accessRuleReason"
                                        data-testid="agents-capability-access-reason" />
                             </FormField>
                         </div>
@@ -240,9 +234,9 @@
 
                 <FilterBar ResultText="@($"{FilteredCapabilities.Count} matching capability(s)")">
                     <div class="agent-capabilities-panel__filters">
-                        <input @bind="capabilitySearch"
-                               @bind:event="oninput"
-                               class="ui-input agent-capabilities-panel__filter-input"
+                        <TextInput @bind-Value="capabilitySearch"
+                               Immediate="true"
+                               Class="agent-capabilities-panel__filter-input"
                                placeholder="Search capabilities"
                                data-testid="agents-capability-search" />
                         <TagEditor Value="@capabilityTagFilters"
@@ -252,21 +246,21 @@
                                    MaxTags="6"
                                    TestId="agents-capability-tag-filter"
                                    InputTestId="agents-capability-tag-filter-input" />
-                        <InputSelect @bind-Value="assignmentFilter"
-                                     class="ui-input agent-capabilities-panel__filter-select"
+                        <SelectInput @bind-Value="assignmentFilter"
+                                     Class="agent-capabilities-panel__filter-select"
                                      data-testid="agents-capability-assignment-filter">
                             <option value="@CapabilityAssignmentFilter.All">All</option>
                             <option value="@CapabilityAssignmentFilter.Assigned">Assigned</option>
                             <option value="@CapabilityAssignmentFilter.NotAssigned">Not Assigned</option>
-                        </InputSelect>
-                        <InputSelect @bind-Value="typeFilter"
-                                     class="ui-input agent-capabilities-panel__filter-select"
+                        </SelectInput>
+                        <SelectInput @bind-Value="typeFilter"
+                                     Class="agent-capabilities-panel__filter-select"
                                      data-testid="agents-capability-type-filter">
                             <option value="@CapabilityTypeFilter.All">All</option>
                             <option value="@CapabilityTypeFilter.Mcp">MCP</option>
                             <option value="@CapabilityTypeFilter.Skill">Skill</option>
                             <option value="@CapabilityTypeFilter.Tool">Tool</option>
-                        </InputSelect>
+                        </SelectInput>
                         <Button Text="Reset"
                                 Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"

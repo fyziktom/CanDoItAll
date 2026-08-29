@@ -8,7 +8,7 @@
             </Actions>
             <Filters>
                 <FilterBar ResultText="@($"{FilteredProviders.Count} matching profile(s)")">
-                    <input @bind="providerSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search providers" />
+                    <TextInput @bind-Value="providerSearch" Immediate="true" Class="min-w-[14rem] flex-1" placeholder="Search providers" />
                     <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetProviderSearch" />
                 </FilterBar>
             </Filters>
@@ -60,17 +60,17 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Profile name">
-                                    <InputText @bind-Value="providerModel.Name" class="ui-input" data-testid="provider-name-input" />
+                                    <TextInput @bind-Value="providerModel.Name" data-testid="provider-name-input" />
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Connector plugin">
-                                    <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="ui-input" data-testid="provider-plugin-select">
+                                    <SelectInput @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" data-testid="provider-plugin-select">
                                         @foreach (var manifest in providerManifests)
                                         {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>
@@ -123,13 +123,13 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="API key secret">
-                                    <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="ui-input" data-testid="provider-secret-select">
+                                    <SelectInput @bind-Value="providerModel.ApiKeySecretId" data-testid="provider-secret-select">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
                                         {
                                             <option value="@secret.Id">@secret.Name</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>

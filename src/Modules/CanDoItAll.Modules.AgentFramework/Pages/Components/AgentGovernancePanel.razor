@@ -18,17 +18,16 @@
             <SurfaceCard Soft="true">
                 <div>
                     <FormField Text="Agent filter">
-                    <InputSelect TValue="Guid?"
+                    <SelectInput TValue="Guid?"
                                  Value="@selectedAgentId"
                                  ValueChanged="HandleAgentFilterChangedAsync"
-                                 ValueExpression="@(() => selectedAgentId)"
-                                 class="ui-input">
+                                 ValueExpression="@(() => selectedAgentId)">
                         <option value="">All technical agents</option>
                         @foreach (var agent in agents.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
                         {
                             <option value="@agent.Id">@agent.Name</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                     </FormField>
                 </div>
             </SurfaceCard>

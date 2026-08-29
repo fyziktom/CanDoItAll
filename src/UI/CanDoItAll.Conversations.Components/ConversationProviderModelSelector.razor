@@ -3,13 +3,17 @@
 <div class="@Class" data-testid="@TestId">
     <FormField Text="@Label">
         <Stack GapScale="LayoutGap.Small">
-            <DropDown TValue="ProviderModelSelectorOption"
-                      Data="@modelChoices"
-                      TextProperty="@nameof(ProviderModelSelectorOption.Text)"
-                      Value="@selectedChoice"
+            <SelectInput TValue="string"
+                      Value="@SelectedChoiceModel"
                       ValueChanged="HandleChoiceChangedAsync"
+                      ValueExpression="@(() => SelectedChoiceModel)"
                       Disabled="@(Disabled || isOverrideEnabled)"
-                      data-testid="@ChoiceTestId" />
+                      data-testid="@ChoiceTestId">
+                @foreach (var choice in modelChoices)
+                {
+                    <option value="@choice.Model">@choice.Text</option>
+                }
+            </SelectInput>
 
             <CheckboxOption TValue="bool"
                             Value="@isOverrideEnabled"
@@ -22,7 +26,7 @@
 
             @if (isOverrideEnabled)
             {
-                <TextBox Value="@customModelName"
+                <TextInput Value="@customModelName"
                          ValueChanged="HandleCustomModelChangedAsync"
                          Immediate="true"
                          Disabled="@Disabled"
@@ -42,6 +46,8 @@
     private bool hasSyncedParameters;
     private bool suppressNextParameterSync;
     private bool isOverrideEnabled;
+
+    private string SelectedChoiceModel => selectedChoice?.Model ?? string.Empty;
 
     [Parameter]
     public ConversationProviderOption? Provider { get; set; }
@@ -191,9 +197,12 @@
                string.Equals(value.Trim(), providerDefault, StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task HandleChoiceChangedAsync(ProviderModelSelectorOption? choice)
+    private async Task HandleChoiceChangedAsync(string? model)
     {
-        selectedChoice = choice ?? modelChoices[0];
+        selectedChoice = modelChoices.FirstOrDefault(choice => string.Equals(
+            choice.Model,
+            model,
+            StringComparison.Ordinal)) ?? modelChoices[0];
         isOverrideEnabled = false;
         var nextValue = selectedChoice.Kind == ProviderModelChoiceKind.ProviderDefault
             ? ResolveProviderDefaultEmittedValue()

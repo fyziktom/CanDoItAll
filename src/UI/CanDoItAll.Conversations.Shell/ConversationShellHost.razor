@@ -104,7 +104,7 @@
                         data-testid="@($"conversation-shell-filter-{option.Value.ToString().ToLowerInvariant()}")" />
             }
         </Cluster>
-        <TextBox Value="@searchText"
+        <TextInput Value="@searchText"
                  ValueChanged="HandleSearchChangedAsync"
                  Placeholder="Search conversations"
                  Immediate="true"

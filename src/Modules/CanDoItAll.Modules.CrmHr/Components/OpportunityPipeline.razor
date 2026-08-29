@@ -26,15 +26,13 @@
                data-testid="crmhr-opportunity-filter-stack">
             <Grid Gap="LayoutGap.Small"
                   ColumnsLg="3">
-                <input value="@searchText"
+                <TextInput Value="@searchText"
                        @oninput="HandleSearchInputAsync"
-                       class="ui-input"
                        placeholder="Search title or summary"
                        aria-label="Search opportunities"
                        data-testid="crmhr-opportunity-search" />
-                <InputSelect @bind-Value="stageFilter"
+                <SelectInput @bind-Value="stageFilter"
                              @bind-Value:after="HandleFilterChangedAsync"
-                             class="ui-input"
                              aria-label="Opportunity stage"
                              data-testid="crmhr-opportunity-stage-filter">
                     <option value="">All stages</option>
@@ -42,10 +40,9 @@
                     {
                         <option value="@stage">@stage</option>
                     }
-                </InputSelect>
-                <InputSelect @bind-Value="sourceFilter"
+                </SelectInput>
+                <SelectInput @bind-Value="sourceFilter"
                              @bind-Value:after="HandleFilterChangedAsync"
-                             class="ui-input"
                              aria-label="Opportunity source"
                              data-testid="crmhr-opportunity-source-filter">
                     <option value="">All sources</option>
@@ -53,7 +50,7 @@
                     {
                         <option value="@source">@source</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </Grid>
 
             <Cluster Gap="LayoutGap.Small"

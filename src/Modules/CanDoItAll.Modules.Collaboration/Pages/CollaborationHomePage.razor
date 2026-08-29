@@ -107,46 +107,46 @@
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
                                         <FormField Text="Subject">
-                                        <InputText @bind-Value="newThreadEditor.Subject" class="ui-input" data-testid="collaboration-thread-subject" />
+                                        <TextInput @bind-Value="newThreadEditor.Subject" data-testid="collaboration-thread-subject" />
                                         </FormField>
                                         <ValidationMessage For="@(() => newThreadEditor.Subject)" />
                                     </div>
                                     <div>
                                         <FormField Text="Item kind">
-                                        <InputSelect @bind-Value="newThreadEditor.ItemKind" class="ui-input" data-testid="collaboration-thread-kind">
+                                        <SelectInput @bind-Value="newThreadEditor.ItemKind" data-testid="collaboration-thread-kind">
                                             @foreach (var kind in Enum.GetValues<CollaborationInboxItemKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                 </Grid>
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
                                         <FormField Text="Context kind">
-                                        <InputSelect @bind-Value="newThreadEditor.ContextKind" class="ui-input" data-testid="collaboration-thread-context-kind">
+                                        <SelectInput @bind-Value="newThreadEditor.ContextKind" data-testid="collaboration-thread-context-kind">
                                             @foreach (var kind in Enum.GetValues<CollaborationContextKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Context label">
-                                        <InputText @bind-Value="newThreadEditor.ContextLabel" class="ui-input" data-testid="collaboration-thread-context-label" />
+                                        <TextInput @bind-Value="newThreadEditor.ContextLabel" data-testid="collaboration-thread-context-label" />
                                         </FormField>
                                     </div>
                                 </Grid>
                                 <div class="mt-4">
                                     <FormField Text="Context route">
-                                    <InputText @bind-Value="newThreadEditor.ContextRoute" class="ui-input" placeholder="/processes" data-testid="collaboration-thread-context-route" />
+                                    <TextInput @bind-Value="newThreadEditor.ContextRoute" placeholder="/processes" data-testid="collaboration-thread-context-route" />
                                     </FormField>
                                 </div>
                                 <div class="mt-4">
                                     <FormField Text="First message">
-                                    <TextArea @bind-Value="newThreadEditor.MessageBody" Rows="4" data-testid="collaboration-thread-message" />
+                                    <TextAreaInput @bind-Value="newThreadEditor.MessageBody" rows="4" data-testid="collaboration-thread-message" />
                                     </FormField>
                                     <ValidationMessage For="@(() => newThreadEditor.MessageBody)" />
                                 </div>
@@ -327,12 +327,12 @@
                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                         <div>
                                             <FormField Text="Message kind">
-                                            <InputSelect @bind-Value="replyEditor.MessageKind" class="ui-input" data-testid="collaboration-reply-kind">
+                                            <SelectInput @bind-Value="replyEditor.MessageKind" data-testid="collaboration-reply-kind">
                                                 @foreach (var kind in Enum.GetValues<CollaborationMessageKind>())
                                                 {
                                                     <option value="@kind">@kind</option>
                                                 }
-                                            </InputSelect>
+                                            </SelectInput>
                                             </FormField>
                                         </div>
                                         <div class="flex items-end">
@@ -344,7 +344,7 @@
                                     </Grid>
                                     <div class="mt-4">
                                         <FormField Text="Reply">
-                                        <TextArea @bind-Value="replyEditor.MessageBody" Rows="4" data-testid="collaboration-reply-message" />
+                                        <TextAreaInput @bind-Value="replyEditor.MessageBody" rows="4" data-testid="collaboration-reply-message" />
                                         </FormField>
                                         <ValidationMessage For="@(() => replyEditor.MessageBody)" />
                                     </div>

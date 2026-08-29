@@ -19,16 +19,14 @@
                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                     <div>
                         <FormField Text="File extension">
-                        <InputText @bind-Value="editor.Extension"
-                                   class="ui-input"
+                        <TextInput @bind-Value="editor.Extension"
                                    placeholder=".xlsx"
                                    data-testid="file-application-extension" />
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="Application executable">
-                        <InputText @bind-Value="editor.ExecutablePath"
-                                   class="ui-input"
+                        <TextInput @bind-Value="editor.ExecutablePath"
                                    placeholder="C:\Program Files\...\application.exe"
                                    data-testid="file-application-executable" />
                         </FormField>

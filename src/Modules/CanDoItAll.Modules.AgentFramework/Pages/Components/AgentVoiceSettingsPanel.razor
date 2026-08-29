@@ -17,27 +17,27 @@
                 <span>Enable speech input</span>
             </CheckboxOption>
             <FormField Text="Driver" ContainerClass="app-field">
-                <InputSelect @bind-Value="settings.SpeechToText.DriverKind" class="ui-input">
+                <SelectInput @bind-Value="settings.SpeechToText.DriverKind">
                     <option value="@AgentVoiceDriverKind.OpenAi">OpenAI</option>
-                </InputSelect>
+                </SelectInput>
             </FormField>
             <FormField Text="Provider" ContainerClass="app-field">
-                <InputSelect @bind-Value="speechProviderIdText" class="ui-input">
+                <SelectInput @bind-Value="speechProviderIdText">
                     <option value="">Select provider</option>
                     @foreach (var provider in OpenAiVoiceProviders)
                     {
                         <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </FormField>
             <FormField Text="Model" ContainerClass="app-field">
-                <InputText @bind-Value="settings.SpeechToText.Model" class="ui-input" data-testid="agents-voice-stt-model" />
+                <TextInput @bind-Value="settings.SpeechToText.Model" data-testid="agents-voice-stt-model" />
             </FormField>
             <FormField Text="Language" ContainerClass="app-field">
-                <InputText @bind-Value="settings.SpeechToText.Language" class="ui-input" data-testid="agents-voice-stt-language" />
+                <TextInput @bind-Value="settings.SpeechToText.Language" data-testid="agents-voice-stt-language" />
             </FormField>
             <FormField Text="Prompt" ContainerClass="app-field">
-                <TextArea @bind-Value="settings.SpeechToText.Prompt"
+                <TextAreaInput @bind-Value="settings.SpeechToText.Prompt"
 
                                data-testid="agents-voice-stt-prompt" />
             </FormField>
@@ -52,42 +52,42 @@
                 <span>Enable spoken responses</span>
             </CheckboxOption>
             <FormField Text="Driver" ContainerClass="app-field">
-                <InputSelect @bind-Value="settings.TextToSpeech.DriverKind" class="ui-input">
+                <SelectInput @bind-Value="settings.TextToSpeech.DriverKind">
                     <option value="@AgentVoiceDriverKind.OpenAi">OpenAI</option>
-                </InputSelect>
+                </SelectInput>
             </FormField>
             <FormField Text="Provider" ContainerClass="app-field">
-                <InputSelect @bind-Value="ttsProviderIdText" class="ui-input">
+                <SelectInput @bind-Value="ttsProviderIdText">
                     <option value="">Select provider</option>
                     @foreach (var provider in OpenAiVoiceProviders)
                     {
                         <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </FormField>
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                 <FormField Text="Model" ContainerClass="app-field">
-                    <InputText @bind-Value="settings.TextToSpeech.Model" class="ui-input" data-testid="agents-voice-tts-model" />
+                    <TextInput @bind-Value="settings.TextToSpeech.Model" data-testid="agents-voice-tts-model" />
                 </FormField>
                 <FormField Text="Voice" ContainerClass="app-field">
-                    <InputSelect @bind-Value="settings.TextToSpeech.VoiceId" class="ui-input" data-testid="agents-voice-default-voice">
+                    <SelectInput @bind-Value="settings.TextToSpeech.VoiceId" data-testid="agents-voice-default-voice">
                         @foreach (var voiceId in AgentVoiceDefaults.OpenAiVoiceIds)
                         {
                             <option value="@voiceId">@voiceId</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
             </Grid>
             <FormField Text="Output format" ContainerClass="app-field">
-                <InputSelect @bind-Value="settings.TextToSpeech.ResponseFormat" class="ui-input">
+                <SelectInput @bind-Value="settings.TextToSpeech.ResponseFormat">
                     @foreach (var format in AgentVoiceDefaults.ResponseFormats)
                     {
                         <option value="@format">@format</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </FormField>
             <FormField Text="Sample text" ContainerClass="app-field">
-                <TextArea @bind-Value="settings.SampleText"
+                <TextAreaInput @bind-Value="settings.SampleText"
 
                                data-testid="agents-voice-sample-text" />
             </FormField>

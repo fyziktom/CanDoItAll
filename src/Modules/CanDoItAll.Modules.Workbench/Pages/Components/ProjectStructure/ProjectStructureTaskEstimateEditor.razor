@@ -8,24 +8,26 @@
     <Grid ColumnTemplate="minmax(0,2fr) minmax(10rem,1fr)"
           Gap="LayoutGap.Medium">
         <FormField Text="Pure effort">
-            <input type="number"
-                   class="ui-input"
+            <NumberInput TValue="decimal?"
+                   Value="@GetExpectedEffortValue()"
+                   ValueChanged="HandleExpectedEffortChangedAsync"
                    min="0.01"
                    step="0.25"
-                   value="@expectedEffortValueText"
                    aria-label="Expected pure task effort"
-                   data-testid="@TestId("effort")"
-                   @onchange="HandleExpectedEffortChangedAsync" />
+                   data-testid="@TestId("effort")" />
         </FormField>
 
         <FormField Text="Effort unit">
-            <DropDown TValue="ProjectWorkItemEffortUnit"
-                      Data="@EffortUnitOptions"
-                      TextProperty="Label"
-                      ValueProperty="Value"
-                      Value="@expectedEffortUnit"
-                      ValueChanged="HandleExpectedEffortUnitChangedAsync"
-                      data-testid="@TestId("unit")" />
+            <SelectInput TValue="ProjectWorkItemEffortUnit"
+                         Value="@expectedEffortUnit"
+                         ValueChanged="HandleExpectedEffortUnitChangedAsync"
+                         ValueExpression="@(() => expectedEffortUnit)"
+                         data-testid="@TestId("unit")">
+                @foreach (var effortUnit in EffortUnitOptions)
+                {
+                    <option value="@effortUnit.Value">@effortUnit.Label</option>
+                }
+            </SelectInput>
         </FormField>
     </Grid>
 
@@ -49,19 +51,18 @@
     <Grid ColumnTemplate="minmax(0,2fr) minmax(10rem,1fr)"
           Gap="LayoutGap.Medium">
         <FormField Text="Expected cost">
-            <input type="number"
-                   class="ui-input"
+            <NumberInput TValue="decimal?"
+                   Value="@GetExpectedCostAmount()"
+                   ValueChanged="HandleExpectedCostChangedAsync"
                    min="0"
                    step="0.01"
-                   value="@expectedCostAmountText"
                    disabled="@ExpectedCostReadOnly"
                    aria-label="Expected task cost"
-                   data-testid="@TestId("cost")"
-                   @onchange="HandleExpectedCostChangedAsync" />
+                   data-testid="@TestId("cost")" />
         </FormField>
 
         <FormField Text="Currency">
-            <TextBox Value="@expectedCostCurrencyCode"
+            <TextInput Value="@expectedCostCurrencyCode"
                      ValueChanged="HandleCurrencyChangedAsync"
                      Placeholder="@DefaultCurrencyCode"
                      Immediate="true"
@@ -187,9 +188,12 @@
         }
     }
 
-    private async Task HandleExpectedEffortChangedAsync(ChangeEventArgs args)
+    private decimal? GetExpectedEffortValue()
+        => TryParseOptionalDecimal(expectedEffortValueText, out var value) ? value : null;
+
+    private async Task HandleExpectedEffortChangedAsync(decimal? value)
     {
-        expectedEffortValueText = NormalizeInputText(args.Value);
+        expectedEffortValueText = FormatDecimal(value);
         await PublishIfValidAsync();
     }
 
@@ -207,9 +211,12 @@
         await PublishIfValidAsync();
     }
 
-    private async Task HandleExpectedCostChangedAsync(ChangeEventArgs args)
+    private decimal? GetExpectedCostAmount()
+        => TryParseOptionalDecimal(expectedCostAmountText, out var value) ? value : null;
+
+    private async Task HandleExpectedCostChangedAsync(decimal? value)
     {
-        expectedCostAmountText = NormalizeInputText(args.Value);
+        expectedCostAmountText = FormatDecimal(value);
         await PublishIfValidAsync();
     }
 

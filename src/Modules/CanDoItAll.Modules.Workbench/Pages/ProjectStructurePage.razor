@@ -436,18 +436,16 @@ else
                                             <Grid Gap="LayoutGap.Medium"
                                                   ColumnsLg="2">
                                                 <FormField Text="Kind">
-                                                    <InputSelect @bind-Value="partyEditor.QuickCreate.PartyKind"
-                                                                 class="ui-input"
+                                                    <SelectInput @bind-Value="partyEditor.QuickCreate.PartyKind"
                                                                  data-testid="project-structure-participant-quick-kind">
                                                         @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
                                                         {
                                                             <option value="@kind">@ResolveQuickCreateKindLabel(kind)</option>
                                                         }
-                                                    </InputSelect>
+                                                    </SelectInput>
                                                 </FormField>
                                                 <FormField Text="Name">
-                                                    <InputText @bind-Value="partyEditor.QuickCreate.DisplayName"
-                                                               class="ui-input"
+                                                    <TextInput @bind-Value="partyEditor.QuickCreate.DisplayName"
                                                                data-testid="project-structure-participant-quick-name" />
                                                 </FormField>
                                             </Grid>
@@ -455,20 +453,18 @@ else
                                             <Grid Gap="LayoutGap.Medium"
                                                   ColumnsLg="2">
                                                 <FormField Text="Email">
-                                                    <InputText @bind-Value="partyEditor.QuickCreate.Email"
-                                                               class="ui-input"
+                                                    <TextInput @bind-Value="partyEditor.QuickCreate.Email"
                                                                data-testid="project-structure-participant-quick-email" />
                                                 </FormField>
                                                 <FormField Text="Phone">
-                                                    <InputText @bind-Value="partyEditor.QuickCreate.Phone"
-                                                               class="ui-input"
+                                                    <TextInput @bind-Value="partyEditor.QuickCreate.Phone"
                                                                data-testid="project-structure-participant-quick-phone" />
                                                 </FormField>
                                             </Grid>
 
                                             <FormField Text="Summary">
-                                                <TextArea @bind-Value="partyEditor.QuickCreate.Summary"
-                                                               Rows="4"
+                                                <TextAreaInput @bind-Value="partyEditor.QuickCreate.Summary"
+                                                               rows="4"
                                                                data-testid="project-structure-participant-quick-summary" />
                                             </FormField>
 
@@ -608,9 +604,10 @@ else
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Stored secret">
-                        <select class="ui-input"
-                                value="@selectedSecretReferenceId"
-                                @onchange="HandleSelectedSecretReferenceChanged"
+                        <SelectInput TValue="string"
+                                Value="@selectedSecretReferenceId"
+                                ValueChanged="@(value => HandleSelectedSecretReferenceChanged(new ChangeEventArgs { Value = value }))"
+                                ValueExpression="@(() => selectedSecretReferenceId)"
                                 disabled="@isSecretReferenceDialogBusy"
                                 data-testid="project-structure-secret-select">
                             <option value="">Select stored secret</option>
@@ -618,12 +615,13 @@ else
                             {
                                 <option value="@secret.Id.ToString("D")">@secret.Name (@secret.Kind)</option>
                             }
-                        </select>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Search stored secrets">
-                        <input class="ui-input"
-                               value="@secretReferenceSearch"
-                               @oninput="HandleSecretReferenceSearchChanged"
+                        <TextInput Value="@secretReferenceSearch"
+                               ValueChanged="@(value => HandleSecretReferenceSearchChanged(new ChangeEventArgs { Value = value }))"
+                               ValueExpression="@(() => secretReferenceSearch)"
+                               Immediate="true"
                                data-testid="project-structure-secret-search" />
                     </FormField>
                 </Grid>
@@ -637,15 +635,17 @@ else
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Purpose">
-                        <input class="ui-input"
-                               value="@secretReferencePurpose"
-                               @oninput="HandleSecretReferencePurposeChanged"
+                        <TextInput Value="@secretReferencePurpose"
+                               ValueChanged="@(value => HandleSecretReferencePurposeChanged(new ChangeEventArgs { Value = value }))"
+                               ValueExpression="@(() => secretReferencePurpose)"
+                               Immediate="true"
                                data-testid="project-structure-secret-purpose" />
                     </FormField>
                     <FormField Text="Reference note">
-                        <input class="ui-input"
-                               value="@secretReferenceExternalReference"
-                               @oninput="HandleSecretReferenceExternalReferenceChanged"
+                        <TextInput Value="@secretReferenceExternalReference"
+                               ValueChanged="@(value => HandleSecretReferenceExternalReferenceChanged(new ChangeEventArgs { Value = value }))"
+                               ValueExpression="@(() => secretReferenceExternalReference)"
+                               Immediate="true"
                                data-testid="project-structure-secret-external-reference" />
                     </FormField>
                 </Grid>
@@ -679,17 +679,17 @@ else
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
                             <FormField Text="Name">
-                            <InputText @bind-Value="secretReferenceCreateModel.Name" class="ui-input" data-testid="project-structure-secret-create-name" />
+                            <TextInput @bind-Value="secretReferenceCreateModel.Name" data-testid="project-structure-secret-create-name" />
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="Kind">
-                            <InputSelect @bind-Value="secretReferenceCreateModel.Kind" class="ui-input">
+                            <SelectInput @bind-Value="secretReferenceCreateModel.Kind">
                                 @foreach (var kind in Enum.GetValues<SecretKind>())
                                 {
                                     <option value="@kind">@kind</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             </FormField>
                         </div>
                     </Grid>
@@ -705,7 +705,7 @@ else
                     </div>
                     <div class="mt-3">
                         <FormField Text="Purpose">
-                        <InputText @bind-Value="secretReferenceCreateModel.RotationNote" class="ui-input" />
+                        <TextInput @bind-Value="secretReferenceCreateModel.RotationNote" />
                         </FormField>
                     </div>
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">

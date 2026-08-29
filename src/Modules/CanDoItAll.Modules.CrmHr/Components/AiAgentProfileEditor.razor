@@ -4,22 +4,20 @@
         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
             <div>
                 <FormField Text="Provider profile">
-                <InputSelect @bind-Value="Model.ProviderProfileId"
-                             class="ui-input"
+                <SelectInput @bind-Value="Model.ProviderProfileId"
                              data-testid="crmhr-agent-provider">
                     <option value="">No provider linked</option>
                     @foreach (var option in ProviderOptions)
                     {
                         <option value="@option.Id">@BuildProviderLabel(option)</option>
                     }
-                </InputSelect>
+                </SelectInput>
                 </FormField>
                 <p class="mt-2 text-xs leading-5 text-slate-500">@ProviderHintText</p>
             </div>
             <div>
                 <FormField Text="Default model">
-                <InputText @bind-Value="Model.DefaultModel"
-                           class="ui-input"
+                <TextInput @bind-Value="Model.DefaultModel"
                            data-testid="crmhr-agent-default-model" />
                 </FormField>
             </div>
@@ -28,55 +26,51 @@
         <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
             <div>
                 <FormField Text="Execution mode">
-                <InputSelect @bind-Value="Model.ExecutionMode"
-                             class="ui-input"
+                <SelectInput @bind-Value="Model.ExecutionMode"
                              data-testid="crmhr-agent-execution-mode">
                     @foreach (var executionMode in Enum.GetValues<AiExecutionMode>())
                     {
                         <option value="@executionMode">@executionMode</option>
                     }
-                </InputSelect>
+                </SelectInput>
                 </FormField>
             </div>
             <div>
                 <FormField Text="Owner / steward">
-                <InputSelect @bind-Value="Model.OwnerPartyId"
-                             class="ui-input"
+                <SelectInput @bind-Value="Model.OwnerPartyId"
                              data-testid="crmhr-agent-owner">
                     <option value="">No steward assigned</option>
                     @foreach (var owner in OwnerOptions)
                     {
                         <option value="@owner.Id">@owner.DisplayName</option>
                     }
-                </InputSelect>
+                </SelectInput>
                 </FormField>
             </div>
             <div>
                 <FormField Text="Validation status">
-                <InputSelect @bind-Value="Model.ValidationStatus"
-                             class="ui-input"
+                <SelectInput @bind-Value="Model.ValidationStatus"
                              data-testid="crmhr-agent-validation-status">
                     @foreach (var validationStatus in Enum.GetValues<AiValidationStatus>())
                     {
                         <option value="@validationStatus">@validationStatus</option>
                     }
-                </InputSelect>
+                </SelectInput>
                 </FormField>
             </div>
         </Grid>
 
         <div class="mt-5 max-w-sm">
             <FormField Text="Last reviewed on">
-            <InputDate @bind-Value="Model.LastReviewedOn"
-                       class="ui-input"
+            <DateInput @bind-Value="Model.LastReviewedOn"
                        data-testid="crmhr-agent-last-reviewed-on" />
             </FormField>
         </div>
 
         <div class="mt-5">
             <FormField Text="Governance notes">
-            <TextArea @bind-Value="Model.Notes"
-                           Rows="6"
+            <TextAreaInput @bind-Value="Model.Notes"
+                           rows="6"
                            data-testid="crmhr-agent-notes" />
             </FormField>
         </div>

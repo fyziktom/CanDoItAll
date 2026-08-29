@@ -210,32 +210,29 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                         <div>
                                             <FormField Text="Workforce kind">
-                                            <InputSelect @bind-Value="profileEditor.WorkforceKind"
-                                                         class="ui-input"
+                                            <SelectInput @bind-Value="profileEditor.WorkforceKind"
                                                          data-testid="crmhr-workforce-kind">
                                                 @foreach (var workforceKind in AvailableWorkforceKinds)
                                                 {
                                                     <option value="@workforceKind">@workforceKind</option>
                                                 }
-                                            </InputSelect>
+                                            </SelectInput>
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Status">
-                                            <InputSelect @bind-Value="profileEditor.Status"
-                                                         class="ui-input"
+                                            <SelectInput @bind-Value="profileEditor.Status"
                                                          data-testid="crmhr-workforce-status">
                                                 @foreach (var status in WorkforceStatuses)
                                                 {
                                                     <option value="@status">@status</option>
                                                 }
-                                            </InputSelect>
+                                            </SelectInput>
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Employee code">
-                                            <InputText @bind-Value="profileEditor.EmployeeCode"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="profileEditor.EmployeeCode"
                                                        data-testid="crmhr-workforce-employee-code" />
                                             </FormField>
                                         </div>
@@ -244,28 +241,25 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
                                             <FormField Text="Job title">
-                                            <InputText @bind-Value="profileEditor.JobTitle"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="profileEditor.JobTitle"
                                                        data-testid="crmhr-workforce-job-title" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Discipline">
-                                            <InputText @bind-Value="profileEditor.Discipline"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="profileEditor.Discipline"
                                                        data-testid="crmhr-workforce-discipline" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Seniority">
-                                            <InputSelect @bind-Value="profileEditor.Seniority"
-                                                         class="ui-input"
+                                            <SelectInput @bind-Value="profileEditor.Seniority"
                                                          data-testid="crmhr-workforce-seniority">
                                                 @foreach (var seniority in SeniorityValues)
                                                 {
                                                     <option value="@seniority">@seniority</option>
                                                 }
-                                            </InputSelect>
+                                            </SelectInput>
                                             </FormField>
                                         </div>
                                     </Grid>
@@ -290,22 +284,19 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
                                             <FormField Text="Start date">
-                                            <InputDate @bind-Value="profileEditor.StartDate"
-                                                       class="ui-input"
+                                            <DateInput @bind-Value="profileEditor.StartDate"
                                                        data-testid="crmhr-workforce-start-date" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="End date">
-                                            <InputDate @bind-Value="profileEditor.EndDate"
-                                                       class="ui-input"
+                                            <DateInput @bind-Value="profileEditor.EndDate"
                                                        data-testid="crmhr-workforce-end-date" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Capacity hours / week">
-                                            <InputNumber @bind-Value="profileEditor.CapacityHoursPerWeek"
-                                                         class="ui-input"
+                                            <NumberInput @bind-Value="profileEditor.CapacityHoursPerWeek"
                                                          data-testid="crmhr-workforce-capacity" />
                                             </FormField>
                                         </div>
@@ -314,15 +305,13 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
                                         <div>
                                             <FormField Text="Location">
-                                            <InputText @bind-Value="profileEditor.Location"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="profileEditor.Location"
                                                        data-testid="crmhr-workforce-location" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Time zone">
-                                            <InputText @bind-Value="profileEditor.TimeZone"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="profileEditor.TimeZone"
                                                        data-testid="crmhr-workforce-timezone" />
                                             </FormField>
                                         </div>
@@ -331,32 +320,28 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="4" Class="mt-5">
                                         <div>
                                             <FormField Text="Internal cost rate">
-                                            <InputNumber @bind-Value="profileEditor.InternalCostRate"
-                                                         class="ui-input"
+                                            <NumberInput @bind-Value="profileEditor.InternalCostRate"
                                                          data-testid="crmhr-workforce-internal-rate" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="External billing rate">
-                                            <InputNumber @bind-Value="profileEditor.ExternalBillingRate"
-                                                         class="ui-input"
+                                            <NumberInput @bind-Value="profileEditor.ExternalBillingRate"
                                                          data-testid="crmhr-workforce-external-rate" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Rate unit">
-                                            <InputSelect @bind-Value="profileEditor.RateUnit"
-                                                         class="ui-input"
+                                            <SelectInput @bind-Value="profileEditor.RateUnit"
                                                          data-testid="crmhr-workforce-rate-unit">
                                                 <option value="@ProjectResourceRateUnit.Hour">Per hour</option>
                                                 <option value="@ProjectResourceRateUnit.ManDay">Per man-day</option>
-                                            </InputSelect>
+                                            </SelectInput>
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Rate currency">
-                                            <InputText @bind-Value="profileEditor.RateCurrencyCode"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="profileEditor.RateCurrencyCode"
                                                        maxlength="3"
                                                        data-testid="crmhr-workforce-rate-currency" />
                                             </FormField>
@@ -365,8 +350,8 @@
 
                                     <div class="mt-5">
                                         <FormField Text="Notes">
-                                        <TextArea @bind-Value="profileEditor.Notes"
-                                                       Rows="6"
+                                        <TextAreaInput @bind-Value="profileEditor.Notes"
+                                                       rows="6"
                                                        data-testid="crmhr-workforce-notes" />
                                         </FormField>
                                     </div>
@@ -509,19 +494,17 @@
                             <Stack GapScale="LayoutGap.Medium">
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                     <FormField Text="Unit name">
-                                        <InputText @bind-Value="deliveryUnitEditor.Name"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="deliveryUnitEditor.Name"
                                                    data-testid="crmhr-delivery-unit-name" />
                                     </FormField>
                                     <FormField Text="External code">
-                                        <InputText @bind-Value="deliveryUnitEditor.ExternalCode"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="deliveryUnitEditor.ExternalCode"
                                                    data-testid="crmhr-delivery-unit-code" />
                                     </FormField>
                                 </Grid>
 
                                 <FormField Text="Summary">
-                                    <TextArea @bind-Value="deliveryUnitEditor.Summary"
+                                    <TextAreaInput @bind-Value="deliveryUnitEditor.Summary"
 
                                                    data-testid="crmhr-delivery-unit-summary" />
                                 </FormField>

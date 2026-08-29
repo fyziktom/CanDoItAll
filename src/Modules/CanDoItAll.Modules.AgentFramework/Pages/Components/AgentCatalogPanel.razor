@@ -21,9 +21,9 @@
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
                 <div class="agent-catalog-panel__search" role="search">
-                    <input @bind="agentSearch"
-                           @bind:event="oninput"
-                           class="ui-input agent-catalog-panel__search-input"
+                    <TextInput @bind-Value="agentSearch"
+                           Immediate="true"
+                           Class="agent-catalog-panel__search-input"
                            placeholder="Search agents"
                            data-testid="agents-catalog-search" />
                     <TooltipTarget Text="Reset agent search"

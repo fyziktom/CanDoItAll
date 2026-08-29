@@ -28,23 +28,23 @@
             </Split>
 
             <CompactFilterBar ResultText="@($"{TotalCount} matching allocation(s)")">
-                <input value="@SearchText"
+                <TextInput Value="@SearchText"
                        @oninput="HandleAllocationSearchInputAsync"
-                       class="ui-input ui-input--toolbar h-10 min-w-[18rem] flex-1"
+                       Class="h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, task, or notes"
                        data-testid="crmhr-allocation-filter-search" />
-                <InputSelect TValue="ProjectPartyAssignmentRole?"
+                <SelectInput TValue="ProjectPartyAssignmentRole?"
                              Value="@RoleFilter"
                              ValueChanged="HandleAllocationRoleChangedAsync"
-                             class="ui-input ui-input--toolbar h-10 min-w-[13rem]"
+                             Class="h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-allocation-filter-role">
                     <option value="">All allocation roles</option>
                     @foreach (var role in AllocationRoles) {
                         <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </CompactFilterBar>
 
             @if (Allocations.Count == 0) {
@@ -93,34 +93,34 @@
                         </div>
 
                         <CompactFilterBar ResultText="@($"{CandidateTotalCount} matching candidate(s)")">
-                            <input value="@CandidateSearchText"
+                            <TextInput Value="@CandidateSearchText"
                                    @oninput="HandleCandidateSearchInputAsync"
-                                   class="ui-input ui-input--toolbar h-10 min-w-[15rem] flex-1"
+                                   Class="h-10 min-w-[15rem] flex-1"
                                    style="width: auto; flex: 1 1 20rem;"
                                    placeholder="Search people or delivery units"
                                    data-testid="crmhr-allocation-candidate-search" />
-                            <InputSelect TValue="string"
+                            <SelectInput TValue="string"
                                          Value="@CandidateSkillFilter"
                                          ValueChanged="HandleCandidateSkillChangedAsync"
-                                         class="ui-input ui-input--toolbar h-10 min-w-[13rem]"
+                                         Class="h-10 min-w-[13rem]"
                                          style="width: 13rem; flex: 0 1 13rem;"
                                          data-testid="crmhr-allocation-candidate-skill">
                                 <option value="">All skills</option>
                                 @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name)) {
                                     <option value="@skill.Id.ToString("D")">@skill.Name (@skill.Category)</option>
                                 }
-                            </InputSelect>
-                            <InputSelect TValue="string"
+                            </SelectInput>
+                            <SelectInput TValue="string"
                                          Value="@CandidateAvailabilityFilter"
                                          ValueChanged="HandleCandidateAvailabilityChangedAsync"
-                                         class="ui-input ui-input--toolbar h-10 min-w-[10rem]"
+                                         Class="h-10 min-w-[10rem]"
                                          style="width: 10rem; flex: 0 1 10rem;"
                                          data-testid="crmhr-allocation-candidate-availability">
                                 <option value="">Any availability</option>
                                 @foreach (var availabilityState in Enum.GetValues<WorkforceAvailabilityState>()) {
                                     <option value="@availabilityState.ToString()">@availabilityState</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             <TooltipTarget Text="Refresh staffing candidates" Position="TooltipPosition.Bottom">
                                 <Button Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
@@ -223,13 +223,12 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Allocation role">
-                        <InputSelect @bind-Value="Draft.Role"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="Draft.Role"
                                      data-testid="crmhr-allocation-role">
                             @foreach (var role in AllocationRoles) {
                                 <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <PartyPicker Label="Party"
                                  TestIdPrefix="crmhr-allocation-party"
@@ -251,24 +250,21 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Allocation %">
-                        <InputNumber @bind-Value="Draft.AllocationPercent"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="Draft.AllocationPercent"
                                      data-testid="crmhr-allocation-percent" />
                     </FormField>
                     <FormField Text="Starts on">
-                        <InputDate @bind-Value="Draft.StartsOn"
-                                   class="ui-input"
+                        <DateInput @bind-Value="Draft.StartsOn"
                                    data-testid="crmhr-allocation-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
-                        <InputDate @bind-Value="Draft.EndsOn"
-                                   class="ui-input"
+                        <DateInput @bind-Value="Draft.EndsOn"
                                    data-testid="crmhr-allocation-end-date" />
                     </FormField>
                 </Grid>
 
                 <FormField Text="Notes">
-                    <TextArea @bind-Value="Draft.Notes"
+                    <TextAreaInput @bind-Value="Draft.Notes"
 
                                    data-testid="crmhr-allocation-notes" />
                 </FormField>

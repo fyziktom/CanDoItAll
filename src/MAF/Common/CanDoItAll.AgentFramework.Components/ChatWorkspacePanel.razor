@@ -183,12 +183,12 @@
                                data-testid="chat-image-attachment-button">
                             <Icon Name="image" />
                         </label>
-                        <InputFile id="@attachmentInputId"
-                                   class="chat-attachment-file-input"
+                        <FileInput id="@attachmentInputId"
+                                   Class="chat-attachment-file-input"
                                    style="display:none"
-                                   OnChange="HandleAttachmentFilesSelectedAsync"
-                                   accept="image/png,image/jpeg,image/gif,image/webp"
-                                   multiple
+                                   Change="HandleAttachmentFilesSelectedAsync"
+                                   Accept="image/png,image/jpeg,image/gif,image/webp"
+                                   Multiple="true"
                                    disabled="@IsBusy"
                                    data-testid="chat-image-attachment-input" />
                     }

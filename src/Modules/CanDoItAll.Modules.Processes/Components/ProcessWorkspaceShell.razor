@@ -128,9 +128,11 @@
                                          Count="@($"{DefinitionCatalog.Items.Count} definition(s)")">
                             <Filters>
                                 <FilterBar>
-                                    <input class="ui-input min-w-[16rem] flex-1"
-                                           value="@pendingSearchText"
-                                           @oninput="UpdateDefinitionSearchText"
+                                    <TextInput Value="@pendingSearchText"
+                                           ValueChanged="@(value => UpdateDefinitionSearchText(new ChangeEventArgs { Value = value }))"
+                                           ValueExpression="@(() => pendingSearchText)"
+                                           Immediate="true"
+                                           Class="min-w-[16rem] flex-1"
                                            placeholder="Search definitions"
                                            aria-label="Search process definitions"
                                            data-testid="processes-definition-search" />
@@ -1480,38 +1482,35 @@
 
                 <Stack GapScale="LayoutGap.Small">
                     <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-history-window">History length</label>
-                    <select id="processes-manager-chat-history-window"
-                            class="ui-input"
-                            value="@managerChatHistoryWindow"
-                            @onchange="ChangeManagerChatHistoryWindowAsync"
+                    <SelectInput id="processes-manager-chat-history-window"
+                            Value="@managerChatHistoryWindow"
+                            ValueChanged="@((ProcessRuntimeHistoryWindow value) => ChangeManagerChatHistoryWindowAsync(new ChangeEventArgs { Value = value.ToString() }))"
                             data-testid="processes-manager-chat-history-window">
                         @foreach (var option in RuntimeHistoryWindowOptions)
                         {
                             <option value="@option">@FormatHistoryWindow(option)</option>
                         }
-                    </select>
+                    </SelectInput>
 
                     <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-run-select">Run</label>
-                    <select id="processes-manager-chat-run-select"
-                            class="ui-input"
-                            value="@RuntimeRunSelectValue"
-                            @onchange="SelectRuntimeRunAsync"
+                    <SelectInput id="processes-manager-chat-run-select"
+                            Value="@RuntimeRunSelectValue"
+                            ValueChanged="@((string? value) => SelectRuntimeRunAsync(new ChangeEventArgs { Value = value }))"
                             data-testid="processes-manager-chat-run-select">
                         @RenderRuntimeRunOptions()
-                    </select>
+                    </SelectInput>
 
                     <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-agent-select">Manager agent</label>
-                    <select id="processes-manager-chat-agent-select"
-                            class="ui-input"
-                            value="@ManagerChatAgentSelectValue"
-                            @onchange="SelectManagerChatAgentAsync"
+                    <SelectInput id="processes-manager-chat-agent-select"
+                            Value="@ManagerChatAgentSelectValue"
+                            ValueChanged="@((string? value) => SelectManagerChatAgentAsync(new ChangeEventArgs { Value = value }))"
                             disabled="@(managerChatAgents.Count == 0)"
                             data-testid="processes-manager-chat-agent-select">
                         @foreach (var agent in managerChatAgents)
                         {
                             <option value="@agent.Id.ToString("D")">@agent.Name</option>
                         }
-                    </select>
+                    </SelectInput>
                 </Stack>
 
                 <Cluster Gap="LayoutGap.XSmall"
@@ -1786,26 +1785,24 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="History on demand" />
                 <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-window">History window</label>
-                <select id="processes-process-graphs-load-window"
-                        class="ui-input"
-                        value="@runtimeHistoryWindow"
-                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                <SelectInput id="processes-process-graphs-load-window"
+                        Value="@runtimeHistoryWindow"
+                        ValueChanged="@((ProcessRuntimeHistoryWindow value) => ChangeRuntimeHistoryWindowAsync(new ChangeEventArgs { Value = value.ToString() }))"
                         data-testid="processes-runtime-history-window">
                     @foreach (var option in RuntimeHistoryWindowOptions)
                     {
                         <option value="@option">@FormatHistoryWindow(option)</option>
                     }
-                </select>
+                </SelectInput>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-run">Run</label>
-                <select id="processes-process-graphs-load-run"
-                        class="ui-input"
-                        value="@RuntimeRunSelectValue"
-                        @onchange="SelectRuntimeRunAsync"
+                <SelectInput id="processes-process-graphs-load-run"
+                        Value="@RuntimeRunSelectValue"
+                        ValueChanged="@((string? value) => SelectRuntimeRunAsync(new ChangeEventArgs { Value = value }))"
                         data-testid="processes-runtime-run-select">
                     @RenderRuntimeRunOptions()
-                </select>
+                </SelectInput>
             </Stack>
             <Button Text="Load data history"
                     Icon="bar_chart"
@@ -1826,26 +1823,24 @@
               AlignItems="AlignItems.End">
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History window</label>
-                <select id="@($"{testId}-window")"
-                        class="ui-input"
-                        value="@runtimeHistoryWindow"
-                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                <SelectInput id="@($"{testId}-window")"
+                        Value="@runtimeHistoryWindow"
+                        ValueChanged="@((ProcessRuntimeHistoryWindow value) => ChangeRuntimeHistoryWindowAsync(new ChangeEventArgs { Value = value.ToString() }))"
                         data-testid="processes-runtime-history-window">
                     @foreach (var option in RuntimeHistoryWindowOptions)
                     {
                         <option value="@option">@FormatHistoryWindow(option)</option>
                     }
-                </select>
+                </SelectInput>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
-                <select id="@($"{testId}-run")"
-                        class="ui-input"
-                        value="@RuntimeRunSelectValue"
-                        @onchange="SelectRuntimeRunAsync"
+                <SelectInput id="@($"{testId}-run")"
+                        Value="@RuntimeRunSelectValue"
+                        ValueChanged="@((string? value) => SelectRuntimeRunAsync(new ChangeEventArgs { Value = value }))"
                         data-testid="processes-runtime-run-select">
                     @RenderRuntimeRunOptions()
-                </select>
+                </SelectInput>
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
                 <Button Icon="chevron_left"
@@ -3255,42 +3250,42 @@
                 <Grid Gap="LayoutGap.Small" ColumnsLg="3">
                     <Stack GapScale="LayoutGap.Tiny">
                         <label class="text-xs font-semibold text-slate-500" for="processes-definition-criticality-input">Criticality</label>
-                        <select id="processes-definition-criticality-input"
-                                class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
-                                value="@editorCriticality"
-                                @onchange="args => editorCriticality = ParseCriticality(args)"
+                        <SelectInput id="processes-definition-criticality-input"
+                                Class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                Value="@editorCriticality"
+                                ValueChanged="@((ProcessDefinitionCriticalityLevel value) => editorCriticality = ParseCriticality(new ChangeEventArgs { Value = value.ToString() }))"
                                 data-testid="processes-definition-editor-criticality">
                             @foreach (var option in CriticalityOptions)
                             {
                                 <option value="@option">@option.ToString()</option>
                             }
-                        </select>
+                        </SelectInput>
                     </Stack>
                     <Stack GapScale="LayoutGap.Tiny">
                         <label class="text-xs font-semibold text-slate-500" for="processes-definition-autonomy-input">Autonomy</label>
-                        <select id="processes-definition-autonomy-input"
-                                class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
-                                value="@editorAutonomyLevel"
-                                @onchange="args => editorAutonomyLevel = ParseAutonomy(args)"
+                        <SelectInput id="processes-definition-autonomy-input"
+                                Class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                Value="@editorAutonomyLevel"
+                                ValueChanged="@((ProcessDefinitionAutonomyLevel value) => editorAutonomyLevel = ParseAutonomy(new ChangeEventArgs { Value = value.ToString() }))"
                                 data-testid="processes-definition-editor-autonomy">
                             @foreach (var option in AutonomyOptions)
                             {
                                 <option value="@option">@option.ToString()</option>
                             }
-                        </select>
+                        </SelectInput>
                     </Stack>
                     <Stack GapScale="LayoutGap.Tiny">
                         <label class="text-xs font-semibold text-slate-500" for="processes-definition-mode-input">Mode</label>
-                        <select id="processes-definition-mode-input"
-                                class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
-                                value="@editorOperatingMode"
-                                @onchange="args => editorOperatingMode = ParseOperatingMode(args)"
+                        <SelectInput id="processes-definition-mode-input"
+                                Class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                Value="@editorOperatingMode"
+                                ValueChanged="@((ProcessDefinitionOperatingModeKind value) => editorOperatingMode = ParseOperatingMode(new ChangeEventArgs { Value = value.ToString() }))"
                                 data-testid="processes-definition-editor-operating-mode">
                             @foreach (var option in OperatingModeOptions)
                             {
                                 <option value="@option">@option.ToString()</option>
                             }
-                        </select>
+                        </SelectInput>
                     </Stack>
                 </Grid>
                 <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">

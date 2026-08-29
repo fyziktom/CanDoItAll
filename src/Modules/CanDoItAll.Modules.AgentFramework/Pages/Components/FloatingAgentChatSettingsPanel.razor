@@ -27,8 +27,7 @@
             </Alert>
 
             <FormField Text="Maximum prepared agents" ContainerClass="app-field">
-                <InputNumber @bind-Value="maximumPreparedAgents"
-                             class="ui-input"
+                <NumberInput @bind-Value="maximumPreparedAgents"
                              min="0"
                              max="@FloatingAgentChatSettingsValidator.MaximumPreparedAgentLimit"
                              data-testid="floating-agent-chat-maximum-prepared" />
@@ -41,8 +40,7 @@
             </CheckboxOption>
 
             <FormField Text="Prepared metadata idle retention (minutes)" ContainerClass="app-field">
-                <InputNumber @bind-Value="preparedResourceIdleRetentionMinutes"
-                             class="ui-input"
+                <NumberInput @bind-Value="preparedResourceIdleRetentionMinutes"
                              min="1"
                              max="@FloatingAgentChatSettingsValidator.MaximumRetentionMinutes"
                              data-testid="floating-agent-chat-prepared-retention" />

@@ -38,25 +38,23 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                     <div>
                         <FormField Text="Direction">
-                        <InputSelect TValue="bool"
+                        <SelectInput TValue="bool"
                                      @bind-Value="item.IsOutgoing"
-                                     class="ui-input"
                                      data-testid="@($"crmhr-relationship-direction-{rowIndex}")">
                             <option value="@true">This party points to related party</option>
                             <option value="@false">Related party points to this party</option>
-                        </InputSelect>
+                        </SelectInput>
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="Relationship">
-                        <InputSelect @bind-Value="item.RelationshipKind"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="item.RelationshipKind"
                                      data-testid="@($"crmhr-relationship-kind-{rowIndex}")">
                             @foreach (var relationshipKind in Enum.GetValues<PartyRelationshipKind>())
                             {
                                 <option value="@relationshipKind">@relationshipKind</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                         </FormField>
                     </div>
                     <div class="lg:col-span-2">
@@ -83,15 +81,13 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                     <div>
                         <FormField Text="Start date">
-                        <InputDate @bind-Value="item.StartDateUtc"
-                                   class="ui-input"
+                        <DateInput @bind-Value="item.StartDateUtc"
                                    data-testid="@($"crmhr-relationship-start-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="End date">
-                        <InputDate @bind-Value="item.EndDateUtc"
-                                   class="ui-input"
+                        <DateInput @bind-Value="item.EndDateUtc"
                                    data-testid="@($"crmhr-relationship-end-{rowIndex}")" />
                         </FormField>
                     </div>
@@ -102,8 +98,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
                         <FormField Text="Notes">
-                        <InputText @bind-Value="item.Notes"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.Notes"
                                    data-testid="@($"crmhr-relationship-notes-{rowIndex}")" />
                         </FormField>
                     </div>

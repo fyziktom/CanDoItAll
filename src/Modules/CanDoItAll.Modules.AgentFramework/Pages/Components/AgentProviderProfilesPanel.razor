@@ -20,9 +20,9 @@
             </Actions>
             <Filters>
                 <FilterBar ResultText="@($"{FilteredProviders.Count} of {providers.Count} provider(s)")">
-                    <input @bind="providerSearch"
-                           @bind:event="oninput"
-                           class="ui-input min-w-[14rem] flex-1"
+                    <TextInput @bind-Value="providerSearch"
+                           Immediate="true"
+                           Class="min-w-[14rem] flex-1"
                            placeholder="Search providers"
                            data-testid="providers-search" />
                     <Button Text="Reset"
@@ -83,56 +83,50 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2" ColumnsXl="4">
                                     <div>
                                         <FormField Text="Name">
-                                        <InputText @bind-Value="providerModel.Name"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="providerModel.Name"
                                                    data-testid="providers-name-input" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Default model">
-                                        <InputText @bind-Value="providerModel.DefaultModel"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="providerModel.DefaultModel"
                                                    data-testid="providers-model-input" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Provider kind">
-                                        <InputSelect @bind-Value="providerModel.Kind"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="providerModel.Kind"
                                                      data-testid="providers-kind-select">
                                             @foreach (var kind in Enum.GetValues<ProviderKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Purpose">
-                                        <InputSelect @bind-Value="providerModel.Purpose"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="providerModel.Purpose"
                                                      data-testid="providers-purpose-select">
                                             @foreach (var purpose in Enum.GetValues<ProviderProfilePurpose>())
                                             {
                                                 <option value="@purpose">@purpose</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                 </Grid>
 
                                 <div>
                                     <FormField Text="Base URL">
-                                    <InputText @bind-Value="providerModel.BaseUrl"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="providerModel.BaseUrl"
                                                data-testid="providers-base-url-input" />
                                     </FormField>
                                 </div>
 
                                 <div>
                                     <FormField Text="API key secret">
-                                    <InputSelect @bind-Value="providerModel.ApiKeyEnvironmentVariable"
-                                                 class="ui-input"
+                                    <SelectInput @bind-Value="providerModel.ApiKeyEnvironmentVariable"
                                                  data-testid="providers-api-key-input">
                                         <option value="">None</option>
                                         @if (HasUnavailableSecretReference)
@@ -143,7 +137,7 @@
                                         {
                                             <option value="@AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id)">@secret.Name</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                     @if (HasUnavailableSecretReference)
                                     {
@@ -180,14 +174,13 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <FormField Text="Transport">
-                                            <InputSelect @bind-Value="providerModel.Transport"
-                                                         class="ui-input"
+                                            <SelectInput @bind-Value="providerModel.Transport"
                                                          data-testid="providers-transport-select">
                                                 @foreach (var transport in Enum.GetValues<ProviderTransportKind>())
                                                 {
                                                     <option value="@transport">@transport</option>
                                                 }
-                                            </InputSelect>
+                                            </SelectInput>
                                             </FormField>
                                         </div>
                                         <div>
@@ -212,15 +205,15 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <FormField Text="Configuration JSON">
-                                            <TextArea @bind-Value="providerModel.ConfigurationJson"
-                                                           class="ui-input min-h-[12rem] font-mono text-xs"
+                                            <TextAreaInput @bind-Value="providerModel.ConfigurationJson"
+                                                           Class="min-h-[12rem] font-mono text-xs"
                                                            data-testid="providers-config-json" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Notes">
-                                            <TextArea @bind-Value="providerModel.Notes"
-                                                           class="ui-input min-h-[12rem]"
+                                            <TextAreaInput @bind-Value="providerModel.Notes"
+                                                           Class="min-h-[12rem]"
                                                            data-testid="providers-notes" />
                                             </FormField>
                                         </div>

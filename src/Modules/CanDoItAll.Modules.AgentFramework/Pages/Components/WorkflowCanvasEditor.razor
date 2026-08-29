@@ -186,9 +186,9 @@
                                 {
                                     <label class="workflow-canvas-field">
                                         <span>Provider</span>
-                                        <select class="ui-input"
-                                                value="@newComponentProviderProfileId"
-                                                @onchange="HandleNewComponentProviderChanged"
+                                        <SelectInput
+                                                Value="@newComponentProviderProfileId"
+                                                ValueChanged="@((string? value) => HandleNewComponentProviderChanged(new ChangeEventArgs { Value = value }))"
                                                 data-testid="workflow-canvas-component-provider">
                                             @if (!ProviderOptions.Any(option => option.IsEnabled))
                                             {
@@ -199,7 +199,7 @@
                                                 <option value="@providerOption.ProviderProfileId.ToString("D")"
                                                         disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
                                             }
-                                        </select>
+                                        </SelectInput>
                                     </label>
                                 }
                                 <ProviderModelSelector ProviderName="@selectedNewComponentProvider?.Name"
@@ -256,9 +256,9 @@
                 <div class="workflow-canvas-panel workflow-canvas-definition-panel">
                     <label class="workflow-canvas-field">
                         <span>Name</span>
-                        <input class="ui-input"
-                               value="@document.Name"
-                               @onchange="HandleNameChanged"
+                        <TextInput
+                               Value="@document.Name"
+                               ValueChanged="@((string? value) => HandleNameChanged(new ChangeEventArgs { Value = value }))"
                                data-testid="workflow-canvas-name" />
                     </label>
                     <label class="workflow-canvas-field workflow-canvas-field--description">
@@ -270,9 +270,9 @@
                     </label>
                     <label class="workflow-canvas-field">
                         <span>Runtime backend</span>
-                        <select class="ui-input"
-                                value="@document.RuntimePolicy.PreferredBackend"
-                                @onchange="HandleRuntimeBackendChanged"
+                        <SelectInput
+                                Value="@document.RuntimePolicy.PreferredBackend"
+                                ValueChanged="@((WorkflowRuntimeBackendKind value) => HandleRuntimeBackendChanged(new ChangeEventArgs { Value = value.ToString() }))"
                                 data-testid="workflow-canvas-runtime">
                             @foreach (var backend in RuntimeBackendOptions)
                             {
@@ -280,7 +280,7 @@
                                         disabled="@(!backend.IsRunnable)"
                                         title="@backend.AvailabilityReason">@BuildRuntimeBackendOptionText(backend)</option>
                             }
-                        </select>
+                        </SelectInput>
                     </label>
                 </div>
                 </TabsItem>
@@ -301,23 +301,23 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected node" />
                         <label class="workflow-canvas-field">
                             <span>Node name</span>
-                            <input class="ui-input"
-                                   value="@selected.Name"
-                                   @onchange="args => HandleSelectedNodeNameChanged(selected, args)"
+                            <TextInput
+                                   Value="@selected.Name"
+                                   ValueChanged="@((string? value) => HandleSelectedNodeNameChanged(selected, new ChangeEventArgs { Value = value }))"
                                    data-testid="workflow-canvas-node-name" />
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Kind</span>
-                            <select class="ui-input"
-                                    value="@selected.Kind"
-                                    @onchange="args => HandleSelectedNodeKindChanged(selected, args)"
+                            <SelectInput
+                                    Value="@selected.Kind"
+                                    ValueChanged="@((WorkflowNodeKind value) => HandleSelectedNodeKindChanged(selected, new ChangeEventArgs { Value = value.ToString() }))"
                                     disabled="@(selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
                                     data-testid="workflow-canvas-node-kind">
                                 @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
                                 {
                                     <option value="@kind">@kind</option>
                                 }
-                            </select>
+                            </SelectInput>
                         </label>
 
                         @if (selected.Kind == WorkflowNodeKind.LlmCall)
@@ -342,9 +342,9 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
                                 <label class="workflow-canvas-field">
                                     <span>Provider</span>
-                                    <select class="ui-input"
-                                            value="@selected.ProviderProfileId?.ToString("D")"
-                                            @onchange="args => HandleSelectedProviderChanged(selected, args)"
+                                    <SelectInput
+                                            Value="@selected.ProviderProfileId?.ToString("D")"
+                                            ValueChanged="@((string? value) => HandleSelectedProviderChanged(selected, new ChangeEventArgs { Value = value }))"
                                             data-testid="workflow-canvas-node-provider">
                                         <option value="">Select provider</option>
                                         @foreach (var providerOption in ProviderOptions)
@@ -352,7 +352,7 @@
                                             <option value="@providerOption.ProviderProfileId.ToString("D")"
                                                     disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
                                         }
-                                    </select>
+                                    </SelectInput>
                                 </label>
                                 <ProviderModelSelector ProviderName="@selectedProvider?.Name"
                                                        ProviderDefaultModel="@selectedProvider?.DefaultModel"
@@ -380,15 +380,15 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Request kind</span>
-                                <select class="ui-input"
-                                        value="@selected.ExternalRequestKind"
-                                        @onchange="args => HandleSelectedRequestKindChanged(selected, args)"
+                                <SelectInput
+                                        Value="@selected.ExternalRequestKind"
+                                        ValueChanged="@((WorkflowExternalRequestKind? value) => HandleSelectedRequestKindChanged(selected, new ChangeEventArgs { Value = value?.ToString() }))"
                                         data-testid="workflow-canvas-node-request-kind">
                                     @foreach (var requestKind in Enum.GetValues<WorkflowExternalRequestKind>())
                                     {
                                         <option value="@requestKind">@requestKind</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </label>
                         }
 
@@ -396,9 +396,9 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Agent id</span>
-                                <input class="ui-input"
-                                       value="@selected.AgentId?.ToString("D")"
-                                       @onchange="args => HandleSelectedAgentIdChanged(selected, args)"
+                                <TextInput
+                                       Value="@selected.AgentId?.ToString("D")"
+                                       ValueChanged="@((string? value) => HandleSelectedAgentIdChanged(selected, new ChangeEventArgs { Value = value }))"
                                        data-testid="workflow-canvas-node-agent-id" />
                             </label>
                         }
@@ -407,9 +407,9 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Subworkflow id</span>
-                                <input class="ui-input"
-                                       value="@selected.SubworkflowId?.Value.ToString("D")"
-                                       @onchange="args => HandleSelectedSubworkflowIdChanged(selected, args)"
+                                <TextInput
+                                       Value="@selected.SubworkflowId?.Value.ToString("D")"
+                                       ValueChanged="@((string? value) => HandleSelectedSubworkflowIdChanged(selected, new ChangeEventArgs { Value = value }))"
                                        data-testid="workflow-canvas-node-subworkflow-id" />
                             </label>
                         }
@@ -420,9 +420,9 @@
                             var policy = ResolveSelectedExecutionPolicy(selected);
                             <label class="workflow-canvas-field">
                                 <span>Executor</span>
-                                <select class="ui-input"
-                                        value="@selected.ExecutorId?.Value"
-                                        @onchange="args => HandleSelectedExecutorChanged(selected, args)"
+                                <SelectInput
+                                        Value="@selected.ExecutorId?.Value"
+                                        ValueChanged="@((string? value) => HandleSelectedExecutorChanged(selected, new ChangeEventArgs { Value = value }))"
                                         data-testid="workflow-canvas-node-executor">
                                     <option value="">Select executor</option>
                                     @foreach (var executor in executorDescriptors)
@@ -430,7 +430,7 @@
                                     <option value="@executor.Id.Value"
                                             disabled="@(!executor.CanExecute)">@executor.Name@(executor.CanExecute ? string.Empty : $" ({executor.Availability.Kind.ToString().ToLowerInvariant()})")</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </label>
 
                             @if (descriptor is not null)
@@ -479,32 +479,29 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="3">
                                 <label class="workflow-canvas-field">
                                     <span>Timeout seconds</span>
-                                    <input class="ui-input"
-                                           type="number"
+                                    <NumberInput
                                            min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
-                                           value="@policy.TimeoutSeconds"
-                                           @onchange="args => UpdateSelectedExecutionPolicy(selected, item => item with { TimeoutSeconds = ReadInt(args, item.TimeoutSeconds) })"
+                                           Value="@policy.TimeoutSeconds"
+                                           ValueChanged="@((int value) => UpdateSelectedExecutionPolicy(selected, item => item with { TimeoutSeconds = value }))"
                                            data-testid="workflow-canvas-executor-timeout" />
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retries</span>
-                                    <input class="ui-input"
-                                           type="number"
+                                    <NumberInput
                                            min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
-                                           value="@policy.MaxRetryAttempts"
-                                           @onchange="args => UpdateSelectedExecutionPolicy(selected, item => item with { MaxRetryAttempts = ReadInt(args, item.MaxRetryAttempts) })"
+                                           Value="@policy.MaxRetryAttempts"
+                                           ValueChanged="@((int value) => UpdateSelectedExecutionPolicy(selected, item => item with { MaxRetryAttempts = value }))"
                                            data-testid="workflow-canvas-executor-retries" />
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retry delay ms</span>
-                                    <input class="ui-input"
-                                           type="number"
+                                    <NumberInput
                                            min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
-                                           value="@policy.RetryDelayMilliseconds"
-                                           @onchange="args => UpdateSelectedExecutionPolicy(selected, item => item with { RetryDelayMilliseconds = ReadInt(args, item.RetryDelayMilliseconds) })"
+                                           Value="@policy.RetryDelayMilliseconds"
+                                           ValueChanged="@((int value) => UpdateSelectedExecutionPolicy(selected, item => item with { RetryDelayMilliseconds = value }))"
                                            data-testid="workflow-canvas-executor-retry-delay" />
                                 </label>
                             </Grid>
@@ -537,27 +534,27 @@
                         <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                             <label class="workflow-canvas-field">
                                 <span>Input shape</span>
-                                <select class="ui-input"
-                                        value="@selected.InputShapeKind"
-                                        @onchange="args => HandleSelectedInputShapeChanged(selected, args)"
+                                <SelectInput
+                                        Value="@selected.InputShapeKind"
+                                        ValueChanged="@((WorkflowValueShapeKind value) => HandleSelectedInputShapeChanged(selected, new ChangeEventArgs { Value = value.ToString() }))"
                                         data-testid="workflow-canvas-node-input-shape">
                                     @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
                                     {
                                         <option value="@shape">@shape</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </label>
                             <label class="workflow-canvas-field">
                                 <span>Result shape</span>
-                                <select class="ui-input"
-                                        value="@selected.ResultShapeKind"
-                                        @onchange="args => HandleSelectedResultShapeChanged(selected, args)"
+                                <SelectInput
+                                        Value="@selected.ResultShapeKind"
+                                        ValueChanged="@((WorkflowValueShapeKind value) => HandleSelectedResultShapeChanged(selected, new ChangeEventArgs { Value = value.ToString() }))"
                                         data-testid="workflow-canvas-node-result-shape">
                                     @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
                                     {
                                         <option value="@shape">@shape</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </label>
                         </Grid>
 
@@ -592,41 +589,41 @@
                     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                         <label class="workflow-canvas-field">
                             <span>Source</span>
-                            <select class="ui-input" @bind="edgeSourceNodeId" data-testid="workflow-canvas-edge-source">
+                            <SelectInput @bind-Value="edgeSourceNodeId" data-testid="workflow-canvas-edge-source">
                                 @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.End))
                                 {
                                     <option value="@node.Id.Value">@node.Name</option>
                                 }
-                            </select>
+                            </SelectInput>
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Target</span>
-                            <select class="ui-input" @bind="edgeTargetNodeId" data-testid="workflow-canvas-edge-target">
+                            <SelectInput @bind-Value="edgeTargetNodeId" data-testid="workflow-canvas-edge-target">
                                 @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.Start))
                                 {
                                     <option value="@node.Id.Value">@node.Name</option>
                                 }
-                            </select>
+                            </SelectInput>
                         </label>
                     </Grid>
                     <div class="workflow-canvas-route-builder">
                         <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                             <label class="workflow-canvas-field">
                                 <span>Route mode</span>
-                                <select class="ui-input"
-                                        value="@edgeRouteKind"
-                                        @onchange="HandleEdgeRouteKindChanged"
+                                <SelectInput
+                                        Value="@edgeRouteKind"
+                                        ValueChanged="@((WorkflowRouteKind value) => HandleEdgeRouteKindChanged(new ChangeEventArgs { Value = value.ToString() }))"
                                         data-testid="workflow-canvas-edge-route-kind">
                                     @foreach (var kind in Enum.GetValues<WorkflowRouteKind>())
                                     {
                                         <option value="@kind">@WorkflowCanvasDefinitionMapper.ResolveRouteModeLabel(kind)</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </label>
                             <label class="workflow-canvas-field">
                                 <span>Edge label</span>
-                                <input class="ui-input"
-                                       @bind="edgeRouteLabel"
+                                <TextInput
+                                       @bind-Value="edgeRouteLabel"
                                        data-testid="workflow-canvas-edge-route-label" />
                             </label>
                         </Grid>
@@ -636,8 +633,8 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                 <label class="workflow-canvas-field">
                                     <span>JSON path</span>
-                                    <input class="ui-input"
-                                           @bind="edgeRouteJsonPath"
+                                    <TextInput
+                                           @bind-Value="edgeRouteJsonPath"
                                            placeholder="$.status"
                                            data-testid="workflow-canvas-edge-route-json-path" />
                                 </label>
@@ -645,14 +642,14 @@
                                 {
                                     <label class="workflow-canvas-field">
                                         <span>Operator</span>
-                                        <select class="ui-input"
-                                                @bind="edgeRouteOperator"
+                                        <SelectInput
+                                                @bind-Value="edgeRouteOperator"
                                                 data-testid="workflow-canvas-edge-route-operator">
                                             @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
                                             {
                                                 <option value="@routeOperator">@WorkflowRoutingValidation.FormatOperator(routeOperator)</option>
                                             }
-                                        </select>
+                                        </SelectInput>
                                     </label>
                                 }
                             </Grid>
@@ -663,19 +660,19 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                 <label class="workflow-canvas-field">
                                     <span>Value kind</span>
-                                    <select class="ui-input"
-                                            @bind="edgeRouteValueKind"
+                                    <SelectInput
+                                            @bind-Value="edgeRouteValueKind"
                                             data-testid="workflow-canvas-edge-route-value-kind">
                                         @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
                                         {
                                             <option value="@valueKind">@valueKind</option>
                                         }
-                                    </select>
+                                    </SelectInput>
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Expected value</span>
-                                    <input class="ui-input"
-                                           @bind="edgeRouteExpectedValue"
+                                    <TextInput
+                                           @bind-Value="edgeRouteExpectedValue"
                                            data-testid="workflow-canvas-edge-route-expected-value" />
                                 </label>
                             </Grid>
@@ -685,11 +682,10 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Fan-out target index</span>
-                                <input class="ui-input"
-                                       type="number"
+                                <NumberInput
                                        min="0"
-                                       value="@(edgeRouteFanOutTargetIndex?.ToString() ?? string.Empty)"
-                                       @onchange="HandleEdgeFanOutTargetIndexChanged"
+                                       Value="@edgeRouteFanOutTargetIndex"
+                                       ValueChanged="@((int? value) => edgeRouteFanOutTargetIndex = value)"
                                        data-testid="workflow-canvas-edge-route-fanout-index" />
                             </label>
                         }
@@ -707,16 +703,16 @@
                     <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="workflow-canvas-legacy-edge-fields">
                         <label class="workflow-canvas-field">
                             <span>Kind</span>
-                            <select class="ui-input" value="@edgeKind" disabled data-testid="workflow-canvas-edge-kind">
+                            <SelectInput Value="@edgeKind" disabled data-testid="workflow-canvas-edge-kind">
                                 @foreach (var kind in Enum.GetValues<WorkflowEdgeKind>())
                                 {
                                     <option value="@kind">@kind</option>
                                 }
-                            </select>
+                            </SelectInput>
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Legacy condition</span>
-                            <input class="ui-input" @bind="edgeCondition" data-testid="workflow-canvas-edge-condition" />
+                            <TextInput @bind-Value="edgeCondition" data-testid="workflow-canvas-edge-condition" />
                         </label>
                     </Grid>
                     <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap" Class="mt-3">
@@ -849,30 +845,30 @@
                             {
                                 <label class="workflow-canvas-field">
                                     <span>Project</span>
-                                    <select class="ui-input"
-                                            value="@previewInputState.ProjectId"
-                                            @onchange="HandlePreviewProjectChanged"
+                                    <SelectInput
+                                            Value="@previewInputState.ProjectId"
+                                            ValueChanged="@((string? value) => HandlePreviewProjectChanged(new ChangeEventArgs { Value = value }))"
                                             data-testid="workflow-canvas-preview-project-select">
                                         <option value="">Choose project</option>
                                         @foreach (var project in previewProjectOptions)
                                         {
                                             <option value="@project.Id.ToString("D")">@project.Name</option>
                                         }
-                                    </select>
+                                    </SelectInput>
                                 </label>
                             }
 
                             <label class="workflow-canvas-field">
                                 <span>Project id</span>
-                                <input class="ui-input"
-                                       @bind="previewInputState.ProjectId"
+                                <TextInput
+                                       @bind-Value="previewInputState.ProjectId"
                                        data-testid="workflow-canvas-preview-project-id" />
                             </label>
 
                             <label class="workflow-canvas-field">
                                 <span>Parent node id</span>
-                                <input class="ui-input"
-                                       @bind="previewInputState.ParentNodeId"
+                                <TextInput
+                                       @bind-Value="previewInputState.ParentNodeId"
                                        data-testid="workflow-canvas-preview-node-id" />
                             </label>
                         </Grid>
@@ -948,23 +944,23 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity" />
                         <label class="workflow-canvas-field">
                             <span>Node name</span>
-                            <input class="ui-input"
-                                   value="@modalNode.Name"
-                                   @onchange="args => HandleSelectedNodeNameChanged(modalNode, args)"
+                            <TextInput
+                                   Value="@modalNode.Name"
+                                   ValueChanged="@((string? value) => HandleSelectedNodeNameChanged(modalNode, new ChangeEventArgs { Value = value }))"
                                    data-testid="workflow-canvas-node-modal-name" />
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Kind</span>
-                            <select class="ui-input"
-                                    value="@modalNode.Kind"
-                                    @onchange="args => HandleSelectedNodeKindChanged(modalNode, args)"
+                            <SelectInput
+                                    Value="@modalNode.Kind"
+                                    ValueChanged="@((WorkflowNodeKind value) => HandleSelectedNodeKindChanged(modalNode, new ChangeEventArgs { Value = value.ToString() }))"
                                     disabled="@(modalNode.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
                                     data-testid="workflow-canvas-node-modal-kind">
                                 @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
                                 {
                                     <option value="@kind">@kind</option>
                                 }
-                            </select>
+                            </SelectInput>
                         </label>
                     </section>
 
@@ -972,27 +968,27 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Payload" />
                         <label class="workflow-canvas-field">
                             <span>Input shape</span>
-                            <select class="ui-input"
-                                    value="@modalNode.InputShapeKind"
-                                    @onchange="args => HandleSelectedInputShapeChanged(modalNode, args)"
+                            <SelectInput
+                                    Value="@modalNode.InputShapeKind"
+                                    ValueChanged="@((WorkflowValueShapeKind value) => HandleSelectedInputShapeChanged(modalNode, new ChangeEventArgs { Value = value.ToString() }))"
                                     data-testid="workflow-canvas-node-modal-input-shape">
                                 @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
                                 {
                                     <option value="@shape">@shape</option>
                                 }
-                            </select>
+                            </SelectInput>
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Result shape</span>
-                            <select class="ui-input"
-                                    value="@modalNode.ResultShapeKind"
-                                    @onchange="args => HandleSelectedResultShapeChanged(modalNode, args)"
+                            <SelectInput
+                                    Value="@modalNode.ResultShapeKind"
+                                    ValueChanged="@((WorkflowValueShapeKind value) => HandleSelectedResultShapeChanged(modalNode, new ChangeEventArgs { Value = value.ToString() }))"
                                     data-testid="workflow-canvas-node-modal-result-shape">
                                 @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
                                 {
                                     <option value="@shape">@shape</option>
                                 }
-                            </select>
+                            </SelectInput>
                         </label>
                     </section>
                 </aside>
@@ -1022,9 +1018,9 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
                                 <label class="workflow-canvas-field">
                                     <span>Provider</span>
-                                    <select class="ui-input"
-                                            value="@modalNode.ProviderProfileId?.ToString("D")"
-                                            @onchange="args => HandleSelectedProviderChanged(modalNode, args)"
+                                    <SelectInput
+                                            Value="@modalNode.ProviderProfileId?.ToString("D")"
+                                            ValueChanged="@((string? value) => HandleSelectedProviderChanged(modalNode, new ChangeEventArgs { Value = value }))"
                                             data-testid="workflow-canvas-node-modal-provider">
                                         <option value="">Select provider</option>
                                         @foreach (var providerOption in ProviderOptions)
@@ -1032,7 +1028,7 @@
                                             <option value="@providerOption.ProviderProfileId.ToString("D")"
                                                     disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
                                         }
-                                    </select>
+                                    </SelectInput>
                                 </label>
                                 <ProviderModelSelector ProviderName="@modalProvider?.Name"
                                                        ProviderDefaultModel="@modalProvider?.DefaultModel"
@@ -1065,9 +1061,9 @@
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor" />
                             <label class="workflow-canvas-field">
                                 <span>Tool</span>
-                                <select class="ui-input"
-                                        value="@modalNode.ExecutorId?.Value"
-                                        @onchange="args => HandleSelectedExecutorChanged(modalNode, args)"
+                                <SelectInput
+                                        Value="@modalNode.ExecutorId?.Value"
+                                        ValueChanged="@((string? value) => HandleSelectedExecutorChanged(modalNode, new ChangeEventArgs { Value = value }))"
                                         data-testid="workflow-canvas-node-modal-executor">
                                     <option value="">Select executor</option>
                                     @foreach (var executor in executorDescriptors)
@@ -1075,7 +1071,7 @@
                               <option value="@executor.Id.Value"
                                       disabled="@(!executor.CanExecute)">@executor.Name@(executor.CanExecute ? string.Empty : $" ({executor.Availability.Kind.ToString().ToLowerInvariant()})")</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </label>
 
                             @if (descriptor is not null)
@@ -1127,32 +1123,29 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="3">
                                 <label class="workflow-canvas-field">
                                     <span>Timeout seconds</span>
-                                    <input class="ui-input"
-                                           type="number"
+                                    <NumberInput
                                            min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
-                                           value="@policy.TimeoutSeconds"
-                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { TimeoutSeconds = ReadInt(args, item.TimeoutSeconds) })"
+                                           Value="@policy.TimeoutSeconds"
+                                           ValueChanged="@((int value) => UpdateSelectedExecutionPolicy(modalNode, item => item with { TimeoutSeconds = value }))"
                                            data-testid="workflow-canvas-node-modal-timeout" />
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retries</span>
-                                    <input class="ui-input"
-                                           type="number"
+                                    <NumberInput
                                            min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
-                                           value="@policy.MaxRetryAttempts"
-                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { MaxRetryAttempts = ReadInt(args, item.MaxRetryAttempts) })"
+                                           Value="@policy.MaxRetryAttempts"
+                                           ValueChanged="@((int value) => UpdateSelectedExecutionPolicy(modalNode, item => item with { MaxRetryAttempts = value }))"
                                            data-testid="workflow-canvas-node-modal-retries" />
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retry delay ms</span>
-                                    <input class="ui-input"
-                                           type="number"
+                                    <NumberInput
                                            min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
-                                           value="@policy.RetryDelayMilliseconds"
-                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { RetryDelayMilliseconds = ReadInt(args, item.RetryDelayMilliseconds) })"
+                                           Value="@policy.RetryDelayMilliseconds"
+                                           ValueChanged="@((int value) => UpdateSelectedExecutionPolicy(modalNode, item => item with { RetryDelayMilliseconds = value }))"
                                            data-testid="workflow-canvas-node-modal-retry-delay" />
                                 </label>
                             </Grid>
@@ -1263,43 +1256,43 @@
                                     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                         <label class="workflow-canvas-field">
                                             <span>Target output</span>
-                                            <select class="ui-input"
-                                                    @bind="decisionRouteTargetNodeId"
+                                            <SelectInput
+                                                    @bind-Value="decisionRouteTargetNodeId"
                                                     data-testid="workflow-canvas-decision-route-target">
                                                 <option value="">Create new branch output</option>
                                                 @foreach (var targetNode in document.Nodes.Where(node => node.Id != modalNode.Id && node.Kind != WorkflowNodeKind.Start))
                                                 {
                                                     <option value="@targetNode.Id.Value">@targetNode.Name</option>
                                                 }
-                                            </select>
+                                            </SelectInput>
                                         </label>
                                         <label class="workflow-canvas-field">
                                             <span>Route mode</span>
-                                            <select class="ui-input"
-                                                    value="@decisionRouteKind"
-                                                    @onchange="HandleDecisionRouteKindChanged"
+                                            <SelectInput
+                                                    Value="@decisionRouteKind"
+                                                    ValueChanged="@((WorkflowRouteKind value) => HandleDecisionRouteKindChanged(new ChangeEventArgs { Value = value.ToString() }))"
                                                     data-testid="workflow-canvas-decision-route-kind">
                                                 @foreach (var kind in Enum.GetValues<WorkflowRouteKind>().Where(kind => kind != WorkflowRouteKind.Always))
                                                 {
                                                     <option value="@kind">@WorkflowCanvasDefinitionMapper.ResolveRouteModeLabel(kind)</option>
                                                 }
-                                            </select>
+                                            </SelectInput>
                                         </label>
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                         <label class="workflow-canvas-field">
                                             <span>Route label</span>
-                                            <input class="ui-input"
-                                                   @bind="decisionRouteLabel"
+                                            <TextInput
+                                                   @bind-Value="decisionRouteLabel"
                                                    data-testid="workflow-canvas-decision-route-label" />
                                         </label>
                                         @if (IsPredicateRoute(decisionRouteKind))
                                         {
                                             <label class="workflow-canvas-field">
                                                 <span>JSON path</span>
-                                                <input class="ui-input"
-                                                       @bind="decisionRouteJsonPath"
+                                                <TextInput
+                                                       @bind-Value="decisionRouteJsonPath"
                                                        placeholder="$.route"
                                                        data-testid="workflow-canvas-decision-route-json-path" />
                                             </label>
@@ -1313,28 +1306,28 @@
                                             {
                                                 <label class="workflow-canvas-field">
                                                     <span>Operator</span>
-                                                    <select class="ui-input"
-                                                            @bind="decisionRouteOperator"
+                                                    <SelectInput
+                                                            @bind-Value="decisionRouteOperator"
                                                             data-testid="workflow-canvas-decision-route-operator">
                                                         @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
                                                         {
                                                             <option value="@routeOperator">@WorkflowRoutingValidation.FormatOperator(routeOperator)</option>
                                                         }
-                                                    </select>
+                                                    </SelectInput>
                                                 </label>
                                             }
                                             @if (ShowsExpectedValue(decisionRouteKind, decisionRouteOperator))
                                             {
                                                 <label class="workflow-canvas-field">
                                                     <span>Value kind</span>
-                                                    <select class="ui-input"
-                                                            @bind="decisionRouteValueKind"
+                                                    <SelectInput
+                                                            @bind-Value="decisionRouteValueKind"
                                                             data-testid="workflow-canvas-decision-route-value-kind">
                                                         @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
                                                         {
                                                             <option value="@valueKind">@valueKind</option>
                                                         }
-                                                    </select>
+                                                    </SelectInput>
                                                 </label>
                                             }
                                         </Grid>
@@ -1344,8 +1337,8 @@
                                     {
                                         <label class="workflow-canvas-field">
                                             <span>Expected value</span>
-                                            <input class="ui-input"
-                                                   @bind="decisionRouteExpectedValue"
+                                            <TextInput
+                                                   @bind-Value="decisionRouteExpectedValue"
                                                    data-testid="workflow-canvas-decision-route-expected-value" />
                                         </label>
                                     }
@@ -1354,11 +1347,10 @@
                                     {
                                         <label class="workflow-canvas-field">
                                             <span>Fan-out target index</span>
-                                            <input class="ui-input"
-                                                   type="number"
+                                            <NumberInput
                                                    min="0"
-                                                   value="@(decisionRouteFanOutTargetIndex?.ToString() ?? string.Empty)"
-                                                   @onchange="HandleDecisionRouteFanOutTargetIndexChanged"
+                                                   Value="@decisionRouteFanOutTargetIndex"
+                                                   ValueChanged="@((int? value) => decisionRouteFanOutTargetIndex = value)"
                                                    data-testid="workflow-canvas-decision-route-fanout-index" />
                                         </label>
                                     }

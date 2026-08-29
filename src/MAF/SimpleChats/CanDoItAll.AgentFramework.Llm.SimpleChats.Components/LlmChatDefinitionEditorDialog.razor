@@ -155,22 +155,27 @@
                                                                           Disabled="@isBusy"
                                                                           InputTestId="llm-chat-definition-temperature" />
                                             <FormField Text="Thinking effort">
-                                                <DropDown TValue="LlmChatThinkingEffort?"
-                                                          Data="@ThinkingEffortChoices"
+                                                <SelectInput TValue="LlmChatThinkingEffort?"
                                                           Value="@form.ThinkingEffort"
                                                           ValueChanged="HandleThinkingEffortChanged"
-                                                          Placeholder="Provider default"
-                                                          AllowClear="true"
+                                                          ValueExpression="@(() => form.ThinkingEffort)"
                                                           Disabled="@(isBusy || ThinkingEffortChoices.Count == 0)"
-                                                          data-testid="llm-chat-definition-thinking-effort" />
+                                                          data-testid="llm-chat-definition-thinking-effort">
+                                                    <option value="">Provider default</option>
+                                                    @foreach (var effort in ThinkingEffortChoices)
+                                                    {
+                                                        <option value="@effort">@effort</option>
+                                                    }
+                                                </SelectInput>
                                                 <p class="mt-2 text-sm leading-6 text-slate-600">@ThinkingEffortDescription</p>
                                             </FormField>
                                             <FormField Text="Timeout (seconds)">
-                                                <Numeric TValue="double?"
+                                                <NumberInput TValue="double?"
                                                          Value="@form.TimeoutSeconds"
                                                          ValueChanged="HandleTimeoutChanged"
-                                                         Min="1"
-                                                         Step="1"
+                                                         ValueExpression="@(() => form.TimeoutSeconds)"
+                                                         min="1"
+                                                         step="1"
                                                          Disabled="@isBusy"
                                                          data-testid="llm-chat-definition-timeout" />
                                             </FormField>
@@ -190,27 +195,30 @@
                                 <FormSection Title="Output and revision" Description="Control structured output and record why the new immutable revision is being saved.">
                                     <Stack GapScale="LayoutGap.Large">
                                         <FormField Text="Response format">
-                                            <DropDown TValue="LlmChatUiResponseFormatKind"
-                                                      Data="@ResponseFormatOptions"
-                                                      TextProperty="@nameof(ResponseFormatOption.Label)"
-                                                      ValueProperty="@nameof(ResponseFormatOption.Value)"
+                                            <SelectInput TValue="LlmChatUiResponseFormatKind"
                                                       Value="@form.ResponseFormat"
                                                       ValueChanged="HandleResponseFormatChanged"
+                                                      ValueExpression="@(() => form.ResponseFormat)"
                                                       Disabled="@isBusy"
-                                                      data-testid="llm-chat-definition-response-format" />
+                                                      data-testid="llm-chat-definition-response-format">
+                                                @foreach (var option in ResponseFormatOptions)
+                                                {
+                                                    <option value="@option.Value">@option.Label</option>
+                                                }
+                                            </SelectInput>
                                         </FormField>
 
                                         @if (form.ResponseFormat == LlmChatUiResponseFormatKind.JsonSchema)
                                         {
                                             <Grid ColumnsMd="2" Gap="LayoutGap.Large">
                                                 <FormField Text="Schema name">
-                                                    <TextBox Value="@form.SchemaName"
+                                                    <TextInput Value="@form.SchemaName"
                                                              ValueChanged="HandleSchemaNameChanged"
                                                              Disabled="@isBusy"
                                                              data-testid="llm-chat-definition-schema-name" />
                                                 </FormField>
                                                 <FormField Text="Schema description">
-                                                    <TextBox Value="@form.SchemaDescription"
+                                                    <TextInput Value="@form.SchemaDescription"
                                                              ValueChanged="HandleSchemaDescriptionChanged"
                                                              Disabled="@isBusy"
                                                              data-testid="llm-chat-definition-schema-description" />
@@ -226,7 +234,7 @@
                                         }
 
                                         <FormField Text="Revision reason">
-                                            <TextArea Value="@form.RevisionReason"
+                                            <TextAreaInput Value="@form.RevisionReason"
                                                       ValueChanged="HandleRevisionReasonChanged"
                                                       Size="TextAreaSize.Standard"
                                                       Disabled="@isBusy"

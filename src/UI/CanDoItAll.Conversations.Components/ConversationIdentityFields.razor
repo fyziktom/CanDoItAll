@@ -3,7 +3,7 @@
 <Stack GapScale="LayoutGap.Large" Class="@Class" data-testid="@TestId">
     <FormRow Split="@ShowRole">
         <FormField Text="@NameLabel">
-            <TextBox Value="@Name"
+            <TextInput Value="@Name"
                      ValueChanged="NameChanged"
                      Disabled="@Disabled"
                      data-testid="@NameTestId" />
@@ -16,7 +16,7 @@
         @if (ShowRole)
         {
             <FormField Text="@RoleLabel">
-                <TextBox Value="@Role"
+                <TextInput Value="@Role"
                          ValueChanged="RoleChanged"
                          Disabled="@Disabled"
                          data-testid="@RoleTestId" />
@@ -74,7 +74,7 @@
     }
 
     <FormField Text="@SummaryLabel" Class="conversation-identity-fields__full-field">
-        <TextArea Value="@Summary"
+        <TextAreaInput Value="@Summary"
                   ValueChanged="SummaryChanged"
                   Size="TextAreaSize.Standard"
                   Disabled="@Disabled"
@@ -93,7 +93,7 @@
             {
                 <p class="mb-2 text-sm leading-6 text-slate-600">@InstructionsDescription</p>
             }
-            <TextArea Value="@Instructions"
+            <TextAreaInput Value="@Instructions"
                       ValueChanged="InstructionsChanged"
                       Size="TextAreaSize.Extended"
                       Disabled="@Disabled"

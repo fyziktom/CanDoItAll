@@ -265,7 +265,7 @@ else
                 }
 
                 <FormField Text="Conversation title">
-                    <TextBox Value="@startTitle"
+                    <TextInput Value="@startTitle"
                              ValueChanged="HandleStartTitleChanged"
                              Disabled="@controller.IsMutating"
                              data-testid="llm-chat-start-title" />
@@ -303,7 +303,7 @@ else
             OnClose="CloseRenameDialog">
         <ChildContent>
             <FormField Text="Conversation title">
-                <TextBox Value="@renameTitle"
+                <TextInput Value="@renameTitle"
                          ValueChanged="HandleRenameTitleChanged"
                          Disabled="@controller.IsMutating"
                          data-testid="llm-chat-rename-title" />

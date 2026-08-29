@@ -10,11 +10,10 @@
 <Stack GapScale="LayoutGap.Small" data-testid="@TestIdPrefix">
     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
         <FormField Text="@providerProfileLabel">
-            <InputSelect TValue="string"
+            <SelectInput TValue="string"
                          Value="@SelectedProviderProfileId"
                          ValueChanged="HandleProviderProfileChangedAsync"
                          ValueExpression="@(() => SelectedProviderProfileId)"
-                         class="ui-input"
                          data-testid="@BuildProviderTestId()">
                 <option value="">Default image provider</option>
                 @if (HasUnknownProviderSelection)
@@ -26,7 +25,7 @@
                     <option value="@provider.ProviderProfileId.ToString("D")"
                             disabled="@(!provider.IsEnabled)">@BuildProviderLabel(provider)</option>
                 }
-            </InputSelect>
+            </SelectInput>
 
             @if (isLoadingProviders)
             {

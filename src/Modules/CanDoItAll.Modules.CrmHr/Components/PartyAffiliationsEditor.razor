@@ -73,21 +73,20 @@
                         </div>
                         <div>
                             <FormField Text="Affiliation kind">
-                            <InputSelect TValue="PartyOrganizationAffiliationKind"
+                            <SelectInput TValue="PartyOrganizationAffiliationKind"
                                          Value="@item.AffiliationKind"
                                          ValueChanged="@((PartyOrganizationAffiliationKind value) => UpdateKindAsync(item, value))"
-                                         class="ui-input"
                                          data-testid="@($"crmhr-affiliation-kind-{rowIndex}")">
                                 @foreach (var kind in Enum.GetValues<PartyOrganizationAffiliationKind>())
                                 {
                                     <option value="@kind">@FormatAffiliationKind(kind)</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="Job title">
-                            <TextBox Value="@item.JobTitle"
+                            <TextInput Value="@item.JobTitle"
                                      ValueChanged="@((string? value) => UpdateJobTitleAsync(item, value))"
                                        data-testid="@($"crmhr-affiliation-title-{rowIndex}")" />
                             </FormField>
@@ -97,26 +96,24 @@
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
                         <div>
                             <FormField Text="Employee / engagement code">
-                            <TextBox Value="@item.EmployeeCode"
+                            <TextInput Value="@item.EmployeeCode"
                                      ValueChanged="@((string? value) => UpdateEmployeeCodeAsync(item, value))"
                                        data-testid="@($"crmhr-affiliation-code-{rowIndex}")" />
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="Valid from">
-                            <InputDate TValue="DateOnly?"
+                            <DateInput TValue="DateOnly?"
                                        Value="@item.ValidFrom"
                                        ValueChanged="@((DateOnly? value) => UpdateValidFromAsync(item, value))"
-                                       class="ui-input"
                                        data-testid="@($"crmhr-affiliation-start-{rowIndex}")" />
                             </FormField>
                         </div>
                         <div>
                             <FormField Text="Valid to">
-                            <InputDate TValue="DateOnly?"
+                            <DateInput TValue="DateOnly?"
                                        Value="@item.ValidTo"
                                        ValueChanged="@((DateOnly? value) => UpdateValidToAsync(item, value))"
-                                       class="ui-input"
                                        data-testid="@($"crmhr-affiliation-end-{rowIndex}")" />
                             </FormField>
                         </div>
@@ -191,9 +188,9 @@
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
                         <div>
                             <FormField Text="Notes">
-                            <TextArea Value="@item.Notes"
+                            <TextAreaInput Value="@item.Notes"
                                            ValueChanged="@((string? value) => UpdateNotesAsync(item, value))"
-                                           class="ui-input min-h-24"
+                                           Class="min-h-24"
                                            data-testid="@($"crmhr-affiliation-notes-{rowIndex}")" />
                             </FormField>
                         </div>

@@ -11,17 +11,16 @@
     <Grid Gap="LayoutGap.Large" ColumnsMd="3">
         <div>
             <FormField Text="Invocation mode">
-            <InputSelect TValue="AgentMemoryInvocationMode"
+            <SelectInput TValue="AgentMemoryInvocationMode"
                          Value="@Value.InvocationMode"
                          ValueChanged="state.HandleInvocationModeChanged"
                          ValueExpression="@(() => Value.InvocationMode)"
-                         class="ui-input"
                          data-testid="agents-catalog-memory-mode">
                 @foreach (var mode in Enum.GetValues<AgentMemoryInvocationMode>())
                 {
                     <option value="@mode">@AgentMemorySettingsPanelState.DescribeMode(mode)</option>
                 }
-            </InputSelect>
+            </SelectInput>
             </FormField>
         </div>
 
@@ -48,16 +47,14 @@
     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
         <div>
             <FormField Text="Alias">
-            <InputText @bind-Value="state.NewAlias"
-                       class="ui-input"
+            <TextInput @bind-Value="state.NewAlias"
                        placeholder="team-memory"
                        data-testid="agents-catalog-memory-new-alias" />
             </FormField>
         </div>
         <div>
             <FormField Text="Configured provider">
-            <InputSelect @bind-Value="state.NewProviderInstanceId"
-                         class="ui-input"
+            <SelectInput @bind-Value="state.NewProviderInstanceId"
                          disabled="@(!state.AvailableProviders.Any())"
                          data-testid="agents-catalog-memory-new-provider">
                 <option value="">Select an enabled provider</option>
@@ -65,19 +62,18 @@
                 {
                     <option value="@provider.InstanceId.Value">@provider.DisplayName (@provider.InstanceId.Value)</option>
                 }
-            </InputSelect>
+            </SelectInput>
             </FormField>
         </div>
         <div>
             <FormField Text="Failure behavior">
-            <InputSelect @bind-Value="state.NewRequirement"
-                         class="ui-input"
+            <SelectInput @bind-Value="state.NewRequirement"
                          data-testid="agents-catalog-memory-new-requirement">
                 @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>())
                 {
                     <option value="@requirement">@requirement</option>
                 }
-            </InputSelect>
+            </SelectInput>
             </FormField>
         </div>
         <Stack GapScale="LayoutGap.Small" JustifyContent="JustifyContent.End">

@@ -18,49 +18,44 @@
             {
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Skill">
-                        <InputSelect @bind-Value="SkillDraft.SkillId"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="SkillDraft.SkillId"
                                      data-testid="crmhr-skill-skill-id">
                             <option value="@Guid.Empty">Choose a skill</option>
                             @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
                             {
                                 <option value="@skill.Id">@skill.Name (@skill.Category)</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Proficiency">
-                        <InputSelect @bind-Value="SkillDraft.Proficiency"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="SkillDraft.Proficiency"
                                      data-testid="crmhr-skill-proficiency">
                             @foreach (var proficiency in Enum.GetValues<SkillProficiencyLevel>())
                             {
                                 <option value="@proficiency">@proficiency</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                     <FormField Text="Years">
-                        <InputNumber @bind-Value="SkillDraft.YearsExperience"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="SkillDraft.YearsExperience"
                                      data-testid="crmhr-skill-years" />
                     </FormField>
                     <FormField Text="Certification">
-                        <InputText @bind-Value="SkillDraft.CertificationStatus"
-                                   class="ui-input"
+                        <TextInput @bind-Value="SkillDraft.CertificationStatus"
                                    data-testid="crmhr-skill-certification" />
                     </FormField>
                     <FormField Text="Last validated">
-                        <InputDate @bind-Value="SkillDraft.LastValidatedOn"
-                                   class="ui-input"
+                        <DateInput @bind-Value="SkillDraft.LastValidatedOn"
                                    data-testid="crmhr-skill-validated-on" />
                     </FormField>
                 </Grid>
 
                 <div class="mt-4">
                     <FormField Text="Notes">
-                        <TextArea @bind-Value="SkillDraft.Notes"
+                        <TextAreaInput @bind-Value="SkillDraft.Notes"
 
                                        data-testid="crmhr-skill-notes" />
                     </FormField>
@@ -83,20 +78,18 @@
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                 <FormField Text="Skill name">
-                    <InputText @bind-Value="SkillDefinitionDraft.Name"
-                               class="ui-input"
+                    <TextInput @bind-Value="SkillDefinitionDraft.Name"
                                data-testid="crmhr-skill-definition-name" />
                 </FormField>
                 <FormField Text="Category">
-                    <InputText @bind-Value="SkillDefinitionDraft.Category"
-                               class="ui-input"
+                    <TextInput @bind-Value="SkillDefinitionDraft.Category"
                                data-testid="crmhr-skill-definition-category" />
                 </FormField>
             </Grid>
 
             <div class="mt-4">
                 <FormField Text="Description">
-                    <TextArea @bind-Value="SkillDefinitionDraft.Description"
+                    <TextAreaInput @bind-Value="SkillDefinitionDraft.Description"
 
                                    data-testid="crmhr-skill-definition-description" />
                 </FormField>

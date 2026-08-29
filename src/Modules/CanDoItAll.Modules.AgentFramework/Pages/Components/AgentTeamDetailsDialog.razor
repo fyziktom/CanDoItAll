@@ -34,18 +34,18 @@
 
             <label class="agent-team-details-dialog__field">
                 <span>Name</span>
-                <input @bind="editorModel.Name"
-                       @bind:event="oninput"
-                       class="ui-input agent-team-details-dialog__input"
+                <TextInput @bind-Value="editorModel.Name"
+                       Immediate="true"
+                       Class="agent-team-details-dialog__input"
                        data-testid="agents-team-name" />
             </label>
 
             <label class="agent-team-details-dialog__field">
                 <span>Description</span>
-                <textarea @bind="editorModel.Description"
-                          @bind:event="oninput"
-                          class="ui-input agent-team-details-dialog__textarea"
-                          data-testid="agents-team-description"></textarea>
+                <TextAreaInput @bind-Value="editorModel.Description"
+                          Immediate="true"
+                          Class="agent-team-details-dialog__textarea"
+                          data-testid="agents-team-description" />
             </label>
 
             <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">

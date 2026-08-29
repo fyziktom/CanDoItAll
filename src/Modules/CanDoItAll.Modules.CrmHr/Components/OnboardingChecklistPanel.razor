@@ -62,31 +62,28 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Task kind">
-                        <InputSelect @bind-Value="TaskDraft.TaskKind"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="TaskDraft.TaskKind"
                                      data-testid="crmhr-recruiting-task-kind">
                             @foreach (var taskKind in Enum.GetValues<LifecycleTaskKind>())
                             {
                                 <option value="@taskKind">@taskKind</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Status">
-                        <InputSelect @bind-Value="TaskDraft.Status"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="TaskDraft.Status"
                                      data-testid="crmhr-recruiting-task-status">
                             @foreach (var status in Enum.GetValues<LifecycleTaskStatus>())
                             {
                                 <option value="@status">@status</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Title">
-                        <InputText @bind-Value="TaskDraft.Title"
-                                   class="ui-input"
+                        <TextInput @bind-Value="TaskDraft.Title"
                                    data-testid="crmhr-recruiting-task-title" />
                     </FormField>
                     <PartyPicker Label="Owner"
@@ -100,8 +97,7 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Due date">
-                        <InputDate @bind-Value="TaskDraft.DueDate"
-                                   class="ui-input"
+                        <DateInput @bind-Value="TaskDraft.DueDate"
                                    data-testid="crmhr-recruiting-task-due-date" />
                     </FormField>
                     <ProjectPicker Label="Related project"
@@ -112,7 +108,7 @@
 
                 <div class="mt-4">
                     <FormField Text="Notes">
-                        <TextArea @bind-Value="TaskDraft.Notes"
+                        <TextAreaInput @bind-Value="TaskDraft.Notes"
 
                                        data-testid="crmhr-recruiting-task-notes" />
                     </FormField>

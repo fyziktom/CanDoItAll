@@ -1,16 +1,18 @@
 @using CanDoItAll.Conversations.Components.Presentation
 
 <FormField Text="@Label" Class="@Class" data-testid="@TestId">
-    <DropDown TValue="ConversationPresentationKey"
-              Data="@selectorOptions"
-              TextProperty="@nameof(ProviderSelectorOption.Text)"
-              ValueProperty="@nameof(ProviderSelectorOption.Key)"
-              Value="@Value"
+    <SelectInput TValue="string"
+              Value="@SelectedKey"
               ValueChanged="HandleValueChangedAsync"
-              Placeholder="@NoneLabel"
-              AllowClear="true"
+              ValueExpression="@(() => SelectedKey)"
               Disabled="@IsDisabled"
-              data-testid="@InputTestId" />
+              data-testid="@InputTestId">
+        <option value="">@NoneLabel</option>
+        @foreach (var option in selectorOptions)
+        {
+            <option value="@option.Key.Value">@option.Text</option>
+        }
+    </SelectInput>
 
     @if (IsLoading)
     {
@@ -73,6 +75,8 @@
 
     private bool IsDisabled => Disabled || IsLoading;
 
+    private string SelectedKey => Value?.Value ?? string.Empty;
+
     protected override void OnParametersSet()
     {
         selectorOptions = Options
@@ -80,8 +84,10 @@
             .ToList();
     }
 
-    private Task HandleValueChangedAsync(ConversationPresentationKey? value)
-        => ValueChanged.InvokeAsync(value);
+    private Task HandleValueChangedAsync(string? value)
+        => ValueChanged.InvokeAsync(string.IsNullOrWhiteSpace(value)
+            ? null
+            : new ConversationPresentationKey(value));
 
     private string BuildOptionText(ConversationProviderOption option)
     {

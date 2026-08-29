@@ -29,17 +29,17 @@
             </Split>
 
             <CompactFilterBar ResultText="@($"{TotalCount} matching request(s)")">
-                <input value="@SearchText"
+                <TextInput Value="@SearchText"
                        @oninput="HandleSearchInputAsync"
-                       class="ui-input ui-input--toolbar h-10 min-w-[16rem] flex-1"
+                       Class="h-10 min-w-[16rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search title, role, project, requester, unit, skill, or notes"
                        aria-label="Search staffing requests"
                        data-testid="crmhr-staffing-request-search" />
-                <InputSelect TValue="StaffingRequestStatus?"
+                <SelectInput TValue="StaffingRequestStatus?"
                              Value="@StatusFilter"
                              ValueChanged="HandleStatusFilterChangedAsync"
-                             class="ui-input ui-input--toolbar h-10 min-w-[12rem]"
+                             Class="h-10 min-w-[12rem]"
                              style="width: 12rem; flex: 0 1 12rem;"
                              aria-label="Filter staffing requests by status"
                              data-testid="crmhr-staffing-request-status-filter">
@@ -48,7 +48,7 @@
                     {
                         <option value="@status">@status</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </CompactFilterBar>
         </Stack>
     </SurfaceCard>
@@ -178,42 +178,36 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Request title">
-                        <InputText @bind-Value="Draft.Title"
-                                   class="ui-input"
+                        <TextInput @bind-Value="Draft.Title"
                                    data-testid="crmhr-staffing-request-title" />
                     </FormField>
                     <FormField Text="Needed role">
-                        <InputText @bind-Value="Draft.NeededRole"
-                                   class="ui-input"
+                        <TextInput @bind-Value="Draft.NeededRole"
                                    data-testid="crmhr-staffing-request-role" />
                     </FormField>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                     <FormField Text="Allocation %">
-                        <InputNumber @bind-Value="Draft.AllocationPercent"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="Draft.AllocationPercent"
                                      data-testid="crmhr-staffing-request-allocation" />
                     </FormField>
                     <FormField Text="Starts on">
-                        <InputDate @bind-Value="Draft.StartDate"
-                                   class="ui-input"
+                        <DateInput @bind-Value="Draft.StartDate"
                                    data-testid="crmhr-staffing-request-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
-                        <InputDate @bind-Value="Draft.EndDate"
-                                   class="ui-input"
+                        <DateInput @bind-Value="Draft.EndDate"
                                    data-testid="crmhr-staffing-request-end-date" />
                     </FormField>
                     <FormField Text="Status">
-                        <InputSelect @bind-Value="Draft.Status"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="Draft.Status"
                                      data-testid="crmhr-staffing-request-status">
                             @foreach (var status in Enum.GetValues<StaffingRequestStatus>())
                             {
                                 <option value="@status">@status</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
@@ -260,7 +254,7 @@
                 </div>
 
                 <FormField Text="Notes">
-                    <TextArea @bind-Value="Draft.Notes"
+                    <TextAreaInput @bind-Value="Draft.Notes"
 
                                    data-testid="crmhr-staffing-request-notes" />
                 </FormField>

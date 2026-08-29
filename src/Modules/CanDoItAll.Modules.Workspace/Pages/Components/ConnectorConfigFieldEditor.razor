@@ -7,10 +7,10 @@
 @switch (Field.FieldType)
     {
         case ConnectorConfigFieldType.Number:
-            <InputNumber TValue="decimal?"
+            <NumberInput TValue="decimal?"
                          Value="NumberValue"
                          ValueChanged="HandleNumberChanged"
-                         class="@InputClass"
+                         Class="@InputClass"
                          data-testid="@TestId" />
             break;
         case ConnectorConfigFieldType.Boolean:
@@ -21,13 +21,13 @@
             break;
         case ConnectorConfigFieldType.Json:
         case ConnectorConfigFieldType.MultilineText:
-            <TextArea Value="@TextValue"
+            <TextAreaInput Value="@TextValue"
                       ValueChanged="HandleTextChanged"
-                      Rows="4"
+                      rows="4"
                            data-testid="@TestId" />
             break;
         case ConnectorConfigFieldType.Select:
-            <InputSelect TValue="string"
+            <SelectInput TValue="string"
                          Value="@TextValue"
                          ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
                          class="@InputClass"
@@ -36,10 +36,10 @@
                 {
                     <option value="@option.Value">@option.Label</option>
                 }
-            </InputSelect>
+            </SelectInput>
             break;
         case ConnectorConfigFieldType.SecretReference:
-            <InputSelect TValue="string"
+            <SelectInput TValue="string"
                          Value="@TextValue"
                          ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
                          class="@InputClass"
@@ -49,10 +49,10 @@
                 {
                     <option value="@secret.Id">@secret.Name</option>
                 }
-            </InputSelect>
+            </SelectInput>
             break;
         default:
-            <TextBox Value="@TextValue"
+            <TextInput Value="@TextValue"
                      ValueChanged="HandleTextChanged"
                      Class="@InputClass"
                      data-testid="@TestId" />

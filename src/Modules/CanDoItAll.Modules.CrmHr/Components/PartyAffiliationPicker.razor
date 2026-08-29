@@ -20,11 +20,10 @@
     else if (affiliations.Count > 0)
     {
         <FormField Text="@Label">
-            <InputSelect TValue="Guid?"
+            <SelectInput TValue="Guid?"
                          Value="@SelectedAffiliationId"
                          ValueChanged="HandleSelectionChangedAsync"
                          ValueExpression="@(() => SelectedAffiliationId)"
-                         class="ui-input"
                          data-testid="@TestIdPrefix">
                 <option value="">Use directory classification</option>
                 @foreach (var affiliation in affiliations)
@@ -33,7 +32,7 @@
                         @FormatAffiliationOption(affiliation)
                     </option>
                 }
-            </InputSelect>
+            </SelectInput>
             <p class="mt-1 text-xs leading-5 text-slate-500">
                 This preserves the company and worker relationship used for the assignment.
             </p>

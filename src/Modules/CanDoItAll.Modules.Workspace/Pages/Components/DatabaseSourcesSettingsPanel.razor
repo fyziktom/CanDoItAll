@@ -22,9 +22,9 @@
             </Actions>
             <Filters>
                 <FilterBar ResultText="@($"{FilteredProfiles.Count} matching profile(s)")">
-                    <input @bind="profileSearch"
-                           @bind:event="oninput"
-                           class="ui-input min-w-[14rem] flex-1"
+                    <TextInput @bind-Value="profileSearch"
+                           Immediate="true"
+                           Class="min-w-[14rem] flex-1"
                            placeholder="Search data sources"
                            data-testid="database-profile-search" />
                     <Button Text="Reset"
@@ -190,16 +190,14 @@
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
                                 <FormField Text="Profile name">
-                                <InputText @bind-Value="databaseProfileModel.DisplayName"
-                                           class="ui-input"
+                                <TextInput @bind-Value="databaseProfileModel.DisplayName"
                                            data-testid="database-profile-name" />
                                 </FormField>
                             </div>
 
                             <div>
                                 <FormField Text="Workspace root">
-                                <InputText @bind-Value="databaseProfileModel.WorkspaceRoot"
-                                           class="ui-input"
+                                <TextInput @bind-Value="databaseProfileModel.WorkspaceRoot"
                                            data-testid="database-profile-workspace-root" />
                                 </FormField>
                             </div>
@@ -226,16 +224,14 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Host">
-                                    <InputText @bind-Value="databaseProfileModel.PostgresHost"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="databaseProfileModel.PostgresHost"
                                                data-testid="database-profile-postgres-host" />
                                     </FormField>
                                 </div>
 
                                 <div>
                                     <FormField Text="Port">
-                                    <InputNumber @bind-Value="databaseProfileModel.PostgresPort"
-                                                 class="ui-input"
+                                    <NumberInput @bind-Value="databaseProfileModel.PostgresPort"
                                                  data-testid="database-profile-postgres-port" />
                                     </FormField>
                                 </div>
@@ -244,16 +240,14 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Database">
-                                    <InputText @bind-Value="databaseProfileModel.PostgresDatabaseName"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="databaseProfileModel.PostgresDatabaseName"
                                                data-testid="database-profile-postgres-database" />
                                     </FormField>
                                 </div>
 
                                 <div>
                                     <FormField Text="Admin database">
-                                    <InputText @bind-Value="databaseProfileModel.PostgresAdminDatabaseName"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="databaseProfileModel.PostgresAdminDatabaseName"
                                                data-testid="database-profile-postgres-admin-database" />
                                     </FormField>
                                 </div>
@@ -262,17 +256,15 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Username">
-                                    <InputText @bind-Value="databaseProfileModel.PostgresUsername"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="databaseProfileModel.PostgresUsername"
                                                data-testid="database-profile-postgres-user" />
                                     </FormField>
                                 </div>
 
                                 <div>
                                     <FormField Text="Password">
-                                    <InputText @bind-Value="databaseProfileModel.PostgresPassword"
+                                    <TextInput @bind-Value="databaseProfileModel.PostgresPassword"
                                                type="password"
-                                               class="ui-input"
                                                data-testid="database-profile-postgres-password" />
                                     </FormField>
                                 </div>
@@ -460,17 +452,18 @@
 
                 <div>
                     <FormField Text="Copy settings from">
-                    <select class="ui-input"
-                            value="@transferSourceProfileId?.ToString()"
+                    <SelectInput TValue="Guid?"
+                            Value="@transferSourceProfileId"
+                            ValueChanged="@(value => ChangeTransferSourceAsync(new ChangeEventArgs { Value = value?.ToString() }))"
+                            ValueExpression="@(() => transferSourceProfileId)"
                             disabled="@(transferBusy || transferSources.Count == 0)"
-                            @onchange="ChangeTransferSourceAsync"
                             data-testid="database-transfer-source-select">
                         <option value="">Select source database</option>
                         @foreach (var source in transferSources)
                         {
                             <option value="@source.ProfileId">@source.DisplayName (@DescribeSource(source.SourceKind))</option>
                         }
-                    </select>
+                    </SelectInput>
                     </FormField>
                     @if (transferSources.Count == 0)
                     {

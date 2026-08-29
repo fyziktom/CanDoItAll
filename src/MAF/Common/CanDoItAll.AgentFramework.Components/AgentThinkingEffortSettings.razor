@@ -2,14 +2,17 @@
 
 <FormField Text="Thinking effort">
     <Stack GapScale="LayoutGap.Small">
-        <DropDown TValue="string"
-                  Data="@options"
-                  TextProperty="@nameof(ThinkingEffortOption.Text)"
-                  ValueProperty="@nameof(ThinkingEffortOption.ChoiceValue)"
+        <SelectInput TValue="string"
                   Value="@SelectedChoiceValue"
                   ValueChanged="HandleValueChangedAsync"
+                  ValueExpression="@(() => SelectedChoiceValue)"
                   Disabled="@IsSelectorDisabled"
-                  data-testid="@TestId" />
+                  data-testid="@TestId">
+            @foreach (var option in options)
+            {
+                <option value="@option.ChoiceValue">@option.Text</option>
+            }
+        </SelectInput>
 
         <Alert AlertStyle="@SupportAlertStyle"
                Variant="Variant.Outlined"

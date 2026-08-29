@@ -38,28 +38,28 @@
                                  Count="@($"{FilteredPlans.Count} plan(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredPlans.Count} matching plan(s)")">
-                            <input @bind="planSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search test plans" />
-                            <InputSelect @bind-Value="projectFilter" class="ui-input">
+                            <TextInput @bind-Value="planSearch" Immediate="true" Class="min-w-[14rem] flex-1" placeholder="Search test plans" />
+                            <SelectInput @bind-Value="projectFilter">
                                 <option value="">All projects</option>
                                 @foreach (var project in projects.OrderBy(item => item.Name))
                                 {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
-                            </InputSelect>
-                            <InputSelect @bind-Value="phaseFilter" class="ui-input">
+                            </SelectInput>
+                            <SelectInput @bind-Value="phaseFilter">
                                 <option value="">All phases</option>
                                 @foreach (var phase in plans.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
                                 {
                                     <option value="@phase">@phase</option>
                                 }
-                            </InputSelect>
-                            <InputSelect @bind-Value="resultFilter" class="ui-input">
+                            </SelectInput>
+                            <SelectInput @bind-Value="resultFilter">
                                 <option value="">All latest results</option>
                                 @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                 {
                                     <option value="@status.ToString()">@status</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
@@ -125,49 +125,49 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Project">
-                                        <InputSelect @bind-Value="editor.ProjectId" class="ui-input" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
+                                        <SelectInput @bind-Value="editor.ProjectId" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
                                             {
                                                 <option value="@project.Id">@project.Name</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Phase">
-                                        <InputText @bind-Value="editor.Phase" class="ui-input" />
+                                        <TextInput @bind-Value="editor.Phase" />
                                         </FormField>
                                     </div>
                                 </Grid>
 
                                 <div class="max-w-xl">
                                     <FormField Text="Responsible party">
-                                    <InputSelect @bind-Value="editor.ResponsiblePartyId" class="ui-input" data-testid="testlab-responsible-party-select">
+                                    <SelectInput @bind-Value="editor.ResponsiblePartyId" data-testid="testlab-responsible-party-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
                                         {
                                             <option value="@option.PartyId">@option.DisplayName</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
 
                                 <div>
                                     <FormField Text="Title">
-                                        <InputText @bind-Value="editor.Title" class="ui-input" data-testid="testlab-title-input" />
+                                        <TextInput @bind-Value="editor.Title" data-testid="testlab-title-input" />
                                     </FormField>
                                 </div>
 
                                 <div>
                                     <FormField Text="Coverage goal">
-                                    <TextArea @bind-Value="editor.CoverageGoal" Rows="4" />
+                                    <TextAreaInput @bind-Value="editor.CoverageGoal" rows="4" />
                                     </FormField>
                                 </div>
 
                                 <div>
                                     <FormField Text="Playwright spec path">
-                                    <InputText @bind-Value="editor.PlaywrightSpecPath" class="ui-input" />
+                                    <TextInput @bind-Value="editor.PlaywrightSpecPath" />
                                     </FormField>
                                 </div>
                             </FormSection>
@@ -188,15 +188,15 @@
                                         @foreach (var testCase in editor.Cases)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
-                                                <InputText @bind-Value="testCase.Name" class="ui-input" />
-                                                <InputText @bind-Value="testCase.StoryOrFeature" class="ui-input" />
-                                                <InputSelect @bind-Value="testCase.Status" class="ui-input">
+                                                <TextInput @bind-Value="testCase.Name" />
+                                                <TextInput @bind-Value="testCase.StoryOrFeature" />
+                                                <SelectInput @bind-Value="testCase.Status">
                                                     @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                                     {
                                                         <option value="@status">@status</option>
                                                     }
-                                                </InputSelect>
-                                                <InputText @bind-Value="testCase.Notes" class="ui-input" />
+                                                </SelectInput>
+                                                <TextInput @bind-Value="testCase.Notes" />
                                             </Grid>
                                         }
                                     </Stack>
@@ -219,10 +219,10 @@
                                         @foreach (var evidence in editor.Evidence)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
-                                                <InputText @bind-Value="evidence.EvidenceLabel" class="ui-input" />
-                                                <InputText @bind-Value="evidence.ArtifactPath" class="ui-input" />
-                                                <InputText @bind-Value="evidence.EvidenceKind" class="ui-input" />
-                                                <InputText @bind-Value="evidence.Notes" class="ui-input" />
+                                                <TextInput @bind-Value="evidence.EvidenceLabel" />
+                                                <TextInput @bind-Value="evidence.ArtifactPath" />
+                                                <TextInput @bind-Value="evidence.EvidenceKind" />
+                                                <TextInput @bind-Value="evidence.Notes" />
                                             </Grid>
                                         }
                                     </Stack>
@@ -245,15 +245,15 @@
                                         @foreach (var run in editor.Runs)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
-                                                <InputDate @bind-Value="run.ExecutedAtUtc" class="ui-input" />
-                                                <InputText @bind-Value="run.Runner" class="ui-input" />
-                                                <InputSelect @bind-Value="run.Result" class="ui-input">
+                                                <DateInput @bind-Value="run.ExecutedAtUtc" />
+                                                <TextInput @bind-Value="run.Runner" />
+                                                <SelectInput @bind-Value="run.Result">
                                                     @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                                     {
                                                         <option value="@status">@status</option>
                                                     }
-                                                </InputSelect>
-                                                <InputText @bind-Value="run.Summary" class="ui-input" />
+                                                </SelectInput>
+                                                <TextInput @bind-Value="run.Summary" />
                                             </Grid>
                                         }
                                     </Stack>

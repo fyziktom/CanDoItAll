@@ -4,9 +4,9 @@
 <div class="min-w-0" data-testid="material-icon-picker-dialog">
     <Stack GapScale="LayoutGap.Medium">
         <FilterBar ResultText="@($"{FilteredIcons.Count} of {AgentTeamIconCatalog.Options.Count} icon(s)")">
-            <input @bind="searchText"
-                   @bind:event="oninput"
-                   class="ui-input min-w-[14rem] flex-1"
+            <TextInput @bind-Value="searchText"
+                   Immediate="true"
+                   Class="min-w-[14rem] flex-1"
                    placeholder="Search icons"
                    data-testid="material-icon-picker-search" />
             <StatusBadge Tone="info" Text="@selectedIcon" />

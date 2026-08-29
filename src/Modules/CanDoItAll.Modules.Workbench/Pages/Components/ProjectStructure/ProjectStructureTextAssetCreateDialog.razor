@@ -37,7 +37,7 @@
     <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
           Gap="LayoutGap.Medium">
         <FormField Text="@Definition.TitleLabel">
-            <TextBox Value="@title"
+            <TextInput Value="@title"
                      ValueChanged="HandleTitleChangedAsync"
                      Placeholder="@Definition.TitlePlaceholder"
                      Immediate="true"
@@ -45,7 +45,7 @@
         </FormField>
 
         <FormField Text="@Definition.SubtitleLabel">
-            <TextBox Value="@subtitle"
+            <TextInput Value="@subtitle"
                      ValueChanged="HandleSubtitleChangedAsync"
                      Placeholder="@Definition.SubtitlePlaceholder"
                      Immediate="true"
@@ -56,7 +56,7 @@
     @if (sourceMode == ProjectAssetSourceMode.CreateNew)
     {
         <FormField Text="File name">
-            <TextBox Value="@fileName"
+            <TextInput Value="@fileName"
                      ValueChanged="HandleFileNameChangedAsync"
                      Placeholder="@Definition.FileNamePlaceholder"
                      Immediate="true"
@@ -64,10 +64,10 @@
         </FormField>
 
         <FormField Text="File content">
-            <TextArea Value="@content"
+            <TextAreaInput Value="@content"
                       ValueChanged="HandleContentChangedAsync"
                       Placeholder="@Definition.ContentPlaceholder"
-                      Rows="14"
+                      rows="14"
                       Immediate="true"
                       data-testid="project-structure-text-asset-content" />
         </FormField>
@@ -94,10 +94,10 @@
     }
 
     <FormField Text="@Definition.NotesLabel">
-        <TextArea Value="@notes"
+        <TextAreaInput Value="@notes"
                   ValueChanged="HandleNotesChangedAsync"
                   Placeholder="@Definition.NotesPlaceholder"
-                  Rows="3"
+                  rows="3"
                   Immediate="true"
                   data-testid="project-structure-text-asset-notes" />
     </FormField>

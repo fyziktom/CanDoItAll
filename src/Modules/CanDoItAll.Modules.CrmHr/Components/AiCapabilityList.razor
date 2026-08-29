@@ -29,15 +29,13 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
                     <div>
                         <FormField Text="Capability">
-                        <InputText @bind-Value="capability.Name"
-                                   class="ui-input"
+                        <TextInput @bind-Value="capability.Name"
                                    data-testid="@($"crmhr-agent-capability-name-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="Scope">
-                        <InputText @bind-Value="capability.Scope"
-                                   class="ui-input"
+                        <TextInput @bind-Value="capability.Scope"
                                    data-testid="@($"crmhr-agent-capability-scope-{rowIndex}")" />
                         </FormField>
                     </div>
@@ -46,15 +44,13 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
                         <FormField Text="Tool access">
-                        <InputText @bind-Value="capability.ToolAccess"
-                                   class="ui-input"
+                        <TextInput @bind-Value="capability.ToolAccess"
                                    data-testid="@($"crmhr-agent-capability-tool-access-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="Limitations">
-                        <InputText @bind-Value="capability.Limitations"
-                                   class="ui-input"
+                        <TextInput @bind-Value="capability.Limitations"
                                    data-testid="@($"crmhr-agent-capability-limitations-{rowIndex}")" />
                         </FormField>
                     </div>
@@ -63,7 +59,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
                         <FormField Text="Notes">
-                        <TextArea @bind-Value="capability.Notes"
+                        <TextAreaInput @bind-Value="capability.Notes"
 
                                        data-testid="@($"crmhr-agent-capability-notes-{rowIndex}")" />
                         </FormField>

@@ -25,30 +25,26 @@ else
                          Description="Name and classify this reusable instruction without coupling it to a workflow or agent runtime.">
                 <Grid Gap="LayoutGap.Large" ColumnsXl="2">
                     <FormField Text="Name">
-                        <InputText @bind-Value="editor.Title"
-                                   class="ui-input"
+                        <TextInput @bind-Value="editor.Title"
                                    data-testid="prompt-gallery-editor-title" />
                     </FormField>
                     <FormField Text="Kind">
-                        <InputSelect @bind-Value="editor.Kind"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="editor.Kind"
                                      data-testid="prompt-gallery-editor-kind">
                             @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
                             {
                                 <option value="@option">@FormatKind(option)</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
                 <Grid Gap="LayoutGap.Large" ColumnsXl="2">
                     <FormField Text="Summary">
-                        <InputText @bind-Value="editor.Summary"
-                                   class="ui-input"
+                        <TextInput @bind-Value="editor.Summary"
                                    data-testid="prompt-gallery-editor-summary" />
                     </FormField>
                     <FormField Text="Phase or group">
-                        <InputText @bind-Value="editor.Phase"
-                                   class="ui-input"
+                        <TextInput @bind-Value="editor.Phase"
                                    data-testid="prompt-gallery-editor-phase" />
                     </FormField>
                 </Grid>
@@ -65,8 +61,8 @@ else
             <FormSection Title="Reusable content"
                          Description="Keep the editable draft here. Finalization creates a separate immutable version.">
                 <FormField Text="Prompt or prompt-part content">
-                    <TextArea @bind-Value="editor.Content"
-                                   Class="ui-input--mono min-h-80"
+                    <TextAreaInput @bind-Value="editor.Content"
+                                   Class="min-h-80"
                                    data-testid="prompt-gallery-editor-content" />
                 </FormField>
             </FormSection>
@@ -119,13 +115,11 @@ else
                          Description="Add only combinations verified for this item. Mark one optional preferred pair to preload consumers; an empty list means the item is model-agnostic.">
                 <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
                     <FormField Text="Provider">
-                        <InputText @bind-Value="providerToAdd"
-                                   class="ui-input"
+                        <TextInput @bind-Value="providerToAdd"
                                    placeholder="OpenAI, Ollama, ..." />
                     </FormField>
                     <FormField Text="Model">
-                        <InputText @bind-Value="modelToAdd"
-                                   class="ui-input"
+                        <TextInput @bind-Value="modelToAdd"
                                    placeholder="Model identifier" />
                     </FormField>
                     <Cluster AlignItems="AlignItems.End">
@@ -178,22 +172,19 @@ else
                          Description="Optional recommendations preload compatible workflow and chat settings without becoming runtime policy.">
                 <Grid Gap="LayoutGap.Large" ColumnsXl="3">
                     <FormField Text="Temperature">
-                        <InputNumber @bind-Value="editor.Temperature"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="editor.Temperature"
                                      min="0"
                                      max="2"
                                      step="0.1" />
                     </FormField>
                     <FormField Text="Top-p">
-                        <InputNumber @bind-Value="editor.TopP"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="editor.TopP"
                                      min="0"
                                      max="1"
                                      step="0.05" />
                     </FormField>
                     <FormField Text="Maximum output tokens">
-                        <InputNumber @bind-Value="editor.MaxOutputTokens"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="editor.MaxOutputTokens"
                                      min="1" />
                     </FormField>
                 </Grid>

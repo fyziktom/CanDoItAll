@@ -56,28 +56,28 @@
                                  Count="@($"{FilteredResources.Count} item(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredResources.Count} matching resource(s)")">
-                            <input @bind="resourceSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search resources" />
-                            <InputSelect @bind-Value="projectFilter" class="ui-input">
+                            <TextInput @bind-Value="resourceSearch" Immediate="true" Class="min-w-[14rem] flex-1" placeholder="Search resources" />
+                            <SelectInput @bind-Value="projectFilter">
                                 <option value="">All projects</option>
                                 @foreach (var project in projects.OrderBy(item => item.Name))
                                 {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
-                            </InputSelect>
-                            <InputSelect @bind-Value="connectorFilter" class="ui-input">
+                            </SelectInput>
+                            <SelectInput @bind-Value="connectorFilter">
                                 <option value="">All connectors</option>
                                 @foreach (var manifest in resourceManifests)
                                 {
                                     <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                 }
-                            </InputSelect>
-                            <InputSelect @bind-Value="validationFilter" class="ui-input">
+                            </SelectInput>
+                            <SelectInput @bind-Value="validationFilter">
                                 <option value="">All validation states</option>
                                 @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
                                 {
                                     <option value="@status.ToString()">@status</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
@@ -193,23 +193,23 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Project">
-                                    <InputSelect @bind-Value="editor.ProjectId" class="ui-input" data-testid="resource-project-select" @bind-Value:after="RefreshResponsiblePartyOptionsAsync">
+                                    <SelectInput @bind-Value="editor.ProjectId" data-testid="resource-project-select" @bind-Value:after="RefreshResponsiblePartyOptionsAsync">
                                         <option value="">Select a project</option>
                                         @foreach (var project in projects)
                                         {
                                             <option value="@project.Id">@project.Name</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Connector plugin">
-                                    <InputSelect @bind-Value="editor.ConnectorPluginKey" class="ui-input" data-testid="resource-plugin-select" @bind-Value:after="HandleConnectorPluginChangedAsync">
+                                    <SelectInput @bind-Value="editor.ConnectorPluginKey" data-testid="resource-plugin-select" @bind-Value:after="HandleConnectorPluginChangedAsync">
                                         @foreach (var manifest in EditableResourceManifests)
                                         {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>
@@ -217,18 +217,18 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Name">
-                                    <InputText @bind-Value="editor.Name" class="ui-input" data-testid="resource-name-input" />
+                                    <TextInput @bind-Value="editor.Name" data-testid="resource-name-input" />
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Linked secret">
-                                    <InputSelect @bind-Value="editor.LinkedSecretId" class="ui-input">
+                                    <SelectInput @bind-Value="editor.LinkedSecretId">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
                                         {
                                             <option value="@secret.Id">@secret.Name</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>
@@ -236,24 +236,24 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Owner">
-                                    <InputSelect @bind-Value="editor.OwnerPartyId" class="ui-input" data-testid="resource-owner-select">
+                                    <SelectInput @bind-Value="editor.OwnerPartyId" data-testid="resource-owner-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
                                         {
                                             <option value="@option.PartyId">@option.DisplayName</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Maintainer">
-                                    <InputSelect @bind-Value="editor.MaintainerPartyId" class="ui-input" data-testid="resource-maintainer-select">
+                                    <SelectInput @bind-Value="editor.MaintainerPartyId" data-testid="resource-maintainer-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
                                         {
                                             <option value="@option.PartyId">@option.DisplayName</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>
@@ -280,29 +280,29 @@
                         <FormSection Title="Metadata and capabilities" Description="Keep validation, sensitivity, and handling flags explicit on every resource record.">
                             <div>
                                 <FormField Text="Description">
-                                <TextArea @bind-Value="editor.Description" Rows="4" />
+                                <TextAreaInput @bind-Value="editor.Description" rows="4" />
                                 </FormField>
                             </div>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Validation">
-                                    <InputSelect @bind-Value="editor.ValidationStatus" class="ui-input">
+                                    <SelectInput @bind-Value="editor.ValidationStatus">
                                         @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
                                         {
                                             <option value="@status">@status</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Sensitivity">
-                                    <InputSelect @bind-Value="editor.Sensitivity" class="ui-input">
+                                    <SelectInput @bind-Value="editor.Sensitivity">
                                         @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>())
                                         {
                                             <option value="@sensitivity">@sensitivity</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>

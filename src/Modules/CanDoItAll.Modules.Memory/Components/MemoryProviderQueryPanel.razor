@@ -8,7 +8,7 @@
                Value="@MemoryProviderUiAvailability.QueryDiagnostic(Provider, Editor.UseAsyncQuery)" />
 
     <FormField Text="Query">
-        <TextArea Value="@Editor.Query"
+        <TextAreaInput Value="@Editor.Query"
                   ValueChanged="@(value => Editor.Query = value)"
                   Rows="6"
                   data-testid="memory-ui-query-text" />

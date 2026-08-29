@@ -272,9 +272,9 @@
 
                             <label class="workflows-field mt-4">
                                 <span>Input JSON</span>
-                                <textarea class="ui-input ui-input--textarea workflows-input"
-                                          @bind="testInputJson"
-                                          data-testid="workflows-test-input"></textarea>
+                                <TextAreaInput @bind-Value="testInputJson"
+                                               Class="workflows-input"
+                                               data-testid="workflows-test-input" />
                             </label>
 
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
@@ -495,9 +495,9 @@
                                                 <small>@request.RequestJson</small>
                                                 <label class="workflows-field">
                                                     <span>Response JSON</span>
-                                                    <textarea class="ui-input ui-input--textarea workflows-request-response"
-                                                              @bind="pendingResponseJson"
-                                                              data-testid="workflows-pending-response"></textarea>
+                                                    <TextAreaInput @bind-Value="pendingResponseJson"
+                                                                   Class="workflows-request-response"
+                                                                   data-testid="workflows-pending-response" />
                                                 </label>
                                                 <Button Icon="send"
                                                         Size="ButtonSize.Small"
@@ -572,9 +572,9 @@
 
                                         <label class="workflows-field mt-4">
                                             <span>Search</span>
-                                            <input class="ui-input"
-                                                   value="@templateSearchText"
-                                                   @onchange="HandleWorkflowTemplateSearchChanged"
+                                            <TextInput Value="@templateSearchText"
+                                                   ValueChanged="@(value => HandleWorkflowTemplateSearchChanged(new ChangeEventArgs { Value = value }))"
+                                                   ValueExpression="@(() => templateSearchText)"
                                                    data-testid="workflows-template-catalogue-search" />
                                         </label>
 
@@ -829,30 +829,29 @@
                                 {
                                     <label class="workflows-field">
                                         <span>Project</span>
-                                        <select class="ui-input"
-                                                value="@previewInputState.ProjectId"
-                                                @onchange="HandlePreviewProjectChanged"
+                                        <SelectInput TValue="string"
+                                                Value="@previewInputState.ProjectId"
+                                                ValueChanged="@(value => HandlePreviewProjectChanged(new ChangeEventArgs { Value = value }))"
+                                                ValueExpression="@(() => previewInputState.ProjectId)"
                                                 data-testid="workflows-preview-project-select">
                                             <option value="">Choose project</option>
                                             @foreach (var project in previewProjectOptions)
                                             {
                                                 <option value="@project.Id.ToString("D")">@project.Name</option>
                                             }
-                                        </select>
+                                        </SelectInput>
                                     </label>
                                 }
 
                                 <label class="workflows-field">
                                     <span>Project id</span>
-                                    <input class="ui-input"
-                                           @bind="previewInputState.ProjectId"
+                                    <TextInput @bind-Value="previewInputState.ProjectId"
                                            data-testid="workflows-preview-project-id" />
                                 </label>
 
                                 <label class="workflows-field">
                                     <span>Parent node id</span>
-                                    <input class="ui-input"
-                                           @bind="previewInputState.ParentNodeId"
+                                    <TextInput @bind-Value="previewInputState.ParentNodeId"
                                            data-testid="workflows-preview-node-id" />
                                 </label>
                             </Grid>
@@ -879,9 +878,9 @@
 
                             <label class="workflows-field">
                                 <span>Input JSON</span>
-                                <textarea class="ui-input ui-input--textarea workflows-input"
-                                          @bind="previewInputState.InputJson"
-                                          data-testid="workflows-preview-input-json"></textarea>
+                                <TextAreaInput @bind-Value="previewInputState.InputJson"
+                                               Class="workflows-input"
+                                               data-testid="workflows-preview-input-json" />
                             </label>
 
                             @if (!string.IsNullOrWhiteSpace(previewInputErrorMessage))

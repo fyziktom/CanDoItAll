@@ -283,7 +283,7 @@ public sealed class LlmChatConversationWorkspaceTests
         using var context = CreateContext(conversations, operations);
 
         var cut = context.Render<LlmChatConversationWorkspace>();
-        cut.WaitForElement("[data-testid='llm-chat-prompt']").Change("Explain the result");
+        cut.WaitForElement("[data-testid='llm-chat-prompt']").Input("Explain the result");
         cut.Find("[data-testid='llm-chat-send']").Click();
         cut.WaitForAssertion(() => Assert.Single(operations.Sends));
         cut.Find("[data-testid='llm-chat-send']").Click();
@@ -347,7 +347,7 @@ public sealed class LlmChatConversationWorkspaceTests
         using var context = CreateContext(conversations, operations, eventSessions);
 
         var cut = context.Render<LlmChatConversationWorkspace>();
-        cut.WaitForElement("[data-testid='llm-chat-prompt']").Change("Explain the result");
+        cut.WaitForElement("[data-testid='llm-chat-prompt']").Input("Explain the result");
         cut.Find("[data-testid='llm-chat-send']").Click();
         cut.WaitForAssertion(() => Assert.Single(operations.Sends));
         var operationId = new LlmChatOperationId(operations.Sends[0].OperationId);

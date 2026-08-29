@@ -32,8 +32,7 @@
                                              SelectedPartyId="@Draft.PartyId"
                                              SelectedPartyIdChanged="SetCandidatePartyAsync" />
                                 <FormField Text="Desired role">
-                                    <InputText @bind-Value="Draft.DesiredRole"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="Draft.DesiredRole"
                                                data-testid="crmhr-recruiting-role" />
                                 </FormField>
                             </Grid>
@@ -42,24 +41,21 @@
                                   ColumnsMd="2"
                                   ColumnsLg="3">
                                 <FormField Text="New candidate name">
-                                    <InputText @bind-Value="Draft.CandidateName"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="Draft.CandidateName"
                                                data-testid="crmhr-recruiting-candidate-name" />
                                 </FormField>
                                 <FormField Text="Email">
-                                    <InputText @bind-Value="Draft.CandidateEmail"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="Draft.CandidateEmail"
                                                data-testid="crmhr-recruiting-candidate-email" />
                                 </FormField>
                                 <FormField Text="Phone">
-                                    <InputText @bind-Value="Draft.CandidatePhone"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="Draft.CandidatePhone"
                                                data-testid="crmhr-recruiting-candidate-phone" />
                                 </FormField>
                             </Grid>
 
                             <FormField Text="Candidate summary">
-                                <TextArea @bind-Value="Draft.CandidateSummary"
+                                <TextAreaInput @bind-Value="Draft.CandidateSummary"
 
                                                data-testid="crmhr-recruiting-candidate-summary" />
                             </FormField>
@@ -73,33 +69,29 @@
                                AlignItems="AlignItems.Stretch">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                 <FormField Text="Stage">
-                                    <InputSelect @bind-Value="Draft.Stage"
-                                                 class="ui-input"
+                                    <SelectInput @bind-Value="Draft.Stage"
                                                  data-testid="crmhr-recruiting-stage">
                                         @foreach (var stage in Enum.GetValues<RecruitmentStage>())
                                         {
                                             <option value="@stage">@stage</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                 </FormField>
                                 <FormField Text="Decision">
-                                    <InputSelect @bind-Value="Draft.Decision"
-                                                 class="ui-input"
+                                    <SelectInput @bind-Value="Draft.Decision"
                                                  data-testid="crmhr-recruiting-decision">
                                         @foreach (var decision in Enum.GetValues<RecruitmentDecision>())
                                         {
                                             <option value="@decision">@decision</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                 </FormField>
                                 <FormField Text="Available from">
-                                    <InputDate @bind-Value="Draft.AvailableFrom"
-                                               class="ui-input"
+                                    <DateInput @bind-Value="Draft.AvailableFrom"
                                                data-testid="crmhr-recruiting-available-from" />
                                 </FormField>
                                 <FormField Text="Source">
-                                    <InputText @bind-Value="Draft.Source"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="Draft.Source"
                                                data-testid="crmhr-recruiting-source" />
                                 </FormField>
                             </Grid>
@@ -142,13 +134,13 @@
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <FormField Text="Stage note">
-                                <TextArea @bind-Value="Draft.StageNotes"
+                                <TextAreaInput @bind-Value="Draft.StageNotes"
 
                                                data-testid="crmhr-recruiting-stage-notes" />
                             </FormField>
 
                             <FormField Text="Notes">
-                                <TextArea @bind-Value="Draft.Notes"
+                                <TextAreaInput @bind-Value="Draft.Notes"
 
                                                data-testid="crmhr-recruiting-notes" />
                             </FormField>

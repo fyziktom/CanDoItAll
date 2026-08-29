@@ -201,12 +201,11 @@
                 <h2 class="app-title-md">Upload zip</h2>
                 <div>
                     <FormField Text="Package archive">
-                    <InputFile id="plugin-package-upload"
-                               class="ui-input"
-                               accept=".zip,application/zip"
-                               aria-label="Package archive"
-                               data-testid="plugin-package-upload"
-                               OnChange="UploadPackageAsync" />
+                    <FileInput id="plugin-package-upload"
+                               Accept=".zip,application/zip"
+                               AriaLabel="Package archive"
+                               TestHookId="plugin-package-upload"
+                               Change="UploadPackageAsync" />
                     </FormField>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(packageUploadFileName))

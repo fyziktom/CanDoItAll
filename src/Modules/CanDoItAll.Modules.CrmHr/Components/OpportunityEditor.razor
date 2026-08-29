@@ -12,8 +12,7 @@
                     <Stack GapScale="LayoutGap.XSmall"
                            Class="lg:col-span-2">
                         <FormField Text="Opportunity title">
-                        <InputText @bind-Value="Model.Title"
-                                   class="ui-input"
+                        <TextInput @bind-Value="Model.Title"
                                    data-testid="crmhr-opportunity-title" />
                         </FormField>
                     </Stack>
@@ -32,40 +31,36 @@
                       Class="mt-4">
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Stage">
-                        <InputSelect @bind-Value="Model.Stage"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="Model.Stage"
                                      data-testid="crmhr-opportunity-stage">
                             @foreach (var stage in Enum.GetValues<OpportunityStage>())
                             {
                                 <option value="@stage">@stage</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                         </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Source">
-                        <InputSelect @bind-Value="Model.OpportunitySource"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="Model.OpportunitySource"
                                      data-testid="crmhr-opportunity-source">
                             @foreach (var source in Enum.GetValues<OpportunitySource>())
                             {
                                 <option value="@source">@source</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                         </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Currency">
-                        <InputText @bind-Value="Model.CurrencyCode"
-                                   class="ui-input"
+                        <TextInput @bind-Value="Model.CurrencyCode"
                                    maxlength="3"
                                    data-testid="crmhr-opportunity-currency" />
                         </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Amount">
-                        <InputNumber @bind-Value="Model.Amount"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="Model.Amount"
                                      data-testid="crmhr-opportunity-amount" />
                         </FormField>
                     </Stack>
@@ -76,15 +71,13 @@
                       Class="mt-4">
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Probability %">
-                        <InputNumber @bind-Value="Model.ProbabilityPercent"
-                                     class="ui-input"
+                        <NumberInput @bind-Value="Model.ProbabilityPercent"
                                      data-testid="crmhr-opportunity-probability" />
                         </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Expected close">
-                        <InputDate @bind-Value="Model.ExpectedCloseOn"
-                                   class="ui-input"
+                        <DateInput @bind-Value="Model.ExpectedCloseOn"
                                    data-testid="crmhr-opportunity-close-date" />
                         </FormField>
                     </Stack>
@@ -228,14 +221,13 @@
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
                                         <FormField Text="Role">
-                                        <InputSelect @bind-Value="partyLink.Role"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="partyLink.Role"
                                                      data-testid="@($"crmhr-opportunity-party-role-{rowIndex}")">
                                             @foreach (var role in PartyRoleOptions)
                                             {
                                                 <option value="@role">@ResolvePartyRoleLabel(role)</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall"
@@ -265,15 +257,15 @@
                       ColumnsLg="2">
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Summary">
-                        <TextArea @bind-Value="Model.Summary"
-                                       Rows="6"
+                        <TextAreaInput @bind-Value="Model.Summary"
+                                       rows="6"
                                        data-testid="crmhr-opportunity-summary" />
                         </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Notes">
-                        <TextArea @bind-Value="Model.Notes"
-                                       Rows="6"
+                        <TextAreaInput @bind-Value="Model.Notes"
+                                       rows="6"
                                        data-testid="crmhr-opportunity-notes" />
                         </FormField>
                     </Stack>
@@ -284,29 +276,28 @@
                       Class="mt-4">
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Stage note">
-                        <TextArea @bind-Value="Model.StageNotes"
+                        <TextAreaInput @bind-Value="Model.StageNotes"
 
                                        data-testid="crmhr-opportunity-stage-notes" />
                         </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Competitor">
-                        <InputText @bind-Value="Model.CompetitorName"
-                                   class="ui-input"
+                        <TextInput @bind-Value="Model.CompetitorName"
                                    data-testid="crmhr-opportunity-competitor" />
                         </FormField>
                         @if (Model.Stage == OpportunityStage.Lost)
                         {
                             <FormField Text="Lost reason">
-                            <TextArea @bind-Value="Model.LostReason"
-                                           Rows="4"
+                            <TextAreaInput @bind-Value="Model.LostReason"
+                                           rows="4"
                                            data-testid="crmhr-opportunity-lost-reason" />
                             </FormField>
                         }
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <FormField Text="Partner contribution">
-                        <TextArea @bind-Value="Model.PartnerContributionSummary"
+                        <TextAreaInput @bind-Value="Model.PartnerContributionSummary"
 
                                        data-testid="crmhr-opportunity-partner-contribution" />
                         </FormField>

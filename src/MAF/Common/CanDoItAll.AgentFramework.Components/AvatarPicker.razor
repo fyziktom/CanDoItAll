@@ -51,12 +51,11 @@
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
                             <FormField Text="Custom image">
-                            <InputFile id="@UploadInputId"
-                                       class="ui-input"
-                                       accept="image/png,image/jpeg,image/webp,image/gif"
-                                       aria-label="Custom image"
-                                       OnChange="LoadCustomAvatarAsync"
-                                       data-testid="@($"{TestIdPrefix}-upload")" />
+                            <FileInput id="@UploadInputId"
+                                       Accept="image/png,image/jpeg,image/webp,image/gif"
+                                       AriaLabel="Custom image"
+                                       Change="LoadCustomAvatarAsync"
+                                       TestHookId="@($"{TestIdPrefix}-upload")" />
                             </FormField>
                             @if (!string.IsNullOrWhiteSpace(customAvatarFileName))
                             {
@@ -86,7 +85,7 @@
                             <TextBlock TextStyle="TextStyle.Body2"
                                        Value="@($"Uses the image provider '{generationSource.ProviderName}' and model '{generationSource.Model}'.")" />
                             <FormField Text="Creative direction">
-                                <TextArea Value="@generationPrompt"
+                                <TextAreaInput Value="@generationPrompt"
                                           ValueChanged="@(value => generationPrompt = value ?? string.Empty)"
                                           Size="TextAreaSize.Compact"
                                           Immediate="true"

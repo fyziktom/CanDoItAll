@@ -1049,40 +1049,37 @@
               AlignItems="AlignItems.End">
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History</label>
-                <select id="@($"{testId}-window")"
-                        class="ui-input"
-                        value="@runtimeHistoryWindow"
-                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                <SelectInput id="@($"{testId}-window")"
+                        Value="@runtimeHistoryWindow"
+                        ValueChanged="@((ProcessRuntimeHistoryWindow value) => ChangeRuntimeHistoryWindowAsync(new ChangeEventArgs { Value = value.ToString() }))"
                         data-testid="live-processes-history-window">
                     @foreach (var option in RuntimeHistoryWindowOptions)
                     {
                         <option value="@option">@FormatHistoryWindow(option)</option>
                     }
-                </select>
+                </SelectInput>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-status")">Status</label>
-                <select id="@($"{testId}-status")"
-                        class="ui-input"
-                        value="@StatusFilterValue"
-                        @onchange="ChangeStatusFilterAsync"
+                <SelectInput id="@($"{testId}-status")"
+                        Value="@StatusFilterValue"
+                        ValueChanged="@((string? value) => ChangeStatusFilterAsync(new ChangeEventArgs { Value = value }))"
                         data-testid="live-processes-status-filter">
                     <option value="">All statuses</option>
                     @foreach (var option in StatusFilterOptions)
                     {
                         <option value="@option">@option.ToString()</option>
                     }
-                </select>
+                </SelectInput>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
-                <select id="@($"{testId}-run")"
-                        class="ui-input"
-                        value="@RuntimeRunSelectValue"
-                        @onchange="SelectRuntimeRunAsync"
+                <SelectInput id="@($"{testId}-run")"
+                        Value="@RuntimeRunSelectValue"
+                        ValueChanged="@((string? value) => SelectRuntimeRunAsync(new ChangeEventArgs { Value = value }))"
                         data-testid="live-processes-run-filter">
                     @RenderRuntimeRunOptions()
-                </select>
+                </SelectInput>
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
                 <Button Icon="chevron_left"
@@ -1673,11 +1670,11 @@
                              data-testid="live-processes-run-detail-decision">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operator decision" />
                             <p>@FirstNonEmpty(primaryAction.RequiredOperatorDecision, primaryAction.Summary)</p>
-                            <TextArea Value="@GetOperatorActionNote(primaryAction)"
+                            <TextAreaInput Value="@GetOperatorActionNote(primaryAction)"
                                       Change="@((string? value) => SetOperatorActionNote(primaryAction, value))"
                                       Rows="4"
                                       Placeholder="Optional note for the manager or next agent"
-                                      class="live-processes-operator-action-row__note"
+                                      Class="live-processes-operator-action-row__note"
                                       data-testid="live-processes-dialog-operator-note" />
                             <Cluster Gap="LayoutGap.Small" Class="live-processes-run-detail-decision__actions">
                                 <Button Icon="replay"
@@ -1845,11 +1842,11 @@
                             {
                                 <p class="live-processes-operator-action-row__disabled">@action.DisabledReason</p>
                             }
-                            <TextArea Value="@GetOperatorActionNote(action)"
+                            <TextAreaInput Value="@GetOperatorActionNote(action)"
                                       Change="@((string? value) => SetOperatorActionNote(action, value))"
                                       Rows="3"
                                       Placeholder="Optional note for the manager or next agent"
-                                      class="live-processes-operator-action-row__note"
+                                      Class="live-processes-operator-action-row__note"
                                       data-testid="live-processes-dialog-operator-note" />
                         </div>
                         <Button Icon="replay"

@@ -3165,14 +3165,6 @@ public partial class WorkflowCanvasEditor
         }
     }
 
-    private void HandleEdgeFanOutTargetIndexChanged(ChangeEventArgs args)
-    {
-        var value = ReadString(args);
-        edgeRouteFanOutTargetIndex = int.TryParse(value, out var targetIndex)
-            ? targetIndex
-            : null;
-    }
-
     private void HandleDecisionRouteKindChanged(ChangeEventArgs args)
     {
         if (!Enum.TryParse<WorkflowRouteKind>(args.Value?.ToString(), out var routeKind) ||
@@ -3231,14 +3223,6 @@ public partial class WorkflowCanvasEditor
         {
             decisionRouteLabel = ResolveDefaultDecisionRouteLabel(routeKind, CountCurrentDecisionRoutes() + 1);
         }
-    }
-
-    private void HandleDecisionRouteFanOutTargetIndexChanged(ChangeEventArgs args)
-    {
-        var value = ReadString(args);
-        decisionRouteFanOutTargetIndex = int.TryParse(value, out var targetIndex)
-            ? targetIndex
-            : null;
     }
 
     private int CountCurrentDecisionRoutes()

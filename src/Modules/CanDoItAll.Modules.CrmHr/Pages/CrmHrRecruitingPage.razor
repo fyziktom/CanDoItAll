@@ -232,24 +232,24 @@
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                                             <FormField Text="Workforce kind">
-                                                <InputSelect @bind-Value="conversionEditor.WorkforceKind" class="ui-input" data-testid="crmhr-recruiting-convert-kind">
+                                                <SelectInput @bind-Value="conversionEditor.WorkforceKind" data-testid="crmhr-recruiting-convert-kind">
                                                     @foreach (var workforceKind in Enum.GetValues<WorkforceKind>())
                                                     {
                                                         <option value="@workforceKind">@workforceKind</option>
                                                     }
-                                                </InputSelect>
+                                                </SelectInput>
                                             </FormField>
                                             <FormField Text="Job title">
-                                                <InputText @bind-Value="conversionEditor.JobTitle" class="ui-input" data-testid="crmhr-recruiting-convert-job-title" />
+                                                <TextInput @bind-Value="conversionEditor.JobTitle" data-testid="crmhr-recruiting-convert-job-title" />
                                             </FormField>
                                             <FormField Text="Discipline">
-                                                <InputText @bind-Value="conversionEditor.Discipline" class="ui-input" data-testid="crmhr-recruiting-convert-discipline" />
+                                                <TextInput @bind-Value="conversionEditor.Discipline" data-testid="crmhr-recruiting-convert-discipline" />
                                             </FormField>
                                         </Grid>
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                                             <FormField Text="Seniority">
-                                                <InputText @bind-Value="conversionEditor.Seniority" class="ui-input" data-testid="crmhr-recruiting-convert-seniority" />
+                                                <TextInput @bind-Value="conversionEditor.Seniority" data-testid="crmhr-recruiting-convert-seniority" />
                                             </FormField>
                                             <PartyPicker Label="Home unit"
                                                          TestIdPrefix="crmhr-recruiting-convert-home-unit"
@@ -267,15 +267,15 @@
                                         </Grid>
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
-                                            <FormField Text="Start date"><InputDate @bind-Value="conversionEditor.StartDate" class="ui-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
-                                            <FormField Text="Location"><InputText @bind-Value="conversionEditor.Location" class="ui-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
-                                            <FormField Text="Time zone"><InputText @bind-Value="conversionEditor.TimeZone" class="ui-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
-                                            <FormField Text="Capacity h/week"><InputNumber @bind-Value="conversionEditor.CapacityHoursPerWeek" class="ui-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
+                                            <FormField Text="Start date"><DateInput @bind-Value="conversionEditor.StartDate" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
+                                            <FormField Text="Location"><TextInput @bind-Value="conversionEditor.Location" data-testid="crmhr-recruiting-convert-location" /></FormField>
+                                            <FormField Text="Time zone"><TextInput @bind-Value="conversionEditor.TimeZone" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
+                                            <FormField Text="Capacity h/week"><NumberInput @bind-Value="conversionEditor.CapacityHoursPerWeek" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
                                         </Grid>
 
                                         <div class="mt-4">
                                             <FormField Text="Notes">
-                                                <TextArea @bind-Value="conversionEditor.Notes" data-testid="crmhr-recruiting-convert-notes" />
+                                                <TextAreaInput @bind-Value="conversionEditor.Notes" data-testid="crmhr-recruiting-convert-notes" />
                                             </FormField>
                                         </div>
 

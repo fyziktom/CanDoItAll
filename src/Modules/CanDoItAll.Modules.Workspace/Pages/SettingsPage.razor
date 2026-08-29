@@ -38,36 +38,36 @@
                                  Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
                         <div>
                             <FormField Text="Workspace name">
-                            <InputText @bind-Value="settingsModel.WorkspaceName" class="ui-input" />
+                            <TextInput @bind-Value="settingsModel.WorkspaceName" />
                             </FormField>
                         </div>
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
                                 <FormField Text="Default output format">
-                                <InputText @bind-Value="settingsModel.DefaultPromptOutputFormat" class="ui-input" />
+                                <TextInput @bind-Value="settingsModel.DefaultPromptOutputFormat" />
                                 </FormField>
                             </div>
                             <div>
                                 <FormField Text="Default provider">
-                                <InputSelect @bind-Value="settingsModel.DefaultProviderProfileId" class="ui-input">
+                                <SelectInput @bind-Value="settingsModel.DefaultProviderProfileId">
                                     <option value="">None</option>
                                     @foreach (var provider in providers)
                                     {
                                         <option value="@provider.Id">@provider.Name</option>
                                     }
-                                </InputSelect>
+                                </SelectInput>
                                 </FormField>
                             </div>
                         </Grid>
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
                                 <FormField Text="Currency code">
-                                <InputText @bind-Value="settingsModel.CurrencyCode" class="ui-input" maxlength="3" />
+                                <TextInput @bind-Value="settingsModel.CurrencyCode" maxlength="3" />
                                 </FormField>
                             </div>
                             <div>
                                 <FormField Text="Currency culture">
-                                <InputText @bind-Value="settingsModel.CurrencyCultureName" class="ui-input" />
+                                <TextInput @bind-Value="settingsModel.CurrencyCultureName" />
                                 </FormField>
                             </div>
                         </Grid>
@@ -78,7 +78,7 @@
                                  Description="Keep any operating notes or setup caveats close to the defaults.">
                         <div>
                             <FormField Text="Notes">
-                            <TextArea @bind-Value="settingsModel.Notes" Class="min-h-32" />
+                            <TextAreaInput @bind-Value="settingsModel.Notes" Class="min-h-32" />
                             </FormField>
                         </div>
                     </FormSection>
@@ -113,7 +113,7 @@
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredSecrets.Count} matching secret(s)")">
-                                <input @bind="secretSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search secrets" />
+                                <TextInput @bind-Value="secretSearch" Immediate="true" Class="min-w-[14rem] flex-1" placeholder="Search secrets" />
                                 <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetSecretSearch" />
                             </FilterBar>
                         </Filters>
@@ -175,29 +175,29 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Name">
-                                        <InputText @bind-Value="secretModel.Name" class="ui-input" />
+                                        <TextInput @bind-Value="secretModel.Name" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Kind">
-                                        <InputSelect @bind-Value="secretModel.Kind" class="ui-input">
+                                        <SelectInput @bind-Value="secretModel.Kind">
                                             @foreach (var kind in Enum.GetValues<SecretKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                 </Grid>
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Scope">
-                                        <InputText @bind-Value="secretModel.Scope" class="ui-input" />
+                                        <TextInput @bind-Value="secretModel.Scope" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Rotation note">
-                                        <InputText @bind-Value="secretModel.RotationNote" class="ui-input" />
+                                        <TextInput @bind-Value="secretModel.RotationNote" />
                                         </FormField>
                                     </div>
                                 </Grid>
@@ -219,7 +219,7 @@
                                 </div>
                                 <div>
                                     <FormField Text="Metadata JSON">
-                                    <TextArea @bind-Value="secretModel.MetadataJson" />
+                                    <TextAreaInput @bind-Value="secretModel.MetadataJson" />
                                     </FormField>
                                 </div>
                             </FormSection>
@@ -253,7 +253,7 @@
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredProviders.Count} matching profile(s)")">
-                                <input @bind="providerSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search providers" />
+                                <TextInput @bind-Value="providerSearch" Immediate="true" Class="min-w-[14rem] flex-1" placeholder="Search providers" />
                                 <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetProviderSearch" />
                             </FilterBar>
                         </Filters>
@@ -308,17 +308,17 @@
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             <div>
                                                 <FormField Text="Profile name">
-                                                <InputText @bind-Value="providerModel.Name" class="ui-input" data-testid="provider-name-input" />
+                                                <TextInput @bind-Value="providerModel.Name" data-testid="provider-name-input" />
                                                 </FormField>
                                             </div>
                                             <div>
                                                 <FormField Text="Connector plugin">
-                                                <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="ui-input" data-testid="provider-plugin-select">
+                                                <SelectInput @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" data-testid="provider-plugin-select">
                                                     @foreach (var manifest in providerManifests)
                                                     {
                                                         <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                                     }
-                                                </InputSelect>
+                                                </SelectInput>
                                                 </FormField>
                                             </div>
                                         </Grid>
@@ -373,13 +373,13 @@
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             <div>
                                                 <FormField Text="API key secret">
-                                                <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="ui-input" data-testid="provider-secret-select">
+                                                <SelectInput @bind-Value="providerModel.ApiKeySecretId" data-testid="provider-secret-select">
                                                     <option value="">None</option>
                                                     @foreach (var secret in secrets)
                                                     {
                                                         <option value="@secret.Id">@secret.Name</option>
                                                     }
-                                                </InputSelect>
+                                                </SelectInput>
                                                 </FormField>
                                             </div>
                                         </Grid>
@@ -450,25 +450,25 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Subject">
-                                        <InputText @bind-Value="apiTokenModel.Subject" class="ui-input" />
+                                        <TextInput @bind-Value="apiTokenModel.Subject" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Display name">
-                                        <InputText @bind-Value="apiTokenModel.DisplayName" class="ui-input" />
+                                        <TextInput @bind-Value="apiTokenModel.DisplayName" />
                                         </FormField>
                                     </div>
                                 </Grid>
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Lifetime minutes">
-                                        <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="ui-input" />
+                                        <NumberInput @bind-Value="apiTokenModel.LifetimeMinutes" />
                                         </FormField>
                                         <p class="app-body-muted mt-1">Maximum: @apiStatus.MaxTokenLifetimeMinutes minutes</p>
                                     </div>
                                     <div>
                                         <FormField Text="Scopes">
-                                        <InputText @bind-Value="apiScopesText" class="ui-input" />
+                                        <TextInput @bind-Value="apiScopesText" />
                                         </FormField>
                                         <p class="app-body-muted mt-1">Separate scopes with spaces or commas.</p>
                                     </div>
@@ -482,7 +482,7 @@
                             <Alert AlertStyle="AlertStyle.Success">
                                 <p class="font-semibold">Token created for @issuedApiToken.DisplayName.</p>
                                 <p class="mt-1">Expires: @FormatTimestamp(issuedApiToken.ExpiresAtUtc)</p>
-                                <textarea readonly class="ui-input ui-input--textarea mt-3 min-h-32">@issuedApiToken.Token</textarea>
+                                <TextAreaInput Value="@issuedApiToken.Token" ValueExpression="@(() => issuedApiToken.Token)" readonly Class="mt-3 min-h-32" />
                             </Alert>
                         }
                     }

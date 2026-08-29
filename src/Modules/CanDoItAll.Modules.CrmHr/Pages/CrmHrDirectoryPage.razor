@@ -143,32 +143,29 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                     <div>
                                         <FormField Text="Type">
-                                        <InputSelect @bind-Value="editor.PartyType"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="editor.PartyType"
                                                      data-testid="crmhr-party-type">
                                             @foreach (var partyType in Enum.GetValues<PartyType>())
                                             {
                                                 <option value="@partyType">@partyType</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Status">
-                                        <InputSelect @bind-Value="editor.LifecycleStatus"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="editor.LifecycleStatus"
                                                      data-testid="crmhr-party-status">
                                             @foreach (var lifecycleStatus in Enum.GetValues<PartyLifecycleStatus>())
                                             {
                                                 <option value="@lifecycleStatus">@lifecycleStatus</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="External code">
-                                        <InputText @bind-Value="editor.ExternalCode"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="editor.ExternalCode"
                                                    data-testid="crmhr-party-external-code" />
                                         </FormField>
                                     </div>
@@ -177,15 +174,13 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Display name">
-                                        <InputText @bind-Value="editor.DisplayName"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="editor.DisplayName"
                                                    data-testid="crmhr-party-display-name" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Preferred name">
-                                        <InputText @bind-Value="editor.PreferredName"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="editor.PreferredName"
                                                    data-testid="crmhr-party-preferred-name" />
                                         </FormField>
                                     </div>
@@ -193,8 +188,7 @@
 
                                 <div>
                                     <FormField Text="Legal name">
-                                    <InputText @bind-Value="editor.LegalName"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="editor.LegalName"
                                                data-testid="crmhr-party-legal-name" />
                                     </FormField>
                                 </div>
@@ -205,15 +199,14 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Primary role">
-                                        <InputSelect @bind-Value="editor.PrimaryRoleKindText"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="editor.PrimaryRoleKindText"
                                                      data-testid="crmhr-party-role">
                                             <option value="">No primary role yet</option>
                                             @foreach (var roleKind in Enum.GetValues<PartyRoleKind>())
                                             {
                                                 <option value="@roleKind.ToString()">@roleKind</option>
                                             }
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
@@ -231,15 +224,13 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Primary email">
-                                        <InputText @bind-Value="editor.PrimaryEmail"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="editor.PrimaryEmail"
                                                    data-testid="crmhr-party-email" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Primary phone">
-                                        <InputText @bind-Value="editor.PrimaryPhone"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="editor.PrimaryPhone"
                                                    data-testid="crmhr-party-phone" />
                                         </FormField>
                                     </div>
@@ -275,20 +266,18 @@
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                                                     <div>
                                                         <FormField Text="Role kind">
-                                                        <InputSelect @bind-Value="role.RoleKind"
-                                                                     class="ui-input"
+                                                        <SelectInput @bind-Value="role.RoleKind"
                                                                      data-testid="@($"crmhr-party-extra-role-kind-{index}")">
                                                             @foreach (var roleKind in Enum.GetValues<PartyRoleKind>())
                                                             {
                                                                 <option value="@roleKind">@roleKind</option>
                                                             }
-                                                        </InputSelect>
+                                                        </SelectInput>
                                                         </FormField>
                                                     </div>
                                                     <div class="lg:col-span-2">
                                                         <FormField Text="Role title">
-                                                        <InputText @bind-Value="role.Title"
-                                                                   class="ui-input"
+                                                        <TextInput @bind-Value="role.Title"
                                                                    data-testid="@($"crmhr-party-extra-role-title-{index}")" />
                                                         </FormField>
                                                     </div>
@@ -304,22 +293,19 @@
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                                                     <div>
                                                         <FormField Text="Valid from">
-                                                        <InputDate @bind-Value="role.ValidFromUtc"
-                                                                   class="ui-input"
+                                                        <DateInput @bind-Value="role.ValidFromUtc"
                                                                    data-testid="@($"crmhr-party-extra-role-start-{index}")" />
                                                         </FormField>
                                                     </div>
                                                     <div>
                                                         <FormField Text="Valid to">
-                                                        <InputDate @bind-Value="role.ValidToUtc"
-                                                                   class="ui-input"
+                                                        <DateInput @bind-Value="role.ValidToUtc"
                                                                    data-testid="@($"crmhr-party-extra-role-end-{index}")" />
                                                         </FormField>
                                                     </div>
                                                     <div>
                                                         <FormField Text="Notes">
-                                                        <InputText @bind-Value="role.Notes"
-                                                                   class="ui-input"
+                                                        <TextInput @bind-Value="role.Notes"
                                                                    data-testid="@($"crmhr-party-extra-role-notes-{index}")" />
                                                         </FormField>
                                                     </div>
@@ -331,8 +317,8 @@
 
                                 <div>
                                     <FormField Text="Summary">
-                                    <TextArea @bind-Value="editor.Summary"
-                                                   Rows="4"
+                                    <TextAreaInput @bind-Value="editor.Summary"
+                                                   rows="4"
                                                    data-testid="crmhr-party-summary" />
                                     </FormField>
                                 </div>
@@ -353,22 +339,19 @@
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                             <div>
                                                 <FormField Text="Region">
-                                                <InputText @bind-Value="editor.Region"
-                                                           class="ui-input"
+                                                <TextInput @bind-Value="editor.Region"
                                                            data-testid="crmhr-party-region" />
                                                 </FormField>
                                             </div>
                                             <div>
                                                 <FormField Text="Country code">
-                                                <InputText @bind-Value="editor.CountryCode"
-                                                           class="ui-input"
+                                                <TextInput @bind-Value="editor.CountryCode"
                                                            data-testid="crmhr-party-country" />
                                                 </FormField>
                                             </div>
                                             <div>
                                                 <FormField Text="Time zone">
-                                                <InputText @bind-Value="editor.TimeZone"
-                                                           class="ui-input"
+                                                <TextInput @bind-Value="editor.TimeZone"
                                                            data-testid="crmhr-party-timezone" />
                                                 </FormField>
                                             </div>
@@ -394,7 +377,7 @@
 
                                 <div>
                                     <FormField Text="Operational notes">
-                                    <TextArea @bind-Value="editor.Notes"
+                                    <TextAreaInput @bind-Value="editor.Notes"
 
                                                    data-testid="crmhr-party-notes" />
                                     </FormField>
@@ -444,14 +427,13 @@
                                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                                                         <div>
                                                             <FormField Text="Category">
-                                                            <InputSelect @bind-Value="note.Category"
-                                                                         class="ui-input"
+                                                            <SelectInput @bind-Value="note.Category"
                                                                          data-testid="@($"crmhr-confidential-note-category-{index}")">
                                                                 @foreach (var category in ConfidentialNoteCategories)
                                                                 {
                                                                     <option value="@category">@category</option>
                                                                 }
-                                                            </InputSelect>
+                                                            </SelectInput>
                                                             </FormField>
                                                         </div>
                                                         <div class="md:col-span-2">
@@ -475,8 +457,8 @@
 
                                                     <div class="mt-4">
                                                         <FormField Text="Confidential note">
-                                                        <TextArea @bind-Value="note.NoteText"
-                                                                       Rows="4"
+                                                        <TextAreaInput @bind-Value="note.NoteText"
+                                                                       rows="4"
                                                                        data-testid="@($"crmhr-confidential-note-text-{index}")" />
                                                         </FormField>
                                                     </div>

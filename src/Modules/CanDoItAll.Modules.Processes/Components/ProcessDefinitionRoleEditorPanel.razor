@@ -121,9 +121,8 @@
                     <Stack GapScale="LayoutGap.Small" Class="process-role-dialog-section">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity and staffing" />
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-display-name-input">Display name</label>
-                        <input id="processes-role-display-name-input"
-                               class="ui-input"
-                               value="@roleDisplayName"
+                        <TextInput id="processes-role-display-name-input"
+                               Value="@roleDisplayName"
                                @oninput="args => roleDisplayName = ReadChangeValue(args)"
                                data-testid="processes-role-display-name" />
 
@@ -144,29 +143,27 @@
                         <Grid Gap="LayoutGap.Small" ColumnsMd="2">
                             <Stack GapScale="LayoutGap.Tiny">
                                 <label class="text-xs font-semibold text-slate-500" for="processes-role-executor-kind-input">Executor kind</label>
-                                <select id="processes-role-executor-kind-input"
-                                        class="ui-input"
-                                        value="@roleExecutorKind"
-                                        @onchange="UpdateRoleExecutorKind"
+                                <SelectInput id="processes-role-executor-kind-input"
+                                        Value="@roleExecutorKind"
+                                        ValueChanged="@((ProcessDefinitionRoleExecutorKind value) => UpdateRoleExecutorKind(new ChangeEventArgs { Value = value.ToString() }))"
                                         data-testid="processes-role-executor-kind">
                                     @foreach (var option in ExecutorKindOptions)
                                     {
                                         <option value="@option">@option.ToString()</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </Stack>
                             <Stack GapScale="LayoutGap.Tiny">
                                 <label class="text-xs font-semibold text-slate-500" for="processes-role-project-assignment-input">Project role</label>
-                                <select id="processes-role-project-assignment-input"
-                                        class="ui-input"
-                                        value="@roleProjectAssignment"
-                                        @onchange="args => roleProjectAssignment = ParseProjectAssignment(args)"
+                                <SelectInput id="processes-role-project-assignment-input"
+                                        Value="@roleProjectAssignment"
+                                        ValueChanged="@((ProcessDefinitionRoleProjectAssignmentKind value) => roleProjectAssignment = ParseProjectAssignment(new ChangeEventArgs { Value = value.ToString() }))"
                                         data-testid="processes-role-project-assignment">
                                     @foreach (var option in ProjectAssignmentOptions)
                                     {
                                         <option value="@option">@option.ToString()</option>
                                     }
-                                </select>
+                                </SelectInput>
                             </Stack>
                         </Grid>
 
@@ -178,7 +175,7 @@
                                            Value="Choose one workflow definition. Leave the version empty to use that workflow's latest active version, or enter an exact saved version." />
                                 <Grid Gap="LayoutGap.Small" ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
                                     <FormField Text="Workflow definition id">
-                                        <TextBox Value="@roleWorkflowDefinitionIdInput"
+                                        <TextInput Value="@roleWorkflowDefinitionIdInput"
                                                  ValueChanged="UpdateWorkflowDefinitionId"
                                                  aria-invalid="@(roleWorkflowDefinitionIdError is not null)"
                                                  data-testid="processes-role-workflow-id" />
@@ -192,7 +189,7 @@
                                         }
                                     </FormField>
                                     <FormField Text="Exact version id (optional)">
-                                        <TextBox Value="@roleWorkflowVersionIdInput"
+                                        <TextInput Value="@roleWorkflowVersionIdInput"
                                                  ValueChanged="UpdateWorkflowVersionId"
                                                  aria-invalid="@(roleWorkflowVersionIdError is not null)"
                                                  data-testid="processes-role-workflow-version-id" />
@@ -210,12 +207,10 @@
                         }
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-allocation-input">Default allocation percent</label>
-                        <input id="processes-role-allocation-input"
-                               type="number"
+                        <NumberInput id="processes-role-allocation-input"
                                min="0"
                                max="100"
-                               class="ui-input"
-                               value="@roleDefaultAllocationPercent"
+                               Value="@roleDefaultAllocationPercent"
                                @oninput="args => roleDefaultAllocationPercent = ParseInt(args)"
                                data-testid="processes-role-allocation" />
 
@@ -247,28 +242,25 @@
                     <Stack GapScale="LayoutGap.Small" Class="process-role-dialog-section" data-testid="processes-role-template-and-bindings">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template and bindings" />
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-template-action-input">Apply template</label>
-                        <select id="processes-role-template-action-input"
-                                class="ui-input"
-                                value="@selectedTemplateActionKey"
-                                @onchange="args => selectedTemplateActionKey = ReadChangeValue(args)"
+                        <SelectInput id="processes-role-template-action-input"
+                                Value="@selectedTemplateActionKey"
+                                ValueChanged="@((string? value) => selectedTemplateActionKey = ReadChangeValue(new ChangeEventArgs { Value = value }))"
                                 data-testid="processes-role-template-action">
                             @foreach (var template in RoleEditor.TemplateActions)
                             {
                                 <option value="@template.ActionKey.Value">@template.Label</option>
                             }
-                        </select>
+                        </SelectInput>
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-template-source-input">Template source</label>
-                        <input id="processes-role-template-source-input"
-                               class="ui-input"
-                               value="@roleTemplateSourceKey"
+                        <TextInput id="processes-role-template-source-input"
+                               Value="@roleTemplateSourceKey"
                                @oninput="args => roleTemplateSourceKey = ReadChangeValue(args)"
                                data-testid="processes-role-template-source" />
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-template-snapshot-input">Template snapshot</label>
-                        <input id="processes-role-template-snapshot-input"
-                               class="ui-input"
-                               value="@roleTemplateSnapshotName"
+                        <TextInput id="processes-role-template-snapshot-input"
+                               Value="@roleTemplateSnapshotName"
                                @oninput="args => roleTemplateSnapshotName = ReadChangeValue(args)"
                                data-testid="processes-role-template-snapshot" />
 

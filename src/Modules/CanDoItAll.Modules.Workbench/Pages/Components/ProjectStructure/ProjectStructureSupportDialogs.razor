@@ -58,12 +58,17 @@
                                 <TextBlock TextStyle="TextStyle.Caption" Value="@(row.StartUtc?.ToLocalTime().ToString("g") ?? "Undated")" />
                             </Stack>
 
-                            <DropDown TValue="string"
-                                      Data="@SummaryStatuses"
-                                      Placeholder="Select status"
-                                      Value="@row.Status"
-                                      Change="@(value => ChangeSummaryStatus.InvokeAsync((row.NodeId, value?.ToString() ?? string.Empty)))"
-                                      Class="project-structure-summary-row__select" />
+                            <SelectInput TValue="string"
+                                         Value="@row.Status"
+                                         ValueChanged="@(value => ChangeSummaryStatus.InvokeAsync((row.NodeId, value ?? string.Empty)))"
+                                         ValueExpression="@(() => row.Status)"
+                                         Class="project-structure-summary-row__select">
+                                <option value="">Select status</option>
+                                @foreach (var status in SummaryStatuses)
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </SelectInput>
                         </Split>
                     }
                 </Stack>

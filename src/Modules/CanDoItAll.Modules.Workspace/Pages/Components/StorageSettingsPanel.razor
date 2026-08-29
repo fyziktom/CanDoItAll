@@ -32,9 +32,9 @@
             </Actions>
             <Filters>
                 <FilterBar ResultText="@($"{FilteredStorages.Count} matching storage target(s)")">
-                    <input @bind="storageSearch"
-                           @bind:event="oninput"
-                           class="ui-input min-w-[14rem] flex-1"
+                    <TextInput @bind-Value="storageSearch"
+                           Immediate="true"
+                           Class="min-w-[14rem] flex-1"
                            placeholder="Search storage catalog"
                            data-testid="storage-settings-search" />
                     <Button Text="Reset"
@@ -113,23 +113,21 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Name">
-                                    <InputText @bind-Value="storageModel.Name"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="storageModel.Name"
                                                data-testid="storage-settings-name" />
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Provider kind">
-                                    <InputSelect Value="storageModel.ProviderKind"
+                                    <SelectInput Value="storageModel.ProviderKind"
                                                  ValueChanged="@((StorageProviderKind value) => HandleProviderKindChangedAsync(value))"
                                                  ValueExpression="() => storageModel.ProviderKind"
-                                                 class="ui-input"
                                                  data-testid="storage-settings-provider">
                                         @foreach (var providerKind in Enum.GetValues<StorageProviderKind>())
                                         {
                                             <option value="@providerKind">@StoragePresentation.DescribeProvider(providerKind)</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>
@@ -137,28 +135,26 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <FormField Text="Connection mode">
-                                    <InputSelect @bind-Value="storageModel.ConnectionMode"
-                                                 class="ui-input"
+                                    <SelectInput @bind-Value="storageModel.ConnectionMode"
                                                  disabled="@(storageModel.ProviderKind == StorageProviderKind.FileSystem)"
                                                  data-testid="storage-settings-connection-mode">
                                         @foreach (var connectionMode in Enum.GetValues<StorageConnectionMode>())
                                         {
                                             <option value="@connectionMode">@StoragePresentation.DescribeConnectionMode(connectionMode)</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Credential secret">
-                                    <InputSelect @bind-Value="storageModel.CredentialSecretId"
-                                                 class="ui-input"
+                                    <SelectInput @bind-Value="storageModel.CredentialSecretId"
                                                  data-testid="storage-settings-secret">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
                                         {
                                             <option value="@secret.Id">@secret.Name</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>
@@ -172,8 +168,7 @@
 
                             <div>
                                 <FormField Text="Display order">
-                                <InputNumber @bind-Value="storageModel.DisplayOrder"
-                                             class="ui-input"
+                                <NumberInput @bind-Value="storageModel.DisplayOrder"
                                              data-testid="storage-settings-display-order" />
                                 </FormField>
                             </div>
@@ -186,8 +181,7 @@
                                      Description="Use exact host or root values. Test connection should fail loudly when the catalog entry is incomplete or the driver is unavailable.">
                             <div>
                                 <FormField Text="@(storageModel.ProviderKind == StorageProviderKind.FileSystem ? "Root path" : "Endpoint or host")">
-                                <InputText @bind-Value="storageModel.EndpointOrRoot"
-                                           class="ui-input"
+                                <TextInput @bind-Value="storageModel.EndpointOrRoot"
                                            data-testid="storage-settings-endpoint" />
                                 </FormField>
                             </div>
@@ -197,15 +191,13 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Gateway base URL">
-                                        <InputText @bind-Value="storageModel.GatewayBaseUrl"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="storageModel.GatewayBaseUrl"
                                                    data-testid="storage-settings-ipfs-gateway" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Base path">
-                                        <InputText @bind-Value="storageModel.BasePath"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="storageModel.BasePath"
                                                    data-testid="storage-settings-base-path" />
                                         </FormField>
                                     </div>
@@ -219,15 +211,13 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <FormField Text="Port">
-                                        <InputNumber @bind-Value="storageModel.Port"
-                                                     class="ui-input"
+                                        <NumberInput @bind-Value="storageModel.Port"
                                                      data-testid="storage-settings-ftp-port" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Username">
-                                        <InputText @bind-Value="storageModel.Username"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="storageModel.Username"
                                                    data-testid="storage-settings-ftp-username" />
                                         </FormField>
                                     </div>
@@ -235,8 +225,7 @@
 
                                 <div>
                                     <FormField Text="Base path">
-                                    <InputText @bind-Value="storageModel.BasePath"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="storageModel.BasePath"
                                                data-testid="storage-settings-base-path" />
                                     </FormField>
                                 </div>

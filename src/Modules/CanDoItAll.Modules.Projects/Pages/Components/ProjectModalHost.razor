@@ -90,10 +90,10 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnsLg="2">
                                             <FormField Text="Name">
-                                                <TextBox @bind-Value="Editor.Name" data-testid="project-name-input" />
+                                                <TextInput @bind-Value="Editor.Name" data-testid="project-name-input" />
                                             </FormField>
                                             <FormField Text="Current phase">
-                                                <TextBox @bind-Value="Editor.CurrentPhase"
+                                                <TextInput @bind-Value="Editor.CurrentPhase"
                                                          data-testid="project-phase-input" />
                                             </FormField>
                                         </Grid>
@@ -101,22 +101,24 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnsLg="2">
                                             <FormField Text="Status">
-                                                <DropDown TValue="ProjectStatus"
-                                                          @bind-Value="Editor.Status"
-                                                          Data="@(Enum.GetValues<ProjectStatus>())" />
+                                                <SelectInput @bind-Value="Editor.Status">
+                                                    @foreach (var status in Enum.GetValues<ProjectStatus>())
+                                                    {
+                                                        <option value="@status">@status</option>
+                                                    }
+                                                </SelectInput>
                                             </FormField>
                                             <FormField Text="Target date">
-                                                <InputDate @bind-Value="Editor.TargetDateUtc"
-                                                           class="form-input ui-input ui-input--outlined" />
+                                                <DateInput @bind-Value="Editor.TargetDateUtc" />
                                             </FormField>
                                         </Grid>
 
                                         <FormField Text="Description">
-                                            <TextArea @bind-Value="Editor.Description" />
+                                            <TextAreaInput @bind-Value="Editor.Description" />
                                         </FormField>
 
                                         <FormField Text="Objective">
-                                            <TextArea @bind-Value="Editor.Objective" />
+                                            <TextAreaInput @bind-Value="Editor.Objective" />
                                         </FormField>
                                     </ChildContent>
                                 </FormSection>
@@ -148,15 +150,16 @@
                                                     <PanelCard>
                                                         <Grid Gap="LayoutGap.Medium"
                                                               ColumnsXl="5">
-                                                            <TextBox @bind-Value="phase.Name" Class="xl:col-span-2" />
-                                                            <DropDown TValue="ProjectPhaseStatus"
-                                                                      @bind-Value="phase.Status"
-                                                                      Data="@(Enum.GetValues<ProjectPhaseStatus>())" />
-                                                            <InputDate @bind-Value="phase.StartDateUtc"
-                                                                       class="form-input ui-input ui-input--outlined" />
-                                                            <InputDate @bind-Value="phase.EndDateUtc"
-                                                                       class="form-input ui-input ui-input--outlined" />
-                                                            <TextArea @bind-Value="phase.Goal" Rows="3" Class="xl:col-span-4" />
+                                                            <TextInput @bind-Value="phase.Name" Class="xl:col-span-2" />
+                                                            <SelectInput @bind-Value="phase.Status">
+                                                                @foreach (var status in Enum.GetValues<ProjectPhaseStatus>())
+                                                                {
+                                                                    <option value="@status">@status</option>
+                                                                }
+                                                            </SelectInput>
+                                                            <DateInput @bind-Value="phase.StartDateUtc" />
+                                                            <DateInput @bind-Value="phase.EndDateUtc" />
+                                                            <TextAreaInput @bind-Value="phase.Goal" rows="3" Class="xl:col-span-4" />
                                                             <Button Tone="ButtonTone.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
@@ -180,8 +183,8 @@
                                                 <PanelCard>
                                                     <div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
                                                     <Grid Gap="LayoutGap.Medium">
-                                                        <TextBox @bind-Value="option.OptionName" />
-                                                        <TextBox @bind-Value="option.Notes" />
+                                                        <TextInput @bind-Value="option.OptionName" />
+                                                        <TextInput @bind-Value="option.Notes" />
                                                     </Grid>
                                                 </PanelCard>
                                             }
@@ -216,11 +219,14 @@
                                                     <PanelCard>
                                                         <Grid Gap="LayoutGap.Medium"
                                                               ColumnsXl="4">
-                                                            <DropDown TValue="ProjectObjectType"
-                                                                      @bind-Value="starter.ObjectType"
-                                                                      Data="StarterObjectKinds" />
-                                                            <TextBox @bind-Value="starter.Title" />
-                                                            <TextBox @bind-Value="starter.Subtitle" />
+                                                            <SelectInput @bind-Value="starter.ObjectType">
+                                                                @foreach (var objectKind in StarterObjectKinds)
+                                                                {
+                                                                    <option value="@objectKind">@objectKind</option>
+                                                                }
+                                                            </SelectInput>
+                                                            <TextInput @bind-Value="starter.Title" />
+                                                            <TextInput @bind-Value="starter.Subtitle" />
                                                             <Button Tone="ButtonTone.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"

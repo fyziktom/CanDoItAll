@@ -76,10 +76,10 @@
             <div class="projects-board__filters">
                 <PrefixedField Prefix="FIND"
                                Class="min-w-0">
-                    <input value="@ProjectSearch"
+                    <TextInput Value="@ProjectSearch"
                            @oninput="HandleProjectSearchInput"
                            maxlength="@ProjectFileFilter.MaximumTextLength"
-                           class="ui-input ui-input--toolbar h-10"
+                           Class="h-10"
                            placeholder="Search by name or current phase"
                            data-testid="projects-search-input" />
                 </PrefixedField>
@@ -89,15 +89,15 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect TValue="ProjectStatus?"
+                    <SelectInput TValue="ProjectStatus?"
                                  @bind-Value="StatusFilterProxy"
-                                 class="ui-input ui-input--toolbar h-10 appearance-none">
+                                 Class="h-10 appearance-none">
                         <option value="">All statuses</option>
                         @foreach (var status in Enum.GetValues<ProjectStatus>())
                         {
                             <option value="@status.ToString()">@status</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </PrefixedField>
                 <PrefixedField Prefix="REL"
                                Suffix="V"
@@ -105,16 +105,16 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect TValue="ProjectPartyPortfolioCategory?"
+                    <SelectInput TValue="ProjectPartyPortfolioCategory?"
                                  @bind-Value="RelatedPartyCategoryFilterProxy"
-                                 class="ui-input ui-input--toolbar h-10 appearance-none"
+                                 Class="h-10 appearance-none"
                                  data-testid="project-related-party-category-filter">
                         <option value="">Any relationship</option>
                         @foreach (var category in Enum.GetValues<ProjectPartyPortfolioCategory>())
                         {
                             <option value="@category.ToString()">@ResolveCategoryLabel(category)</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </PrefixedField>
                 <PrefixedField Prefix="PARTY"
                                Suffix="V"
@@ -122,15 +122,15 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect @bind-Value="RelatedPartyValueFilterProxy"
-                                 class="ui-input ui-input--toolbar h-10 appearance-none"
+                    <SelectInput @bind-Value="RelatedPartyValueFilterProxy"
+                                 Class="h-10 appearance-none"
                                  data-testid="project-related-party-value-filter">
                         <option value="">Any party</option>
                         @foreach (var value in ProjectProjection.AvailableRelatedPartyValues)
                         {
                             <option value="@value">@value</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </PrefixedField>
                 <PrefixedField Prefix="PROJECT"
                                Suffix="V"
@@ -138,16 +138,16 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect TValue="Guid?"
+                    <SelectInput TValue="Guid?"
                                  @bind-Value="HierarchyFilterProjectIdProxy"
-                                 class="ui-input ui-input--toolbar h-10 appearance-none"
+                                 Class="h-10 appearance-none"
                                  data-testid="hierarchy-filter-project">
                         <option value="">Any project</option>
                         @foreach (var project in MainProjectOptions)
                         {
                             <option value="@project.Id">@project.Name</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </PrefixedField>
                 <PrefixedField Prefix="LINK"
                                Suffix="V"
@@ -155,15 +155,15 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect TValue="ProjectHierarchyFilterMode"
+                    <SelectInput TValue="ProjectHierarchyFilterMode"
                                  @bind-Value="HierarchyFilterModeProxy"
-                                 class="ui-input ui-input--toolbar h-10 appearance-none"
+                                 Class="h-10 appearance-none"
                                  data-testid="hierarchy-filter-mode">
                         <option value="@ProjectHierarchyFilterMode.Descendants">Project scope</option>
                         <option value="@ProjectHierarchyFilterMode.Children">Subprojects</option>
                         <option value="@ProjectHierarchyFilterMode.Parents">Parents</option>
                         <option value="@ProjectHierarchyFilterMode.Related">Related</option>
-                    </InputSelect>
+                    </SelectInput>
                 </PrefixedField>
                 <label class="inline-flex h-10 min-w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
                     <CheckBox TValue="bool"
@@ -214,9 +214,9 @@
                     <PrefixedField Prefix="ZIP"
                                    PrefixPaddingRem="3.2"
                                    Class="min-w-0">
-                        <input value="@ProjectPackagePath"
+                        <TextInput Value="@ProjectPackagePath"
                                @oninput="HandleProjectPackagePathInput"
-                               class="ui-input ui-input--toolbar h-10"
+                               Class="h-10"
                                placeholder="Package path"
                                data-testid="projects-package-path-input" />
                     </PrefixedField>
@@ -226,16 +226,16 @@
                                    SuffixPaddingRem="2.25"
                                    StackOnMobile="true"
                                    Class="min-w-0">
-                        <InputSelect TValue="Guid?"
+                        <SelectInput TValue="Guid?"
                                      @bind-Value="ProjectPackageTargetProfileIdProxy"
-                                     class="ui-input ui-input--toolbar h-10 appearance-none"
+                                     Class="h-10 appearance-none"
                                      data-testid="projects-package-target-profile-select">
                             <option value="">Select an inactive target profile</option>
                             @foreach (var profile in ProjectPackageTargetProfiles)
                             {
                                 <option value="@profile.Id">@profile.DisplayName · @profile.Descriptor</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </PrefixedField>
                     <Cluster Gap="LayoutGap.Small"
                              JustifyContent="JustifyContent.End"

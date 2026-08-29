@@ -5,11 +5,9 @@
     <div>
         <FormField Text="External workspace root">
         <div class="external-workspace-root-selection-field__entry mt-2">
-            <input id="@InputId"
-                   type="text"
-                   class="ui-input"
+            <TextInput id="@InputId"
                    aria-label="External workspace root"
-                   value="@candidate"
+                   Value="@candidate"
                    disabled="@Disabled"
                    placeholder="C:\repositories\OtherRepo or external-target/v1/..."
                    aria-invalid="@(HasValidationMessage ? "true" : "false")"

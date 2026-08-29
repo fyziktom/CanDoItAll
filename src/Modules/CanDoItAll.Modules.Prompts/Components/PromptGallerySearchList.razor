@@ -11,17 +11,16 @@
               ColumnTemplate="@FilterColumnTemplate"
               Class="min-w-0 flex-1"
               data-testid="prompt-gallery-filter-rail">
-            <TextBox Value="@searchText"
+            <TextInput Value="@searchText"
                      ValueChanged="HandleSearchChangedAsync"
                      Placeholder="Search names, prompt text, or tags"
                      Immediate="true"
                      aria-label="Search prompt gallery"
                      data-testid="prompt-gallery-search" />
-            <InputSelect TValue="PromptGalleryItemKind?"
+            <SelectInput TValue="PromptGalleryItemKind?"
                          Value="@kind"
                          ValueChanged="HandleKindChangedAsync"
                          ValueExpression="@(() => kind)"
-                         class="ui-input"
                          aria-label="Prompt kind"
                          data-testid="prompt-gallery-kind-filter">
                 <option value="">All kinds</option>
@@ -29,12 +28,11 @@
                 {
                     <option value="@option">@FormatKind(option)</option>
                 }
-            </InputSelect>
-            <InputSelect TValue="PromptArtifactStatus?"
+            </SelectInput>
+            <SelectInput TValue="PromptArtifactStatus?"
                          Value="@status"
                          ValueChanged="HandleStatusChangedAsync"
                          ValueExpression="@(() => status)"
-                         class="ui-input"
                          aria-label="Prompt status"
                          data-testid="prompt-gallery-status-filter">
                 <option value="">All statuses</option>
@@ -42,7 +40,7 @@
                 {
                     <option value="@option">@option</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <TagEditor Value="@tagFilters"
                        ValueChanged="HandleTagsChangedAsync"
                        Suggestions="@availableTags"
@@ -52,12 +50,12 @@
                        InputTestId="prompt-gallery-tag-filter-input" />
             @if (!Compact)
             {
-                <TextBox Value="@providerFilter"
+                <TextInput Value="@providerFilter"
                          ValueChanged="HandleProviderFilterChangedAsync"
                          Placeholder="Any provider"
                          Immediate="true"
                          aria-label="Filter by supported provider" />
-                <TextBox Value="@modelFilter"
+                <TextInput Value="@modelFilter"
                          ValueChanged="HandleModelFilterChangedAsync"
                          Placeholder="Any model"
                          Immediate="true"

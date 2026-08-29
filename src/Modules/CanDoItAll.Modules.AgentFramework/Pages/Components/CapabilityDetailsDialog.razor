@@ -31,10 +31,9 @@ else
                             <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                 <div>
                                     <FormField Text="Kind">
-                                    <InputSelect TValue="CapabilityKind"
+                                    <SelectInput TValue="CapabilityKind"
                                                  Value="@editorModel.Kind"
                                                  ValueChanged="HandleKindChangedAsync"
-                                                 class="ui-input"
                                                  disabled="@IsKindLocked"
                                                  data-testid="agents-capability-details-kind">
                                         @foreach (var kind in Enum.GetValues<CapabilityKind>()
@@ -42,21 +41,19 @@ else
                                         {
                                             <option value="@kind">@ResolveCapabilityKindLabel(kind)</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Key">
-                                    <InputText @bind-Value="editorModel.Key"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="editorModel.Key"
                                                disabled="@IsIdentityLocked"
                                                data-testid="agents-capability-details-key" />
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Name">
-                                    <InputText @bind-Value="editorModel.Name"
-                                               class="ui-input"
+                                    <TextInput @bind-Value="editorModel.Name"
                                                disabled="@IsIdentityLocked"
                                                data-testid="agents-capability-details-name" />
                                     </FormField>
@@ -65,7 +62,7 @@ else
 
                             <div>
                                 <FormField Text="Description">
-                                <TextArea @bind-Value="editorModel.Description"
+                                <TextAreaInput @bind-Value="editorModel.Description"
                                                Class="capability-details-dialog__textarea"
                                                disabled="@IsIdentityLocked"
                                                data-testid="agents-capability-details-description" />
@@ -74,8 +71,7 @@ else
 
                             <div>
                                 <FormField Text="Endpoint or path">
-                                <InputText @bind-Value="editorModel.EndpointOrPath"
-                                           class="ui-input"
+                                <TextInput @bind-Value="editorModel.EndpointOrPath"
                                            disabled="@IsEndpointLocked"
                                            data-testid="agents-capability-details-endpoint" />
                                 </FormField>
@@ -99,20 +95,18 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
                                         <FormField Text="Transport">
-                                        <InputSelect @bind-Value="mcpState.Transport"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="mcpState.Transport"
                                                      data-testid="agents-capability-details-mcp-transport">
                                             <option value="stdio">Stdio</option>
                                             <option value="http">HTTP</option>
                                             <option value="sse">SSE</option>
                                             <option value="logical">Logical seam</option>
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Server name">
-                                        <InputText @bind-Value="mcpState.ServerName"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="mcpState.ServerName"
                                                    data-testid="agents-capability-details-mcp-server" />
                                         </FormField>
                                     </div>
@@ -123,15 +117,13 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                     <div>
                                         <FormField Text="Endpoint">
-                                        <InputText @bind-Value="mcpState.Endpoint"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="mcpState.Endpoint"
                                                    data-testid="agents-capability-details-mcp-endpoint" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Command">
-                                        <InputText @bind-Value="mcpState.Command"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="mcpState.Command"
                                                    data-testid="agents-capability-details-mcp-command" />
                                         </FormField>
                                     </div>
@@ -140,14 +132,14 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                     <div>
                                         <FormField Text="Arguments">
-                                        <TextArea @bind-Value="mcpState.ArgumentsText"
+                                        <TextAreaInput @bind-Value="mcpState.ArgumentsText"
                                                        Class="capability-details-dialog__textarea"
                                                        data-testid="agents-capability-details-mcp-arguments" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Allowed tools">
-                                        <TextArea @bind-Value="mcpState.AllowedToolsText"
+                                        <TextAreaInput @bind-Value="mcpState.AllowedToolsText"
                                                        Class="capability-details-dialog__textarea"
                                                        data-testid="agents-capability-details-mcp-tools" />
                                         </FormField>
@@ -157,24 +149,22 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
                                         <FormField Text="Working directory">
-                                        <InputText @bind-Value="mcpState.WorkingDirectory"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="mcpState.WorkingDirectory"
                                                    data-testid="agents-capability-details-mcp-working-directory" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Approval mode">
-                                        <InputSelect @bind-Value="mcpState.ApprovalMode"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="mcpState.ApprovalMode"
                                                      data-testid="agents-capability-details-mcp-approval">
                                             <option value="NeverRequire">Never Require</option>
                                             <option value="AlwaysRequire">Always Require</option>
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Allowed working roots">
-                                        <TextArea @bind-Value="mcpState.AllowedWorkingDirectoriesText"
+                                        <TextAreaInput @bind-Value="mcpState.AllowedWorkingDirectoriesText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-mcp-roots" />
                                         </FormField>
@@ -184,14 +174,14 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                     <div>
                                         <FormField Text="Environment variable bindings">
-                                        <TextArea @bind-Value="mcpState.EnvironmentVariableBindingsText"
+                                        <TextAreaInput @bind-Value="mcpState.EnvironmentVariableBindingsText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-mcp-env-bindings" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Header bindings">
-                                        <TextArea @bind-Value="mcpState.HeaderBindingsText"
+                                        <TextAreaInput @bind-Value="mcpState.HeaderBindingsText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-mcp-header-bindings" />
                                         </FormField>
@@ -206,21 +196,19 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
                                         <FormField Text="Source">
-                                        <InputSelect @bind-Value="skillState.SkillSource"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="skillState.SkillSource"
                                                      data-testid="agents-capability-details-skill-source">
                                             <option value="file">File skill</option>
                                             <option value="inline">Inline skill</option>
                                             <option value="registered">Registered service</option>
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <CheckboxOption @bind-Value="skillState.ScriptApproval"
                                                        data-testid="agents-capability-details-skill-approval"  Class="capability-details-dialog__inline-option" Text="Require script approval" />
                                     <div>
                                         <FormField Text="Trust level">
-                                        <InputText @bind-Value="skillState.ScriptTrustLevel"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="skillState.ScriptTrustLevel"
                                                    data-testid="agents-capability-details-skill-trust" />
                                         </FormField>
                                     </div>
@@ -231,22 +219,20 @@ else
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                         <div>
                                             <FormField Text="Inline name">
-                                            <InputText @bind-Value="skillState.InlineName"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="skillState.InlineName"
                                                        data-testid="agents-capability-details-inline-name" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Inline description">
-                                            <InputText @bind-Value="skillState.InlineDescription"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="skillState.InlineDescription"
                                                        data-testid="agents-capability-details-inline-description" />
                                             </FormField>
                                         </div>
                                     </Grid>
                                     <div>
                                         <FormField Text="Instructions">
-                                        <TextArea @bind-Value="skillState.InlineInstructions"
+                                        <TextAreaInput @bind-Value="skillState.InlineInstructions"
                                                        Class="capability-details-dialog__large-textarea"
                                                        data-testid="agents-capability-details-inline-instructions" />
                                         </FormField>
@@ -256,8 +242,7 @@ else
                                 {
                                     <div>
                                         <FormField Text="Registered service type">
-                                        <InputText @bind-Value="skillState.RegisteredSkillServiceType"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="skillState.RegisteredSkillServiceType"
                                                    data-testid="agents-capability-details-skill-registered-type" />
                                         </FormField>
                                     </div>
@@ -267,14 +252,13 @@ else
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                                         <div>
                                             <FormField Text="Skill root or SKILL.md path">
-                                            <InputText @bind-Value="skillState.SkillRoot"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="skillState.SkillRoot"
                                                        data-testid="agents-capability-details-skill-root" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Allowed external roots">
-                                            <TextArea @bind-Value="skillState.AllowedExternalRootsText"
+                                            <TextAreaInput @bind-Value="skillState.AllowedExternalRootsText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            data-testid="agents-capability-details-skill-roots" />
                                             </FormField>
@@ -290,27 +274,24 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
                                         <FormField Text="Tool setup kind">
-                                        <InputSelect @bind-Value="toolState.ToolKind"
-                                                     class="ui-input"
+                                        <SelectInput @bind-Value="toolState.ToolKind"
                                                      disabled="@editorModel.IsBuiltIn"
                                                      data-testid="agents-capability-details-tool-kind">
                                             <option value="externalProcess">External process</option>
                                             <option value="externalHttp">External HTTP</option>
-                                        </InputSelect>
+                                        </SelectInput>
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Runtime tool name">
-                                        <InputText @bind-Value="toolState.RuntimeToolName"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="toolState.RuntimeToolName"
                                                    disabled="@editorModel.IsBuiltIn"
                                                    data-testid="agents-capability-details-tool-runtime-name" />
                                         </FormField>
                                     </div>
                                     <div>
                                         <FormField Text="Implementation key">
-                                        <InputText @bind-Value="toolState.ImplementationKey"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="toolState.ImplementationKey"
                                                    disabled="@editorModel.IsBuiltIn"
                                                    data-testid="agents-capability-details-tool-implementation-key" />
                                         </FormField>
@@ -320,7 +301,7 @@ else
                                 <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                     <div>
                                         <FormField Text="Operation classifications">
-                                        <TextArea @bind-Value="toolState.OperationClassificationsText"
+                                        <TextAreaInput @bind-Value="toolState.OperationClassificationsText"
                                                        Class="capability-details-dialog__small-textarea"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-classifications" />
@@ -328,8 +309,7 @@ else
                                     </div>
                                     <div>
                                         <FormField Text="Side-effect kind">
-                                        <InputText @bind-Value="toolState.SideEffectKind"
-                                                   class="ui-input"
+                                        <TextInput @bind-Value="toolState.SideEffectKind"
                                                    disabled="@editorModel.IsBuiltIn"
                                                    data-testid="agents-capability-details-tool-side-effect" />
                                         </FormField>
@@ -349,24 +329,21 @@ else
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
                                             <FormField Text="HTTP method">
-                                            <InputText @bind-Value="toolState.HttpMethod"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="toolState.HttpMethod"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-http-method" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Endpoint">
-                                            <InputText @bind-Value="toolState.Endpoint"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="toolState.Endpoint"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-http-endpoint" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Timeout seconds">
-                                            <InputNumber @bind-Value="toolState.HttpTimeoutSeconds"
-                                                         class="ui-input"
+                                            <NumberInput @bind-Value="toolState.HttpTimeoutSeconds"
                                                          disabled="@editorModel.IsBuiltIn"
                                                          data-testid="agents-capability-details-tool-http-timeout" />
                                             </FormField>
@@ -376,7 +353,7 @@ else
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
                                             <FormField Text="Header bindings">
-                                            <TextArea @bind-Value="toolState.HeaderBindingsText"
+                                            <TextAreaInput @bind-Value="toolState.HeaderBindingsText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-http-header-bindings" />
@@ -384,7 +361,7 @@ else
                                         </div>
                                         <div>
                                             <FormField Text="Required output properties">
-                                            <TextArea @bind-Value="toolState.HttpRequiredOutputPropertiesText"
+                                            <TextAreaInput @bind-Value="toolState.HttpRequiredOutputPropertiesText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-http-output" />
@@ -392,8 +369,7 @@ else
                                         </div>
                                         <div>
                                             <FormField Text="Max response bytes">
-                                            <InputNumber @bind-Value="toolState.MaxResponseBytes"
-                                                         class="ui-input"
+                                            <NumberInput @bind-Value="toolState.MaxResponseBytes"
                                                          disabled="@editorModel.IsBuiltIn"
                                                          data-testid="agents-capability-details-tool-http-max-response" />
                                             </FormField>
@@ -405,24 +381,21 @@ else
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
                                             <FormField Text="Command">
-                                            <InputText @bind-Value="toolState.Command"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="toolState.Command"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-process-command" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Working directory">
-                                            <InputText @bind-Value="toolState.WorkingDirectory"
-                                                       class="ui-input"
+                                            <TextInput @bind-Value="toolState.WorkingDirectory"
                                                        disabled="@editorModel.IsBuiltIn"
                                                        data-testid="agents-capability-details-tool-process-working-directory" />
                                             </FormField>
                                         </div>
                                         <div>
                                             <FormField Text="Timeout seconds">
-                                            <InputNumber @bind-Value="toolState.ProcessTimeoutSeconds"
-                                                         class="ui-input"
+                                            <NumberInput @bind-Value="toolState.ProcessTimeoutSeconds"
                                                          disabled="@editorModel.IsBuiltIn"
                                                          data-testid="agents-capability-details-tool-process-timeout" />
                                             </FormField>
@@ -432,7 +405,7 @@ else
                                     <Grid Gap="LayoutGap.Large" ColumnsLg="3">
                                         <div>
                                             <FormField Text="Arguments">
-                                            <TextArea @bind-Value="toolState.ArgumentsText"
+                                            <TextAreaInput @bind-Value="toolState.ArgumentsText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-process-arguments" />
@@ -440,7 +413,7 @@ else
                                         </div>
                                         <div>
                                             <FormField Text="Allowed executable names">
-                                            <TextArea @bind-Value="toolState.AllowedExecutableNamesText"
+                                            <TextAreaInput @bind-Value="toolState.AllowedExecutableNamesText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-process-allowed-executables" />
@@ -448,7 +421,7 @@ else
                                         </div>
                                         <div>
                                             <FormField Text="Required output properties">
-                                            <TextArea @bind-Value="toolState.ProcessRequiredOutputPropertiesText"
+                                            <TextAreaInput @bind-Value="toolState.ProcessRequiredOutputPropertiesText"
                                                            Class="capability-details-dialog__small-textarea"
                                                            disabled="@editorModel.IsBuiltIn"
                                                            data-testid="agents-capability-details-tool-process-output" />
@@ -458,8 +431,7 @@ else
 
                                     <div>
                                         <FormField Text="Max output bytes">
-                                        <InputNumber @bind-Value="toolState.MaxOutputBytes"
-                                                     class="ui-input"
+                                        <NumberInput @bind-Value="toolState.MaxOutputBytes"
                                                      disabled="@editorModel.IsBuiltIn"
                                                      data-testid="agents-capability-details-tool-process-max-output" />
                                         </FormField>
@@ -471,7 +443,7 @@ else
                         {
                             <FormSection Title="Configuration JSON"
                                          Description="This capability kind does not have a specialized editor yet. Built-in tools keep their runtime configuration read-only here.">
-                                <TextArea @bind-Value="rawConfigurationJson"
+                                <TextAreaInput @bind-Value="rawConfigurationJson"
                                                Class="capability-details-dialog__large-textarea"
                                                disabled="@editorModel.IsBuiltIn"
                                                data-testid="agents-capability-details-raw-config" />
@@ -486,7 +458,7 @@ else
                                 {
                                     <div>
                                         <FormField Text="Tool test input JSON">
-                                        <TextArea @bind-Value="toolState.TestInputJson"
+                                        <TextAreaInput @bind-Value="toolState.TestInputJson"
                                                        Class="capability-details-dialog__small-textarea"
                                                        data-testid="agents-capability-details-tool-test-input" />
                                         </FormField>
@@ -555,7 +527,7 @@ else
                                 </FactTable>
                                 <div>
                                     <FormField Text="Configuration JSON">
-                                    <TextArea Value="@rawConfigurationJson"
+                                    <TextAreaInput Value="@rawConfigurationJson"
                                                    ValueChanged="HandleRawConfigurationChangedAsync"
                                                    Class="capability-details-dialog__large-textarea"
                                                    disabled="@IsRawConfigurationLocked"

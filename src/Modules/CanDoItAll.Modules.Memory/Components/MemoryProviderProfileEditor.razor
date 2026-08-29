@@ -13,50 +13,58 @@
 
     <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
         <FormField Text="Instance id">
-            <TextBox Value="@Editor.InstanceId"
+            <TextInput Value="@Editor.InstanceId"
                      ValueChanged="@(value => Editor.InstanceId = value)"
                      data-testid="memory-ui-editor-instance-id" />
         </FormField>
         <FormField Text="Display name">
-            <TextBox Value="@Editor.DisplayName"
+            <TextInput Value="@Editor.DisplayName"
                      ValueChanged="@(value => Editor.DisplayName = value)"
                      data-testid="memory-ui-editor-display-name" />
         </FormField>
         <FormField Text="Driver">
-            <DropDown TValue="MemoryProviderDriverKind"
-                      Data="@DriverKinds"
-                      Value="@Editor.DriverKind"
-                      ValueChanged="@(value => Editor.DriverKind = value)"
-                      data-testid="memory-ui-editor-driver" />
+            <SelectInput @bind-Value="Editor.DriverKind"
+                         data-testid="memory-ui-editor-driver">
+                @foreach (var driverKind in DriverKinds)
+                {
+                    <option value="@driverKind">@driverKind</option>
+                }
+            </SelectInput>
         </FormField>
         <FormField Text="Health">
-            <DropDown TValue="MemoryProviderHealthState"
-                      Data="@HealthStates"
-                      Value="@Editor.HealthState"
-                      ValueChanged="@(value => Editor.HealthState = value)"
-                      data-testid="memory-ui-editor-health" />
+            <SelectInput @bind-Value="Editor.HealthState"
+                         data-testid="memory-ui-editor-health">
+                @foreach (var healthState in HealthStates)
+                {
+                    <option value="@healthState">@healthState</option>
+                }
+            </SelectInput>
         </FormField>
         <FormField Text="Workspace">
-            <DropDown TValue="MemoryProviderWorkspaceScope"
-                      Data="@WorkspaceScopes"
-                      Value="@Editor.WorkspaceScope"
-                      ValueChanged="@(value => Editor.WorkspaceScope = value)"
-                      data-testid="memory-ui-editor-workspace" />
+            <SelectInput @bind-Value="Editor.WorkspaceScope"
+                         data-testid="memory-ui-editor-workspace">
+                @foreach (var workspaceScope in WorkspaceScopes)
+                {
+                    <option value="@workspaceScope">@workspaceScope</option>
+                }
+            </SelectInput>
         </FormField>
         <FormField Text="Fallback">
-            <DropDown TValue="MemoryProviderFallbackBehavior"
-                      Data="@FallbackBehaviors"
-                      Value="@Editor.FallbackBehavior"
-                      ValueChanged="@(value => Editor.FallbackBehavior = value)"
-                      data-testid="memory-ui-editor-fallback" />
+            <SelectInput @bind-Value="Editor.FallbackBehavior"
+                         data-testid="memory-ui-editor-fallback">
+                @foreach (var fallbackBehavior in FallbackBehaviors)
+                {
+                    <option value="@fallbackBehavior">@fallbackBehavior</option>
+                }
+            </SelectInput>
         </FormField>
         <FormField Text="Provider kind">
-            <TextBox Value="@Editor.ProviderKind"
+            <TextInput Value="@Editor.ProviderKind"
                      ValueChanged="@(value => Editor.ProviderKind = value)"
                      data-testid="memory-ui-editor-provider-kind" />
         </FormField>
         <FormField Text="Provider UI URL">
-            <TextBox Value="@Editor.ProviderUiUrl"
+            <TextInput Value="@Editor.ProviderUiUrl"
                      ValueChanged="@(value => Editor.ProviderUiUrl = value)"
                      Disabled="@(!Editor.SupportsIframeUi)"
                      data-testid="memory-ui-editor-provider-ui-url" />

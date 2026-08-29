@@ -21,24 +21,22 @@
                   AlignItems="AlignItems.End">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Caption" Value="Activity type" />
-                    <InputSelect TValue="ProjectManagerActivityKind"
+                    <SelectInput TValue="ProjectManagerActivityKind"
                                  @bind-Value="activityKind"
                                  @bind-Value:after="ResetAndLoadAsync"
-                                 class="ui-input"
                                  disabled="@isLoading"
                                  data-testid="manager-activity-kind">
                         <option value="@ProjectManagerActivityKind.Conversation">Agents</option>
                         <option value="@ProjectManagerActivityKind.SimpleChat">Simple chats</option>
                         <option value="@ProjectManagerActivityKind.Workflow">Workflows</option>
                         <option value="@ProjectManagerActivityKind.Process">Processes</option>
-                    </InputSelect>
+                    </SelectInput>
                 </Stack>
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Caption" Value="Outcome" />
-                    <InputSelect TValue="ProjectManagerActivityStatusFilter"
+                    <SelectInput TValue="ProjectManagerActivityStatusFilter"
                                  @bind-Value="statusFilter"
                                  @bind-Value:after="ResetAndLoadAsync"
-                                 class="ui-input"
                                  disabled="@isLoading"
                                  data-testid="manager-activity-status">
                         <option value="@ProjectManagerActivityStatusFilter.All">All outcomes</option>
@@ -46,7 +44,7 @@
                         <option value="@ProjectManagerActivityStatusFilter.Succeeded">Succeeded</option>
                         <option value="@ProjectManagerActivityStatusFilter.Failed">Failed</option>
                         <option value="@ProjectManagerActivityStatusFilter.Cancelled">Cancelled</option>
-                    </InputSelect>
+                    </SelectInput>
                 </Stack>
                 <MetricCard Label="Matching runs"
                             Value="@FormatCount(page?.TotalCount ?? 0)" />

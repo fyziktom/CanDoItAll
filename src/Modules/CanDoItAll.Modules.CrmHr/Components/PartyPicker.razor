@@ -68,18 +68,16 @@
                 <Grid Gap="LayoutGap.Medium"
                       ColumnsLg="2">
                     <FormField Text="Kind">
-                        <InputSelect @bind-Value="QuickCreate.PartyKind"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="QuickCreate.PartyKind"
                                      data-testid="@($"{TestIdPrefix}-quick-kind")">
                             @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
                             {
                                 <option value="@kind">@ResolveQuickCreateLabel(kind)</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Name">
-                        <InputText @bind-Value="QuickCreate.DisplayName"
-                                   class="ui-input"
+                        <TextInput @bind-Value="QuickCreate.DisplayName"
                                    data-testid="@($"{TestIdPrefix}-quick-name")" />
                     </FormField>
                 </Grid>
@@ -87,20 +85,18 @@
                 <Grid Gap="LayoutGap.Medium"
                       ColumnsLg="2">
                     <FormField Text="Email">
-                        <InputText @bind-Value="QuickCreate.Email"
-                                   class="ui-input"
+                        <TextInput @bind-Value="QuickCreate.Email"
                                    data-testid="@($"{TestIdPrefix}-quick-email")" />
                     </FormField>
                     <FormField Text="Phone">
-                        <InputText @bind-Value="QuickCreate.Phone"
-                                   class="ui-input"
+                        <TextInput @bind-Value="QuickCreate.Phone"
                                    data-testid="@($"{TestIdPrefix}-quick-phone")" />
                     </FormField>
                 </Grid>
 
                 <FormField Text="Summary">
-                    <TextArea @bind-Value="QuickCreate.Summary"
-                                   Rows="4"
+                    <TextAreaInput @bind-Value="QuickCreate.Summary"
+                                   rows="4"
                                    data-testid="@($"{TestIdPrefix}-quick-summary")" />
                 </FormField>
 

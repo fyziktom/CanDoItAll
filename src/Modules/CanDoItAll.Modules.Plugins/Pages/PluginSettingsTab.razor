@@ -24,10 +24,11 @@ else
                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                     <div>
                         <FormField Text="Connection name">
-                        <input class="ui-input"
-                               value="@editor.DisplayName"
+                        <TextInput Value="@editor.DisplayName"
+                               ValueChanged="@(value => OnDisplayNameChanged(editor, value))"
+                               ValueExpression="@(() => editor.DisplayName)"
                                data-testid="@PluginsPageHelpers.BuildConnectionNameTestId(Plugin.PluginId, connectionDescriptor)"
-                               @onchange="@((ChangeEventArgs args) => HandleDisplayNameChanged(editor, args))" />
+                               />
                         </FormField>
                     </div>
                     <div>
@@ -67,29 +68,35 @@ else
                                         break;
                                     case ConfigurationFieldType.Json:
                                     case ConfigurationFieldType.MultilineText:
-                                        <textarea class="ui-input ui-input--textarea min-h-24"
+                                        <TextAreaInput Value="@fieldValue"
+                                                  ValueChanged="@(value => OnSettingChanged(editor, field.Key, value))"
+                                                  ValueExpression="@(() => fieldValue)"
+                                                  Class="min-h-24"
                                                   data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
-                                                  @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))">@fieldValue</textarea>
+                                                  />
                                         break;
                                     case ConfigurationFieldType.Select:
-                                        <select class="ui-input"
-                                                value="@fieldValue"
+                                        <SelectInput TValue="string"
+                                                Value="@fieldValue"
+                                                ValueChanged="@(value => OnSettingChanged(editor, field.Key, value))"
+                                                ValueExpression="@(() => fieldValue)"
                                                 data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
-                                                @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))">
+                                                >
                                             <option value="">Select value</option>
                                             @foreach (var option in field.Options)
                                             {
                                                 <option value="@option.Value">@option.Label</option>
                                             }
-                                        </select>
+                                        </SelectInput>
                                         break;
                                     default:
-                                        <input class="ui-input"
+                                        <TextInput Value="@fieldValue"
+                                               ValueChanged="@(value => OnSettingChanged(editor, field.Key, value))"
+                                               ValueExpression="@(() => fieldValue)"
                                                type="@PluginsPageHelpers.ResolveInputType(field)"
-                                               value="@fieldValue"
                                                placeholder="@(PluginsPageHelpers.ResolveFieldPlaceholder(Settings, field, Navigation.ToAbsoluteUri("/api/plugins/oauth/callback").ToString()))"
                                                data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
-                                               @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))" />
+                                               />
                                         break;
                                     }
                                 </FormField>

@@ -25,26 +25,23 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="5">
                     <div>
                         <FormField Text="Type">
-                        <InputSelect @bind-Value="item.ContactType"
-                                     class="ui-input"
+                        <SelectInput @bind-Value="item.ContactType"
                                      data-testid="@($"crmhr-contact-type-{rowIndex}")">
                             @foreach (var contactType in Enum.GetValues<PartyContactType>()) {
                                 <option value="@contactType">@contactType</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                         </FormField>
                     </div>
                     <div>
                         <FormField Text="Label">
-                        <InputText @bind-Value="item.Label"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.Label"
                                    data-testid="@($"crmhr-contact-label-{rowIndex}")" />
                         </FormField>
                     </div>
                     <div class="lg:col-span-2">
                         <FormField Text="Value">
-                        <InputText @bind-Value="item.Value"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.Value"
                                    data-testid="@($"crmhr-contact-value-{rowIndex}")" />
                         </FormField>
                     </div>
@@ -62,8 +59,7 @@
                                        data-testid="@($"crmhr-contact-public-{rowIndex}")"  Text="Publicly shareable" />
                     <div>
                         <FormField Text="Notes">
-                        <InputText @bind-Value="item.Notes"
-                                   class="ui-input"
+                        <TextInput @bind-Value="item.Notes"
                                    data-testid="@($"crmhr-contact-notes-{rowIndex}")" />
                         </FormField>
                     </div>
@@ -116,8 +112,7 @@
                     <Stack GapScale="LayoutGap.Medium">
                         <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                             <FormField Text="Value">
-                                <InputText @bind-Value="contactDraft.Value"
-                                           class="ui-input"
+                                <TextInput @bind-Value="contactDraft.Value"
                                            aria-invalid="@(!string.IsNullOrEmpty(contactValidationError) ? "true" : "false")"
                                            data-testid="crmhr-contact-wizard-value" />
                                 @if (!string.IsNullOrEmpty(contactValidationError)) {
@@ -130,8 +125,7 @@
                             </FormField>
 
                             <FormField Text="Label">
-                                <InputText @bind-Value="contactDraft.Label"
-                                           class="ui-input"
+                                <TextInput @bind-Value="contactDraft.Label"
                                            data-testid="crmhr-contact-wizard-label" />
                             </FormField>
                         </Grid>
@@ -150,7 +144,7 @@
                                            data-testid="crmhr-contact-wizard-public"  Text="Publicly shareable" />
 
                         <FormField Text="Notes">
-                            <TextArea Value="@contactDraft.Notes"
+                            <TextAreaInput Value="@contactDraft.Notes"
                                       ValueChanged="UpdateContactNotes"
                                       Size="TextAreaSize.Standard"
                                       Placeholder="Optional context for this contact method"

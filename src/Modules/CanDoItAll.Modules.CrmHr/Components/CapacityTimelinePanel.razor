@@ -110,36 +110,31 @@
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                 <FormField Text="Block type">
-                    <InputSelect @bind-Value="CapacityBlockDraft.BlockKind"
-                                 class="ui-input"
+                    <SelectInput @bind-Value="CapacityBlockDraft.BlockKind"
                                  data-testid="crmhr-capacity-block-kind">
                         @foreach (var blockKind in Enum.GetValues<CapacityBlockKind>())
                         {
                             <option value="@blockKind">@blockKind</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
                 <FormField Text="Starts on">
-                    <InputDate @bind-Value="CapacityBlockDraft.StartDate"
-                               class="ui-input"
+                    <DateInput @bind-Value="CapacityBlockDraft.StartDate"
                                data-testid="crmhr-capacity-block-start-date" />
                 </FormField>
                 <FormField Text="Ends on">
-                    <InputDate @bind-Value="CapacityBlockDraft.EndDate"
-                               class="ui-input"
+                    <DateInput @bind-Value="CapacityBlockDraft.EndDate"
                                data-testid="crmhr-capacity-block-end-date" />
                 </FormField>
             </Grid>
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                 <FormField Text="Blocked %">
-                    <InputNumber @bind-Value="CapacityBlockDraft.Percentage"
-                                 class="ui-input"
+                    <NumberInput @bind-Value="CapacityBlockDraft.Percentage"
                                  data-testid="crmhr-capacity-block-percentage" />
                 </FormField>
                 <FormField Text="Notes">
-                    <InputText @bind-Value="CapacityBlockDraft.Notes"
-                               class="ui-input"
+                    <TextInput @bind-Value="CapacityBlockDraft.Notes"
                                data-testid="crmhr-capacity-block-notes" />
                 </FormField>
             </Grid>

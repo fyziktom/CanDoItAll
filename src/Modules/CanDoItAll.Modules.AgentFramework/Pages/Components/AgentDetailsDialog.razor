@@ -112,32 +112,32 @@ else
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                 <div>
                                     <FormField Text="Status">
-                                    <InputSelect @bind-Value="editorModel.Status" class="ui-input">
+                                    <SelectInput @bind-Value="editorModel.Status">
                                         @foreach (var status in Enum.GetValues<AgentLifecycleStatus>())
                                         {
                                             <option value="@status">@status</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Workload">
-                                    <InputSelect @bind-Value="editorModel.Workload" class="ui-input">
+                                    <SelectInput @bind-Value="editorModel.Workload">
                                         @foreach (var workload in Enum.GetValues<AgentWorkloadKind>())
                                         {
                                             <option value="@workload">@workload</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                                 <div>
                                     <FormField Text="Chat history">
-                                    <InputSelect @bind-Value="editorModel.ChatHistoryMode" class="ui-input">
+                                    <SelectInput @bind-Value="editorModel.ChatHistoryMode">
                                         @foreach (var mode in Enum.GetValues<AgentChatHistoryMode>())
                                         {
                                             <option value="@mode">@mode</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                 </div>
                             </Grid>
@@ -369,17 +369,17 @@ else
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-workspace-tools">
                                 <div class="app-admin-subpanel">
                                     <FormField Text="Access profile">
-                                    <select id="agents-catalog-workspace-profile"
-                                            class="ui-input mt-2"
+                                    <SelectInput id="agents-catalog-workspace-profile"
+                                            Class="mt-2"
                                             aria-label="Access profile"
-                                            value="@editorModel.WorkspaceToolAccess.Profile"
-                                            @onchange="args => ChangeWorkspaceToolProfile(args.Value)"
+                                            Value="@editorModel.WorkspaceToolAccess.Profile"
+                                            ValueChanged="@((AgentWorkspaceToolProfileKind value) => ChangeWorkspaceToolProfile(value.ToString()))"
                                             data-testid="agents-catalog-workspace-profile">
                                         @foreach (var profile in WorkspaceToolProfileOptions)
                                         {
                                             <option value="@profile">@FormatWorkspaceToolProfile(profile)</option>
                                         }
-                                    </select>
+                                    </SelectInput>
                                     </FormField>
                                     <p class="mt-3 text-sm leading-6 text-slate-600">
                                         @DescribeWorkspaceExecutionScope(editorModel)
@@ -590,26 +590,26 @@ else
                             {
                                 <FilterBar ResultText="@($"{FilteredAssignableCapabilities.Count} matching capability(s)")">
                                     <div class="agent-details-dialog__capability-filters">
-                                        <input @bind="capabilitySearch"
-                                               @bind:event="oninput"
-                                               class="ui-input agent-details-dialog__capability-filter-input"
+                                        <TextInput @bind-Value="capabilitySearch"
+                                               Immediate="true"
+                                               Class="agent-details-dialog__capability-filter-input"
                                                placeholder="Search capabilities"
                                                data-testid="agents-details-capability-search" />
-                                        <InputSelect @bind-Value="capabilityAssignmentFilter"
-                                                     class="ui-input agent-details-dialog__capability-filter-select"
+                                        <SelectInput @bind-Value="capabilityAssignmentFilter"
+                                                     Class="agent-details-dialog__capability-filter-select"
                                                      data-testid="agents-details-capability-assignment-filter">
                                             <option value="@CapabilityDialogAssignmentFilter.All">All assignments</option>
                                             <option value="@CapabilityDialogAssignmentFilter.Attached">Attached</option>
                                             <option value="@CapabilityDialogAssignmentFilter.Available">Available</option>
-                                        </InputSelect>
-                                        <InputSelect @bind-Value="capabilityKindFilter"
-                                                     class="ui-input agent-details-dialog__capability-filter-select"
+                                        </SelectInput>
+                                        <SelectInput @bind-Value="capabilityKindFilter"
+                                                     Class="agent-details-dialog__capability-filter-select"
                                                      data-testid="agents-details-capability-kind-filter">
                                             <option value="@CapabilityDialogKindFilter.All">All kinds</option>
                                             <option value="@CapabilityDialogKindFilter.Tool">Tool</option>
                                             <option value="@CapabilityDialogKindFilter.Skill">Skill</option>
                                             <option value="@CapabilityDialogKindFilter.Mcp">MCP server</option>
-                                        </InputSelect>
+                                        </SelectInput>
                                         <Button Text="Reset"
                                                 Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
@@ -658,8 +658,7 @@ else
                                 </div>
                                 <div class="app-admin-subpanel">
                                     <FormField Text="Voice override">
-                                    <InputSelect @bind-Value="editorModel.VoiceAccess.PreferredVoiceId"
-                                                 class="ui-input"
+                                    <SelectInput @bind-Value="editorModel.VoiceAccess.PreferredVoiceId"
                                                  disabled="@(!editorModel.VoiceAccess.CanUseVoiceMode)"
                                                  data-testid="agents-catalog-voice-override">
                                         <option value="">Use general voice</option>
@@ -667,7 +666,7 @@ else
                                         {
                                             <option value="@voiceId">@voiceId</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                     </FormField>
                                     <p class="mt-2 text-sm leading-6 text-slate-600">
                                         When set, this voice takes priority over the general AgentFramework voice.

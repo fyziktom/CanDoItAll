@@ -41,23 +41,23 @@
                         Description="The project selector remains available above the workspace tabs." />
         } else {
             <CompactFilterBar ResultText="@($"{TotalCount} matching assignment(s)")">
-                <input value="@SearchText"
+                <TextInput Value="@SearchText"
                        @oninput="HandleSearchInputAsync"
-                       class="ui-input ui-input--toolbar h-10 min-w-[18rem] flex-1"
+                       Class="h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, node, or notes"
                        data-testid="crmhr-assignment-search" />
-                <InputSelect TValue="ProjectPartyAssignmentRole?"
+                <SelectInput TValue="ProjectPartyAssignmentRole?"
                              Value="@RoleFilter"
                              ValueChanged="HandleRoleFilterChangedAsync"
-                             class="ui-input ui-input--toolbar h-10 min-w-[13rem]"
+                             Class="h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-assignment-role-filter">
                     <option value="">All roles</option>
                     @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
                         <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </CompactFilterBar>
 
             <Stack GapScale="LayoutGap.Medium"
@@ -101,17 +101,15 @@
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="2">
                 <FormField Text="Assignment role">
-                    <InputSelect @bind-Value="Draft.Role"
-                                 class="ui-input"
+                    <SelectInput @bind-Value="Draft.Role"
                                  data-testid="crmhr-assignment-role">
                         @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
                             <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
                 <FormField Text="Node key">
-                    <InputText @bind-Value="Draft.NodeKey"
-                               class="ui-input"
+                    <TextInput @bind-Value="Draft.NodeKey"
                                data-testid="crmhr-assignment-node-key" />
                 </FormField>
             </Grid>
@@ -129,18 +127,15 @@
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="3">
                 <FormField Text="Allocation %">
-                    <InputNumber @bind-Value="Draft.AllocationPercent"
-                                 class="ui-input"
+                    <NumberInput @bind-Value="Draft.AllocationPercent"
                                  data-testid="crmhr-assignment-allocation" />
                 </FormField>
                 <FormField Text="Starts on">
-                    <InputDate @bind-Value="Draft.StartsOn"
-                               class="ui-input"
+                    <DateInput @bind-Value="Draft.StartsOn"
                                data-testid="crmhr-assignment-starts-on" />
                 </FormField>
                 <FormField Text="Ends on">
-                    <InputDate @bind-Value="Draft.EndsOn"
-                               class="ui-input"
+                    <DateInput @bind-Value="Draft.EndsOn"
                                data-testid="crmhr-assignment-ends-on" />
                 </FormField>
             </Grid>
@@ -148,8 +143,8 @@
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="2">
                 <FormField Text="Notes">
-                    <TextArea @bind-Value="Draft.Notes"
-                                   Rows="4"
+                    <TextAreaInput @bind-Value="Draft.Notes"
+                                   rows="4"
                                    data-testid="crmhr-assignment-notes" />
                 </FormField>
                 <label class="inline-flex items-center gap-2 self-start text-sm text-slate-700">
