@@ -250,10 +250,10 @@ public sealed class ConcreteProviderDriverTests
         var provider = CreateProvider(
             ProviderKind.OpenAi,
             "https://api.openai.test/v1",
-            OpenAiModelIds.Gpt56Luna,
+            OpenAiModelIds.Gpt54Mini,
             """{"modelParameters":{"reasoningEffort":"high","maxOutputTokens":128000}}""");
 
-        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt56Luna));
+        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt54Mini));
 
         Assert.Equal("configured", result.ResponseText);
         var request = Assert.Single(handler.Requests);

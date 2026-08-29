@@ -78,7 +78,10 @@ public sealed class AgentDefinitionFactoryThinkingEffortTests
     [Fact]
     public void Create_ExplicitNoneCanonicalizesConfigurationAndRehydratesEditor()
     {
-        var provider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Sol);
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Sol,
+            ProviderTransportKind.Responses);
         var editor = CreateEditor(provider);
         editor.ThinkingEffortOverride = AgentReasoningEffortLevel.None;
         editor.ConfigurationJson =
@@ -368,7 +371,10 @@ public sealed class AgentDefinitionFactoryThinkingEffortTests
     [Fact]
     public void Create_UsesProviderDefaultWhenAgentModelIsEmpty()
     {
-        var provider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Luna);
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Luna,
+            ProviderTransportKind.Responses);
         var editor = CreateEditor(provider);
         editor.Model = "  ";
         editor.ThinkingEffortOverride = AgentReasoningEffortLevel.Max;
@@ -415,7 +421,10 @@ public sealed class AgentDefinitionFactoryThinkingEffortTests
         };
     }
 
-    private static ProviderProfile CreateProvider(ProviderKind kind, string defaultModel)
+    private static ProviderProfile CreateProvider(
+        ProviderKind kind,
+        string defaultModel,
+        ProviderTransportKind transport = ProviderTransportKind.ChatCompletions)
     {
         return new ProviderProfile(
             Id: Guid.NewGuid(),
@@ -424,7 +433,7 @@ public sealed class AgentDefinitionFactoryThinkingEffortTests
             BaseUrl: "http://provider.test",
             ApiKeyEnvironmentVariable: string.Empty,
             DefaultModel: defaultModel,
-            Transport: ProviderTransportKind.ChatCompletions,
+            Transport: transport,
             IsEnabled: true,
             SupportsStreaming: true,
             SupportsTools: true,

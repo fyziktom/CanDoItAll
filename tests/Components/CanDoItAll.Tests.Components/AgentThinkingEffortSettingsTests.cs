@@ -15,7 +15,7 @@ public sealed class AgentThinkingEffortSettingsTests
         using var context = new BunitContext();
         const string route = "opaque-published-model";
         var capability = AgentThinkingEffortPolicy.ResolveDefinedCapability(
-            ProviderKind.OpenAi, ProviderTransportKind.ChatCompletions, "gpt-5.6-sol") with { Model = route };
+            ProviderKind.OpenAi, ProviderTransportKind.Responses, "gpt-5.6-sol") with { Model = route };
         var provider = CreateProvider(ProviderKind.OpenAi, route, capabilities: [capability]) with {
             CredentialBinding = new ProviderCredentialBinding(Guid.NewGuid(),
                 ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid()),

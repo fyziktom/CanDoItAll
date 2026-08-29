@@ -1233,12 +1233,11 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Contains(expectedMessage, exception.Message, StringComparison.Ordinal);
     }
 
-    [Theory]
-    [InlineData(ProviderTransportKind.Responses)]
-    [InlineData(ProviderTransportKind.ChatCompletions)]
+    [Fact]
 #pragma warning disable OPENAI001
-    public void Max_reasoning_effort_builds_transport_native_OpenAI_options(ProviderTransportKind transport)
+    public void Max_reasoning_effort_builds_responses_native_OpenAI_options()
     {
+        const ProviderTransportKind transport = ProviderTransportKind.Responses;
         var provider = CreateProvider(transport, preferFrameworkManagedHistory: false) with
         {
             ConfigurationJson = "{\"reasoningEffort\":\"max\"}"
@@ -1251,15 +1250,8 @@ public sealed class AgentFinalizerPolicyTests
             forceOmitTemperature: false);
         var rawOptions = Assert.IsAssignableFrom<object>(options.RawRepresentationFactory!(null!));
 
-        if (transport == ProviderTransportKind.Responses)
-        {
-            var responseOptions = Assert.IsType<OpenAI.Responses.CreateResponseOptions>(rawOptions);
-            Assert.Equal("max", responseOptions.ReasoningOptions!.ReasoningEffortLevel.ToString());
-            return;
-        }
-
-        var chatOptions = Assert.IsType<OpenAI.Chat.ChatCompletionOptions>(rawOptions);
-        Assert.Equal("max", chatOptions.ReasoningEffortLevel.ToString());
+        var responseOptions = Assert.IsType<OpenAI.Responses.CreateResponseOptions>(rawOptions);
+        Assert.Equal("max", responseOptions.ReasoningOptions!.ReasoningEffortLevel.ToString());
     }
 #pragma warning restore OPENAI001
 

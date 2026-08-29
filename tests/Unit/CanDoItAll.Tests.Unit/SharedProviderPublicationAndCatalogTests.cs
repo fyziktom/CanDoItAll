@@ -112,16 +112,37 @@ public sealed class SharedProviderPublicationAndCatalogTests
     }
 
     [Fact]
-    public void PublicModelLabelsHideSourceNamesAndRoutingIdsRemainDistinct() {
+    public void PublicModelLabelsPreserveSourceNamesAndRoutingIdsRemainOpaque() {
         var profile = CreateProfile(defaultModel: "model-alpha", suggestedModels: ["model-beta"]);
         var projection = SharedProviderCatalogProjector.Project(
             SourceInstanceId,
             [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
         var publication = Assert.Single(projection.Catalog.Providers);
 
-        Assert.Equal(["Model 1", "Model 2"],
+        Assert.Equal(["model-alpha", "model-beta"],
             publication.Models.Select(model => model.DisplayName).Order());
         Assert.All(publication.Models, model => Assert.StartsWith("sp1.", model.Id.Value));
+    }
+
+    [Fact]
+    public void ChatCompletionsPublicationDoesNotAdvertiseGpt56ThinkingEffort() {
+        var profile = CreateProfile(defaultModel: OpenAiModelIds.Gpt56Luna);
+        profile.ExtraSettingsJson = SharedProviderProfilePublicationMetadataWriter.Write(
+            profile.ExtraSettingsJson,
+            AgentFrameworkProviderKind.OpenAi,
+            ProviderTransportKind.ChatCompletions,
+            ProviderProfilePurpose.Chat,
+            OpenAiModelIds.Gpt56Luna);
+        var projection = SharedProviderCatalogProjector.Project(
+            SourceInstanceId,
+            [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
+
+        var thinking = Assert.Single(projection.Catalog.Providers).Models
+            .Single(model => model.DisplayName == OpenAiModelIds.Gpt56Luna)
+            .Thinking!;
+
+        Assert.Equal(SharedProviderThinkingSupport.Unsupported, thinking.Support);
+        Assert.Empty(thinking.AllowedEfforts);
     }
 
     [Fact]

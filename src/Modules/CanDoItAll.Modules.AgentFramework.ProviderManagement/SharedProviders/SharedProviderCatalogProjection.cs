@@ -138,9 +138,6 @@ public static class SharedProviderCatalogProjector
             routes);
     }
 
-    private static string CreatePublicModelDisplayName(int modelIndex)
-        => FormattableString.Invariant($"Model {modelIndex + 1}");
-
     private static SharedProviderCatalogPublication ProjectPublication(        SharedProviderCatalogProjectionSource source,
         IDictionary<SharedProviderRoutingModelId, SharedProviderRoutingTarget> routes)
     {
@@ -160,14 +157,14 @@ public static class SharedProviderCatalogProjector
                 metadata.ProviderKind, profile.DefaultModel, pricing.ModelPrices)
             .ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
         var models = eligibility.Models
-            .Select((model, modelIndex) =>
+            .Select(model =>
             {
                 var routingModelId = SharedProviderRoutingModelIdCodec.Create(
                     publicationId,
                     model.UpstreamModelId);
                 var publicModel = new SharedProviderCatalogModel(
                     routingModelId,
-                    CreatePublicModelDisplayName(modelIndex),
+                    model.UpstreamModelId,
                     Array.AsReadOnly(model.Capabilities.ToArray())) {
                     Thinking = SharedProviderThinkingCapabilityMapper.ToCatalog(thinkingProvider, model.UpstreamModelId),
                     IsSuggested = metadata.ProviderKind != CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi ||

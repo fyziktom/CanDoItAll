@@ -171,7 +171,10 @@ public sealed class SharedThinkingEffortTests {
 
     private static RuntimeProvider CreateProvider(RuntimeKind kind, string model) => new(
         Guid.NewGuid(), "Source", kind, "https://provider.invalid/v1", string.Empty, model,
-        ProviderTransportKind.ChatCompletions, true, true, true, true, false, "{}", "", "", null, [model]);
+        kind == RuntimeKind.OpenAi && model.StartsWith("gpt-5.6", StringComparison.OrdinalIgnoreCase)
+            ? ProviderTransportKind.Responses
+            : ProviderTransportKind.ChatCompletions,
+        true, true, true, true, false, "{}", "", "", null, [model]);
 
     private static RuntimeProvider AsShared(RuntimeProvider source, SharedProviderThinkingCapability capability) => source with {
         Kind = RuntimeKind.OpenAi,

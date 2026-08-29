@@ -42,7 +42,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         TimeSpan.Zero);
 
     [Fact]
-    public async Task Catalog_publication_defaults_off_filters_ineligible_and_supports_sanitized_conditional_get()
+    public async Task Catalog_publication_defaults_off_filters_ineligible_sanitizes_secrets_and_supports_conditional_get()
     {
         await using var fixtureLease =
             await FixtureLease<SharedProviderCatalogApiFixture>.CreateAsync();
@@ -80,8 +80,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         string projectedJson = SharedProviderProtocolJson.SerializeCatalog(projection.Catalog);
         Assert.DoesNotContain(eligibleProfile.BaseUrl, projectedJson, StringComparison.Ordinal);
         Assert.DoesNotContain(eligibleProfile.ApiKeySecretId!.Value.ToString("D"), projectedJson, StringComparison.Ordinal);
-        Assert.DoesNotContain("duplicate-upstream-model", projectedJson, StringComparison.Ordinal);
-        Assert.Contains("\"displayName\":\"Model 1\"", projectedJson, StringComparison.Ordinal);
+        Assert.Contains("\"displayName\":\"duplicate-upstream-model\"", projectedJson, StringComparison.Ordinal);
 
         using var response = await catalogFixture.Host.Client.GetAsync(SharedProviderRoutes.Catalog);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
