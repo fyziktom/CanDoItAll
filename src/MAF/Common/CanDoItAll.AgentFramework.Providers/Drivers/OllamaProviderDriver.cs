@@ -133,7 +133,9 @@ public sealed class OllamaProviderDriver(
             request.Model,
             ReadMessageText(message),
             ProviderDriverJson.ReadInt(document.RootElement, "prompt_eval_count"),
-            ProviderDriverJson.ReadInt(document.RootElement, "eval_count"));
+            ProviderDriverJson.ReadInt(document.RootElement, "eval_count")) {
+            ObservedUsage = ProviderObservedUsage.Ollama(document.RootElement)
+        };
     }
 
     public Task<ProviderInferenceRelayTransportResponse> RelayAsync(

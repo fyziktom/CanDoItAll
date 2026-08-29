@@ -101,4 +101,7 @@
     <ProjectReference Include="..\..\..\tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../../src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/CanDoItAll.AgentFramework.ProviderHistory.Application.csproj" />
+  </ItemGroup>
 </Project>

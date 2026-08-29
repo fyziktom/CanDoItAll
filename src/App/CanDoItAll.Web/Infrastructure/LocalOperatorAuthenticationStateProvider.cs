@@ -11,6 +11,9 @@ internal interface IInteractiveAccessPrincipalProvider
     bool IsAvailable { get; }
 
     ValueTask<ClaimsPrincipal> GetCurrentAsync(CancellationToken cancellationToken = default);
+
+    ValueTask<ClaimsPrincipal?> TryGetTrustedLocalOperatorAsync(CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult<ClaimsPrincipal?>(null);
 }
 
 internal sealed class AnonymousInteractiveAccessPrincipalProvider : IInteractiveAccessPrincipalProvider
@@ -56,6 +59,14 @@ internal sealed class LocalOperatorAuthenticationStateProvider(
         var currentTask = accessPrincipalTask ?? throw new InvalidOperationException(
             "The host has not supplied the interactive authentication state.");
         return await currentTask.WaitAsync(cancellationToken);
+    }
+
+    public async ValueTask<ClaimsPrincipal?> TryGetTrustedLocalOperatorAsync(CancellationToken cancellationToken = default) {
+        if (isTrustedCircuit != true || authenticationStateTask is null) {
+            return null;
+        }
+        var actual = await authenticationStateTask.WaitAsync(cancellationToken);
+        return actual.User.Identity?.IsAuthenticated == true ? null : localOperator;
     }
 
     public void SetAuthenticationState(Task<AuthenticationState> authenticationStateTask)
@@ -114,7 +125,10 @@ internal sealed class LocalOperatorAuthenticationStateProvider(
                         ' ',
                         ApiAccessScopeNames.ReadLlmChats,
                         ApiAccessScopeNames.ManageLlmChats,
-                        ApiAccessScopeNames.ExecuteLlmChats))
+                        ApiAccessScopeNames.ExecuteLlmChats,
+                        ApiAccessScopeNames.ReadProviderHistory,
+                        ApiAccessScopeNames.ReadProviderHistoryContent,
+                        ApiAccessScopeNames.ManageProviderHistory))
             ],
             AuthenticationType);
         return new ClaimsPrincipal(identity);

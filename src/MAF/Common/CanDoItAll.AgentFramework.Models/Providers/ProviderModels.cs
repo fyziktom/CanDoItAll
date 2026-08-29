@@ -300,6 +300,7 @@ public sealed record ProviderProfile(
     }
 
     public IReadOnlyList<ProviderModelTokenPrice> ModelPrices { get; init; } = [];
+    public string? PricingSourceRevision { get; init; }
 
     public IReadOnlyList<string> Tags { get; init; } = [];
 

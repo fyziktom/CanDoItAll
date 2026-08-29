@@ -67,6 +67,7 @@ public sealed class ProviderProfileMapper(
             mappedPurpose)
         {
             ConnectorPluginKey = provider.ConnectorPluginKey,
+            PricingSourceRevision = provider.ConcurrencyToken.ToString("N"),
             Tags = ResolvePersistedProviderTags(
                 provider,
                 mappedKind,

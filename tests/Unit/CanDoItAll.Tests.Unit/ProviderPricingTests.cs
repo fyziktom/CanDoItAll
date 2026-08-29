@@ -13,6 +13,89 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderPricingTests
 {
+    [Fact]
+    public void Long_usage_does_not_clamp_or_overflow() {
+        var price = new ProviderModelTokenPrice("exact", 2m, 1m, 4m) { CacheWritePerMillionTokensUsd = 3m };
+        Assert.True(ProviderPricingCalculator.TryCalculate(price, 5_000_000_000L, 1_000_000_000L,
+            1_000_000_000L, 2_000_000_000L, out var cost));
+        Assert.Equal(18_000m, cost.TotalUsd);
+        Assert.False(ProviderPricingCalculator.TryCalculate(price, 1L, 2L, 0L, 1L, out _));
+        Assert.False(ProviderPricingCalculator.TryCalculate(price, long.MaxValue, long.MaxValue, 1L, 0L, out _));
+        Assert.False(ProviderPricingCalculator.TryCalculate(price with { InputPerMillionTokensUsd = decimal.MaxValue },
+            long.MaxValue, 0L, 0L, 0L, out _));
+    }
+
+    [Fact]
+    public void Execution_price_snapshot_uses_exact_model_and_is_immutable() {
+        var prices = new List<ProviderModelTokenPrice> { new("Model", 2m, 2m, 4m) };
+        var snapshot = ProviderExecutionPricing.Freeze(Guid.NewGuid(), "Model", prices, "revision-1");
+        prices[0] = prices[0] with { InputPerMillionTokensUsd = 900m };
+        var result = ProviderExecutionPricing.Evaluate(snapshot, 2, null, null, 3, true);
+        Assert.Equal(0.000016m, result.Amount);
+        Assert.Equal(ProviderPriceEvidenceKind.Calculated, result.Kind);
+        Assert.Equal("revision-1", result.SourceRevision);
+        var other = ProviderExecutionPricing.Freeze(Guid.NewGuid(), "model", prices, "revision-2");
+        Assert.Equal(ProviderPriceEvidenceKind.MissingTariff,
+            ProviderExecutionPricing.Evaluate(other, 2, null, null, 3, true).Kind);
+    }
+
+    [Fact]
+    public void Explicit_free_intent_survives_editor_catalog_and_runtime_roundtrip() {
+        var price = new ProviderModelTokenPrice("free", 0, 0, 0) { TariffKind = ProviderTariffKind.ExplicitFree };
+        var edited = ProviderPricingDefaults.FromEditorModels(ProviderPricingDefaults.ToEditorModels([price])).Single();
+        var published = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderPriceMapper.ToCatalog(edited);
+        var imported = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderPriceMapper.ToRuntime("free", published);
+        Assert.True(published.IsExplicitlyFree);
+        Assert.Equal(price, imported);
+        var provider = CreateProvider("free", [price]);
+        Assert.NotEqual(ProviderPricingSnapshot.CreateProfileHash(provider),
+            ProviderPricingSnapshot.CreateProfileHash(provider with {
+                ModelPrices = [price with { TariffKind = ProviderTariffKind.Unspecified }]
+            }));
+    }
+
+    [Fact]
+    public void Provider_reported_zero_remains_known_in_original_currency() {
+        var snapshot = ProviderExecutionPricing.Freeze(Guid.NewGuid(), "unknown", [], "revision");
+        var result = ProviderExecutionPricing.Evaluate(snapshot, null, null, null, null, false, 0m, "EUR");
+        Assert.Equal(ProviderPriceEvidenceKind.ProviderReported, result.Kind);
+        Assert.Equal(0m, result.Amount);
+        Assert.Equal("EUR", result.Currency);
+    }
+
+    [Fact]
+    public void Missing_categories_remain_partial_and_legacy_zero_is_not_free() {
+        var price = new ProviderModelTokenPrice("model", 2m, 0.2m, 4m);
+        var snapshot = ProviderExecutionPricing.Freeze(Guid.NewGuid(), "model", [price], "revision");
+        var partial = ProviderExecutionPricing.Evaluate(snapshot, 100, null, null, 10, true);
+        Assert.Equal(ProviderPriceEvidenceKind.PartialEstimate, partial.Kind);
+        Assert.Null(partial.Amount);
+        var missing = ProviderExecutionPricing.Evaluate(snapshot, null, null, null, null, true);
+        Assert.Equal(ProviderPriceEvidenceKind.MissingUsage, missing.Kind);
+        var zero = price with { InputPerMillionTokensUsd = 0, CachedInputPerMillionTokensUsd = 0, OutputPerMillionTokensUsd = 0 };
+        snapshot = ProviderExecutionPricing.Freeze(Guid.NewGuid(), "model", [zero], "revision");
+        Assert.Equal(ProviderPriceEvidenceKind.MissingTariff,
+            ProviderExecutionPricing.Evaluate(snapshot, 1, 0, 0, 1, true).Kind);
+        snapshot = ProviderExecutionPricing.Freeze(Guid.NewGuid(), "model",
+            [zero with { TariffKind = ProviderTariffKind.ExplicitFree }], "revision");
+        Assert.Equal(ProviderPriceEvidenceKind.ExplicitFree,
+            ProviderExecutionPricing.Evaluate(snapshot, 1, 0, 0, 1, true).Kind);
+    }
+
+    [Fact]
+    public void Long_context_tariff_is_selected_per_attempt_and_reasoning_is_not_added_again() {
+        var price = new ProviderModelTokenPrice("model", 1m, 1m, 2m) {
+            LongContextThresholdTokens = 100,
+            LongContextInputPerMillionTokensUsd = 3m,
+            LongContextCachedInputPerMillionTokensUsd = 3m,
+            LongContextOutputPerMillionTokensUsd = 4m
+        };
+        Assert.True(ProviderPricingCalculator.TryCalculate(price, 100L, 0L, 0L, 10L, out var first));
+        Assert.True(ProviderPricingCalculator.TryCalculate(price, 101L, 0L, 0L, 10L, out var second));
+        Assert.Equal(0.000120m, first.TotalUsd);
+        Assert.Equal(0.000343m, second.TotalUsd);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -56,6 +139,15 @@ public sealed class ProviderPricingTests
         var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Terra);
         ProviderModelTokenPrice[] expectedPrices =
         [
+            new(OpenAiModelIds.Gpt56, 4.00m, 0.40m, 20.00m)
+            {
+                CacheWritePerMillionTokensUsd = 5.00m,
+                LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = 8.00m,
+                LongContextCachedInputPerMillionTokensUsd = 0.80m,
+                LongContextCacheWritePerMillionTokensUsd = 10.00m,
+                LongContextOutputPerMillionTokensUsd = 30.00m
+            },
             new(OpenAiModelIds.Gpt56Luna, 0.20m, 0.02m, 1.20m)
             {
                 CacheWritePerMillionTokensUsd = 0.25m,

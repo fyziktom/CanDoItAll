@@ -28,4 +28,8 @@
     <InternalsVisibleTo Include="CanDoItAll.Tests.Integration" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
+    <ProjectReference Include="..\..\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Persistence\CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
+  </ItemGroup>
 </Project>

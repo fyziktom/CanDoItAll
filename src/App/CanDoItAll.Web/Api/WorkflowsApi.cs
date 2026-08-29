@@ -399,7 +399,9 @@ internal static class WorkflowsApi
                     WorkflowLaunchMode.Production,
                     new WorkflowLaunchOrigin.Api(
                         ResolveApiActor(httpContext.User),
-                        new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)),
+                        new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)) {
+                        HistoryCaller = ProviderHistoryRequestContext.Caller(httpContext)
+                    },
                     request.InputJson ?? "{}",
                     WorkflowLaunchCompletionPolicy.WaitForStopped,
                     ResolveLaunchIdempotency(httpContext, idempotencyKey))

@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -66,6 +67,12 @@ internal sealed class SharedProviderImageCapabilityRelay(
         var expectedContentType = ContentType(format);
         var images = new List<SharedProviderGeneratedImage>(request.Count);
         var totalBytes = 0;
+        var history = request.Context is { } relay
+            ? HistoryInvocationContext.Create(HistoryWorkload.SharedRelay,
+                SharedProviderCallerHistoryMapper.Map(relay.CallerIdentity, relay.AuthenticatedSubject),
+                new(HistorySourceKind.SharedRelay, new(request.ProviderProfileId.ToString("N")), new(relay.RequestId)),
+                correlationId: relay.CorrelationId)
+            : HistoryInvocationContext.Create(currentTurn: new(request.Prompt, 0));
         try
         {
             while (images.Count < request.Count)
@@ -78,7 +85,7 @@ internal sealed class SharedProviderImageCapabilityRelay(
                         request.Size,
                         request.Quality,
                         format,
-                        Sources: []),
+                        Sources: []) { History = history },
                     cancellationToken);
                 if (result.Images.Count == 0)
                 {

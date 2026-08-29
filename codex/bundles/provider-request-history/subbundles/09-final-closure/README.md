@@ -2,8 +2,7 @@
 
 ## Status
 
-- Execution: `Not started`. This phase audits real completed work; it cannot be satisfied
-  by the preparation documents alone.
+- Execution: Completed
 
 ## Objective
 
@@ -115,12 +114,12 @@ Only documented framework/generated exceptions apply; no late partial-file worka
 
 ## Acceptance Checklist
 
-- [ ] All in-scope product notes are Solved with specific source/test/runtime evidence.
-- [ ] Provider and global history are lazy, bounded and authorized in real composition.
-- [ ] Pricing/client attribution/canonical reuse/retention/details are honestly proved.
-- [ ] No stale hashes, missing transcripts, zero discovery or unreviewed screenshot.
-- [ ] All architecture and upstream closure gates pass; no superficial anti-pattern escape.
-- [ ] Deferred scope and preparation-only work remain distinguishable from implementation.
+- [x] All in-scope product notes are Solved with specific source/test/runtime evidence.
+- [x] Provider and global history are lazy, bounded and authorized in real composition.
+- [x] Pricing/client attribution/canonical reuse/retention/details are honestly proved.
+- [x] No stale hashes, missing transcripts, zero discovery or unreviewed screenshot.
+- [x] All architecture and upstream closure gates pass; no superficial anti-pattern escape.
+- [x] Deferred scope and preparation-only work remain distinguishable from implementation.
 
 ## Proof Required
 

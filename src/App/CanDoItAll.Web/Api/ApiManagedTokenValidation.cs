@@ -23,7 +23,9 @@ internal static class ApiManagedTokenValidation {
             var token = await registry.FindAsync(tokenId, context.HttpContext.RequestAborted);
             if (token is null || token.GetStatus(clock.GetUtcNow()) != ApiTokenStatus.Active) {
                 context.Fail("The API token is revoked, expired or deleted.");
+                return;
             }
+            context.HttpContext.Features.Set(new ValidatedApiCredential(token.Id, context.SecurityToken.Issuer, token.DisplayName));
         } catch (Exception exception) {
             context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
                 .CreateLogger(nameof(ApiManagedTokenValidation))

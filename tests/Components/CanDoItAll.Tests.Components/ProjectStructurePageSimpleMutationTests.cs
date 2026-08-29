@@ -301,8 +301,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var agentWorkspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var secretService = harness.Context.Services.GetRequiredService<SecretService>();
 
-        var providerId = await SaveImageProviderAsync(agentWorkspaceService);
+        var providerId = await SaveImageProviderAsync(secretService, agentWorkspaceService);
 
         var projectId = await CreateProjectAsync(projectsService, "Generated image asset");
         var parentNodeId = $"project:{projectId}";
@@ -487,7 +488,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var agentWorkspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var providerId = await SaveImageProviderAsync(agentWorkspaceService, "Failing image provider");
+        var secretService = harness.Context.Services.GetRequiredService<SecretService>();
+        var providerId = await SaveImageProviderAsync(secretService, agentWorkspaceService, "Failing image provider");
 
         var projectId = await CreateProjectAsync(projectsService, "Generated image failure");
         var parentNodeId = $"project:{projectId}";
@@ -2330,15 +2332,26 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 }
             }.ToJson());
 
-    private static Task<Guid> SaveImageProviderAsync(
+    private static async Task<Guid> SaveImageProviderAsync(
+        SecretService secretService,
         IAgentFrameworkWorkspaceService agentWorkspaceService,
         string name = "Component image provider")
-        => agentWorkspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+    {
+        var secretResult = await secretService.SaveAsync(new SecretEditorModel
+        {
+            Name = $"{name} key",
+            Kind = SecretKind.ApiKey,
+            SecretValue = "component-image-provider-key",
+            Scope = "workspace"
+        });
+        Assert.True(secretResult.IsSuccess);
+
+        return await agentWorkspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = name,
             Kind = ProviderKind.OpenAi,
             BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable = $"secret:{Guid.NewGuid():D}",
+            ApiKeyEnvironmentVariable = $"secret:{secretResult.Value:D}",
             DefaultModel = "gpt-image-1-mini",
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.ImageGeneration,
@@ -2347,6 +2360,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             SupportsTools = false,
             SuggestedModels = ["gpt-image-1-mini"]
         });
+    }
 
     private static async Task<string> InvokeCreateActionAsync(
         IRenderedComponent<ProjectStructurePage> cut,

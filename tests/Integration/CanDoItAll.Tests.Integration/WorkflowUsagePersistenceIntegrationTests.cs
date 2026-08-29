@@ -1,4 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
@@ -25,7 +28,7 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
 
         var factory = new WorkflowUsagePostgresDbContextFactory(options);
         var runStore = new PersistentWorkflowRunStore(factory);
-        var usageStore = new PersistentWorkflowUsageObservationStore(factory);
+        var usageStore = new PersistentWorkflowUsageObservationStore(factory, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
         var runId = WorkflowRunId.New();
         var workflowId = WorkflowId.New();
         var versionId = WorkflowVersionId.New();
@@ -105,6 +108,74 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
             known with { Id = WorkflowUsageObservationId.New(), RunId = null }));
         await Assert.ThrowsAsync<WorkflowUsageObservationConflictException>(() => usageStore.AppendAsync(
             known with { ProviderRequestId = "conflicting-request" }));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Actual_workflow_append_commits_or_rolls_back_exact_attempt_outbox(bool rollback) {
+        await using var history = await HistoryPersistenceTestDatabase.CreateAsync();
+        var interceptor = new FailAfterWorkflowHistorySave(rollback);
+        var factory = history.Factory.WithInterceptor(interceptor);
+        var store = new PersistentWorkflowUsageObservationStore(factory, new(history.Outbox));
+        var start = history.Start();
+        var exact = HistoryAttemptEvidence.Create(start, history.Completion());
+        var runId = WorkflowRunId.New();
+        var observation = CreateObservation(WorkflowUsageObservationId.New(), runId, WorkflowId.New(),
+            WorkflowVersionId.New(), "model", WorkflowPricingStatus.Unknown, null, 1000) with {
+                HistoryEvidence = new(start.RequestId, true, [exact])
+            };
+
+        if (rollback) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => store.AppendAsync(observation));
+            Assert.True(interceptor.Failed);
+            await using var rolledBack = history.Factory.CreateDbContext();
+            Assert.Empty(await rolledBack.Set<WorkflowUsageObservationRecordEntity>().ToListAsync());
+            Assert.Empty(await rolledBack.Set<HistoryOutboxRow>().ToListAsync());
+            return;
+        }
+
+        await store.AppendAsync(observation);
+        await store.AppendAsync(observation);
+        Assert.Equal(1, await history.Processor.ProcessAsync(history.Partition, 20, default));
+        await using var db = history.Factory.CreateDbContext();
+        var entry = await db.Set<HistoryEntryRow>().SingleAsync();
+        Assert.Equal(start.EntryId.Value, entry.Id);
+        Assert.Equal(10, entry.InputTokens);
+        Assert.Equal(0.01m, entry.Amount);
+        Assert.Equal(HistoryRetentionAuthority.CanonicalOwner, entry.RetentionAuthority);
+        Assert.Empty(await db.Set<HistoryDetailRow>().ToListAsync());
+        var restored = Assert.Single(await store.ListAsync(new() { RunIds = [runId] }));
+        Assert.Equal(observation.HistoryEvidence, restored.HistoryEvidence);
+        var adapter = new WorkflowHistorySource(history.Factory, history.Outbox);
+        var source = new CanonicalEvidenceReference(history.Partition, HistorySourceKind.Workflow,
+            new(runId.Value.ToString("N")), new(observation.Id.Value.ToString("N")));
+        var linked = await adapter.ReadAsync(source, default);
+        Assert.Equal(exact.Id, Assert.Single(linked!.Attempts).Id);
+        var progress = await adapter.ProcessAsync(history.Maintenance, null, 1, default);
+        Assert.False(progress.BackfillComplete);
+        var resumed = await new WorkflowHistorySource(history.Factory, history.Outbox)
+            .ProcessAsync(history.Maintenance, progress.Cursor, 1, default);
+        Assert.True(resumed.BackfillComplete);
+        Assert.Equal(1, await history.Processor.ProcessAsync(history.Partition, 10, default));
+        Assert.Single(await db.Set<HistoryEntryRow>().ToArrayAsync());
+        Assert.Null(await adapter.ReadAsync(source with { Owner = new(Guid.NewGuid().ToString("N")) }, default));
+        Assert.Equal(1000, restored.InputTokens);
+    }
+
+    private sealed class FailAfterWorkflowHistorySave(bool enabled) : SaveChangesInterceptor {
+        public bool Failed { get; private set; }
+
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData,
+            int result, CancellationToken cancellationToken = default) {
+            if (enabled && eventData.Context is { } db &&
+                db.ChangeTracker.Entries<WorkflowUsageObservationRecordEntity>().Any() &&
+                db.ChangeTracker.Entries<HistoryOutboxRow>().Any() && db.Database.CurrentTransaction is not null) {
+                Failed = true;
+                throw new InvalidOperationException("Injected failure after workflow source and outbox flush.");
+            }
+            return ValueTask.FromResult(result);
+        }
     }
 
     private static WorkflowUsageObservation CreateObservation(

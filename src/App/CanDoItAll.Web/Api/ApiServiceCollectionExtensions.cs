@@ -137,8 +137,13 @@ public static class ApiServiceCollectionExtensions
                 options,
                 ApiAuthorizationPolicies.RespondWorkflows,
                 ApiAccessScopeNames.RespondWorkflows);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadProviderHistory, ApiAccessScopeNames.ReadProviderHistory);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadProviderHistoryContent, ApiAccessScopeNames.ReadProviderHistoryContent);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ManageProviderHistory, ApiAccessScopeNames.ManageProviderHistory);
         });
         services.AddHttpContextAccessor();
+        services.AddScoped<WebHistoryPrincipalResolver>();
+        services.Replace(ServiceDescriptor.Scoped<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryAccess, WebProviderHistoryAccess>());
         services.TryAddScoped<AccessContextReferenceState>();
         services.TryAddScoped<IAccessContextReferenceAccessor>(serviceProvider =>
             serviceProvider.GetRequiredService<AccessContextReferenceState>());

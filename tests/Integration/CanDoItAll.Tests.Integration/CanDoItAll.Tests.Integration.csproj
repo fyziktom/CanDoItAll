@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Support\CanDoItAll.McpTestHost\CanDoItAll.McpTestHost.csproj" />
     <ProjectReference Include="..\..\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+    <ProjectReference Include="../../../src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />

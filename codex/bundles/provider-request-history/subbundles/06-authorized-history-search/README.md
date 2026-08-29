@@ -2,8 +2,7 @@
 
 ## Status
 
-- Execution: `Not started`. This is an implementation contract, not completed feature evidence.
-- Preparation: defined; entry requires the prerequisites below and renewed scope authorization.
+- Execution: Completed
 
 ## Objective
 
@@ -123,12 +122,12 @@ dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integ
 
 ## Acceptance Checklist
 
-- [ ] No unfiltered aggregate, file enumeration, N+1 owner/key lookup, body hydration or provider/catalog call appears in search.
-- [ ] No query can widen a host-fixed provider or cross stable partition/security boundary.
-- [ ] Metadata/content/manage are independent; invoke-only and missing authority cannot read history.
-- [ ] Expired/unauthorized content is unavailable even if a row/cursor/request ID is known.
-- [ ] Cursor ordering uses immutable keys with honest live Refresh behavior and explicit legacy TimeBasis.
-- [ ] Auth/profile changes during await are checked server-side before publishing, not just by the UI.
+- [x] No unfiltered aggregate, file enumeration, N+1 owner/key lookup, body hydration or provider/catalog call appears in search.
+- [x] No query can widen a host-fixed provider or cross stable partition/security boundary.
+- [x] Metadata/content/manage are independent; invoke-only and missing authority cannot read history.
+- [x] Expired/unauthorized content is unavailable even if a row/cursor/request ID is known.
+- [x] Cursor ordering uses immutable keys with honest live Refresh behavior and explicit legacy TimeBasis.
+- [x] Auth/profile changes during await are checked server-side before publishing, not just by the UI.
 
 ## Proof Required
 

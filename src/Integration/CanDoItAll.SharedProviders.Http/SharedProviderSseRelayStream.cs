@@ -21,6 +21,7 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
     private readonly SharedProviderBoundedLineReader lineReader;
     private readonly TaskCompletionSource<SharedProviderRelayStreamCompletion> completion =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private SharedProviderRelayUsage lastObservedUsage = SharedProviderRelayUsage.Unavailable;
     private int enumerationStarted;
     private int disposed;
 
@@ -167,6 +168,7 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
                     if (frameUsage.Completeness != SharedProviderRelayUsageCompleteness.Unavailable)
                     {
                         usage = frameUsage;
+                        Volatile.Write(ref lastObservedUsage, usage);
                     }
 
                     var terminal = ResolveTerminalCompletion(frame, usage);
@@ -228,7 +230,7 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
         if (!completion.Task.IsCompleted)
         {
             CompleteFailure(
-                SharedProviderRelayUsage.Unavailable,
+                Volatile.Read(ref lastObservedUsage),
                 SharedProviderFailureCategory.Cancelled,
                 "shared_provider_stream_abandoned",
                 "The shared-provider response stream was not completed.");

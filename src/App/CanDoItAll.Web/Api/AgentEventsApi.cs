@@ -194,7 +194,7 @@ internal static class AgentEventsApi
                 agentId,
                 request.ChatSessionId,
                 request.Prompt,
-                new AgentChatRunOptions(operationId),
+                new AgentChatRunOptions(operationId) { Context = ProviderHistoryRequestContext.ForExecution(null, context) },
                 cancellationToken,
                 request.AttachmentPaths),
             static result => result.ExecutionRunId,
@@ -229,7 +229,7 @@ internal static class AgentEventsApi
             request.Prompt,
             operationId,
             request.ChatSessionId,
-            request.Context,
+            ProviderHistoryRequestContext.ForExecution(request.Context, context),
             request.AutoApprovePendingToolCalls,
             InputAttachmentPaths: request.InputAttachmentPaths,
             JsonSchemaOutput: request.StructuredOutput);
@@ -275,7 +275,7 @@ internal static class AgentEventsApi
             request.Prompt,
             operationId,
             request.ChatSessionId,
-            request.Context,
+            ProviderHistoryRequestContext.ForExecution(request.Context, context),
             request.AutoApprovePendingToolCalls,
             InputAttachmentPaths: request.InputAttachmentPaths,
             JsonSchemaOutput: request.StructuredOutput);

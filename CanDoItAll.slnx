@@ -52,6 +52,11 @@
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Usage/CanDoItAll.AgentFramework.Usage.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj" />
   </Folder>
+  <Folder Name="/src/MAF/ProviderHistory/">
+    <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
+    <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/CanDoItAll.AgentFramework.ProviderHistory.Application.csproj" />
+    <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
+  </Folder>
   <Folder Name="/src/MAF/Capabilities/">
     <Project Path="src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <Project Path="src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Access/CanDoItAll.AgentFramework.Capabilities.Access.csproj" />

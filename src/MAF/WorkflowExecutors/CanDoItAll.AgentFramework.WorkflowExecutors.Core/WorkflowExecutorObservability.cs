@@ -33,24 +33,25 @@ public sealed class NullWorkflowExecutorExecutionObserver : IWorkflowExecutorExe
 
 public sealed class WorkflowExecutorExecutionAuditScope : IDisposable
 {
-    private static readonly AsyncLocal<WorkflowRunId?> CurrentRun = new();
-    private readonly WorkflowRunId? previousRunId;
+    private static readonly AsyncLocal<ExecutionContext?> Current = new();
+    private readonly ExecutionContext? previous;
 
-    private WorkflowExecutorExecutionAuditScope(WorkflowRunId runId)
-    {
-        previousRunId = CurrentRun.Value;
-        CurrentRun.Value = runId;
+    private WorkflowExecutorExecutionAuditScope(WorkflowRunId runId, WorkflowLaunchOrigin? origin) {
+        previous = Current.Value;
+        Current.Value = new(runId, origin);
     }
 
-    public static WorkflowRunId? CurrentRunId => CurrentRun.Value;
+    public static WorkflowRunId? CurrentRunId => Current.Value?.RunId;
+    public static WorkflowLaunchOrigin? CurrentOrigin => Current.Value?.Origin;
 
-    public static WorkflowExecutorExecutionAuditScope Push(WorkflowRunId runId)
-        => new(runId);
+    public static WorkflowExecutorExecutionAuditScope Push(WorkflowRunId runId, WorkflowLaunchOrigin? origin = null)
+        => new(runId, origin);
 
-    public void Dispose()
-    {
-        CurrentRun.Value = previousRunId;
+    public void Dispose() {
+        Current.Value = previous;
     }
+
+    private sealed record ExecutionContext(WorkflowRunId RunId, WorkflowLaunchOrigin? Origin);
 }
 
 public static class WorkflowExecutorPayloadPolicy

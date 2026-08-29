@@ -94,6 +94,9 @@
         {
             <StorageSettingsPanel />
         }
+        else if (settingsTab == ProviderHistorySettingsTabKey) {
+            <ProviderHistoryPolicyPanel />
+        }
         else if (string.Equals(settingsTab, FilesSettingsTabKey, StringComparison.Ordinal))
         {
             <FileApplicationSettingsPanel />

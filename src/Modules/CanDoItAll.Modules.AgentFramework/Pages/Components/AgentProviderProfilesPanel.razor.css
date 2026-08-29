@@ -10,7 +10,7 @@
 
     .agent-provider-editor-tabs-shell ::deep .cad-tabs__list {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 0.5rem;
         align-items: stretch;
         padding-block-end: 0.5rem;

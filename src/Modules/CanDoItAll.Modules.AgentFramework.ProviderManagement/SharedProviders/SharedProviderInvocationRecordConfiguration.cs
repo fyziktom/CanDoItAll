@@ -1,3 +1,5 @@
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -32,6 +34,9 @@ internal sealed class SharedProviderInvocationRecordConfiguration
                     "(\"Operation\" = 'ImageGenerations' AND \"UsageCompleteness\" = 'Complete' AND \"InputTokenCount\" IS NULL AND \"OutputTokenCount\" IS NULL AND \"ImageCount\" IS NOT NULL))");
             });
         builder.HasKey(invocation => invocation.Id);
+        builder.Property(invocation => invocation.HistoryVersion).HasDefaultValue(1L);
+        builder.Property(invocation => invocation.ProviderNameSnapshot).HasMaxLength(240).HasDefaultValue(string.Empty);
+        builder.Property(invocation => invocation.ProviderKindSnapshot).HasConversion<string>().HasMaxLength(64);
         builder.Property(invocation => invocation.RequestId).HasMaxLength(128).IsRequired();
         builder.Property(invocation => invocation.PublicationId)
             .HasConversion(
@@ -70,7 +75,16 @@ internal sealed class SharedProviderInvocationRecordConfiguration
             .HasConversion<string>()
             .HasMaxLength(32)
             .IsRequired();
-        builder.Property(invocation => invocation.Price).HasPrecision(28, 12);
+        builder.Property(invocation => invocation.Price).HasColumnType("numeric");
+        builder.Property(invocation => invocation.CallerIdentity).HasColumnType("jsonb").HasConversion(
+            value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+            value => JsonSerializer.Deserialize<SharedProviderCallerIdentity>(value, (JsonSerializerOptions?)null));
+        builder.Property(invocation => invocation.PricingSnapshot).HasColumnType("jsonb").HasConversion(
+            value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+            value => JsonSerializer.Deserialize<ProviderExecutionTariff>(value, (JsonSerializerOptions?)null));
+        builder.Property(invocation => invocation.PriceEvidence).HasColumnType("jsonb").HasConversion(
+            value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+            value => JsonSerializer.Deserialize<ProviderExecutionPrice>(value, (JsonSerializerOptions?)null));
         builder.Property(invocation => invocation.PricingCompleteness)
             .HasConversion<string>()
             .HasMaxLength(32)

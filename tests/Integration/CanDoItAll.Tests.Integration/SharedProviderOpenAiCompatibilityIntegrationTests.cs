@@ -31,6 +31,78 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
     SharedProviderOpenAiCompatibilityFixture fixture)
     : IClassFixture<SharedProviderOpenAiCompatibilityFixture>
 {
+
+
+    [Fact]
+    public async Task Actual_audited_stream_reconciles_completion_after_disposal_in_postgresql() {
+        await using var scope = fixture.PersistedHost.App.Services.CreateAsyncScope();
+        var audit = scope.ServiceProvider.GetRequiredService<SharedProviderInvocationAuditService>();
+        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var requestId = Guid.NewGuid().ToString("N");
+        var tariff = ProviderExecutionPricing.Freeze(fixture.PersistedChatProfileId,
+            SharedProviderOpenAiCompatibilityFixture.PersistedChatUpstreamModel,
+            [new(SharedProviderOpenAiCompatibilityFixture.PersistedChatUpstreamModel, 2m, 2m, 4m)], "race-revision");
+        await audit.BeginAsync(new(requestId, fixture.PersistedChatPublicationId, fixture.PersistedChatProfileId,
+            "stream-race", null, requestId, requestId, SharedProviderRelayOperation.ChatCompletions,
+            fixture.PersistedChatModelId, SharedProviderOpenAiCompatibilityFixture.PersistedChatUpstreamModel,
+            clock.GetUtcNow().AddDays(30)) { PricingSnapshot = tariff });
+        var finalizer = new SharedProviderInvocationAuditFinalizer(requestId, SharedProviderRelayOperation.ChatCompletions,
+            tariff, audit, clock, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        var upstream = new PricingTestRelayStream(new(10, 5, null, SharedProviderRelayUsageCompleteness.Complete),
+            null, allowLateCompletion: true);
+        await using var stream = new SharedProviderAuditedRelayStream(upstream, finalizer);
+        await stream.DisposeAsync();
+        await using var db = await factory.CreateDbContextAsync();
+        Assert.Equal(SharedProviderInvocationOutcome.Cancelled,
+            (await db.Set<SharedProviderInvocationRecord>().AsNoTracking().SingleAsync(row => row.RequestId == requestId)).Outcome);
+        upstream.Complete();
+        await stream.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        var terminal = await db.Set<SharedProviderInvocationRecord>().AsNoTracking().SingleAsync(row => row.RequestId == requestId);
+        Assert.Equal(SharedProviderInvocationOutcome.Succeeded, terminal.Outcome);
+        Assert.Equal(10, terminal.InputTokenCount);
+        Assert.Equal(0.00004m, terminal.Price);
+        Assert.False(terminal.FinalizationRecovered);
+    }
+
+    [Fact]
+    public async Task Actual_managed_tokens_with_same_subject_remain_distinct_in_persisted_relay_history() {
+        await using var host = await fixture.CreateAuthenticatedPersistedHostAsync();
+        Assert.IsType<CanDoItAll.AgentFramework.Maf.HistoryProviderDriverFactory>(host.App.Services.GetRequiredService<IAgentProviderFactory>());
+        Assert.IsType<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryInvocationRecorder>(
+            host.App.Services.GetRequiredService<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder>());
+        var first = IssueToken(host, ApiAccessScopeNames.InvokeSharedProviders, "same-history-subject");
+        var second = IssueToken(host, ApiAccessScopeNames.InvokeSharedProviders, "same-history-subject");
+        foreach (var token in new[] { first, second }) {
+            using var request = CreatePost(SharedProviderRoutes.ChatCompletions, ChatJson(fixture.PersistedChatModelId));
+            request.Headers.Authorization = token;
+            request.Headers.TryAddWithoutValidation("X-Api-Key-Id", Guid.NewGuid().ToString());
+            using var response = await host.Client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            await response.Content.ReadAsStringAsync();
+        }
+        var factory = host.App.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var db = await factory.CreateDbContextAsync();
+        var records = await db.Set<SharedProviderInvocationRecord>().AsNoTracking()
+            .Where(row => row.AuthenticatedSubject == "same-history-subject").ToArrayAsync();
+        Assert.Equal(2, records.Length);
+        Assert.All(records, row => {
+            Assert.Equal(SharedProviderCallerKind.ManagedCredential, row.CallerIdentity!.Kind);
+            Assert.Equal("CanDoItAll.Api.Tests", row.CallerIdentity.Issuer);
+            Assert.Equal(SharedProviderInvocationOutcome.Succeeded, row.Outcome);
+        });
+        Assert.Equal(2, records.Select(row => row.CallerIdentity!.CredentialId).Distinct().Count());
+        var registry = host.App.Services.GetRequiredService<CanDoItAll.Infrastructure.ControlPlane.IApiTokenRegistry>();
+        foreach (var token in (await registry.SearchAsync(new("same-history-subject"))).Items) {
+            await registry.RevokeAsync(token.Id, DateTimeOffset.UtcNow);
+        }
+        using var revokedRequest = CreatePost(SharedProviderRoutes.ChatCompletions, ChatJson(fixture.PersistedChatModelId));
+        revokedRequest.Headers.Authorization = first;
+        using var revoked = await host.Client.SendAsync(revokedRequest);
+        Assert.Equal(HttpStatusCode.Unauthorized, revoked.StatusCode);
+        Assert.Equal(2, await db.Set<SharedProviderInvocationRecord>().CountAsync(row => row.AuthenticatedSubject == "same-history-subject"));
+    }
+
     [Fact]
     public async Task PersistedProviderRelay_ResolvesRouteSecretAndFinalizesMetadataOnlyAudit()
     {
@@ -172,9 +244,13 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
             Assert.Equal(accessContext, invocation.AccessContextReference?.Value);
             Assert.Equal(SharedProviderInvocationOutcome.Succeeded, invocation.Outcome);
             Assert.Null(invocation.FailureCategory);
-            Assert.Null(invocation.Price);
-            Assert.Equal(SharedProviderMetadataCompleteness.Unavailable, invocation.PricingCompleteness);
         });
+        Assert.Equal(0.000016m, chatInvocation.Price);
+        Assert.Equal(0.000028m, responsesInvocation.Price);
+        Assert.Equal(SharedProviderMetadataCompleteness.Complete, chatInvocation.PricingCompleteness);
+        Assert.Equal(SharedProviderMetadataCompleteness.Complete, responsesInvocation.PricingCompleteness);
+        Assert.Null(imageInvocation.Price);
+        Assert.Equal(SharedProviderMetadataCompleteness.Unavailable, imageInvocation.PricingCompleteness);
         Assert.Equal(2, chatInvocation.InputTokenCount);
         Assert.Equal(3, chatInvocation.OutputTokenCount);
         Assert.Null(chatInvocation.ImageCount);
@@ -217,6 +293,49 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         Assert.True(expectedImageCount >= 1);
         Assert.Equal(expectedImageCount, usageSnapshot.Totals.ImageCount);
         Assert.Equal(expectedTokenCount, usageSnapshot.Totals.Tokens.TotalTokens);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Relay_buffered_and_streaming_use_frozen_tariff(bool streaming) {
+        await using var scope = fixture.PersistedHost.App.Services.CreateAsyncScope();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var before = await factory.CreateDbContextAsync();
+        var original = await before.Set<PersistedProviderProfile>().AsNoTracking()
+            .SingleAsync(profile => profile.Id == fixture.PersistedChatProfileId);
+        fixture.PersistedDispatcher.BeforeCompletion = async () => {
+            await using var changing = await factory.CreateDbContextAsync();
+            var profile = await changing.Set<PersistedProviderProfile>().SingleAsync(profile => profile.Id == original.Id);
+            profile.ExtraSettingsJson = ProviderPricingMetadata.Write(profile.ExtraSettingsJson, false,
+                [new ProviderModelTokenPrice(SharedProviderOpenAiCompatibilityFixture.PersistedChatUpstreamModel, 900m, 900m, 900m)]);
+            await changing.SaveChangesAsync();
+        };
+        try {
+            using var request = CreatePost(SharedProviderRoutes.ChatCompletions,
+                ChatJson(fixture.PersistedChatModelId, streaming ? "\"stream\":true" : null));
+            using var response = await fixture.PersistedHost.Client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            if (streaming) {
+                Assert.Contains("[DONE]", body, StringComparison.Ordinal);
+            }
+            var requestId = Assert.Single(response.Headers.GetValues(SharedProviderHeaders.RequestId));
+            await using var check = await factory.CreateDbContextAsync();
+            var audit = await check.Set<SharedProviderInvocationRecord>().AsNoTracking()
+                .SingleAsync(row => row.RequestId == requestId);
+            Assert.Equal(0.000016m, audit.Price);
+            Assert.Equal(ProviderPriceEvidenceKind.Calculated, audit.PriceEvidence!.Kind);
+            Assert.Equal(2m, audit.PricingSnapshot!.Price!.InputPerMillionTokensUsd);
+            var current = await check.Set<PersistedProviderProfile>().AsNoTracking().SingleAsync(row => row.Id == original.Id);
+            Assert.Equal(900m, ProviderPricingMetadata.Read(current.ExtraSettingsJson).ModelPrices.Single().InputPerMillionTokensUsd);
+        } finally {
+            fixture.PersistedDispatcher.BeforeCompletion = null;
+            await using var restore = await factory.CreateDbContextAsync();
+            var profile = await restore.Set<PersistedProviderProfile>().SingleAsync(row => row.Id == original.Id);
+            profile.ExtraSettingsJson = original.ExtraSettingsJson;
+            await restore.SaveChangesAsync();
+        }
     }
 
     [Fact]
@@ -1161,10 +1280,24 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
         Assert.Fail("The hosted shared-provider invocation recovery worker did not recover the stale record.");
     }
 
-    private async Task SeedPersistedProviderGraphAsync()
+    internal async Task<ApiTestHost> CreateAuthenticatedPersistedHostAsync() {
+        var host = await ApiTestHost.CreateAsync(jwtEnabled: true, services => {
+            services.RemoveAll<ISharedProviderRelayDispatcher>();
+            services.AddSingleton<ISharedProviderRelayDispatcher>(new RecordingPersistedRelayDispatcher());
+        });
+        try {
+            await SeedPersistedProviderGraphAsync(host);
+            return host;
+        } catch {
+            await host.DisposeAsync();
+            throw;
+        }
+    }
+
+    private async Task SeedPersistedProviderGraphAsync(ApiTestHost? host = null)
     {
         var now = DateTimeOffset.UtcNow;
-        await using var scope = PersistedHost.App.Services.CreateAsyncScope();
+        await using var scope = (host ?? PersistedHost).App.Services.CreateAsyncScope();
         var dbContextFactory = scope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         var protector = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
@@ -1182,7 +1315,9 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
             "Persisted image relay credential",
             protector.Protect(PersistedCredential),
             now);
-        PersistedImageSecretId = imageSecret.Id;
+        if (host is null) {
+            PersistedImageSecretId = imageSecret.Id;
+        }
         var chatProfile = CreateOpenAiProfile(
             PersistedChatProfileId,
             "Persisted chat relay",
@@ -1314,7 +1449,7 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
             SupportsStructuredOutput = supportsStructuredOutput,
             SupportsVision = false,
             ExtraSettingsJson = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderProfilePublicationMetadataWriter.Write(
-                "{}",
+                ProviderPricingMetadata.Write("{}", false, [new ProviderModelTokenPrice(upstreamModel, 2m, 2m, 4m)]),
                 AgentFrameworkProviderKind.OpenAi,
                 transport,
                 purpose,
@@ -1337,9 +1472,10 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
 
 internal sealed class RecordingPersistedRelayDispatcher : ISharedProviderRelayDispatcher
 {
+    public Func<Task>? BeforeCompletion { get; set; }
     public ConcurrentQueue<SharedProviderRelayDispatchRequest> Requests { get; } = new();
 
-    public ValueTask<SharedProviderRelayDispatchResult> DispatchAsync(
+    public async ValueTask<SharedProviderRelayDispatchResult> DispatchAsync(
         SharedProviderRelayDispatchRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -1374,12 +1510,14 @@ internal sealed class RecordingPersistedRelayDispatcher : ISharedProviderRelayDi
                 SharedProviderRelayUsageCompleteness.Complete),
             _ => throw new ArgumentOutOfRangeException(nameof(request))
         };
-        return ValueTask.FromResult<SharedProviderRelayDispatchResult>(
-            new SharedProviderRelayDispatchResult.Buffered(
-                Encoding.UTF8.GetBytes(body),
-                "application/json",
-                SharedProviderRelayResponseHeaders.Empty,
-                usage));
+        if (request.Request.Stream) {
+            return new SharedProviderRelayDispatchResult.Streaming(new PricingTestRelayStream(usage, BeforeCompletion));
+        }
+        if (BeforeCompletion is not null) {
+            await BeforeCompletion();
+        }
+        return new SharedProviderRelayDispatchResult.Buffered(
+            Encoding.UTF8.GetBytes(body), "application/json", SharedProviderRelayResponseHeaders.Empty, usage);
     }
 
     public void Reset() => Requests.Clear();

@@ -13,6 +13,10 @@ internal sealed class LlmChatOperationConfiguration : IEntityTypeConfiguration<L
     public void Configure(EntityTypeBuilder<LlmChatOperationRow> builder)
     {
         builder.ToTable("LlmChats_Operations");
+        builder.Property(row => row.HistoryCaller).HasColumnType("jsonb").HasConversion(
+            caller => System.Text.Json.JsonSerializer.Serialize(caller, (System.Text.Json.JsonSerializerOptions?)null),
+            json => System.Text.Json.JsonSerializer.Deserialize<CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller>(
+                json, (System.Text.Json.JsonSerializerOptions?)null));
         builder.HasKey(row => row.Id);
         builder.Property(row => row.RequestFingerprint).HasMaxLength(64).IsFixedLength().IsRequired();
         builder.Property(row => row.AttributionScopeKey)
@@ -43,6 +47,7 @@ internal sealed class LlmChatInvocationRecordConfiguration : IEntityTypeConfigur
     public void Configure(EntityTypeBuilder<LlmChatInvocationRecordRow> builder)
     {
         builder.ToTable("LlmChats_InvocationRecords");
+        builder.Property(row => row.HistoryAttemptsJson).HasColumnType("jsonb").HasDefaultValue("[]").IsRequired();
         builder.HasKey(row => new { row.OperationId, row.Ordinal });
         builder.Property(row => row.ProviderName).HasMaxLength(LlmConversationProviderSnapshot.MaximumNameLength).IsRequired();
         builder.Property(row => row.Model).HasMaxLength(LlmConversationProviderSnapshot.MaximumModelLength).IsRequired();

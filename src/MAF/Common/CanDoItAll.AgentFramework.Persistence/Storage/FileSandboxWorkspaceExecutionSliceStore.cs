@@ -286,7 +286,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         foreach (var runId in plan.RunIds)
         {
-            DeleteRunRoot(runId);
+            await DeleteRunRootAsync(runId, cancellationToken);
         }
 
         foreach (var sessionId in plan.SessionIds)
@@ -1409,7 +1409,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 var runRoot = layout.RunRoot(runId);
                 if (Directory.Exists(runRoot))
                 {
-                    jsonStore.DeleteDirectory(runRoot);
+                    await jsonStore.DeleteDirectoryAsync(runRoot, cancellationToken);
                     changed = true;
                 }
 
@@ -3172,13 +3172,13 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                executionRunId != Guid.Empty && runIds.Contains(executionRunId);
     }
 
-    private void DeleteRunRoot(Guid executionRunId)
+    private async Task DeleteRunRootAsync(Guid executionRunId, CancellationToken cancellationToken)
     {
         var runRoot = layout.RunRoot(executionRunId);
 
         if (Directory.Exists(runRoot))
         {
-            jsonStore.DeleteDirectory(runRoot);
+            await jsonStore.DeleteDirectoryAsync(runRoot, cancellationToken);
         }
     }
 

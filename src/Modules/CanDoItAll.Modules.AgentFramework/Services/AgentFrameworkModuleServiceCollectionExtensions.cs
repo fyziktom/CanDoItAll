@@ -393,6 +393,15 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
         services.Replace(ServiceDescriptor.Scoped<IWorkflowLaunchIdempotencyQueryStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
+        services.TryAddSingleton<WorkflowHistoryProjection>();
+        services.AddSingleton<WorkflowHistorySource>();
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistoryTransferParticipant, AgentHistoryTransferParticipant>();
+        services.AddSingleton<AgentHistoryPublicationStore>();
+        services.AddSingleton<AgentFileHistorySource>();
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<AgentFileHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistorySourceMaintenance>(provider => provider.GetRequiredService<AgentFileHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<WorkflowHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistorySourceMaintenance>(provider => provider.GetRequiredService<WorkflowHistorySource>());
         services.TryAddScoped<PersistentWorkflowUsageObservationStore>();
         services.Replace(ServiceDescriptor.Scoped<IWorkflowUsageObservationStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowUsageObservationStore>()));

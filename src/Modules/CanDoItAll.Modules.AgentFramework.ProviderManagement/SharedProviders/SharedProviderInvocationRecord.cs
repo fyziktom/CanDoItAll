@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedProviders.Abstractions;
 
@@ -14,6 +15,11 @@ public sealed class SharedProviderInvocationRecord : IHasConcurrencyToken
     public Guid ProviderProfileId { get; set; }
 
     public string AuthenticatedSubject { get; set; } = string.Empty;
+    public SharedProviderCallerIdentity? CallerIdentity { get; set; }
+    public bool FinalizationRecovered { get; set; }
+    public long HistoryVersion { get; set; } = 1;
+    public string ProviderNameSnapshot { get; set; } = string.Empty;
+    public ProviderKind? ProviderKindSnapshot { get; set; }
 
     public AccessContextReference? AccessContextReference { get; set; }
 
@@ -48,6 +54,12 @@ public sealed class SharedProviderInvocationRecord : IHasConcurrencyToken
         SharedProviderMetadataCompleteness.Unavailable;
 
     public decimal? Price { get; set; }
+
+    public ProviderExecutionTariff? PricingSnapshot { get; set; }
+    public ProviderExecutionPrice? PriceEvidence { get; set; }
+    public long? CachedInputTokenCount { get; set; }
+    public long? CacheWriteTokenCount { get; set; }
+    public long? ReasoningTokenCount { get; set; }
 
     public SharedProviderMetadataCompleteness PricingCompleteness { get; set; } =
         SharedProviderMetadataCompleteness.Unavailable;

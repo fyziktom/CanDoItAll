@@ -28,6 +28,7 @@ public static class ModuleAssemblies
     [
         typeof(AgentFrameworkModuleAssemblyMarker).Assembly,
         typeof(ProviderManagementModuleAssemblyMarker).Assembly,
+        typeof(CanDoItAll.AgentFramework.ProviderHistory.Persistence.ProviderHistoryPersistenceAssemblyMarker).Assembly,
         typeof(CollaborationModuleAssemblyMarker).Assembly,
         typeof(CrmHrModuleAssemblyMarker).Assembly,
         typeof(MemoryModuleAssemblyMarker).Assembly,

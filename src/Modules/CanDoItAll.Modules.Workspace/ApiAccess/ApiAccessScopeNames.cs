@@ -25,4 +25,10 @@ public static class ApiAccessScopeNames
     public const string ReadSharedProviderCatalog = "api.shared-providers.catalog.read";
 
     public const string InvokeSharedProviders = "api.shared-providers.invoke";
+
+    public const string ReadProviderHistory = "api.provider-history.read";
+
+    public const string ReadProviderHistoryContent = "api.provider-history.content.read";
+
+    public const string ManageProviderHistory = "api.provider-history.manage";
 }

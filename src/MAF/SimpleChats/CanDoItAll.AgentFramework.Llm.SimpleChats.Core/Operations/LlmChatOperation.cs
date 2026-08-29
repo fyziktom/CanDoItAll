@@ -31,6 +31,8 @@ public sealed record LlmChatOperation
 {
     public const int MaximumAttributionScopeKeyLength = 200;
 
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; init; }
+
     private long lastEventSequence;
 
     public LlmChatOperation(

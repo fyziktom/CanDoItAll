@@ -29,4 +29,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
+  </ItemGroup>
 </Project>

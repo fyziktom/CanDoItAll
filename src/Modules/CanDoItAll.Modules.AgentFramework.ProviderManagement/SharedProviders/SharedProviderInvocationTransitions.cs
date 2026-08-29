@@ -91,15 +91,18 @@ public static class SharedProviderInvocationTransitions
 
         if (invocation.Outcome != SharedProviderInvocationOutcome.InProgress)
         {
-            if (MatchesCompletion(invocation, completion))
+            if (MatchesCompletion(invocation, completion) || SharedProviderTerminalEvidence.IgnoreCancellation(invocation, completion))
             {
                 return;
             }
 
-            throw new InvalidOperationException(
-                "The invocation was already finalized with a different completion.");
+            if (!SharedProviderTerminalEvidence.CanReconcile(invocation, completion)) {
+                throw new InvalidOperationException("The invocation was already finalized with a different completion.");
+            }
         }
 
+        invocation.HistoryVersion = checked(invocation.HistoryVersion + 1);
+        invocation.FinalizationRecovered = false;
         invocation.CompletedAtUtc = completion.CompletedAtUtc;
         invocation.DurationMilliseconds = checked(
             (long)(completion.CompletedAtUtc - invocation.StartedAtUtc).TotalMilliseconds);
@@ -111,6 +114,10 @@ public static class SharedProviderInvocationTransitions
         invocation.UsageCompleteness = completion.UsageCompleteness;
         invocation.Price = completion.Price;
         invocation.PricingCompleteness = completion.PricingCompleteness;
+        invocation.PriceEvidence = completion.PriceEvidence;
+        invocation.CachedInputTokenCount = completion.CachedInputTokenCount;
+        invocation.CacheWriteTokenCount = completion.CacheWriteTokenCount;
+        invocation.ReasoningTokenCount = completion.ReasoningTokenCount;
     }
 
     public static bool RecoverInterruptedFinalization(
@@ -135,6 +142,7 @@ public static class SharedProviderInvocationTransitions
                 SharedProviderMetadataCompleteness.Unavailable,
                 Price: null,
                 SharedProviderMetadataCompleteness.Unavailable));
+        invocation.FinalizationRecovered = true;
         return true;
     }
 
@@ -149,7 +157,11 @@ public static class SharedProviderInvocationTransitions
             invocation.ImageCount == completion.ImageCount &&
             invocation.UsageCompleteness == completion.UsageCompleteness &&
             invocation.Price == completion.Price &&
-            invocation.PricingCompleteness == completion.PricingCompleteness;
+            invocation.PricingCompleteness == completion.PricingCompleteness &&
+            invocation.PriceEvidence == completion.PriceEvidence &&
+            invocation.CachedInputTokenCount == completion.CachedInputTokenCount &&
+            invocation.CacheWriteTokenCount == completion.CacheWriteTokenCount &&
+            invocation.ReasoningTokenCount == completion.ReasoningTokenCount;
 
     private static void ValidateCompletion(
         SharedProviderInvocationRecord invocation,
@@ -219,6 +231,15 @@ public static class SharedProviderInvocationTransitions
             throw new ArgumentException(
                 "The invocation usage values do not match their completeness state.",
                 nameof(completion));
+        }
+
+        if (completion.CachedInputTokenCount is < 0 || completion.CacheWriteTokenCount is < 0
+            || completion.ReasoningTokenCount is < 0
+            || completion.CachedInputTokenCount > completion.InputTokenCount
+            || completion.CacheWriteTokenCount > completion.InputTokenCount - (completion.CachedInputTokenCount ?? 0)
+            || completion.ReasoningTokenCount > completion.OutputTokenCount
+            || completion.PriceEvidence is { } evidence && evidence.Amount != completion.Price) {
+            throw new ArgumentException("Invalid pricing or token category evidence.", nameof(completion));
         }
 
         if (completion.Price is < 0)

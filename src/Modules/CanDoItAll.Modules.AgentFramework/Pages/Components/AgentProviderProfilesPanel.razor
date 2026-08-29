@@ -64,8 +64,6 @@
     </DetailHeader>
 
     <DetailContent>
-        <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
-            <Stack Class="agent-provider-editor-form min-h-full" GapScale="LayoutGap.XXLarge">
                 <div class="agent-provider-editor-tabs-shell">
                     <Tabs @bind-SelectedIndex="providerEditorTabIndex"
                           RenderMode="TabRenderMode.Server"
@@ -75,6 +73,11 @@
                           AriaLabel="Provider editor tabs"
                           data-testid="provider-editor-tabs">
                         <TabsItem Text="Connection" Icon="plug" data-testid="provider-editor-tab-connection">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
                             <fieldset disabled="@SelectedProviderIsSourceManaged"
                                       class="agent-provider-readonly-fields">
                             <div class="agent-provider-connection-tab">
@@ -161,8 +164,14 @@
                                 </FormSection>
                             </div>
                             </fieldset>
+                            </ProviderProfileEditorForm>
                         </TabsItem>
                         <TabsItem Text="Prices" Icon="paid" data-testid="provider-editor-tab-prices">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
                             <fieldset disabled="@SelectedProviderIsSourceManaged"
                                       class="agent-provider-readonly-fields">
                             <div class="agent-provider-prices-tab">
@@ -175,8 +184,14 @@
                                                             OnRefreshPrices="RefreshProviderModelPricesAsync" />
                             </div>
                             </fieldset>
+                            </ProviderProfileEditorForm>
                         </TabsItem>
                         <TabsItem Text="Runtime" Icon="tune" data-testid="provider-editor-tab-runtime">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
                             <fieldset disabled="@SelectedProviderIsSourceManaged"
                                       class="agent-provider-readonly-fields">
                             <div class="agent-provider-runtime-tab">
@@ -228,48 +243,33 @@
                                 </FormSection>
                             </div>
                             </fieldset>
+                            </ProviderProfileEditorForm>
                         </TabsItem>
                         <TabsItem Text="Thinking" Icon="psychology" data-testid="provider-editor-tab-thinking">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
                             <ProviderModelThinkingEditor @key="providerModel" Model="providerModel" Provider="SelectedProvider"
                                                          Refreshed="RefreshProvidersAfterSharedChangeAsync" />
+                            </ProviderProfileEditorForm>
                         </TabsItem>
                         <TabsItem Text="Sharing" Icon="share" data-testid="provider-editor-tab-sharing">
                             <SharedProviderManagementPanel ProviderProfileId="providerModel.Id"
                                                            ProvidersChanged="RefreshProvidersAfterSharedChangeAsync" />
                         </TabsItem>
+                        <TabsItem Text="History" Icon="history" data-testid="provider-editor-tab-history">
+                            @if (providerModel.Id is { } providerId) {
+                                <CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel @key="providerId"
+                                    Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.SingleProvider(new(providerId)))" />
+                            } else {
+                                <EmptyState Title="Save this provider first" Description="Request history is scoped to a saved provider identity." />
+                            }
+                        </TabsItem>
                     </Tabs>
                 </div>
 
-                <StickyActionFooter StatusLabel="Provider profiles">
-                    <SecondaryActions>
-                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
-                        @if (providerModel.Id.HasValue && !SelectedProviderIsSourceManaged)
-                        {
-                            <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@isBusy" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
-                        }
-                    </SecondaryActions>
-                    <PrimaryActions>
-                        @if (!SelectedProviderIsSourceManaged)
-                        {
-                            <Button Text="Save provider"
-                                    Type="submit"
-                                    Disabled="@isBusy"
-                                    IsBusy="@isBusy"
-                                    data-testid="providers-save" />
-                        }
-                    </PrimaryActions>
-                    <DangerActions>
-                        @if (providerModel.Id.HasValue && !SelectedProviderIsSourceManaged)
-                        {
-                            <Button Text="Delete"
-                                    ButtonStyle="ButtonStyle.Danger"
-                                    Disabled="@isBusy"
-                                    Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
-                        }
-                    </DangerActions>
-                </StickyActionFooter>
-            </Stack>
-        </EditForm>
     </DetailContent>
 </ListDetailShell>
 

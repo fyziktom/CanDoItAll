@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="..\..\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
     <ProjectReference Include="..\..\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />

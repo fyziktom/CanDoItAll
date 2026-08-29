@@ -1,3 +1,7 @@
+using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
@@ -15,6 +19,40 @@ namespace CanDoItAll.Tests.Integration.SharedProviders;
 
 public sealed class SharedProviderPersistenceIntegrationTests
 {
+    [Fact]
+    public async Task Migration_preserves_existing_audit_and_legacy_unknowns() {
+        await using var database = await SharedProviderTestDatabase.CreateAsync("history-upgrade",
+            migrate: true, targetMigration: "20260828153731_AddProviderInvocationPriceEvidence");
+        var publication = new SharedProviderPublicationId(Guid.NewGuid());
+        var providerId = await SeedInvocationOwnerAsync(database, publication);
+        await using var db = database.Factory.CreateDbContext();
+        var id = Guid.NewGuid();
+        var model = SharedProviderRoutingModelIdCodec.Create(publication, "upstream-model").Value;
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Workspace_SharedProviderInvocations"
+                ("Id", "RequestId", "PublicationId", "ProviderProfileId", "AuthenticatedSubject",
+                 "TraceId", "CorrelationId", "Operation", "PublicModelId", "UpstreamModelId",
+                 "StartedAtUtc", "CompletedAtUtc", "DurationMilliseconds", "Outcome",
+                 "InputTokenCount", "OutputTokenCount", "UsageCompleteness", "PricingCompleteness",
+                 "DeleteAfterUtc", "ConcurrencyToken")
+            VALUES ({id}, 'before-history-migration', {publication.Value}, {providerId}, 'legacy-subject',
+                'migration-trace', 'migration-correlation', 'Responses', {model}, 'upstream-model',
+                {Now}, {Now.AddSeconds(2)}, 2000, 'Succeeded', 10, 5, 'Complete', 'Unavailable',
+                {Now.AddDays(30)}, {Guid.NewGuid()})
+            """);
+        await db.Database.GetService<IMigrator>().MigrateAsync();
+        var after = await db.Set<SharedProviderInvocationRecord>().AsNoTracking().SingleAsync();
+        Assert.Equal(id, after.Id);
+        Assert.Equal(Now, after.StartedAtUtc);
+        Assert.Equal("legacy-subject", after.AuthenticatedSubject);
+        Assert.Null(after.CallerIdentity);
+        Assert.False(after.FinalizationRecovered);
+        Assert.Equal(10, after.InputTokenCount);
+        Assert.Null(after.Price);
+        Assert.Null(after.PriceEvidence);
+        Assert.Empty(await db.Set<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryEntryRow>().ToListAsync());
+    }
+
     private static readonly DateTimeOffset Now = new(2026, 8, 24, 20, 0, 0, TimeSpan.Zero);
 
     [Fact]
@@ -418,10 +456,31 @@ public sealed class SharedProviderPersistenceIntegrationTests
     }
 
     [Fact]
+    public async Task Actual_relay_begin_rolls_back_audit_partition_and_outbox_after_save_failure() {
+        await using var database = await SharedProviderTestDatabase.CreateAsync("history-relay-rollback");
+        var publication = new SharedProviderPublicationId(Guid.NewGuid());
+        var providerId = await SeedInvocationOwnerAsync(database, publication);
+        var interceptor = new FailAfterHistoryAuditSave();
+        var service = new SharedProviderInvocationAuditService(database.WithInterceptor(interceptor), new FixedClock(Now),
+            new SharedProviderHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+        var request = new SharedProviderInvocationStartRequest("rollback-call", publication, providerId,
+            "caller", null, "trace", "correlation", SharedProviderRelayOperation.Responses,
+            SharedProviderRoutingModelIdCodec.Create(publication, "upstream-model"), "upstream-model", Now.AddDays(30));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.BeginAsync(request));
+        Assert.True(interceptor.ObservedAuditAndOutbox);
+        await using var db = database.Factory.CreateDbContext();
+        Assert.Empty(await db.Set<SharedProviderInvocationRecord>().ToListAsync());
+        Assert.Empty(await db.Set<HistoryOutboxRow>().ToListAsync());
+        Assert.Empty(await db.Set<HistoryPartitionRow>().ToListAsync());
+        Assert.True(await db.Set<ProviderProfile>().AnyAsync(profile => profile.Id == providerId));
+    }
+
+    [Fact]
     public async Task Invocation_audit_is_metadata_only_and_finalization_is_idempotent()
     {
         await using var database = await SharedProviderTestDatabase.CreateAsync("sharedprovider-audit");
-        var service = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now));
+        var service = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now),
+            new SharedProviderHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
         const string requestId = "invocation-001";
         var publicationId = new SharedProviderPublicationId(Guid.Parse("11111111-1111-4111-8111-111111111111"));
         var providerProfileId = await SeedInvocationOwnerAsync(database, publicationId);
@@ -476,6 +535,12 @@ public sealed class SharedProviderPersistenceIntegrationTests
         Assert.Contains("does not own", mismatch.Message, StringComparison.Ordinal);
 
         await service.BeginAsync(start);
+        var partition = await new HistoryPartitionStore(database.Factory).GetAsync(default);
+        var processor = new HistoryOutboxProcessor(database.Factory, TimeProvider.System, NullLogger<HistoryOutboxProcessor>.Instance);
+        Assert.Equal(1, await processor.ProcessAsync(partition, 50, default));
+        await using (var startedDb = database.Factory.CreateDbContext()) {
+            Assert.Equal(HistoryOutcome.Started, (await startedDb.Set<HistoryEntryRow>().SingleAsync()).Outcome);
+        }
         await service.FinalizeAsync(requestId, completion);
         await service.FinalizeAsync(requestId, completion);
         const string imageRequestId = "invocation-image-001";
@@ -498,6 +563,19 @@ public sealed class SharedProviderPersistenceIntegrationTests
         };
         await service.BeginAsync(imageStart);
         await service.FinalizeAsync(imageRequestId, imageCompletion);
+        Assert.Equal(3, await processor.ProcessAsync(partition, 50, default));
+        await using (var historyDb = database.Factory.CreateDbContext()) {
+            var entries = await historyDb.Set<HistoryEntryRow>().ToListAsync();
+            Assert.Equal(2, entries.Count);
+            Assert.All(entries, entry => {
+                Assert.Equal(HistoryOutcome.Succeeded, entry.Outcome);
+                Assert.Equal(HistoryMetadataAuthority.CanonicalProjection, entry.MetadataAuthority);
+                Assert.Equal(HistoryRetentionAuthority.HistoryPolicy, entry.RetentionAuthority);
+            });
+            Assert.Equal(10, entries.Single(entry => entry.Operation == HistoryOperation.CompleteChat).InputTokens);
+            Assert.Equal(2, entries.Single(entry => entry.Operation == HistoryOperation.GenerateImage).ImageCount);
+            Assert.Empty(await historyDb.Set<HistoryDetailRow>().ToListAsync());
+        }
 
         await using var dbContext = database.Factory.CreateDbContext();
         var records = await dbContext.Set<SharedProviderInvocationRecord>()
@@ -530,6 +608,79 @@ public sealed class SharedProviderPersistenceIntegrationTests
                 .SingleAsync(candidate => candidate.RequestId == imageRequestId);
             invalidRecord.ImageCount = 0;
             await Assert.ThrowsAsync<DbUpdateException>(() => invalidZeroImageCount.SaveChangesAsync());
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Actual_relay_retention_preserves_started_requests_and_tombstones_expired_terminal_evidence(bool failAfterFlush) {
+        await using var database = await SharedProviderTestDatabase.CreateAsync("relay-history-retention");
+        var publication = new SharedProviderPublicationId(Guid.NewGuid());
+        var provider = await SeedInvocationOwnerAsync(database, publication);
+        var clock = new HistoryPersistenceTestDatabase.TestClock { Now = Now };
+        var outbox = new HistoryOutboxWriter(clock);
+        var audit = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now), new(outbox));
+        var start = new SharedProviderInvocationStartRequest("expired", publication, provider, "caller", null,
+            "trace", "correlation", SharedProviderRelayOperation.ChatCompletions,
+            SharedProviderRoutingModelIdCodec.Create(publication, "model"), "model", null);
+        await audit.BeginAsync(start);
+        var partition = await new HistoryPartitionStore(database.Factory).GetAsync(default);
+        await using (var db = database.Factory.CreateDbContext()) {
+            Assert.Equal(Now.AddDays(30), (await db.Set<SharedProviderInvocationRecord>().SingleAsync()).DeleteAfterUtc);
+            var policy = await db.Set<HistoryPolicyRow>().SingleAsync();
+            policy.MetadataRetentionDays = 1;
+            policy.DetailRetentionDays = 1;
+            await db.SaveChangesAsync();
+        }
+        await audit.BeginAsync(start);
+        await audit.BeginAsync(start with { RequestId = "active" });
+        await audit.FinalizeAsync("expired", new(SharedProviderInvocationOutcome.Succeeded, Now.AddSeconds(1), null,
+            10, 5, SharedProviderMetadataCompleteness.Complete, null, SharedProviderMetadataCompleteness.Unavailable));
+        var processor = new HistoryOutboxProcessor(database.Factory, clock, NullLogger<HistoryOutboxProcessor>.Instance);
+        await processor.ProcessAsync(partition, 50, default);
+        HistorySourceMutation stale;
+        await using (var db = database.Factory.CreateDbContext()) {
+            var completed = await db.Set<SharedProviderInvocationRecord>().SingleAsync(row => row.RequestId == "expired");
+            stale = SharedProviderHistoryProjection.Create(completed, partition);
+            var active = await db.Set<SharedProviderInvocationRecord>().SingleAsync(row => row.RequestId == "active");
+            Assert.Equal(Now.AddDays(1), active.DeleteAfterUtc);
+            var entry = await db.Set<HistoryEntryRow>().SingleAsync(row => row.Id == completed.Id);
+            entry.ExpiresAtUtc = Now.AddDays(1);
+            await db.SaveChangesAsync();
+        }
+        clock.Now = Now.AddDays(2);
+        var runtime = new HistoryPersistenceTestDatabase.TestRuntime();
+        var context = new HistoryMaintenanceContext(partition, runtime.GetSnapshot(), runtime);
+        if (failAfterFlush) {
+            var fault = new FailAfterRelayRetentionFlush();
+            var failingFactory = database.WithInterceptor(fault);
+            var failing = new SharedProviderHistorySource(failingFactory, outbox, clock);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => failing.ProcessAsync(context, null, 10, default));
+            await using var verification = database.Factory.CreateDbContext();
+            Assert.Equal(2, await verification.Set<SharedProviderInvocationRecord>().CountAsync());
+            Assert.Empty(await verification.Set<HistoryOutboxRow>().ToListAsync());
+        }
+        var source = new SharedProviderHistorySource(database.Factory, outbox, clock);
+        await source.ProcessAsync(context, null, 10, default);
+        await processor.ProcessAsync(partition, 50, default);
+        await new HistoryProjectionWriter(database.Factory).ApplyAsync(stale, default);
+        await using (var db = database.Factory.CreateDbContext()) {
+            Assert.Equal("active", (await db.Set<SharedProviderInvocationRecord>().SingleAsync()).RequestId);
+            Assert.False((await db.Set<HistoryEntryRow>().SingleAsync(row => row.Id == stale.Entry!.Id.Value)).IsVisible);
+            Assert.True(await db.Set<HistorySourceRow>().AnyAsync(row => row.Kind == HistorySourceKind.SharedRelay && row.IsDeleted));
+        }
+        Assert.Equal(1, await new HistoryRetentionStore(database.Factory, clock).PurgeExpiredMetadataAsync(partition, 10, default));
+    }
+
+    private sealed class FailAfterRelayRetentionFlush : SaveChangesInterceptor {
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            if (eventData.Context!.ChangeTracker.Entries<HistoryOutboxRow>().Any(entry =>
+                entry.Entity.Mutation.Kind == HistorySourceMutationKind.Delete)) {
+                throw new InvalidOperationException("Injected relay cleanup failure after flush.");
+            }
+            return ValueTask.FromResult(result);
         }
     }
 
@@ -805,14 +956,17 @@ public sealed class SharedProviderPersistenceIntegrationTests
 
         public SharedProviderDbContextFactory Factory { get; }
 
-        public static async Task<SharedProviderTestDatabase> CreateAsync(string key, bool migrate = false)
+        public SharedProviderDbContextFactory WithInterceptor(IInterceptor interceptor) =>
+            new(new DbContextOptionsBuilder<AppDbContext>(lease.CreateAppDbContextOptions()).AddInterceptors(interceptor).Options);
+
+        public static async Task<SharedProviderTestDatabase> CreateAsync(string key, bool migrate = false, string? targetMigration = null)
         {
             AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
             var database = new SharedProviderTestDatabase(PostgresTestDatabaseLease.Create(key));
             await using var dbContext = database.Factory.CreateDbContext();
             if (migrate)
             {
-                await dbContext.Database.GetService<IMigrator>().MigrateAsync();
+                await dbContext.Database.GetService<IMigrator>().MigrateAsync(targetMigration);
             }
             else
             {
@@ -823,6 +977,17 @@ public sealed class SharedProviderPersistenceIntegrationTests
         }
 
         public ValueTask DisposeAsync() => lease.DisposeAsync();
+    }
+
+    private sealed class FailAfterHistoryAuditSave : SaveChangesInterceptor {
+        public bool ObservedAuditAndOutbox { get; private set; }
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            ObservedAuditAndOutbox = eventData.Context!.ChangeTracker.Entries<SharedProviderInvocationRecord>().Any()
+                && eventData.Context.ChangeTracker.Entries<HistoryOutboxRow>().Any()
+                && eventData.Context.Database.CurrentTransaction is not null;
+            return ValueTask.FromException<int>(new InvalidOperationException("Fail after the actual audit and outbox database flush."));
+        }
     }
 
     private sealed class SharedProviderDbContextFactory(DbContextOptions<AppDbContext> options)

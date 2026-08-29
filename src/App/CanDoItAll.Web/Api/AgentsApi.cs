@@ -279,7 +279,7 @@ internal static class AgentsApi
             {
                 return Results.Ok(await providerAdministration.RunProviderTestChatAsync(
                     providerId,
-                    request,
+                    ProviderHistoryRequestContext.WithCaller(request, context),
                     cancellationToken));
             }
             catch (ProviderRuntimeProfileUnavailableException)
@@ -470,7 +470,7 @@ internal static class AgentsApi
                         agentId,
                         request.ChatSessionId,
                         request.Prompt,
-                        new AgentChatRunOptions(operationId),
+                        new AgentChatRunOptions(operationId) { Context = ProviderHistoryRequestContext.ForExecution(null, context) },
                         cancellationToken,
                         request.AttachmentPaths);
                     return Results.Ok(AgentApiResponseMapper.ToChatRunResult(result));
@@ -867,7 +867,9 @@ internal static class AgentsApi
             request.InitialActivityOperationId);
         try
         {
-            var result = await workspaceService.ExecuteRunAsync(request, cancellationToken);
+            var result = await workspaceService.ExecuteRunAsync(request with {
+                Context = ProviderHistoryRequestContext.ForExecution(request.Context, context)
+            }, cancellationToken);
             return Results.Ok(AgentApiResponseMapper.ToExecutionRunResult(result));
         }
         catch (AgentJsonSchemaOutputContractException exception)

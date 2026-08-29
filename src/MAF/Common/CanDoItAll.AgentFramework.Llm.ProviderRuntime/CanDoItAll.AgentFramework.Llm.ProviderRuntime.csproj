@@ -17,4 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsPackageVersion)" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
+  </ItemGroup>
 </Project>

@@ -262,7 +262,10 @@ public sealed record SharedProviderInvocationStartRequest(
     SharedProviderRelayOperation Operation,
     SharedProviderRoutingModelId PublicModelId,
     string UpstreamModelId,
-    DateTimeOffset RetainUntilUtc);
+    DateTimeOffset? RetainUntilUtc) {
+    public CanDoItAll.AgentFramework.Models.ProviderExecutionTariff? PricingSnapshot { get; init; }
+    public SharedProviderCallerIdentity? CallerIdentity { get; init; }
+}
 
 public sealed class SharedProviderConcurrencyException(
     string entityName,

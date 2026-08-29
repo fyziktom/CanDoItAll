@@ -1,0 +1,62 @@
+<Dialog IsOpen="true" Title="Request evidence" Subtitle="Metadata and explicitly requested bounded content."
+        Size="ModalSize.Wide" DenseChrome="true" OnClose="CloseAsync" TestId="history-detail-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+            @if (isLoading) {
+                <LoadingState Title="Loading authorized evidence" Description="Close this dialog to cancel." />
+            }
+            @if (error is not null) {
+                <Alert AlertStyle="AlertStyle.Danger" data-testid="history-detail-error">@error</Alert>
+            }
+            @if (metadata is { } loaded) {
+                <ProviderHistoryMetadataView Entry="loaded.Entry" />
+                <FormSection Title="Canonical evidence" Description="Existing records retain their own content and retention. The history index does not copy their conversations.">
+                    @foreach (var owner in loaded.Owners) {
+                        <Cluster Gap="LayoutGap.Small" @key="owner.Source">
+                            <span>@owner.Source.Kind · @owner.Source.Owner.Value · @owner.Source.Evidence.Value</span>
+                            <StatusBadge Text="@($"{owner.Role} · {owner.State}")" />
+                            @if (owner.Role == HistoryOwnerRole.ContentOwner && owner.State == HistoryOwnerState.Linked) {
+                                <Button Text="Load linked content" ButtonStyle="ButtonStyle.Light" Disabled="@isLoading"
+                                        Click="@(() => LoadContentAsync(owner.Source))" data-testid="history-owner-content" />
+                            }
+                        </Cluster>
+                    }
+                    @if (loaded.HasMoreOwners) {
+                        <Alert AlertStyle="AlertStyle.Info">Only the first 16 owner references are shown.</Alert>
+                    }
+                    @if (loaded.Owners.Count == 0) {
+                        <span>No canonical owner references are available.</span>
+                    }
+                </FormSection>
+                @if (loaded.Entry.MetadataAuthority == HistoryMetadataAuthority.Standalone) {
+                    <Button Text="Load captured content" ButtonStyle="ButtonStyle.Light" Disabled="@isLoading"
+                            Click="@(() => LoadContentAsync(null))" data-testid="history-load-content" />
+                }
+                @if (detail is { } content) {
+                    <StatusBadge Text="@($"Content: {content.State}")" data-testid="history-content-state" />
+                    @if (content.ExpiresAtUtc is { } expiry) {
+                        <p>Content expires @ProviderHistoryPresentation.Time(expiry)</p>
+                    }
+                    @foreach (var segment in new[] { ("Current input", content.Input), ("Response", content.Response) }) {
+                        @if (segment.Item2 is { } text) {
+                            <FormSection Title="@segment.Item1" Description="@($"{text.CapturedBytes:N0} of {text.OriginalBytes:N0} bytes · {text.Flags}")">
+                                <TextArea Value="@text.Text" ReadOnly="true" Size="TextAreaSize.Extended"
+                                          aria-label="@segment.Item1" data-testid="history-content-text" />
+                            </FormSection>
+                        }
+                    }
+                    @if (content.Input is null && content.Response is null) {
+                        <p>No prompt or response text is available for this evidence state.</p>
+                    }
+                } else {
+                    <p>Content has not been requested. API keys are never included.</p>
+                }
+            } else if (!isLoading && error is null) {
+                <EmptyState Title="Evidence unavailable" Description="This entry is no longer available in the current authorized scope." />
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="CloseAsync" data-testid="history-detail-close" />
+    </Footer>
+</Dialog>

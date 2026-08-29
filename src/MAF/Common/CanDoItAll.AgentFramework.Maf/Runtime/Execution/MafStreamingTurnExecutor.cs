@@ -199,7 +199,7 @@ internal sealed class MafStreamingTurnExecutor
                 response,
                 snapshotEffectiveToolInvocationTraces(),
                 inputMessages);
-            var repairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool);
+            var repairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool, runtimeOptions.History);
             var repairMessages = new[]
             {
                 MafFinalizerDriver.CreateRequiredFinalizerRepairMessage(finalizerPolicy, response, repairContext)
@@ -436,7 +436,7 @@ internal sealed class MafStreamingTurnExecutor
                 forceOmitTemperature,
                 finalizerPolicy);
             var jsonRepairSession = await jsonRepairAgent.CreateSessionAsync(cancellationToken);
-            var jsonRepairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerJsonRepairRunOptions();
+            var jsonRepairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerJsonRepairRunOptions(runtimeOptions.History);
             var jsonRepairMessages = new[]
             {
                 MafFinalizerDriver.CreateRequiredFinalizerJsonRepairMessage(finalizerPolicy, previousResponse, repairContext)

@@ -84,7 +84,7 @@ internal sealed class MafWorkflowExternalResponseDriver(
             WorkflowPreviewSimulationPlan.Empty,
             request.Run.Origin);
         MafWorkflowStreamTurn turn;
-        using (WorkflowExecutorExecutionAuditScope.Push(request.Run.RunId))
+        using (WorkflowExecutorExecutionAuditScope.Push(request.Run.RunId, request.Run.Origin))
         using (WorkflowNodeExecutionProgressScope.Push(progressObserver))
         {
             turn = await runDriver.ResumeAndRespondAsync(

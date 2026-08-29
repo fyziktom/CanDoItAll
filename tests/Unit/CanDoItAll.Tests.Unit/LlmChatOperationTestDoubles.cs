@@ -984,14 +984,14 @@ internal sealed class LlmChatInvocationAuditHarness
         return new LlmChatInvocationAuditHarness(operationId, invocations, port, scope, request);
     }
 
-    public async Task<LlmInvocationResult> InvokeAsync()
+    public async Task<LlmInvocationResult> InvokeAsync(CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? caller = null)
     {
         using var operation = scope.Push(new LlmChatOperationExecutionContext(
             OperationId,
             new LlmChatRuntimeIdentity(
                 ProviderRuntimeTestData.RuntimeIdentity.ActiveProfileId!.Value,
                 ProviderRuntimeTestData.RuntimeIdentity.ActiveFingerprint!,
-                ProviderRuntimeTestData.RuntimeIdentity.Generation)));
+                ProviderRuntimeTestData.RuntimeIdentity.Generation)) { HistoryCaller = caller });
         return await port.InvokeAsync(request);
     }
 }

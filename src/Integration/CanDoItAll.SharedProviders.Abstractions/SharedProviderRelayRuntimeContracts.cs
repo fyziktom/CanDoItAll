@@ -3,78 +3,6 @@ using System.Text.Json;
 
 namespace CanDoItAll.SharedProviders.Abstractions;
 
-public enum SharedProviderRelayUsageCompleteness
-{
-    Unavailable,
-    Partial,
-    Complete
-}
-
-public sealed record SharedProviderRelayUsage
-{
-    public SharedProviderRelayUsage(
-        long? inputTokens,
-        long? outputTokens,
-        int? imageCount,
-        SharedProviderRelayUsageCompleteness completeness)
-    {
-        if (inputTokens is < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(inputTokens));
-        }
-
-        if (outputTokens is < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(outputTokens));
-        }
-
-        if (imageCount is <= 0 or > SharedProviderRelaySupportDescriptor.MaximumAllowedImageCount)
-        {
-            throw new ArgumentOutOfRangeException(nameof(imageCount));
-        }
-
-        var hasInputTokens = inputTokens.HasValue;
-        var hasOutputTokens = outputTokens.HasValue;
-        var hasImageCount = imageCount.HasValue;
-        var isConsistent = completeness switch
-        {
-            SharedProviderRelayUsageCompleteness.Unavailable =>
-                !hasInputTokens && !hasOutputTokens && !hasImageCount,
-            SharedProviderRelayUsageCompleteness.Partial =>
-                !hasImageCount && hasInputTokens != hasOutputTokens,
-            SharedProviderRelayUsageCompleteness.Complete =>
-                !hasImageCount && hasInputTokens && hasOutputTokens ||
-                hasImageCount && !hasInputTokens && !hasOutputTokens,
-            _ => false
-        };
-        if (!isConsistent)
-        {
-            throw new ArgumentException(
-                "Relay usage values do not match their completeness state.",
-                nameof(completeness));
-        }
-
-        InputTokens = inputTokens;
-        OutputTokens = outputTokens;
-        ImageCount = imageCount;
-        Completeness = completeness;
-    }
-
-    public long? InputTokens { get; }
-
-    public long? OutputTokens { get; }
-
-    public int? ImageCount { get; }
-
-    public SharedProviderRelayUsageCompleteness Completeness { get; }
-
-    public static SharedProviderRelayUsage Unavailable { get; } = new(
-        inputTokens: null,
-        outputTokens: null,
-        imageCount: null,
-        SharedProviderRelayUsageCompleteness.Unavailable);
-}
-
 public sealed record SharedProviderRelayResponseHeaders
 {
     public SharedProviderRelayResponseHeaders(
@@ -431,6 +359,8 @@ public sealed record SharedProviderRelayRequestContext
 
     public string AuthenticatedSubject { get; }
 
+    public SharedProviderCallerIdentity CallerIdentity { get; init; } = new(SharedProviderCallerKind.Unknown);
+
     public AccessContextReference? AccessContextReference { get; }
 
     public string TraceId { get; }
@@ -669,7 +599,9 @@ public sealed record SharedProviderImageCapabilityRequest(
     string Size,
     string Quality,
     string OutputFormat,
-    int Count);
+    int Count) {
+    public SharedProviderRelayRequestContext? Context { get; init; }
+}
 
 public sealed record SharedProviderGeneratedImage(
     string ContentType,

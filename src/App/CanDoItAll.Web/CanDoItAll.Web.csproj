@@ -13,6 +13,7 @@
     <PackageReference Include="CanDoItAll.Components.Charts" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Mermaid" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
+    <ProjectReference Include="..\..\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj" />

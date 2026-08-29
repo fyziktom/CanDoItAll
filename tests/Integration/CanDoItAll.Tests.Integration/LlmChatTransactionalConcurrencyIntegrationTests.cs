@@ -288,7 +288,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         var timeProvider = TimeProvider.System;
         var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
-        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
         var conversationEngine = new PostgreSqlReconciliationConversationEngine(dbContext);
         var operationScope = new LlmChatOperationScopeAccessor();
         var eventJournal = new LlmChatOperationEventJournal(

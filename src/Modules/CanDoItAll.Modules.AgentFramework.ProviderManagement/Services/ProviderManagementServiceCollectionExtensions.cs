@@ -85,6 +85,10 @@ public static class ProviderManagementServiceCollectionExtensions
         services.TryAddScoped<SharedProviderSourceSyncService>();
         services.TryAddScoped<ISharedProviderManagementService, SharedProviderManagementService>();
         services.TryAddScoped<SharedProviderInvocationAuditService>();
+        services.TryAddSingleton<SharedProviderHistoryProjection>();
+        services.AddSingleton<SharedProviderHistorySource>();
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<SharedProviderHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistorySourceMaintenance>(provider => provider.GetRequiredService<SharedProviderHistorySource>());
         services.TryAddScoped<SharedProviderInvocationRecoveryService>();
         services.TryAddSingleton<SharedProviderInvocationRecoverySchedule>(_ =>
             SharedProviderInvocationRecoverySchedule.Default);

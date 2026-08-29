@@ -1,0 +1,3 @@
+namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
+
+public static class ProviderHistoryPersistenceAssemblyMarker;

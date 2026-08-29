@@ -94,7 +94,7 @@ public sealed class LlmChatOperationAdmissionService(
                 LlmChatOperationStatus.Pending,
                 timeProvider.GetUtcNow(),
                 0,
-                command.AttributionScope);
+                command.AttributionScope) { HistoryCaller = command.HistoryCaller };
             var operationAdmission = await operationRepository.AdmitAsync(proposed, token).ConfigureAwait(false);
             if (!operationAdmission.Created)
             {

@@ -22,8 +22,6 @@ public sealed class SharedProviderRelayApplicationService(
     ILogger<SharedProviderRelayApplicationService> logger) :
     ISharedProviderRelayApplicationService
 {
-    private static readonly TimeSpan InvocationRetention = TimeSpan.FromDays(30);
-
     private static readonly SharedProviderRelaySupportDescriptor RoutingLookupSupport = new(
         new HashSet<SharedProviderRelayOperation>
         {
@@ -103,9 +101,11 @@ public sealed class SharedProviderRelayApplicationService(
         }
 
         var target = targetResult.Target!;
+        var pricing = SharedProviderExecutionPricingResolver.Freeze(persisted.Profile, persisted.Model.UpstreamModelId);
         var finalizer = new SharedProviderInvocationAuditFinalizer(
             request.Context.RequestId,
             normalizedRequest.Operation,
+            pricing,
             invocationAuditService,
             clock,
             logger);
@@ -123,7 +123,10 @@ public sealed class SharedProviderRelayApplicationService(
                     normalizedRequest.Operation,
                     target.PublicModelId,
                     target.UpstreamModelId,
-                    clock.GetUtcNow().Add(InvocationRetention)),
+                    RetainUntilUtc: null) {
+                        PricingSnapshot = pricing,
+                        CallerIdentity = request.Context.CallerIdentity
+                    },
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

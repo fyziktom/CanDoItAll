@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
@@ -337,12 +338,14 @@ public sealed class WorkflowUsageAnalyticsTests
     [Fact]
     public async Task PersistentStoreRoundTripsImmutableFactsAndAggregatesWithoutDoubleCounting()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(PersistentWorkflowUsageObservationStore).Assembly]);
+        AppDbContextModelRegistry.ConfigureAssemblies([typeof(PersistentWorkflowUsageObservationStore).Assembly,
+            typeof(CanDoItAll.AgentFramework.ProviderHistory.Persistence.ProviderHistoryPersistenceAssemblyMarker).Assembly]);
         var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"workflow-usage-{Guid.NewGuid():N}")
             .Options;
         var store = new PersistentWorkflowUsageObservationStore(
-            new WorkflowUsageTestDbContextFactory(options));
+            new WorkflowUsageTestDbContextFactory(options),
+            new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
         var runId = new WorkflowRunId(Guid.Parse("70000000-0000-0000-0000-000000000001"));
         var processRunId = Guid.Parse("70000000-0000-0000-0000-000000000002");
         var origin = new WorkflowLaunchOrigin.ProcessAssignment(
@@ -383,6 +386,7 @@ public sealed class WorkflowUsageAnalyticsTests
         var services = new ServiceCollection();
         services.AddSingleton<IDbContextFactory<AppDbContext>>(
             new WorkflowUsageTestDbContextFactory(options));
+        services.AddSingleton(new HistoryOutboxWriter(TimeProvider.System));
         services.AddAgentFrameworkModule(new ConfigurationBuilder().Build());
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();

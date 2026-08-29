@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -30,6 +31,7 @@ public partial class AgentProviderProfilesPanel
     private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private ProviderProfileEditorModel providerModel = CreateNewProviderEditor();
+    private EditContext providerEditContext = default!;
     private IReadOnlyList<string> providerTagValues = [];
     private string providerSearch = string.Empty;
     private string suggestedModelsText = string.Empty;
@@ -77,8 +79,8 @@ public partial class AgentProviderProfilesPanel
         set => providerModel.DefaultModel = value;
     }
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() {
+        providerEditContext = new(providerModel);
         await LoadAsync();
     }
 
@@ -357,8 +359,10 @@ public partial class AgentProviderProfilesPanel
                provider.Tags.Any(tag => tag.Contains(providerSearch, StringComparison.OrdinalIgnoreCase));
     }
 
-    private void SyncProviderEditorText()
-    {
+    private void SyncProviderEditorText() {
+        if (!ReferenceEquals(providerEditContext.Model, providerModel)) {
+            providerEditContext = new(providerModel);
+        }
         providerTagValues = providerModel.Tags
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)

@@ -227,6 +227,8 @@ public sealed class OpenAiProviderDriver(
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "prompt_tokens") : 0,
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "completion_tokens") : 0)
         {
+            ObservedUsage = ProviderObservedUsage.ChatCompletions(usage),
+            RemoteRequest = ProviderResponseCorrelation.Read(request.Provider, response),
             CachedInputTokens = ProviderDriverProtocol.ReadChatCompletionsCachedTokens(usage)
         };
     }
@@ -338,6 +340,9 @@ public sealed class OpenAiProviderDriver(
             request.Provider,
             cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        if (ProviderResponseCorrelation.Read(request.Provider, response) is { } correlation) {
+            yield return new ProviderChatCorrelationObserved(correlation);
+        }
         await foreach (var update in ProviderStreamingProtocol.ReadOpenAiChatCompletionsAsync(
             stream,
             request.Model,
@@ -375,6 +380,9 @@ public sealed class OpenAiProviderDriver(
             request.Provider,
             cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        if (ProviderResponseCorrelation.Read(request.Provider, response) is { } correlation) {
+            yield return new ProviderChatCorrelationObserved(correlation);
+        }
         await foreach (var update in ProviderStreamingProtocol.ReadOpenAiResponsesAsync(
             stream,
             request.Model,
@@ -413,7 +421,9 @@ public sealed class OpenAiProviderDriver(
             cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-        return ProviderDriverProtocol.ReadOpenAiResponsesResult(request.Model, document.RootElement);
+        return ProviderDriverProtocol.ReadOpenAiResponsesResult(request.Model, document.RootElement) with {
+            RemoteRequest = ProviderResponseCorrelation.Read(request.Provider, response)
+        };
     }
 
     public async Task<ProviderImageGenerationResult> GenerateImageAsync(

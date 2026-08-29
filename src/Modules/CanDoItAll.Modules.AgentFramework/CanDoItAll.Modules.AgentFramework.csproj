@@ -50,6 +50,7 @@
     <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.SharedProviders.Abstractions\CanDoItAll.SharedProviders.Abstractions.csproj" />
+    <ProjectReference Include="..\..\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Persistence\CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />

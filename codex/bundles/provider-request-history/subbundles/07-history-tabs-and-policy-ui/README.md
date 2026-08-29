@@ -2,11 +2,7 @@
 
 ## Status
 
-- Implementation: `Not started`
-- Automated verification: `Not started`
-- Browser verification: `Not started`
-- Architecture acceptance: `Not started`
-- This README prepares the phase only. No product code, runtime setting, test, provider request, or migration is executed during bundle preparation.
+- Execution: Completed
 
 ## Objective
 
@@ -195,23 +191,23 @@ The separate mandatory Unit anchor is [AgentFrameworkSimpleChatsRouteTests.cs:86
 
 ## Acceptance Checklist
 
-- [ ] Provider History immediately follows Sharing; the dedicated Agents Request history tab uses the same panel.
-- [ ] Current instance/profile/security scope is visible; a provider host is fixed to its saved local provider ID; unsaved providers cannot search.
-- [ ] Mount, tab switch, filter edit, and control open produce zero history/aggregate/totals/facet/content/external-provider calls; permitted bounded local catalog reads do not scan history.
-- [ ] One valid Search captures immutable applied filters; invalid range/page/identifier input shows field errors and no query.
-- [ ] Paging uses only the applied query/cursor; draft changes are labeled; host scope/profile/auth changes cancel and clear.
-- [ ] EntryId and SortAtUtc/TimeBasis remain stable display/query facts; legacy evidence is not presented as an invented dispatch time.
-- [ ] Live paging does not promise a snapshot or insertion fence. Late-backfill discovery uses explicit Search/Refresh without duplicate stable IDs.
-- [ ] Loading, cancel, no results, failure with labeled prior results, denied access, and coverage gaps are distinct.
-- [ ] Search/Enter/Next/Details do not save provider edits; provider Save still validates and persists the intended model.
-- [ ] Details and content have separate explicit requests; owner/current permission is rechecked; unavailable/expired/unsupported detail is honest.
-- [ ] Price display distinguishes ProviderReported, calculated/estimated/free/unpriced/legacy evidence and currency; no null-as-zero.
-- [ ] Global policy requires explicit authorized Load and versioned Apply; draft edits trigger neither history queries nor writes.
-- [ ] Retention shortening/purge requires its explicit authorized preview/confirmation; mode changes do not silently delete or extend prior detail.
-- [ ] Permission/profile changes during a server/UI await cannot publish stale metadata, content, or policy results.
-- [ ] Workspace depends only on neutral history contracts for this feature; no reverse module edge or new shared-library edit.
-- [ ] Expected versus actual test discovery is recorded, all selected tests pass, and screenshots/counters support the stated behavior.
-- [ ] No paid provider call, real token lifecycle mutation, or unrelated data operation was used without execution-specific authorization.
+- [x] Provider History immediately follows Sharing; the dedicated Agents Request history tab uses the same panel.
+- [x] Current instance/profile/security scope is visible; a provider host is fixed to its saved local provider ID; unsaved providers cannot search.
+- [x] Mount, tab switch, filter edit, and control open produce zero history/aggregate/totals/facet/content/external-provider calls; permitted bounded local catalog reads do not scan history.
+- [x] One valid Search captures immutable applied filters; invalid range/page/identifier input shows field errors and no query.
+- [x] Paging uses only the applied query/cursor; draft changes are labeled; host scope/profile/auth changes cancel and clear.
+- [x] EntryId and SortAtUtc/TimeBasis remain stable display/query facts; legacy evidence is not presented as an invented dispatch time.
+- [x] Live paging does not promise a snapshot or insertion fence. Late-backfill discovery uses explicit Search/Refresh without duplicate stable IDs.
+- [x] Loading, cancel, no results, failure with labeled prior results, denied access, and coverage gaps are distinct.
+- [x] Search/Enter/Next/Details do not save provider edits; provider Save still validates and persists the intended model.
+- [x] Details and content have separate explicit requests; owner/current permission is rechecked; unavailable/expired/unsupported detail is honest.
+- [x] Price display distinguishes ProviderReported, calculated/estimated/free/unpriced/legacy evidence and currency; no null-as-zero.
+- [x] Global policy requires explicit authorized Load and versioned Apply; draft edits trigger neither history queries nor writes.
+- [x] Retention shortening/purge requires its explicit authorized preview/confirmation; mode changes do not silently delete or extend prior detail.
+- [x] Permission/profile changes during a server/UI await cannot publish stale metadata, content, or policy results.
+- [x] Workspace depends only on neutral history contracts for this feature; no reverse module edge or new shared-library edit.
+- [x] Expected versus actual test discovery is recorded, all selected tests pass, and screenshots/counters support the stated behavior.
+- [x] No paid provider call, real token lifecycle mutation, or unrelated data operation was used without execution-specific authorization.
 
 ## Proof Required
 

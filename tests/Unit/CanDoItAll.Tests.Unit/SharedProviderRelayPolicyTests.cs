@@ -10,6 +10,19 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class SharedProviderRelayPolicyTests
 {
+    [Fact]
+    public void Usage_extractor_preserves_observed_categories_without_inventing_missing_counts() {
+        var usage = SharedProviderRelayUsageExtractor.ExtractBuffered(SharedProviderRelayOperation.ChatCompletions,
+            Encoding.UTF8.GetBytes("""{"usage":{"prompt_tokens":100,"completion_tokens":20,"prompt_tokens_details":{"cached_tokens":40},"completion_tokens_details":{"reasoning_tokens":12}}}"""));
+        Assert.Equal(40, usage.CachedInputTokens);
+        Assert.Equal(12, usage.ReasoningTokens);
+        Assert.Equal(20, usage.OutputTokens);
+        Assert.Null(usage.CacheWriteTokens);
+        var invalid = SharedProviderRelayUsageExtractor.ExtractBuffered(SharedProviderRelayOperation.ChatCompletions,
+            Encoding.UTF8.GetBytes("""{"usage":{"prompt_tokens":1,"completion_tokens":1,"prompt_tokens_details":{"cached_tokens":2}}}"""));
+        Assert.Equal(SharedProviderRelayUsageCompleteness.Unavailable, invalid.Completeness);
+    }
+
     [Theory]
     [InlineData("\"\"", "null")]
     [InlineData("\"A function\"", "false")]

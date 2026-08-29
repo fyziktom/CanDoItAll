@@ -1,5 +1,7 @@
 # C# Dependency Direction
 
+Execution clarification: [SB04 concrete placement and edges](11-capture-implementation-decisions.md) amends the preliminary recorder/typed-adapter and batch ownership assumptions below.
+
 ## Current Baseline
 
 The [declared graph](../inventories/03-project-reference-inventory.json) covers 104 source

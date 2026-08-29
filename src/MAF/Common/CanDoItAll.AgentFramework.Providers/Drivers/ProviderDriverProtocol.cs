@@ -128,6 +128,7 @@ internal static class ProviderDriverProtocol
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "input_tokens") : 0,
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "output_tokens") : 0)
         {
+            ObservedUsage = ProviderObservedUsage.Responses(usage),
             CachedInputTokens = ReadCachedTokens(usage, "input_tokens_details")
         };
     }

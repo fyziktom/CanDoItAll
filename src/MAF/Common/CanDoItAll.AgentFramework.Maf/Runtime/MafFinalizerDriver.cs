@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -100,8 +101,10 @@ internal static class MafFinalizerDriver
 
     public static ChatClientAgentRunOptions CreateRequiredFinalizerRepairRunOptions(
         AgentFinalizerPolicy policy,
-        AITool finalizerTool)
+        AITool finalizerTool,
+        HistoryInvocationContext history)
     {
+        ArgumentNullException.ThrowIfNull(history);
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(finalizerTool);
 
@@ -113,7 +116,7 @@ internal static class MafFinalizerDriver
             ToolMode = ChatToolMode.RequireSpecific(policy.ToolName)
         };
 
-        return new ChatClientAgentRunOptions(chatOptions)
+        return new ChatClientAgentRunOptions(ProviderHistoryChatContext.WithContext(chatOptions, history))
         {
             AllowBackgroundResponses = false,
             ContinuationToken = null
@@ -143,14 +146,13 @@ internal static class MafFinalizerDriver
             BuildRequiredFinalizerArgumentInstructions(policy);
     }
 
-    public static ChatClientAgentRunOptions CreateRequiredFinalizerJsonRepairRunOptions()
-    {
-        return new ChatClientAgentRunOptions(new ChatOptions
-        {
+    public static ChatClientAgentRunOptions CreateRequiredFinalizerJsonRepairRunOptions(HistoryInvocationContext history) {
+        ArgumentNullException.ThrowIfNull(history);
+        return new ChatClientAgentRunOptions(ProviderHistoryChatContext.WithContext(new ChatOptions {
             AllowMultipleToolCalls = false,
             ToolMode = null,
             Tools = []
-        })
+        }, history))
         {
             AllowBackgroundResponses = false,
             ContinuationToken = null

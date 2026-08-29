@@ -43,5 +43,8 @@
     <NoWarn>$(NoWarn);OPENAI001;MEAI001;MAAI001</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
+  </ItemGroup>
 </Project>
 

@@ -196,8 +196,11 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
                     RunningState,
                     CancellationToken.None);
             }
-            catch (OperationCanceledException) when (activeRun.IsCancellationRequested)
+            catch (OperationCanceledException exception) when (activeRun.IsCancellationRequested)
             {
+                if (WorkflowRuntimeTransitionRules.TryFindUsageObservationException(exception, out var usageException)) {
+                    await AppendUsageObservationsAsync(running, usageException!.Observations, CancellationToken.None);
+                }
                 return await FinalizeCancellationAsync(running, CancellationToken.None);
             }
             catch (Exception exception) when (WorkflowRuntimeTransitionRules.TryFindUsageObservationException(exception, out var usageException))

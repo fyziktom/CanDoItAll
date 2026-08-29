@@ -2,8 +2,7 @@
 
 ## Status
 
-- Execution: `Not started`. This is an implementation contract, not completed feature evidence.
-- Preparation: defined; entry requires the prerequisites below and renewed scope authorization.
+- Execution: Completed
 
 ## Objective
 
@@ -13,6 +12,14 @@
 
 - N001–N011; R001–R011, R013, R014. R012 preparation boundary remains documented separately.
 - [Normalized requirements](../../requirements/01-normalized-requirements.md).
+
+## Required user acceptance environments
+
+The implementation authorization requires both the standard 5032 application and the
+existing Docker shared publisher5210/client5212 path. Preserve their data and configuration.
+Capture actual agent/chat producer calls, caller identity and both history tabs in each
+appropriate host. Deterministic isolated test hosts supplement this acceptance and never
+replace it. Record any inability to test these targets as an open gate.
 
 ## Prerequisites
 
@@ -123,13 +130,13 @@ dotnet test 'C:/repositories/CanDoItAll/tests/Playwright/CanDoItAll.Tests.Playwr
 
 ## Acceptance Checklist
 
-- [ ] Both views filter the same captured local attempts and distinguish managed keys; old unsupported price remains honest.
-- [ ] Browser initial/tab/draft state causes no history/count/detail query or provider save; screenshots and assertions cover overlays and keyboard flow.
-- [ ] One-million-row synthetic scale fixture meets declared page/plan/byte/time bounds or has an explicitly reviewed evidence-based target revision.
-- [ ] Capture and projection do not copy prior conversation, lose attempts silently, or repeat inference on failure.
-- [ ] Profile/authorization change before publishing denies stale results; expired/deleted content and stale replay remain suppressed.
-- [ ] No mandatory fixture is skipped, zero-discovered, mocked into desired output or falsely claimed from old bundle status.
-- [ ] No real paid model, user database, token issuance on the active instance or deployment occurred without separate authorization.
+- [x] Both views filter the same captured local attempts and distinguish managed keys; old unsupported price remains honest.
+- [x] Browser initial/tab/draft state causes no history/count/detail query or provider save; screenshots and assertions cover overlays and keyboard flow.
+- [x] One-million-row synthetic scale fixture meets declared page/plan/byte/time bounds or has an explicitly reviewed evidence-based target revision.
+- [x] Capture and projection do not copy prior conversation, lose attempts silently, or repeat inference on failure.
+- [x] Profile/authorization change before publishing denies stale results; expired/deleted content and stale replay remain suppressed.
+- [x] No mandatory fixture is skipped, zero-discovered, mocked into desired output or falsely claimed from old bundle status.
+- [x] No real paid model, user database, token issuance on the active instance or deployment occurred without separate authorization.
 
 ## Proof Required
 

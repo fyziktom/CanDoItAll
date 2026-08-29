@@ -45,6 +45,7 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
                     [provider.Id] = "test-source-token"
                 })),
             NoOpMafProviderStreamingDispatchGate.Instance,
+            new RecordingProviderHistory(),
             httpClientSelector: new FixedProviderHttpClientSelector(httpClient));
         var agent = CreateFrameworkAgent(factory, provider);
 
@@ -103,7 +104,8 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
             });
         var factory = new MafProviderAgentFactory(
             new MafProviderCredentialService(resolver),
-            NoOpMafProviderStreamingDispatchGate.Instance);
+            NoOpMafProviderStreamingDispatchGate.Instance,
+            new RecordingProviderHistory());
         var environmentNames = new[]
         {
             providerA.ApiKeyEnvironmentVariable,
@@ -312,6 +314,7 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
             new MafProviderCredentialService(new ProfileCredentialResolver(
                 new Dictionary<Guid, string> { [provider.Id] = "unused-test-key" })),
             NoOpMafProviderStreamingDispatchGate.Instance,
+            new RecordingProviderHistory(),
             httpClientSelector: new FixedProviderHttpClientSelector(httpClient));
         var invocationCount = 0;
         var function = AIFunctionFactory.Create((string value) => {

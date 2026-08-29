@@ -89,7 +89,7 @@ internal sealed class SharedProviderRelayUsageProjectionSource(
             usage.Completeness,
             MapPricing(row.Invocation),
             usage.Tokens,
-            row.Invocation.Price,
+            row.Invocation.PriceEvidence?.Currency is null or "USD" ? row.Invocation.Price : null,
             row.Invocation.CompletedAtUtc ?? row.Invocation.StartedAtUtc)
         {
             ImageCount = usage.ImageCount
@@ -220,9 +220,11 @@ internal sealed class SharedProviderRelayUsageProjectionSource(
 
     private static ProviderUsagePricingCompleteness MapPricing(
         SharedProviderInvocationRecord invocation)
-        => invocation.Price.HasValue &&
-            invocation.PricingCompleteness != SharedProviderMetadataCompleteness.Unavailable
-            ? ProviderUsagePricingCompleteness.CalculatedAtExecution
+        => invocation.Price.HasValue && invocation.PriceEvidence?.Currency is null or "USD" &&
+            invocation.PricingCompleteness == SharedProviderMetadataCompleteness.Complete
+            ? invocation.PriceEvidence?.Kind == CanDoItAll.AgentFramework.Models.ProviderPriceEvidenceKind.ProviderReported
+                ? ProviderUsagePricingCompleteness.ProviderReported
+                : ProviderUsagePricingCompleteness.CalculatedAtExecution
             : ProviderUsagePricingCompleteness.Unpriced;
 
     private sealed record UsageRow(

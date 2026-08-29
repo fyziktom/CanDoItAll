@@ -2,8 +2,7 @@
 
 ## Status
 
-- Execution: `Not started`. This is an implementation contract, not completed feature evidence.
-- Preparation: defined; entry requires the prerequisites below and renewed scope authorization.
+- Execution: Completed
 
 ## Objective
 
@@ -125,14 +124,14 @@ dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integ
 
 ## Acceptance Checklist
 
-- [ ] Existing retained canonical records older than 30 days are searchable in selected ranges without copied transcripts.
-- [ ] One physical observation/attempt with multiple owners is not charged twice; identical unrelated calls stay separate.
-- [ ] Aggregate canonical owner amounts never overwrite or get guessed/distributed into per-attempt costs; the H09 granularity fixture proves this.
-- [ ] Source version changes preserve EntryId/SortAtUtc; legacy actual-start/attempt fields are not fabricated.
-- [ ] Late trusted canonical commit can index after orphan expiry; expired detail and newer deleted source cannot revive.
-- [ ] Journal recovery covers first canonical creation after orphan expiry and crash-before-publication, plus all linked-source updates/deletes; a pending entry is only supplementary.
-- [ ] Interactive Search causes no backfill/workspace scan; checkpoints/lag/failed source are visible.
-- [ ] Safety markers survive every possible stale replay; their eventual purge requires drained/reconciled source generations.
+- [x] Existing retained canonical records older than30d remain indexable without copied transcripts; actual authorized range search is SB06.
+- [x] One physical observation/attempt with multiple owners is not charged twice; identical unrelated calls stay separate.
+- [x] Aggregate canonical owner amounts never overwrite or get guessed/distributed into per-attempt costs; the H09 granularity fixture proves this.
+- [x] Source version changes preserve EntryId/SortAtUtc; legacy actual-start/attempt fields are not fabricated.
+- [x] Late trusted canonical commit can index after orphan expiry; expired detail and newer deleted source cannot revive.
+- [x] Journal recovery covers first canonical creation after orphan expiry and crash-before-publication, plus all linked-source updates/deletes; a pending entry is only supplementary.
+- [x] Backfill runs only in maintenance with durable coverage/error checkpoints; SB06 must expose them without source work on Search.
+- [x] Safety markers survive every possible stale replay; their eventual purge requires drained/reconciled source generations.
 
 ## Proof Required
 

@@ -211,6 +211,26 @@ public sealed class SharedProviderArchitectureCharacterizationTests
         Assert.False(File.Exists(workspaceProviderPanel));
     }
 
+    [Fact]
+    public void History_contracts_do_not_reference_outer_types() {
+        var root = FindRepositoryRoot();
+        var prefix = "src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.";
+        foreach (var layer in new[] { "Abstractions", "Application", "Persistence" }) {
+            var project = Path.Combine(root, $"{prefix}{layer}/CanDoItAll.AgentFramework.ProviderHistory.{layer}.csproj");
+            Assert.True(File.Exists(project), $"Missing history boundary: {layer}");
+            var references = ReadProjectReferences(project).Select(Path.GetFileNameWithoutExtension).ToArray();
+            string[] allowed = layer switch {
+                "Application" => ["CanDoItAll.AgentFramework.ProviderHistory.Abstractions"],
+                "Persistence" => ["CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
+                    "CanDoItAll.AgentFramework.ProviderHistory.Application", "CanDoItAll.Infrastructure"],
+                _ => []
+            };
+            Assert.All(references, reference => Assert.Contains(reference, allowed));
+        }
+        var shared = Read("src/Integration/CanDoItAll.SharedProviders.Abstractions/CanDoItAll.SharedProviders.Abstractions.csproj");
+        Assert.DoesNotContain("ProjectReference", shared, StringComparison.Ordinal);
+    }
+
     private static IReadOnlyList<string> ReadProjectReferences(string project)
     {
         var projectDirectory = Path.GetDirectoryName(project)!;

@@ -450,6 +450,40 @@ public sealed class EmptyCompletionRetryChatClientTests
         Assert.Equal(22, result.TotalTokens);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task History_decorator_is_inside_retry_and_does_not_send_internal_context(bool streaming) {
+        var history = new RecordingProviderHistory();
+        var usage = new UsageDetails { InputTokenCount = 10, OutputTokenCount = 5, CachedInputTokenCount = 0 };
+        var inner = streaming
+            ? ScriptedChatClient.ForStreaming([CreateUpdate(new UsageContent(usage))],
+                [CreateUpdate(new TextContent("answer")), CreateUpdate(new UsageContent(usage))])
+            : ScriptedChatClient.ForResponses(CreateResponse(usage: usage), CreateResponse(new TextContent("answer"), usage));
+        var provider = CreateProvider();
+        using var observed = new ProviderHistoryChatClient(inner, provider, provider.DefaultModel, history, TimeProvider.System);
+        using var client = CreateClient(observed);
+        await InvokeAsync(client, streaming);
+        Assert.Equal(2, inner.InvocationCount);
+        Assert.Equal(2, history.Starts.Count);
+        Assert.Single(history.Starts.Select(start => start.RequestId).Distinct());
+        Assert.All(history.Completions, item => Assert.Equal(10, item.Completion.Usage.InputTokens));
+        Assert.All(inner.Options, options => Assert.Null(ProviderHistoryChatContext.Read(options)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task History_terminal_failure_never_triggers_sdk_empty_retry(bool streaming) {
+        var history = new RecordingProviderHistory { FailCompletion = true };
+        var inner = streaming ? ScriptedChatClient.ForStreaming([]) : ScriptedChatClient.ForResponses(CreateResponse());
+        var provider = CreateProvider();
+        using var observed = new ProviderHistoryChatClient(inner, provider, provider.DefaultModel, history, TimeProvider.System);
+        using var client = CreateClient(observed);
+        await Assert.ThrowsAsync<CanDoItAll.AgentFramework.ProviderHistory.ProviderHistoryException>(() => InvokeAsync(client, streaming));
+        Assert.Equal(1, inner.InvocationCount);
+    }
+
     private static async Task<InvocationResult> InvokeAsync(
         IChatClient client,
         bool streaming,
@@ -722,6 +756,7 @@ public sealed class EmptyCompletionRetryChatClientTests
         public int InvocationCount { get; private set; }
 
         public List<IReadOnlyList<ChatMessage>> Invocations { get; } = [];
+        public List<ChatOptions?> Options { get; } = [];
 
         public static ScriptedChatClient ForResponses(params ChatResponse[] responses)
         {
@@ -748,6 +783,7 @@ public sealed class EmptyCompletionRetryChatClientTests
         {
             InvocationCount++;
             Invocations.Add(messages.ToArray());
+            Options.Add(options);
             if (throwCancellation)
             {
                 throw new OperationCanceledException(
@@ -766,6 +802,7 @@ public sealed class EmptyCompletionRetryChatClientTests
         {
             InvocationCount++;
             Invocations.Add(messages.ToArray());
+            Options.Add(options);
             if (throwCancellation)
             {
                 throw new OperationCanceledException(

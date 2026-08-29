@@ -813,6 +813,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         var factory = new MafProviderAgentFactory(
             new MafProviderCredentialService(FixedAgentCredentialResolver.Instance),
             NoOpMafProviderStreamingDispatchGate.Instance,
+            fixture.Services.GetRequiredService<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder>(),
             loggerFactory: null,
             fixture.Services.GetRequiredService<IProviderHttpClientSelector>());
         var agent = factory.CreateFrameworkAgent(

@@ -8,6 +8,7 @@ public static class SharedProviderPriceMapper {
         price.InputPerMillionTokensUsd,
         price.CachedInputPerMillionTokensUsd,
         price.OutputPerMillionTokensUsd) {
+        IsExplicitlyFree = price.TariffKind == ProviderTariffKind.ExplicitFree,
         CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd,
         LongContextThresholdTokens = price.LongContextThresholdTokens,
         LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd,
@@ -21,6 +22,7 @@ public static class SharedProviderPriceMapper {
         price.InputPerMillionTokensUsd,
         price.CachedInputPerMillionTokensUsd,
         price.OutputPerMillionTokensUsd) {
+        TariffKind = price.IsExplicitlyFree ? ProviderTariffKind.ExplicitFree : ProviderTariffKind.Unspecified,
         CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd,
         LongContextThresholdTokens = price.LongContextThresholdTokens,
         LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd,

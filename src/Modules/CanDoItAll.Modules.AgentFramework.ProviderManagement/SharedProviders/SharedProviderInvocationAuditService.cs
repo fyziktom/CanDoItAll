@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,8 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderInvocationAuditService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock)
+    IClock clock,
+    SharedProviderHistoryProjection history)
 {
     public async Task<Guid> BeginAsync(
         SharedProviderInvocationStartRequest request,
@@ -14,6 +16,8 @@ public sealed class SharedProviderInvocationAuditService(
     {
         ArgumentNullException.ThrowIfNull(request);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
         var existing = await dbContext.Set<SharedProviderInvocationRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(record => record.RequestId == request.RequestId, cancellationToken);
@@ -37,6 +41,8 @@ public sealed class SharedProviderInvocationAuditService(
                 nameof(request));
         }
 
+        var startedAt = HistoryStorageTimestamp.Normalize(clock.GetUtcNow());
+        var retainUntil = await history.ResolveRetentionAsync(dbContext, startedAt, request.RetainUntilUtc, cancellationToken);
         var record = SharedProviderInvocationTransitions.Create(
             request.RequestId,
             request.PublicationId,
@@ -48,12 +54,23 @@ public sealed class SharedProviderInvocationAuditService(
             request.Operation,
             request.PublicModelId,
             request.UpstreamModelId,
-            clock.GetUtcNow(),
-            request.RetainUntilUtc);
+            startedAt,
+            retainUntil);
+        record.PricingSnapshot = request.PricingSnapshot;
+        record.CallerIdentity = request.CallerIdentity;
+        var provider = await dbContext.Set<ProviderProfile>().AsNoTracking()
+            .Where(item => item.Id == request.ProviderProfileId)
+            .Select(item => new { item.Name, item.ProviderKind }).SingleAsync(cancellationToken);
+        record.ProviderNameSnapshot = provider.Name;
+        record.ProviderKindSnapshot = provider.ProviderKind;
         dbContext.Add(record);
+        await history.StageAsync(dbContext, record, cancellationToken);
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            if (transaction is not null) {
+                await transaction.CommitAsync(cancellationToken);
+            }
             return record.Id;
         }
         catch (DbUpdateException exception) when (exception is not DbUpdateConcurrencyException)
@@ -80,13 +97,24 @@ public sealed class SharedProviderInvocationAuditService(
         ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
         ArgumentNullException.ThrowIfNull(completion);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
         var record = await dbContext.Set<SharedProviderInvocationRecord>()
             .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken)
             ?? throw new KeyNotFoundException($"Shared-provider invocation '{requestId}' was not found.");
+        completion = completion with { CompletedAtUtc = HistoryStorageTimestamp.Normalize(completion.CompletedAtUtc) };
+        var previousVersion = record.HistoryVersion;
         SharedProviderInvocationTransitions.Finalize(record, completion);
+        if (record.HistoryVersion == previousVersion) {
+            return;
+        }
+        await history.StageAsync(dbContext, record, cancellationToken);
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            if (transaction is not null) {
+                await transaction.CommitAsync(cancellationToken);
+            }
         }
         catch (DbUpdateConcurrencyException exception)
         {
@@ -119,7 +147,8 @@ public sealed class SharedProviderInvocationAuditService(
             existing.Operation != request.Operation ||
             existing.PublicModelId != request.PublicModelId ||
             !string.Equals(existing.UpstreamModelId, request.UpstreamModelId, StringComparison.Ordinal) ||
-            existing.DeleteAfterUtc != request.RetainUntilUtc)
+            request.RetainUntilUtc is { } requestedExpiry && existing.DeleteAfterUtc != HistoryStorageTimestamp.Normalize(requestedExpiry) ||
+            existing.PricingSnapshot != request.PricingSnapshot || existing.CallerIdentity != request.CallerIdentity)
         {
             throw new InvalidOperationException(
                 $"Shared-provider invocation '{request.RequestId}' already exists with different metadata.");
@@ -137,5 +166,9 @@ public sealed class SharedProviderInvocationAuditService(
             record.ImageCount == completion.ImageCount &&
             record.UsageCompleteness == completion.UsageCompleteness &&
             record.Price == completion.Price &&
-            record.PricingCompleteness == completion.PricingCompleteness;
+            record.PricingCompleteness == completion.PricingCompleteness &&
+            record.PriceEvidence == completion.PriceEvidence &&
+            record.CachedInputTokenCount == completion.CachedInputTokenCount &&
+            record.CacheWriteTokenCount == completion.CacheWriteTokenCount &&
+            record.ReasoningTokenCount == completion.ReasoningTokenCount;
 }

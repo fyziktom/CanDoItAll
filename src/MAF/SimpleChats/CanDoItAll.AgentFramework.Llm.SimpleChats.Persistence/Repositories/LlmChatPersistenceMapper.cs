@@ -133,6 +133,7 @@ internal static class LlmChatPersistenceMapper
             RequestFingerprint = operation.RequestFingerprint.Value,
             ExpectedTranscriptRevision = operation.ExpectedTranscriptRevision,
             Status = operation.Status,
+            HistoryCaller = operation.HistoryCaller,
             AttributionScopeKind = operation.AttributionScope?.Kind,
             AttributionScopeKey = operation.AttributionScope?.Key ?? string.Empty,
             CancellationRequestedAtUtc = operation.CancellationRequestedAtUtc,
@@ -170,6 +171,7 @@ internal static class LlmChatPersistenceMapper
                 ? new WorkspaceScopeDescriptor(attributionScopeKind, row.AttributionScopeKey)
                 : null)
         {
+            HistoryCaller = row.HistoryCaller,
             CancellationRequestedAtUtc = row.CancellationRequestedAtUtc,
             CancellationGeneration = row.CancellationGeneration,
             ExecutionOwnerId = row.ExecutionOwnerId is { } ownerId
@@ -199,6 +201,7 @@ internal static class LlmChatPersistenceMapper
     public static LlmChatInvocationRecordRow ToRow(LlmChatInvocationRecord record)
         => new()
         {
+            HistoryAttemptsJson = System.Text.Json.JsonSerializer.Serialize(record.HistoryAttempts),
             OperationId = record.OperationId.Value,
             ProviderProfileId = record.ProviderProfileId,
             ProviderKind = record.ProviderKind,
@@ -248,5 +251,8 @@ internal static class LlmChatPersistenceMapper
             row.ProviderCostUsd,
             row.CalculatedCostUsd,
             row.PricingProfileHash,
-            row.PricingVersion);
+            row.PricingVersion) {
+                HistoryAttempts = System.Text.Json.JsonSerializer.Deserialize<CanDoItAll.AgentFramework.ProviderHistory.HistoryEntry[]>(
+                    row.HistoryAttemptsJson) ?? throw new InvalidDataException("Stored invocation history attempts are null.")
+            };
 }

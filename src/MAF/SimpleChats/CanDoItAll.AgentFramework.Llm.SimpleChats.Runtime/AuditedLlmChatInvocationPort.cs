@@ -21,6 +21,7 @@ public sealed class AuditedLlmChatInvocationPort(
         ArgumentNullException.ThrowIfNull(request);
         var operationId = operationScope.Current?.OperationId
             ?? throw new InvalidOperationException("An LLM Chat operation scope is required for invocation audit.");
+        request = LlmChatHistoryContext.Attach(request, operationId, operationScope.Current?.HistoryCaller);
         cancellationToken.ThrowIfCancellationRequested();
         var startedAtUtc = timeProvider.GetUtcNow();
         await evidenceSink.MarkProviderDispatchStartedAsync(
@@ -116,7 +117,9 @@ public sealed class AuditedLlmChatInvocationPort(
             providerCostUsd: pricing.ProviderCostUsd,
             calculatedCostUsd: pricing.CalculatedCostUsd,
             pricingProfileHash: pricing.PricingProfileHash,
-            pricingVersion: pricing.PricingVersion), CancellationToken.None);
+            pricingVersion: pricing.PricingVersion) {
+                HistoryAttempts = request.History.Attempts.EvidenceSnapshot()
+            }, CancellationToken.None);
     }
 
     internal static string MapFailureCode(LlmInvocationFailureKind failureKind)

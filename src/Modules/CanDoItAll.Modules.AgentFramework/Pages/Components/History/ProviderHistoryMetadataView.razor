@@ -1,0 +1,48 @@
+<FormStack>
+    <FormRow Split="true">
+        <FormField Text="Entry / provider">
+            <span>@Entry.Id.Value<br />@Entry.Provider.Name · @Entry.Provider.Id?.Value<br />@ProviderHistoryPresentation.Model(Entry)</span>
+        </FormField>
+        <FormField Text="Execution">
+            <span>@Entry.Workload · @Entry.Operation · @Entry.Outcome<br />@Entry.Granularity · @Entry.TimeBasis<br />@ProviderHistoryPresentation.Time(Entry.SortAtUtc)</span>
+        </FormField>
+    </FormRow>
+    <FormRow Split="true">
+        <FormField Text="Request / attempt">
+            <span>@(Entry.RequestId?.Value.ToString() ?? "Unavailable")<br />@(Entry.AttemptId?.Value.ToString() ?? "Unavailable")</span>
+        </FormField>
+        <FormField Text="Caller authentication">
+            <span>@Entry.Caller.Kind<br />Credential ID: @(Entry.Caller.CredentialId?.Value.ToString() ?? "Unavailable")<br />
+                Subject: @(Entry.Caller.Subject ?? "Unavailable")<br />Issuer: @(Entry.Caller.Issuer ?? "Unavailable")</span>
+        </FormField>
+    </FormRow>
+    <FormRow Split="true">
+        <FormField Text="Usage">
+            <span>@ProviderHistoryPresentation.Usage(Entry.Usage)<br />
+                Cached input: @ProviderHistoryPresentation.Count(Entry.Usage.CachedInputTokens) · Cache write: @ProviderHistoryPresentation.Count(Entry.Usage.CacheWriteTokens)<br />
+                Reasoning: @ProviderHistoryPresentation.Count(Entry.Usage.ReasoningTokens) · Images: @ProviderHistoryPresentation.Count(Entry.Usage.ImageCount)</span>
+        </FormField>
+        <FormField Text="Price evidence">
+            <span>@ProviderHistoryPresentation.Price(Entry.Price)<br />
+                Version: @(Entry.Price.Version ?? "Unavailable")<br />
+                Source revision: @(Entry.Price.SourceRevision ?? "Unavailable")<br />
+                Profile hash: @(Entry.Price.ProfileHash ?? "Unavailable")</span>
+        </FormField>
+    </FormRow>
+    <FormRow Split="true">
+        <FormField Text="Ownership / retention">
+            <span>@Entry.MetadataAuthority · @Entry.RetentionAuthority<br />Detail: @Entry.DetailState<br />
+                Expires: @(Entry.ExpiresAtUtc is { } expiry ? ProviderHistoryPresentation.Time(expiry) : "Managed by owner / no history expiry")</span>
+        </FormField>
+        <FormField Text="Correlation">
+            <span>@(Entry.CorrelationId ?? "Unavailable")</span>
+            @if (Entry.RemoteRequest is { } remote) {
+                <span>Remote source: @remote.ConfiguredSourceId<br />Publisher request: @remote.PublisherRequestId</span>
+            }
+        </FormField>
+    </FormRow>
+</FormStack>
+
+@code {
+    [Parameter, EditorRequired] public HistoryEntry Entry { get; set; } = default!;
+}

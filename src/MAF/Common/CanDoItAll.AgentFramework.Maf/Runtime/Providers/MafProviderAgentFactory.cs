@@ -207,17 +207,23 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
     private readonly IMafProviderStreamingDispatchGate dispatchGate;
     private readonly IProviderHttpClientSelector? httpClientSelector;
     private readonly ILoggerFactory loggerFactory;
+    private readonly CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder history;
+    private readonly TimeProvider clock;
 
     public MafProviderAgentFactory(
         IMafProviderCredentialService credentialService,
         IMafProviderStreamingDispatchGate dispatchGate,
+        CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder history,
         ILoggerFactory? loggerFactory = null,
-        IProviderHttpClientSelector? httpClientSelector = null)
+        IProviderHttpClientSelector? httpClientSelector = null,
+        TimeProvider? clock = null)
     {
         this.credentialService = credentialService ?? throw new ArgumentNullException(nameof(credentialService));
         this.dispatchGate = dispatchGate ?? throw new ArgumentNullException(nameof(dispatchGate));
         this.loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         this.httpClientSelector = httpClientSelector;
+        this.history = history ?? throw new ArgumentNullException(nameof(history));
+        this.clock = clock ?? TimeProvider.System;
     }
 
     public AIAgent CreateFrameworkAgent(
@@ -426,6 +432,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 $"Provider '{provider.Name}' model '{model}' already contains empty-completion recovery.");
         }
 
+        chatClient = new ProviderHistoryChatClient(chatClient, provider, model, history, clock);
         var logger = loggerFactory.CreateLogger<EmptyCompletionRetryChatClient>();
         return new EmptyCompletionRetryChatClient(
             chatClient,

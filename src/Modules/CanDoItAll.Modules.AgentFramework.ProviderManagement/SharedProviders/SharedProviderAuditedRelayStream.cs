@@ -5,176 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-internal sealed class SharedProviderInvocationAuditFinalizer(
-    string requestId,
-    SharedProviderRelayOperation operation,
-    SharedProviderInvocationAuditService invocationAuditService,
-    IClock clock,
-    ILogger logger)
-{
-    private static readonly TimeSpan FinalizationTimeout = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan[] RetryDelays =
-    [
-        TimeSpan.FromMilliseconds(50),
-        TimeSpan.FromMilliseconds(200)
-    ];
-    private const int MaximumAttempts = 3;
-    private readonly object gate = new();
-    private Task? finalization;
-
-    public Task SucceededAsync(SharedProviderRelayUsage usage)
-        => FinalizeOnceAsync(SharedProviderInvocationOutcome.Succeeded, null, usage);
-
-    public Task FailedAsync(
-        SharedProviderFailure failure,
-        SharedProviderRelayUsage usage)
-    {
-        ArgumentNullException.ThrowIfNull(failure);
-        return failure.Category == SharedProviderFailureCategory.Cancelled
-            ? CancelledAsync(usage)
-            : FinalizeOnceAsync(
-                SharedProviderInvocationOutcome.Failed,
-                failure.Category,
-                usage);
-    }
-
-    public Task CancelledAsync(SharedProviderRelayUsage usage)
-        => FinalizeOnceAsync(
-            SharedProviderInvocationOutcome.Cancelled,
-            SharedProviderFailureCategory.Cancelled,
-            usage);
-
-    private Task FinalizeOnceAsync(
-        SharedProviderInvocationOutcome outcome,
-        SharedProviderFailureCategory? failureCategory,
-        SharedProviderRelayUsage usage)
-    {
-        ArgumentNullException.ThrowIfNull(usage);
-        lock (gate)
-        {
-            return finalization ??= PersistAsync(outcome, failureCategory, usage);
-        }
-    }
-
-    private async Task PersistAsync(
-        SharedProviderInvocationOutcome outcome,
-        SharedProviderFailureCategory? failureCategory,
-        SharedProviderRelayUsage usage)
-    {
-        var mappedUsage = MapUsage(operation, usage);
-        var completion = new SharedProviderInvocationCompletion(
-            outcome,
-            clock.GetUtcNow(),
-            failureCategory,
-            mappedUsage.InputTokens,
-            mappedUsage.OutputTokens,
-            mappedUsage.Completeness,
-            Price: null,
-            SharedProviderMetadataCompleteness.Unavailable)
-        {
-            ImageCount = mappedUsage.ImageCount
-        };
-        using var finalizationCancellation = new CancellationTokenSource(FinalizationTimeout);
-        Exception? terminalFailure = null;
-        var attempts = 0;
-        while (attempts < MaximumAttempts)
-        {
-            attempts++;
-            try
-            {
-                await invocationAuditService.FinalizeAsync(
-                    requestId,
-                    completion,
-                    finalizationCancellation.Token);
-                return;
-            }
-            catch (Exception exception)
-            {
-                terminalFailure = exception;
-            }
-
-            if (attempts >= MaximumAttempts || finalizationCancellation.IsCancellationRequested)
-            {
-                break;
-            }
-
-            try
-            {
-                await Task.Delay(
-                    RetryDelays[attempts - 1],
-                    finalizationCancellation.Token);
-            }
-            catch (OperationCanceledException exception)
-            {
-                terminalFailure = exception;
-                break;
-            }
-        }
-
-        logger.LogWarning(
-            "Shared-provider invocation audit finalization did not complete for request {RequestId} after {AttemptCount} attempt(s); durable recovery remains scheduled.",
-            requestId,
-            attempts);
-        throw new SharedProviderInvocationTerminalizationException(terminalFailure!);
-    }
-
-    private static PersistedUsage MapUsage(
-        SharedProviderRelayOperation operation,
-        SharedProviderRelayUsage usage)
-    {
-        if (usage.Completeness == SharedProviderRelayUsageCompleteness.Unavailable)
-        {
-            return PersistedUsage.Unavailable;
-        }
-
-        return operation switch
-        {
-            SharedProviderRelayOperation.ChatCompletions or SharedProviderRelayOperation.Responses
-                when !usage.ImageCount.HasValue => new PersistedUsage(
-                    usage.InputTokens,
-                    usage.OutputTokens,
-                    MapCompleteness(usage.Completeness),
-                    ImageCount: null),
-            SharedProviderRelayOperation.ImageGenerations
-                when usage.Completeness == SharedProviderRelayUsageCompleteness.Complete &&
-                    usage.ImageCount.HasValue => new PersistedUsage(
-                        InputTokens: null,
-                        OutputTokens: null,
-                        SharedProviderMetadataCompleteness.Complete,
-                        usage.ImageCount),
-            _ => throw new InvalidOperationException(
-                $"Relay usage is incompatible with operation '{operation}'.")
-        };
-    }
-
-    private static SharedProviderMetadataCompleteness MapCompleteness(
-        SharedProviderRelayUsageCompleteness completeness)
-        => completeness switch
-        {
-            SharedProviderRelayUsageCompleteness.Partial =>
-                SharedProviderMetadataCompleteness.Partial,
-            SharedProviderRelayUsageCompleteness.Complete =>
-                SharedProviderMetadataCompleteness.Complete,
-            _ => throw new ArgumentOutOfRangeException(nameof(completeness), completeness, null)
-        };
-
-    private sealed record PersistedUsage(
-        long? InputTokens,
-        long? OutputTokens,
-        SharedProviderMetadataCompleteness Completeness,
-        int? ImageCount)
-    {
-        public static PersistedUsage Unavailable { get; } = new(
-            null,
-            null,
-            SharedProviderMetadataCompleteness.Unavailable,
-            null);
-    }
-}
-
-internal sealed class SharedProviderInvocationTerminalizationException(Exception innerException) :
-    Exception("Shared-provider invocation audit finalization could not be persisted.", innerException);
-
 internal sealed class SharedProviderAuditedRelayStream : ISharedProviderRelayStream
 {
     private readonly ISharedProviderRelayStream inner;
@@ -208,7 +38,11 @@ internal sealed class SharedProviderAuditedRelayStream : ISharedProviderRelayStr
         }
         finally
         {
-            await finalizer.CancelledAsync(SharedProviderRelayUsage.Unavailable);
+            if (inner.Completion.IsCompleted) {
+                await completion;
+            } else {
+                await finalizer.CancelledAsync(SharedProviderRelayUsage.Unavailable);
+            }
         }
     }
 
@@ -267,19 +101,10 @@ internal sealed class SharedProviderAuditedRelayStream : ISharedProviderRelayStr
 
     private async Task<SharedProviderRelayStreamCompletion> ObserveCompletionAsync()
     {
+        SharedProviderRelayStreamCompletion result;
         try
         {
-            var result = await inner.Completion;
-            if (result.Failure is null)
-            {
-                await finalizer.SucceededAsync(result.Usage);
-            }
-            else
-            {
-                await finalizer.FailedAsync(result.Failure, result.Usage);
-            }
-
-            return result;
+            result = await inner.Completion;
         }
         catch (OperationCanceledException)
         {
@@ -293,5 +118,11 @@ internal sealed class SharedProviderAuditedRelayStream : ISharedProviderRelayStr
                 SharedProviderRelayUsage.Unavailable);
             throw;
         }
+        if (result.Failure is null) {
+            await finalizer.SucceededAsync(result.Usage);
+        } else {
+            await finalizer.FailedAsync(result.Failure, result.Usage);
+        }
+        return result;
     }
 }

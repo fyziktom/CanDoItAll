@@ -95,6 +95,10 @@
         {
             <AgentProviderProfilesPanel />
         }
+        else if (selectedTab == AgentWorkspaceTabs.RequestHistory) {
+            <CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel
+                Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.AllAuthorized())" />
+        }
         else if (string.Equals(selectedTab, AgentWorkspaceTabs.Voice, StringComparison.Ordinal))
         {
             <AgentVoiceSettingsPanel />

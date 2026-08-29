@@ -193,7 +193,7 @@ internal sealed class SharedProviderComfyUiRelayAdapter(
                     size,
                     quality,
                     outputFormat,
-                    request.Request.RequestedImageCount),
+                    request.Request.RequestedImageCount) { Context = request.Context },
                 timeoutSource.Token).ConfigureAwait(false);
 
             if (images.Count == 0 || images.Count > request.Request.RequestedImageCount)

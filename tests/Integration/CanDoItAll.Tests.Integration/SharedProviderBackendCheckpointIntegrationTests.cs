@@ -81,6 +81,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         Assert.DoesNotContain(eligibleProfile.BaseUrl, projectedJson, StringComparison.Ordinal);
         Assert.DoesNotContain(eligibleProfile.ApiKeySecretId!.Value.ToString("D"), projectedJson, StringComparison.Ordinal);
         Assert.DoesNotContain("duplicate-upstream-model", projectedJson, StringComparison.Ordinal);
+        Assert.Contains("\"displayName\":\"Model 1\"", projectedJson, StringComparison.Ordinal);
 
         using var response = await catalogFixture.Host.Client.GetAsync(SharedProviderRoutes.Catalog);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -935,7 +936,12 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
             SupportsToolCalling = true,
             SupportsStructuredOutput = true,
             SupportsVision = false,
-            ExtraSettingsJson = "{\"private\":\"operator-only\"}"
+            ExtraSettingsJson = SharedProviderProfilePublicationMetadataWriter.Write(
+                "{\"private\":\"operator-only\"}",
+                AgentFrameworkProviderKind.OpenAi,
+                ProviderTransportKind.Responses,
+                ProviderProfilePurpose.Chat,
+                "private-upstream-model")
         };
 
     private static SharedProviderPublicationEligibility EligibleChat(string upstreamModel)

@@ -90,7 +90,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary,
         Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary,
         FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics,
-        Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null)
+        Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null,
+        Action<FileHistoryCommitStage>? historyCommitBoundary = null)
     {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
         var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
@@ -99,7 +100,8 @@ public sealed partial class FileSandboxWorkspaceStore :
             jsonReadDiagnostics,
             physicalPathPolicyFactory,
             durableFileWriter,
-            layout.RootPath);
+            layout.RootPath,
+            new FileProviderHistoryJournal(layout, historyCommitBoundary));
         executionSliceStore = new FileSandboxWorkspaceExecutionSliceStore(layout, jsonStore);
         chatProjectionStore = new FileSandboxWorkspaceChatProjectionStore(layout, jsonStore);
         crossProcessLock = new FileSandboxWorkspaceCrossProcessLock(

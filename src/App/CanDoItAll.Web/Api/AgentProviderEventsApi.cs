@@ -71,7 +71,7 @@ internal static class AgentProviderEventsApi
         {
             completion = providerAdministration.RunProviderTestChatAsync(
                 providerId,
-                request.ToProviderRequest(),
+                ProviderHistoryRequestContext.WithCaller(request.ToProviderRequest(), context),
                 commandLifetime.Token);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)

@@ -53,7 +53,8 @@ public sealed class ProviderRuntimeImageGenerationService(
                         source.Bytes))
                     .ToList())
             {
-                OutputCompression = request.OutputCompression
+                OutputCompression = request.OutputCompression,
+                History = request.History
             };
 
             try

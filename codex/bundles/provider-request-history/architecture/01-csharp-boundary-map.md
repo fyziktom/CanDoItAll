@@ -1,5 +1,7 @@
 # C# Boundary Map
 
+Execution clarification: [SB04 concrete placement and edges](11-capture-implementation-decisions.md) amends the preliminary recorder/typed-adapter and batch ownership assumptions below.
+
 ## Project Roles
 
 The three projects below are proposed, not already created. All live beneath

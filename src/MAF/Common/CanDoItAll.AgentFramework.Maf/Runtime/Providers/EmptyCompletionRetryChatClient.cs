@@ -24,6 +24,7 @@ internal sealed class EmptyCompletionRetryChatClient(
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        options = ProviderHistoryChatContext.Ensure(options);
         var materializedMessages = messages as IReadOnlyList<ChatMessage> ?? messages.ToList();
         var firstResponse = await base.GetResponseAsync(materializedMessages, options, cancellationToken);
         if (!IsRetryableNonActionableCompletion(firstResponse))
@@ -62,6 +63,7 @@ internal sealed class EmptyCompletionRetryChatClient(
         ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        options = ProviderHistoryChatContext.Ensure(options);
         var materializedMessages = messages as IReadOnlyList<ChatMessage> ?? messages.ToList();
         var bufferedUpdates = new List<ChatResponseUpdate>();
         var firstAttemptIsRetryable = true;

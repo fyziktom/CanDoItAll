@@ -8,6 +8,10 @@ public sealed record SharedProviderCatalogPrice(
     [property: JsonPropertyName("inputPerMillionTokensUsd")] decimal InputPerMillionTokensUsd,
     [property: JsonPropertyName("cachedInputPerMillionTokensUsd")] decimal CachedInputPerMillionTokensUsd,
     [property: JsonPropertyName("outputPerMillionTokensUsd")] decimal OutputPerMillionTokensUsd) {
+    [JsonPropertyName("isExplicitlyFree")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsExplicitlyFree { get; init; }
+
     [JsonPropertyName("cacheWritePerMillionTokensUsd")]
     public decimal? CacheWritePerMillionTokensUsd { get; init; }
 
@@ -32,6 +36,13 @@ public sealed record SharedProviderCatalogPrice(
             LongContextInputPerMillionTokensUsd < 0 || LongContextCachedInputPerMillionTokensUsd < 0 ||
             LongContextCacheWritePerMillionTokensUsd < 0 || LongContextOutputPerMillionTokensUsd < 0) {
             throw new JsonException("Shared-provider model prices cannot be negative.");
+        }
+
+        if (IsExplicitlyFree && (InputPerMillionTokensUsd != 0 || CachedInputPerMillionTokensUsd != 0
+            || OutputPerMillionTokensUsd != 0 || CacheWritePerMillionTokensUsd is > 0
+            || LongContextInputPerMillionTokensUsd is > 0 || LongContextCachedInputPerMillionTokensUsd is > 0
+            || LongContextCacheWritePerMillionTokensUsd is > 0 || LongContextOutputPerMillionTokensUsd is > 0)) {
+            throw new JsonException("An explicitly free shared tariff must contain only zero rates.");
         }
 
         var hasLongContext = LongContextThresholdTokens.HasValue ||

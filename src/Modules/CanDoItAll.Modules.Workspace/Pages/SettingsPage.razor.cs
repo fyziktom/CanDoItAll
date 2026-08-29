@@ -9,6 +9,7 @@ namespace CanDoItAll.Modules.Workspace.Pages;
 public partial class SettingsPage
 {
     private const string FilesSettingsTabKey = "files";
+    private const string ProviderHistorySettingsTabKey = "provider-history";
 
     [SupplyParameterFromQuery(Name = "tab")]
     public string? RequestedTab { get; set; }
@@ -33,6 +34,7 @@ public partial class SettingsPage
         new("data-sources", "Data Sources"),
         new("storage", "Storage"),
         new(FilesSettingsTabKey, "Files"),
+        new(ProviderHistorySettingsTabKey, "Provider history"),
         new("secrets", "Secrets", secrets.Count.ToString()),
         new("providers", "Providers", providers.Count.ToString()),
         new("api-access", "API Access", apiStatus?.AuthorizationEnabled == true ? "JWT" : "Open")
@@ -172,7 +174,7 @@ public partial class SettingsPage
 
     private static bool IsValidSettingsTab(string? key)
     {
-        return key is "workspace" or "data-sources" or "storage" or FilesSettingsTabKey or "secrets" or "providers" or "api-access";
+        return key is "workspace" or "data-sources" or "storage" or FilesSettingsTabKey or ProviderHistorySettingsTabKey or "secrets" or "providers" or "api-access";
     }
 
     private static string BuildSettingsRoute(string key)

@@ -178,6 +178,8 @@ internal sealed class LlmChatMessageRow
 
 internal sealed class LlmChatOperationRow
 {
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; set; }
+
     public Guid Id { get; set; }
 
     public Guid ConversationId { get; set; }
@@ -235,6 +237,8 @@ internal sealed class LlmChatOperationRow
 
 internal sealed class LlmChatInvocationRecordRow
 {
+    public string HistoryAttemptsJson { get; set; } = "[]";
+
     public Guid OperationId { get; set; }
 
     public int Ordinal { get; set; }

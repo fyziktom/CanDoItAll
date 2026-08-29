@@ -3,6 +3,7 @@ using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -332,7 +333,11 @@ public sealed class AgentFinalizerPolicyTests
             chatOptions,
             policy,
             resolvedTool);
-        var repairOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool);
+        var history = HistoryInvocationContext.Create(HistoryWorkload.Agent);
+        var repairOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool, history);
+        var jsonRepairOptions = MafFinalizerDriver.CreateRequiredFinalizerJsonRepairRunOptions(history);
+        Assert.Same(history, ProviderHistoryChatContext.Read(repairOptions.ChatOptions));
+        Assert.Same(history, ProviderHistoryChatContext.Read(jsonRepairOptions.ChatOptions));
 
         Assert.Same(finalizerTool, resolvedTool);
         Assert.False(chatOptions.AllowMultipleToolCalls);

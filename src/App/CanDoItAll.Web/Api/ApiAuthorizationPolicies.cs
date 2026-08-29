@@ -27,6 +27,13 @@ internal static class ApiAuthorizationPolicies
 
     public const string InvokeSharedProviders = "Api.SharedProviders.Invoke";
 
+    public const string ReadProviderHistory = "Api.ProviderHistory.Read";
+    public const string ReadProviderHistoryContent = "Api.ProviderHistory.Content.Read";
+    public const string ManageProviderHistory = "Api.ProviderHistory.Manage";
+
+    public static IEnumerable<string> ScopeValues(ClaimsPrincipal principal) =>
+        principal.Claims.Where(claim => IsScopeClaimType(claim.Type)).Select(claim => claim.Value);
+
     public static bool HasScope(ClaimsPrincipal principal, string requiredScope)
     {
         ArgumentNullException.ThrowIfNull(principal);

@@ -538,6 +538,34 @@ public sealed class SharedProviderStateModelTests
             InitialTimestamp));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Relay_late_actual_completion_reconciles_cancellation_or_recovery(bool recovered) {
+        var invocation = CreateInvocation();
+        if (recovered) {
+            SharedProviderInvocationTransitions.RecoverInterruptedFinalization(invocation, InitialTimestamp.AddSeconds(5));
+        } else {
+            SharedProviderInvocationTransitions.Finalize(invocation, new(SharedProviderInvocationOutcome.Cancelled,
+                InitialTimestamp.AddSeconds(1), SharedProviderFailureCategory.Cancelled, null, null,
+                SharedProviderMetadataCompleteness.Unavailable, null, SharedProviderMetadataCompleteness.Unavailable));
+        }
+        var actual = new SharedProviderInvocationCompletion(SharedProviderInvocationOutcome.Succeeded,
+            InitialTimestamp.AddSeconds(2), null, 10, 5, SharedProviderMetadataCompleteness.Complete,
+            0.01m, SharedProviderMetadataCompleteness.Complete);
+        SharedProviderInvocationTransitions.Finalize(invocation, actual);
+        SharedProviderInvocationTransitions.Finalize(invocation, actual);
+        Assert.Equal(SharedProviderInvocationOutcome.Succeeded, invocation.Outcome);
+        Assert.Equal(10, invocation.InputTokenCount);
+        Assert.Equal(0.01m, invocation.Price);
+        SharedProviderInvocationTransitions.Finalize(invocation, actual with {
+            Outcome = SharedProviderInvocationOutcome.Cancelled, FailureCategory = SharedProviderFailureCategory.Cancelled,
+            InputTokenCount = null, OutputTokenCount = null, UsageCompleteness = SharedProviderMetadataCompleteness.Unavailable,
+            Price = null, PricingCompleteness = SharedProviderMetadataCompleteness.Unavailable
+        });
+        Assert.Equal(SharedProviderInvocationOutcome.Succeeded, invocation.Outcome);
+    }
+
     private static ProviderSharePublication CreatePublication()
         => SharedProviderPublicationTransitions.Create(
             Guid.Parse("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb"),

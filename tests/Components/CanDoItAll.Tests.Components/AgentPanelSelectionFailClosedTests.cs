@@ -184,6 +184,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(workspace);
         return context;
     }

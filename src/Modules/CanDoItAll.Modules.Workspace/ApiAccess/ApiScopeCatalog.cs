@@ -15,7 +15,10 @@ public static class ApiScopeCatalog {
         new(ApiAccessScopeNames.ExecuteLlmChats, "Execute Simple Chats", "Start and respond to chat turns."),
         new(ApiAccessScopeNames.RespondWorkflows, "Respond to workflows", "Submit human responses to workflow requests."),
         new(ApiAccessScopeNames.ReadSharedProviderCatalog, "Discover shared providers", "Read the shared provider catalog."),
-        new(ApiAccessScopeNames.InvokeSharedProviders, "Use shared providers", "Invoke published providers for chat and images.")
+        new(ApiAccessScopeNames.InvokeSharedProviders, "Use shared providers", "Invoke published providers for chat and images."),
+        new(ApiAccessScopeNames.ReadProviderHistory, "Read provider history", "Search request metadata in this database; does not grant content access."),
+        new(ApiAccessScopeNames.ReadProviderHistoryContent, "Read provider history content", "Read retained request content with metadata and canonical-owner permission."),
+        new(ApiAccessScopeNames.ManageProviderHistory, "Manage provider history", "Read and apply this database's history retention and capture policy.")
     ];
 
     public static List<string> Parse(string text) => text

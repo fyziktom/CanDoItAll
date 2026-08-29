@@ -2,8 +2,7 @@
 
 ## Status
 
-- Execution: `Not started`. This is an implementation contract, not completed feature evidence.
-- Preparation: defined; entry requires the prerequisites below and renewed scope authorization.
+- Execution: Completed
 
 ## Objective
 
@@ -127,12 +126,12 @@ dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integ
 
 ## Acceptance Checklist
 
-- [ ] Each observed actual call has one attempt; no duplicate relay standalone record or recovered-result inference.
-- [ ] Buffered and streaming execution keep current latency/lifetime/cancellation and tool/approval semantics.
-- [ ] Verified keys with equal subject remain distinguishable; legacy/unavailable/auth-disabled attribution is honest.
-- [ ] No credentials, assembled prior conversation or binary media persist in metadata/detail.
-- [ ] Operational/health granularity and unobserved SDK retries are explicitly limited; no fabricated free calls.
-- [ ] Terminal persistence failure never schedules another model call.
+- [x] Each observed actual call has one attempt; no duplicate relay standalone record or recovered-result inference.
+- [x] Buffered and streaming execution keep current latency/lifetime/cancellation and tool/approval semantics.
+- [x] Verified keys with equal subject remain distinguishable; legacy/unavailable/auth-disabled attribution is honest.
+- [x] No credentials, assembled prior conversation or binary media persist in metadata/detail.
+- [x] Operational/health granularity and unobserved SDK retries are explicitly limited; no fabricated free calls.
+- [x] Terminal persistence failure never schedules another model call.
 
 ## Proof Required
 

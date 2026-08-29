@@ -2520,6 +2520,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             InputAttachments: inputAttachments)
         {
             ActivityOperationId = activityOperationId,
+            History = AgentHistoryInvocation.Create(run),
             TransientContext = transientContext,
             // Separated fingerprint dimensions: the model-context digest and
             // the authority policy fingerprint are independent compatibility

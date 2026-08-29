@@ -14,8 +14,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 /// </summary>
 public sealed class MafAgentRuntime
 {
-    private readonly MafAgentExecutionAdapter executionAdapter;
-    private readonly MafAgentContinuationAdapter continuationAdapter;
+    private readonly HistoryAgentRuntime historyRuntime;
     private readonly MafProviderDiagnosticsAdapter diagnosticsAdapter;
     private readonly MafProviderModelAdministrationAdapter modelAdministrationAdapter;
     private readonly MafHostedAgentFactory hostedAgentFactory;
@@ -61,7 +60,7 @@ public sealed class MafAgentRuntime
             dependencies.SessionPersistenceDriver,
             dependencies.PhysicalPathPolicyFactory,
             dependencies.ExecutionOutcomeRecoveryPolicies);
-        executionAdapter = new MafAgentExecutionAdapter(
+        var executionAdapter = new MafAgentExecutionAdapter(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,
             dependencies.PhysicalPathPolicyFactory,
@@ -71,7 +70,7 @@ public sealed class MafAgentRuntime
                 dependencies.ProviderCredentialService,
                 dependencies.ProviderRuntimeGateway),
             streamingTurnExecutor);
-        continuationAdapter = new MafAgentContinuationAdapter(
+        var continuationAdapter = new MafAgentContinuationAdapter(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,
             dependencies.PhysicalPathPolicyFactory,
@@ -79,6 +78,7 @@ public sealed class MafAgentRuntime
             runtimeAgentFactory,
             dependencies.ApprovalContinuationDriver,
             streamingTurnExecutor);
+        historyRuntime = new HistoryAgentRuntime(executionAdapter, continuationAdapter);
         diagnosticsAdapter = new MafProviderDiagnosticsAdapter(dependencies.ProviderRuntimeGateway);
         modelAdministrationAdapter = new MafProviderModelAdministrationAdapter(dependencies.ProviderRuntimeGateway);
         hostedAgentFactory = new MafHostedAgentFactory(
@@ -114,10 +114,10 @@ public sealed class MafAgentRuntime
     }
 
     /// <summary>The native execution port served by this runtime composition.</summary>
-    public IAgentExecutionRuntime ExecutionPort => executionAdapter;
+    public IAgentExecutionRuntime ExecutionPort => historyRuntime;
 
     /// <summary>The native continuation port served by this runtime composition.</summary>
-    public IAgentContinuationRuntime ContinuationPort => continuationAdapter;
+    public IAgentContinuationRuntime ContinuationPort => historyRuntime;
 
     /// <summary>The native provider diagnostics port served by this runtime composition.</summary>
     public IProviderDiagnosticsRuntime DiagnosticsPort => diagnosticsAdapter;

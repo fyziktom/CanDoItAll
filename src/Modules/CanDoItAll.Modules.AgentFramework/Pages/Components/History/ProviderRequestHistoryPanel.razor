@@ -1,0 +1,77 @@
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="provider-request-history">
+    <FormSection Title="Request history" Description="Current instance and database profile. Choose an interval, then Search. Opening this tab does not read history.">
+        <EditForm EditContext="editContext" OnSubmit="SearchAsync" data-testid="history-search-form">
+            <DataAnnotationsValidator />
+            <ProviderHistoryFilters Draft="draft" AllowProvider="@(Scope is HistoryProviderScope.AllAuthorized)" Changed="DraftChanged" />
+            <ValidationSummary />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Search" Type="submit" Icon="search" Disabled="@state.IsLoading" IsBusy="@state.IsLoading" data-testid="history-search" />
+                @if (state.IsLoading) {
+                    <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="state.Cancel" data-testid="history-cancel" />
+                }
+                <Button Text="Clear results" ButtonStyle="ButtonStyle.Light" Click="ClearResults" Disabled="@(!state.HasRequested)" data-testid="history-clear" />
+            </Cluster>
+        </EditForm>
+    </FormSection>
+    @if (state.AppliedQuery is { } applied) {
+        <p data-testid="history-applied">Applied filters: @ProviderHistoryPresentation.Applied(applied)</p>
+        @if (draftChanged) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="history-draft-warning">Filters changed. Search again to apply them; paging uses the applied filters above.</Alert>
+        }
+    }
+    @if (state.IsLoading) {
+        <LoadingState Title="Searching request history" Description="Reading one bounded page. You can cancel this request." />
+    } else if (state.Error is { } error) {
+        <Alert AlertStyle="AlertStyle.Danger" data-testid="history-error">@state.Failure: @error</Alert>
+    } else if (state.WasCanceled) {
+        <EmptyState Title="Search canceled" Description="No canceled response will be displayed. Search again when ready." />
+    } else if (state.Page is { } page) {
+        <Cluster Gap="LayoutGap.Small" data-testid="history-coverage">
+            <StatusBadge Text="@($"Index coverage: {page.Coverage.State}")" />
+            <span>Queried @ProviderHistoryPresentation.Time(page.QueriedAtUtc)</span>
+            @if (page.Coverage.IndexedThroughUtc is { } through) {
+                <span>Indexed through @ProviderHistoryPresentation.Time(through)</span>
+            }
+        </Cluster>
+        @if (page.Coverage.State != HistoryCoverageState.Current) {
+            <Alert AlertStyle="AlertStyle.Warning">Coverage is incomplete. Missing records do not mean there were no requests.</Alert>
+        }
+        <DataGrid TItem="HistoryEntry" Data="page.Entries" AllowPaging="false" EmptyText="No matching requests in this interval."
+                  Caption="@($"Page {state.PageNumber} · {page.Entries.Count} rows. Results can change between requests.")" data-testid="history-results">
+            <Columns>
+                <DataGridColumn TItem="HistoryEntry" Title="Time / basis">
+                    <Template Context="entry">@ProviderHistoryPresentation.Time(entry.SortAtUtc)<br />@entry.TimeBasis · @entry.Granularity</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Provider / model">
+                    <Template Context="entry">@entry.Provider.Name<br />@ProviderHistoryPresentation.Model(entry)</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Workload / outcome">
+                    <Template Context="entry">@entry.Workload · @entry.Operation<br /><StatusBadge Text="@entry.Outcome.ToString()" /></Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Caller">
+                    <Template Context="entry">@ProviderHistoryPresentation.Caller(entry.Caller)</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Usage / price evidence">
+                    <Template Context="entry">@ProviderHistoryPresentation.Usage(entry.Usage)<br />@ProviderHistoryPresentation.Price(entry.Price)</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Evidence">
+                    <Template Context="entry">
+                        <Button Text="Details" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => selectedEntry = entry.Id)" data-testid="history-details" />
+                    </Template>
+                </DataGridColumn>
+            </Columns>
+        </DataGrid>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Previous" Disabled="@(!state.CanPrevious)" Click="state.PreviousAsync" data-testid="history-previous" />
+            <Button Text="Next" Disabled="@(!state.CanNext)" Click="state.NextAsync" data-testid="history-next" />
+            @if (state.HasEarlierPages) {
+                <span>Only the last 32 previous pages are retained. Search again to return to the beginning.</span>
+            }
+        </Cluster>
+    } else {
+        <EmptyState Title="History not requested" Description="Set the range and optional filters, then Search. Prompt and response content requires a separate action." />
+    }
+</Stack>
+@if (selectedEntry is { } entryId) {
+    <ProviderHistoryDetailsDialog @key="entryId" EntryId="entryId" OnClose="@(() => selectedEntry = null)" />
+}

@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Net.Mime;
-using System.Security.Claims;
 using System.Text.Json;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.AspNetCore.Http.Features;
@@ -15,7 +14,6 @@ internal static class SharedProviderInferenceApi
         SharedProviderRelaySupportDescriptor.MaximumAllowedRequestBytes;
 
     private const int RequestBufferSize = 64 * 1024;
-    private const string AuthorizationDisabledSubject = "api-authorization-disabled";
 
     private static readonly SharedProviderFailure InvalidContentTypeFailure = CreateFailure(
         SharedProviderFailureCategory.Validation,
@@ -421,7 +419,7 @@ internal static class SharedProviderInferenceApi
         IAccessContextReferenceAccessor accessContextAccessor,
         out SharedProviderRelayRequestContext requestContext)
     {
-        string? subject = ResolveSubject(httpContext.User);
+        string? subject = SharedProviderCallerSnapshot.Subject(httpContext.User);
         if (!IsBoundedExactText(subject, 256))
         {
             requestContext = null!;
@@ -441,20 +439,8 @@ internal static class SharedProviderInferenceApi
             subject!,
             accessContextAccessor.Current,
             traceId,
-            requestId);
+            requestId) { CallerIdentity = SharedProviderCallerSnapshot.From(httpContext) };
         return true;
-    }
-
-    private static string? ResolveSubject(ClaimsPrincipal principal)
-    {
-        if (principal.Identity?.IsAuthenticated != true)
-        {
-            return AuthorizationDisabledSubject;
-        }
-
-        return principal.FindFirstValue("sub") ??
-            principal.FindFirstValue(ClaimTypes.NameIdentifier) ??
-            principal.Identity.Name;
     }
 
     private static bool IsBoundedExactText(string? value, int maximumLength)

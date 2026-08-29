@@ -64,6 +64,10 @@ public sealed record SharedProviderInvocationCompletion(
     SharedProviderMetadataCompleteness PricingCompleteness)
 {
     public int? ImageCount { get; init; }
+    public CanDoItAll.AgentFramework.Models.ProviderExecutionPrice? PriceEvidence { get; init; }
+    public long? CachedInputTokenCount { get; init; }
+    public long? CacheWriteTokenCount { get; init; }
+    public long? ReasoningTokenCount { get; init; }
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

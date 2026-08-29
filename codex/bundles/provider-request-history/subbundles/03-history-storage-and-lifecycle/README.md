@@ -2,8 +2,7 @@
 
 ## Status
 
-- Execution: `Not started`. This is an implementation contract, not completed feature evidence.
-- Preparation: defined; entry requires the prerequisites below and renewed scope authorization.
+- Execution: Completed
 
 ## Objective
 
@@ -95,10 +94,10 @@ their established framework role. New cohesive classes follow the 250-line revie
 
 - Proof tier: `Governed`.
 - Critical foundation: Yes; schema, durable writes, profile isolation, quotas and retention authority..
-- Test project/filter: `C:/repositories/CanDoItAll/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj` / `FullyQualifiedName~ProviderHistoryPolicyTests|FullyQualifiedName~ProviderHistoryLifecycleTests|FullyQualifiedName~LlmChatWholeUseCaseProfileScopeTests|FullyQualifiedName~ProviderDatabaseTransferTests`; `C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` / `FullyQualifiedName~ProviderHistoryPersistenceIntegrationTests|FullyQualifiedName~SharedProviderPersistenceIntegrationTests|FullyQualifiedName~MigrationBootstrapIntegrationTests`.
-- Selection reason: New history persistence/lifecycle behavior plus existing canonical audit, migration, profile-scope and actual provider database-transfer compatibility. Extend ProviderDatabaseTransferTests to prove preserved history partition identity, policy and replay state.
+- Test project/filter: `C:/repositories/CanDoItAll/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj` / `FullyQualifiedName~ProviderHistoryIdentityTests|FullyQualifiedName~SharedProviderArchitectureCharacterizationTests|FullyQualifiedName~ProviderHistoryPolicyTests|FullyQualifiedName~ProviderHistoryLifecycleTests|FullyQualifiedName~LlmChatWholeUseCaseProfileScopeTests|FullyQualifiedName~ProviderDatabaseTransferTests`; `C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` / `FullyQualifiedName~ProviderHistorySourceProjectionIntegrationTests|FullyQualifiedName~ProviderHistoryPersistenceIntegrationTests|FullyQualifiedName~SharedProviderPersistenceIntegrationTests|FullyQualifiedName~MigrationBootstrapIntegrationTests`.
+- Selection reason: New history persistence/lifecycle behavior plus existing canonical audit, migration, profile-scope and actual provider database-transfer compatibility. Existing ProviderDatabaseTransferTests remain a compatibility gate; the history transfer cases run in the new PostgreSQL persistence fixture to exercise actual protected storage, partition identity, policy and replay state.
 - Expected discovery: Existing SharedProviderPersistenceIntegrationTests and MigrationBootstrapIntegrationTests are discovered; Provider_management_marker_discovers_the_compatible_provider_schema and Provider_transfer_copies_profiles_and_referenced_secrets_but_not_workspace_preference are present, plus all five proposed cases above, History_transfer_preserves_partition_identity_policy_and_replay_state and policy invalid-value/concurrency cases. Record exact actual cases/counts at execution;
-  zero discovery or a missing named expected case fails the gate. Discovery has not run now.
+  zero discovery or a missing required behavior fails the gate. Executed discovery and raw TRX agree on method identities and case multiplicities; managed output redacts some theory arguments. The manifest maps the final case names to these behaviors.
 - Invalidation keys: HistorySchemaV1; SameContextOutbox; RetentionAuthority; DetailQuotaProtection; ProfileLeaseFence; MigrationModel.
 - Broad-gate decision: Required once at frozen SB08 only if public-contract/schema/DI
   changes made here trigger it. No broad suite here or repeated run without invalidation.
@@ -106,10 +105,10 @@ their established framework role. New cohesive classes follow the 250-line revie
   source revision for discovery/build and the subsequent no-build execution):
 
 ```powershell
-dotnet test 'C:/repositories/CanDoItAll/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj' --list-tests --filter 'FullyQualifiedName~ProviderHistoryPolicyTests|FullyQualifiedName~ProviderHistoryLifecycleTests|FullyQualifiedName~LlmChatWholeUseCaseProfileScopeTests|FullyQualifiedName~ProviderDatabaseTransferTests'
-dotnet test 'C:/repositories/CanDoItAll/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj' --no-build --filter 'FullyQualifiedName~ProviderHistoryPolicyTests|FullyQualifiedName~ProviderHistoryLifecycleTests|FullyQualifiedName~LlmChatWholeUseCaseProfileScopeTests|FullyQualifiedName~ProviderDatabaseTransferTests'
-dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj' --list-tests --filter 'FullyQualifiedName~ProviderHistoryPersistenceIntegrationTests|FullyQualifiedName~SharedProviderPersistenceIntegrationTests|FullyQualifiedName~MigrationBootstrapIntegrationTests'
-dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj' --no-build --filter 'FullyQualifiedName~ProviderHistoryPersistenceIntegrationTests|FullyQualifiedName~SharedProviderPersistenceIntegrationTests|FullyQualifiedName~MigrationBootstrapIntegrationTests'
+dotnet test 'C:/repositories/CanDoItAll/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj' --list-tests --filter 'FullyQualifiedName~ProviderHistoryIdentityTests|FullyQualifiedName~SharedProviderArchitectureCharacterizationTests|FullyQualifiedName~ProviderHistoryPolicyTests|FullyQualifiedName~ProviderHistoryLifecycleTests|FullyQualifiedName~LlmChatWholeUseCaseProfileScopeTests|FullyQualifiedName~ProviderDatabaseTransferTests'
+dotnet test 'C:/repositories/CanDoItAll/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj' --no-build --filter 'FullyQualifiedName~ProviderHistoryIdentityTests|FullyQualifiedName~SharedProviderArchitectureCharacterizationTests|FullyQualifiedName~ProviderHistoryPolicyTests|FullyQualifiedName~ProviderHistoryLifecycleTests|FullyQualifiedName~LlmChatWholeUseCaseProfileScopeTests|FullyQualifiedName~ProviderDatabaseTransferTests'
+dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj' --list-tests --filter 'FullyQualifiedName~ProviderHistorySourceProjectionIntegrationTests|FullyQualifiedName~ProviderHistoryPersistenceIntegrationTests|FullyQualifiedName~SharedProviderPersistenceIntegrationTests|FullyQualifiedName~MigrationBootstrapIntegrationTests'
+dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj' --no-build --filter 'FullyQualifiedName~ProviderHistorySourceProjectionIntegrationTests|FullyQualifiedName~ProviderHistoryPersistenceIntegrationTests|FullyQualifiedName~SharedProviderPersistenceIntegrationTests|FullyQualifiedName~MigrationBootstrapIntegrationTests'
 ```
 
 ## Implementation Steps
@@ -122,12 +121,12 @@ dotnet test 'C:/repositories/CanDoItAll/tests/Integration/CanDoItAll.Tests.Integ
 
 ## Acceptance Checklist
 
-- [ ] Entry/source uniqueness excludes mutable source version; sort timestamps are immutable with explicit TimeBasis.
-- [ ] Existing canonical histories and relay rows remain intact; no body enters metadata tables/outbox.
-- [ ] Start writes fail explicitly before provider use; terminal errors remain recoverable without provider replay.
-- [ ] Canonical retention is independent of the direct/relay default; shared input expiry cannot be extended by retries.
-- [ ] Protection-key failure never stores/returns plaintext; expiry applies before physical GC.
-- [ ] Migration and rollback activation are additive, registered and tested in a disposable environment.
+- [x] Entry/source uniqueness excludes mutable source version; sort timestamps are immutable with explicit TimeBasis.
+- [x] Existing canonical histories and relay rows remain intact; no body enters metadata tables/outbox.
+- [x] Start writes fail explicitly before provider use; terminal errors remain recoverable without provider replay.
+- [x] Canonical retention is independent of the direct/relay default; shared input expiry cannot be extended by retries.
+- [x] Protection-key failure never stores/returns plaintext; expiry applies before physical GC.
+- [x] Migration and rollback activation are additive, registered and tested in a disposable environment.
 
 ## Proof Required
 

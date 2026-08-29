@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -235,8 +236,8 @@ public sealed class MafRuntimePortAdapterTests
         Assert.Same(runtime.ContinuationPort, runtime.ContinuationPort);
         Assert.Same(runtime.DiagnosticsPort, runtime.DiagnosticsPort);
         Assert.Same(runtime.ModelAdministrationPort, runtime.ModelAdministrationPort);
-        Assert.IsType<MafAgentExecutionAdapter>(runtime.ExecutionPort);
-        Assert.IsType<MafAgentContinuationAdapter>(runtime.ContinuationPort);
+        Assert.IsType<HistoryAgentRuntime>(runtime.ExecutionPort);
+        Assert.Same(runtime.ExecutionPort, runtime.ContinuationPort);
         Assert.IsType<MafProviderDiagnosticsAdapter>(runtime.DiagnosticsPort);
         Assert.IsType<MafProviderModelAdministrationAdapter>(runtime.ModelAdministrationPort);
     }
@@ -294,6 +295,81 @@ public sealed class MafRuntimePortAdapterTests
             () => RuntimeCapabilityComposer.ValidateComposedToolNames(colliding));
         Assert.Contains("workspace_colliding_tool", exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_other_tool", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false, HistoryOutcome.Succeeded)]
+    [InlineData(true, HistoryOutcome.Succeeded)]
+    [InlineData(false, HistoryOutcome.Cancelled)]
+    [InlineData(true, HistoryOutcome.Cancelled)]
+    [InlineData(false, HistoryOutcome.Failed)]
+    [InlineData(true, HistoryOutcome.Failed)]
+    public async Task History_runtime_handoff_preserves_attempts_and_failure_classification(bool continuation, HistoryOutcome outcome) {
+        var provider = CreateProvider();
+        var agent = CreateAgent();
+        var recorder = new RecordingProviderHistory();
+        var context = HistoryInvocationContext.Create(HistoryWorkload.Agent,
+            owner: new(HistorySourceKind.AgentConversation, new("run"), new("invocation")));
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        var native = new HistoryTestRuntime(async options => {
+            Assert.Same(context, options.History);
+            var start = await recorder.BeginAsync(new(new(new(provider.Id), provider.Name, provider.Kind.ToString(),
+                new("model"), new("model")), HistoryOperation.CompleteChat, options.History), default);
+            options.History.Attempts.Complete(start, new(outcome, start.StartedAtUtc.AddSeconds(1),
+                new(HistoryUsageState.Complete, 7, 3), new(HistoryPriceState.Unpriced)));
+            if (outcome == HistoryOutcome.Cancelled) {
+                throw new OperationCanceledException(cancelled.Token);
+            }
+            if (outcome == HistoryOutcome.Failed) {
+                throw new AgentRuntimeUsageException("provider failed", new InvalidOperationException("transport"),
+                    [CreateUsageObservation(), CreateUsageObservation()]);
+            }
+            return new AgentRuntimeResponse("private response", 100, 200, 0, "", null, []) {
+                UsageObservations = [CreateUsageObservation(), CreateUsageObservation()]
+            };
+        });
+        var runtime = new HistoryAgentRuntime(native, native);
+        var options = new AgentRuntimeExecutionOptions(null, AgentFinalizerMode.Disabled, true, 0) { History = context };
+        Task<AgentRuntimeResponse> Invoke() => continuation
+            ? runtime.ContinueAsync(new(agent, provider, CreateSession(agent.Id), [], [],
+                [new("approval", true)], null, ProgressCallback, ExecutionOptions: options))
+            : runtime.ExecuteAsync(new(agent, provider, CreateSession(agent.Id), [], [], "private prompt",
+                null, ProgressCallback, ExecutionOptions: options));
+        if (outcome == HistoryOutcome.Succeeded) {
+            var response = await Invoke();
+            Assert.Single(response.UsageObservations, item => item.HistoryEvidence!.IsPrimary);
+            Assert.Equal(1, response.UsageObservations.Sum(item => item.HistoryEvidence!.Attempts.Count));
+            Assert.Equal("private response", response.ResponseText);
+            Assert.DoesNotContain("private response", System.Text.Json.JsonSerializer.Serialize(response.HistoryEvidence), StringComparison.Ordinal);
+        } else if (outcome == HistoryOutcome.Cancelled) {
+            var exception = await Assert.ThrowsAsync<AgentHistoryCancellationException>(Invoke);
+            Assert.Equal(cancelled.Token, exception.CancellationToken);
+            Assert.Equal(outcome, Assert.Single(exception.HistoryEvidence.Attempts).Outcome);
+        } else {
+            var exception = await Assert.ThrowsAsync<AgentRuntimeUsageException>(Invoke);
+            Assert.Single(exception.UsageObservations, item => item.HistoryEvidence!.IsPrimary);
+            Assert.Equal(outcome, Assert.Single(exception.HistoryEvidence!.Attempts).Outcome);
+            Assert.IsType<AgentRuntimeUsageException>(exception.InnerException);
+        }
+        Assert.Equal(continuation ? 0 : 1, native.ExecutionCalls);
+        Assert.Equal(continuation ? 1 : 0, native.ContinuationCalls);
+    }
+
+    private sealed class HistoryTestRuntime(Func<AgentRuntimeExecutionOptions, Task<AgentRuntimeResponse>> invoke)
+        : IAgentExecutionRuntime, IAgentContinuationRuntime {
+        public int ExecutionCalls { get; private set; }
+        public int ContinuationCalls { get; private set; }
+
+        public Task<AgentRuntimeResponse> ExecuteAsync(AgentRuntimeExecutionRequest request, CancellationToken cancellationToken = default) {
+            ExecutionCalls++;
+            return invoke(request.ExecutionOptions!);
+        }
+
+        public Task<AgentRuntimeResponse> ContinueAsync(AgentRuntimeContinuationRequest request, CancellationToken cancellationToken = default) {
+            ContinuationCalls++;
+            return invoke(request.ExecutionOptions!);
+        }
     }
 
     private static ProviderUsageObservation CreateUsageObservation()

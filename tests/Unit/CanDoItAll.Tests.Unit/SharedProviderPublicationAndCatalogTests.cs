@@ -34,13 +34,13 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var source = CreateProjectionSource(profile, CreatePolicy(), isPublished: true);
         var before = SharedProviderCatalogProjector.Project(SourceInstanceId, [source]);
         var models = before.Catalog.Providers[0].Models;
-        var thinking = models.Single(model => model.DisplayName == "gpt-5.6-sol").Thinking!;
+        var thinking = FindPublishedModel(before, "gpt-5.6-sol").Thinking!;
         Assert.Equal(SharedProviderReasoningEffort.Low, thinking.DefaultEffort);
         Assert.Contains(SharedProviderReasoningEffort.Max, thinking.AllowedEfforts);
         Assert.Equal(SharedProviderThinkingSupport.Unsupported,
-            models.Single(model => model.DisplayName == "gpt-4.1").Thinking!.Support);
-        Assert.False(models.Single(model => model.DisplayName == "gpt-3.5-turbo").IsSuggested);
-        Assert.True(models.Single(model => model.DisplayName == "gpt-5.6-sol").IsSuggested);
+            FindPublishedModel(before, "gpt-4.1").Thinking!.Support);
+        Assert.False(FindPublishedModel(before, "gpt-3.5-turbo").IsSuggested);
+        Assert.True(FindPublishedModel(before, "gpt-5.6-sol").IsSuggested);
 
         profile.ExtraSettingsJson = AgentThinkingEffortPolicy.WriteProviderDefault(
             profile.ExtraSettingsJson, AgentReasoningEffortLevel.High);
@@ -104,21 +104,22 @@ public sealed class SharedProviderPublicationAndCatalogTests
             [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
 
         foreach (var model in Assert.Single(projection.Catalog.Providers).Models) {
-            var sourcePrice = runtime.ModelPrices.SingleOrDefault(price => price.Model == model.DisplayName);
+            var route = projection.RoutingIndex[model.Id];
+            var sourcePrice = runtime.ModelPrices.SingleOrDefault(price => price.Model == route.UpstreamModelId);
             Assert.Equal(sourcePrice?.InputPerMillionTokensUsd, model.Price?.InputPerMillionTokensUsd);
             Assert.Equal(sourcePrice?.OutputPerMillionTokensUsd, model.Price?.OutputPerMillionTokensUsd);
         }
     }
 
     [Fact]
-    public void SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds() {
+    public void PublicModelLabelsHideSourceNamesAndRoutingIdsRemainDistinct() {
         var profile = CreateProfile(defaultModel: "model-alpha", suggestedModels: ["model-beta"]);
         var projection = SharedProviderCatalogProjector.Project(
             SourceInstanceId,
             [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
         var publication = Assert.Single(projection.Catalog.Providers);
 
-        Assert.Equal(new[] { "model-alpha", "model-beta" }.Order(),
+        Assert.Equal(["Model 1", "Model 2"],
             publication.Models.Select(model => model.DisplayName).Order());
         Assert.All(publication.Models, model => Assert.StartsWith("sp1.", model.Id.Value));
     }
@@ -135,8 +136,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var publication = document.RootElement.GetProperty("providers")[0];
 
         Assert.True(publication.GetProperty("isPrivateProvider").GetBoolean());
-        var price = publication.GetProperty("models").EnumerateArray()
-            .Single(model => model.GetProperty("displayName").GetString() == "model-alpha").GetProperty("price");
+        var price = publication.GetProperty("models")[0].GetProperty("price");
         Assert.Equal(1.23m, price.GetProperty("inputPerMillionTokensUsd").GetDecimal());
         Assert.Equal(0m, price.GetProperty("cachedInputPerMillionTokensUsd").GetDecimal());
         Assert.Equal(4.56m, price.GetProperty("outputPerMillionTokensUsd").GetDecimal());
@@ -639,7 +639,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             SourceInstanceId,
             [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
         var publication = Assert.Single(projection.Catalog.Providers);
-        var secondaryModel = publication.Models.Single(model => model.DisplayName == "secondary-model");
+        var secondaryModel = FindPublishedModel(projection, "secondary-model");
         var unknown = SharedProviderRoutingModelIdCodec.Create(
             publication.PublicationId,
             "unknown-model");
@@ -904,8 +904,17 @@ public sealed class SharedProviderPublicationAndCatalogTests
         Assert.Equal(firstAfter.EntityTag, secondAfter.EntityTag);
     }
 
-    private static SharedProviderPublicationEligibilityPolicy CreatePolicy(
-        SharedProviderRelaySupportDescriptor? support = null,
+    private static SharedProviderCatalogModel FindPublishedModel(
+        SharedProviderCatalogProjection projection,
+        string upstreamModelId) {
+        var routingEntry = projection.RoutingIndex.Single(entry =>
+            string.Equals(entry.Value.UpstreamModelId, upstreamModelId, StringComparison.Ordinal));
+        return projection.Catalog.Providers
+            .SelectMany(publication => publication.Models)
+            .Single(model => model.Id == routingEntry.Key);
+    }
+
+    private static SharedProviderPublicationEligibilityPolicy CreatePolicy(        SharedProviderRelaySupportDescriptor? support = null,
         string connectorPluginKey = ProviderConnectorKeys.OpenAi,
         SharedProviderPurpose purpose = SharedProviderPurpose.Chat,
         SharedProviderRelayAdapterClassification classification =

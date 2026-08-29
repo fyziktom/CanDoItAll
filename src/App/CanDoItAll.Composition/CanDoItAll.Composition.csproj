@@ -44,4 +44,7 @@
     <ProjectReference Include="..\..\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
+  </ItemGroup>
 </Project>

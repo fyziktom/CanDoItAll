@@ -66,6 +66,7 @@ public sealed class LocalOperatorAuthenticationStateProviderTests
         var principal = await provider.GetCurrentAsync();
 
         Assert.False(principal.Identity?.IsAuthenticated);
+        Assert.Null(await provider.TryGetTrustedLocalOperatorAsync());
     }
 
     [Fact]
@@ -100,6 +101,7 @@ public sealed class LocalOperatorAuthenticationStateProviderTests
 
         Assert.Same(bearer, state.User);
         Assert.Same(bearer, accessPrincipal);
+        Assert.Null(await provider.TryGetTrustedLocalOperatorAsync());
         Assert.False(ApiAuthorizationPolicies.HasScope(accessPrincipal, ApiAccessScopeNames.ReadLlmChats));
     }
 
@@ -116,6 +118,12 @@ public sealed class LocalOperatorAuthenticationStateProviderTests
         var principal = await provider.GetCurrentAsync();
 
         Assert.False(principal.Identity?.IsAuthenticated);
+        var explicitAuthority = await provider.TryGetTrustedLocalOperatorAsync();
+        Assert.True(explicitAuthority?.Identity?.IsAuthenticated);
+        Assert.True(ApiAuthorizationPolicies.HasScope(explicitAuthority!, ApiAccessScopeNames.ReadProviderHistory));
+        Assert.True(ApiAuthorizationPolicies.HasScope(explicitAuthority!, ApiAccessScopeNames.ReadProviderHistoryContent));
+        Assert.True(ApiAuthorizationPolicies.HasScope(explicitAuthority!, ApiAccessScopeNames.ManageProviderHistory));
+        Assert.False((await provider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated);
     }
 
     [Fact]
