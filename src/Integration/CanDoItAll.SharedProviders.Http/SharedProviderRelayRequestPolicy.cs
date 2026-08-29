@@ -582,9 +582,52 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
 
         if (item.TryGetProperty("type", out var type) &&
             (type.ValueKind != JsonValueKind.String ||
-                type.GetString() is not ("message" or "function_call_output")))
+                type.GetString() is not ("message" or "reasoning" or "function_call" or "function_call_output")))
         {
-            return Validation("A Responses input item type is unsupported.", "input");
+            var unsupportedType = type.ValueKind == JsonValueKind.String &&
+                type.GetString() is { Length: > 0 and <= 64 } value &&
+                value.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-')
+                    ? $" '{value}'"
+                    : string.Empty;
+            return Validation($"A Responses input item type{unsupportedType} is unsupported.", "input");
+        }
+
+        var isReasoning = type.ValueKind == JsonValueKind.String &&
+            string.Equals(type.GetString(), "reasoning", StringComparison.Ordinal);
+        if (isReasoning)
+        {
+            return ValidateResponseReasoningItem(item);
+        }
+        var isFunctionCall = type.ValueKind == JsonValueKind.String &&
+            string.Equals(type.GetString(), "function_call", StringComparison.Ordinal);
+        if (isFunctionCall)
+        {
+            if (!HasOnlyProperties(
+                    item,
+                    Set("type", "id", "call_id", "name", "arguments", "status"),
+                    out var unknown))
+            {
+                return Validation("A function call contains an unsupported field.", unknown ?? "input");
+            }
+
+            if (!support.SupportsFunctionTools ||
+                !item.TryGetProperty("call_id", out var callId) ||
+                !IsName(callId) ||
+                !item.TryGetProperty("name", out var name) ||
+                !IsName(name) ||
+                !item.TryGetProperty("arguments", out var arguments) ||
+                arguments.ValueKind != JsonValueKind.String ||
+                !IsBoundedText(arguments.GetString(), MaximumSchemaCharacters) ||
+                item.TryGetProperty("id", out var id) && !IsName(id) ||
+                item.TryGetProperty("status", out var status) &&
+                (status.ValueKind != JsonValueKind.String ||
+                    status.GetString() is not ("in_progress" or "completed" or "incomplete")))
+            {
+                return Validation("A function call is invalid.", "input");
+            }
+
+            requiredCapabilities.Add(SharedProviderCapability.FunctionTools);
+            return null;
         }
 
         var isFunctionOutput = type.ValueKind == JsonValueKind.String &&
@@ -632,15 +675,112 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             support,
             requiredCapabilities,
             SharedProviderRelayOperation.Responses,
-            allowsImageInput: true);
+            allowsImageInput: string.Equals(role.GetString(), "user", StringComparison.Ordinal),
+            allowsResponseOutputText: string.Equals(role.GetString(), "assistant", StringComparison.Ordinal));
     }
 
+    private static SharedProviderRelayRequestPolicyResult.Rejected? ValidateResponseReasoningItem(
+        JsonElement item)
+    {
+        if (!HasOnlyProperties(
+                item,
+                Set("type", "id", "summary", "content", "encrypted_content", "status"),
+                out var unknown))
+        {
+            return Validation("A Responses reasoning item contains an unsupported field.", unknown ?? "input");
+        }
+
+        if (item.TryGetProperty("id", out var id) && !IsName(id))
+        {
+            return Validation("A Responses reasoning item id is invalid.", "input");
+        }
+
+        if (item.TryGetProperty("summary", out var summary) &&
+            GetReasoningPartsFailure(summary, "summary_text") is { } summaryFailure)
+        {
+            return Validation($"A Responses reasoning item summary is invalid: {summaryFailure}.", "input");
+        }
+
+        if (item.TryGetProperty("content", out var content) &&
+            GetReasoningPartsFailure(content, "reasoning_text") is { } contentFailure)
+        {
+            return Validation($"A Responses reasoning item content is invalid: {contentFailure}.", "input");
+        }
+        if (item.TryGetProperty("encrypted_content", out var encryptedContent) &&
+            encryptedContent.ValueKind != JsonValueKind.Null &&
+            (encryptedContent.ValueKind != JsonValueKind.String ||
+                !IsBoundedText(encryptedContent.GetString(), MaximumTextCharacters)))
+        {
+            return Validation("A Responses reasoning item encrypted content is invalid.", "input");
+        }
+
+        if (!item.TryGetProperty("summary", out _) &&
+            !item.TryGetProperty("content", out _) &&
+            !item.TryGetProperty("encrypted_content", out _))
+        {
+            return Validation("A Responses reasoning item has no replay context.", "input");
+        }
+        if (item.TryGetProperty("status", out var status) &&
+            status.ValueKind != JsonValueKind.Null &&
+            (status.ValueKind != JsonValueKind.String ||
+                status.GetString() is not ("in_progress" or "completed" or "incomplete")))
+        {
+            return Validation("A Responses reasoning item status is invalid.", "input");
+        }
+
+        return null;
+    }
+
+    private static string? GetReasoningPartsFailure(JsonElement parts, string expectedType)
+    {
+        if (parts.ValueKind != JsonValueKind.Array)
+        {
+            return "it must be an array";
+        }
+
+        if (parts.GetArrayLength() > MaximumMessages)
+        {
+            return "it exceeds the maximum item count";
+        }
+
+        foreach (var part in parts.EnumerateArray())
+        {
+            if (part.ValueKind != JsonValueKind.Object)
+            {
+                return "a part must be an object";
+            }
+
+            if (!HasOnlyProperties(part, Set("type", "text"), out _))
+            {
+                return "a part contains an unsupported field";
+            }
+
+            if (!part.TryGetProperty("type", out var type) ||
+                type.ValueKind != JsonValueKind.String ||
+                !string.Equals(type.GetString(), expectedType, StringComparison.Ordinal))
+            {
+                return "a part discriminator is invalid";
+            }
+
+            if (!part.TryGetProperty("text", out var text) ||
+                text.ValueKind != JsonValueKind.String ||
+                text.GetString() is not { } textValue ||
+                textValue.Length > MaximumTextCharacters ||
+                textValue.Any(character => character is '\0'))
+            {
+                return "a part text is invalid";
+            }
+        }
+
+        return null;
+    }
     private static SharedProviderRelayRequestPolicyResult.Rejected? ValidateMessageContent(
         JsonElement content,
         SharedProviderRelaySupportDescriptor support,
         ISet<SharedProviderCapability> requiredCapabilities,
         SharedProviderRelayOperation operation,
-        bool allowsImageInput)
+        bool allowsImageInput,
+        bool allowsResponseOutputText = false)
     {
         if (content.ValueKind == JsonValueKind.String)
         {
@@ -657,6 +797,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         var expectedTextPartType = operation switch
         {
             SharedProviderRelayOperation.ChatCompletions => "text",
+            SharedProviderRelayOperation.Responses when allowsResponseOutputText => "output_text",
             SharedProviderRelayOperation.Responses => "input_text",
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
@@ -671,10 +812,16 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
 
             if (string.Equals(type.GetString(), expectedTextPartType, StringComparison.Ordinal))
             {
-                if (!HasOnlyProperties(part, Set("type", "text"), out _) ||
+                var allowedTextProperties = allowsResponseOutputText
+                    ? Set("type", "text", "annotations")
+                    : Set("type", "text");
+                if (!HasOnlyProperties(part, allowedTextProperties, out _) ||
                     !part.TryGetProperty("text", out var text) ||
                     text.ValueKind != JsonValueKind.String ||
-                    !IsBoundedText(text.GetString(), MaximumTextCharacters))
+                    !IsBoundedText(text.GetString(), MaximumTextCharacters) ||
+                    allowsResponseOutputText &&
+                    part.TryGetProperty("annotations", out var annotations) &&
+                    (annotations.ValueKind != JsonValueKind.Array || annotations.GetArrayLength() != 0))
                 {
                     return Validation("A text content part is invalid.", "messages");
                 }

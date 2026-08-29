@@ -155,14 +155,22 @@ public sealed class SharedProviderRelayPolicyTests
             $$"""
             {"model":"{{RoutingModelId.Value}}","input":[{"type":"function_call_output","call_id":"call_1","output":"sunny"}]}
             """);
+        var functionTurnRequest = Accept(
+            SharedProviderRelayOperation.Responses,
+            $$"""
+            {"model":"{{RoutingModelId.Value}}","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"weather"}]},{"type":"function_call","id":"fc_1","call_id":"call_1","name":"weather","arguments":"{}","status":"completed"},{"type":"function_call_output","call_id":"call_1","output":"sunny"}]}
+            """);
 
         Assert.Contains("\"input_text\"", RewriteForUpstream(messageRequest));
         Assert.Contains("\"function_call_output\"", RewriteForUpstream(functionOutputRequest));
+        Assert.Contains("\"function_call\"", RewriteForUpstream(functionTurnRequest));
         foreach (string item in new[]
         {
             "{}",
             "{\"type\":\"message\"}",
             "{\"type\":\"message\",\"role\":\"user\"}",
+            "{\"type\":\"function_call\"}",
+            "{\"type\":\"function_call\",\"call_id\":\"call_1\",\"name\":\"weather\",\"arguments\":\"{}\",\"status\":\"unknown\"}",
             "{\"type\":\"function_call_output\"}",
             "{\"type\":\"function_call_output\",\"role\":\"user\",\"call_id\":\"call_1\",\"output\":\"sunny\"}"
         })
@@ -173,6 +181,49 @@ public sealed class SharedProviderRelayPolicyTests
         }
     }
 
+    [Fact]
+    public void ResponsesReasoningReplay_AcceptsOfficialSchemaAndRejectsMalformedItems()
+    {
+        var request = Accept(
+            SharedProviderRelayOperation.Responses,
+            $$"""
+            {"model":"{{RoutingModelId.Value}}","input":[{"type":"reasoning","id":"rs_1","summary":[{"type":"summary_text","text":"Checked the tool inputs."}],"content":[{"type":"reasoning_text","text":"Opaque reasoning context."}],"encrypted_content":"encrypted-context","status":"completed"},{"type":"function_call","id":"fc_1","call_id":"call_1","name":"weather","arguments":"{}","status":"completed"},{"type":"function_call_output","call_id":"call_1","output":"sunny"}]}
+            """);
+
+        var canonical = RewriteForUpstream(request);
+        Assert.Contains("\"type\":\"reasoning\"", canonical);
+        Assert.Contains("\"encrypted_content\":\"encrypted-context\"", canonical);
+
+        var minimal = Accept(
+            SharedProviderRelayOperation.Responses,
+            $$"""
+            {"model":"{{RoutingModelId.Value}}","input":[{"type":"reasoning","summary":[],"encrypted_content":null,"status":null}]}
+            """);
+        Assert.Contains("\"summary\":[]", RewriteForUpstream(minimal));
+        var emptySummaryText = Accept(
+            SharedProviderRelayOperation.Responses,
+            $$"""
+            {"model":"{{RoutingModelId.Value}}","input":[{"type":"reasoning","summary":[{"type":"summary_text","text":""}]}]}
+            """);
+        Assert.Contains("\"text\":\"\"", RewriteForUpstream(emptySummaryText));
+
+        foreach (string item in new[]
+        {
+            "{\"type\":\"reasoning\",\"id\":\"bad id\",\"summary\":[]}",
+            "{\"type\":\"reasoning\",\"id\":\"rs_1\"}",
+            "{\"type\":\"reasoning\",\"id\":\"rs_1\",\"summary\":{}}",
+            "{\"type\":\"reasoning\",\"id\":\"rs_1\",\"summary\":[{\"type\":\"reasoning_text\",\"text\":\"wrong\"}]}",
+            "{\"type\":\"reasoning\",\"id\":\"rs_1\",\"summary\":[],\"content\":[{\"type\":\"summary_text\",\"text\":\"wrong\"}]}",
+            "{\"type\":\"reasoning\",\"id\":\"rs_1\",\"summary\":[],\"encrypted_content\":\"\"}",
+            "{\"type\":\"reasoning\",\"id\":\"rs_1\",\"summary\":[],\"status\":\"unknown\"}",
+            "{\"type\":\"reasoning\",\"id\":\"rs_1\",\"summary\":[],\"metadata\":{}}"
+        })
+        {
+            AssertValidationFailure(
+                SharedProviderRelayOperation.Responses,
+                $"{{\"model\":\"{RoutingModelId.Value}\",\"input\":[{item}]}}");
+        }
+    }
     [Theory]
     [InlineData("none")]
     [InlineData("low")]
