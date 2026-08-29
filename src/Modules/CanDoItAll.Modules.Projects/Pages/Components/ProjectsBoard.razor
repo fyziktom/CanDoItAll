@@ -72,9 +72,9 @@
             </Cluster>
         </Split>
 
-        <Toolbar Class="rounded-[1.35rem] border border-slate-200/90 bg-slate-50/85 p-3 shadow-none">
+        <Toolbar Class="shadow-none p-0 border-0 mt-2">
             <div class="projects-board__filters">
-                <PrefixedField Prefix="FIND"
+                <PrefixedField
                                Class="min-w-0">
                     <TextInput Value="@ProjectSearch"
                            @oninput="HandleProjectSearchInput"
@@ -83,8 +83,8 @@
                            placeholder="Search by name or current phase"
                            data-testid="projects-search-input" />
                 </PrefixedField>
-                <PrefixedField Prefix="STATUS"
-                               Suffix="V"
+                <PrefixedField
+
                                PrefixPaddingRem="4.6"
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
@@ -99,8 +99,8 @@
                         }
                     </SelectInput>
                 </PrefixedField>
-                <PrefixedField Prefix="REL"
-                               Suffix="V"
+                <PrefixedField
+
                                PrefixPaddingRem="3.1"
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
@@ -116,8 +116,8 @@
                         }
                     </SelectInput>
                 </PrefixedField>
-                <PrefixedField Prefix="PARTY"
-                               Suffix="V"
+                <PrefixedField
+
                                PrefixPaddingRem="4.2"
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
@@ -132,8 +132,8 @@
                         }
                     </SelectInput>
                 </PrefixedField>
-                <PrefixedField Prefix="PROJECT"
-                               Suffix="V"
+                <PrefixedField
+
                                PrefixPaddingRem="4.9"
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
@@ -149,8 +149,8 @@
                         }
                     </SelectInput>
                 </PrefixedField>
-                <PrefixedField Prefix="LINK"
-                               Suffix="V"
+                <PrefixedField
+
                                PrefixPaddingRem="3.8"
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
@@ -165,16 +165,14 @@
                         <option value="@ProjectHierarchyFilterMode.Related">Related</option>
                     </SelectInput>
                 </PrefixedField>
-                <label class="inline-flex h-10 min-w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
-                    <CheckBox TValue="bool"
+                    <CheckboxOption
+                        TValue="bool"
+                            Text="Include subprojects"
                               Value="@IncludeSubprojects"
                               ValueChanged="IncludeSubprojectsChanged"
                               Disabled="@(HierarchyFilterProjectId is null || HierarchyFilterMode != ProjectHierarchyFilterMode.Descendants)"
                               aria-label="Include subprojects"
                               data-testid="project-include-subprojects-filter" />
-                    <TextBlock TextStyle="TextStyle.Caption"
-                               Value="Include subprojects" />
-                </label>
                 <TooltipTarget Text="Reset filters"
                                Position="TooltipPosition.Bottom"
                                TestId="projects-reset-filters-tooltip">
@@ -221,7 +219,7 @@
                                data-testid="projects-package-path-input" />
                     </PrefixedField>
                     <PrefixedField Prefix="TARGET"
-                                   Suffix="V"
+
                                    PrefixPaddingRem="5.4"
                                    SuffixPaddingRem="2.25"
                                    StackOnMobile="true"
