@@ -11,7 +11,7 @@
                    Wrap="FlexWrap.Wrap">
                 <div class="min-w-0">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Project demand" />
-                    <h3 class="mt-1 truncate text-lg font-semibold text-slate-950">Staffing requests</h3>
+                    <h3 class="mt-1 truncate text-lg font-semibold text-chrome-950">Staffing requests</h3>
                     <SmallText Text="@ProjectContextText" />
                 </div>
                 <TooltipTarget Text="@CreateTooltipText"
@@ -75,14 +75,14 @@
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div class="min-w-0">
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Project" />
-                                <p class="truncate text-xs font-semibold text-slate-600">@ResolveProjectName(request)</p>
-                                <h3 class="mt-2 line-clamp-2 text-base font-semibold text-slate-950">@request.Title</h3>
+                                <p class="truncate text-xs font-semibold text-chrome-600">@ResolveProjectName(request)</p>
+                                <h3 class="mt-2 line-clamp-2 text-base font-semibold text-chrome-950">@request.Title</h3>
                             </div>
                             <StatusBadge Tone="@ResolveStatusTone(request.Status)"
                                          Text="@request.Status.ToString()" />
                         </Split>
 
-                        <p class="text-sm leading-5 text-slate-600">@BuildMeta(request)</p>
+                        <p class="text-sm leading-5 text-chrome-600">@BuildMeta(request)</p>
 
                         @if (request.NeededSkills.Count > 0)
                         {
@@ -101,7 +101,7 @@
 
                         @if (!string.IsNullOrWhiteSpace(request.Notes))
                         {
-                            <p class="line-clamp-2 text-sm leading-5 text-slate-600">@request.Notes</p>
+                            <p class="line-clamp-2 text-sm leading-5 text-chrome-600">@request.Notes</p>
                         }
 
                         <CardActions Secondary="true" Class="mt-auto pt-3">
@@ -237,15 +237,15 @@
                         <Grid Gap="LayoutGap.Small" ColumnsMd="2" Class="mt-2">
                             @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
                             {
-                                <label class="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm text-slate-700">
+                                <label class="rounded-[1rem] border border-chrome-200 bg-chrome-50/80 px-3 py-3 text-sm text-chrome-700">
                                     <input type="checkbox"
                                            checked="@Draft.SkillIds.Contains(skill.Id)"
                                            data-testid="crmhr-staffing-request-skill"
                                            @onchange="args => ToggleSkill(skill.Id, args)" />
-                                    <span class="ml-2 font-medium text-slate-900">@skill.Name</span>
+                                    <span class="ml-2 font-medium text-chrome-900">@skill.Name</span>
                                     @if (!string.IsNullOrWhiteSpace(skill.Category))
                                     {
-                                        <span class="ml-2 text-slate-500">@skill.Category</span>
+                                        <span class="ml-2 text-chrome-500">@skill.Category</span>
                                     }
                                 </label>
                             }
@@ -297,26 +297,26 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Needed role" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.NeededRole)</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatValue(selectedRequest.NeededRole)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Allocation" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@($"{selectedRequest.AllocationPercent:0.##}%")</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@($"{selectedRequest.AllocationPercent:0.##}%")</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Period" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@BuildPeriod(selectedRequest)</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@BuildPeriod(selectedRequest)</p>
                     </SurfaceCard>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Requested by" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.RequestedByName)</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatValue(selectedRequest.RequestedByName)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Delivery unit" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.DeliveryUnitName)</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatValue(selectedRequest.DeliveryUnitName)</p>
                     </SurfaceCard>
                 </Grid>
 
@@ -341,7 +341,7 @@
                 {
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Notes" />
-                        <p class="mt-2 text-sm leading-6 text-slate-700">@selectedRequest.Notes</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-700">@selectedRequest.Notes</p>
                     </SurfaceCard>
                 }
             </Stack>

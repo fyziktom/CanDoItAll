@@ -54,7 +54,7 @@
                         }
                         @if (!string.IsNullOrWhiteSpace(AvatarDescription))
                         {
-                            <small class="text-sm text-slate-600">@AvatarDescription</small>
+                            <small class="text-sm text-chrome-600">@AvatarDescription</small>
                         }
                     </Stack>
                 </Stack>
@@ -91,7 +91,7 @@
         <FormField Text="@InstructionsLabel" Class="conversation-identity-fields__full-field">
             @if (!string.IsNullOrWhiteSpace(InstructionsDescription))
             {
-                <p class="mb-2 text-sm leading-6 text-slate-600">@InstructionsDescription</p>
+                <p class="mb-2 text-sm leading-6 text-chrome-600">@InstructionsDescription</p>
             }
             <TextAreaInput Value="@Instructions"
                       ValueChanged="InstructionsChanged"

@@ -83,7 +83,7 @@ else
             <div class="space-y-5">
                 <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
                     <CanvasCalendar Surface="canvasSurface"
-                                    HostClass="min-h-[36rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                                    HostClass="min-h-[36rem] w-full overflow-hidden rounded-2xl border border-chrome-200 bg-chrome-50"
                                     SelectionChanged="HandleEventSelectedAsync"
                                     StateChanged="HandleViewStateChangedAsync" />
                 </SectionCard>
@@ -100,30 +100,30 @@ else
                         <div class="space-y-4">
                             <div class="space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <p class="text-lg font-semibold text-slate-950">@selectedEvent.Title</p>
+                                    <p class="text-lg font-semibold text-chrome-950">@selectedEvent.Title</p>
                                     <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]" style="@($"background:{selectedEvent.AccentColor}18;color:{selectedEvent.AccentColor}")">@selectedEvent.ObjectType</span>
                                 </div>
-                                <p class="text-sm text-slate-600">@selectedEvent.Status</p>
+                                <p class="text-sm text-chrome-600">@selectedEvent.Status</p>
                             </div>
 
                             <div class="grid gap-3 sm:grid-cols-2">
-                                <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Start</p>
-                                    <p class="mt-2 text-sm font-semibold text-slate-950">@selectedEvent.StartUtc.LocalDateTime:g</p>
+                                <div class="rounded-[1.2rem] bg-chrome-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-chrome-500">Start</p>
+                                    <p class="mt-2 text-sm font-semibold text-chrome-950">@selectedEvent.StartUtc.LocalDateTime:g</p>
                                 </div>
-                                <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">End</p>
-                                    <p class="mt-2 text-sm font-semibold text-slate-950">@selectedEvent.EndUtc.LocalDateTime:g</p>
+                                <div class="rounded-[1.2rem] bg-chrome-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-chrome-500">End</p>
+                                    <p class="mt-2 text-sm font-semibold text-chrome-950">@selectedEvent.EndUtc.LocalDateTime:g</p>
                                 </div>
                             </div>
 
-                            <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
-                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Route</p>
-                                <p class="mt-2 break-all text-sm text-slate-700">@selectedEvent.Route</p>
+                            <div class="rounded-[1.2rem] bg-chrome-50 px-4 py-3">
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-chrome-500">Route</p>
+                                <p class="mt-2 break-all text-sm text-chrome-700">@selectedEvent.Route</p>
                             </div>
 
                             <button type="button"
-                                    class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                                    class="inline-flex items-center rounded-xl bg-chrome-900 px-4 py-2 text-sm font-semibold text-white"
                                     @onclick="() => Navigation.NavigateTo(selectedEvent.Route)">
                                 Open linked artifact
                             </button>
@@ -150,21 +150,21 @@ else
                                                StatePill="@currentViewState.View"
                                                Metrics="@StateParserMetrics">
                         <div class="grid gap-3 md:grid-cols-2">
-                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selected date</p>
-                                <p class="mt-2 text-sm text-slate-950">@currentViewState.SelectedDate</p>
+                            <div class="rounded-[1.4rem] border border-chrome-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-chrome-500">Selected date</p>
+                                <p class="mt-2 text-sm text-chrome-950">@currentViewState.SelectedDate</p>
                             </div>
-                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Timezone</p>
-                                <p class="mt-2 text-sm text-slate-950">@currentViewState.Timezone</p>
+                            <div class="rounded-[1.4rem] border border-chrome-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-chrome-500">Timezone</p>
+                                <p class="mt-2 text-sm text-chrome-950">@currentViewState.Timezone</p>
                             </div>
-                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Scope</p>
-                                <p class="mt-2 text-sm text-slate-950">@currentViewState.Scope</p>
+                            <div class="rounded-[1.4rem] border border-chrome-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-chrome-500">Scope</p>
+                                <p class="mt-2 text-sm text-chrome-950">@currentViewState.Scope</p>
                             </div>
-                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selected event</p>
-                                <p class="mt-2 text-sm text-slate-950">@StateParserSelectedEventLabel</p>
+                            <div class="rounded-[1.4rem] border border-chrome-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-chrome-500">Selected event</p>
+                                <p class="mt-2 text-sm text-chrome-950">@StateParserSelectedEventLabel</p>
                             </div>
                         </div>
                     </CanvasBoundaryCard>

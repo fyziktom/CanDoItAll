@@ -1,10 +1,13 @@
 @layer components {
   .app-shell-root {
-    @apply min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_24%),linear-gradient(180deg,_#f8fbff_0%,_#edf3fb_100%)] text-slate-900;
+    @apply min-h-screen;
+    /*@apply bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_24%),linear-gradient(180deg,_#f8fbff_0%,_#edf3fb_100%)];*/
+    @apply text-chrome-900;
   }
 
   .app-shell-frame {
-    @apply mx-auto flex min-h-screen w-full max-w-none gap-2 px-2 py-2 sm:px-3 xl:px-4;
+    @apply mx-auto flex min-h-screen w-full max-w-none;
+    /*@apply gap-2 px-2 py-2 sm:px-3 xl:px-4;*/
   }
 
   .app-shell-frame--focus {
@@ -12,31 +15,37 @@
   }
 
   .app-shell-sidebar {
-    @apply hidden shrink-0 overflow-visible rounded-[1.35rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 transition-[width] duration-200 xl:block;
+    @apply hidden shrink-0 overflow-visible bg-chrome-50 text-chrome-950;
+    @apply transition-[width] duration-200 xl:block;
+    @apply border-r border-chrome-300;
   }
 
   .app-shell-sidebar--focus {
-    @apply p-2.5;
+    /*@apply p-2.5;*/
   }
 
   .app-shell-sidebar--standard {
-    @apply p-2.5;
+    /*@apply p-2.5;*/
     position: sticky;
-    top: 0.5rem;
-    height: calc(100vh - 1rem);
-    max-height: calc(100vh - 1rem);
+    top: 0;
+    height: calc(100vh);
+    max-height: calc(100vh);
   }
 
   .app-shell-sidebar--collapsed {
-    @apply w-[4.75rem];
+    @apply w-[3.25rem];
   }
 
   .app-shell-sidebar--expanded {
-    @apply w-72;
+    @apply w-60;
   }
 
   .app-shell-sidebar__inner {
-    @apply flex h-full min-h-0 flex-col gap-2;
+    @apply flex h-full min-h-0 flex-col;
+  }
+
+  .app-shell-sidebar--expanded .app-shell-sidebar__inner {
+    @apply min-w-60;
   }
 
   .app-shell-sidebar__top {
@@ -52,23 +61,24 @@
   }
 
   .app-shell-brand--collapsed {
-    @apply w-full justify-center;
+    /*@apply w-full justify-center;*/
   }
 
   .app-shell-brand-title {
-    @apply truncate text-sm font-semibold tracking-tight text-white;
+    @apply truncate text-sm font-semibold tracking-tight text-chrome-50;
   }
 
   .app-shell-brand-mark {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-sky-100;
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold uppercase;
   }
 
   .app-shell-toggle-button {
-    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white;
+    @apply cursor-pointer;
+    /*@apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-chrome-300 transition hover:bg-chrome-50/10 hover:text-chrome-950;*/
   }
 
   .app-shell-sidebar--collapsed .app-shell-toggle-button {
-    @apply absolute -right-4 top-1/2 h-7 w-7 -translate-y-1/2;
+    /*@apply absolute -right-4 top-1/2 h-7 w-7 -translate-y-1/2;*/
   }
 
   .app-shell-expanded-context {
@@ -76,11 +86,11 @@
   }
 
   .app-shell-card-dark {
-    @apply rounded-2xl border border-white/10 bg-white/5 p-3;
+    /*@apply rounded-2xl border border-chrome-50/10 bg-chrome-50/5 p-3;*/
   }
 
   .app-shell-card-info {
-    @apply rounded-2xl border border-sky-400/20 bg-sky-400/10 p-3;
+    /*@apply rounded-2xl border border-sky-400/20 bg-sky-400/10 p-3;*/
   }
 
   .app-shell-pick-button {
@@ -88,19 +98,21 @@
   }
 
   .app-shell-pick-button--active {
-    @apply bg-sky-400/15 text-white;
+    /*@apply bg-sky-400/15 text-chrome-50;*/
   }
 
   .app-shell-pick-button--inactive {
-    @apply text-slate-300 hover:bg-white/5 hover:text-white;
+    /*@apply text-chrome-300 hover:bg-chrome-50/5 hover:text-chrome-50;*/
   }
 
   .app-shell-nav-button {
+    @apply cursor-pointer;
     @apply relative flex w-full text-left transition;
+    @apply hover:bg-chrome-200;
   }
 
   .app-shell-nav {
-    @apply min-h-0 flex-1 overflow-visible py-1;
+    @apply min-h-0 flex-1 overflow-visible;
   }
 
   .app-shell-nav--expanded {
@@ -108,27 +120,33 @@
   }
 
   .app-shell-nav--collapsed {
-    @apply flex flex-col items-center gap-1.5 overflow-visible;
+    /*@apply flex flex-col items-center gap-1.5 overflow-visible;*/
+    @apply space-y-1.5;
   }
 
   .app-shell-nav-button--expanded {
-    @apply items-center gap-2 rounded-xl px-2.5 py-1.5;
+    /*@apply items-center;*/
+    @apply gap-2 px-2.5 py-1.5;
+    /*@apply h-11 w-11 items-center;*/
   }
 
   .app-shell-nav-button--collapsed {
-    @apply h-11 w-11 items-center justify-center rounded-xl px-0 py-0;
+    /*@apply h-11 w-11 items-center;*/
+    /*@apply justify-center;*/
+    /*@apply rounded-xl px-0 py-0;*/
+    @apply gap-2 px-2.5 py-1.5;
   }
 
   .app-shell-nav-button--active {
-    @apply bg-sky-400/15 text-white;
+    /*@apply bg-sky-400/15 text-chrome-50;*/
   }
 
   .app-shell-nav-button--inactive {
-    @apply text-slate-300 hover:bg-white/5 hover:text-white;
+    /*@apply text-chrome-300 hover:bg-chrome-50/5 hover:text-chrome-50;*/
   }
 
   .app-shell-nav-icon {
-    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold uppercase;
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-chrome-50/10 text-xs font-semibold uppercase;
   }
 
   .app-shell-nav-button--expanded .app-shell-nav-icon {
@@ -136,11 +154,12 @@
   }
 
   .app-shell-nav-button--collapsed .app-shell-nav-icon {
-    @apply h-10 w-10;
+    @apply h-8 w-8;
+    /*@apply h-10 w-10;*/
   }
 
   .app-shell-nav-badge-dot {
-    @apply absolute right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.55rem] font-bold leading-none text-slate-950;
+    @apply absolute right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.55rem] font-bold leading-none text-chrome-950;
   }
 
   .app-shell-nav-label-row {
@@ -148,7 +167,9 @@
   }
 
   .app-shell-nav-badge-inline {
-    @apply inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.65rem] font-semibold leading-none text-sky-200;
+    @apply inline-flex min-w-6 shrink-0 items-center;
+    /*@apply justify-cente;*/
+    @apply rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.65rem] font-semibold leading-none text-sky-200;
   }
 
   .app-shell-nav-overflow-anchor {
@@ -185,7 +206,7 @@
   }
 
   .app-shell-nav-overflow-panel {
-    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-100 opacity-0 shadow-2xl shadow-slate-950/30 transition duration-150 ease-out;
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-chrome-50/10 bg-chrome-950 p-2 text-chrome-100 opacity-0 shadow-2xl shadow-chrome-950/30 transition duration-150 ease-out;
     left: calc(100% + 0.75rem);
     top: 50%;
     transform: translate3d(0.35rem, -50%, 0);
@@ -205,7 +226,7 @@
   }
 
   .app-shell-nav-overflow-panel__arrow {
-    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-white/10 bg-slate-950;
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-chrome-50/10 bg-chrome-950;
     transform: translateY(-50%) rotate(45deg);
   }
 
@@ -230,11 +251,11 @@
   }
 
   .app-shell-nav-overflow-card--active {
-    @apply border-sky-300/40 bg-sky-400/15 text-white;
+    @apply border-sky-300/40 bg-sky-400/15 text-chrome-50;
   }
 
   .app-shell-nav-overflow-card--inactive {
-    @apply border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white;
+    @apply border-chrome-50/10 bg-chrome-50/5 text-chrome-300 hover:bg-chrome-50/10 hover:text-chrome-50;
   }
 
   .app-shell-nav-overflow-card__icon {
@@ -246,7 +267,7 @@
   }
 
   .app-shell-nav-overflow-card__badge {
-    @apply absolute right-1 top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.5rem] font-bold leading-none text-slate-950;
+    @apply absolute right-1 top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.5rem] font-bold leading-none text-chrome-950;
   }
 
   .app-shell-opened-work-anchor {
@@ -254,7 +275,7 @@
   }
 
   .app-shell-opened-work-panel {
-    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-100 opacity-0 shadow-2xl shadow-slate-950/30 transition duration-150 ease-out;
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-chrome-50/10 bg-chrome-950 p-2 text-chrome-100 opacity-0 shadow-2xl shadow-chrome-950/30 transition duration-150 ease-out;
     left: calc(100% + 0.75rem);
     top: 50%;
     transform: translate3d(0.35rem, -50%, 0);
@@ -274,7 +295,7 @@
   }
 
   .app-shell-opened-work-panel__arrow {
-    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-white/10 bg-slate-950;
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-chrome-50/10 bg-chrome-950;
     transform: translateY(-50%) rotate(45deg);
   }
 
@@ -299,15 +320,15 @@
   }
 
   .app-shell-opened-work-card--active {
-    @apply border-sky-300/40 bg-sky-400/15 text-white;
+    @apply border-sky-300/40 bg-sky-400/15 text-chrome-50;
   }
 
   .app-shell-opened-work-card--inactive {
-    @apply border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white;
+    @apply border-chrome-50/10 bg-chrome-50/5 text-chrome-300 hover:bg-chrome-50/10 hover:text-chrome-50;
   }
 
   .app-shell-opened-work-card__icon {
-    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-sm;
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg bg-chrome-50/10 text-sm;
   }
 
   .app-shell-opened-work-card__title {
@@ -315,7 +336,7 @@
   }
 
   .app-shell-nav-tooltip {
-    @apply max-w-[18rem] rounded-xl border border-slate-700 bg-slate-950 p-0 text-slate-100 shadow-2xl shadow-slate-950/20;
+    @apply max-w-[18rem] rounded-xl border border-chrome-700 bg-chrome-950 p-0 text-chrome-100 shadow-2xl shadow-chrome-950/20;
   }
 
   .app-shell-tooltip-card {
@@ -323,11 +344,11 @@
   }
 
   .app-shell-tooltip-title {
-    @apply text-sm font-semibold text-white;
+    @apply text-sm font-semibold text-chrome-50;
   }
 
   .app-shell-tooltip-body {
-    @apply text-xs leading-5 text-slate-300;
+    @apply text-xs leading-5 text-chrome-300;
   }
 
   .app-shell-tooltip-badge {
@@ -335,24 +356,33 @@
   }
 
   .app-shell-utility-area {
-    @apply mt-auto shrink-0 border-t border-white/10 pt-2;
+    @apply mt-auto shrink-0 pt-2;
   }
 
   .app-shell-utility-stack {
     @apply flex flex-col gap-1.5;
+    @apply pb-3;
   }
 
   .app-shell-utility-button {
-    @apply relative flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-2 text-left text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
+    @apply hover:bg-chrome-200;
+    @apply cursor-pointer;
+    @apply relative flex min-h-11 w-full items-center;
+    /*@apply justify-center;*/
+    @apply gap-2 rounded-xl;
+    @apply px-2.5 text-left transition;
+    /*@apply hover:bg-chrome-50/10 hover:text-chrome-50;*/
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
   }
 
   .app-shell-sidebar--expanded .app-shell-utility-button,
   .app-shell-utility-button--expanded {
-    @apply justify-start px-3;
+    @apply justify-start px-2.5;
   }
 
   .app-shell-utility-icon {
-    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold uppercase;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl;
+    @apply bg-chrome-50/10 text-xs font-semibold uppercase;
   }
 
   .app-shell-utility-label {
@@ -368,13 +398,15 @@
   }
 
   .app-shell-utility-button--database {
-    @apply bg-white/[0.03];
+    @apply bg-chrome-50/[0.03];
+    @apply cursor-help;
   }
 
   .app-shell-db-flyout {
-    @apply invisible pointer-events-auto fixed z-[96] max-h-[calc(100vh-2rem)] w-[23.5rem] max-w-[calc(100vw-7rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white p-0 text-slate-900 opacity-0 shadow-2xl shadow-slate-950/20 transition duration-150 ease-out;
+    @apply invisible pointer-events-auto fixed z-[96] max-h-[calc(100vh-2rem)] w-[23.5rem] max-w-[calc(100vw-7rem)] overflow-y-auto rounded-xl border border-chrome-200 bg-chrome-50 p-0 text-chrome-900 opacity-0;
+    @apply shadow-2xl shadow-chrome-950/20 transition duration-150 ease-out;
     bottom: 1.125rem;
-    left: calc(1rem + 18rem + 0.75rem);
+    left: calc(1rem + 12rem + 0.75rem);
     transform: translate3d(-0.35rem, 0.5rem, 0);
     transition-property: opacity, transform, visibility;
     transition-delay: 220ms;
@@ -396,7 +428,7 @@
   }
 
   .app-shell-db-flyout__arrow {
-    @apply absolute left-[-0.45rem] bottom-4 h-3.5 w-3.5 rotate-45 border-b border-l border-slate-200 bg-white;
+    @apply absolute left-[-0.45rem] bottom-4 h-3.5 w-3.5 rotate-45 border-b border-l border-chrome-200 bg-chrome-50;
   }
 
   .app-shell-db-flyout-card {
@@ -404,19 +436,19 @@
   }
 
   .app-shell-db-flyout__icon {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-chrome-100 text-chrome-700;
   }
 
   .app-shell-db-flyout__heading {
-    @apply text-sm font-semibold text-slate-950;
+    @apply text-sm font-semibold text-chrome-950;
   }
 
   .app-shell-db-flyout__section {
-    @apply w-full border-t border-slate-200 pt-3;
+    @apply w-full border-t border-chrome-200 pt-3;
   }
 
   .app-shell-db-flyout__section-title {
-    @apply text-xs font-semibold text-slate-700;
+    @apply text-xs font-semibold text-chrome-700;
   }
 
   .app-shell-db-flyout__status-dot {
@@ -424,7 +456,7 @@
   }
 
   .app-shell-db-flyout__current-name {
-    @apply min-w-0 flex-1 truncate text-sm font-medium text-slate-800;
+    @apply min-w-0 flex-1 truncate text-sm font-medium text-chrome-800;
   }
 
   .app-shell-db-flyout__facts {
@@ -436,11 +468,11 @@
   }
 
   .app-shell-db-flyout__fact span {
-    @apply text-slate-500;
+    @apply text-chrome-500;
   }
 
   .app-shell-db-flyout__fact strong {
-    @apply truncate text-right font-medium text-slate-800;
+    @apply truncate text-right font-medium text-chrome-800;
   }
 
   .app-shell-db-flyout__fact .cda-copy-button-icon {
@@ -452,23 +484,23 @@
   }
 
   .app-shell-db-flyout__recent-list {
-    @apply w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70;
+    @apply w-full overflow-hidden rounded-xl border border-chrome-200 bg-chrome-50/70;
   }
 
   .app-shell-db-flyout__recent-button {
-    @apply flex min-h-10 w-full items-center justify-between gap-2 bg-white px-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex min-h-10 w-full items-center justify-between gap-2 bg-chrome-50 px-3 text-left text-sm font-medium text-chrome-700 transition hover:bg-chrome-50 hover:text-chrome-950 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .app-shell-db-flyout__recent-button + .app-shell-db-flyout__recent-button {
-    @apply border-t border-slate-200;
+    @apply border-t border-chrome-200;
   }
 
   .app-shell-db-flyout__recent-button .cda-material-icon {
-    @apply text-base text-slate-400;
+    @apply text-base text-chrome-400;
   }
 
   .app-shell-db-flyout__empty {
-    @apply w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500;
+    @apply w-full rounded-xl border border-dashed border-chrome-200 bg-chrome-50 px-3 py-2 text-sm text-chrome-500;
   }
 
   .app-shell-db-flyout__dialog-button {
@@ -476,7 +508,7 @@
   }
 
   .app-shell-mobile-panel {
-    @apply rounded-[1.5rem] border border-white/80 bg-white/90 px-4 py-3 shadow-lg shadow-slate-200/40 backdrop-blur xl:hidden;
+    @apply rounded-[1.5rem] border border-chrome-50/80 bg-chrome-50/90 px-4 py-3 shadow-lg shadow-chrome-200/40 backdrop-blur xl:hidden;
   }
 
   .app-shell-mobile-card {
@@ -484,11 +516,11 @@
   }
 
   .app-shell-mobile-card--active {
-    @apply border-slate-900 bg-slate-900 text-white;
+    @apply border-chrome-900 bg-chrome-900 text-chrome-50;
   }
 
   .app-shell-mobile-card--inactive {
-    @apply border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white;
+    @apply border-chrome-200 bg-chrome-50 text-chrome-700 hover:border-chrome-300 hover:bg-chrome-50;
   }
 
   .app-shell-workbar {
@@ -512,7 +544,7 @@
   }
 
   .app-shell-status-trigger {
-    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white/85 text-slate-500 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400;
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-chrome-200 bg-chrome-50/85 text-chrome-500 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400;
   }
 
   .app-shell-status-trigger > span {
@@ -520,7 +552,7 @@
   }
 
   .app-shell-status-panel {
-    @apply w-80 max-w-[calc(100vw-2rem)] gap-0 rounded-xl border-slate-200 bg-white p-0 text-slate-900 shadow-2xl shadow-slate-950/15;
+    @apply w-80 max-w-[calc(100vw-2rem)] gap-0 rounded-xl border-chrome-200 bg-chrome-50 p-0 text-chrome-900 shadow-2xl shadow-chrome-950/15;
   }
 
   .app-shell-status-popover {
@@ -532,11 +564,11 @@
   }
 
   .app-shell-status-panel .app-shell-status-popover__title {
-    @apply m-0 text-sm font-semibold leading-5 text-slate-950;
+    @apply m-0 text-sm font-semibold leading-5 text-chrome-950;
   }
 
   .app-shell-status-panel .app-shell-status-popover__description {
-    @apply m-0 text-xs font-normal leading-4 text-slate-500;
+    @apply m-0 text-xs font-normal leading-4 text-chrome-500;
   }
 
   .app-tab-menu__panel--recent {
@@ -549,7 +581,7 @@
   }
 
   .app-tab-recent-header {
-    @apply shrink-0 border-b border-slate-200 pb-2;
+    @apply shrink-0 border-b border-chrome-200 pb-2;
   }
 
   @media (min-width: 1280px) {
@@ -571,11 +603,11 @@
   }
 
   .app-shell-topbar {
-    @apply rounded-xl border border-white/80 bg-white/88 px-4 py-2 shadow-sm shadow-slate-200/40 backdrop-blur;
+    @apply rounded-xl border border-chrome-50/80 bg-chrome-50/88 px-4 py-2 shadow-sm shadow-chrome-200/40 backdrop-blur;
   }
 
   .app-shell-body-surface {
-    @apply min-w-0 rounded-[1.75rem] border border-white/80 bg-white/92 p-4 shadow-xl shadow-slate-200/60 xl:p-5 2xl:p-6;
+    @apply min-w-0 bg-chrome-50/92 p-4 xl:p-5 2xl:p-6;
   }
 
   .app-shell-body-surface--standard {
@@ -584,11 +616,11 @@
   }
 
   .app-shell-rail {
-    @apply hidden rounded-[1.75rem] border border-white/80 bg-white/88 p-4 shadow-lg shadow-slate-200/50 backdrop-blur 2xl:block 2xl:p-5;
+    @apply hidden rounded-[1.75rem] border border-chrome-50/80 bg-chrome-50/88 p-4 shadow-lg shadow-chrome-200/50 backdrop-blur 2xl:block 2xl:p-5;
   }
 
   .app-shell-rail-collapse {
-    @apply rounded-[1.5rem] border border-white/80 bg-white/90 px-4 py-3 shadow-lg shadow-slate-200/40 backdrop-blur;
+    @apply rounded-[1.5rem] border border-chrome-50/80 bg-chrome-50/90 px-4 py-3 shadow-lg shadow-chrome-200/40 backdrop-blur;
   }
 
   .app-shell-pill {
@@ -596,7 +628,7 @@
   }
 
   .app-shell-pill--neutral {
-    @apply border-slate-200 bg-slate-100 text-slate-500;
+    @apply border-chrome-200 bg-chrome-100 text-chrome-500;
   }
 
   .app-shell-pill--info {
@@ -604,14 +636,14 @@
   }
 
   .app-shell-stat-card {
-    @apply rounded-2xl bg-slate-50 p-3;
+    @apply rounded-2xl bg-chrome-50 p-3;
   }
 
   .app-shell-upload {
-    @apply cursor-pointer rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700;
+    @apply cursor-pointer rounded-xl border border-chrome-300 bg-chrome-100 px-3 py-2 text-xs font-semibold text-chrome-700;
   }
 
   .app-shell-attachment {
-    @apply flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-700;
+    @apply flex items-center justify-between gap-3 rounded-2xl bg-chrome-50 px-3 py-2 text-xs text-chrome-700;
   }
 }

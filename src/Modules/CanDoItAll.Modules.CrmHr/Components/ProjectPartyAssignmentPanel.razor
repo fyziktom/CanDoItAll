@@ -10,8 +10,8 @@
                Wrap="FlexWrap.Wrap">
             <div class="min-w-0">
                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Project relationships" />
-                <h2 class="mt-1 text-lg font-semibold text-slate-950">Recorded assignments</h2>
-                <p class="mt-1 text-sm text-slate-600">
+                <h2 class="mt-1 text-lg font-semibold text-chrome-950">Recorded assignments</h2>
+                <p class="mt-1 text-sm text-chrome-600">
                     @if (string.IsNullOrWhiteSpace(ProjectName)) {
                         <text>Choose a project to manage its commercial and staffing relationships.</text>
                     } else {
@@ -147,7 +147,7 @@
                                    rows="4"
                                    data-testid="crmhr-assignment-notes" />
                 </FormField>
-                <label class="inline-flex items-center gap-2 self-start text-sm text-slate-700">
+                <label class="inline-flex items-center gap-2 self-start text-sm text-chrome-700">
                     <InputCheckbox @bind-Value="Draft.IsPrimary"
                                    data-testid="crmhr-assignment-primary" />
                     <span>Mark as primary</span>

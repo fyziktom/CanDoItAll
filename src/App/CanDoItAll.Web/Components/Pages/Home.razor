@@ -40,7 +40,7 @@ tests: component:HomePageTests, component:QuickActionCardTests, e2e:smoke-dashbo
                     {
                         <TextBlock TextStyle="TextStyle.Caption"
                                    Value="@AutomaticRefreshText"
-                                   Class="whitespace-nowrap text-slate-500"
+                                   Class="whitespace-nowrap text-chrome-500"
                                    data-testid="dashboard-refresh-countdown" />
                     }
                     <PageHeaderActionButton Icon="refresh"
@@ -115,13 +115,13 @@ tests: component:HomePageTests, component:QuickActionCardTests, e2e:smoke-dashbo
                                                    Wrap="FlexWrap.NoWrap">
                                                 <TextBlock TextStyle="TextStyle.Subtitle2"
                                                            Value="@project.Name"
-                                                           Class="min-w-0 flex-1 truncate text-slate-900" />
+                                                           Class="min-w-0 flex-1 truncate text-chrome-900" />
                                                 <StatusBadge Tone="@MapStatusTone(project.Status.Tone)"
                                                              Text="@project.Status.Label" />
                                             </Split>
                                             <TextBlock TextStyle="TextStyle.Caption"
                                                        Value="@BuildProjectMeta(project)"
-                                                       Class="mt-auto block w-full min-w-0 max-w-full truncate text-slate-500" />
+                                                       Class="mt-auto block w-full min-w-0 max-w-full truncate text-chrome-500" />
                                         </Stack>
                                     </ActionCard>
                                 </a>

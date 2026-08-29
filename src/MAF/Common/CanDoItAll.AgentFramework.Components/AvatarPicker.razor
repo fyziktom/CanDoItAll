@@ -42,7 +42,7 @@
                         <Stack GapScale="LayoutGap.XSmall">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current avatar" />
                             <strong>@SelectionText</strong>
-                            <small class="text-sm text-slate-600">Avatar changes are saved with the definition.</small>
+                            <small class="text-sm text-chrome-600">Avatar changes are saved with the definition.</small>
                         </Stack>
                     </Stack>
                 </SurfaceCard>
@@ -59,12 +59,12 @@
                             </FormField>
                             @if (!string.IsNullOrWhiteSpace(customAvatarFileName))
                             {
-                                <p class="mt-2 break-all text-sm text-slate-600" data-testid="@($"{TestIdPrefix}-upload-file")">@customAvatarFileName</p>
+                                <p class="mt-2 break-all text-sm text-chrome-600" data-testid="@($"{TestIdPrefix}-upload-file")">@customAvatarFileName</p>
                             }
                         </div>
                         <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Start">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Custom avatar" />
-                            <p class="text-sm leading-6 text-slate-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
+                            <p class="text-sm leading-6 text-chrome-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
                             @if (isUploadBusy)
                             {
                                 <StatusBadge Tone="info" Text="Loading" />

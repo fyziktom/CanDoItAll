@@ -6,22 +6,22 @@
     }
 
     <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
-        <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Availability</p>
-            <p class="mt-1 text-sm font-semibold text-slate-950"
+        <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Availability</p>
+            <p class="mt-1 text-sm font-semibold text-chrome-950"
                data-testid="crmhr-capacity-availability-message">@capacitySummary.AvailabilityMessage</p>
         </div>
-        <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Weekly capacity</p>
-            <p class="mt-1 text-sm font-semibold text-slate-950">@($"{capacitySummary.CapacityHoursPerWeek:0.##}h")</p>
+        <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Weekly capacity</p>
+            <p class="mt-1 text-sm font-semibold text-chrome-950">@($"{capacitySummary.CapacityHoursPerWeek:0.##}h")</p>
         </div>
-        <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Active allocations</p>
-            <p class="mt-1 text-sm font-semibold text-slate-950">@FormatPercent(capacitySummary.ActiveAllocationPercent)</p>
+        <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Active allocations</p>
+            <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatPercent(capacitySummary.ActiveAllocationPercent)</p>
         </div>
-        <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Blocked</p>
-            <p class="mt-1 text-sm font-semibold text-slate-950">@FormatPercent(capacitySummary.ActiveBlockedPercent)</p>
+        <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Blocked</p>
+            <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatPercent(capacitySummary.ActiveBlockedPercent)</p>
         </div>
     </Grid>
 
@@ -62,8 +62,8 @@
                    JustifyContent="JustifyContent.SpaceBetween">
                 <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Allocation schedule" />
-                    <h3 class="text-lg font-semibold text-slate-950">Project commitment timeline</h3>
-                    <p class="text-sm leading-6 text-slate-600">
+                    <h3 class="text-lg font-semibold text-chrome-950">Project commitment timeline</h3>
+                    <p class="text-sm leading-6 text-chrome-600">
                         Read-only project assignments. Allocation percentages remain in the task titles and are not interpreted as delivery progress.
                     </p>
                 </Stack>
@@ -103,8 +103,8 @@
     <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-6">
         <SurfaceCard>
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Capacity block" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Add leave or reserve time</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Add leave or reserve time</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Use partial blocks for leave, reserve, or temporary unavailability so availability math stays explicit.
             </p>
 
@@ -148,18 +148,18 @@
 
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Forward look" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Availability outlook</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Availability outlook</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Project allocations are read directly from project-party assignments, so this view is already bidirectional with the project module.
             </p>
 
             <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                <div class="rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3">
-                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Available now</p>
-                    <p class="mt-1 text-sm font-semibold text-slate-950">@FormatPercent(capacitySummary.AvailablePercent)</p>
+                <div class="rounded-[1.1rem] border border-chrome-200 bg-white px-4 py-3">
+                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Available now</p>
+                    <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatPercent(capacitySummary.AvailablePercent)</p>
                 </div>
-                <div class="rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3">
-                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">State</p>
+                <div class="rounded-[1.1rem] border border-chrome-200 bg-white px-4 py-3">
+                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">State</p>
                     <Cluster Gap="LayoutGap.Small" Class="mt-2">
                         <StatusBadge Tone="@ResolveAvailabilityTone(capacitySummary.AvailabilityState)"
                                      Text="@capacitySummary.AvailabilityState.ToString()" />
@@ -170,9 +170,9 @@
                         }
                     </Cluster>
                 </div>
-                <div class="rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3">
-                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Project allocations</p>
-                    <p class="mt-1 text-sm font-semibold text-slate-950">@ProjectAllocations.Count allocation(s)</p>
+                <div class="rounded-[1.1rem] border border-chrome-200 bg-white px-4 py-3">
+                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Project allocations</p>
+                    <p class="mt-1 text-sm font-semibold text-chrome-950">@ProjectAllocations.Count allocation(s)</p>
                 </div>
             </Stack>
         </SurfaceCard>
@@ -181,11 +181,11 @@
     <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-6">
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Capacity blocks" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">@CapacityBlocks.Count block(s)</h3>
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">@CapacityBlocks.Count block(s)</h3>
 
             @if (CapacityBlocks.Count == 0)
             {
-                <p class="mt-3 text-sm leading-6 text-slate-600">No leave or reserve blocks are currently recorded.</p>
+                <p class="mt-3 text-sm leading-6 text-chrome-600">No leave or reserve blocks are currently recorded.</p>
             }
             else
             {
@@ -197,17 +197,17 @@
                                    AlignItems="AlignItems.Start"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0 space-y-1">
-                                    <p class="text-base font-semibold text-slate-950">@block.BlockKind</p>
-                                    <p class="text-sm text-slate-600">
+                                    <p class="text-base font-semibold text-chrome-950">@block.BlockKind</p>
+                                    <p class="text-sm text-chrome-600">
                                         @($"{block.StartDate:yyyy-MM-dd} -> {block.EndDate:yyyy-MM-dd}") / @FormatPercent(block.Percentage)
                                     </p>
                                     @if (!string.IsNullOrWhiteSpace(block.RelatedProjectName))
                                     {
-                                        <p class="text-sm text-slate-600">Project: @block.RelatedProjectName</p>
+                                        <p class="text-sm text-chrome-600">Project: @block.RelatedProjectName</p>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(block.Notes))
                                     {
-                                        <p class="text-sm leading-6 text-slate-600">@block.Notes</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@block.Notes</p>
                                     }
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">
@@ -228,11 +228,11 @@
 
         <SurfaceCard>
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Project allocations" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">@ProjectAllocations.Count project-linked commitment(s)</h3>
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">@ProjectAllocations.Count project-linked commitment(s)</h3>
 
             @if (ProjectAllocations.Count == 0)
             {
-                <p class="mt-3 text-sm leading-6 text-slate-600">No project allocations are currently pushing capacity from the project module.</p>
+                <p class="mt-3 text-sm leading-6 text-chrome-600">No project allocations are currently pushing capacity from the project module.</p>
             }
             else
             {
@@ -244,17 +244,17 @@
                                    AlignItems="AlignItems.Start"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0 space-y-1">
-                                    <p class="text-base font-semibold text-slate-950">@allocation.ProjectName</p>
-                                    <p class="text-sm text-slate-600">@allocation.Role / @FormatPercent(allocation.AllocationPercent)</p>
+                                    <p class="text-base font-semibold text-chrome-950">@allocation.ProjectName</p>
+                                    <p class="text-sm text-chrome-600">@allocation.Role / @FormatPercent(allocation.AllocationPercent)</p>
                                     @if (allocation.StartsOn.HasValue || allocation.EndsOn.HasValue)
                                     {
-                                        <p class="text-sm text-slate-600">
+                                        <p class="text-sm text-chrome-600">
                                             @($"{FormatDate(allocation.StartsOn)} -> {FormatDate(allocation.EndsOn)}")
                                         </p>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(allocation.Notes))
                                     {
-                                        <p class="text-sm leading-6 text-slate-600">@allocation.Notes</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@allocation.Notes</p>
                                     }
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">

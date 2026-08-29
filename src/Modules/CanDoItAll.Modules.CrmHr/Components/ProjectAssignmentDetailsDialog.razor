@@ -15,15 +15,15 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Role" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(Assignment.Role)</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(Assignment.Role)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Allocation" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@(Assignment.AllocationPercent.HasValue ? $"{Assignment.AllocationPercent.Value:0.##}%" : "Not set")</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@(Assignment.AllocationPercent.HasValue ? $"{Assignment.AllocationPercent.Value:0.##}%" : "Not set")</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Period" />
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@($"{FormatDate(Assignment.StartsAtUtc)} → {FormatDate(Assignment.EndsAtUtc)}")</p>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@($"{FormatDate(Assignment.StartsAtUtc)} → {FormatDate(Assignment.EndsAtUtc)}")</p>
                     </SurfaceCard>
                 </Grid>
 
@@ -37,14 +37,14 @@
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div class="min-w-0">
                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Party affiliation" />
-                                <p class="mt-1 text-sm font-semibold text-slate-950">
+                                <p class="mt-1 text-sm font-semibold text-chrome-950">
                                     @(string.IsNullOrWhiteSpace(Assignment.Affiliation.PrimaryDisplayText)
                                         ? "No organization recorded"
                                         : Assignment.Affiliation.PrimaryDisplayText)
                                 </p>
                                 @if (!string.IsNullOrWhiteSpace(Assignment.Affiliation.OtherAffiliationsSummary))
                                 {
-                                    <p class="mt-1 text-xs leading-5 text-slate-600">
+                                    <p class="mt-1 text-xs leading-5 text-chrome-600">
                                         Other affiliations: @Assignment.Affiliation.OtherAffiliationsSummary
                                     </p>
                                 }
@@ -59,7 +59,7 @@
                 {
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Assignment notes" />
-                        <p class="mt-1 text-sm leading-6 text-slate-700">@Assignment.Notes</p>
+                        <p class="mt-1 text-sm leading-6 text-chrome-700">@Assignment.Notes</p>
                     </SurfaceCard>
                 }
 
@@ -75,19 +75,19 @@
                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Linked project work item" />
                                 @if (IsTaskLoading)
                                 {
-                                    <p class="mt-2 text-sm text-slate-600">Loading work-item details…</p>
+                                    <p class="mt-2 text-sm text-chrome-600">Loading work-item details…</p>
                                 }
                                 else if (TaskDetails is not null)
                                 {
-                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@TaskDetails.Title</h3>
+                                    <h3 class="mt-1 text-lg font-semibold text-chrome-950">@TaskDetails.Title</h3>
                                     @if (!string.IsNullOrWhiteSpace(TaskDetails.Subtitle))
                                     {
-                                        <p class="mt-1 text-sm text-slate-600">@TaskDetails.Subtitle</p>
+                                        <p class="mt-1 text-sm text-chrome-600">@TaskDetails.Subtitle</p>
                                     }
                                 }
                                 else
                                 {
-                                    <p class="mt-2 text-sm text-slate-600">The linked node is not available in the active project structure.</p>
+                                    <p class="mt-2 text-sm text-chrome-600">The linked node is not available in the active project structure.</p>
                                 }
                             </div>
                             @if (TaskDetails is not null)

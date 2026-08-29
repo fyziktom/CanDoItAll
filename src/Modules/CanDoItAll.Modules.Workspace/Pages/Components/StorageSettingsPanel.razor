@@ -251,7 +251,7 @@
                             <div class="grid gap-3 md:grid-cols-2" data-testid="storage-settings-purpose-grid">
                                 @foreach (var purpose in WorkspaceStorageDefaults.TrackedPurposes)
                                 {
-                                    <CheckboxOption TValue="bool" Value="@storageModel.DefaultPurposes.Contains(purpose)" ValueChanged="value => TogglePurpose(purpose, new ChangeEventArgs { Value = value }.Value is bool selected && selected)" data-testid="@($"storage-settings-purpose-{purpose.ToString().ToLowerInvariant()}")" Class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                                    <CheckboxOption TValue="bool" Value="@storageModel.DefaultPurposes.Contains(purpose)" ValueChanged="value => TogglePurpose(purpose, new ChangeEventArgs { Value = value }.Value is bool selected && selected)" data-testid="@($"storage-settings-purpose-{purpose.ToString().ToLowerInvariant()}")" Class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50/80 px-4 py-3">
                                         @StoragePresentation.DescribeUsagePurpose(purpose)
                                     </CheckboxOption>
                                 }
@@ -263,9 +263,9 @@
                                     <div class="grid gap-x-4 gap-y-3 md:grid-cols-2">
                                         @foreach (var routingDefault in routingDefaults)
                                         {
-                                            <div class="min-w-0 rounded-[1.1rem] border border-slate-200 bg-white/90 px-4 py-3">
-                                                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-500">@StoragePresentation.DescribeUsagePurpose(routingDefault.UsagePurpose)</p>
-                                                <p class="mt-1 text-sm text-slate-700">@(string.IsNullOrWhiteSpace(routingDefault.PreferredStorageName) ? "No workspace default assigned" : routingDefault.PreferredStorageName)</p>
+                                            <div class="min-w-0 rounded-[1.1rem] border border-chrome-200 bg-white/90 px-4 py-3">
+                                                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-chrome-500">@StoragePresentation.DescribeUsagePurpose(routingDefault.UsagePurpose)</p>
+                                                <p class="mt-1 text-sm text-chrome-700">@(string.IsNullOrWhiteSpace(routingDefault.PreferredStorageName) ? "No workspace default assigned" : routingDefault.PreferredStorageName)</p>
                                             </div>
                                         }
                                     </div>

@@ -1,6 +1,6 @@
 @layer components {
   .app-reconnect-dialog {
-    @apply w-80 rounded-2xl border-0 bg-white p-8 text-slate-700 shadow-xl shadow-slate-950/20;
+    @apply w-80 rounded-2xl border-0 bg-white p-8 text-chrome-700 shadow-xl shadow-chrome-950/20;
   }
 
   .app-reconnect-stack {
@@ -8,7 +8,7 @@
   }
 
   .app-reconnect-copy {
-    @apply m-0 text-center text-sm leading-6 text-slate-700;
+    @apply m-0 text-center text-sm leading-6 text-chrome-700;
   }
 
   .app-reconnect-action {

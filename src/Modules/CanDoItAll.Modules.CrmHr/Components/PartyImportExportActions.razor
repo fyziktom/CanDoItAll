@@ -6,8 +6,8 @@
            JustifyContent="JustifyContent.SpaceBetween">
         <Stack GapScale="LayoutGap.Small">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Bulk import and export" />
-            <h2 class="text-lg font-semibold text-slate-950">CSV stewardship tools</h2>
-            <p class="text-sm leading-6 text-slate-600">
+            <h2 class="text-lg font-semibold text-chrome-950">CSV stewardship tools</h2>
+            <p class="text-sm leading-6 text-chrome-600">
                 @ExportDescription
             </p>
         </Stack>
@@ -61,17 +61,17 @@
     {
         <Stack GapScale="LayoutGap.Medium">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Import preview" />
-            <p class="text-sm leading-6 text-slate-600">@($"{preview.ReadyRowCount} ready row(s), {preview.BlockingRowCount} blocking row(s).")</p>
+            <p class="text-sm leading-6 text-chrome-600">@($"{preview.ReadyRowCount} ready row(s), {preview.BlockingRowCount} blocking row(s).")</p>
 
             @foreach (var row in preview.Rows)
             {
-                <div class="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4" data-testid="crmhr-import-row">
+                <div class="rounded-[1.25rem] border border-chrome-200 bg-white px-4 py-4" data-testid="crmhr-import-row">
                     <Split Gap="LayoutGap.Small"
                            AlignItems="AlignItems.Start"
                            JustifyContent="JustifyContent.SpaceBetween">
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-slate-950">Row @row.RowNumber: @row.Party.DisplayName</p>
-                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@row.Party.PartyType / @row.Party.LifecycleStatus</p>
+                            <p class="text-sm font-semibold text-chrome-950">Row @row.RowNumber: @row.Party.DisplayName</p>
+                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-chrome-500">@row.Party.PartyType / @row.Party.LifecycleStatus</p>
                             @if (row.Messages.Count > 0)
                             {
                                 <p class="mt-2 text-sm leading-6 text-rose-700">@string.Join(" ", row.Messages)</p>

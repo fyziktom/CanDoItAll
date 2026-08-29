@@ -8,8 +8,8 @@
                JustifyContent="JustifyContent.SpaceBetween">
             <div class="min-w-0">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Project" />
-                <p class="truncate text-xs font-semibold text-slate-600">@ProjectName</p>
-                <h3 class="mt-2 truncate text-base font-semibold text-slate-950">@Assignment.PartyDisplayName</h3>
+                <p class="truncate text-xs font-semibold text-chrome-600">@ProjectName</p>
+                <h3 class="mt-2 truncate text-base font-semibold text-chrome-950">@Assignment.PartyDisplayName</h3>
                 @if (Assignment.Affiliation is not null)
                 {
                     <div class="mt-2 flex min-w-0 items-center gap-2"
@@ -19,7 +19,7 @@
                                      Text="@Assignment.Affiliation.AffiliationLabel" />
                         @if (!string.IsNullOrWhiteSpace(Assignment.Affiliation.PrimaryDisplayText))
                         {
-                            <span class="truncate text-xs text-slate-600">
+                            <span class="truncate text-xs text-chrome-600">
                                 @Assignment.Affiliation.PrimaryDisplayText
                             </span>
                         }
@@ -32,14 +32,14 @@
             }
         </Split>
 
-        <p class="text-sm leading-5 text-slate-600">@BuildAssignmentMeta()</p>
+        <p class="text-sm leading-5 text-chrome-600">@BuildAssignmentMeta()</p>
         @if (!string.IsNullOrWhiteSpace(Assignment.NodeKey))
         {
-            <p class="truncate font-mono text-xs text-slate-500" title="@Assignment.NodeKey">@Assignment.NodeKey</p>
+            <p class="truncate font-mono text-xs text-chrome-500" title="@Assignment.NodeKey">@Assignment.NodeKey</p>
         }
         @if (!string.IsNullOrWhiteSpace(Assignment.Notes))
         {
-            <p class="line-clamp-2 text-sm leading-5 text-slate-600">@Assignment.Notes</p>
+            <p class="line-clamp-2 text-sm leading-5 text-chrome-600">@Assignment.Notes</p>
         }
 
         <CardActions Secondary="true" Class="mt-auto pt-3">

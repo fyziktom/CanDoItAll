@@ -108,9 +108,9 @@
                                             </SelectInput>
                                             </FormField>
                                         </div>
-                                        <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                                        <div class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current scope" />
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">
+                                            <p class="mt-2 text-sm leading-6 text-chrome-700">
                                                 Account context, connected people, follow-up history, opportunity progression, and recognized sold value stay grounded on the shared party record.
                                             </p>
                                         </div>
@@ -168,7 +168,7 @@
                                        JustifyContent="JustifyContent.SpaceBetween">
                                     <div>
                                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Company relationship map" />
-                                        <p class="mt-1 text-sm leading-6 text-slate-600">Use typed relationship roles for employees, contacts, sponsors, partners, and delivery participants. Project links are optional.</p>
+                                        <p class="mt-1 text-sm leading-6 text-chrome-600">Use typed relationship roles for employees, contacts, sponsors, partners, and delivery participants. Project links are optional.</p>
                                     </div>
                                     <Button Text="Add connection"
                                             Tone="ButtonTone.Default"
@@ -179,7 +179,7 @@
 
                                 @if (connectedRecordEditors.Count == 0)
                                 {
-                                    <div class="mt-5 rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                    <div class="mt-5 rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                         No connected records saved yet. Add a person or another directory record associated with this company.
                                     </div>
                                 }
@@ -259,7 +259,7 @@
                                                     <div class="flex items-end gap-3">
                                                         <InputCheckbox @bind-Value="connection.IsPrimary"
                                                                        data-testid="@($"crmhr-connection-primary-{rowIndex}")" />
-                                                        <label class="text-sm text-slate-700">Primary for this role</label>
+                                                        <label class="text-sm text-chrome-700">Primary for this role</label>
                                                     </div>
                                                 </Grid>
                                             </PanelCard>
@@ -284,7 +284,7 @@
                                 {
                                     <SurfaceCard Soft="true" data-testid="crmhr-account-activity-error">
                                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Account activity unavailable" />
-                                        <p class="mt-2 text-sm leading-6 text-slate-700">@accountActivityLoadError</p>
+                                        <p class="mt-2 text-sm leading-6 text-chrome-700">@accountActivityLoadError</p>
                                         <Button Text="Retry"
                                                 Icon="refresh"
                                                 Tone="ButtonTone.Default"
@@ -303,8 +303,8 @@
 
                                 <SurfaceCard Soft="true">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Next actions" />
-                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Follow-up pressure</h3>
-                                    <p class="mt-4 text-sm leading-6 text-slate-600">
+                                    <h3 class="mt-1 text-lg font-semibold text-chrome-950">Follow-up pressure</h3>
+                                    <p class="mt-4 text-sm leading-6 text-chrome-600">
                                         Counts cover the complete account history while the timeline renders only the active page.
                                     </p>
                                     <Cluster Gap="LayoutGap.Small" Class="mt-4">
@@ -351,7 +351,7 @@
                                                     }
                                                 </SelectInput>
                                                 </FormField>
-                                                <p class="mt-1 text-xs leading-5 text-slate-500">
+                                                <p class="mt-1 text-xs leading-5 text-chrome-500">
                                                     Select an opportunity from the paged Opportunities tab before linking it here.
                                                 </p>
                                             </div>
@@ -385,7 +385,7 @@
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Participants" />
                                             @if (ParticipantOptions.Count == 0)
                                             {
-                                                <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                                <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                                     Save at least one connected record to expose reusable participant shortcuts here.
                                                 </div>
                                             }
@@ -394,7 +394,7 @@
                                                 <Grid Gap="LayoutGap.Small" ColumnsMd="2">
                                                     @foreach (var option in ParticipantOptions)
                                                     {
-                                                        <label class="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700"
+                                                        <label class="flex items-center gap-3 rounded-[1rem] border border-chrome-200 bg-chrome-50/80 px-4 py-3 text-sm text-chrome-700"
                                                                data-testid="@($"crmhr-interaction-participant-option-{option.Id:N}")">
                                                             <input type="checkbox"
                                                                    checked="@interactionEditor.ParticipantPartyIds.Contains(option.Id)"

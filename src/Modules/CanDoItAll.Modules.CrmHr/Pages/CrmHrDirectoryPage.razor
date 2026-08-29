@@ -99,7 +99,7 @@
                                                    Position="TooltipPosition.Bottom"
                                                    Duration="@((TimeSpan?)null)"
                                                    TestId="crmhr-directory-primary-affiliation-tooltip">
-                                        <p class="text-sm font-medium text-slate-700"
+                                        <p class="text-sm font-medium text-chrome-700"
                                            data-testid="crmhr-directory-primary-affiliation">
                                             @FormatAffiliation(primaryAffiliation)
                                         </p>
@@ -107,7 +107,7 @@
                                 }
                                 else
                                 {
-                                    <p class="text-sm font-medium text-slate-600"
+                                    <p class="text-sm font-medium text-chrome-600"
                                        data-testid="crmhr-directory-primary-affiliation">
                                         No current organization affiliation
                                     </p>
@@ -242,7 +242,7 @@
                                            JustifyContent="JustifyContent.SpaceBetween">
                                         <div>
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Additional role assignments" />
-                                            <p class="mt-1 text-sm leading-6 text-slate-600">Keep more than one business role on the same party instead of creating duplicate directory records.</p>
+                                            <p class="mt-1 text-sm leading-6 text-chrome-600">Keep more than one business role on the same party instead of creating duplicate directory records.</p>
                                         </div>
                                         <Button Text="Add role"
                                                 Tone="ButtonTone.Default"
@@ -253,7 +253,7 @@
 
                                     @if (editor.AdditionalRoles.Count == 0)
                                     {
-                                        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                             No secondary roles defined yet.
                                         </div>
                                     }
@@ -383,15 +383,15 @@
                                     </FormField>
                                 </div>
 
-                                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                                <div class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4"
                                      data-testid="crmhr-confidential-notes-panel">
                                     <Split Gap="LayoutGap.Medium"
                                            AlignItems="AlignItems.Start"
                                            JustifyContent="JustifyContent.SpaceBetween">
                                         <div class="min-w-0">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Confidential notes" />
-                                            <h3 class="mt-1 text-lg font-semibold text-slate-950">HR-only and sensitive note stream</h3>
-                                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                            <h3 class="mt-1 text-lg font-semibold text-chrome-950">HR-only and sensitive note stream</h3>
+                                            <p class="mt-3 text-sm leading-6 text-chrome-600">
                                                 Keep high-sensitivity notes separate from broad operational context so downstream CRM-HR screens do not overexpose private detail.
                                             </p>
                                         </div>
@@ -412,7 +412,7 @@
                                     }
                                     else if (editor.ConfidentialNotes.Count == 0)
                                     {
-                                        <div class="mt-4 rounded-[1rem] border border-dashed border-slate-300 bg-white/80 px-4 py-4 text-sm leading-6 text-slate-600">
+                                        <div class="mt-4 rounded-[1rem] border border-dashed border-chrome-300 bg-white/80 px-4 py-4 text-sm leading-6 text-chrome-600">
                                             No confidential notes stored yet.
                                         </div>
                                     }
@@ -422,7 +422,7 @@
                                             @for (var index = 0; index < editor.ConfidentialNotes.Count; index++)
                                             {
                                                 var note = editor.ConfidentialNotes[index];
-                                                <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-4"
+                                                <div class="rounded-[1rem] border border-chrome-200 bg-white px-4 py-4"
                                                      data-testid="crmhr-confidential-note-item">
                                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                                                         <div>
@@ -437,11 +437,11 @@
                                                             </FormField>
                                                         </div>
                                                         <div class="md:col-span-2">
-                                                            <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Stewardship</p>
-                                                            <p class="mt-1 text-sm leading-6 text-slate-700">
+                                                            <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Stewardship</p>
+                                                            <p class="mt-1 text-sm leading-6 text-chrome-700">
                                                                 Created @FormatMoment(note.CreatedAtUtc) by @FormatActor(note.CreatedBy)
                                                             </p>
-                                                            <p class="text-sm leading-6 text-slate-600">
+                                                            <p class="text-sm leading-6 text-chrome-600">
                                                                 Updated @FormatMoment(note.UpdatedAtUtc)
                                                             </p>
                                                         </div>
@@ -485,7 +485,7 @@
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-directory-activity-error">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Activity unavailable" />
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">@activityLoadError</p>
+                                            <p class="mt-2 text-sm leading-6 text-chrome-700">@activityLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
                                                     Tone="ButtonTone.Default"
@@ -512,8 +512,8 @@
 
                                     <SurfaceCard>
                                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Project assignments" />
-                                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Assignments and delivery context</h3>
-                                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                                        <h3 class="mt-1 text-lg font-semibold text-chrome-950">Assignments and delivery context</h3>
+                                        <p class="mt-3 text-sm leading-6 text-chrome-600">
                                             Project-party links stay visible here so staffing, ownership, and stakeholder context do not require a separate workbench pass.
                                         </p>
 
@@ -529,8 +529,8 @@
                                         {
                                             <SurfaceCard Soft="true" Class="mt-5">
                                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Project assignments unavailable" />
-                                                <h4 class="mt-1 text-base font-semibold text-slate-950">Assignment history could not be loaded</h4>
-                                                <p class="mt-2 text-sm leading-6 text-slate-700">Retry to load the requested assignment page for this party.</p>
+                                                <h4 class="mt-1 text-base font-semibold text-chrome-950">Assignment history could not be loaded</h4>
+                                                <p class="mt-2 text-sm leading-6 text-chrome-700">Retry to load the requested assignment page for this party.</p>
                                                 <Button Text="Retry"
                                                         Icon="refresh"
                                                         Tone="ButtonTone.Default"
@@ -552,16 +552,16 @@
                                             <Stack GapScale="LayoutGap.Small" Class="mt-5">
                                                 @foreach (var assignment in projectAssignmentsPage.Items)
                                                 {
-                                                    <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                                                    <div class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4"
                                                          data-testid="crmhr-party-assignment-item">
                                                         <Split Gap="LayoutGap.Medium">
                                                             <div class="min-w-0">
-                                                                <p class="text-sm font-semibold text-slate-950">@assignment.ProjectName</p>
-                                                                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">@assignment.AssignmentKind / @assignment.NodeKey</p>
-                                                                <p class="mt-2 text-xs text-slate-500">@BuildAssignmentSchedule(assignment)</p>
+                                                                <p class="text-sm font-semibold text-chrome-950">@assignment.ProjectName</p>
+                                                                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-chrome-500">@assignment.AssignmentKind / @assignment.NodeKey</p>
+                                                                <p class="mt-2 text-xs text-chrome-500">@BuildAssignmentSchedule(assignment)</p>
                                                                 @if (!string.IsNullOrWhiteSpace(assignment.Notes))
                                                                 {
-                                                                    <p class="mt-3 text-sm leading-6 text-slate-600">@assignment.Notes</p>
+                                                                    <p class="mt-3 text-sm leading-6 text-chrome-600">@assignment.Notes</p>
                                                                 }
                                                             </div>
                                                             <Cluster Gap="LayoutGap.Small">
@@ -625,7 +625,7 @@
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-directory-relationships-error">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Relationship data unavailable" />
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">@relationshipsLoadError</p>
+                                            <p class="mt-2 text-sm leading-6 text-chrome-700">@relationshipsLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
                                                     Tone="ButtonTone.Default"
@@ -652,7 +652,7 @@
 
                                     @if (!editor.Id.HasValue)
                                     {
-                                        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                             Save the party first to evaluate duplicate candidates against persisted directory records.
                                         </div>
                                     }
@@ -664,7 +664,7 @@
                                                    JustifyContent="JustifyContent.SpaceBetween">
                                                 <div>
                                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Potential duplicates" />
-                                                    <p class="mt-1 text-sm leading-6 text-slate-600">Candidates are ranked by external code, normalized names, and contact value overlap.</p>
+                                                    <p class="mt-1 text-sm leading-6 text-chrome-600">Candidates are ranked by external code, normalized names, and contact value overlap.</p>
                                                 </div>
                                                 <StatusBadge Tone="@(duplicateCandidates.Count == 0 ? "success" : "warning")"
                                                              Text="@(duplicateCandidates.Count == 0 ? "No duplicates" : $"{duplicateCandidates.Count} candidate(s)")" />
@@ -672,7 +672,7 @@
 
                                             @if (duplicateCandidates.Count == 0)
                                             {
-                                                <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                                <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                                     No duplicate candidates are currently detected for this party.
                                                 </div>
                                             }
@@ -685,13 +685,13 @@
                                                                AlignItems="AlignItems.Start"
                                                                JustifyContent="JustifyContent.SpaceBetween">
                                                             <div class="min-w-0">
-                                                                <p class="text-sm font-semibold text-slate-950">@candidate.DisplayName</p>
-                                                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@candidate.PartyType / @candidate.LifecycleStatus</p>
+                                                                <p class="text-sm font-semibold text-chrome-950">@candidate.DisplayName</p>
+                                                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-chrome-500">@candidate.PartyType / @candidate.LifecycleStatus</p>
                                                                 @if (!string.IsNullOrWhiteSpace(candidate.Summary))
                                                                 {
-                                                                    <p class="mt-3 text-sm leading-6 text-slate-700">@candidate.Summary</p>
+                                                                    <p class="mt-3 text-sm leading-6 text-chrome-700">@candidate.Summary</p>
                                                                 }
-                                                                <p class="mt-3 text-sm leading-6 text-slate-700">Reasons: @string.Join(", ", candidate.MatchReasons)</p>
+                                                                <p class="mt-3 text-sm leading-6 text-chrome-700">Reasons: @string.Join(", ", candidate.MatchReasons)</p>
                                                             </div>
                                                             <Button Text="Merge into current party"
                                                                     Tone="ButtonTone.Warning"

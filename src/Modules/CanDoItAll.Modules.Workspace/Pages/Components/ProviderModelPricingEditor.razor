@@ -15,10 +15,10 @@
                     <p class="app-body-muted">Prices are USD per one million tokens.</p>
                 </div>
 
-                <div class="provider-pricing-table overflow-x-auto rounded-md border border-slate-200" data-testid="provider-pricing-table">
+                <div class="provider-pricing-table overflow-x-auto rounded-md border border-chrome-200" data-testid="provider-pricing-table">
                     <table class="min-w-full border-collapse text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 text-left text-slate-600">
+                            <tr class="border-b border-chrome-200 text-left text-chrome-600">
                                 <th class="px-3 py-2 font-semibold">Model</th>
                                 <th class="px-3 py-2 font-semibold">Input</th>
                                 <th class="px-3 py-2 font-semibold">Cached input</th>
@@ -36,7 +36,7 @@
                             @for (var index = 0; index < Model.ModelPrices.Count; index++)
                             {
                                 var price = Model.ModelPrices[index];
-                                <tr class="border-b border-slate-100 last:border-b-0"
+                                <tr class="border-b border-chrome-100 last:border-b-0"
                                     data-testid="@($"provider-pricing-row-{index}")">
                                     <td class="min-w-[14rem] px-3 py-2 align-top">
                                         <TextInput @bind-Value="price.Model"

@@ -4,7 +4,7 @@
            JustifyContent="JustifyContent.SpaceBetween">
         <div>
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Additional contact methods" />
-            <p class="mt-1 text-sm leading-6 text-slate-600">Keep secondary email, phone, website, messaging, or social handles attached to the same party record.</p>
+            <p class="mt-1 text-sm leading-6 text-chrome-600">Keep secondary email, phone, website, messaging, or social handles attached to the same party record.</p>
         </div>
         <Button Text="Add contact"
                 Tone="ButtonTone.Default"
@@ -14,7 +14,7 @@
     </Split>
 
     @if (ContactPoints.Count == 0) {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
             No extra contact methods yet.
         </div>
     } else {
@@ -86,7 +86,7 @@
                    data-testid="crmhr-contact-wizard-steps">
                 <StepsItem Text="Type" Icon="category">
                     <Stack GapScale="LayoutGap.Medium">
-                        <p class="text-sm leading-6 text-slate-600">
+                        <p class="text-sm leading-6 text-chrome-600">
                             Select the contact channel to add.
                         </p>
                         <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
@@ -278,7 +278,7 @@
     private string ResolveContactTypeCardClass(PartyContactType contactType) {
         var selectionClasses = contactDraft?.ContactType == contactType
             ? "border-sky-500 bg-sky-50 text-sky-950 ring-2 ring-sky-200"
-            : "border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-sky-50/60";
+            : "border-chrome-200 bg-white text-chrome-800 hover:border-sky-300 hover:bg-sky-50/60";
 
         return $"aspect-square w-full flex flex-col items-center justify-center gap-3 text-center {selectionClasses}";
     }

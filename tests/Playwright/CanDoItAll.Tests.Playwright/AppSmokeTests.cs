@@ -2919,7 +2919,7 @@ public sealed partial class AppSmokeTests
                 const button = Array.from(document.querySelectorAll('button'))
                     .find(candidate => regex.test(normalize(candidate.textContent)));
                 return button instanceof HTMLButtonElement &&
-                    button.className.includes('bg-slate-900') &&
+                    button.className.includes('bg-chrome-900') &&
                     button.className.includes('text-white');
             }",
             tabPattern);

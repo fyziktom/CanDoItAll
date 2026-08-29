@@ -151,8 +151,8 @@
                     <SurfaceCard Soft="true"
                                  data-testid="agents-overview-load-error">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Overview unavailable" />
-                        <h2 class="mt-1 text-base font-semibold text-slate-950">Agent runtime summary could not be refreshed</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">@overviewLoadError</p>
+                        <h2 class="mt-1 text-base font-semibold text-chrome-950">Agent runtime summary could not be refreshed</h2>
+                        <p class="mt-2 text-sm leading-6 text-chrome-600">@overviewLoadError</p>
                     </SurfaceCard>
                 }
 
@@ -163,7 +163,7 @@
                              Wrap="FlexWrap.Wrap">
                         <Stack Gap="0.2rem">
                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Usage scope" />
-                            <span class="text-sm text-slate-600">Catalog counts stay workspace-wide. Usage, tokens, cost, rankings, charts, and dialogs use this scope.</span>
+                            <span class="text-sm text-chrome-600">Catalog counts stay workspace-wide. Usage, tokens, cost, rankings, charts, and dialogs use this scope.</span>
                         </Stack>
                         <SecondaryTabs Items="UsageScopeTabs"
                                        SelectedKey="@UsageScopeKey"
@@ -209,7 +209,7 @@
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.25rem">
                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Most used consumers" />
-                                <h2 class="text-base font-semibold text-slate-950">Top 5 @UsageScopeLabel by execution count</h2>
+                                <h2 class="text-base font-semibold text-chrome-950">Top 5 @UsageScopeLabel by execution count</h2>
                             </Stack>
                             <StatusBadge Tone="info"
                                          Text="@(!isUsageLoading && isLoaded ? $"{TopUsageConsumers.Count} ranked" : "Loading")" />
@@ -255,7 +255,7 @@
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.25rem">
                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Most failing consumers" />
-                                <h2 class="text-base font-semibold text-slate-950">Top 5 @UsageScopeLabel by failed executions</h2>
+                                <h2 class="text-base font-semibold text-chrome-950">Top 5 @UsageScopeLabel by failed executions</h2>
                             </Stack>
                             <StatusBadge Tone="danger"
                                          Text="@(!isUsageLoading && isLoaded ? $"{TopFailingConsumers.Count} flagged" : "Loading")" />
@@ -329,7 +329,7 @@
                         <Stack GapScale="LayoutGap.Small">
                             <Stack Gap="0.25rem">
                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Load on demand" />
-                                <h2 class="text-base font-semibold text-slate-950">Deeper usage views stay out of default load</h2>
+                                <h2 class="text-base font-semibold text-chrome-950">Deeper usage views stay out of default load</h2>
                             </Stack>
                             <Cluster Gap="LayoutGap.Small"
                                      Wrap="FlexWrap.Wrap">

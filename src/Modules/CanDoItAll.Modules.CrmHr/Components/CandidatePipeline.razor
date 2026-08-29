@@ -5,8 +5,8 @@
           ColumnTemplateXl="minmax(0,1.65fr) minmax(18rem,0.75fr)">
         <SurfaceCard>
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Application editor" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Candidate and stage</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Candidate and stage</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Select an existing person or bound AI agent, or create a new human candidate inline, then keep role, ownership, stage, and decision on the same record.
             </p>
 
@@ -171,7 +171,7 @@
                    Wrap="FlexWrap.Wrap">
                 <div>
                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Stage history" />
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@StageHistory.Count update(s)</h3>
+                    <h3 class="mt-1 text-lg font-semibold text-chrome-950">@StageHistory.Count update(s)</h3>
                 </div>
                 @if (HasWorkforceProfile)
                 {
@@ -199,11 +199,11 @@
                                    JustifyContent="JustifyContent.SpaceBetween"
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0 space-y-1">
-                                    <p class="text-base font-semibold text-slate-950">@item.Summary</p>
-                                    <p class="text-sm text-slate-600">@item.ChangedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") / @item.ChangedBy</p>
+                                    <p class="text-base font-semibold text-chrome-950">@item.Summary</p>
+                                    <p class="text-sm text-chrome-600">@item.ChangedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") / @item.ChangedBy</p>
                                     @if (!string.IsNullOrWhiteSpace(item.Notes))
                                     {
-                                        <p class="text-sm leading-6 text-slate-600">@item.Notes</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@item.Notes</p>
                                     }
                                 </div>
                                 <StatusBadge Tone="@ResolveStageTone(item.Stage)"

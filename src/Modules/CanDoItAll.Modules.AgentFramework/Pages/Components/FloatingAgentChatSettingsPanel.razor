@@ -7,7 +7,7 @@
       data-testid="floating-agent-chat-settings">
     <SurfaceCard>
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Active chat lifecycle" />
-        <h2 class="mt-1 text-lg font-semibold text-slate-950">Retention and capacity</h2>
+        <h2 class="mt-1 text-lg font-semibold text-chrome-950">Retention and capacity</h2>
         <ConversationActiveChatLifecycleFields @bind-HiddenChatRetentionMinutes="hiddenActiveChatRetentionMinutes"
                                                MaximumRetentionMinutes="@FloatingAgentChatSettingsValidator.MaximumRetentionMinutes"
                                                @bind-MaximumActiveChats="maximumActiveChats"
@@ -20,7 +20,7 @@
 
     <SurfaceCard>
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Prepared activation stock" />
-        <h2 class="mt-1 text-lg font-semibold text-slate-950">Background preparation budget</h2>
+        <h2 class="mt-1 text-lg font-semibold text-chrome-950">Background preparation budget</h2>
         <Stack GapScale="LayoutGap.Medium" Class="mt-4">
             <Alert AlertStyle="AlertStyle.Info">
                 Preparation caches immutable agent activation metadata only. Live runtime agents, credentials, tool clients, and execution sessions remain per-run and are never pooled.

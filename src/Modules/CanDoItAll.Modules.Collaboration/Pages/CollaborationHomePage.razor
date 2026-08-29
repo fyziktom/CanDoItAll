@@ -103,7 +103,7 @@
                             <SurfaceCard Soft="true">
                                 <DataAnnotationsValidator />
                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Quick create" />
-                                <h3 class="mt-1 text-lg font-semibold text-slate-950">New collaboration item</h3>
+                                <h3 class="mt-1 text-lg font-semibold text-chrome-950">New collaboration item</h3>
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
                                         <FormField Text="Subject">
@@ -254,7 +254,7 @@
                             <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@($"{workspace.SelectedThread.ContextKind} / {workspace.SelectedThread.ContextLabel}")" />
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950" data-testid="collaboration-thread-title">@workspace.SelectedThread.Subject</h2>
+                                    <h2 class="mt-1 text-lg font-semibold text-chrome-950" data-testid="collaboration-thread-title">@workspace.SelectedThread.Subject</h2>
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">
                                     <StatusBadge Tone="@ResolveItemTone(workspace.SelectedThread.ItemKind)" Text="@workspace.SelectedThread.ItemKind.ToString()" />
@@ -278,17 +278,17 @@
                     {
                         <Stack GapScale="LayoutGap.Large">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Context</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@workspace.SelectedThread.ContextLabel</p>
+                                <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Context</p>
+                                    <p class="mt-1 text-sm font-medium text-chrome-950">@workspace.SelectedThread.ContextLabel</p>
                                 </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Messages</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@workspace.SelectedThread.Messages.Count</p>
+                                <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Messages</p>
+                                    <p class="mt-1 text-sm font-medium text-chrome-950">@workspace.SelectedThread.Messages.Count</p>
                                 </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Participants</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@workspace.SelectedThread.Participants.Count</p>
+                                <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Participants</p>
+                                    <p class="mt-1 text-sm font-medium text-chrome-950">@workspace.SelectedThread.Participants.Count</p>
                                 </div>
                             </Grid>
                             <SectionCard Title="Transcript" Description="Durable message history with preserved author and timestamp state.">
@@ -304,8 +304,8 @@
                                             <div class="cda-panel-card--soft" data-testid="collaboration-thread-message-item">
                                                 <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap">
                                                     <div>
-                                                        <p class="text-sm font-semibold text-slate-900">@collaborationMessage.AuthorName</p>
-                                                        <p class="mt-1 text-xs text-slate-500">@collaborationMessage.AuthorKind / @collaborationMessage.MessageKind</p>
+                                                        <p class="text-sm font-semibold text-chrome-900">@collaborationMessage.AuthorName</p>
+                                                        <p class="mt-1 text-xs text-chrome-500">@collaborationMessage.AuthorKind / @collaborationMessage.MessageKind</p>
                                                     </div>
                                                     <Cluster Gap="LayoutGap.Small">
                                                         @if (collaborationMessage.RaisesEscalation)
@@ -315,7 +315,7 @@
                                                         <StatusBadge Tone="neutral" Text="@(collaborationMessage.CreatedAtUtc.LocalDateTime.ToString("g"))" />
                                                     </Cluster>
                                                 </Split>
-                                                <p class="mt-3 text-sm leading-6 text-slate-700">@collaborationMessage.Body</p>
+                                                <p class="mt-3 text-sm leading-6 text-chrome-700">@collaborationMessage.Body</p>
                                             </div>
                                         }
                                     </Stack>

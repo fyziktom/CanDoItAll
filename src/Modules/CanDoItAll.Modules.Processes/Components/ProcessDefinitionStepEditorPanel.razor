@@ -1,12 +1,12 @@
 @namespace CanDoItAll.Modules.Processes
 @using CanDoItAll.Processes.Projections
 
-<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-step-editor">
+<div class="mt-6 border-t border-chrome-200 pt-5" data-testid="processes-definition-step-editor">
     <Split Gap="LayoutGap.Small">
         <Stack GapScale="LayoutGap.Tiny">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Steps" />
-            <h3 class="text-sm font-semibold text-slate-900">Step editor</h3>
-            <p class="text-sm leading-6 text-slate-600">Basic info, operation contract, route targets, roles, artifacts, and subprocess mappings.</p>
+            <h3 class="text-sm font-semibold text-chrome-900">Step editor</h3>
+            <p class="text-sm leading-6 text-chrome-600">Basic info, operation contract, route targets, roles, artifacts, and subprocess mappings.</p>
         </Stack>
         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
             <StatusBadge Tone="info" Text="@($"{StepEditor.Steps.Count} step(s)")" />
@@ -16,7 +16,7 @@
 
     @if (!string.IsNullOrWhiteSpace(commandNotice) || StepEditor.LastCommandReceipt is not null)
     {
-        <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-step-command-receipt">
+        <p class="mt-3 text-xs font-semibold text-chrome-500" data-testid="processes-step-command-receipt">
             @(StepEditor.LastCommandReceipt is null ? commandNotice : $"{StepEditor.LastCommandReceipt.Status}: {StepEditor.LastCommandReceipt.Summary}")
         </p>
     }
@@ -51,18 +51,18 @@
             <Stack GapScale="LayoutGap.Small" Class="lg:col-span-2" data-testid="processes-step-editor-form">
                 <Stack GapScale="LayoutGap.Small" data-testid="processes-step-basic">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Basic" />
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-title-input">Title</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-title-input">Title</label>
                     <input id="processes-step-title-input"
-                           class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                           class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                            value="@stepTitle"
                            @oninput="args => stepTitle = ReadChangeValue(args)"
                            data-testid="processes-step-title" />
 
                     <Grid Gap="LayoutGap.Small" ColumnsMd="2">
                         <Stack GapScale="LayoutGap.Tiny">
-                            <label class="text-xs font-semibold text-slate-500" for="processes-step-kind-input">Kind</label>
+                            <label class="text-xs font-semibold text-chrome-500" for="processes-step-kind-input">Kind</label>
                             <select id="processes-step-kind-input"
-                                    class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                    class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                     value="@stepKind"
                                     @onchange="args => stepKind = ParseStepKind(args)"
                                     data-testid="processes-step-kind">
@@ -73,54 +73,54 @@
                             </select>
                         </Stack>
                         <Stack GapScale="LayoutGap.Tiny">
-                            <label class="text-xs font-semibold text-slate-500" for="processes-step-lead-hours-input">Lead hours</label>
+                            <label class="text-xs font-semibold text-chrome-500" for="processes-step-lead-hours-input">Lead hours</label>
                             <input id="processes-step-lead-hours-input"
                                    type="number"
                                    min="0"
-                                   class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                   class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                    value="@targetLeadHours"
                                    @oninput="args => targetLeadHours = ParseInt(args)"
                                    data-testid="processes-step-target-lead-hours" />
                         </Stack>
                     </Grid>
 
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-subtitle-input">Subtitle</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-subtitle-input">Subtitle</label>
                     <input id="processes-step-subtitle-input"
-                           class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                           class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                            value="@stepSubtitle"
                            @oninput="args => stepSubtitle = ReadChangeValue(args)"
                            data-testid="processes-step-subtitle" />
 
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-notes-input">Notes</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-notes-input">Notes</label>
                     <textarea id="processes-step-notes-input"
-                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                               value="@stepNotes"
                               @oninput="args => stepNotes = ReadChangeValue(args)"
                               data-testid="processes-step-notes"></textarea>
 
                     <Cluster Gap="LayoutGap.Medium" Class="flex-wrap">
-                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                             <input type="checkbox"
                                    checked="@allowsManualSkip"
                                    @onchange="args => allowsManualSkip = ParseBool(args)"
                                    data-testid="processes-step-allows-manual-skip" />
                             Manual skip
                         </label>
-                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                             <input type="checkbox"
                                    checked="@allowsSafeRefusal"
                                    @onchange="args => allowsSafeRefusal = ParseBool(args)"
                                    data-testid="processes-step-allows-safe-refusal" />
                             Safe refusal
                         </label>
-                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                             <input type="checkbox"
                                    checked="@requiresApproval"
                                    @onchange="args => requiresApproval = ParseBool(args)"
                                    data-testid="processes-step-requires-approval" />
                             Approval
                         </label>
-                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                             <input type="checkbox"
                                    checked="@requiresDecisionRecord"
                                    @onchange="args => requiresDecisionRecord = ParseBool(args)"
@@ -132,9 +132,9 @@
 
                 <Stack GapScale="LayoutGap.Small" data-testid="processes-step-operation-contract">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operation" />
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-target-scope-input">Target scope</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-target-scope-input">Target scope</label>
                     <select id="processes-step-target-scope-input"
-                            class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                            class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                             value="@operationTargetScope"
                             @onchange="args => operationTargetScope = ParseTargetScope(args)"
                             data-testid="processes-step-operation-target-scope">
@@ -147,7 +147,7 @@
                     <Grid Gap="LayoutGap.XSmall" ColumnsMd="2" data-testid="processes-step-allowed-operations">
                         @foreach (var operation in OperationOptions)
                         {
-                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                                 <input type="checkbox"
                                        checked="@selectedOperations.Contains(operation)"
                                        @onchange="args => ToggleOperation(operation, args)"
@@ -160,33 +160,33 @@
 
                 <Stack GapScale="LayoutGap.Small" data-testid="processes-step-contracts">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Contracts" />
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-input-contract-input">Input</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-input-contract-input">Input</label>
                     <textarea id="processes-step-input-contract-input"
-                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                               value="@inputContractSummary"
                               @oninput="args => inputContractSummary = ReadChangeValue(args)"
                               data-testid="processes-step-input-contract"></textarea>
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-output-contract-input">Output</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-output-contract-input">Output</label>
                     <textarea id="processes-step-output-contract-input"
-                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                               value="@outputContractSummary"
                               @oninput="args => outputContractSummary = ReadChangeValue(args)"
                               data-testid="processes-step-output-contract"></textarea>
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-evidence-contract-input">Evidence</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-evidence-contract-input">Evidence</label>
                     <textarea id="processes-step-evidence-contract-input"
-                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                               value="@evidenceContractSummary"
                               @oninput="args => evidenceContractSummary = ReadChangeValue(args)"
                               data-testid="processes-step-evidence-contract"></textarea>
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-decision-rights-input">Decision rights</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-decision-rights-input">Decision rights</label>
                     <textarea id="processes-step-decision-rights-input"
-                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                               value="@decisionRightsSummary"
                               @oninput="args => decisionRightsSummary = ReadChangeValue(args)"
                               data-testid="processes-step-decision-rights"></textarea>
-                    <label class="text-xs font-semibold text-slate-500" for="processes-step-exception-policy-input">Exception policy</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-step-exception-policy-input">Exception policy</label>
                     <textarea id="processes-step-exception-policy-input"
-                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                               value="@exceptionPolicySummary"
                               @oninput="args => exceptionPolicySummary = ReadChangeValue(args)"
                               data-testid="processes-step-exception-policy"></textarea>
@@ -204,16 +204,16 @@
                 {
                     var branchIndex = index;
                     var branch = branchOutcomes[branchIndex];
-                    <div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@BuildBranchTestId(branch.OutcomeKey)">
-                        <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-route-title-{branchIndex}")">Route</label>
+                    <div class="rounded-md border border-chrome-200 bg-chrome-50 p-3" data-testid="@BuildBranchTestId(branch.OutcomeKey)">
+                        <label class="text-xs font-semibold text-chrome-500" for="@($"processes-step-route-title-{branchIndex}")">Route</label>
                         <input id="@($"processes-step-route-title-{branchIndex}")"
-                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               class="mt-1 min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                value="@branch.Title"
                                @oninput="args => UpdateBranchTitle(branchIndex, args)"
                                data-testid="@BuildBranchTitleTestId(branch.OutcomeKey)" />
-                        <label class="mt-3 block text-xs font-semibold text-slate-500" for="@($"processes-step-route-target-{branchIndex}")">Target</label>
+                        <label class="mt-3 block text-xs font-semibold text-chrome-500" for="@($"processes-step-route-target-{branchIndex}")">Target</label>
                         <select id="@($"processes-step-route-target-{branchIndex}")"
-                                class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                class="mt-1 min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                 value="@branch.RouteTarget.Kind"
                                 @onchange="args => UpdateBranchRouteTarget(branchIndex, args)"
                                 data-testid="@BuildBranchRouteTargetTestId(branch.OutcomeKey)">
@@ -222,11 +222,11 @@
                                 <option value="@option">@option.ToString()</option>
                             }
                         </select>
-                        <label class="mt-3 block text-xs font-semibold text-slate-500" for="@($"processes-step-route-budget-{branchIndex}")">Loop budget</label>
+                        <label class="mt-3 block text-xs font-semibold text-chrome-500" for="@($"processes-step-route-budget-{branchIndex}")">Loop budget</label>
                         <input id="@($"processes-step-route-budget-{branchIndex}")"
                                type="number"
                                min="0"
-                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               class="mt-1 min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                value="@branch.LoopBudget.MaximumRepeats"
                                @oninput="args => UpdateBranchLoopBudget(branchIndex, args)"
                                data-testid="@BuildBranchLoopBudgetTestId(branch.OutcomeKey)" />
@@ -247,18 +247,18 @@
                 {
                     var artifactIndex = index;
                     var artifact = artifactExpectations[artifactIndex];
-                    <div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@BuildArtifactTestId(artifact.ArtifactKey)">
-                        <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-title-{artifactIndex}")">Artifact</label>
+                    <div class="rounded-md border border-chrome-200 bg-chrome-50 p-3" data-testid="@BuildArtifactTestId(artifact.ArtifactKey)">
+                        <label class="text-xs font-semibold text-chrome-500" for="@($"processes-step-artifact-title-{artifactIndex}")">Artifact</label>
                         <input id="@($"processes-step-artifact-title-{artifactIndex}")"
-                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               class="mt-1 min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                value="@artifact.Title"
                                @oninput="args => UpdateArtifactTitle(artifactIndex, args)"
                                data-testid="@BuildArtifactTitleTestId(artifact.ArtifactKey)" />
                         <Grid Gap="LayoutGap.XSmall" ColumnsMd="2" Class="mt-3">
                             <Stack GapScale="LayoutGap.Tiny">
-                                <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-kind-{artifactIndex}")">Kind</label>
+                                <label class="text-xs font-semibold text-chrome-500" for="@($"processes-step-artifact-kind-{artifactIndex}")">Kind</label>
                                 <select id="@($"processes-step-artifact-kind-{artifactIndex}")"
-                                        class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                        class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                         value="@artifact.ArtifactKind"
                                         @onchange="args => UpdateArtifactKind(artifactIndex, args)"
                                         data-testid="@BuildArtifactKindTestId(artifact.ArtifactKey)">
@@ -269,11 +269,11 @@
                                 </select>
                             </Stack>
                             <Stack GapScale="LayoutGap.Tiny">
-                                <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-retention-{artifactIndex}")">Retention</label>
+                                <label class="text-xs font-semibold text-chrome-500" for="@($"processes-step-artifact-retention-{artifactIndex}")">Retention</label>
                                 <input id="@($"processes-step-artifact-retention-{artifactIndex}")"
                                        type="number"
                                        min="0"
-                                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                       class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                        value="@artifact.RetentionDays"
                                        @oninput="args => UpdateArtifactRetention(artifactIndex, args)"
                                        data-testid="@BuildArtifactRetentionTestId(artifact.ArtifactKey)" />
@@ -292,7 +292,7 @@
                         data-testid="processes-step-add-artifact-expectation" />
 
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Subprocess" />
-                <select class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                <select class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                         value="@subprocessProcessKey"
                         @onchange="args => subprocessProcessKey = ReadChangeValue(args)"
                         data-testid="processes-step-subprocess-definition">
@@ -302,7 +302,7 @@
                         <option value="@option.DefinitionKey.Value">@option.DisplayName</option>
                     }
                 </select>
-                <input class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                <input class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                        value="@subprocessSnapshotName"
                        @oninput="args => subprocessSnapshotName = ReadChangeValue(args)"
                        placeholder="Snapshot name"
@@ -321,17 +321,17 @@
 
         @if (StepEditor.Lint.HasWarningsOrErrors)
         {
-            <div class="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="processes-step-lint-panel">
+            <div class="mt-5 rounded-md border border-chrome-200 bg-chrome-50 p-3" data-testid="processes-step-lint-panel">
                 @foreach (var issue in StepEditor.Lint.Issues)
                 {
-                    <div class="border-t border-slate-200 py-3 first:border-t-0 first:pt-0 last:pb-0">
+                    <div class="border-t border-chrome-200 py-3 first:border-t-0 first:pt-0 last:pb-0">
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                             <StatusBadge Tone="@ResolveLintIssueTone(issue.Severity)" Text="@issue.Severity.ToString()" />
-                            <span class="text-xs font-semibold text-slate-500">@issue.Section.ToString()</span>
-                            <span class="text-xs text-slate-500">@issue.Code</span>
+                            <span class="text-xs font-semibold text-chrome-500">@issue.Section.ToString()</span>
+                            <span class="text-xs text-chrome-500">@issue.Code</span>
                         </Cluster>
-                        <p class="mt-2 text-sm leading-6 text-slate-700">@issue.Message</p>
-                        <p class="text-xs leading-5 text-slate-500">@issue.Suggestion</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-700">@issue.Message</p>
+                        <p class="text-xs leading-5 text-chrome-500">@issue.Suggestion</p>
                     </div>
                 }
             </div>

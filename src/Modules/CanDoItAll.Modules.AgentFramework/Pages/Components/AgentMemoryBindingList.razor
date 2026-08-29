@@ -3,7 +3,7 @@
 @if (Bindings.Count == 0)
 {
     <SurfaceCard Soft="true">
-        <p class="text-sm text-slate-600">No external memory providers are bound to this agent.</p>
+        <p class="text-sm text-chrome-600">No external memory providers are bound to this agent.</p>
     </SurfaceCard>
 }
 else
@@ -17,8 +17,8 @@ else
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <Stack GapScale="LayoutGap.XSmall">
                         <strong>/mem:@binding.Alias.Value</strong>
-                        <span class="text-sm text-slate-600">@binding.ProviderInstanceId.Value</span>
-                        <small class="text-slate-500">
+                        <span class="text-sm text-chrome-600">@binding.ProviderInstanceId.Value</span>
+                        <small class="text-chrome-500">
                             @(binding.IncludeInAutomaticContext ? "Included in automatic context" : "Explicit directive only")
                         </small>
                         <SelectInput TValue="AgentMemoryProviderRequirement"

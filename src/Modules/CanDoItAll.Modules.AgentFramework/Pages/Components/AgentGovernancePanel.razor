@@ -68,8 +68,8 @@
     <DetailHeader>
         <Stack GapScale="LayoutGap.Small">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Governance detail" />
-            <h2 class="text-xl font-semibold text-slate-950">@(selectedDetail?.Run.Title ?? "Select an execution run")</h2>
-            <p class="text-sm leading-6 text-slate-600">Durable run details stay here even when the originating process, scenario, or chat route is elsewhere.</p>
+            <h2 class="text-xl font-semibold text-chrome-950">@(selectedDetail?.Run.Title ?? "Select an execution run")</h2>
+            <p class="text-sm leading-6 text-chrome-600">Durable run details stay here even when the originating process, scenario, or chat route is elsewhere.</p>
         </Stack>
     </DetailHeader>
 
@@ -115,8 +115,8 @@
                             <StatusBadge Tone="warning" Text="Process-linked" />
                         }
                     </Cluster>
-                    <p class="mt-3 text-sm leading-6 text-slate-700">@selectedDetail.Run.ResultSummary</p>
-                    <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <p class="mt-3 text-sm leading-6 text-chrome-700">@selectedDetail.Run.ResultSummary</p>
+                    <p class="mt-3 text-xs uppercase tracking-[0.18em] text-chrome-500">
                         Source @selectedDetail.Run.SourceId
                         @if (!string.IsNullOrWhiteSpace(selectedDetail.Run.ProcessRunId))
                         {

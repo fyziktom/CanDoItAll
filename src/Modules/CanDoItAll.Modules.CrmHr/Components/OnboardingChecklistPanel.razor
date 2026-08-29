@@ -11,7 +11,7 @@
         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
             <SurfaceCard>
                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Support network" />
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">Manager, buddy, and mentor</h3>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">Manager, buddy, and mentor</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                     <PartyPicker Label="Manager"
@@ -58,7 +58,7 @@
 
             <SurfaceCard Soft="true">
                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Checklist item" />
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">Training or lifecycle task</h3>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">Training or lifecycle task</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Task kind">
@@ -128,7 +128,7 @@
 
         <SurfaceCard Soft="true" Class="mt-6">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Lifecycle board" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">@Tasks.Count task(s)</h3>
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">@Tasks.Count task(s)</h3>
 
             @if (Tasks.Count == 0)
             {
@@ -148,11 +148,11 @@
                                    AlignItems="AlignItems.Start"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0 space-y-1">
-                                    <p class="text-base font-semibold text-slate-950">@item.Title</p>
-                                    <p class="text-sm text-slate-600">@BuildTaskMeta(item)</p>
+                                    <p class="text-base font-semibold text-chrome-950">@item.Title</p>
+                                    <p class="text-sm text-chrome-600">@BuildTaskMeta(item)</p>
                                     @if (!string.IsNullOrWhiteSpace(item.Notes))
                                     {
-                                        <p class="text-sm leading-6 text-slate-600">@item.Notes</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@item.Notes</p>
                                     }
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">

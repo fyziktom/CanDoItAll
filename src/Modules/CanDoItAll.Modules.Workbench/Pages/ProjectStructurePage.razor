@@ -368,7 +368,7 @@ else
                                           Text="@PartyEditorLinkedPartyName" />
                                 }
                             </Cluster>
-                            <p class="text-sm text-slate-600">@PartyEditorLead</p>
+                            <p class="text-sm text-chrome-600">@PartyEditorLead</p>
                         </Stack>
                     </SurfaceCard>
 
@@ -376,13 +376,13 @@ else
                     {
                         <SurfaceCard Soft="true"
                                      data-testid="project-structure-party-editor-loading">
-                            <p class="text-sm text-slate-600">Loading party relationships for the selected node.</p>
+                            <p class="text-sm text-chrome-600">Loading party relationships for the selected node.</p>
                         </SurfaceCard>
                     }
                     else if (!string.IsNullOrWhiteSpace(partyEditor.Message))
                     {
                         <SurfaceCard Soft="true">
-                            <p class="text-sm @(partyEditor.MessageTone == "danger" ? "text-rose-700" : "text-slate-700")"
+                            <p class="text-sm @(partyEditor.MessageTone == "danger" ? "text-rose-700" : "text-chrome-700")"
                                data-testid="project-structure-party-editor-message">@partyEditor.Message</p>
                         </SurfaceCard>
                     }
@@ -390,14 +390,14 @@ else
                     @if (isPartyEditorLoading)
                     {
                         <SurfaceCard Soft="true">
-                            <p class="text-sm text-slate-600">Preparing the directory linkage controls.</p>
+                            <p class="text-sm text-chrome-600">Preparing the directory linkage controls.</p>
                         </SurfaceCard>
                     }
                     else if (IsParticipantPartyEditor)
                     {
                         <SurfaceCard>
                             <Stack GapScale="LayoutGap.Large">
-                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                                     <InputCheckbox @bind-Value="partyEditor.KeepProjectLocalOnly"
                                                    data-testid="project-structure-participant-local-only" />
                                     <span>Keep project-local only</span>
@@ -430,7 +430,7 @@ else
                                         <Stack GapScale="LayoutGap.Medium">
                                             <div>
                                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Quick create" />
-                                                <p class="mt-1 text-sm text-slate-600">Create a directory record from the selected participant node when nothing reusable exists yet.</p>
+                                                <p class="mt-1 text-sm text-chrome-600">Create a directory record from the selected participant node when nothing reusable exists yet.</p>
                                             </div>
 
                                             <Grid Gap="LayoutGap.Medium"
@@ -506,14 +506,14 @@ else
                                       ColumnsLg="2">
                                     @foreach (var option in partyEditorOptions)
                                     {
-                                        <label class="flex items-start gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                                        <label class="flex items-start gap-3 rounded-[1.25rem] border border-chrome-200 bg-white px-4 py-3 text-sm text-chrome-700"
                                                data-testid="project-structure-meeting-party-option">
                                             <input type="checkbox"
                                                    checked="@partyEditor.SelectedMeetingPartyIds.Contains(option.PartyId)"
                                                    data-testid="project-structure-meeting-party-checkbox"
                                                    @onchange="args => HandleMeetingPartyChanged(option.PartyId, args)" />
                                             <span>
-                                                <span class="block font-semibold text-slate-950">@option.DisplayName</span>
+                                                <span class="block font-semibold text-chrome-950">@option.DisplayName</span>
                                                 <span class="block">@option.PartyTypeLabel</span>
                                             </span>
                                         </label>

@@ -1,42 +1,42 @@
 @layer components {
   .app-admin-panel {
-    @apply flex min-h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm;
+    @apply flex min-h-full flex-col gap-6 rounded-3xl border border-chrome-200 bg-white p-6 shadow-sm;
   }
 
   .app-admin-subpanel {
-    @apply rounded-2xl border border-slate-200 bg-slate-50 p-4;
+    @apply rounded-2xl border border-chrome-200 bg-chrome-50 p-4;
   }
 
   .app-admin-empty {
-    @apply rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600;
+    @apply rounded-2xl border border-dashed border-chrome-300 bg-chrome-50 p-4 text-sm text-chrome-600;
   }
 
   .app-admin-note {
-    @apply rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-600;
+    @apply rounded-2xl border border-chrome-200 bg-white p-3 text-sm text-chrome-600;
     overflow-wrap: anywhere;
   }
 
   .app-admin-kicker {
-    @apply text-xs font-semibold uppercase tracking-[0.18em] text-slate-500;
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-chrome-500;
   }
 
   .app-admin-heading {
-    @apply text-lg font-semibold text-slate-950;
+    @apply text-lg font-semibold text-chrome-950;
   }
 
   .app-admin-title {
-    @apply text-xl font-semibold text-slate-950;
+    @apply text-xl font-semibold text-chrome-950;
   }
 
   .app-admin-copy {
-    @apply text-sm leading-6 text-slate-600;
+    @apply text-sm leading-6 text-chrome-600;
   }
 
   .app-admin-code-label {
-    @apply mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500;
+    @apply mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-chrome-500;
   }
 
   .app-admin-knowledge-card {
-    @apply rounded-2xl border border-slate-200 bg-slate-50 p-4;
+    @apply rounded-2xl border border-chrome-200 bg-chrome-50 p-4;
   }
 }

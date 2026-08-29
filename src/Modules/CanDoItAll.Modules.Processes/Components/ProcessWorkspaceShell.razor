@@ -102,7 +102,7 @@
         {
             <SurfaceCard data-testid="processes-shell-loading">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
-                <h2 class="text-base font-semibold text-slate-900">Refreshing process workspace</h2>
+                <h2 class="text-base font-semibold text-chrome-900">Refreshing process workspace</h2>
             </SurfaceCard>
         }
         else
@@ -112,7 +112,7 @@
                    data-testid="processes-shell">
                 @if (!string.IsNullOrWhiteSpace(agentContextNotice))
                 {
-                    <p class="text-xs font-semibold text-slate-500" data-testid="processes-agent-context-notice">@agentContextNotice</p>
+                    <p class="text-xs font-semibold text-chrome-500" data-testid="processes-agent-context-notice">@agentContextNotice</p>
                 }
 
                 <ListDetailShell ListPaneWidth="28rem"
@@ -1134,7 +1134,7 @@
                                                                  data-testid="processes-definition-list-scroll">
         @if (!string.IsNullOrWhiteSpace(catalogCommandNotice))
         {
-            <p class="text-xs font-semibold text-slate-500" data-testid="processes-feed-defaults-receipt">@catalogCommandNotice</p>
+            <p class="text-xs font-semibold text-chrome-500" data-testid="processes-feed-defaults-receipt">@catalogCommandNotice</p>
         }
 
         <TreeView Items="@ProcessDefinitionTreeNodes"
@@ -1382,8 +1382,8 @@
                    Wrap="FlexWrap.Wrap">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run focus" />
-                    <h3 class="text-base font-semibold text-slate-900">@SelectedRunTitle</h3>
-                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.Runtime.AttentionSummary</p>
+                    <h3 class="text-base font-semibold text-chrome-900">@SelectedRunTitle</h3>
+                    <p class="text-sm leading-6 text-chrome-600">@CurrentShell.Runtime.AttentionSummary</p>
                 </Stack>
                 <CompactStatStrip>
                     <CompactStat Tone="success"
@@ -1476,12 +1476,12 @@
             <Stack GapScale="LayoutGap.Medium">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Process manager" />
-                    <h3 class="text-base font-semibold text-slate-900">@ManagerChatManagerLabel</h3>
-                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.AgentEntry.ContextKey</p>
+                    <h3 class="text-base font-semibold text-chrome-900">@ManagerChatManagerLabel</h3>
+                    <p class="text-sm leading-6 text-chrome-600">@CurrentShell.AgentEntry.ContextKey</p>
                 </Stack>
 
                 <Stack GapScale="LayoutGap.Small">
-                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-history-window">History length</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-manager-chat-history-window">History length</label>
                     <SelectInput id="processes-manager-chat-history-window"
                             Value="@managerChatHistoryWindow"
                             ValueChanged="@((ProcessRuntimeHistoryWindow value) => ChangeManagerChatHistoryWindowAsync(new ChangeEventArgs { Value = value.ToString() }))"
@@ -1492,7 +1492,7 @@
                         }
                     </SelectInput>
 
-                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-run-select">Run</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-manager-chat-run-select">Run</label>
                     <SelectInput id="processes-manager-chat-run-select"
                             Value="@RuntimeRunSelectValue"
                             ValueChanged="@((string? value) => SelectRuntimeRunAsync(new ChangeEventArgs { Value = value }))"
@@ -1500,7 +1500,7 @@
                         @RenderRuntimeRunOptions()
                     </SelectInput>
 
-                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-agent-select">Manager agent</label>
+                    <label class="text-xs font-semibold text-chrome-500" for="processes-manager-chat-agent-select">Manager agent</label>
                     <SelectInput id="processes-manager-chat-agent-select"
                             Value="@ManagerChatAgentSelectValue"
                             ValueChanged="@((string? value) => SelectManagerChatAgentAsync(new ChangeEventArgs { Value = value }))"
@@ -1784,7 +1784,7 @@
               AlignItems="AlignItems.End">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="History on demand" />
-                <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-window">History window</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-process-graphs-load-window">History window</label>
                 <SelectInput id="processes-process-graphs-load-window"
                         Value="@runtimeHistoryWindow"
                         ValueChanged="@((ProcessRuntimeHistoryWindow value) => ChangeRuntimeHistoryWindowAsync(new ChangeEventArgs { Value = value.ToString() }))"
@@ -1796,7 +1796,7 @@
                 </SelectInput>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
-                <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-run">Run</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-process-graphs-load-run">Run</label>
                 <SelectInput id="processes-process-graphs-load-run"
                         Value="@RuntimeRunSelectValue"
                         ValueChanged="@((string? value) => SelectRuntimeRunAsync(new ChangeEventArgs { Value = value }))"
@@ -1822,7 +1822,7 @@
               ColumnTemplateXl="minmax(14rem,0.6fr) minmax(16rem,1fr) auto"
               AlignItems="AlignItems.End">
             <Stack GapScale="LayoutGap.Tiny">
-                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History window</label>
+                <label class="text-xs font-semibold text-chrome-500" for="@($"{testId}-window")">History window</label>
                 <SelectInput id="@($"{testId}-window")"
                         Value="@runtimeHistoryWindow"
                         ValueChanged="@((ProcessRuntimeHistoryWindow value) => ChangeRuntimeHistoryWindowAsync(new ChangeEventArgs { Value = value.ToString() }))"
@@ -1834,7 +1834,7 @@
                 </SelectInput>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
-                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
+                <label class="text-xs font-semibold text-chrome-500" for="@($"{testId}-run")">Run</label>
                 <SelectInput id="@($"{testId}-run")"
                         Value="@RuntimeRunSelectValue"
                         ValueChanged="@((string? value) => SelectRuntimeRunAsync(new ChangeEventArgs { Value = value }))"
@@ -1892,8 +1892,8 @@
                                                            data-testid="processes-run-launch-section">
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Launch planning" />
-            <h3 class="text-base font-semibold text-slate-900">@(DefinitionCatalog.SelectedItem?.Name ?? "Select a definition")</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Launch uses the process application boundary and refreshes runtime projections after the run is accepted.</p>
+            <h3 class="text-base font-semibold text-chrome-900">@(DefinitionCatalog.SelectedItem?.Name ?? "Select a definition")</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">Launch uses the process application boundary and refreshes runtime projections after the run is accepted.</p>
             <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
                 <StatusBadge Tone="info" Text="@ResolveHistoryWindowText(CurrentShell.Runtime.HistoryWindow)" />
                 <StatusBadge Tone="@ResolveEditorStatusTone(DefinitionCatalog.SelectedEditor?.Status ?? ProcessDefinitionAuthoringStatus.TemplateDefault)" Text="@(DefinitionCatalog.SelectedEditor?.Status.ToString() ?? "No definition")" />
@@ -1923,8 +1923,8 @@
                                                                    data-testid="processes-operator-control-section">
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager resolution" />
-            <h3 class="text-base font-semibold text-slate-900">@CurrentShell.Runtime.AttentionSummary</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Manager incidents, recovery denials, branch rejections, and loop-budget escalations are projected from runtime events.</p>
+            <h3 class="text-base font-semibold text-chrome-900">@CurrentShell.Runtime.AttentionSummary</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">Manager incidents, recovery denials, branch rejections, and loop-budget escalations are projected from runtime events.</p>
         </SurfaceCard>
         @RenderIncidentLedger("processes-run-control-incidents")
     </Grid>;
@@ -1934,8 +1934,8 @@
                                                                      data-testid="processes-runtime-host-readback">
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected run" />
-            <h3 class="text-base font-semibold text-slate-900">@SelectedRunTitle</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">@CurrentShell.Runtime.Summary</p>
+            <h3 class="text-base font-semibold text-chrome-900">@SelectedRunTitle</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">@CurrentShell.Runtime.Summary</p>
             <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
                 @if (CurrentShell.Runtime.SelectedRun is { } selectedRun)
                 {
@@ -1954,8 +1954,8 @@
                                                                         data-testid="processes-run-coordination">
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Assignments and messaging" />
-            <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.ManagerMessages.Count} manager message(s)")</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Manager messages are filtered to the selected run and history window.</p>
+            <h3 class="text-base font-semibold text-chrome-900">@($"{CurrentShell.Runtime.ManagerMessages.Count} manager message(s)")</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">Manager messages are filtered to the selected run and history window.</p>
             <Button Text="Open manager chat"
                     Icon="forum"
                     Tone="ButtonTone.Default"
@@ -1972,8 +1972,8 @@
                                                                     data-testid="processes-run-evidence">
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Evidence" />
-            <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.Events.Count} event(s) on page")</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Runtime evidence is shown as event history, incidents, diagnostic references, and manager decisions until artifact-map projections contain concrete artifact rows.</p>
+            <h3 class="text-base font-semibold text-chrome-900">@($"{CurrentShell.Runtime.Events.Count} event(s) on page")</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">Runtime evidence is shown as event history, incidents, diagnostic references, and manager decisions until artifact-map projections contain concrete artifact rows.</p>
         </SurfaceCard>
         @RenderRuntimeEventLedger("processes-run-evidence-events")
     </Grid>;
@@ -2028,13 +2028,13 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Runtime timeline" />
-                <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.Events.Count} event(s)")</h3>
+                <h3 class="text-base font-semibold text-chrome-900">@($"{CurrentShell.Runtime.Events.Count} event(s)")</h3>
             </Stack>
             <StatusBadge Tone="neutral" Text="@ResolveHistoryWindowText(CurrentShell.Runtime.HistoryWindow)" />
         </Split>
         @if (CurrentShell.Runtime.Events.Count == 0)
         {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime events match this filter.</p>
+            <p class="mt-3 text-sm leading-6 text-chrome-500">No runtime events match this filter.</p>
         }
         else
         {
@@ -2064,7 +2064,7 @@
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
         @if (CurrentShell.Runtime.Incidents.Count == 0)
         {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No manager incidents are open in this projection window.</p>
+            <p class="mt-3 text-sm leading-6 text-chrome-500">No manager incidents are open in this projection window.</p>
         }
         else
         {
@@ -2075,11 +2075,11 @@
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                             <StatusBadge Tone="warning" Text="@incident.Severity" />
                             <StatusBadge Tone="neutral" Text="@incident.Status" />
-                            <span class="text-xs text-slate-500">@incident.RaisedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                            <span class="text-xs text-chrome-500">@incident.RaisedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                         </Cluster>
-                        <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
-                        <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                        <p class="mt-2 text-sm font-semibold text-chrome-900">@incident.Classification</p>
+                        <p class="mt-1 text-sm leading-6 text-chrome-600">@incident.SafeSummary</p>
+                        <p class="mt-1 text-xs text-chrome-500">@incident.DiagnosticReference</p>
                     </div>
                 }
             </Stack>
@@ -2091,7 +2091,7 @@
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager messages" />
         @if (CurrentShell.Runtime.ManagerMessages.Count == 0)
         {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No manager messages match the selected run and history window.</p>
+            <p class="mt-3 text-sm leading-6 text-chrome-500">No manager messages match the selected run and history window.</p>
         }
         else
         {
@@ -2101,12 +2101,12 @@
                     <div class="processes-runtime-ledger-row" data-testid="processes-runtime-manager-message-row">
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                             <StatusBadge Tone="@ResolveManagerMessageTone(message)" Text="@message.Kind" />
-                            <span class="text-xs text-slate-500">@message.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                            <span class="text-xs text-chrome-500">@message.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                         </Cluster>
-                        <p class="mt-2 text-sm leading-6 text-slate-700">@message.Summary</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-700">@message.Summary</p>
                         @if (!string.IsNullOrWhiteSpace(message.RestrictedDiagnosticReference))
                         {
-                            <p class="mt-1 text-xs text-slate-500">@message.RestrictedDiagnosticReference</p>
+                            <p class="mt-1 text-xs text-chrome-500">@message.RestrictedDiagnosticReference</p>
                         }
                     </div>
                 }
@@ -2119,7 +2119,7 @@
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool usage" />
         @if (CurrentShell.Runtime.ToolUsage.Count == 0)
         {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime tool usage is present in this scope.</p>
+            <p class="mt-3 text-sm leading-6 text-chrome-500">No runtime tool usage is present in this scope.</p>
         }
         else
         {
@@ -2129,8 +2129,8 @@
                     <div class="processes-runtime-ledger-row" data-testid="processes-runtime-tool-row">
                         <Split Gap="LayoutGap.Small">
                             <div>
-                                <p class="text-sm font-semibold text-slate-900">@tool.ToolName</p>
-                                <p class="mt-1 text-xs text-slate-500">@tool.Summary</p>
+                                <p class="text-sm font-semibold text-chrome-900">@tool.ToolName</p>
+                                <p class="mt-1 text-xs text-chrome-500">@tool.Summary</p>
                             </div>
                             <StatusBadge Tone="warning" Text="@($"{tool.CallCount} calls")" />
                         </Split>
@@ -2172,9 +2172,9 @@
                     <div class="processes-runtime-ledger-row">
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                             <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@runtimeEvent.EventType" />
-                            <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                            <span class="text-xs text-chrome-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                         </Cluster>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">@runtimeEvent.Summary</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-600">@runtimeEvent.Summary</p>
                     </div>
                 }
             </SurfaceCard>
@@ -2182,7 +2182,7 @@
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
                 @if (run.Incidents.Count == 0)
                 {
-                    <p class="mt-3 text-sm leading-6 text-slate-500">No incidents are attached to this run.</p>
+                    <p class="mt-3 text-sm leading-6 text-chrome-500">No incidents are attached to this run.</p>
                 }
                 else
                 {
@@ -2193,9 +2193,9 @@
                                 <StatusBadge Tone="warning" Text="@incident.Severity" />
                                 <StatusBadge Tone="neutral" Text="@incident.Status" />
                             </Cluster>
-                            <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
-                            <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
-                            <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                            <p class="mt-2 text-sm font-semibold text-chrome-900">@incident.Classification</p>
+                            <p class="mt-1 text-sm leading-6 text-chrome-600">@incident.SafeSummary</p>
+                            <p class="mt-1 text-xs text-chrome-500">@incident.DiagnosticReference</p>
                         </div>
                     }
                 }
@@ -2208,13 +2208,13 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Child runs" />
-                <h3 class="text-base font-semibold text-slate-900">@FormatCount(run.WaitingOnChildRuns.Count, "wait", "waits")</h3>
+                <h3 class="text-base font-semibold text-chrome-900">@FormatCount(run.WaitingOnChildRuns.Count, "wait", "waits")</h3>
             </Stack>
             <StatusBadge Tone="info" Text="Subprocess" />
         </Split>
         @if (run.WaitingOnChildRuns.Count == 0)
         {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No parent step is waiting on an active child process run.</p>
+            <p class="mt-3 text-sm leading-6 text-chrome-500">No parent step is waiting on an active child process run.</p>
         }
         else
         {
@@ -2232,7 +2232,7 @@
                                         <StatusBadge Tone="warning" Text="@wait.ChildStepStatus" />
                                     }
                                 </Cluster>
-                                <p class="mt-2 text-sm leading-6 text-slate-700">@wait.Summary</p>
+                                <p class="mt-2 text-sm leading-6 text-chrome-700">@wait.Summary</p>
                             </div>
                             <Button Icon="open_in_new"
                                     Tone="ButtonTone.Default"
@@ -2252,7 +2252,7 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current step" />
-                <h3 class="text-base font-semibold text-slate-900">@step.StepKey</h3>
+                <h3 class="text-base font-semibold text-chrome-900">@step.StepKey</h3>
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                 <StatusBadge Tone="info" Text="@step.StepStatus" />
@@ -2266,7 +2266,7 @@
                 }
             </Cluster>
         </Split>
-        <p class="mt-3 text-sm leading-6 text-slate-700">@step.Summary</p>
+        <p class="mt-3 text-sm leading-6 text-chrome-700">@step.Summary</p>
     </SurfaceCard>;
 
     private RenderFragment RenderEventDetailDialog(ProcessTimelineEventProjection runtimeEvent) => @<Stack GapScale="LayoutGap.Medium"
@@ -2278,10 +2278,10 @@
         </CompactStatStrip>
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Summary" />
-            <p class="mt-2 text-sm leading-6 text-slate-700">@runtimeEvent.Summary</p>
+            <p class="mt-2 text-sm leading-6 text-chrome-700">@runtimeEvent.Summary</p>
             @if (!string.IsNullOrWhiteSpace(runtimeEvent.RestrictedDiagnosticReference))
             {
-                <p class="mt-2 text-xs font-semibold text-slate-500">@runtimeEvent.RestrictedDiagnosticReference</p>
+                <p class="mt-2 text-xs font-semibold text-chrome-500">@runtimeEvent.RestrictedDiagnosticReference</p>
             }
         </SurfaceCard>
     </Stack>;
@@ -3185,17 +3185,17 @@
         string tone,
         string summary) => @<SurfaceCard Soft="true">
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="@label" />
-        <h3 class="text-base font-semibold text-slate-900">@value</h3>
-        <p class="mt-2 text-sm leading-6 text-slate-600">@summary</p>
+        <h3 class="text-base font-semibold text-chrome-900">@value</h3>
+        <p class="mt-2 text-sm leading-6 text-chrome-600">@summary</p>
         <StatusBadge Tone="@tone" Text="@label" />
     </SurfaceCard>;
 
-    private RenderFragment RenderDefinitionEditor(ProcessDefinitionEditorProjection editor) => @<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-editor">
+    private RenderFragment RenderDefinitionEditor(ProcessDefinitionEditorProjection editor) => @<div class="mt-6 border-t border-chrome-200 pt-5" data-testid="processes-definition-editor">
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Authoring" />
-                <h3 class="text-sm font-semibold text-slate-900">Definition editor</h3>
-                <p class="text-sm leading-6 text-slate-600">Edit identity, governance, contract, and simulation-readiness fields through the process projection boundary.</p>
+                <h3 class="text-sm font-semibold text-chrome-900">Definition editor</h3>
+                <p class="text-sm leading-6 text-chrome-600">Edit identity, governance, contract, and simulation-readiness fields through the process projection boundary.</p>
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                 <StatusBadge Tone="@ResolveEditorStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
@@ -3205,7 +3205,7 @@
 
         @if (!string.IsNullOrWhiteSpace(editorCommandNotice) || editor.LastCommandReceipt is not null)
         {
-            <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-definition-editor-receipt">
+            <p class="mt-3 text-xs font-semibold text-chrome-500" data-testid="processes-definition-editor-receipt">
                 @(editor.LastCommandReceipt is null ? editorCommandNotice : $"{editor.LastCommandReceipt.Status}: {editor.LastCommandReceipt.Summary}")
             </p>
         }
@@ -3213,33 +3213,33 @@
         <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-5" data-testid="processes-definition-editor-sections">
             <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-editor-identity">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity" />
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-name-input">Name</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-editor-name-input">Name</label>
                 <input id="processes-definition-editor-name-input"
-                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                        value="@editorName"
                        @oninput="args => editorName = ReadChangeValue(args)"
                        data-testid="processes-definition-editor-name" />
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-owner-input">Owner</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-editor-owner-input">Owner</label>
                 <input id="processes-definition-editor-owner-input"
-                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                        value="@editorOwnerName"
                        @oninput="args => editorOwnerName = ReadChangeValue(args)"
                        data-testid="processes-definition-editor-owner" />
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-customer-input">Customer</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-editor-customer-input">Customer</label>
                 <input id="processes-definition-editor-customer-input"
-                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                        value="@editorCustomerName"
                        @oninput="args => editorCustomerName = ReadChangeValue(args)"
                        data-testid="processes-definition-editor-customer" />
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-summary-input">Summary</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-editor-summary-input">Summary</label>
                 <textarea id="processes-definition-editor-summary-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorSummary"
                           @oninput="args => editorSummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-summary"></textarea>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-value-input">Value statement</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-editor-value-input">Value statement</label>
                 <textarea id="processes-definition-editor-value-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorValueStatement"
                           @oninput="args => editorValueStatement = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-value"></textarea>
@@ -3249,9 +3249,9 @@
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Governance" />
                 <Grid Gap="LayoutGap.Small" ColumnsLg="3">
                     <Stack GapScale="LayoutGap.Tiny">
-                        <label class="text-xs font-semibold text-slate-500" for="processes-definition-criticality-input">Criticality</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-definition-criticality-input">Criticality</label>
                         <SelectInput id="processes-definition-criticality-input"
-                                Class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                Class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                 Value="@editorCriticality"
                                 ValueChanged="@((ProcessDefinitionCriticalityLevel value) => editorCriticality = ParseCriticality(new ChangeEventArgs { Value = value.ToString() }))"
                                 data-testid="processes-definition-editor-criticality">
@@ -3262,9 +3262,9 @@
                         </SelectInput>
                     </Stack>
                     <Stack GapScale="LayoutGap.Tiny">
-                        <label class="text-xs font-semibold text-slate-500" for="processes-definition-autonomy-input">Autonomy</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-definition-autonomy-input">Autonomy</label>
                         <SelectInput id="processes-definition-autonomy-input"
-                                Class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                Class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                 Value="@editorAutonomyLevel"
                                 ValueChanged="@((ProcessDefinitionAutonomyLevel value) => editorAutonomyLevel = ParseAutonomy(new ChangeEventArgs { Value = value.ToString() }))"
                                 data-testid="processes-definition-editor-autonomy">
@@ -3275,9 +3275,9 @@
                         </SelectInput>
                     </Stack>
                     <Stack GapScale="LayoutGap.Tiny">
-                        <label class="text-xs font-semibold text-slate-500" for="processes-definition-mode-input">Mode</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-definition-mode-input">Mode</label>
                         <SelectInput id="processes-definition-mode-input"
-                                Class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                Class="min-h-9 w-full rounded-md border border-chrome-300 px-3 text-sm text-chrome-900 shadow-sm"
                                 Value="@editorOperatingMode"
                                 ValueChanged="@((ProcessDefinitionOperatingModeKind value) => editorOperatingMode = ParseOperatingMode(new ChangeEventArgs { Value = value.ToString() }))"
                                 data-testid="processes-definition-editor-operating-mode">
@@ -3292,27 +3292,27 @@
                     <StatusBadge Tone="@ResolveEditorStatusTone(editorWorkingStatus)" Text="@editorWorkingStatus.ToString()" />
                     <StatusBadge Tone="neutral" Text="@($"{editorRequiredRoleCount} required role(s)")" />
                 </Cluster>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-governance-policy-input">Governance policy</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-governance-policy-input">Governance policy</label>
                 <textarea id="processes-definition-governance-policy-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorGovernancePolicySummary"
                           @oninput="args => editorGovernancePolicySummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-governance-policy"></textarea>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-manager-override-input">Manager override</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-manager-override-input">Manager override</label>
                 <textarea id="processes-definition-manager-override-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorManagerOverrideSummary"
                           @oninput="args => editorManagerOverrideSummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-manager-override"></textarea>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-governance-notes-input">Governance notes</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-governance-notes-input">Governance notes</label>
                 <textarea id="processes-definition-governance-notes-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorGovernanceNotes"
                           @oninput="args => editorGovernanceNotes = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-governance-notes"></textarea>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-change-summary-input">Change summary</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-change-summary-input">Change summary</label>
                 <textarea id="processes-definition-change-summary-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorChangeSummary"
                           @oninput="args => editorChangeSummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-change-summary"></textarea>
@@ -3320,21 +3320,21 @@
 
             <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-editor-contracts">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Contracts" />
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-interface-contract-input">Interface contract</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-interface-contract-input">Interface contract</label>
                 <textarea id="processes-definition-interface-contract-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorInterfaceContractSummary"
                           @oninput="args => editorInterfaceContractSummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-interface-contract"></textarea>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-constitution-input">Constitution rule</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-constitution-input">Constitution rule</label>
                 <textarea id="processes-definition-constitution-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorConstitutionRuleSummary"
                           @oninput="args => editorConstitutionRuleSummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-constitution"></textarea>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-operating-summary-input">Operating mode summary</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-operating-summary-input">Operating mode summary</label>
                 <textarea id="processes-definition-operating-summary-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorOperatingModeSummary"
                           @oninput="args => editorOperatingModeSummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-operating-summary"></textarea>
@@ -3346,33 +3346,33 @@
                     <StatusBadge Tone="info" Text="@($"{editorStepCount} step(s)")" />
                     <StatusBadge Tone="neutral" Text="@($"{editorRequiredArtifactExpectationCount} required artifact(s)")" />
                 </Cluster>
-                <label class="text-xs font-semibold text-slate-500" for="processes-definition-simulation-input">Simulation readiness</label>
+                <label class="text-xs font-semibold text-chrome-500" for="processes-definition-simulation-input">Simulation readiness</label>
                 <textarea id="processes-definition-simulation-input"
-                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          class="min-h-9 w-full rounded-md border border-chrome-300 px-3 py-2 text-sm text-chrome-900 shadow-sm"
                           value="@editorSimulationReadinessSummary"
                           @oninput="args => editorSimulationReadinessSummary = ReadChangeValue(args)"
                           data-testid="processes-definition-editor-simulation-readiness"></textarea>
 
-                <div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="processes-definition-lint-panel">
+                <div class="rounded-md border border-chrome-200 bg-chrome-50 p-3" data-testid="processes-definition-lint-panel">
                     <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                         <StatusBadge Tone="@ResolveEditorLintTone(editor.Lint)" Text="@ResolveEditorLintText(editor.Lint)" />
                     </Cluster>
                     @if (!editor.Lint.HasWarningsOrErrors)
                     {
-                        <p class="mt-2 text-sm leading-6 text-slate-600">No blocking lint issues.</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-600">No blocking lint issues.</p>
                     }
                     else
                     {
                         @foreach (var issue in editor.Lint.Issues)
                         {
-                            <div class="mt-3 border-t border-slate-200 pt-3">
+                            <div class="mt-3 border-t border-chrome-200 pt-3">
                                 <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                     <StatusBadge Tone="@ResolveLintIssueTone(issue.Severity)" Text="@issue.Severity.ToString()" />
-                                    <span class="text-xs font-semibold text-slate-500">@issue.Section.ToString()</span>
-                                    <span class="text-xs text-slate-500">@issue.Code</span>
+                                    <span class="text-xs font-semibold text-chrome-500">@issue.Section.ToString()</span>
+                                    <span class="text-xs text-chrome-500">@issue.Code</span>
                                 </Cluster>
-                                <p class="mt-2 text-sm leading-6 text-slate-700">@issue.Message</p>
-                                <p class="text-xs leading-5 text-slate-500">@issue.Suggestion</p>
+                                <p class="mt-2 text-sm leading-6 text-chrome-700">@issue.Message</p>
+                                <p class="text-xs leading-5 text-chrome-500">@issue.Suggestion</p>
                             </div>
                         }
                     }

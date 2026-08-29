@@ -6,7 +6,7 @@
     {
         <SurfaceCard Soft="true"
                      data-testid="@($"{TestIdPrefix}-loading")">
-            <p class="text-sm text-slate-600">Loading organization affiliations...</p>
+            <p class="text-sm text-chrome-600">Loading organization affiliations...</p>
         </SurfaceCard>
     }
     else if (!string.IsNullOrWhiteSpace(loadError))
@@ -14,7 +14,7 @@
         <SurfaceCard Soft="true"
                      data-testid="@($"{TestIdPrefix}-error")">
             <p class="text-sm font-semibold text-rose-700">Affiliations could not be loaded.</p>
-            <p class="mt-1 text-xs leading-5 text-slate-600">@loadError</p>
+            <p class="mt-1 text-xs leading-5 text-chrome-600">@loadError</p>
         </SurfaceCard>
     }
     else if (affiliations.Count > 0)
@@ -33,7 +33,7 @@
                     </option>
                 }
             </SelectInput>
-            <p class="mt-1 text-xs leading-5 text-slate-500">
+            <p class="mt-1 text-xs leading-5 text-chrome-500">
                 This preserves the company and worker relationship used for the assignment.
             </p>
         </FormField>
@@ -43,8 +43,8 @@
         <SurfaceCard Soft="true"
                      data-testid="@($"{TestIdPrefix}-fallback")">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@Label" />
-            <p class="mt-1 text-sm font-semibold text-slate-900">Directory classification</p>
-            <p class="mt-1 text-xs leading-5 text-slate-600">
+            <p class="mt-1 text-sm font-semibold text-chrome-900">Directory classification</p>
+            <p class="mt-1 text-xs leading-5 text-chrome-600">
                 A person without an organization affiliation is disclosed as an external contact.
             </p>
         </SurfaceCard>

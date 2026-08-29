@@ -88,12 +88,12 @@
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Selected workforce record" />
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@selectedWorkspace.DisplayName</h2>
+                                    <h2 class="mt-1 text-lg font-semibold text-chrome-950">@selectedWorkspace.DisplayName</h2>
                                     @if (!string.IsNullOrWhiteSpace(selectedWorkspace.Summary))
                                     {
-                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@selectedWorkspace.Summary</p>
+                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-chrome-600">@selectedWorkspace.Summary</p>
                                     }
-                                    <p class="mt-2 text-sm font-medium text-slate-700"
+                                    <p class="mt-2 text-sm font-medium text-chrome-700"
                                        data-testid="crmhr-workforce-availability-message">
                                         @SelectedAvailabilityMessage
                                     </p>
@@ -125,8 +125,8 @@
                                 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Start">
                                     <div>
                                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="External contact" />
-                                        <h3 class="mt-1 text-lg font-semibold text-slate-950">No staffable profile</h3>
-                                        <p class="mt-2 text-sm leading-6 text-slate-700">
+                                        <h3 class="mt-1 text-lg font-semibold text-chrome-950">No staffable profile</h3>
+                                        <p class="mt-2 text-sm leading-6 text-chrome-700">
                                             This person can participate in project work, but has no employee, contractor, or freelancer profile. Creating staffing, rate, skill, or capacity data is a deliberate action.
                                         </p>
                                     </div>
@@ -161,39 +161,39 @@
                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Home unit" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                            <p class="mt-1 text-sm font-medium text-chrome-950"
                                                data-testid="crmhr-workforce-summary-home-unit">@FormatValue(selectedWorkspace.HomeUnitName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Manager" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                            <p class="mt-1 text-sm font-medium text-chrome-950"
                                                data-testid="crmhr-workforce-summary-manager">@FormatValue(selectedWorkspace.ManagerName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Primary email" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
+                                            <p class="mt-1 text-sm font-medium text-chrome-950">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Primary phone" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
+                                            <p class="mt-1 text-sm font-medium text-chrome-950">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Available now" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                            <p class="mt-1 text-sm font-medium text-chrome-950"
                                                data-testid="crmhr-workforce-summary-available">@FormatOptionalPercent(SelectedAvailablePercent)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Next availability" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                            <p class="mt-1 text-sm font-medium text-chrome-950"
                                                data-testid="crmhr-workforce-summary-next-availability">@(HasSelectedAvailabilityDetails ? FormatDate(SelectedNextAvailabilityOn) : "Not loaded")</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Contract end" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatDate(selectedWorkspace.Profile.EndDate)</p>
+                                            <p class="mt-1 text-sm font-medium text-chrome-950">@FormatDate(selectedWorkspace.Profile.EndDate)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Searchable skills" />
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(BuildSkillCoverage(selectedWorkspace.Skills))</p>
+                                            <p class="mt-1 text-sm font-medium text-chrome-950">@FormatValue(BuildSkillCoverage(selectedWorkspace.Skills))</p>
                                         </SurfaceCard>
                                     </Grid>
                                 </Stack>
@@ -383,7 +383,7 @@
                                         <SurfaceCard Soft="true"
                                                      data-testid="crmhr-workforce-allocations-loading">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Loading allocation workspace" />
-                                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                            <p class="mt-2 text-sm leading-6 text-chrome-600">
                                                 Reading capacity blocks, project assignments, and the allocation timeline for this record.
                                             </p>
                                         </SurfaceCard>
@@ -393,7 +393,7 @@
                                         <SurfaceCard Soft="true"
                                                      data-testid="crmhr-workforce-allocations-error">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="Allocation workspace unavailable" />
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">@capacityWorkspaceError</p>
+                                            <p class="mt-2 text-sm leading-6 text-chrome-700">@capacityWorkspaceError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
                                                     Tone="ButtonTone.Default"
@@ -424,7 +424,7 @@
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-workforce-history-error">
                                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700" Value="History unavailable" />
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">@historyLoadError</p>
+                                            <p class="mt-2 text-sm leading-6 text-chrome-700">@historyLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
                                                     Tone="ButtonTone.Default"

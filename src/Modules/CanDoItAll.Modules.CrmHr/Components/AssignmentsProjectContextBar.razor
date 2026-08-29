@@ -49,7 +49,7 @@
             <Stack GapScale="LayoutGap.Tiny"
                    Class="min-w-[20rem] flex-[1_1_32rem]">
                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Active project" />
-                <p class="truncate text-base font-semibold text-slate-950">@project.Name</p>
+                <p class="truncate text-base font-semibold text-chrome-950">@project.Name</p>
                 <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
                     <StatusBadge Tone="info" Text="@project.Status.ToString()" />
                     @if (!string.IsNullOrWhiteSpace(project.CurrentPhase))

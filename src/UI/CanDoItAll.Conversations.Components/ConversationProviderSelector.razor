@@ -16,7 +16,7 @@
 
     @if (IsLoading)
     {
-        <p class="mt-2 text-sm leading-6 text-slate-500">@LoadingMessage</p>
+        <p class="mt-2 text-sm leading-6 text-chrome-500">@LoadingMessage</p>
     }
     else if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
@@ -24,7 +24,7 @@
     }
     else if (Options.Count == 0 && !string.IsNullOrWhiteSpace(EmptyMessage))
     {
-        <p class="mt-2 text-sm leading-6 text-slate-600">@EmptyMessage</p>
+        <p class="mt-2 text-sm leading-6 text-chrome-600">@EmptyMessage</p>
     }
 </FormField>
 

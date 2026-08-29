@@ -3,8 +3,8 @@
     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
         <SurfaceCard>
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Skill assignment" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Attach a skill to this profile</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Attach a skill to this profile</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Proficiency and certification details are included in workforce search so staffing can find the right people or units quickly.
             </p>
 
@@ -71,8 +71,8 @@
 
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Skill dictionary" />
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Add a reusable skill definition</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Add a reusable skill definition</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Keep the catalog small and intentional so staffing search stays strongly typed and consistent across workforce and project routes.
             </p>
 
@@ -95,7 +95,7 @@
                 </FormField>
             </div>
 
-            <label class="mt-4 inline-flex items-center gap-2 text-sm text-slate-700">
+            <label class="mt-4 inline-flex items-center gap-2 text-sm text-chrome-700">
                 <InputCheckbox @bind-Value="SkillDefinitionDraft.IsActive"
                                data-testid="crmhr-skill-definition-active" />
                 <span>Active skill</span>
@@ -115,7 +115,7 @@
                JustifyContent="JustifyContent.SpaceBetween">
             <div>
                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current coverage" />
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">@Skills.Count skill record(s)</h3>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">@Skills.Count skill record(s)</h3>
             </div>
         </Split>
 
@@ -137,11 +137,11 @@
                                AlignItems="AlignItems.Start"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div class="min-w-0 space-y-1">
-                                <p class="text-base font-semibold text-slate-950">@skill.SkillName</p>
-                                <p class="text-sm text-slate-600">@BuildMeta(skill)</p>
+                                <p class="text-base font-semibold text-chrome-950">@skill.SkillName</p>
+                                <p class="text-sm text-chrome-600">@BuildMeta(skill)</p>
                                 @if (!string.IsNullOrWhiteSpace(skill.Notes))
                                 {
-                                    <p class="text-sm leading-6 text-slate-600">@skill.Notes</p>
+                                    <p class="text-sm leading-6 text-chrome-600">@skill.Notes</p>
                                 }
                             </div>
                             <Cluster Gap="LayoutGap.Small">

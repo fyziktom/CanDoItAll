@@ -8,7 +8,7 @@
            JustifyContent="JustifyContent.SpaceBetween">
         <div>
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Organization affiliations" />
-            <p class="mt-1 text-sm leading-6 text-slate-600">
+            <p class="mt-1 text-sm leading-6 text-chrome-600">
                 Record each company relationship separately. Selecting a primary affiliation clears the previous primary.
             </p>
         </div>
@@ -23,13 +23,13 @@
 
     @if (!CurrentPersonPartyId.HasValue)
     {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
             Save the person first, then add organization affiliations.
         </div>
     }
     else if (edits.Count == 0)
     {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600"
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600"
              data-testid="crmhr-affiliations-empty">
             No organization affiliations are recorded. A person without a staffable affiliation appears as an external contact in Workforce.
         </div>
@@ -46,11 +46,11 @@
                            AlignItems="AlignItems.Center"
                            JustifyContent="JustifyContent.SpaceBetween">
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-slate-950"
+                            <p class="text-sm font-semibold text-chrome-950"
                                data-testid="@($"crmhr-affiliation-company-name-{rowIndex}")">
                                 @ResolvePartyName(item.OrganizationPartyId, "No company selected")
                             </p>
-                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-chrome-500">
                                 @FormatAffiliationKind(item.AffiliationKind)
                             </p>
                         </div>
@@ -127,7 +127,7 @@
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Organization unit" />
-                                    <p class="truncate text-sm text-slate-700"
+                                    <p class="truncate text-sm text-chrome-700"
                                        data-testid="@($"crmhr-affiliation-unit-name-{rowIndex}")">
                                         @ResolveOptionalPartyName(item.OrganizationUnitPartyId)
                                     </p>
@@ -159,7 +159,7 @@
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0">
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Manager" />
-                                    <p class="truncate text-sm text-slate-700"
+                                    <p class="truncate text-sm text-chrome-700"
                                        data-testid="@($"crmhr-affiliation-manager-name-{rowIndex}")">
                                         @ResolveOptionalPartyName(item.ManagerPartyId)
                                     </p>

@@ -53,8 +53,8 @@
                    Wrap="FlexWrap.Wrap">
                 <div class="min-w-0">
                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current technical candidate" />
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@candidate.Name</h3>
-                    <p class="mt-1 text-sm text-slate-600">@FormatValue(candidate.RoleTitle) / configuration @readiness.CurrentConfigurationVersion</p>
+                    <h3 class="mt-1 text-lg font-semibold text-chrome-950">@candidate.Name</h3>
+                    <p class="mt-1 text-sm text-chrome-600">@FormatValue(candidate.RoleTitle) / configuration @readiness.CurrentConfigurationVersion</p>
                 </div>
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="New assessment"
@@ -110,7 +110,7 @@
                            Wrap="FlexWrap.Wrap">
                         <div>
                             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Assessment cycles" />
-                            <h3 class="mt-1 text-lg font-semibold text-slate-950">@interviews.Count assessment(s)</h3>
+                            <h3 class="mt-1 text-lg font-semibold text-chrome-950">@interviews.Count assessment(s)</h3>
                         </div>
                         <StatusBadge Tone="neutral" Text="Append-only evidence" />
                     </Split>
@@ -137,8 +137,8 @@
                                                JustifyContent="JustifyContent.SpaceBetween"
                                                Wrap="FlexWrap.Wrap">
                                             <div class="min-w-0">
-                                                <p class="text-base font-semibold text-slate-950">@interview.Purpose</p>
-                                                <p class="mt-1 text-sm text-slate-600">
+                                                <p class="text-base font-semibold text-chrome-950">@interview.Purpose</p>
+                                                <p class="mt-1 text-sm text-chrome-600">
                                                     @interview.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") /
                                                     configuration @interview.CandidateConfigurationVersion
                                                 </p>
@@ -200,7 +200,7 @@
 
                                                         @if (attempt.Analysis is { } analysis)
                                                         {
-                                                            <p class="text-sm leading-6 text-slate-700">@analysis.Summary</p>
+                                                            <p class="text-sm leading-6 text-chrome-700">@analysis.Summary</p>
                                                             <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
                                                                 @foreach (var strength in analysis.Strengths.Take(3))
                                                                 {
@@ -268,19 +268,19 @@
                 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Current readiness" />
-                        <h3 class="mt-1 text-lg font-semibold text-slate-950">@FormatReadiness(readiness.Status)</h3>
+                        <h3 class="mt-1 text-lg font-semibold text-chrome-950">@FormatReadiness(readiness.Status)</h3>
                         <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch" Class="mt-4">
                             @foreach (var reason in readiness.Reasons)
                             {
-                                <p class="text-sm leading-6 text-slate-700">@reason</p>
+                                <p class="text-sm leading-6 text-chrome-700">@reason</p>
                             }
                         </Stack>
                     </SurfaceCard>
 
                     <SurfaceCard Soft="true">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Authority boundary" />
-                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Separate activation required</h3>
-                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                        <h3 class="mt-1 text-lg font-semibold text-chrome-950">Separate activation required</h3>
+                        <p class="mt-3 text-sm leading-6 text-chrome-600">
                             Even a ready assessment leaves the agent lifecycle unchanged. Activation remains a separately authorized AgentFramework command.
                         </p>
                         <StatusBadge Tone="warning"
@@ -481,7 +481,7 @@
 
                 <SurfaceCard Soft="true">
                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Evidence integrity" />
-                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                    <p class="mt-2 text-sm leading-6 text-chrome-600">
                         Hashes and structured-output provenance are optional for attachment, but readiness stays incomplete until all required evidence is present.
                     </p>
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">

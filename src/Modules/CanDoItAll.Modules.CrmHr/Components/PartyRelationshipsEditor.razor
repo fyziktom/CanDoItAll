@@ -6,7 +6,7 @@
            JustifyContent="JustifyContent.SpaceBetween">
         <div>
             <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Relationships and org structure" />
-            <p class="mt-1 text-sm leading-6 text-slate-600">Model parent-child, reporting, membership, and partner links without losing the shared party identity.</p>
+            <p class="mt-1 text-sm leading-6 text-chrome-600">Model parent-child, reporting, membership, and partner links without losing the shared party identity.</p>
         </div>
         <Button Text="Add relationship"
                 Tone="ButtonTone.Default"
@@ -18,13 +18,13 @@
 
     @if (!CurrentPartyId.HasValue)
     {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
             Save the party first, then add relationships to other saved parties.
         </div>
     }
     else if (Relationships.Count == 0)
     {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
             No relationships defined yet.
         </div>
     }
@@ -63,7 +63,7 @@
                                Gap="LayoutGap.Small"
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween">
-                            <p class="min-w-0 truncate text-sm text-slate-700"
+                            <p class="min-w-0 truncate text-sm text-chrome-700"
                                data-testid="@($"crmhr-relationship-party-name-{rowIndex}")">
                                 @ResolveRelatedPartyLabel(item)
                             </p>

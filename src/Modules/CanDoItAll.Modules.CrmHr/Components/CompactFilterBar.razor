@@ -1,6 +1,6 @@
 @using CanDoItAll.Components.BaseLib
 
-<div class="w-full rounded-[1.2rem] border border-slate-200 bg-slate-50/90 px-3.5 py-2.5"
+<div class="w-full rounded-[1.2rem] border border-chrome-200 bg-chrome-50/90 px-3.5 py-2.5"
      @attributes="AdditionalAttributes">
     <Split Breakpoint="LayoutBreakpoint.None"
            Gap="LayoutGap.Small"
@@ -16,7 +16,7 @@
         @if (Actions is not null || !string.IsNullOrWhiteSpace(ResultText)) {
             <Cluster Gap="LayoutGap.Small"
                      Wrap="FlexWrap.NoWrap"
-                     Class="ml-auto text-[11px] font-medium text-slate-500">
+                     Class="ml-auto text-[11px] font-medium text-chrome-500">
                 @if (!string.IsNullOrWhiteSpace(ResultText)) {
                     <span>@ResultText</span>
                 }

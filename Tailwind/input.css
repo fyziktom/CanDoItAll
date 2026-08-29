@@ -1,4 +1,8 @@
 @import "tailwindcss" source(none);
+
+@import "../../CanDoItAll.Components/Tailwind/fonts.css"
+@import "../../CanDoItAll.Components/Tailwind/theme.css"
+
 @source "../src";
 @source not "../src/App/CanDoItAll.Web/wwwroot/css/output.css";
 @import "./surfaces/admin.css";

@@ -1,11 +1,11 @@
 @namespace CanDoItAll.Modules.Processes
 @using CanDoItAll.Processes.Projections
 
-<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-role-editor">
+<div class="mt-6 border-t border-chrome-200 pt-5" data-testid="processes-definition-role-editor">
     <Split Gap="LayoutGap.Small">
         <Stack GapScale="LayoutGap.Tiny">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Roles" />
-            <h3 class="text-sm font-semibold text-slate-900">Role responsibilities</h3>
+            <h3 class="text-sm font-semibold text-chrome-900">Role responsibilities</h3>
         </Stack>
         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
             <StatusBadge Tone="info" Text="@($"{RoleEditor.Roles.Count} role(s)")" />
@@ -27,7 +27,7 @@
 
     @if (!string.IsNullOrWhiteSpace(commandNotice) || RoleEditor.LastCommandReceipt is not null)
     {
-        <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-role-editor-receipt">
+        <p class="mt-3 text-xs font-semibold text-chrome-500" data-testid="processes-role-editor-receipt">
             @(RoleEditor.LastCommandReceipt is null ? commandNotice : $"{RoleEditor.LastCommandReceipt.Status}: {RoleEditor.LastCommandReceipt.Summary}")
         </p>
     }
@@ -75,17 +75,17 @@
 
     @if (RoleEditor.Lint.HasWarningsOrErrors)
     {
-        <div class="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="processes-role-lint-panel">
+        <div class="mt-5 rounded-md border border-chrome-200 bg-chrome-50 p-3" data-testid="processes-role-lint-panel">
             @foreach (var issue in RoleEditor.Lint.Issues)
             {
-                <div class="border-t border-slate-200 py-3 first:border-t-0 first:pt-0 last:pb-0">
+                <div class="border-t border-chrome-200 py-3 first:border-t-0 first:pt-0 last:pb-0">
                     <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                         <StatusBadge Tone="@ResolveLintIssueTone(issue.Severity)" Text="@issue.Severity.ToString()" />
-                        <span class="text-xs font-semibold text-slate-500">@issue.Section.ToString()</span>
-                        <span class="text-xs text-slate-500">@issue.Code</span>
+                        <span class="text-xs font-semibold text-chrome-500">@issue.Section.ToString()</span>
+                        <span class="text-xs text-chrome-500">@issue.Code</span>
                     </Cluster>
-                    <p class="mt-2 text-sm leading-6 text-slate-700">@issue.Message</p>
-                    <p class="text-xs leading-5 text-slate-500">@issue.Suggestion</p>
+                    <p class="mt-2 text-sm leading-6 text-chrome-700">@issue.Message</p>
+                    <p class="text-xs leading-5 text-chrome-500">@issue.Suggestion</p>
                 </div>
             }
         </div>
@@ -120,20 +120,20 @@
                 <Grid Gap="LayoutGap.Medium" ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
                     <Stack GapScale="LayoutGap.Small" Class="process-role-dialog-section">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity and staffing" />
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-display-name-input">Display name</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-display-name-input">Display name</label>
                         <TextInput id="processes-role-display-name-input"
                                Value="@roleDisplayName"
                                @oninput="args => roleDisplayName = ReadChangeValue(args)"
                                data-testid="processes-role-display-name" />
 
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-purpose-input">Purpose</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-purpose-input">Purpose</label>
                         <textarea id="processes-role-purpose-input"
                                   class="ui-input ui-input--textarea process-role-dialog-textarea"
                                   value="@rolePurpose"
                                   @oninput="args => rolePurpose = ReadChangeValue(args)"
                                   data-testid="processes-role-purpose"></textarea>
 
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-staffing-input">Staffing intent</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-staffing-input">Staffing intent</label>
                         <textarea id="processes-role-staffing-input"
                                   class="ui-input ui-input--textarea process-role-dialog-textarea"
                                   value="@roleStaffingIntent"
@@ -142,7 +142,7 @@
 
                         <Grid Gap="LayoutGap.Small" ColumnsMd="2">
                             <Stack GapScale="LayoutGap.Tiny">
-                                <label class="text-xs font-semibold text-slate-500" for="processes-role-executor-kind-input">Executor kind</label>
+                                <label class="text-xs font-semibold text-chrome-500" for="processes-role-executor-kind-input">Executor kind</label>
                                 <SelectInput id="processes-role-executor-kind-input"
                                         Value="@roleExecutorKind"
                                         ValueChanged="@((ProcessDefinitionRoleExecutorKind value) => UpdateRoleExecutorKind(new ChangeEventArgs { Value = value.ToString() }))"
@@ -154,7 +154,7 @@
                                 </SelectInput>
                             </Stack>
                             <Stack GapScale="LayoutGap.Tiny">
-                                <label class="text-xs font-semibold text-slate-500" for="processes-role-project-assignment-input">Project role</label>
+                                <label class="text-xs font-semibold text-chrome-500" for="processes-role-project-assignment-input">Project role</label>
                                 <SelectInput id="processes-role-project-assignment-input"
                                         Value="@roleProjectAssignment"
                                         ValueChanged="@((ProcessDefinitionRoleProjectAssignmentKind value) => roleProjectAssignment = ParseProjectAssignment(new ChangeEventArgs { Value = value.ToString() }))"
@@ -206,7 +206,7 @@
                             </Stack>
                         }
 
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-allocation-input">Default allocation percent</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-allocation-input">Default allocation percent</label>
                         <NumberInput id="processes-role-allocation-input"
                                min="0"
                                max="100"
@@ -215,21 +215,21 @@
                                data-testid="processes-role-allocation" />
 
                         <Cluster Gap="LayoutGap.Medium" Class="flex-wrap">
-                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                                 <input type="checkbox"
                                        checked="@roleIsRequired"
                                        @onchange="args => roleIsRequired = ParseBool(args)"
                                        data-testid="processes-role-required" />
                                 Required
                             </label>
-                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                                 <input type="checkbox"
                                        checked="@roleAllowsFallback"
                                        @onchange="args => roleAllowsFallback = ParseBool(args)"
                                        data-testid="processes-role-fallback" />
                                 Fallback
                             </label>
-                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                                 <input type="checkbox"
                                        checked="@roleRequiresApproval"
                                        @onchange="args => roleRequiresApproval = ParseBool(args)"
@@ -241,7 +241,7 @@
 
                     <Stack GapScale="LayoutGap.Small" Class="process-role-dialog-section" data-testid="processes-role-template-and-bindings">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template and bindings" />
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-template-action-input">Apply template</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-template-action-input">Apply template</label>
                         <SelectInput id="processes-role-template-action-input"
                                 Value="@selectedTemplateActionKey"
                                 ValueChanged="@((string? value) => selectedTemplateActionKey = ReadChangeValue(new ChangeEventArgs { Value = value }))"
@@ -252,19 +252,19 @@
                             }
                         </SelectInput>
 
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-template-source-input">Template source</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-template-source-input">Template source</label>
                         <TextInput id="processes-role-template-source-input"
                                Value="@roleTemplateSourceKey"
                                @oninput="args => roleTemplateSourceKey = ReadChangeValue(args)"
                                data-testid="processes-role-template-source" />
 
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-template-snapshot-input">Template snapshot</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-template-snapshot-input">Template snapshot</label>
                         <TextInput id="processes-role-template-snapshot-input"
                                Value="@roleTemplateSnapshotName"
                                @oninput="args => roleTemplateSnapshotName = ReadChangeValue(args)"
                                data-testid="processes-role-template-snapshot" />
 
-                        <label class="text-xs font-semibold text-slate-500" for="processes-role-snapshot-summary-input">Snapshot summary</label>
+                        <label class="text-xs font-semibold text-chrome-500" for="processes-role-snapshot-summary-input">Snapshot summary</label>
                         <textarea id="processes-role-snapshot-summary-input"
                                   class="ui-input ui-input--textarea process-role-dialog-textarea"
                                   value="@roleSnapshotSummary"
@@ -281,10 +281,10 @@
                                 <div class="process-role-bindings__row">
                                     <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                         <StatusBadge Tone="neutral" Text="@binding.ResponsibilityKind.ToString()" />
-                                        <span class="text-xs font-semibold text-slate-500">@binding.StepTitle</span>
-                                        <span class="text-xs text-slate-500">fallback @binding.FallbackOrder</span>
+                                        <span class="text-xs font-semibold text-chrome-500">@binding.StepTitle</span>
+                                        <span class="text-xs text-chrome-500">fallback @binding.FallbackOrder</span>
                                     </Cluster>
-                                    <p class="mt-2 text-xs leading-5 text-slate-500">@binding.RebindPolicySummary</p>
+                                    <p class="mt-2 text-xs leading-5 text-chrome-500">@binding.RebindPolicySummary</p>
                                 </div>
                             }
                         </div>

@@ -19,7 +19,7 @@
     {
         @foreach (var agent in Rows.Take(5))
         {
-            <div class="flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-white/80 px-2.5 py-1.5 shadow-sm"
+            <div class="flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border border-chrome-200 bg-white/80 px-2.5 py-1.5 shadow-sm"
                  data-testid="@($"{TestId}-row")">
                 <span class="h-9 w-9 shrink-0"
                       data-testid="@($"{TestId}-avatar")">
@@ -32,8 +32,8 @@
                 </span>
 
                 <div class="min-w-0 flex-1">
-                    <div class="truncate text-sm font-semibold text-slate-950">@agent.AgentName</div>
-                    <div class="truncate text-xs text-slate-500">@ResolveSubtitle(agent)</div>
+                    <div class="truncate text-sm font-semibold text-chrome-950">@agent.AgentName</div>
+                    <div class="truncate text-xs text-chrome-500">@ResolveSubtitle(agent)</div>
                 </div>
 
                 <div class="flex max-w-[6rem] shrink-0 flex-col items-end gap-0.5">

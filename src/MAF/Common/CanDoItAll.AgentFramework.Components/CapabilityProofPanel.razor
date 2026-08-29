@@ -42,11 +42,11 @@
                                         }
                                     </Cluster>
 
-                                    <p class="mt-3 text-base font-semibold leading-6 text-slate-950" style="overflow-wrap:anywhere;">@capability.Name</p>
+                                    <p class="mt-3 text-base font-semibold leading-6 text-chrome-950" style="overflow-wrap:anywhere;">@capability.Name</p>
 
                                     @if (!string.IsNullOrWhiteSpace(capability.Description))
                                     {
-                                        <p class="mt-2 text-sm leading-6 text-slate-600">@capability.Description</p>
+                                        <p class="mt-2 text-sm leading-6 text-chrome-600">@capability.Description</p>
                                     }
                                 </div>
 
@@ -66,27 +66,27 @@
                                 </Cluster>
                             </div>
 
-                            <div class="rounded-[1.2rem] border border-slate-200 bg-white/85 px-4 py-3">
+                            <div class="rounded-[1.2rem] border border-chrome-200 bg-white/85 px-4 py-3">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Path or endpoint</p>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Path or endpoint</p>
                                     <CopyButton Value="@capability.EndpointOrPath"
                                                 Disabled="@string.IsNullOrWhiteSpace(capability.EndpointOrPath)"
                                                 DisplayMode="CopyButtonDisplayMode.IconOnly"
                                                 Size="CopyButtonSize.ExtraSmall"
                                                 AriaLabel="Copy capability path or endpoint" />
                                 </div>
-                                <p class="mt-2 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@ResolveEndpointSummary(capability)</p>
+                                <p class="mt-2 text-sm leading-6 text-chrome-700" style="overflow-wrap:anywhere;">@ResolveEndpointSummary(capability)</p>
                             </div>
 
                             @if (capability.LastVerifiedAtUtc.HasValue || !string.IsNullOrWhiteSpace(capability.ProofNotes))
                             {
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-white/85 px-4 py-3">
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Proof</p>
+                                <div class="rounded-[1.2rem] border border-chrome-200 bg-white/85 px-4 py-3">
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Proof</p>
                                     @if (capability.LastVerifiedAtUtc.HasValue)
                                     {
-                                        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Checked @capability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
+                                        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-chrome-500">Checked @capability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
                                     }
-                                    <p class="mt-2 text-sm leading-6 text-slate-700">@ResolveProofNotes(capability)</p>
+                                    <p class="mt-2 text-sm leading-6 text-chrome-700">@ResolveProofNotes(capability)</p>
                                 </div>
                             }
                         </Stack>
@@ -128,31 +128,31 @@
 
                                 <div>
                                     <div class="flex flex-wrap items-start justify-between gap-3">
-                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Key</p>
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Key</p>
                                         <CopyButton Value="@selectedCapability.Key"
                                                     Disabled="@string.IsNullOrWhiteSpace(selectedCapability.Key)"
                                                     DisplayMode="CopyButtonDisplayMode.IconOnly"
                                                     Size="CopyButtonSize.ExtraSmall"
                                                     AriaLabel="Copy capability key" />
                                     </div>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@selectedCapability.Key</p>
+                                    <p class="mt-2 text-sm leading-6 text-chrome-700" style="overflow-wrap:anywhere;">@selectedCapability.Key</p>
                                 </div>
 
                                 <div>
                                     <div class="flex flex-wrap items-start justify-between gap-3">
-                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Path or endpoint</p>
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Path or endpoint</p>
                                         <CopyButton Value="@selectedCapability.EndpointOrPath"
                                                     Disabled="@string.IsNullOrWhiteSpace(selectedCapability.EndpointOrPath)"
                                                     DisplayMode="CopyButtonDisplayMode.IconOnly"
                                                     Size="CopyButtonSize.ExtraSmall"
                                                     AriaLabel="Copy capability path or endpoint" />
                                     </div>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@ResolveEndpointSummary(selectedCapability)</p>
+                                    <p class="mt-2 text-sm leading-6 text-chrome-700" style="overflow-wrap:anywhere;">@ResolveEndpointSummary(selectedCapability)</p>
                                 </div>
 
                                 <div>
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Description</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700">@selectedCapability.Description</p>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Description</p>
+                                    <p class="mt-2 text-sm leading-6 text-chrome-700">@selectedCapability.Description</p>
                                 </div>
                             </Stack>
                         </WorkspacePanel>
@@ -167,14 +167,14 @@
                                 @if (selectedCapability.LastVerifiedAtUtc.HasValue)
                                 {
                                     <div>
-                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Last verified</p>
-                                        <p class="mt-2 text-sm leading-6 text-slate-700">@selectedCapability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Last verified</p>
+                                        <p class="mt-2 text-sm leading-6 text-chrome-700">@selectedCapability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
                                     </div>
                                 }
 
                                 <div>
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Configuration JSON</p>
-                                    <pre class="mt-2 overflow-x-auto rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">@ResolveConfigurationJson(selectedCapability)</pre>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Configuration JSON</p>
+                                    <pre class="mt-2 overflow-x-auto rounded-[1.1rem] border border-chrome-200 bg-white px-4 py-3 text-sm leading-6 text-chrome-700">@ResolveConfigurationJson(selectedCapability)</pre>
                                 </div>
                             </Stack>
                         </WorkspacePanel>

@@ -4,10 +4,10 @@
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 
-<section class="projects-board flex min-h-[26rem] w-full flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
+<section class="projects-board flex min-h-[26rem] w-full flex-col overflow-hidden rounded-[1.85rem] border border-chrome-200 bg-white/92 shadow-sm shadow-chrome-200/60"
          data-testid="projects-board">
     <Stack GapScale="LayoutGap.Small"
-           Class="border-b border-slate-200 px-4 py-4 sm:px-5"
+           Class="border-b border-chrome-200 px-4 py-4 sm:px-5"
            data-testid="projects-command-bar">
         <Split Breakpoint="LayoutBreakpoint.Xl"
                Gap="LayoutGap.Small"
@@ -18,7 +18,7 @@
             <Cluster Gap="LayoutGap.Small"
                      Wrap="FlexWrap.NoWrap"
                      Class="projects-board__summary-main min-w-0">
-                <h2 class="truncate text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
+                <h2 class="truncate text-lg font-semibold tracking-tight text-chrome-950">Portfolio board</h2>
                 <Pill Tone="PillTone.Info"
                       Text="@($"{FilteredProjectSummaries.Count} visible")" />
                 <Pill Tone="PillTone.Info"
@@ -302,7 +302,7 @@
                      Class="min-w-0">
                 <div class="min-w-0">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Portfolio board" />
-                    <h3 class="truncate text-base font-semibold text-slate-950">@SelectedTreeProjectName</h3>
+                    <h3 class="truncate text-base font-semibold text-chrome-950">@SelectedTreeProjectName</h3>
                 </div>
                 <Pill Tone="PillTone.Info"
                       Text="@($"{FilteredProjectSummaries.Count} visible")" />

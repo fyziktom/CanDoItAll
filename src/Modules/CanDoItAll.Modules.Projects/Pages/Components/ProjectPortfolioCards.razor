@@ -25,7 +25,7 @@
                     <Cluster AlignItems="AlignItems.Start"
                              Wrap="FlexWrap.NoWrap"
                              Gap="LayoutGap.Medium">
-                        <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
+                        <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-chrome-600 shadow-sm">
                             @ProjectsPresentation.GetProjectMonogram(project.Name)
                         </div>
                         <div class="min-w-0 flex-1">
@@ -35,30 +35,30 @@
                                    JustifyContent="JustifyContent.SpaceBetween"
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Class="text-slate-400" Value="Project" />
-                                    <h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Class="text-chrome-400" Value="Project" />
+                                    <h3 class="mt-1 text-base font-bold tracking-tight text-chrome-950">@project.Name</h3>
                                 </div>
                                 <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(project.Status)"
                                              Text="@project.Status.ToString()" />
                             </Split>
-                            <p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
+                            <p class="mt-2 text-sm leading-5 text-chrome-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
                             @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName) ||
                                  !string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName) ||
                                  !string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
                             {
-                                <div class="mt-3 space-y-1.5 text-sm text-slate-600"
+                                <div class="mt-3 space-y-1.5 text-sm text-chrome-600"
                                      data-testid="project-card-related-parties">
                                     @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName))
                                     {
-                                        <p><span class="font-semibold text-slate-800">Customer:</span> @project.PrimaryCustomerName</p>
+                                        <p><span class="font-semibold text-chrome-800">Customer:</span> @project.PrimaryCustomerName</p>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName))
                                     {
-                                        <p><span class="font-semibold text-slate-800">Delivery unit:</span> @project.PrimaryDeliveryUnitName</p>
+                                        <p><span class="font-semibold text-chrome-800">Delivery unit:</span> @project.PrimaryDeliveryUnitName</p>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
                                     {
-                                        <p><span class="font-semibold text-slate-800">Owner:</span> @project.PrimaryOwnerName</p>
+                                        <p><span class="font-semibold text-chrome-800">Owner:</span> @project.PrimaryOwnerName</p>
                                     }
                                 </div>
                             }

@@ -15,22 +15,22 @@
                data-navigation-mode="@navigationMode.ToString().ToLowerInvariant()">
             <div class="app-shell-sidebar__inner">
                 <div class="app-shell-sidebar__top">
-                    <div class="@ResolveBrandClass()">
-                        <span class="app-shell-brand-mark" aria-hidden="true">
-                            <Icon Name="@ResolveBrandIconName()" />
-                        </span>
-                        @if (IsNavigationExpanded)
-                        {
-                            <div class="min-w-0">
-                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-sky-300 tracking-[0.28em]" Value="CanDoItAll" />
-                                <h1 class="app-shell-brand-title">Local delivery workbench</h1>
-                            </div>
-                        }
-                        else
-                        {
-                            <span class="sr-only">CanDoItAll local delivery workbench</span>
-                        }
-                    </div>
+                    @* <div class="@ResolveBrandClass()"> *@
+                        @* <span class="app-shell-brand-mark" aria-hidden="true"> *@
+                            @* <Icon Name="@ResolveBrandIconName()" /> *@
+                        @* </span> *@
+                        @* @if (IsNavigationExpanded) *@
+                        @* { *@
+                            @* <div class="min-w-0"> *@
+                                @* <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-sky-300 tracking-[0.28em]" Value="CanDoItAll" /> *@
+                                @* <h1 class="app-shell-brand-title">Local delivery workbench</h1> *@
+                            @* </div> *@
+                        @* } *@
+                        @* else *@
+                        @* { *@
+                            @* <span class="sr-only">CanDoItAll local delivery workbench</span> *@
+                        @* } *@
+                    @* </div> *@
 
                     @if (AllowNavigationExpansion)
                     {
@@ -49,10 +49,10 @@
                 {
                     <div class="app-shell-card-info app-shell-expanded-context">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Class="text-sky-300 tracking-[0.28em]" Value="Project Context" />
-                        <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
+                        <p class="mt-2 text-sm font-semibold">@ProjectContextTitle</p>
                         @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
                         {
-                            <p class="mt-1 text-xs text-slate-300">@PhaseContextTitle</p>
+                            <p class="mt-1 text-xs text-chrome-300">@PhaseContextTitle</p>
                         }
                     </div>
                 }
@@ -64,7 +64,7 @@
                         var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
                         <TooltipTarget Position="TooltipPosition.Right"
                                        Delay="@MenuTooltipDelay"
-                                       TriggerClass="w-full justify-center"
+                                       TriggerClass="w-full"
                                        TooltipClass="app-shell-nav-tooltip"
                                        TestId="@BuildNavigationTooltipTestId(item.Route)">
                             <TooltipContent Context="_">
@@ -249,7 +249,7 @@
 
         <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-2">
             <details class="app-shell-mobile-panel">
-                <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
+                <summary class="cursor-pointer list-none text-sm font-semibold text-chrome-900">
                     Workspace navigation
                 </summary>
                 <Stack GapScale="LayoutGap.Large"
@@ -264,7 +264,7 @@
                                         class="app-shell-mobile-card @(workspace.Id == ActiveWorkspaceId ? "app-shell-mobile-card--active" : "app-shell-mobile-card--inactive")"
                                         @onclick="() => SelectWorkspace.InvokeAsync(workspace.Id)">
                                     <span class="block text-sm font-semibold">@workspace.Title</span>
-                                    <span class="mt-1 block text-xs leading-5 @(workspace.Id == ActiveWorkspaceId ? "text-slate-200" : "text-slate-500")">@workspace.Description</span>
+                                    <span class="mt-1 block text-xs leading-5 @(workspace.Id == ActiveWorkspaceId ? "text-chrome-200" : "text-chrome-500")">@workspace.Description</span>
                                 </button>
                             }
                         </Grid>
@@ -279,18 +279,18 @@
                             <button type="button"
                                     class="app-shell-mobile-card @(isActive ? "app-shell-mobile-card--active" : "app-shell-mobile-card--inactive")"
                                     @onclick="() => Navigate.InvokeAsync(item.Route)">
-                                <span class="inline-flex @(isActive ? "text-slate-200" : "text-slate-500")" aria-hidden="true"><Icon Name="@item.Icon" /></span>
+                                <span class="inline-flex @(isActive ? "text-chrome-200" : "text-chrome-500")" aria-hidden="true"><Icon Name="@item.Icon" /></span>
                                 <span class="mt-2 flex items-center gap-2 text-sm font-semibold">
                                     <span>@item.Title</span>
                                     @if (!string.IsNullOrWhiteSpace(item.BadgeText))
                                     {
-                                        <span class="inline-flex min-w-6 items-center justify-center rounded-full bg-sky-500/10 px-2 py-1 text-[0.65rem] font-semibold leading-none @(isActive ? "text-slate-50" : "text-sky-700")"
+                                        <span class="inline-flex min-w-6 items-center justify-center rounded-full bg-sky-500/10 px-2 py-1 text-[0.65rem] font-semibold leading-none @(isActive ? "text-chrome-50" : "text-sky-700")"
                                               data-testid="@($"shell-nav-badge-{item.Route.Trim('/').Replace('/', '-') }-mobile")">
                                             @item.BadgeText
                                         </span>
                                     }
                                 </span>
-                                <span class="mt-1 block text-xs leading-5 @(isActive ? "text-slate-200" : "text-slate-500")">@item.Description</span>
+                                <span class="mt-1 block text-xs leading-5 @(isActive ? "text-chrome-200" : "text-chrome-500")">@item.Description</span>
                             </button>
                         }
                     </Grid>
@@ -308,8 +308,8 @@
                                         <button type="button"
                                                 class="app-shell-mobile-card app-shell-mobile-card--inactive w-full text-sm"
                                                 @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
-                                            <span class="block font-semibold text-slate-900">@item.Title</span>
-                                            <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
+                                            <span class="block font-semibold text-chrome-900">@item.Title</span>
+                                            <span class="mt-1 block text-xs text-chrome-500">@item.Route</span>
                                         </button>
                                     }
                                 </Stack>
@@ -324,8 +324,8 @@
                                         <button type="button"
                                                 class="app-shell-mobile-card app-shell-mobile-card--inactive w-full text-sm"
                                                 @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
-                                            <span class="block font-semibold text-slate-900">@item.Title</span>
-                                            <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
+                                            <span class="block font-semibold text-chrome-900">@item.Title</span>
+                                            <span class="mt-1 block text-xs text-chrome-500">@item.Route</span>
                                         </button>
                                     }
                                 </Stack>
@@ -335,34 +335,34 @@
                 </Stack>
             </details>
 
-            <div class="app-shell-workbar"
-                 data-testid="app-shell-workbar">
-                <div class="app-shell-tab-region">
-                    <AppTabStrip Items="Tabs"
-                                 RecentTabs="RecentTabs"
-                                 ActiveTabId="@ActiveTabId"
-                                 ShowActiveSummary="ShowTabSummary"
-                                 Compact="@(Mode == AppShellMode.FocusWorkbench)"
-                                 Activate="SelectTab"
-                                 Close="CloseTab"
-                                 MoveLeft="MoveLeft"
-                                 MoveRight="MoveRight"
-                                 TogglePin="ToggleTabPin"
-                                 ToggleSleep="ToggleTabSleep"
-                                 CloseOthers="CloseOtherTabs"
-                                 CloseRight="CloseTabsToRight"
-                                 CloseBackground="CloseBackgroundTabs"
-                                 ReopenRecent="ReopenRecentTab"
-                                 ClearRecent="ClearRecentTabs" />
-                </div>
-
-                @if (TopBar is not null)
-                {
-                    <div class="app-shell-topbar-region">
-                        @TopBar
-                    </div>
-                }
-            </div>
+            @* <div class="app-shell-workbar" *@
+            @*      data-testid="app-shell-workbar"> *@
+            @*     <div class="app-shell-tab-region"> *@
+            @*         <AppTabStrip Items="Tabs" *@
+            @*                      RecentTabs="RecentTabs" *@
+            @*                      ActiveTabId="@ActiveTabId" *@
+            @*                      ShowActiveSummary="ShowTabSummary" *@
+            @*                      Compact="@(Mode == AppShellMode.FocusWorkbench)" *@
+            @*                      Activate="SelectTab" *@
+            @*                      Close="CloseTab" *@
+            @*                      MoveLeft="MoveLeft" *@
+            @*                      MoveRight="MoveRight" *@
+            @*                      TogglePin="ToggleTabPin" *@
+            @*                      ToggleSleep="ToggleTabSleep" *@
+            @*                      CloseOthers="CloseOtherTabs" *@
+            @*                      CloseRight="CloseTabsToRight" *@
+            @*                      CloseBackground="CloseBackgroundTabs" *@
+            @*                      ReopenRecent="ReopenRecentTab" *@
+            @*                      ClearRecent="ClearRecentTabs" /> *@
+            @*     </div> *@
+            @* *@
+            @*     @if (TopBar is not null) *@
+            @*     { *@
+            @*         <div class="app-shell-topbar-region"> *@
+            @*             @TopBar *@
+            @*         </div> *@
+            @*     } *@
+            @* </div> *@
 
             <div class="@ResolveBodyRegionClass()">
                 @if (Mode == AppShellMode.FocusWorkbench)
@@ -389,7 +389,7 @@
             @if ((ShowRightRail || ShowCollapsedRail) && RightRail is not null)
             {
                 <details class="app-shell-rail-collapse @(ShowRightRail ? "2xl:hidden" : string.Empty)">
-                    <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
+                    <summary class="cursor-pointer list-none text-sm font-semibold text-chrome-900">
                         @CollapsedRailLabel
                     </summary>
                     <div class="mt-4">
@@ -429,7 +429,7 @@
     public AppShellMode Mode { get; set; } = AppShellMode.StandardPage;
 
     [Parameter]
-    public AppShellNavigationMode DefaultNavigationMode { get; set; } = AppShellNavigationMode.Collapsed;
+    public AppShellNavigationMode DefaultNavigationMode { get; set; } = AppShellNavigationMode.Expanded;
 
     [Parameter]
     public bool AllowNavigationExpansion { get; set; } = true;

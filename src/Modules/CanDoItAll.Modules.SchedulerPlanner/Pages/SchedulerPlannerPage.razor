@@ -72,7 +72,7 @@
         {
             <SurfaceCard data-testid="scheduler-loading">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
-                <h2 class="text-base font-semibold text-slate-900">Refreshing scheduler state</h2>
+                <h2 class="text-base font-semibold text-chrome-900">Refreshing scheduler state</h2>
             </SurfaceCard>
         }
         else
@@ -87,7 +87,7 @@
                         <Split Gap="LayoutGap.Small">
                             <div>
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" />
-                                <h2 class="text-base font-semibold text-slate-900">Planned and dispatched runs</h2>
+                                <h2 class="text-base font-semibold text-chrome-900">Planned and dispatched runs</h2>
                             </div>
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 <StatusBadge Tone="info" Text="@($"{CalendarEventCount} event(s)")" />
@@ -111,7 +111,7 @@
                         <div class="scheduler-list-toolbar" data-testid="scheduler-schedules-toolbar">
                             <div>
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Schedules" />
-                                <h2 class="text-base font-semibold text-slate-900">Saved scheduled runs</h2>
+                                <h2 class="text-base font-semibold text-chrome-900">Saved scheduled runs</h2>
                             </div>
                             <TextInput @bind-Value="scheduleSearchText"
                                        Class="scheduler-list-toolbar__search"
@@ -250,7 +250,7 @@
                     <Grid Gap="LayoutGap.Large" ColumnTemplateLg="minmax(0,0.9fr) minmax(0,1.1fr)">
                         <SurfaceCard data-testid="scheduler-form">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Setup" />
-                            <h2 class="text-base font-semibold text-slate-900">Schedule a workflow or process run</h2>
+                            <h2 class="text-base font-semibold text-chrome-900">Schedule a workflow or process run</h2>
 
                             <Stack GapScale="LayoutGap.Medium" Class="mt-4">
                                 <label class="block">
@@ -264,8 +264,8 @@
                                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Target" />
                                     <div class="scheduler-target-summary mt-1" data-testid="scheduler-target-selected">
                                         <div class="min-w-0">
-                                            <p class="text-sm font-semibold text-slate-900">@SelectedTargetName</p>
-                                            <p class="mt-1 text-xs leading-5 text-slate-500">@SelectedTargetDescription</p>
+                                            <p class="text-sm font-semibold text-chrome-900">@SelectedTargetName</p>
+                                            <p class="mt-1 text-xs leading-5 text-chrome-500">@SelectedTargetDescription</p>
                                         </div>
                                         <Button Text="Choose"
                                                 Icon="switch_account"
@@ -425,7 +425,7 @@
                                                    data-testid="scheduler-input-json" />
                                 </label>
 
-                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <label class="flex items-center gap-2 text-sm text-chrome-700">
                                     <InputCheckbox @bind-Value="editor.IsEnabled" />
                                     Enabled after save
                                 </label>
@@ -448,13 +448,13 @@
 
                         <SurfaceCard data-testid="scheduler-cron-preview">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="CRON description" />
-                            <h2 class="text-base font-semibold text-slate-900">@CronPreviewTitle</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">@CronPreviewDescription</p>
+                            <h2 class="text-base font-semibold text-chrome-900">@CronPreviewTitle</h2>
+                            <p class="mt-3 text-sm leading-6 text-chrome-600">@CronPreviewDescription</p>
 
                             <div class="mt-5 cda-panel-card--soft">
                                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Target summary" />
-                                <p class="mt-1 text-sm font-semibold text-slate-900">@SelectedTargetName</p>
-                                <p class="mt-2 text-sm leading-6 text-slate-600">@SelectedTargetDescription</p>
+                                <p class="mt-1 text-sm font-semibold text-chrome-900">@SelectedTargetName</p>
+                                <p class="mt-2 text-sm leading-6 text-chrome-600">@SelectedTargetDescription</p>
                             </div>
                         </SurfaceCard>
                     </Grid>
@@ -465,7 +465,7 @@
                         <div class="scheduler-list-toolbar" data-testid="scheduler-history-toolbar">
                             <div>
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="History" />
-                                <h2 class="text-base font-semibold text-slate-900">Dispatched scheduled runs</h2>
+                                <h2 class="text-base font-semibold text-chrome-900">Dispatched scheduled runs</h2>
                             </div>
                             <TextInput @bind-Value="historyQuery.Search"
                                        Class="scheduler-list-toolbar__search"
@@ -520,8 +520,8 @@
                                         <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Run">
                                             <Template Context="run">
                                                 <div>
-                                                    <p class="font-semibold text-slate-900">@run.PlanName</p>
-                                                    <p class="text-xs text-slate-500">@run.TargetKind / @run.TargetName</p>
+                                                    <p class="font-semibold text-chrome-900">@run.PlanName</p>
+                                                    <p class="text-xs text-chrome-500">@run.TargetKind / @run.TargetName</p>
                                                 </div>
                                             </Template>
                                         </DataGridColumn>
@@ -541,10 +541,10 @@
                                         <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Result">
                                             <Template Context="run">
                                                 <div class="space-y-1">
-                                                    <span class="text-sm text-slate-600">@ResolveRunResult(run)</span>
+                                                    <span class="text-sm text-chrome-600">@ResolveRunResult(run)</span>
                                                     @if (run.RetryCategory != SchedulerPlanRunRetryCategory.None)
                                                     {
-                                                        <p class="text-xs font-medium text-slate-500">@FormatRunPolicy(run.RetryCategory)</p>
+                                                        <p class="text-xs font-medium text-chrome-500">@FormatRunPolicy(run.RetryCategory)</p>
                                                     }
                                                 </div>
                                             </Template>
@@ -755,7 +755,7 @@
                                                    data-testid="scheduler-edit-input-json" />
                                 </label>
 
-                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <label class="flex items-center gap-2 text-sm text-chrome-700">
                                     <InputCheckbox @bind-Value="editScheduleEditor.IsEnabled" />
                                     Enabled after save
                                 </label>

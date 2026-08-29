@@ -12,8 +12,8 @@ internal static class ProjectsPresentation
             ProjectStatus.Active => "border-emerald-200 bg-[linear-gradient(180deg,_rgba(236,253,245,0.96),_rgba(255,255,255,0.98))]",
             ProjectStatus.Completed => "border-sky-200 bg-[linear-gradient(180deg,_rgba(240,249,255,0.96),_rgba(255,255,255,0.98))]",
             ProjectStatus.OnHold => "border-amber-200 bg-[linear-gradient(180deg,_rgba(255,251,235,0.96),_rgba(255,255,255,0.98))]",
-            ProjectStatus.Archived => "border-slate-300 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]",
-            _ => "border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
+            ProjectStatus.Archived => "border-chrome-300 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]",
+            _ => "border-chrome-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
         };
 
         return $"app-board-card {accent}";

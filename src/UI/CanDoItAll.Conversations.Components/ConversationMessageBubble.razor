@@ -52,7 +52,7 @@
                     <span class="chat-message-footer-meta">
                         @if (Message.TokenEstimate > 0)
                         {
-                            <span class="text-xs @(IsUserMessage ? "text-white/70" : "text-slate-400")">~@Message.TokenEstimate tokens</span>
+                            <span class="text-xs @(IsUserMessage ? "text-white/70" : "text-chrome-400")">~@Message.TokenEstimate tokens</span>
                         }
                     </span>
 
@@ -128,6 +128,6 @@
         => CssClassBuilder.Join(
             "chat-message-bubble rounded-[1.4rem] border px-4 py-3.5 shadow-sm",
             IsUserMessage
-                ? "border-slate-900 bg-slate-900 text-white"
-                : "border-slate-200 bg-slate-50 text-slate-700");
+                ? "border-chrome-900 bg-chrome-900 text-white"
+                : "border-chrome-200 bg-chrome-50 text-chrome-700");
 }

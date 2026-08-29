@@ -11,7 +11,7 @@
         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
             <SurfaceCard>
                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Schedule step" />
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">Interview details</h3>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">Interview details</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Interview type">
@@ -78,7 +78,7 @@
 
             <SurfaceCard Soft="true">
                 <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Interview log" />
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">@Interviews.Count interview(s)</h3>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">@Interviews.Count interview(s)</h3>
 
                 @if (Interviews.Count == 0)
                 {
@@ -98,15 +98,15 @@
                                        AlignItems="AlignItems.Start"
                                        JustifyContent="JustifyContent.SpaceBetween">
                                     <div class="min-w-0 space-y-1">
-                                        <p class="text-base font-semibold text-slate-950">@item.InterviewType</p>
-                                        <p class="text-sm text-slate-600">@BuildMeta(item)</p>
+                                        <p class="text-base font-semibold text-chrome-950">@item.InterviewType</p>
+                                        <p class="text-sm text-chrome-600">@BuildMeta(item)</p>
                                         @if (!string.IsNullOrWhiteSpace(item.Recommendation))
                                         {
-                                            <p class="text-sm text-slate-700">Recommendation: @item.Recommendation</p>
+                                            <p class="text-sm text-chrome-700">Recommendation: @item.Recommendation</p>
                                         }
                                         @if (!string.IsNullOrWhiteSpace(item.Feedback))
                                         {
-                                            <p class="text-sm leading-6 text-slate-600">@item.Feedback</p>
+                                            <p class="text-sm leading-6 text-chrome-600">@item.Feedback</p>
                                         }
                                     </div>
                                     <Cluster Gap="LayoutGap.Small">

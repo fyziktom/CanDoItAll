@@ -38,8 +38,8 @@
     @if (ResolvedSelectedParty is not null)
     {
         <PanelCard data-testid="@($"{TestIdPrefix}-summary")">
-            <div class="space-y-1 text-sm text-slate-600">
-                <p class="font-semibold text-slate-900">@ResolvedSelectedParty.DisplayName</p>
+            <div class="space-y-1 text-sm text-chrome-600">
+                <p class="font-semibold text-chrome-900">@ResolvedSelectedParty.DisplayName</p>
                 @if (!string.IsNullOrWhiteSpace(ResolvedSelectedParty.PrimaryEmail))
                 {
                     <p>Email: @ResolvedSelectedParty.PrimaryEmail</p>
@@ -62,7 +62,7 @@
             <Stack GapScale="LayoutGap.Medium">
                 <div>
                     <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Quick create" />
-                    <p class="mt-1 text-sm text-slate-600">Create a directory record without leaving the current flow.</p>
+                    <p class="mt-1 text-sm text-chrome-600">Create a directory record without leaving the current flow.</p>
                 </div>
 
                 <Grid Gap="LayoutGap.Medium"
