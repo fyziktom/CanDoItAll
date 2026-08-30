@@ -37,10 +37,26 @@
 </AppToolbarHelp>
 
 <AppToolbarStats>
+    <CompactStat Label="catalog"
+                 Value="@catalog.Count.ToString()"
+                 TooltipText="Total plugin manifests registered in the catalog."
+                 Tone="neutral" />
+    <CompactStat Label="installed"
+                 Value="@catalog.Count(item => item.IsInstalled).ToString()"
+                 TooltipText="Plugins with an installed runtime package."
+                 Tone="info" />
+    <CompactStat Label="enabled"
+                 Value="@catalog.Count(item => item.IsEnabled).ToString()"
+                 TooltipText="Plugins currently enabled for use."
+                 Tone="success" />
     <CompactStat Label="packages"
                  Value="@packageCatalog.Count.ToString()"
                  TooltipText="Runtime plugin packages available in the package catalog."
                  Tone="info" />
+    <CompactStat Label="unavailable"
+                 Value="@catalog.Count(item => item.Availability == PluginCatalogAvailabilityKind.Unavailable).ToString()"
+                 TooltipText="Plugins whose manifest is currently unavailable."
+                 Tone="warning" />
 </AppToolbarStats>
 
 <PageScaffold MaxWidthClass="max-w-full">
@@ -71,14 +87,6 @@
                 </Split>
             </Alert>
         }
-
-        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mb-4">
-            <StatusBadge Tone="neutral" Text="@($"{catalog.Count} catalog")" />
-            <StatusBadge Tone="info" Text="@($"{catalog.Count(item => item.IsInstalled)} installed")" />
-            <StatusBadge Tone="success" Text="@($"{catalog.Count(item => item.IsEnabled)} enabled")" />
-            <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} packages")" />
-            <StatusBadge Tone="warning" Text="@($"{catalog.Count(item => item.Availability == PluginCatalogAvailabilityKind.Unavailable)} unavailable")" />
-        </Cluster>
 
         @if (catalog.Count == 0)
         {
