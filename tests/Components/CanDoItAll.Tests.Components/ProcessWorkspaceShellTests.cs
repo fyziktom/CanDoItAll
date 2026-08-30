@@ -17,6 +17,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.Tests.Components.AgentFramework;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -35,7 +36,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
 
-        var cut = context.Render<ProcessWorkspaceShell>();
+        var cut = RenderShellWithToolbar(context);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-shell']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
@@ -49,7 +50,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Contains("Manager chat", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Blazor app delivery", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Store pending", cut.Markup, StringComparison.Ordinal);
-        Assert.NotNull(cut.Find("[data-testid='processes-command-strip']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-refresh']"));
         Assert.NotNull(cut.Find("[data-testid='processes-detail-tabs']"));
         Assert.NotNull(cut.Find("[data-testid='processes-definition-tree']"));
     }
@@ -754,7 +755,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Refresh_button_requests_forced_projection_refresh()
     {
         using var context = CreateContext(out var client);
-        var cut = context.Render<ProcessWorkspaceShell>();
+        var cut = RenderShellWithToolbar(context);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-refresh']")));
         cut.Find("[data-testid='processes-refresh']").Click();
@@ -798,7 +799,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Feed_defaults_button_uses_application_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.Render<ProcessWorkspaceShell>();
+        var cut = RenderShellWithToolbar(context);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-feed-defaults']")));
         cut.Find("[data-testid='processes-feed-defaults']").Click();
@@ -845,8 +846,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
         var runId = Guid.Parse("44444444-4444-4444-4444-444444444444");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, runId));
+        var cut = RenderShellWithToolbar(context, runId);
         var navigation = context.Services.GetRequiredService<NavigationManager>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-agent-context']")));
@@ -1909,6 +1909,24 @@ public sealed class ProcessWorkspaceShellTests
         });
     }
 
+    private static IRenderedComponent<AppToolbarActionsTestHost> RenderShellWithToolbar(
+        BunitContext context,
+        Guid? runIdQuery = null)
+    {
+        RenderFragment shellContent = builder =>
+        {
+            builder.OpenComponent<ProcessWorkspaceShell>(0);
+            if (runIdQuery.HasValue)
+            {
+                builder.AddComponentParameter(1, nameof(ProcessWorkspaceShell.RunIdQuery), runIdQuery);
+            }
+
+            builder.CloseComponent();
+        };
+        return context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, shellContent));
+    }
+
     private static BunitContext CreateContext(
         out RecordingProcessWorkspaceProjectionClient client,
         IAgentFrameworkWorkspaceService? agentWorkspaceService = null,
@@ -1926,6 +1944,7 @@ public sealed class ProcessWorkspaceShellTests
         context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         context.Services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
+        context.Services.AddScoped<CanDoItAll.AppComponents.AppToolbarState>();
         var contextRegistry = new AgentChatContextRegistry(effectiveTimeProvider);
         context.Services.AddSingleton<IAgentChatContextRegistry>(contextRegistry);
         context.Services.AddSingleton<IAgentChatExecutionOrchestrator>(

@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
 @using CanDoItAll.AgentFramework.Components
+@using CanDoItAll.AppComponents
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.AgentFramework.Voice
@@ -30,64 +31,60 @@
                                  ContributorPublications="@agentChatContextPublication.ContributorPublications"
                                  ContextNavigationIdentity="@AgentChatNavigationFence" />
 
+<AppToolbarActions>
+    @if (shell is null)
+    {
+        <PageHeaderActionButton Icon="refresh"
+                                Label="Refresh"
+                                TooltipText="Refresh process shell projections."
+                                Disabled="@isBusy"
+                                IsBusy="@isBusy"
+                                Click="RefreshAsync"
+                                data-testid="processes-refresh" />
+        <PageHeaderActionButton Icon="smart_toy"
+                                Label="Agent context"
+                                TooltipText="@AgentContextTooltip"
+                                Disabled="@AgentContextDisabled"
+                                Click="OpenAgentContext"
+                                data-testid="processes-agent-context" />
+    }
+    else
+    {
+        @foreach (var command in shell.Commands)
+        {
+            <PageHeaderActionButton Icon="@command.Icon"
+                                    Label="@command.Text"
+                                    TooltipText="@(command.DisabledReason ?? command.Text)"
+                                    Disabled="@(!command.IsEnabled)"
+                                    Click="@(() => ExecuteCommandAsync(command))"
+                                    data-testid="@BuildCommandTestId(command.Kind)" />
+        }
+    }
+</AppToolbarActions>
+
+<AppToolbarHelp Heading="@ScopeEyebrow">
+    Browse process contracts, filter the library, and keep selection synchronized with the detail workspace.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Tone="info"
+                 Text="@($"{DefinitionTotalText} definition(s)")"
+                 TooltipText="@DefinitionTooltip" />
+    <CompactStat Tone="success"
+                 Text="@($"{LiveRunActiveText} active")"
+                 TooltipText="@LiveRunTooltip" />
+    <CompactStat Tone="warning"
+                 Text="@($"{LiveRunAttentionText} attention")"
+                 TooltipText="Runs projected as needing operator attention." />
+    <CompactStat Tone="@ProjectionTone"
+                 Text="@ProjectionStatusText"
+                 TooltipText="@ProjectionTooltip" />
+</AppToolbarStats>
+
 <PageScaffold FillHeight="true"
               MaxWidthClass="max-w-full"
               Class="processes-page-scaffold"
               data-testid="processes-page-scaffold">
-    <Header>
-        <Toolbar Class="processes-command-strip"
-                 data-testid="processes-command-strip">
-            <ToolbarRow Class="processes-command-strip__row">
-                <CompactStatStrip Class="min-w-0">
-                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="whitespace-nowrap" Value="@ScopeEyebrow" />
-                    <CompactStat Tone="info"
-                                 Text="@($"{DefinitionTotalText} definition(s)")"
-                                 TooltipText="@DefinitionTooltip" />
-                    <CompactStat Tone="success"
-                                 Text="@($"{LiveRunActiveText} active")"
-                                 TooltipText="@LiveRunTooltip" />
-                    <CompactStat Tone="warning"
-                                 Text="@($"{LiveRunAttentionText} attention")"
-                                 TooltipText="Runs projected as needing operator attention." />
-                    <CompactStat Tone="@ProjectionTone"
-                                 Text="@ProjectionStatusText"
-                                 TooltipText="@ProjectionTooltip" />
-                </CompactStatStrip>
-
-                <ToolbarActions Class="processes-command-strip__actions">
-                    @if (shell is null)
-                    {
-                        <PageHeaderActionButton Icon="refresh"
-                                                Label="Refresh"
-                                                TooltipText="Refresh process shell projections."
-                                                Disabled="@isBusy"
-                                                IsBusy="@isBusy"
-                                                Click="RefreshAsync"
-                                                data-testid="processes-refresh" />
-                        <PageHeaderActionButton Icon="smart_toy"
-                                                Label="Agent context"
-                                                TooltipText="@AgentContextTooltip"
-                                                Disabled="@AgentContextDisabled"
-                                                Click="OpenAgentContext"
-                                                data-testid="processes-agent-context" />
-                    }
-                    else
-                    {
-                        @foreach (var command in shell.Commands)
-                        {
-                            <PageHeaderActionButton Icon="@command.Icon"
-                                                    Label="@command.Text"
-                                                    TooltipText="@(command.DisabledReason ?? command.Text)"
-                                                    Disabled="@(!command.IsEnabled)"
-                                                    Click="@(() => ExecuteCommandAsync(command))"
-                                                    data-testid="@BuildCommandTestId(command.Kind)" />
-                        }
-                    }
-                </ToolbarActions>
-            </ToolbarRow>
-        </Toolbar>
-    </Header>
-
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
