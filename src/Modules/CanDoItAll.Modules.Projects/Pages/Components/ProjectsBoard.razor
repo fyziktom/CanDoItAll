@@ -1,77 +1,69 @@
+@using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 
+<AppToolbarActions>
+    <TooltipTarget Text="Create project"
+                   Position="TooltipPosition.Bottom"
+                   TestId="projects-new-tooltip">
+        <Button Class="ui-button--quick"
+                Icon="add"
+                aria-label="Create project"
+                data-testid="projects-new-button"
+                Click="OpenNewProject" />
+    </TooltipTarget>
+    <TooltipTarget Text="Open dashboard"
+                   Position="TooltipPosition.Bottom"
+                   TestId="projects-dashboard-tooltip">
+        <Button Tone="ButtonTone.Default"
+                Class="ui-button--quick"
+                Icon="dashboard"
+                aria-label="Open dashboard"
+                Click="NavigateHome" />
+    </TooltipTarget>
+    <TooltipTarget Text="Import or export projects package"
+                   Position="TooltipPosition.Bottom"
+                   TestId="projects-package-dialog-tooltip">
+        <Button Tone="ButtonTone.Default"
+                Class="ui-button--quick"
+                Icon="inventory_2"
+                aria-label="Import or export projects package"
+                data-testid="projects-package-dialog-button"
+                Click="OpenProjectPackageDialog" />
+    </TooltipTarget>
+</AppToolbarActions>
+
+<AppToolbarHelp Heading="Portfolio board">
+    @HierarchyFilterHelper
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="visible"
+                 Value="@FilteredProjectSummaries.Count.ToString()"
+                 TooltipText="Projects currently visible with the applied filters."
+                 Tone="info" />
+    <CompactStat Label="active"
+                 Value="@ProjectSummaries.Count(project => project.Status == ProjectStatus.Active).ToString()"
+                 TooltipText="Projects with Active status."
+                 Tone="info" />
+    <CompactStat Label="draft"
+                 Value="@ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft).ToString()"
+                 TooltipText="Projects with Draft status."
+                 Tone="neutral" />
+    <CompactStat Label="latest update"
+                 Value="@LatestUpdatedProjectLabel"
+                 TooltipText="@LatestUpdatedProjectHelper"
+                 Tone="warning" />
+</AppToolbarStats>
+
 <section class="projects-board flex min-h-[26rem] w-full flex-col overflow-hidden rounded-[1.85rem] border border-chrome-200 bg-white/92 shadow-sm shadow-chrome-200/60"
          data-testid="projects-board">
     <Stack GapScale="LayoutGap.Small"
            Class="border-b border-chrome-200 px-4 py-4 sm:px-5"
            data-testid="projects-command-bar">
-        <Split Breakpoint="LayoutBreakpoint.Xl"
-               Gap="LayoutGap.Small"
-               AlignItems="AlignItems.Center"
-               JustifyContent="JustifyContent.SpaceBetween"
-               Wrap="FlexWrap.NoWrap"
-               Class="projects-board__summary-row">
-            <Cluster Gap="LayoutGap.Small"
-                     Wrap="FlexWrap.NoWrap"
-                     Class="projects-board__summary-main min-w-0">
-                <h2 class="truncate text-lg font-semibold tracking-tight text-chrome-950">Portfolio board</h2>
-                <Pill Tone="PillTone.Info"
-                      Text="@($"{FilteredProjectSummaries.Count} visible")" />
-                <Pill Tone="PillTone.Info"
-                      Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Active)} active")" />
-                <Pill Tone="PillTone.Neutral"
-                      Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft)} draft")" />
-                <Pill Tone="PillTone.Warn"
-                      Token="UPD"
-                      Text="@LatestUpdatedProjectLabel" />
-                <HelpPopover RootClass="pf-help-popover flex items-center"
-                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                             AriaLabel="Show portfolio board help"
-                             Title="Show portfolio board help"
-                             Heading="Portfolio board"
-                             Body="@HierarchyFilterHelper"
-                             Tip="@LatestUpdatedProjectHelper" />
-            </Cluster>
-
-            <Cluster Gap="LayoutGap.XSmall"
-                     Wrap="FlexWrap.NoWrap"
-                     JustifyContent="JustifyContent.End"
-                     Class="projects-board__summary-actions">
-                <TooltipTarget Text="Create project"
-                               Position="TooltipPosition.Bottom"
-                               TestId="projects-new-tooltip">
-                    <Button Class="ui-button--quick"
-                            Icon="add"
-                            aria-label="Create project"
-                            data-testid="projects-new-button"
-                            Click="OpenNewProject" />
-                </TooltipTarget>
-                <TooltipTarget Text="Open dashboard"
-                               Position="TooltipPosition.Bottom"
-                               TestId="projects-dashboard-tooltip">
-                    <Button Tone="ButtonTone.Default"
-                            Class="ui-button--quick"
-                            Icon="dashboard"
-                            aria-label="Open dashboard"
-                            Click="NavigateHome" />
-                </TooltipTarget>
-                <TooltipTarget Text="Import or export projects package"
-                               Position="TooltipPosition.Bottom"
-                               TestId="projects-package-dialog-tooltip">
-                    <Button Tone="ButtonTone.Default"
-                            Class="ui-button--quick"
-                            Icon="inventory_2"
-                            aria-label="Import or export projects package"
-                            data-testid="projects-package-dialog-button"
-                            Click="OpenProjectPackageDialog" />
-                </TooltipTarget>
-            </Cluster>
-        </Split>
-
         <Toolbar Class="shadow-none p-0 border-0 mt-2">
             <div class="projects-board__filters">
                 <PrefixedField

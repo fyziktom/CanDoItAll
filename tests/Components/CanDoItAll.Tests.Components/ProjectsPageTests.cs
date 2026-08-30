@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AppComponents;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
@@ -10,6 +11,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Components.AgentFramework;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -417,7 +419,7 @@ public sealed class ProjectsPageTests
     public async Task Saves_project_from_wizard_first_flow()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPageWithToolbar(harness);
 
         cut.Find("[data-testid='projects-new-button']").Click();
         cut.WaitForElement("[data-testid='project-name-input']");
@@ -435,7 +437,7 @@ public sealed class ProjectsPageTests
     public async Task Shows_saved_project_as_card_with_dashboard_action()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPageWithToolbar(harness);
 
         cut.Find("[data-testid='projects-new-button']").Click();
         cut.WaitForElement("[data-testid='project-name-input']");
@@ -710,7 +712,7 @@ public sealed class ProjectsPageTests
             services.AddSingleton<IDatabaseProfileService>(
                 new StubDatabaseProfileService([targetProfile]));
         });
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPageWithToolbar(harness);
 
         Assert.Empty(cut.FindAll("[data-testid='projects-package-path-input']"));
         cut.Find("[data-testid='projects-package-dialog-button']").Click();
@@ -759,7 +761,7 @@ public sealed class ProjectsPageTests
             services.RemoveAll<IProjectPackageService>();
             services.AddSingleton<IProjectPackageService>(packageService);
         });
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPageWithToolbar(harness);
 
         cut.Find("[data-testid='projects-package-dialog-button']").Click();
         cut.WaitForAssertion(() =>
@@ -788,6 +790,18 @@ public sealed class ProjectsPageTests
                 @"C:\packages\portfolio.zip",
                 packageService.LastImportRequest.PackagePath);
         });
+    }
+
+    private static IRenderedComponent<AppToolbarActionsTestHost> RenderProjectsPageWithToolbar(
+        ComponentTestHarness harness)
+    {
+        RenderFragment projectsPageContent = builder =>
+        {
+            builder.OpenComponent<ProjectsPage>(0);
+            builder.CloseComponent();
+        };
+        return harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, projectsPageContent));
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
