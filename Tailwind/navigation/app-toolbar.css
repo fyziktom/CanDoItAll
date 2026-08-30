@@ -5,7 +5,7 @@
   .app-toolbar {
     @apply sticky top-0;
     @apply z-[40] flex items-center justify-between gap-3 border-b border-chrome-300 bg-chrome-50 px-4 py-3;
-    @apply 2xl:px-6 2xl:mb-6;
+    @apply 2xl:px-6;
   }
 
   .app-toolbar__crumbs {
