@@ -5,34 +5,32 @@
 
 <PageTitle>Runtime capabilities</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-[1400px]">
-    <Header>
-        <PageHeader Eyebrow="Settings"
-                    Title="Runtime capabilities"
-                    Description="Owner-reported host readiness, support level, and execution boundaries for this application instance."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="Host profile"
-                             Value="@Snapshot.Profile.ToString()"
-                             TooltipText="The explicitly resolved runtime host profile." />
-                <CompactStat Label="Core readiness"
-                             Value="@(Snapshot.IsReady ? "Ready" : "Blocked")"
-                             Tone="@(Snapshot.IsReady ? "success" : "warning")"
-                             TooltipText="Mandatory capabilities must be available before startup can complete." />
-                <CompactStat Label="Capabilities"
-                             Value="@Snapshot.Capabilities.Count.ToString()"
-                             TooltipText="The complete typed capability catalog for this runtime." />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="refresh"
-                                        Label="Refresh capabilities"
-                                        TooltipText="Run the owner readiness probes again."
-                                        Click="Refresh"
-                                        TestId="runtime-capabilities-refresh" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="refresh"
+                            Label="Refresh capabilities"
+                            TooltipText="Run the owner readiness probes again."
+                            Click="Refresh"
+                            TestId="runtime-capabilities-refresh" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Runtime capabilities">
+    Owner-reported host readiness, support level, and execution boundaries for this application instance.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="Host profile"
+                 Value="@Snapshot.Profile.ToString()"
+                 TooltipText="The explicitly resolved runtime host profile." />
+    <CompactStat Label="Core readiness"
+                 Value="@(Snapshot.IsReady ? "Ready" : "Blocked")"
+                 Tone="@(Snapshot.IsReady ? "success" : "warning")"
+                 TooltipText="Mandatory capabilities must be available before startup can complete." />
+    <CompactStat Label="Capabilities"
+                 Value="@Snapshot.Capabilities.Count.ToString()"
+                 TooltipText="The complete typed capability catalog for this runtime." />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-[1400px]">
     <ChildContent>
         <Alert AlertStyle="@(Snapshot.IsReady ? AlertStyle.Success : AlertStyle.Danger)"
                Variant="Variant.Outlined"

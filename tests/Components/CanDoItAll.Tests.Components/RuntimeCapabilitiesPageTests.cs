@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Composition;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,6 +98,7 @@ public sealed class RuntimeCapabilitiesPageTests
     {
         var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddScoped<AppToolbarState>();
         context.Services.AddSingleton<IHostCapabilitySnapshotProvider>(new FixedSnapshotProvider(snapshot));
         return context;
     }
