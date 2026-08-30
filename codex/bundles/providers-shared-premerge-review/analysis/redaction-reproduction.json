@@ -1,0 +1,22 @@
+[
+  {
+    "Input": "password: fixture-secret",
+    "Output": "[redacted]",
+    "Redacted": true
+  },
+  {
+    "Input": "{\"password\":\"fixture-secret\"}",
+    "Output": "{\"password\":\"fixture-secret\"}",
+    "Redacted": false
+  },
+  {
+    "Input": "{\"api_key\":\"fixture-secret\"}",
+    "Output": "{\"api_key\":\"fixture-secret\"}",
+    "Redacted": false
+  },
+  {
+    "Input": "{\"client_secret\":\"fixture-secret\"}",
+    "Output": "{\"client_secret\":\"fixture-secret\"}",
+    "Redacted": false
+  }
+]
