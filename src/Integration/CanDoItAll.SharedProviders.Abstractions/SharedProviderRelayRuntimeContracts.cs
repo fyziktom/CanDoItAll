@@ -336,6 +336,8 @@ public abstract record SharedProviderRelayRequestPolicyResult
 
 public sealed record SharedProviderRelayRequestContext
 {
+    private AccessContextReferenceType? accessContextReferenceType;
+
     public SharedProviderRelayRequestContext(
         string requestId,
         string authenticatedSubject,
@@ -362,6 +364,26 @@ public sealed record SharedProviderRelayRequestContext
     public SharedProviderCallerIdentity CallerIdentity { get; init; } = new(SharedProviderCallerKind.Unknown);
 
     public AccessContextReference? AccessContextReference { get; }
+
+    public AccessContextReferenceType? AccessContextReferenceType
+    {
+        get => accessContextReferenceType;
+        init
+        {
+            if (value.HasValue)
+            {
+                _ = value.Value.Value;
+                if (!AccessContextReference.HasValue)
+                {
+                    throw new ArgumentException(
+                        "An access-context reference type requires an access-context reference.",
+                        nameof(value));
+                }
+            }
+
+            accessContextReferenceType = value;
+        }
+    }
 
     public string TraceId { get; }
 

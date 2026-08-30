@@ -265,6 +265,7 @@ public sealed record SharedProviderInvocationStartRequest(
     DateTimeOffset? RetainUntilUtc) {
     public CanDoItAll.AgentFramework.Models.ProviderExecutionTariff? PricingSnapshot { get; init; }
     public SharedProviderCallerIdentity? CallerIdentity { get; init; }
+    public AccessContextReferenceType? AccessContextReferenceType { get; init; }
 }
 
 public sealed class SharedProviderConcurrencyException(

@@ -440,7 +440,11 @@ internal static class SharedProviderInferenceApi
             subject!,
             accessContextAccessor.Current,
             traceId,
-            requestId) { CallerIdentity = SharedProviderCallerSnapshot.From(httpContext) };
+            requestId)
+        {
+            CallerIdentity = SharedProviderCallerSnapshot.From(httpContext),
+            AccessContextReferenceType = accessContextAccessor.CurrentType
+        };
         return true;
     }
 

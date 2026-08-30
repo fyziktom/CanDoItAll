@@ -25,6 +25,8 @@ internal static class HistoryEntryMapping {
         Subject = entry.Caller.Subject,
         CallerName = entry.Caller.DisplayName,
         CorrelationId = entry.CorrelationId,
+        ExternalReferenceType = entry.ExternalReference?.Type,
+        ExternalReferenceValue = entry.ExternalReference?.Value,
         UsageState = entry.Usage.State,
         InputTokens = entry.Usage.InputTokens,
         OutputTokens = entry.Usage.OutputTokens,
@@ -64,6 +66,9 @@ internal static class HistoryEntryMapping {
         new(row.PriceState, row.Amount, row.Currency, row.PriceHash, row.PriceVersion) { SourceRevision = row.PriceSourceRevision },
         row.MetadataAuthority, row.RetentionAuthority, row.DetailState) {
         CorrelationId = row.CorrelationId,
+        ExternalReference = row.ExternalReferenceValue is { } externalReference
+            ? new(externalReference, row.ExternalReferenceType)
+            : null,
         RemoteRequest = row.RemoteSourceId is { } remote && row.RemoteRequestId is { } remoteRequest
             ? new(remote, remoteRequest) : null,
         ExpiresAtUtc = row.ExpiresAtUtc,

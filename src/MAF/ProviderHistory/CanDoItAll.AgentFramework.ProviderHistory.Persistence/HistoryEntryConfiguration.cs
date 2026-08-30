@@ -22,6 +22,8 @@ internal sealed class HistoryEntryConfiguration : IEntityTypeConfiguration<Histo
         b.Property(x => x.Subject).HasMaxLength(512);
         b.Property(x => x.CallerName).HasMaxLength(200);
         b.Property(x => x.CorrelationId).HasMaxLength(256);
+        b.Property(x => x.ExternalReferenceType).HasMaxLength(HistoryExternalReference.MaximumTypeLength);
+        b.Property(x => x.ExternalReferenceValue).HasMaxLength(HistoryExternalReference.MaximumValueLength);
         b.Property(x => x.Currency).HasMaxLength(3);
         b.Property(x => x.PriceHash).HasMaxLength(128);
         b.Property(x => x.PriceVersion).HasMaxLength(128);
@@ -32,6 +34,9 @@ internal sealed class HistoryEntryConfiguration : IEntityTypeConfiguration<Histo
         b.HasIndex(x => new { x.PartitionId, x.SortAtUtc, x.Id }).IsDescending(false, true, true);
         b.HasIndex(x => new { x.PartitionId, x.ProviderId, x.SortAtUtc, x.Id }).IsDescending(false, false, true, true);
         b.HasIndex(x => new { x.PartitionId, x.CredentialId, x.SortAtUtc, x.Id }).IsDescending(false, false, true, true);
+        b.HasIndex(x => new { x.PartitionId, x.ExternalReferenceValue, x.ExternalReferenceType, x.SortAtUtc, x.Id })
+            .IsDescending(false, false, false, true, true)
+            .HasFilter("\"ExternalReferenceValue\" IS NOT NULL");
         b.HasIndex(x => new { x.PartitionId, x.Outcome, x.ExpiresAtUtc });
         b.HasOne<HistoryPartitionRow>().WithMany().HasForeignKey(x => x.PartitionId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<HistoryHostLeaseRow>().WithMany().HasForeignKey(row => new { row.CaptureHostId, row.PartitionId })

@@ -34,6 +34,15 @@
             <span>@Entry.MetadataAuthority · @Entry.RetentionAuthority<br />Detail: @Entry.DetailState<br />
                 Expires: @(Entry.ExpiresAtUtc is { } expiry ? ProviderHistoryPresentation.Time(expiry) : "Managed by owner / no history expiry")</span>
         </FormField>
+        <FormField Text="External reference">
+            @if (Entry.ExternalReference is { } externalReference) {
+                <span>Type: @(externalReference.Type ?? "Unspecified")<br />Value: @externalReference.Value</span>
+            } else {
+                <span>Unavailable</span>
+            }
+        </FormField>
+    </FormRow>
+    <FormRow>
         <FormField Text="Correlation">
             <span>@(Entry.CorrelationId ?? "Unavailable")</span>
             @if (Entry.RemoteRequest is { } remote) {

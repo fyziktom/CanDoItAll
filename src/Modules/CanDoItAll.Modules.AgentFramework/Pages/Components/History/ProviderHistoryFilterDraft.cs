@@ -25,6 +25,10 @@ public sealed class ProviderHistoryFilterDraft(DateTimeOffset now) : IValidatabl
     public string AttemptId { get; set; } = "";
     [StringLength(256)]
     public string CorrelationId { get; set; } = "";
+    [StringLength(HistoryExternalReference.MaximumTypeLength)]
+    public string ExternalReferenceType { get; set; } = "";
+    [StringLength(HistoryExternalReference.MaximumValueLength)]
+    public string ExternalReferenceValue { get; set; } = "";
     [Range(1, 200)]
     public int PageSize { get; set; } = 50;
 
@@ -46,6 +50,16 @@ public sealed class ProviderHistoryFilterDraft(DateTimeOffset now) : IValidatabl
                 yield return new("Enter a valid nonempty identifier or leave it blank.", [member]);
             }
         }
+        var externalReferenceType = Optional(ExternalReferenceType);
+        var externalReferenceValue = Optional(ExternalReferenceValue);
+        if (externalReferenceType is not null && externalReferenceValue is null) {
+            yield return new("Enter an external reference value when a type is specified.",
+                [nameof(ExternalReferenceType), nameof(ExternalReferenceValue)]);
+        } else if (externalReferenceValue is not null &&
+            !HistoryExternalReference.TryCreate(externalReferenceValue, externalReferenceType, out _)) {
+            yield return new("Enter an exact external reference and an optional canonical lowercase type.",
+                [nameof(ExternalReferenceType), nameof(ExternalReferenceValue)]);
+        }
     }
 
     public ProviderRequestHistoryQuery ToQuery(HistoryProviderScope fixedScope, DateTimeOffset requestedAtUtc) {
@@ -66,8 +80,18 @@ public sealed class ProviderHistoryFilterDraft(DateTimeOffset now) : IValidatabl
             Subject = Optional(Subject), Issuer = Optional(Issuer),
             RequestId = ParseId(RequestId) is { } request ? new ProviderRequestId(request) : null,
             AttemptId = ParseId(AttemptId) is { } attempt ? new ProviderAttemptId(attempt) : null,
-            CorrelationId = Optional(CorrelationId), PageSize = PageSize
+            CorrelationId = Optional(CorrelationId),
+            ExternalReference = CreateExternalReference(),
+            PageSize = PageSize
         };
+    }
+
+    private HistoryExternalReference? CreateExternalReference() {
+        var value = Optional(ExternalReferenceValue);
+        if (value is null) {
+            return null;
+        }
+        return new(value, Optional(ExternalReferenceType));
     }
 
     private static DateTimeOffset AsUtc(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Utc));

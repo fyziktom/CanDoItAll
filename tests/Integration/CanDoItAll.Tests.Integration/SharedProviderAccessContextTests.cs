@@ -69,12 +69,44 @@ public sealed class SharedProviderAccessContextTests : IAsyncLifetime
     }
 
     [Fact]
+    public void TypeParser_AcceptsCanonicalNamespacedTokens()
+    {
+        const string expected = "erp.company-project_2";
+
+        bool parsed = AccessContextReferenceType.TryParse(expected, out var type);
+
+        Assert.True(parsed);
+        Assert.Equal(expected, type.Value);
+        Assert.Equal("project", AccessContextReferenceTypes.Project.Value);
+    }
+
+    [Fact]
+    public void TypeParser_RejectsNonCanonicalAndOversizedValues()
+    {
+        string[] malformed =
+        [
+            string.Empty,
+            "Project",
+            "project/type",
+            "project type",
+            new string('a', AccessContextReferenceType.MaximumLength + 1)
+        ];
+
+        foreach (string value in malformed)
+        {
+            Assert.False(AccessContextReferenceType.TryParse(value, out _));
+        }
+    }
+
+    [Fact]
     public async Task AbsentHeader_LeavesRequestContextEmpty()
     {
         using var response = await SendAsync(ContextRoute);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Null((await ReadContextAsync(response)).Value);
+        var context = await ReadContextAsync(response);
+        Assert.Null(context.Value);
+        Assert.Null(context.Type);
     }
 
     [Fact]
@@ -91,6 +123,38 @@ public sealed class SharedProviderAccessContextTests : IAsyncLifetime
         Assert.Equal(expected, (await ReadContextAsync(response)).Value);
         Assert.Equal(HttpStatusCode.OK, reexecutedResponse.StatusCode);
         Assert.Equal(expected, (await ReadContextAsync(reexecutedResponse)).Value);
+    }
+
+    [Fact]
+    public async Task ValidTypedHeaders_BindExactReferenceAndType()
+    {
+        const string reference = "client-project-42";
+        const string type = "erp.company-project";
+
+        using var response = await SendTypedAsync(ContextRoute, reference, type);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var context = await ReadContextAsync(response);
+        Assert.Equal(reference, context.Value);
+        Assert.Equal(type, context.Type);
+    }
+
+    [Fact]
+    public async Task TypeWithoutReference_ReturnsNativeBadRequestForTypeHeader()
+    {
+        using var response = await SendTypeOnlyAsync(ContextRoute, "project");
+
+        await AssertInvalidAsync(response, SharedProviderHeaders.AccessContextReferenceType);
+    }
+
+    [Fact]
+    public async Task MalformedOrRepeatedTypeHeaders_ReturnNativeBadRequestForTypeHeader()
+    {
+        using var malformed = await SendTypedAsync(ContextRoute, "project-42", "Project");
+        using var repeated = await SendTypedAsync(ContextRoute, "project-42", "project", "project");
+
+        await AssertInvalidAsync(malformed, SharedProviderHeaders.AccessContextReferenceType);
+        await AssertInvalidAsync(repeated, SharedProviderHeaders.AccessContextReferenceType);
     }
 
     [Fact]
@@ -186,13 +250,49 @@ public sealed class SharedProviderAccessContextTests : IAsyncLifetime
         return await Host.Client.SendAsync(request);
     }
 
-    private static async Task AssertInvalidAsync(HttpResponseMessage response)
+    private async Task<HttpResponseMessage> SendTypedAsync(
+        string route,
+        string reference,
+        params string[] typeHeaderValues)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, route);
+        if (!request.Headers.TryAddWithoutValidation(
+                SharedProviderHeaders.AccessContextReference,
+                reference) ||
+            !request.Headers.TryAddWithoutValidation(
+                SharedProviderHeaders.AccessContextReferenceType,
+                typeHeaderValues))
+        {
+            throw new InvalidOperationException("The typed access-context test headers could not be added.");
+        }
+
+        return await Host.Client.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> SendTypeOnlyAsync(
+        string route,
+        params string[] typeHeaderValues)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, route);
+        if (!request.Headers.TryAddWithoutValidation(
+                SharedProviderHeaders.AccessContextReferenceType,
+                typeHeaderValues))
+        {
+            throw new InvalidOperationException("The access-context type test header could not be added.");
+        }
+
+        return await Host.Client.SendAsync(request);
+    }
+
+    private static async Task AssertInvalidAsync(
+        HttpResponseMessage response,
+        string expectedHeader = SharedProviderHeaders.AccessContextReference)
     {
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var failure = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
         var error = Assert.Single(failure!.Errors);
         Assert.Equal(AccessContextReferenceMiddleware.InvalidAccessContextErrorCode, error.Code);
-        Assert.Contains(SharedProviderHeaders.AccessContextReference, error.Message, StringComparison.Ordinal);
+        Assert.Contains(expectedHeader, error.Message, StringComparison.Ordinal);
     }
 
     private static async Task<AccessContextProbeResponse> ReadContextAsync(
@@ -215,13 +315,17 @@ public sealed class SharedProviderAccessContextTests : IAsyncLifetime
                 await Task.Delay(delayMilliseconds, context.RequestAborted);
             }
 
-            return Results.Ok(new AccessContextProbeResponse(accessor.Current?.Value));
+            return Results.Ok(new AccessContextProbeResponse(
+                accessor.Current?.Value,
+                accessor.CurrentType?.Value));
         });
         app.MapGet(ReexecutionRoute, (IAccessContextReferenceAccessor accessor) =>
-            Results.Ok(new AccessContextProbeResponse(accessor.Current?.Value)));
+            Results.Ok(new AccessContextProbeResponse(
+                accessor.Current?.Value,
+                accessor.CurrentType?.Value)));
         app.MapGet(ProtectedRoute, () => Results.NoContent())
             .RequireAuthorization();
     }
 
-    private sealed record AccessContextProbeResponse(string? Value);
+    private sealed record AccessContextProbeResponse(string? Value, string? Type);
 }

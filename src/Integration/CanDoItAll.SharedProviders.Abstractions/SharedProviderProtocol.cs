@@ -8,6 +8,7 @@ public static class SharedProviderProtocol
 public static class SharedProviderHeaders
 {
     public const string AccessContextReference = "CanDoItAll-Access-Context-Ref";
+    public const string AccessContextReferenceType = "CanDoItAll-Access-Context-Type";
     public const string RequestId = "CanDoItAll-Request-Id";
 }
 

@@ -125,7 +125,8 @@ public sealed class SharedProviderRelayApplicationService(
                     target.UpstreamModelId,
                     RetainUntilUtc: null) {
                         PricingSnapshot = pricing,
-                        CallerIdentity = request.Context.CallerIdentity
+                        CallerIdentity = request.Context.CallerIdentity,
+                        AccessContextReferenceType = request.Context.AccessContextReferenceType
                     },
                 cancellationToken);
         }

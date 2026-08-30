@@ -74,6 +74,21 @@ internal sealed class SharedProviderInferenceOpenApiContract
                 Pattern = SharedProviderCatalogOpenApiContract.AccessContextPattern
             }
         });
+        operation.Parameters.Add(new OpenApiParameter
+        {
+            Name = SharedProviderHeaders.AccessContextReferenceType,
+            In = ParameterLocation.Header,
+            Description =
+                "Optional canonical type for the audit correlation reference, for example project or erp.company-project. Requires the reference header and is never sent to the upstream provider.",
+            Required = false,
+            Schema = new OpenApiSchema
+            {
+                Type = JsonSchemaType.String,
+                MinLength = 1,
+                MaxLength = AccessContextReferenceType.MaximumLength,
+                Pattern = SharedProviderCatalogOpenApiContract.AccessContextTypePattern
+            }
+        });
 
         if (operation.Responses is not { } responses)
         {

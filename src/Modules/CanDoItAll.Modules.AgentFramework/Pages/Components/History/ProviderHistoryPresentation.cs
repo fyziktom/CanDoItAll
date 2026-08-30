@@ -55,6 +55,8 @@ public static class ProviderHistoryPresentation {
         Add(parts, "Request", query.RequestId?.Value);
         Add(parts, "Attempt", query.AttemptId?.Value);
         Add(parts, "Correlation", query.CorrelationId);
+        Add(parts, "External reference type", query.ExternalReference?.Type);
+        Add(parts, "External reference", query.ExternalReference?.Value);
         return string.Join(" · ", parts);
     }
 

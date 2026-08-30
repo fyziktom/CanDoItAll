@@ -27,6 +27,8 @@ public sealed class HistoryEntryRow : IHasConcurrencyToken {
     public string? Subject { get; set; }
     public string? CallerName { get; set; }
     public string? CorrelationId { get; set; }
+    public string? ExternalReferenceType { get; set; }
+    public string? ExternalReferenceValue { get; set; }
     public HistoryUsageState UsageState { get; set; }
     public long? InputTokens { get; set; }
     public long? OutputTokens { get; set; }

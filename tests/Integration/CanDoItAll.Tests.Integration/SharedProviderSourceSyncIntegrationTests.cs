@@ -119,6 +119,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         harness.Http.EnqueueCatalog(CreateCatalog());
         var accessContext = new AccessContextReference(AccessContextValue);
         harness.AccessContext.Current = accessContext;
+        harness.AccessContext.CurrentType = AccessContextReferenceTypes.Project;
 
         var result = await harness.Sync.TestAsync(source.Id);
 
@@ -129,6 +130,9 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         Assert.Equal(
             AccessContextValue,
             Assert.Single(request.GetHeaderValues(SharedProviderHeaders.AccessContextReference)));
+        Assert.Equal(
+            AccessContextReferenceTypes.Project.Value,
+            Assert.Single(request.GetHeaderValues(SharedProviderHeaders.AccessContextReferenceType)));
         Assert.DoesNotContain(SourceToken, request.RequestUri.AbsoluteUri, StringComparison.Ordinal);
         Assert.Null(request.Content);
         Assert.DoesNotContain(
@@ -1157,6 +1161,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
     private sealed class ScriptedAccessContextAccessor : IAccessContextReferenceAccessor
     {
         public AccessContextReference? Current { get; set; }
+        public AccessContextReferenceType? CurrentType { get; set; }
     }
 
     private sealed class SourceSyncTestDatabase : IAsyncDisposable

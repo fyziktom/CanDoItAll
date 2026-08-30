@@ -23,6 +23,8 @@ public sealed class SharedProviderInvocationRecord : IHasConcurrencyToken
 
     public AccessContextReference? AccessContextReference { get; set; }
 
+    public AccessContextReferenceType? AccessContextReferenceType { get; set; }
+
     public string TraceId { get; set; } = string.Empty;
 
     public string CorrelationId { get; set; } = string.Empty;

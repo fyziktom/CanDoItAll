@@ -21,6 +21,7 @@ public sealed record HistoryEntry(
     HistoryRetentionAuthority RetentionAuthority,
     HistoryDetailState DetailState) {
     public string? CorrelationId { get; init; }
+    public HistoryExternalReference? ExternalReference { get; init; }
     public RemoteRequestReference? RemoteRequest { get; init; }
     public DateTimeOffset? ExpiresAtUtc { get; init; }
     public long Version { get; init; }

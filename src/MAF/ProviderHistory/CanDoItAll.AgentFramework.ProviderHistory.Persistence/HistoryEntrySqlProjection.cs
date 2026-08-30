@@ -21,6 +21,9 @@ public static class HistoryEntrySqlProjection {
         new HistoryPrice(row.PriceState, row.Amount, row.Currency, row.PriceHash, row.PriceVersion) { SourceRevision = row.PriceSourceRevision },
         row.MetadataAuthority, row.RetentionAuthority, row.DetailState) {
             CorrelationId = row.CorrelationId,
+            ExternalReference = row.ExternalReferenceValue != null
+                ? new HistoryExternalReference(row.ExternalReferenceValue, row.ExternalReferenceType)
+                : null,
             RemoteRequest = row.RemoteSourceId.HasValue && row.RemoteRequestId != null
                 ? new RemoteRequestReference(row.RemoteSourceId.Value, row.RemoteRequestId) : null,
             ExpiresAtUtc = row.ExpiresAtUtc,

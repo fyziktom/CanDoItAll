@@ -51,6 +51,9 @@ public sealed class SharedProviderHistoryProjection(HistoryOutboxWriter outbox) 
                 new(HistoryPriceState.Unpriced, record.Price),
             HistoryMetadataAuthority.CanonicalProjection, HistoryRetentionAuthority.HistoryPolicy, HistoryDetailState.NotCaptured) {
             CorrelationId = record.CorrelationId,
+            ExternalReference = record.AccessContextReference is { } externalReference
+                ? new(externalReference.Value, record.AccessContextReferenceType?.Value)
+                : null,
             ExpiresAtUtc = HistoryStorageTimestamp.Normalize(record.DeleteAfterUtc),
             Version = record.HistoryVersion
         };

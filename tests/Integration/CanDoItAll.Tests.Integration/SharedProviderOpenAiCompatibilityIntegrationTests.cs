@@ -108,12 +108,16 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
     {
         fixture.PersistedDispatcher.Reset();
         const string accessContext = "persisted-relay-context";
+        const string accessContextType = "project";
         using var request = CreatePost(
             SharedProviderRoutes.ChatCompletions,
             ChatJson(fixture.PersistedChatModelId, "\"reasoning_effort\":\"none\""));
         request.Headers.TryAddWithoutValidation(
             SharedProviderHeaders.AccessContextReference,
             accessContext);
+        request.Headers.TryAddWithoutValidation(
+            SharedProviderHeaders.AccessContextReferenceType,
+            accessContextType);
 
         using var chatResponse = await fixture.PersistedHost.Client.SendAsync(request);
         string chatBody = await chatResponse.Content.ReadAsStringAsync();
@@ -124,6 +128,9 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         responsesRequest.Headers.TryAddWithoutValidation(
             SharedProviderHeaders.AccessContextReference,
             accessContext);
+        responsesRequest.Headers.TryAddWithoutValidation(
+            SharedProviderHeaders.AccessContextReferenceType,
+            accessContextType);
         using var responsesResponse = await fixture.PersistedHost.Client.SendAsync(responsesRequest);
         string responsesBody = await responsesResponse.Content.ReadAsStringAsync();
 
@@ -133,6 +140,9 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         imageRequest.Headers.TryAddWithoutValidation(
             SharedProviderHeaders.AccessContextReference,
             accessContext);
+        imageRequest.Headers.TryAddWithoutValidation(
+            SharedProviderHeaders.AccessContextReferenceType,
+            accessContextType);
         using var imageResponse = await fixture.PersistedHost.Client.SendAsync(imageRequest);
         string imageBody = await imageResponse.Content.ReadAsStringAsync();
 
@@ -242,6 +252,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         {
             Assert.Equal("api-authorization-disabled", invocation.AuthenticatedSubject);
             Assert.Equal(accessContext, invocation.AccessContextReference?.Value);
+            Assert.Equal(accessContextType, invocation.AccessContextReferenceType?.Value);
             Assert.Equal(SharedProviderInvocationOutcome.Succeeded, invocation.Outcome);
             Assert.Null(invocation.FailureCategory);
         });
@@ -804,6 +815,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         Assert.Equal("/private-base/v1/chat/completions", request.Uri.AbsolutePath);
         Assert.Equal("Bearer central-secret", request.Authorization);
         Assert.DoesNotContain(SharedProviderHeaders.AccessContextReference, request.Headers.Keys);
+        Assert.DoesNotContain(SharedProviderHeaders.AccessContextReferenceType, request.Headers.Keys);
     }
 
     [Fact]
@@ -812,6 +824,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         fixture.SecureHarness.Reset();
         const string subject = "relay-audit-subject";
         const string accessContext = "opaque-context-reference";
+        const string accessContextType = "erp.company-project";
         using var request = CreatePost(
             SharedProviderRoutes.ChatCompletions,
             ChatJson(SharedProviderRelayTestData.ChatModelId));
@@ -822,6 +835,9 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         request.Headers.TryAddWithoutValidation(
             SharedProviderHeaders.AccessContextReference,
             accessContext);
+        request.Headers.TryAddWithoutValidation(
+            SharedProviderHeaders.AccessContextReferenceType,
+            accessContextType);
         request.Headers.TryAddWithoutValidation("Cookie", "private-cookie=value");
 
         using var response = await fixture.SecureHost.Client.SendAsync(request);
@@ -830,6 +846,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         var captured = Assert.Single(fixture.SecureHarness.Requests);
         Assert.Equal(subject, captured.Context.AuthenticatedSubject);
         Assert.Equal(accessContext, captured.Context.AccessContextReference?.Value);
+        Assert.Equal(accessContextType, captured.Context.AccessContextReferenceType?.Value);
         string normalized = Encoding.UTF8.GetString(Assert.Single(fixture.SecureHarness.Accepted).CanonicalPayloadUtf8.Span);
         Assert.DoesNotContain(subject, normalized, StringComparison.Ordinal);
         Assert.DoesNotContain(accessContext, normalized, StringComparison.Ordinal);

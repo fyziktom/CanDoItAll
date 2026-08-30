@@ -21,7 +21,8 @@ public static class SharedProviderInvocationTransitions
         SharedProviderRoutingModelId publicModelId,
         string upstreamModelId,
         DateTimeOffset startedAtUtc,
-        DateTimeOffset deleteAfterUtc)
+        DateTimeOffset deleteAfterUtc,
+        AccessContextReferenceType? accessContextReferenceType = null)
     {
         SharedProviderStateGuard.PublicationId(publicationId, nameof(publicationId));
         SharedProviderStateGuard.NonEmpty(providerProfileId, nameof(providerProfileId));
@@ -42,6 +43,16 @@ public static class SharedProviderInvocationTransitions
         if (accessContextReference.HasValue)
         {
             _ = accessContextReference.Value.Value;
+        }
+        if (accessContextReferenceType.HasValue)
+        {
+            _ = accessContextReferenceType.Value.Value;
+            if (!accessContextReference.HasValue)
+            {
+                throw new ArgumentException(
+                    "An access-context reference type requires an access-context reference.",
+                    nameof(accessContextReferenceType));
+            }
         }
 
         var expectedModelId = SharedProviderRoutingModelIdCodec.Create(publicationId, upstreamModelId);
@@ -65,6 +76,7 @@ public static class SharedProviderInvocationTransitions
                 MaximumSubjectLength,
                 nameof(authenticatedSubject)),
             AccessContextReference = accessContextReference,
+            AccessContextReferenceType = accessContextReferenceType,
             TraceId = SharedProviderStateGuard.ExactText(
                 traceId,
                 MaximumTraceIdLength,

@@ -76,6 +76,18 @@
                 <TextBox @bind-Value="Draft.AttemptId" @bind-Value:after="OnChangedAsync" aria-label="Attempt ID" />
             </FormField>
         </FormRow>
+        <FormRow Split="true">
+            <FormField Text="External reference type">
+                <TextBox @bind-Value="Draft.ExternalReferenceType" @bind-Value:after="OnChangedAsync"
+                         Placeholder="For example project or erp.company-project"
+                         aria-label="External reference type" data-testid="history-external-reference-type" />
+            </FormField>
+            <FormField Text="External reference value">
+                <TextBox @bind-Value="Draft.ExternalReferenceValue" @bind-Value:after="OnChangedAsync"
+                         Placeholder="Exact third-party identifier"
+                         aria-label="External reference value" data-testid="history-external-reference-value" />
+            </FormField>
+        </FormRow>
         <FormField Text="Correlation ID">
             <TextBox @bind-Value="Draft.CorrelationId" @bind-Value:after="OnChangedAsync" aria-label="Correlation ID" />
         </FormField>

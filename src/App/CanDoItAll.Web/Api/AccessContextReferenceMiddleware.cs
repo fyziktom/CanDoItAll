@@ -10,31 +10,63 @@ internal sealed class AccessContextReferenceMiddleware(RequestDelegate next)
         HttpContext httpContext,
         AccessContextReferenceState state)
     {
-        if (!httpContext.Request.Headers.TryGetValue(
-                SharedProviderHeaders.AccessContextReference,
-                out var values))
+        var hasReference = httpContext.Request.Headers.TryGetValue(
+            SharedProviderHeaders.AccessContextReference,
+            out var referenceValues);
+        var hasType = httpContext.Request.Headers.TryGetValue(
+            SharedProviderHeaders.AccessContextReferenceType,
+            out var typeValues);
+        if (!hasReference && !hasType)
         {
             await next(httpContext);
             return;
         }
 
-        string? rawValue = values.Count == 1
-            ? values[0]
+        string? rawReference = referenceValues.Count == 1
+            ? referenceValues[0]
             : null;
-        if (!AccessContextReference.TryParse(rawValue, out var reference))
+        if (!AccessContextReference.TryParse(rawReference, out var reference))
         {
-            await WriteInvalidAccessContextAsync(httpContext);
+            var message = hasReference
+                ? $"{SharedProviderHeaders.AccessContextReference} must contain exactly one value matching [A-Za-z0-9._~:-] with 1 to {AccessContextReference.MaximumLength} characters."
+                : $"{SharedProviderHeaders.AccessContextReferenceType} requires {SharedProviderHeaders.AccessContextReference}.";
+            await WriteInvalidAccessContextAsync(
+                httpContext,
+                SharedProviderHeaders.AccessContextReference,
+                message);
             return;
         }
 
-        state.Set(reference);
+        AccessContextReferenceType? type = null;
+        if (hasType)
+        {
+            string? rawType = typeValues.Count == 1
+                ? typeValues[0]
+                : null;
+            if (!AccessContextReferenceType.TryParse(rawType, out var parsedType))
+            {
+                await WriteInvalidAccessContextAsync(
+                    httpContext,
+                    SharedProviderHeaders.AccessContextReferenceType,
+                    $"{SharedProviderHeaders.AccessContextReferenceType} must contain exactly one canonical lowercase value matching [a-z0-9._-] with 1 to {AccessContextReferenceType.MaximumLength} characters.");
+                return;
+            }
+
+            type = parsedType;
+        }
+
+        state.Set(reference, type);
         await next(httpContext);
     }
 
-    private static Task WriteInvalidAccessContextAsync(HttpContext httpContext)
+    private static Task WriteInvalidAccessContextAsync(
+        HttpContext httpContext,
+        string parameter,
+        string message)
     {
         return SharedProviderApiResponseWriter.WriteInvalidAccessContextAsync(
             httpContext,
-            $"{SharedProviderHeaders.AccessContextReference} must contain exactly one value matching [A-Za-z0-9._~:-] with 1 to {AccessContextReference.MaximumLength} characters.");
+            parameter,
+            message);
     }
 }

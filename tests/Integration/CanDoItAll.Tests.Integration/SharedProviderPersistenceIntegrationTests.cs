@@ -496,7 +496,10 @@ public sealed class SharedProviderPersistenceIntegrationTests
             SharedProviderRelayOperation.Responses,
             modelId,
             "upstream-model",
-            Now.AddDays(30));
+            Now.AddDays(30))
+        {
+            AccessContextReferenceType = AccessContextReferenceTypes.Project
+        };
         var completion = new SharedProviderInvocationCompletion(
             SharedProviderInvocationOutcome.Succeeded,
             Now.AddSeconds(2),
@@ -571,6 +574,8 @@ public sealed class SharedProviderPersistenceIntegrationTests
                 Assert.Equal(HistoryOutcome.Succeeded, entry.Outcome);
                 Assert.Equal(HistoryMetadataAuthority.CanonicalProjection, entry.MetadataAuthority);
                 Assert.Equal(HistoryRetentionAuthority.HistoryPolicy, entry.RetentionAuthority);
+                Assert.Equal("opaque-context", entry.ExternalReferenceValue);
+                Assert.Equal(AccessContextReferenceTypes.Project.Value, entry.ExternalReferenceType);
             });
             Assert.Equal(10, entries.Single(entry => entry.Operation == HistoryOperation.CompleteChat).InputTokens);
             Assert.Equal(2, entries.Single(entry => entry.Operation == HistoryOperation.GenerateImage).ImageCount);
@@ -583,6 +588,10 @@ public sealed class SharedProviderPersistenceIntegrationTests
             .ToDictionaryAsync(record => record.RequestId, StringComparer.Ordinal);
         var record = records[requestId];
         var imageRecord = records[imageRequestId];
+        Assert.All(records.Values, invocation => {
+            Assert.Equal("opaque-context", invocation.AccessContextReference?.Value);
+            Assert.Equal(AccessContextReferenceTypes.Project, invocation.AccessContextReferenceType);
+        });
         Assert.Equal(10, record.InputTokenCount);
         Assert.Equal(5, record.OutputTokenCount);
         Assert.Null(record.ImageCount);

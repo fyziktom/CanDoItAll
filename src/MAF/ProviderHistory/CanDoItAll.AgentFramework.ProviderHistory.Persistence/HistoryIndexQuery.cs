@@ -56,6 +56,12 @@ public static class HistoryIndexQuery {
         if (query.CorrelationId is { } correlation) {
             rows = rows.Where(row => row.CorrelationId == correlation);
         }
+        if (query.ExternalReference is { } externalReference) {
+            rows = rows.Where(row => row.ExternalReferenceValue == externalReference.Value);
+            if (externalReference.Type is { } externalReferenceType) {
+                rows = rows.Where(row => row.ExternalReferenceType == externalReferenceType);
+            }
+        }
         if (position is { } after) {
             var sortAtUtc = after.SortAtUtc.ToUniversalTime();
             rows = rows.Where(row => row.SortAtUtc < sortAtUtc ||

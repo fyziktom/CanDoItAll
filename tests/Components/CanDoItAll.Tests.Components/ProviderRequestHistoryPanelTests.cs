@@ -16,17 +16,24 @@ public sealed class ProviderRequestHistoryPanelTests {
         Assert.Equal(["Last 24 hours", "Last 7 days", "Custom"], cut.FindAll("[data-testid='history-range'] option").Select(x => x.TextContent));
         cut.Find("[data-testid='history-model']").Change("Vendor/Exact");
         cut.Find("[data-testid='history-more-filters']").Click();
+        cut.Find("[data-testid='history-external-reference-type']").Change("erp.company-project");
+        cut.Find("[data-testid='history-external-reference-value']").Change("company-project-42");
         Assert.Empty(backend.Queries);
         Assert.Equal(0, backend.MetadataReads);
         Assert.Empty(backend.ContentReads);
 
         cut.Find("[data-testid='history-search-form']").Submit();
         cut.WaitForElement("[data-testid='history-results']");
-        Assert.Equal("Vendor/Exact", Assert.Single(backend.Queries).Model!.Value.Value);
+        var query = Assert.Single(backend.Queries);
+        Assert.Equal("Vendor/Exact", query.Model!.Value.Value);
+        Assert.Equal("erp.company-project", query.ExternalReference!.Type);
+        Assert.Equal("company-project-42", query.ExternalReference.Value);
         Assert.Contains("Coverage is incomplete", cut.Markup);
         Assert.Equal(0, backend.MetadataReads);
         cut.Find("[data-testid='history-model']").Change("New model");
         Assert.Contains("Vendor/Exact", cut.Find("[data-testid='history-applied']").TextContent);
+        Assert.Contains("erp.company-project", cut.Find("[data-testid='history-applied']").TextContent);
+        Assert.Contains("company-project-42", cut.Find("[data-testid='history-applied']").TextContent);
         cut.Find("[data-testid='history-draft-warning']");
         Assert.Single(backend.Queries);
     }
@@ -87,7 +94,10 @@ public sealed class ProviderRequestHistoryPanelTests {
     [Fact]
     public void Content_is_separately_requested_and_untrusted_text_is_encoded() {
         var backend = new ProviderHistoryUiFixture();
-        backend.Entry = backend.Entry with { Usage = new(HistoryUsageState.Partial, 10, 5, CachedInputTokens: 0) };
+        backend.Entry = backend.Entry with {
+            Usage = new(HistoryUsageState.Partial, 10, 5, CachedInputTokens: 0),
+            ExternalReference = new("company-project-42", "erp.company-project")
+        };
         using var context = backend.CreateContext();
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized()));
         cut.Find("[data-testid='history-search-form']").Submit();
@@ -100,6 +110,8 @@ public sealed class ProviderRequestHistoryPanelTests {
         Assert.Contains("Cache write: Unavailable", metadata);
         Assert.Contains("Reasoning: Unavailable", metadata);
         Assert.Contains("Images: Unavailable", metadata);
+        Assert.Contains("Type: erp.company-project", metadata);
+        Assert.Contains("Value: company-project-42", metadata);
         cut.Find("[data-testid='history-load-content']").Click();
         cut.WaitForElement("[data-testid='history-content-text']");
         Assert.Single(backend.ContentReads);

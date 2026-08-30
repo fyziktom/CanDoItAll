@@ -8,6 +8,7 @@ namespace CanDoItAll.Web.Api;
 internal sealed class SharedProviderCatalogOpenApiContract
 {
     internal const string AccessContextPattern = "^[A-Za-z0-9._~:-]+$";
+    internal const string AccessContextTypePattern = "^[a-z0-9._-]+$";
     internal const string CatalogEntityTagPattern = "^\"sha256:[0-9a-f]{64}\"$";
     internal const string PrivateNoCachePattern = "^private, no-cache$";
 
@@ -55,6 +56,20 @@ internal sealed class SharedProviderCatalogOpenApiContract
                 MinLength = 1,
                 MaxLength = AccessContextReference.MaximumLength,
                 Pattern = AccessContextPattern
+            }
+        });
+        operation.Parameters.Add(new OpenApiParameter
+        {
+            Name = SharedProviderHeaders.AccessContextReferenceType,
+            In = ParameterLocation.Header,
+            Description = "Optional canonical type for the access-context reference, for example project or erp.company-project. Requires the reference header.",
+            Required = false,
+            Schema = new OpenApiSchema
+            {
+                Type = JsonSchemaType.String,
+                MinLength = 1,
+                MaxLength = AccessContextReferenceType.MaximumLength,
+                Pattern = AccessContextTypePattern
             }
         });
 

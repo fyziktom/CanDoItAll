@@ -55,7 +55,8 @@ public sealed class SharedProviderInvocationAuditService(
             request.PublicModelId,
             request.UpstreamModelId,
             startedAt,
-            retainUntil);
+            retainUntil,
+            request.AccessContextReferenceType);
         record.PricingSnapshot = request.PricingSnapshot;
         record.CallerIdentity = request.CallerIdentity;
         var provider = await dbContext.Set<ProviderProfile>().AsNoTracking()
@@ -142,6 +143,7 @@ public sealed class SharedProviderInvocationAuditService(
             existing.ProviderProfileId != request.ProviderProfileId ||
             !string.Equals(existing.AuthenticatedSubject, request.AuthenticatedSubject, StringComparison.Ordinal) ||
             existing.AccessContextReference != request.AccessContextReference ||
+            existing.AccessContextReferenceType != request.AccessContextReferenceType ||
             !string.Equals(existing.TraceId, request.TraceId, StringComparison.Ordinal) ||
             !string.Equals(existing.CorrelationId, request.CorrelationId, StringComparison.Ordinal) ||
             existing.Operation != request.Operation ||

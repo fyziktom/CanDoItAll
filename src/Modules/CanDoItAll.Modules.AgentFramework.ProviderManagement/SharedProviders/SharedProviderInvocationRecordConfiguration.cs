@@ -15,6 +15,9 @@ internal sealed class SharedProviderInvocationRecordConfiguration
         var accessContextConverter = new ValueConverter<AccessContextReference, string>(
             reference => reference.Value,
             value => new(value));
+        var accessContextTypeConverter = new ValueConverter<AccessContextReferenceType, string>(
+            type => type.Value,
+            value => new(value));
 
         builder.ToTable(
             "Workspace_SharedProviderInvocations",
@@ -48,6 +51,9 @@ internal sealed class SharedProviderInvocationRecordConfiguration
         builder.Property(invocation => invocation.AccessContextReference)
             .HasConversion(accessContextConverter)
             .HasMaxLength(AccessContextReference.MaximumLength);
+        builder.Property(invocation => invocation.AccessContextReferenceType)
+            .HasConversion(accessContextTypeConverter)
+            .HasMaxLength(AccessContextReferenceType.MaximumLength);
         builder.Property(invocation => invocation.TraceId).HasMaxLength(128).IsRequired();
         builder.Property(invocation => invocation.CorrelationId).HasMaxLength(128).IsRequired();
         builder.Property(invocation => invocation.Operation)

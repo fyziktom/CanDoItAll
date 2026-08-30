@@ -19,6 +19,7 @@ public sealed record ProviderRequestHistoryQuery(
     public ProviderRequestId? RequestId { get; init; }
     public ProviderAttemptId? AttemptId { get; init; }
     public string? CorrelationId { get; init; }
+    public HistoryExternalReference? ExternalReference { get; init; }
     public int PageSize { get; init; } = 50;
     public string? Cursor { get; init; }
 }

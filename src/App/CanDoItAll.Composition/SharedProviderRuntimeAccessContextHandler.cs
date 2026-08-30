@@ -13,15 +13,21 @@ internal sealed class SharedProviderRuntimeAccessContextHandler(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        if (!request.Headers.Contains(
-                SharedProviderHeaders.AccessContextReference) &&
+        if (!request.Headers.Contains(SharedProviderHeaders.AccessContextReference) &&
+            !request.Headers.Contains(SharedProviderHeaders.AccessContextReferenceType) &&
             httpContextAccessor.HttpContext?.RequestServices
-                .GetService<IAccessContextReferenceAccessor>()?.Current is
-                { } accessContextReference)
+                .GetService<IAccessContextReferenceAccessor>() is
+                { Current: { } accessContextReference } accessor)
         {
             request.Headers.TryAddWithoutValidation(
                 SharedProviderHeaders.AccessContextReference,
                 accessContextReference.Value);
+            if (accessor.CurrentType is { } type)
+            {
+                request.Headers.TryAddWithoutValidation(
+                    SharedProviderHeaders.AccessContextReferenceType,
+                    type.Value);
+            }
         }
 
         return base.SendAsync(request, cancellationToken);

@@ -122,6 +122,12 @@ public sealed class SharedProviderCatalogClient(
             message.Headers.Add(
                 SharedProviderHeaders.AccessContextReference,
                 accessContextReference.Value);
+            if (accessContextAccessor.CurrentType is { } type)
+            {
+                message.Headers.Add(
+                    SharedProviderHeaders.AccessContextReferenceType,
+                    type.Value);
+            }
         }
 
         return message;

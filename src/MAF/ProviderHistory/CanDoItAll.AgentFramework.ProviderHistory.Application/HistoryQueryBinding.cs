@@ -26,6 +26,8 @@ public static class HistoryQueryBinding {
             query.RequestId,
             query.AttemptId,
             query.CorrelationId,
+            ExternalReferenceType = query.ExternalReference?.Type,
+            ExternalReferenceValue = query.ExternalReference?.Value,
             query.PageSize
         };
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(normalized))));

@@ -112,6 +112,7 @@ internal static class SharedProviderApiResponseWriter
 
     public static Task WriteInvalidAccessContextAsync(
         HttpContext httpContext,
+        string parameter,
         string nativeMessage)
     {
         if (IsSharedProviderPath(httpContext.Request.Path))
@@ -125,7 +126,7 @@ internal static class SharedProviderApiResponseWriter
                 StatusCodes.Status400BadRequest,
                 nativeMessage,
                 SharedProviderOpenAiConstants.InvalidRequestErrorType,
-                SharedProviderHeaders.AccessContextReference,
+                parameter,
                 OpenAiInvalidAccessContextCode)
             : WriteNativeErrorAsync(
                 httpContext,

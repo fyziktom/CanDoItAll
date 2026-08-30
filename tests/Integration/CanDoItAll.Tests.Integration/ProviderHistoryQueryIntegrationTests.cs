@@ -141,6 +141,44 @@ public sealed class ProviderHistoryQueryIntegrationTests(ITestOutputHelper outpu
     }
 
     [Fact]
+    public async Task External_reference_filter_is_exact_and_type_is_optional_for_legacy_callers() {
+        await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
+        var first = fixture.Start();
+        await fixture.Capture.BeginAsync(first, null, default);
+        await fixture.Capture.CompleteAsync(first, fixture.Completion(), null, default);
+        var second = fixture.Start();
+        await fixture.Capture.BeginAsync(second, null, default);
+        await fixture.Capture.CompleteAsync(second, fixture.Completion(), null, default);
+        const string externalReferenceValue = "company-project-42";
+        await using (var db = fixture.Factory.CreateDbContext()) {
+            var rows = await db.Set<HistoryEntryRow>()
+                .Where(row => row.Id == first.EntryId.Value || row.Id == second.EntryId.Value)
+                .ToDictionaryAsync(row => row.Id);
+            rows[first.EntryId.Value].ExternalReferenceValue = externalReferenceValue;
+            rows[first.EntryId.Value].ExternalReferenceType = "project";
+            rows[second.EntryId.Value].ExternalReferenceValue = externalReferenceValue;
+            rows[second.EntryId.Value].ExternalReferenceType = "erp.company-project";
+            await db.SaveChangesAsync();
+        }
+        var store = Store(fixture);
+        var query = Query(fixture);
+
+        var typed = await store.SearchAsync(fixture.Access.Context, query with {
+            ExternalReference = new(externalReferenceValue, "project")
+        }, null, default);
+        var valueOnly = await store.SearchAsync(fixture.Access.Context, query with {
+            ExternalReference = new(externalReferenceValue)
+        }, null, default);
+        var mismatchedCase = await store.SearchAsync(fixture.Access.Context, query with {
+            ExternalReference = new("COMPANY-project-42")
+        }, null, default);
+
+        Assert.Equal(first.EntryId, Assert.Single(typed.Entries).Id);
+        Assert.Equal(2, valueOnly.Entries.Count);
+        Assert.Empty(mismatchedCase.Entries);
+    }
+
+    [Fact]
     public async Task Old_canonical_rows_remain_searchable_and_legacy_facts_remain_unknown() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         var old = fixture.Clock.Now.AddDays(-100);
