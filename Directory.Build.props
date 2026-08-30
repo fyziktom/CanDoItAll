@@ -6,7 +6,7 @@
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <IsPackable>false</IsPackable>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <CanDoItAllComponentsPackageVersion>0.1.18</CanDoItAllComponentsPackageVersion>
+    <CanDoItAllComponentsPackageVersion>0.1.19-local.4</CanDoItAllComponentsPackageVersion>
     <CanDoItAllFileToolsPackageVersion>0.1.18</CanDoItAllFileToolsPackageVersion>
     <MicrosoftAspNetCoreComponentsVersion>10.0.10</MicrosoftAspNetCoreComponentsVersion>
     <MicrosoftExtensionsPackageVersion>10.0.10</MicrosoftExtensionsPackageVersion>

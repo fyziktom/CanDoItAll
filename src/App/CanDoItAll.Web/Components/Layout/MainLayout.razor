@@ -23,6 +23,8 @@
 @inject ProjectsService ProjectsService
 @inject IConversationShellLauncher ConversationShellLauncher
 @inject IJSRuntime JS
+@inject AppThemeState ThemeState
+@inject AppToolbarState ToolbarState
 
 <AppShell NavigationItems="@NavigationItems"
           Mode="ShellMode"
@@ -236,16 +238,45 @@
     </TopBar>
     <Body>
         <Notification Position="NotificationPosition.BottomCenter" />
-        @if (databaseDialogStartupMode && databaseDialogOpen)
+        <AppToolbar PageText="@ActiveNavigation.Title" />
+        @if (ToolbarState.StatsContent is not null && ToolbarState.StatsVisible)
         {
-            <EmptyState Eyebrow="Database startup"
-                        Title="Continue with the active database to load the workspace"
-                        Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
+            <div class="app-stats-row">
+                <CompactStatStrip>@ToolbarState.StatsContent</CompactStatStrip>
+                <button type="button"
+                        class="app-stats-row__close"
+                        aria-label="Hide stats"
+                        title="Hide stats"
+                        @onclick:stopPropagation="true"
+                        @onclick="@(() => ToolbarState.SetStatsVisibleAsync(false))">
+                    <Icon Name="close" />
+                </button>
+            </div>
         }
-        else
-        {
-            @Body
-        }
+        <div class="@(ShellMode == AppShellMode.StandardPage ? "app-page-content" : null)">
+            @if (ToolbarState.HelpContent is not null)
+            {
+                <HelpCard Visible="@ToolbarState.HelpVisible"
+                          VisibleChanged="@(value => ToolbarState.SetHelpVisibleAsync(value))"
+                          Heading="@ToolbarState.HelpHeading"
+                          Icon="help"
+                          Class="help-card">
+                    @ToolbarState.HelpContent
+                </HelpCard>
+            }
+            @if (databaseDialogStartupMode && databaseDialogOpen)
+            {
+                <EmptyState Eyebrow="Database startup"
+                            Title="Continue with the active database to load the workspace"
+                            Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
+            }
+            else
+            {
+                <div class="app-page-body">
+                    @Body
+                </div>
+            }
+        </div>
     </Body>
 </AppShell>
 

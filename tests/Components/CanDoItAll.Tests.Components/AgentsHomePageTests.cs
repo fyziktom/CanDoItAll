@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -87,7 +88,13 @@ public sealed class AgentsHomePageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents");
-        var cut = harness.Context.Render<AgentsHomePage>();
+        RenderFragment agentsHomePageContent = builder =>
+        {
+            builder.OpenComponent<AgentsHomePage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, agentsHomePageContent));
         var openButton = cut.WaitForElement(
             "[data-testid='agents-hr-agent-open-header']",
             TimeSpan.FromSeconds(10));

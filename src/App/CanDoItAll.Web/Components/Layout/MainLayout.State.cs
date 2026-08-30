@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Http;
 using Microsoft.JSInterop;
 
 namespace CanDoItAll.Web.Components.Layout;
@@ -36,6 +37,53 @@ public partial class MainLayout
 
     [Inject]
     private IEnumerable<IShellNavigationContributor> ShellNavigationContributors { get; set; } = [];
+
+    /// <summary>
+    /// Available only during the static prerender pass — used to read the AppToolbar help/stats
+    /// visibility cookies synchronously in <c>OnInitialized</c>. The prerender pass and the interactive
+    /// circuit that follows run in separate DI scopes (a fresh <see cref="AppToolbarState"/> instance
+    /// each), so the resolved value must be handed off via <see cref="ApplicationState"/>
+    /// (<see cref="PersistentComponentState"/>) rather than assumed to carry over — see
+    /// <see cref="InitializeToolbarVisibility"/>.
+    /// </summary>
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    [Inject]
+    private PersistentComponentState ApplicationState { get; set; } = default!;
+
+    private PersistingComponentStateSubscription toolbarVisibilityPersistingSubscription;
+
+    private const string ToolbarVisibilityPersistenceKey = "app-toolbar-visibility";
+
+    private void InitializeToolbarVisibility()
+    {
+        if (ApplicationState.TryTakeFromJson<ToolbarVisibilitySnapshot>(ToolbarVisibilityPersistenceKey, out var persisted))
+        {
+            // Interactive circuit resuming after prerender: HttpContext is null here (a fresh DI scope,
+            // no HTTP request), so use the value the prerender pass already resolved and persisted.
+            ToolbarState.InitializeFromCookies(
+                persisted!.HelpVisible ? "true" : "false",
+                persisted.StatsVisible ? "true" : "false");
+        }
+        else
+        {
+            // Static prerender pass (or a non-prerendered request): read the cookies directly.
+            ToolbarState.InitializeFromCookies(
+                HttpContext?.Request.Cookies[AppToolbarState.HelpVisibleCookieName],
+                HttpContext?.Request.Cookies[AppToolbarState.StatsVisibleCookieName]);
+        }
+
+        toolbarVisibilityPersistingSubscription = ApplicationState.RegisterOnPersisting(() =>
+        {
+            ApplicationState.PersistAsJson(
+                ToolbarVisibilityPersistenceKey,
+                new ToolbarVisibilitySnapshot(ToolbarState.HelpVisible, ToolbarState.StatsVisible));
+            return Task.CompletedTask;
+        });
+    }
+
+    private sealed record ToolbarVisibilitySnapshot(bool HelpVisible, bool StatsVisible);
 
     private static readonly TimeSpan ShellMenuTooltipDelay = TimeSpan.FromSeconds(2);
 
@@ -99,6 +147,9 @@ public partial class MainLayout
         Workbench.Changed += HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed += HandleDatabaseSwitchChanged;
         CollaborationService.Changed += HandleCollaborationChanged;
+        ThemeState.Changed += HandleThemeStateChanged;
+        ToolbarState.Changed += HandleThemeStateChanged;
+        InitializeToolbarVisibility();
         activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
         _ = LoadCollaborationShellStateAsync();
     }
@@ -139,7 +190,13 @@ public partial class MainLayout
         Workbench.Changed -= HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed -= HandleDatabaseSwitchChanged;
         CollaborationService.Changed -= HandleCollaborationChanged;
+        ThemeState.Changed -= HandleThemeStateChanged;
+        ToolbarState.Changed -= HandleThemeStateChanged;
+        toolbarVisibilityPersistingSubscription.Dispose();
         databaseSwitchListenerReference?.Dispose();
     }
+
+    private void HandleThemeStateChanged()
+        => InvokeAsync(StateHasChanged);
 
 }

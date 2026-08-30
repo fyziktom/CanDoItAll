@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Web.Infrastructure;
@@ -54,6 +55,9 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             configuration,
             testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Components"));
         context.Services.AddScoped<TuningCoordinator>();
+        context.Services.AddScoped<AppThemeState>();
+        context.Services.AddScoped<AppToolbarState>();
+        context.AddBunitPersistentComponentState();
         context.Services.AddHttpClient<DevelopmentManagerClient>();
         configureServices?.Invoke(context.Services);
 

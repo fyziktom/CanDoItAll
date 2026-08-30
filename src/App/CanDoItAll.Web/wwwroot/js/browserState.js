@@ -17,6 +17,10 @@ window.CanDoItAll.browserState = {
     remove: function (key) {
         window.localStorage.removeItem(key);
     },
+    saveCookie: function (key, value) {
+        const maxAgeSeconds = 60 * 60 * 24 * 365;
+        document.cookie = key + "=" + encodeURIComponent(value) + "; path=/; max-age=" + maxAgeSeconds + "; samesite=lax";
+    },
     publishDatabaseSwitch: function (payload) {
         window.localStorage.setItem(databaseSwitchStorageKey, payload);
         if (typeof window.BroadcastChannel === "function") {

@@ -1,48 +1,47 @@
 @page "/crm-hr"
 @inject ICrmHrHomeQueryService HomeQueryService
 @inject NavigationManager Navigation
+@inject AppToolbarState ToolbarState
 
 <PageTitle>CRM / HR</PageTitle>
 
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Unified relationship and workforce workspace"
-                    Description="Track people, organizations, delivery units, recruiting, and AI agents in one module shell without leaving the core application."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="parties"
-                             Value="@homeSnapshot.PartyCount.ToString()"
-                             TooltipText="Unified directory records across CRM and HR." />
-                <CompactStat Label="organizations"
-                             Value="@homeSnapshot.OrganizationCount.ToString()"
-                             TooltipText="Accounts, legal entities, and delivery units."
-                             Tone="info" />
-                <CompactStat Label="pipeline"
-                             Value="@homeSnapshot.OpportunityCount.ToString()"
-                             TooltipText="Tracked opportunities in the shared CRM workspace." />
-                <CompactStat Label="workforce"
-                             Value="@homeSnapshot.WorkforceProfileCount.ToString()"
-                             TooltipText="People and delivery supply profiles."
-                             Tone="success" />
-                <CompactStat Label="agents"
-                             Value="@homeSnapshot.AgentProjectionCount.ToString()"
-                             TooltipText="Bound AgentFramework projections available to CRM-HR."
-                             Tone="warning" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="asset"
-                                        Label="Open directory"
-                                        TooltipText="Open the CRM-HR party directory."
-                                        Tone="ButtonTone.Primary"
-                                        Click="OpenDirectory"
-                                        data-testid="crmhr-home-open-directory" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="asset"
+                            Label="Open directory"
+                            TooltipText="Open the CRM-HR party directory."
+                            Tone="ButtonTone.Primary"
+                            Click="OpenDirectory"
+                            data-testid="crmhr-home-open-directory" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Unified relationship and workforce workspace">
+    Track people, organizations, delivery units, recruiting, and AI agents in one module shell without leaving the core application.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="parties"
+                 Value="@homeSnapshot.PartyCount.ToString()"
+                 TooltipText="Unified directory records across CRM and HR." />
+    <CompactStat Label="organizations"
+                 Value="@homeSnapshot.OrganizationCount.ToString()"
+                 TooltipText="Accounts, legal entities, and delivery units."
+                 Tone="info" />
+    <CompactStat Label="pipeline"
+                 Value="@homeSnapshot.OpportunityCount.ToString()"
+                 TooltipText="Tracked opportunities in the shared CRM workspace." />
+    <CompactStat Label="workforce"
+                 Value="@homeSnapshot.WorkforceProfileCount.ToString()"
+                 TooltipText="People and delivery supply profiles."
+                 Tone="success" />
+    <CompactStat Label="agents"
+                 Value="@homeSnapshot.AgentProjectionCount.ToString()"
+                 TooltipText="Bound AgentFramework projections available to CRM-HR."
+                 Tone="warning" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Home" />
@@ -251,6 +250,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ToolbarState.SetTabText("Home");
         homeSnapshot = await HomeQueryService.GetAsync();
     }
 

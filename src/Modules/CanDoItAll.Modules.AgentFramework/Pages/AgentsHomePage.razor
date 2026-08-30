@@ -2,74 +2,65 @@
 
 <PageTitle>Agents</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="AgentFramework"
-                    Title="Integrated technical agent runtime"
-                    Description="@AgentFrameworkShellHelpText"
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="technical agents"
-                             Value="@ResolveSummaryValue(technicalAgentCount)"
-                             TooltipText="Organization-scoped technical runtime records."
-                             Tone="info" />
-                <CompactStat Label="providers"
-                             Value="@ResolveSummaryValue(providerCount)"
-                             TooltipText="Workspace-owned providers executed through AgentFramework."
-                             Tone="success" />
-                <CompactStat Label="bound resources"
-                             Value="@ResolveSummaryValue(boundResourceCount)"
-                             TooltipText="CRM-HR AI resources already bound to a technical agent."
-                             Tone="warning" />
-                <CompactStat Label="capabilities"
-                             Value="@ResolveSummaryValue(capabilityCount)"
-                             TooltipText="Reusable skills, MCP servers, and other runtime capabilities."
-                             Tone="accent" />
-                <CompactStat Label="active runs"
-                             Value="@ResolveSummaryValue(activeRunCount)"
-                             TooltipText="Durable technical executions still in progress."
-                             Tone="info" />
-                <CompactStat Label="failed runs"
-                             Value="@ResolveSummaryValue(failedRunCount)"
-                             TooltipText="Recent execution failures that still need governance attention."
-                             Tone="danger" />
-            </Stats>
-            <Actions>
-                <AgentAvatarActionButton AgentName="@HrAgentDisplayName"
-                                         AvatarImageUrl="@HrAgentAvatarImageUrl"
-                                         FallbackText="HR"
-                                         Label="@($"Open {HrAgentDisplayName}")"
-                                         Click="OpenHrAgentAsync"
-                                         Disabled="@(hrAgent is null || isOpeningHrAgent || AgentChatAccessState != AgentChatContextAccessState.Ready)"
-                                         TestId="agents-hr-agent-open-header"
-                                         TooltipTestId="agents-hr-agent-tooltip" />
-                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
-                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                             OpenOnHover="true"
-                             AriaLabel="Show AgentFramework shell help"
-                             Title="Show AgentFramework shell help"
-                             Heading="AgentFramework shell"
-                             Body="@AgentFrameworkShellHelpText" />
-                <PageHeaderActionButton Icon="groups"
-                                        Label="Open CRM / HR agents"
-                                        TooltipText="Open CRM-HR agent projections."
-                                        Tone="ButtonTone.Primary"
-                                        Click="OpenCrmHrAgents"
-                                        data-testid="agents-shell-open-crmhr" />
-                <PageHeaderActionButton Icon="flow"
-                                        Label="Open workflows"
-                                        TooltipText="Open AgentFramework workflows."
-                                        Click="OpenWorkflows"
-                                        data-testid="agents-shell-open-workflows" />
-                <PageHeaderActionButton Icon="flow"
-                                        Label="Open processes"
-                                        TooltipText="Open the processes workspace."
-                                        Click="OpenProcesses"
-                                        data-testid="agents-shell-open-processes" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <AgentAvatarActionButton AgentName="@HrAgentDisplayName"
+                             AvatarImageUrl="@HrAgentAvatarImageUrl"
+                             FallbackText="HR"
+                             Label="@($"Open {HrAgentDisplayName}")"
+                             Click="OpenHrAgentAsync"
+                             Disabled="@(hrAgent is null || isOpeningHrAgent || AgentChatAccessState != AgentChatContextAccessState.Ready)"
+                             TestId="agents-hr-agent-open-header"
+                             TooltipTestId="agents-hr-agent-tooltip" />
+    <PageHeaderActionButton Icon="groups"
+                            Label="Open CRM / HR agents"
+                            TooltipText="Open CRM-HR agent projections."
+                            Tone="ButtonTone.Primary"
+                            Click="OpenCrmHrAgents"
+                            data-testid="agents-shell-open-crmhr" />
+    <PageHeaderActionButton Icon="flow"
+                            Label="Open workflows"
+                            TooltipText="Open AgentFramework workflows."
+                            Click="OpenWorkflows"
+                            data-testid="agents-shell-open-workflows" />
+    <PageHeaderActionButton Icon="flow"
+                            Label="Open processes"
+                            TooltipText="Open the processes workspace."
+                            Click="OpenProcesses"
+                            data-testid="agents-shell-open-processes" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="AgentFramework shell">
+    @AgentFrameworkShellHelpText
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="technical agents"
+                 Value="@ResolveSummaryValue(technicalAgentCount)"
+                 TooltipText="Organization-scoped technical runtime records."
+                 Tone="info" />
+    <CompactStat Label="providers"
+                 Value="@ResolveSummaryValue(providerCount)"
+                 TooltipText="Workspace-owned providers executed through AgentFramework."
+                 Tone="success" />
+    <CompactStat Label="bound resources"
+                 Value="@ResolveSummaryValue(boundResourceCount)"
+                 TooltipText="CRM-HR AI resources already bound to a technical agent."
+                 Tone="warning" />
+    <CompactStat Label="capabilities"
+                 Value="@ResolveSummaryValue(capabilityCount)"
+                 TooltipText="Reusable skills, MCP servers, and other runtime capabilities."
+                 Tone="accent" />
+    <CompactStat Label="active runs"
+                 Value="@ResolveSummaryValue(activeRunCount)"
+                 TooltipText="Durable technical executions still in progress."
+                 Tone="info" />
+    <CompactStat Label="failed runs"
+                 Value="@ResolveSummaryValue(failedRunCount)"
+                 TooltipText="Recent execution failures that still need governance attention."
+                 Tone="danger" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <Lead>
         <Cluster AlignItems="AlignItems.Center"
                  JustifyContent="JustifyContent.SpaceBetween"

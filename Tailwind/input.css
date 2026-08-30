@@ -5,7 +5,9 @@
 
 @source "../src";
 @source not "../src/App/CanDoItAll.Web/wwwroot/css/output.css";
+
 @import "./surfaces/admin.css";
 @import "./surfaces/overlays.css";
 @import "./navigation/workbench-shell.css";
+@import "./navigation/app-toolbar.css";
 @import "./main/tunable-boundary.css";

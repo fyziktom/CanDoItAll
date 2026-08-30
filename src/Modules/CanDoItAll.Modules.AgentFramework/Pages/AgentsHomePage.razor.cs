@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AppComponents;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Usage;
@@ -37,6 +38,9 @@ public partial class AgentsHomePage
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public AppToolbarState ToolbarState { get; set; } = default!;
 
     [Inject]
     public DialogService DialogService { get; set; } = default!;
@@ -172,6 +176,10 @@ public partial class AgentsHomePage
         new(AgentWorkspaceTabs.Governance, "Governance", ResolveSummaryValue(activeRunCount)),
         new(AgentWorkspaceTabs.Diagnostics, "Diagnostics", ResolveSummaryValue(failedRunCount))
     ];
+
+    private string SelectedTabText
+        => Tabs.FirstOrDefault(tab => string.Equals(tab.Key, selectedTab, StringComparison.Ordinal))?.Label
+            ?? string.Empty;
 
     private IReadOnlyList<SecondaryTabItem> UsageScopeTabs =>
     [
@@ -329,6 +337,7 @@ public partial class AgentsHomePage
     protected override void OnParametersSet()
     {
         ApplyRequestedTab();
+        ToolbarState.SetTabText(SelectedTabText);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

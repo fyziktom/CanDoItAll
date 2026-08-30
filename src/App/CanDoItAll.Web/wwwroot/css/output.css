@@ -1624,12 +1624,23 @@
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-chrome-50) 92%, transparent);
     }
-    padding: calc(var(--spacing) * 4);
+  }
+  .app-page-content {
+    padding-inline: calc(var(--spacing) * 4);
     @media (width >= 80rem) {
-      padding: calc(var(--spacing) * 5);
+      padding-inline: calc(var(--spacing) * 5);
     }
     @media (width >= 96rem) {
-      padding: calc(var(--spacing) * 6);
+      padding-inline: calc(var(--spacing) * 6);
+    }
+  }
+  .app-page-body {
+    margin-block: calc(var(--spacing) * 4);
+    @media (width >= 80rem) {
+      margin-block: calc(var(--spacing) * 5);
+    }
+    @media (width >= 96rem) {
+      margin-block: calc(var(--spacing) * 6);
     }
   }
   .app-shell-body-surface--standard {
@@ -1749,6 +1760,84 @@
     line-height: var(--tw-leading, var(--text-xs--line-height));
     color: var(--color-chrome-700);
   }
+  .app-toolbar {
+    position: sticky;
+    top: 0px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 1px;
+    border-color: var(--color-chrome-300);
+    background-color: var(--color-chrome-50);
+    padding-inline: calc(var(--spacing) * 4);
+    padding-block: calc(var(--spacing) * 3);
+    @media (width >= 96rem) {
+      margin-bottom: calc(var(--spacing) * 6);
+    }
+    @media (width >= 96rem) {
+      padding-inline: calc(var(--spacing) * 6);
+    }
+  }
+  .app-toolbar__crumbs {
+    display: flex;
+    min-width: 0px;
+    align-items: center;
+    gap: var(--spacing);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    color: var(--color-chrome-900);
+  }
+  .app-toolbar__crumb--tab {
+    color: var(--color-chrome-600);
+  }
+  .app-toolbar__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+  }
+  .app-stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 1px;
+    border-color: var(--color-chrome-300);
+    padding-inline: calc(var(--spacing) * 4);
+    padding-block: calc(var(--spacing) * 3);
+  }
+  .app-stats-row__close {
+    display: inline-flex;
+    height: calc(var(--spacing) * 7);
+    width: calc(var(--spacing) * 7);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(infinity * 1px);
+    border-style: var(--tw-border-style);
+    border-width: 0px;
+  }
+}
+.app-stats-row__close:hover {
+  background: var(--color-chrome-200);
+}
+.help-card {
+  margin-block: calc(var(--spacing) * 4);
+  @media (width >= 80rem) {
+    margin-block: calc(var(--spacing) * 5);
+  }
+  @media (width >= 96rem) {
+    margin-block: calc(var(--spacing) * 6);
+  }
+}
+@layer components {
   .app-tunable-boundary {
     position: relative;
     min-width: 0px;

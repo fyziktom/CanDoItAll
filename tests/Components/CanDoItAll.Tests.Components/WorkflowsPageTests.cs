@@ -19,6 +19,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -1887,7 +1888,14 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents");
-        var cut = harness.Context.Render<AgentsHomePage>();
+        RenderFragment agentsHomePageContent = builder =>
+        {
+            builder.OpenComponent<AgentsHomePage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, agentsHomePageContent));
+        var agentsHomePage = cut.FindComponent<AgentsHomePage>();
 
         cut.WaitForElement("[data-testid='agents-shell-open-workflows']");
         cut.WaitForAssertion(() =>
@@ -1899,7 +1907,7 @@ public sealed class WorkflowsPageTests
             "OpenWorkflows",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         Assert.NotNull(openWorkflows);
-        await cut.InvokeAsync(() => openWorkflows.Invoke(cut.Instance, null));
+        await cut.InvokeAsync(() => openWorkflows.Invoke(agentsHomePage.Instance, null));
 
         Assert.EndsWith("/agents/workflows", navigation.Uri, StringComparison.Ordinal);
     }

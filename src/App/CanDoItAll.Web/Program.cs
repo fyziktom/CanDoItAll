@@ -70,6 +70,8 @@ builder.Services.AddCanDoItAllMermaid();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
 builder.Services.AddScoped<TuningCoordinator>();
+builder.Services.AddScoped<AppThemeState>();
+builder.Services.AddScoped<AppToolbarState>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;

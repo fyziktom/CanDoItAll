@@ -1,8 +1,10 @@
 @page "/crm-hr/workforce"
 @implements IDisposable
+@using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using Microsoft.Extensions.Logging
+@inject AppToolbarState ToolbarState
 @inject HrService HrService
 @inject PartyDirectoryService PartyDirectoryService
 @inject IPartyOrganizationAffiliationService AffiliationService
@@ -16,21 +18,19 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="asset"
+                            Label="Open directory"
+                            TooltipText="Open the shared party directory."
+                            Click="OpenDirectory" />
+</AppToolbarActions>
+
+<AppToolbarHelp Heading="Workforce workspace">
+    Keep worker identity, delivery-unit structure, manager lines, and commercial staffing metadata on the shared party model instead of splitting people ops and delivery records.
+</AppToolbarHelp>
+
 <PageScaffold MaxWidthClass="max-w-full"
               FillHeight="true">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Workforce workspace"
-                    Description="Keep worker identity, delivery-unit structure, manager lines, and commercial staffing metadata on the shared party model instead of splitting people ops and delivery records."
-                    Compact="true">
-            <Actions>
-                <PageHeaderActionButton Icon="asset"
-                                        Label="Open directory"
-                                        TooltipText="Open the shared party directory."
-                                        Click="OpenDirectory" />
-            </Actions>
-        </PageHeader>
-    </Header>
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium"
@@ -654,6 +654,8 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        ToolbarState.SetTabText("Workforce");
+
         var requestedPartyId = PartyIdQuery;
         if (requestedPartyId != selectedWorkspace?.PartyId)
         {

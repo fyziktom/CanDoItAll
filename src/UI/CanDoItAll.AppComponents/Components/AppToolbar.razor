@@ -1,0 +1,72 @@
+@namespace CanDoItAll.AppComponents
+@implements IDisposable
+@inject AppToolbarState ToolbarState
+@inject AppThemeState ThemeState
+
+<div class="@CssClassBuilder.Join("app-toolbar", Class)" role="banner">
+    <nav class="app-toolbar__crumbs" aria-label="Breadcrumb">
+        <span class="app-toolbar__crumb">@PageText</span>
+        @if (!string.IsNullOrWhiteSpace(ToolbarState.TabText))
+        {
+            <span aria-hidden="true">&gt;</span>
+            <span class="app-toolbar__crumb app-toolbar__crumb--tab">@ToolbarState.TabText</span>
+        }
+    </nav>
+
+    <div class="app-toolbar__actions">
+        @ToolbarState.ActionsContent
+
+        @if (ToolbarState.StatsContent is not null)
+        {
+            <PageHeaderActionButton Icon="bar_chart"
+                    Variant="Variant.Outlined"
+                    Size="ButtonSize.Small"
+                    aria-pressed="@(ToolbarState.StatsVisible ? "true" : "false")"
+                    Click="@(() => ToolbarState.SetStatsVisibleAsync(!ToolbarState.StatsVisible))" />
+        }
+
+        @if (ToolbarState.HelpContent is not null)
+        {
+            <PageHeaderActionButton Icon="help"
+                    Variant="Variant.Outlined"
+                    Size="ButtonSize.Small"
+                    aria-pressed="@(ToolbarState.HelpVisible ? "true" : "false")"
+                    Click="@(() => ToolbarState.SetHelpVisibleAsync(!ToolbarState.HelpVisible))" />
+        }
+
+        <PageHeaderActionButton Icon="@(IsDark ? "dark_mode" : "light_mode")"
+                Variant="Variant.Outlined"
+                Size="ButtonSize.Small"
+                aria-pressed="@(IsDark ? "true" : "false")"
+                Click="ToggleThemeAsync" />
+    </div>
+</div>
+
+@code {
+    /// <summary>The current page's side-nav label, e.g. "Agents". Supplied by the shell (<c>MainLayout</c>), not the page.</summary>
+    [Parameter, EditorRequired]
+    public string PageText { get; set; } = string.Empty;
+
+    /// <summary>Extra CSS class merged onto the root element, e.g. the shell's breakout modifier for standard (padded) shell mode.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private bool IsDark => string.Equals(ThemeState.ThemeKey, CadThemes.Dark, StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        ToolbarState.Changed += HandleChanged;
+        ThemeState.Changed += HandleChanged;
+    }
+
+    private void HandleChanged() => InvokeAsync(StateHasChanged);
+
+    private Task ToggleThemeAsync()
+        => ThemeState.SetThemeKeyAsync(IsDark ? CadThemes.Light : CadThemes.Dark);
+
+    public void Dispose()
+    {
+        ToolbarState.Changed -= HandleChanged;
+        ThemeState.Changed -= HandleChanged;
+    }
+}

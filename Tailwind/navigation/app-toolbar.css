@@ -1,0 +1,42 @@
+@layer components {
+  /* app-shell-body-surface carries no padding of its own (see .app-page-content in
+     workbench-shell.css), so the bar sits flush against the surface edge in both StandardPage and
+     FocusWorkbench mode — own horizontal padding plus a bottom margin, no breakout needed. */
+  .app-toolbar {
+    @apply sticky top-0;
+    @apply z-[40] flex items-center justify-between gap-3 border-b border-chrome-300 bg-chrome-50 px-4 py-3;
+    @apply 2xl:px-6 2xl:mb-6;
+  }
+
+  .app-toolbar__crumbs {
+    @apply flex min-w-0 items-center gap-1 truncate text-sm text-chrome-900;
+  }
+
+  .app-toolbar__crumb--tab {
+    @apply text-chrome-600;
+  }
+
+  .app-toolbar__actions {
+    @apply flex shrink-0 items-center gap-2;
+  }
+
+  /* Same flush-edge treatment as .app-toolbar above, so the stats row reads as a continuation of the
+     toolbar (full-width rule, no card margin) rather than an inset card like HelpCard. mb-* gives
+     breathing room before whatever follows (HelpCard or page content). */
+  .app-stats-row {
+    @apply flex items-center justify-between gap-3;
+    @apply border-b border-chrome-300 px-4 py-3;
+  }
+
+  .app-stats-row__close {
+    @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-0;
+  }
+}
+
+.app-stats-row__close:hover {
+  background: var(--color-chrome-200);
+}
+
+.help-card {
+  @apply my-4 xl:my-5 2xl:my-6;
+}

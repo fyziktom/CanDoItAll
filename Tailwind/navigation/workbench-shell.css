@@ -607,7 +607,15 @@
   }
 
   .app-shell-body-surface {
-    @apply min-w-0 bg-chrome-50/92 p-4 xl:p-5 2xl:p-6;
+    @apply min-w-0 bg-chrome-50/92;
+  }
+
+  .app-page-content {
+    @apply px-4 xl:px-5 2xl:px-6;
+  }
+
+  .app-page-body {
+    @apply my-4 xl:my-5 2xl:my-6;
   }
 
   .app-shell-body-surface--standard {
