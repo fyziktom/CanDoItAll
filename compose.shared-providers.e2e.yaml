@@ -28,6 +28,7 @@ x-app-environment: &app-environment
   SecretVault__VaultPath: /data/secrets
   Storage__WorkspaceRoot: /data/workspace
   WebHost__HttpsRedirectionEnabled: "false"
+  WebHost__LocalOperatorUi__TrustedAddresses__0: ${E2E_LOCAL_INGRESS_GATEWAY:-10.245.0.1}
   Workflows__ExampleSeed__Enabled: "false"
   Workflows__ExampleSeed__SeedSampleWorkspaceFiles: "false"
   XDG_CONFIG_HOME: /data/config
@@ -322,6 +323,7 @@ services:
     ports:
       - "127.0.0.1:${E2E_CENTRAL_PORT:-5210}:8080"
     networks:
+      - local-ingress
       - app-mesh
       - central-db
       - upstream-data
@@ -357,6 +359,7 @@ services:
     ports:
       - "127.0.0.1:${E2E_CLIENT_A_PORT:-5211}:8080"
     networks:
+      - local-ingress
       - app-mesh
       - client-a-db
       - client-a-personal
@@ -390,6 +393,7 @@ services:
     ports:
       - "127.0.0.1:${E2E_CLIENT_B_PORT:-5212}:8080"
     networks:
+      - local-ingress
       - app-mesh
       - client-b-db
     volumes:
@@ -625,6 +629,11 @@ volumes:
   postgres-data:
 
 networks:
+  local-ingress:
+    ipam:
+      config:
+        - subnet: ${E2E_LOCAL_INGRESS_SUBNET:-10.245.0.0/24}
+          gateway: ${E2E_LOCAL_INGRESS_GATEWAY:-10.245.0.1}
   app-mesh:
     internal: true
   central-db:

@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.SharedProviders.Http;
 using Microsoft.AspNetCore.Http;
@@ -15,14 +17,12 @@ internal sealed class SharedProviderRuntimeAccessContextHandler(
     {
         if (!request.Headers.Contains(SharedProviderHeaders.AccessContextReference) &&
             !request.Headers.Contains(SharedProviderHeaders.AccessContextReferenceType) &&
-            httpContextAccessor.HttpContext?.RequestServices
-                .GetService<IAccessContextReferenceAccessor>() is
-                { Current: { } accessContextReference } accessor)
+            ResolveAccessContext() is { } accessContext)
         {
             request.Headers.TryAddWithoutValidation(
                 SharedProviderHeaders.AccessContextReference,
-                accessContextReference.Value);
-            if (accessor.CurrentType is { } type)
+                accessContext.Reference.Value);
+            if (accessContext.Type is { } type)
             {
                 request.Headers.TryAddWithoutValidation(
                     SharedProviderHeaders.AccessContextReferenceType,
@@ -31,6 +31,30 @@ internal sealed class SharedProviderRuntimeAccessContextHandler(
         }
 
         return base.SendAsync(request, cancellationToken);
+    }
+
+    private (AccessContextReference Reference, AccessContextReferenceType? Type)?
+        ResolveAccessContext()
+    {
+        if (httpContextAccessor.HttpContext?.RequestServices
+                .GetService<IAccessContextReferenceAccessor>() is
+                { Current: { } explicitReference } accessor)
+        {
+            return (explicitReference, accessor.CurrentType);
+        }
+
+        var workspaceScope = WorkspaceExecutionAuditContext.Current?
+            .ContextWorkspaceScope;
+        if (workspaceScope is not { Kind: WorkspaceScopeKind.Project } ||
+            !Guid.TryParse(workspaceScope.Key, out var projectId) ||
+            projectId == Guid.Empty)
+        {
+            return null;
+        }
+
+        return (
+            new AccessContextReference(projectId.ToString("D")),
+            AccessContextReferenceTypes.Project);
     }
 }
 

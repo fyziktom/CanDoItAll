@@ -474,6 +474,8 @@ function Set-ChildEnvironmentAssignments {
         "E2E_UPSTREAM_PORT=5213",
         "E2E_PERSONAL_UPSTREAM_PORT=5214",
         "E2E_POSTGRES_PORT=55432",
+        "E2E_LOCAL_INGRESS_SUBNET=10.245.0.0/24",
+        "E2E_LOCAL_INGRESS_GATEWAY=10.245.0.1",
         "E2E_DB_ADMIN_PASSWORD_FILE=$(Join-Path $RuntimeSecretsRoot 'db-admin-password')",
         "E2E_DB_CENTRAL_PASSWORD_FILE=$(Join-Path $RuntimeSecretsRoot 'db-central-password')",
         "E2E_DB_CLIENT_A_PASSWORD_FILE=$(Join-Path $RuntimeSecretsRoot 'db-client-a-password')",

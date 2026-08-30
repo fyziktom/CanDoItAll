@@ -325,6 +325,9 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         ProviderChatCompletionResult firstResult;
         ProviderChatCompletionResult secondResult;
         ProviderChatCompletionResult noContextResult;
+        ProviderChatCompletionResult projectContextResult;
+        ProviderChatCompletionResult explicitContextResult;
+        var projectId = Guid.NewGuid();
         try
         {
             await using (var requestServices =
@@ -352,6 +355,23 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             ambientContext.HttpContext = null;
             noContextResult = await driver.CompleteChatAsync(
                 CreateChatRequest(profile));
+
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       CreateAuditRun(),
+                       WorkspaceScopeDescriptor.Project(projectId.ToString("D"))))
+            {
+                projectContextResult = await driver.CompleteChatAsync(
+                    CreateChatRequest(profile));
+
+                await using var requestServices =
+                    CreateAccessContextRequestServices("explicit-context");
+                ambientContext.HttpContext = new DefaultHttpContext
+                {
+                    RequestServices = requestServices
+                };
+                explicitContextResult = await driver.CompleteChatAsync(
+                    CreateChatRequest(profile));
+            }
         }
         finally
         {
@@ -361,6 +381,8 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         Assert.Equal("raw shared chat", firstResult.ResponseText);
         Assert.Equal("raw shared chat", secondResult.ResponseText);
         Assert.Equal("raw shared chat", noContextResult.ResponseText);
+        Assert.Equal("raw shared chat", projectContextResult.ResponseText);
+        Assert.Equal("raw shared chat", explicitContextResult.ResponseText);
         Assert.Equal(
             profile.DefaultModel,
             Assert.Single(listedModels).Model);
@@ -385,6 +407,9 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
                 Assert.Equal(
                     "runtime-request-a",
                     request.AccessContextReference);
+                Assert.Equal(
+                    AccessContextReferenceTypes.Project.Value,
+                    request.AccessContextReferenceType);
             },
             request =>
             {
@@ -395,6 +420,9 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
                 Assert.Equal(
                     "runtime-request-b",
                     request.AccessContextReference);
+                Assert.Equal(
+                    AccessContextReferenceTypes.Project.Value,
+                    request.AccessContextReferenceType);
             },
             request =>
             {
@@ -403,6 +431,33 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
                     SharedProviderRoutes.ChatCompletions,
                     profile.DefaultModel);
                 Assert.Empty(request.AccessContextReference);
+                Assert.Empty(request.AccessContextReferenceType);
+            },
+            request =>
+            {
+                AssertRuntimeRequest(
+                    request,
+                    SharedProviderRoutes.ChatCompletions,
+                    profile.DefaultModel);
+                Assert.Equal(
+                    projectId.ToString("D"),
+                    request.AccessContextReference);
+                Assert.Equal(
+                    AccessContextReferenceTypes.Project.Value,
+                    request.AccessContextReferenceType);
+            },
+            request =>
+            {
+                AssertRuntimeRequest(
+                    request,
+                    SharedProviderRoutes.ChatCompletions,
+                    profile.DefaultModel);
+                Assert.Equal(
+                    "explicit-context",
+                    request.AccessContextReference);
+                Assert.Equal(
+                    AccessContextReferenceTypes.Project.Value,
+                    request.AccessContextReferenceType);
             });
     }
 
@@ -596,6 +651,35 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             Assert.Single(server.Requests),
             SharedProviderRoutes.Responses,
             profile.DefaultModel);
+    }
+
+    [Fact]
+    public async Task Maf_sdk_propagates_project_scope_through_shared_client()
+    {
+        await using var server = await DeterministicOpenAiServer.CreateAsync(
+            request => CreateResponsesResponse(request, "sdk project response"));
+        var profile = await ProjectRuntimeProfileAsync(
+            server.SourceBaseUri,
+            SharedProviderPurpose.Chat,
+            [SharedProviderCapability.Responses]);
+        var projectId = Guid.NewGuid();
+
+        string text;
+        using (WorkspaceExecutionAuditContext.BeginScope(
+                   CreateAuditRun(),
+                   WorkspaceScopeDescriptor.Project(projectId.ToString("D"))))
+        {
+            text = await RunMafAgentAsync(
+                profile,
+                "send a project-scoped responses request");
+        }
+
+        Assert.Equal("sdk project response", text);
+        var request = Assert.Single(server.Requests);
+        Assert.Equal(projectId.ToString("D"), request.AccessContextReference);
+        Assert.Equal(
+            AccessContextReferenceTypes.Project.Value,
+            request.AccessContextReferenceType);
     }
 
     [Fact]
@@ -1001,6 +1085,36 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             [],
             "return the deterministic response");
 
+    private static ExecutionRunRecord CreateAuditRun()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Shared provider access-context test",
+            "project-structure",
+            Guid.NewGuid().ToString("D"),
+            Guid.NewGuid().ToString("N"),
+            string.Empty,
+            "integration-test",
+            "test",
+            "{}",
+            "Test shared provider context propagation",
+            string.Empty,
+            "shared-provider",
+            "shared-model",
+            ExecutionState.Running,
+            null,
+            now,
+            now,
+            now,
+            null,
+            "runtime-session",
+            null,
+            []);
+    }
+
     private static string CreateForeignRoutingModel()
         => SharedProviderRoutingModelIdCodec.Create(
             new SharedProviderPublicationId(Guid.NewGuid()),
@@ -1036,7 +1150,8 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         var services = new ServiceCollection();
         services.AddSingleton<IAccessContextReferenceAccessor>(
             new FixedAccessContextReferenceAccessor(
-                new AccessContextReference(value)));
+                new AccessContextReference(value),
+                AccessContextReferenceTypes.Project));
         return services.BuildServiceProvider();
     }
 
@@ -1181,9 +1296,13 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     }
 
     private sealed class FixedAccessContextReferenceAccessor(
-        AccessContextReference current) : IAccessContextReferenceAccessor
+        AccessContextReference current,
+        AccessContextReferenceType currentType) :
+        IAccessContextReferenceAccessor
     {
         public AccessContextReference? Current { get; } = current;
+
+        public AccessContextReferenceType? CurrentType { get; } = currentType;
     }
 
     private sealed class CapturingSecretRuntimeResolver :
@@ -1240,7 +1359,8 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         string PathAndQuery,
         string Authorization,
         string Body,
-        string AccessContextReference = "");
+        string AccessContextReference = "",
+        string AccessContextReferenceType = "");
 
     private sealed class DeterministicOpenAiServer : IAsyncDisposable
     {
@@ -1285,6 +1405,9 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
                     await reader.ReadToEndAsync(context.RequestAborted),
                     context.Request.Headers[
                         SharedProviderHeaders.AccessContextReference]
+                        .ToString(),
+                    context.Request.Headers[
+                        SharedProviderHeaders.AccessContextReferenceType]
                         .ToString());
                 requests.Enqueue(captured);
                 context.Response.ContentType = "application/json";
