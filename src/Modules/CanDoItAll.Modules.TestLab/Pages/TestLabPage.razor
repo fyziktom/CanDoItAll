@@ -1,4 +1,5 @@
 ﻿@page "/test-lab"
+@using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @inject TestLabService TestLabService
@@ -8,28 +9,26 @@
 
 <PageTitle>Test Lab</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="Test Lab"
-                    Title="Tests, evidence, and execution results"
-                    Description="Track planned coverage, linked cases, evidence artifacts, and the latest execution results for each phase."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="plans" Value="@plans.Count.ToString()" TooltipText="Persisted test plans." />
-                <CompactStat Label="visible" Value="@FilteredPlans.Count.ToString()" TooltipText="Plans matching the current filters." Tone="info" />
-                <CompactStat Label="cases" Value="@plans.Sum(item => item.CaseCount).ToString()" TooltipText="Tracked test cases across all plans." />
-                <CompactStat Label="evidence" Value="@plans.Sum(item => item.EvidenceCount).ToString()" TooltipText="Linked evidence records across all plans." />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="add"
-                                        Label="New test plan"
-                                        TooltipText="Create a new test plan."
-                                        Tone="ButtonTone.Primary"
-                                        Click="CreateNewAsync" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="add"
+                            Label="New test plan"
+                            TooltipText="Create a new test plan."
+                            Tone="ButtonTone.Primary"
+                            Click="CreateNewAsync" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Tests, evidence, and execution results">
+    Track planned coverage, linked cases, evidence artifacts, and the latest execution results for each phase.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="plans" Value="@plans.Count.ToString()" TooltipText="Persisted test plans." />
+    <CompactStat Label="visible" Value="@FilteredPlans.Count.ToString()" TooltipText="Plans matching the current filters." Tone="info" />
+    <CompactStat Label="cases" Value="@plans.Sum(item => item.CaseCount).ToString()" TooltipText="Tracked test cases across all plans." />
+    <CompactStat Label="evidence" Value="@plans.Sum(item => item.EvidenceCount).ToString()" TooltipText="Linked evidence records across all plans." />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>

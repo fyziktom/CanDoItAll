@@ -24,14 +24,6 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 <PageTitle>Projects</PageTitle>
 
 <PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <div class="pr-20 sm:pr-24">
-            <PageHeader Eyebrow="Projects"
-                        Compact="true"
-                        Title="Project workspace" />
-        </div>
-    </Header>
-
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(projectDeletionNotice))
         {

@@ -4,7 +4,9 @@ using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Tests.Components.AgentFramework;
 using CanDoItAll.Web.Dashboard;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -255,7 +257,7 @@ public sealed class HomePageTests
             loadAsync);
     }
 
-    private static void AssertQuickActions(IRenderedComponent<DashboardHome> cut)
+    private static void AssertQuickActions(IRenderedComponent<AppToolbarActionsTestHost> cut)
     {
         var actions = cut.FindComponents<QuickActionCard>();
         Assert.Collection(
@@ -300,7 +302,7 @@ public sealed class HomePageTests
     }
 
     private static CompactStat FindStat(
-        IRenderedComponent<DashboardHome> cut,
+        IRenderedComponent<AppToolbarActionsTestHost> cut,
         string label)
     {
         return Assert.Single(
@@ -400,7 +402,7 @@ public sealed class HomePageTests
 
     private sealed class DashboardPageHarness : IAsyncDisposable
     {
-        private readonly List<IRenderedComponent<DashboardHome>> renderedHomes = [];
+        private readonly List<IRenderedComponent<AppToolbarActionsTestHost>> renderedHomes = [];
 
         public DashboardPageHarness(
             TimeProvider timeProvider,
@@ -412,6 +414,7 @@ public sealed class HomePageTests
             Context.Services.AddLogging();
             Context.Services.AddCanDoItAllBaseLib();
             Context.Services.AddSingleton(timeProvider);
+            Context.Services.AddScoped<AppToolbarState>();
 
             Runner = new RecordingDashboardSnapshotLoadRunner(loadAsync);
             var cache = new DashboardSnapshotCache(
@@ -430,16 +433,22 @@ public sealed class HomePageTests
 
         public RecordingDashboardSnapshotLoadRunner Runner { get; }
 
-        public IRenderedComponent<DashboardHome> RenderHome()
+        public IRenderedComponent<AppToolbarActionsTestHost> RenderHome()
         {
-            var component = Context.Render<DashboardHome>();
+            RenderFragment homeContent = builder =>
+            {
+                builder.OpenComponent<DashboardHome>(0);
+                builder.CloseComponent();
+            };
+            var component = Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+                .Add(p => p.ChildContent, homeContent));
             renderedHomes.Add(component);
             return component;
         }
 
-        public async Task DisposeHomeAsync(IRenderedComponent<DashboardHome> component)
+        public async Task DisposeHomeAsync(IRenderedComponent<AppToolbarActionsTestHost> component)
         {
-            await component.Instance.DisposeAsync().AsTask();
+            await component.FindComponent<DashboardHome>().Instance.DisposeAsync().AsTask();
             component.Dispose();
             renderedHomes.Remove(component);
         }
@@ -448,7 +457,7 @@ public sealed class HomePageTests
         {
             foreach (var component in renderedHomes.ToArray())
             {
-                await component.Instance.DisposeAsync();
+                await component.FindComponent<DashboardHome>().Instance.DisposeAsync();
                 component.Dispose();
             }
 

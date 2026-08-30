@@ -3,66 +3,64 @@
 
 <PageTitle>Workflows</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="AgentFramework"
-                    Title="Workflows"
-                    Description="Build, validate, test, and observe workflow executions as a peer option beside technical agents."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="definitions"
-                             Value="@definitions.Count.ToString()"
-                             TooltipText="Saved workflow definitions in the workflow catalog."
-                             Tone="info" />
-                <CompactStat Label="LLM components"
-                             Value="@ComponentCountText"
-                             TooltipText="Prepared LLM Call Components available to workflow nodes."
-                             Tone="success" />
-                <CompactStat Label="runs"
-                             Value="@HistoryRunCountText"
-                             TooltipText="Paged workflow runs for the selected workflow history."
-                             Tone="accent" />
-                <CompactStat Label="pending input"
-                             Value="@PendingRequestCountText"
-                             TooltipText="Human-in-loop or approval requests waiting for a response."
-                             Tone="warning" />
-                <CompactStat Label="backend"
-                             Value="@settings.DefaultRuntimePolicy.PreferredBackend.ToString()"
-                             TooltipText="Workflow setting used when a run does not request a backend explicitly."
-                             Tone="info" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="refresh"
-                                        Label="Refresh"
-                                        TooltipText="Refresh workflow definitions, runs, and settings."
-                                        Click="RefreshAsync"
-                                        Disabled="@isBusy"
-                                        IsBusy="@isBusy"
-                                        data-testid="workflows-refresh" />
-                <PageHeaderActionButton Icon="add"
-                                        Label="Create starter"
-                                        TooltipText="Create the starter workflow definition."
-                                        Tone="ButtonTone.Primary"
-                                        Click="CreateStarterWorkflowAsync"
-                                        Disabled="@isBusy"
-                                        data-testid="workflows-create-starter" />
-                <AgentAvatarActionButton AgentName="@WorkflowCuratorDisplayName"
-                                         AvatarImageUrl="@WorkflowCuratorAvatarImageUrl"
-                                         FallbackText="WC"
-                                         Label="@($"Open {WorkflowCuratorDisplayName}")"
-                                         Click="OpenWorkflowCuratorAsync"
-                                         Disabled="@(workflowCuratorAgent is null || isOpeningWorkflowCurator || isBusy || AgentChatAccessState != AgentChatContextAccessState.Ready)"
-                                         TestId="workflows-curator-open"
-                                         TooltipTestId="workflows-curator-tooltip" />
-                <PageHeaderActionButton Icon="support_agent"
-                                        Label="Open agents"
-                                        TooltipText="Open the technical agents workspace."
-                                        Click="OpenAgents"
-                                        data-testid="workflows-open-agents" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="refresh"
+                            Label="Refresh"
+                            TooltipText="Refresh workflow definitions, runs, and settings."
+                            Click="RefreshAsync"
+                            Disabled="@isBusy"
+                            IsBusy="@isBusy"
+                            data-testid="workflows-refresh" />
+    <PageHeaderActionButton Icon="add"
+                            Label="Create starter"
+                            TooltipText="Create the starter workflow definition."
+                            Tone="ButtonTone.Primary"
+                            Click="CreateStarterWorkflowAsync"
+                            Disabled="@isBusy"
+                            data-testid="workflows-create-starter" />
+    <AgentAvatarActionButton AgentName="@WorkflowCuratorDisplayName"
+                             AvatarImageUrl="@WorkflowCuratorAvatarImageUrl"
+                             FallbackText="WC"
+                             Label="@($"Open {WorkflowCuratorDisplayName}")"
+                             Click="OpenWorkflowCuratorAsync"
+                             Disabled="@(workflowCuratorAgent is null || isOpeningWorkflowCurator || isBusy || AgentChatAccessState != AgentChatContextAccessState.Ready)"
+                             TestId="workflows-curator-open"
+                             TooltipTestId="workflows-curator-tooltip" />
+    <PageHeaderActionButton Icon="support_agent"
+                            Label="Open agents"
+                            TooltipText="Open the technical agents workspace."
+                            Click="OpenAgents"
+                            data-testid="workflows-open-agents" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Workflows">
+    Build, validate, test, and observe workflow executions as a peer option beside technical agents.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="definitions"
+                 Value="@definitions.Count.ToString()"
+                 TooltipText="Saved workflow definitions in the workflow catalog."
+                 Tone="info" />
+    <CompactStat Label="LLM components"
+                 Value="@ComponentCountText"
+                 TooltipText="Prepared LLM Call Components available to workflow nodes."
+                 Tone="success" />
+    <CompactStat Label="runs"
+                 Value="@HistoryRunCountText"
+                 TooltipText="Paged workflow runs for the selected workflow history."
+                 Tone="accent" />
+    <CompactStat Label="pending input"
+                 Value="@PendingRequestCountText"
+                 TooltipText="Human-in-loop or approval requests waiting for a response."
+                 Tone="warning" />
+    <CompactStat Label="backend"
+                 Value="@settings.DefaultRuntimePolicy.PreferredBackend.ToString()"
+                 TooltipText="Workflow setting used when a run does not request a backend explicitly."
+                 Tone="info" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {

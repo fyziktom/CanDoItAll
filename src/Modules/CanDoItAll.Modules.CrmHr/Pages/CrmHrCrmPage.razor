@@ -4,6 +4,7 @@
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using Microsoft.Extensions.Logging
+@inject AppToolbarState ToolbarState
 @inject CrmService CrmService
 @inject IPartyRecordQueryService PartyRecordQueryService
 @inject IAgentChatLauncher AgentChatLauncher
@@ -13,36 +14,34 @@
 
 <PageTitle>CRM / HR CRM</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="CRM workspace"
-                    Description="Review shared customer, partner, and vendor accounts, keep company connections explicit, and log follow-ups before they disappear into side channels."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="accounts"
-                             Value="@accountCount.ToString()"
-                             TooltipText="Active organization records in the shared directory." />
-                <CompactStat Label="selection"
-                             Value="@(selectedAccount is null ? "None" : "Active")"
-                             TooltipText="Current account workspace selection."
-                             Tone="info" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="smart_toy"
-                                        Label="Agent chats"
-                                        TooltipText="Open the global agent catalog with the current CRM selection as context."
-                                        Tone="ButtonTone.Primary"
-                                        Click="OpenAgentChats"
-                                        data-testid="crmhr-crm-agent-chats" />
-                <PageHeaderActionButton Icon="asset"
-                                        Label="Open directory"
-                                        TooltipText="Open the shared party directory."
-                                        Click="OpenDirectory" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="smart_toy"
+                            Label="Agent chats"
+                            TooltipText="Open the global agent catalog with the current CRM selection as context."
+                            Tone="ButtonTone.Primary"
+                            Click="OpenAgentChats"
+                            data-testid="crmhr-crm-agent-chats" />
+    <PageHeaderActionButton Icon="asset"
+                            Label="Open directory"
+                            TooltipText="Open the shared party directory."
+                            Click="OpenDirectory" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="CRM workspace">
+    Review shared customer, partner, and vendor accounts, keep company connections explicit, and log follow-ups before they disappear into side channels.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="accounts"
+                 Value="@accountCount.ToString()"
+                 TooltipText="Active organization records in the shared directory." />
+    <CompactStat Label="selection"
+                 Value="@(selectedAccount is null ? "None" : "Active")"
+                 TooltipText="Current account workspace selection."
+                 Tone="info" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Crm" />
@@ -598,6 +597,8 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        ToolbarState.SetTabText("CRM");
+
         var requestedAccountId = AccountIdQuery;
         var requestedOpportunityId = OpportunityIdQuery;
         var requestedInteractionId = InteractionIdQuery;

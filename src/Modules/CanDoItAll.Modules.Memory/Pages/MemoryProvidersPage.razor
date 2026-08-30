@@ -1,29 +1,28 @@
 @page "/memory"
 @namespace CanDoItAll.Modules.Memory.Pages
+@using CanDoItAll.AppComponents
 @inject MemoryProvidersPageController Controller
 
 <PageTitle>Memory</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full" data-testid="memory-ui-page">
-    <Header>
-        <PageHeader Eyebrow="Memory"
-                    Title="Provider management"
-                    Description="Generic provider profiles, capability manifests, health, and safe provider selection.">
-            <Actions>
-                <Button Icon="refresh"
-                        Tone="ButtonTone.Default"
-                        Size="ButtonSize.Small"
-                        Class="ui-button--quick"
-                        title="Refresh memory providers"
-                        aria-label="Refresh memory providers"
-                        Click="Controller.RefreshAsync"
-                        Disabled="@Controller.IsBusy"
-                        IsBusy="@Controller.IsBusy"
-                        data-testid="memory-ui-refresh" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <Button Icon="refresh"
+            Tone="ButtonTone.Default"
+            Size="ButtonSize.Small"
+            Class="ui-button--quick"
+            title="Refresh memory providers"
+            aria-label="Refresh memory providers"
+            Click="Controller.RefreshAsync"
+            Disabled="@Controller.IsBusy"
+            IsBusy="@Controller.IsBusy"
+            data-testid="memory-ui-refresh" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Provider management">
+    Generic provider profiles, capability manifests, health, and safe provider selection.
+</AppToolbarHelp>
+
+<PageScaffold MaxWidthClass="max-w-full" data-testid="memory-ui-page">
     <Lead>
         <MemoryProvidersSummary Snapshot="@Controller.Snapshot" />
     </Lead>

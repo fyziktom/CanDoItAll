@@ -54,7 +54,14 @@ public sealed class WorkflowsPageTests
         await CreateHistoryDefinitionAsync(catalog);
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.Render<WorkflowsPage>();
+        RenderFragment workflowsPageContent = builder =>
+        {
+            builder.OpenComponent<WorkflowsPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, workflowsPageContent));
+        var page = cut.FindComponent<WorkflowsPage>();
         await catalog.WaitForInitialListRequestAsync();
 
         var openButton = cut.Find("[data-testid='workflows-curator-open']");
@@ -66,14 +73,14 @@ public sealed class WorkflowsPageTests
             Assert.IsAssignableFrom<IElement>(openButton.QuerySelector("img")).GetAttribute("src"),
             StringComparison.Ordinal);
 
-        Assert.Equal(AgentChatContextAccessState.Loading, ReadAgentChatAccessState(cut.Instance));
+        Assert.Equal(AgentChatContextAccessState.Loading, ReadAgentChatAccessState(page.Instance));
         openButton.Click();
         Assert.Empty(launcher.StartedAgentIds);
 
         catalog.CompleteInitialListRequest();
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(page.Instance));
             Assert.False(cut.Find("[data-testid='workflows-curator-open']").HasAttribute("disabled"));
         });
 
@@ -83,7 +90,7 @@ public sealed class WorkflowsPageTests
         Assert.Equal(TooltipPosition.Bottom, tooltipTarget.Instance.Position);
         Assert.Equal("workflows-curator-tooltip", tooltipTarget.Instance.TestId);
 
-        var surface = ReadAgentChatSurface(cut.Instance);
+        var surface = ReadAgentChatSurface(page.Instance);
         var curatorAccess = Assert.Single(surface.AgentAccess);
         Assert.Equal(WorkflowCuratorAgentIdentity.AgentId, curatorAccess.AgentId);
         Assert.Equal(
@@ -128,7 +135,13 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.Render<WorkflowsPage>();
+        RenderFragment workflowsPageContent = builder =>
+        {
+            builder.OpenComponent<WorkflowsPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, workflowsPageContent));
 
         cut.WaitForAssertion(() =>
         {
@@ -159,7 +172,13 @@ public sealed class WorkflowsPageTests
         var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.Render<WorkflowsPage>();
+        RenderFragment workflowsPageContent = builder =>
+        {
+            builder.OpenComponent<WorkflowsPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, workflowsPageContent));
 
         cut.WaitForElement("[data-testid='workflows-create-starter']");
         cut.WaitForAssertion(() =>
@@ -215,7 +234,13 @@ public sealed class WorkflowsPageTests
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.Render<WorkflowsPage>();
+        RenderFragment workflowsPageContent = builder =>
+        {
+            builder.OpenComponent<WorkflowsPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, workflowsPageContent));
 
         cut.WaitForAssertion(() =>
         {
@@ -249,7 +274,13 @@ public sealed class WorkflowsPageTests
         var counter = harness.Context.Services.GetRequiredService<WorkflowComponentLibraryCallCounter>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.Render<WorkflowsPage>();
+        RenderFragment workflowsPageContent = builder =>
+        {
+            builder.OpenComponent<WorkflowsPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, workflowsPageContent));
 
         cut.WaitForElement("[data-testid='workflows-create-starter']");
         cut.WaitForElement("[data-testid='workflows-tabs']");

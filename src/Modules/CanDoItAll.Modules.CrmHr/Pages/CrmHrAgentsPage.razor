@@ -1,5 +1,6 @@
 @page "/crm-hr/agents"
 @implements IAsyncDisposable
+@inject AppToolbarState ToolbarState
 @inject AiAgentService AiAgentService
 @inject IAiAgentDirectoryQueryService AiAgentDirectoryQueryService
 @inject NavigationManager Navigation
@@ -10,44 +11,42 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Agent directory projection"
-                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. The shared catalog snapshot supplies technical identity and card data; CRM-HR adds governance, ownership, and directory context."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="projected agents"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.TotalCount.ToString())"
-                             TooltipText="AgentFramework agents in the current CRM-HR projection." />
-                <CompactStat Label="page providers"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Provider is not null).ToString())"
-                             TooltipText="Agents on this page linked to a provider profile."
-                             Tone="info" />
-                <CompactStat Label="page review"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Governance.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
-                             TooltipText="Agents on this page awaiting CRM-HR governance review."
-                             Tone="warning" />
-                <CompactStat Label="page capabilities"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Agent.Capabilities.Count > 0).ToString())"
-                             TooltipText="Agents on this page that expose technical capabilities."
-                             Tone="success" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="smart_toy"
-                                        Label="Open technical catalog"
-                                        TooltipText="Open the AgentFramework technical catalog."
-                                        Tone="ButtonTone.Primary"
-                                        Click="OpenTechnicalCatalog"
-                                        data-testid="crmhr-agent-open-catalog" />
-                <PageHeaderActionButton Icon="asset"
-                                        Label="Open directory"
-                                        TooltipText="Open the linked directory record."
-                                        Click="OpenDirectoryRecord" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="smart_toy"
+                            Label="Open technical catalog"
+                            TooltipText="Open the AgentFramework technical catalog."
+                            Tone="ButtonTone.Primary"
+                            Click="OpenTechnicalCatalog"
+                            data-testid="crmhr-agent-open-catalog" />
+    <PageHeaderActionButton Icon="asset"
+                            Label="Open directory"
+                            TooltipText="Open the linked directory record."
+                            Click="OpenDirectoryRecord" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Agent directory projection">
+    CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. The shared catalog snapshot supplies technical identity and card data; CRM-HR adds governance, ownership, and directory context.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="projected agents"
+                 Value="@(ShouldShowListLoadingState ? "..." : agentPage.TotalCount.ToString())"
+                 TooltipText="AgentFramework agents in the current CRM-HR projection." />
+    <CompactStat Label="page providers"
+                 Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Provider is not null).ToString())"
+                 TooltipText="Agents on this page linked to a provider profile."
+                 Tone="info" />
+    <CompactStat Label="page review"
+                 Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Governance.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
+                 TooltipText="Agents on this page awaiting CRM-HR governance review."
+                 Tone="warning" />
+    <CompactStat Label="page capabilities"
+                 Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Agent.Capabilities.Count > 0).ToString())"
+                 TooltipText="Agents on this page that expose technical capabilities."
+                 Tone="success" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Agents" />
@@ -166,6 +165,11 @@
         : null;
 
     private bool ShouldShowListLoadingState => isListLoading;
+
+    protected override void OnInitialized()
+    {
+        ToolbarState.SetTabText("Agents");
+    }
 
     protected override Task OnParametersSetAsync()
         => LoadAsync(PartyIdQuery);

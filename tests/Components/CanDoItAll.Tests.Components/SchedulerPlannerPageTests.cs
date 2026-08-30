@@ -1,9 +1,12 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.SchedulerPlanner.Pages;
+using CanDoItAll.Tests.Components.AgentFramework;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -26,7 +29,14 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<IAgentChatLauncher>(launcher);
         });
 
-        var cut = harness.Context.Render<SchedulerPlannerPage>();
+        RenderFragment schedulerPlannerPageContent = builder =>
+        {
+            builder.OpenComponent<SchedulerPlannerPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, schedulerPlannerPageContent));
+        var page = cut.FindComponent<SchedulerPlannerPage>();
         cut.WaitForElement("[data-testid='scheduler-agent-open']");
         cut.WaitForAssertion(() => Assert.False(
             cut.Find("[data-testid='scheduler-agent-open']").HasAttribute("disabled")));
@@ -37,7 +47,7 @@ public sealed class SchedulerPlannerPageTests
             button.QuerySelector("img")?.GetAttribute("src"),
             StringComparison.Ordinal);
 
-        var surface = ReadSchedulerAgentChatSurface(cut.Instance);
+        var surface = ReadSchedulerAgentChatSurface(page.Instance);
         var access = Assert.Single(surface.AgentAccess);
         Assert.Equal(SchedulerAgentIdentity.AgentId, access.AgentId);
         Assert.Equal(

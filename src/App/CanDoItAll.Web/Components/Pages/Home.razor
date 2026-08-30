@@ -16,45 +16,43 @@ tests: component:HomePageTests, component:QuickActionCardTests, e2e:smoke-dashbo
 
 <PageTitle>Dashboard</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="Dashboard"
-                    Title="Operational overview"
-                    Description="Recent projects, live execution activity, and observed agent usage in one five-minute snapshot."
-                    Compact="true">
-            <Stats>
-                @if (SnapshotData is { } snapshotData)
-                {
-                    <CompactStat Label="Total tokens"
-                                 Value="@FormatTokens(snapshotData.Usage.ObservedTokens)"
-                                 TooltipText="Observed input and output tokens recorded by agent executions." />
-                    <CompactStat Label="Known cost (USD)"
-                                 Value="@FormatKnownCost(snapshotData.Usage.KnownCostUsd)"
-                                 TooltipText="@UsageCostTooltip" />
-                }
-            </Stats>
-            <Actions>
-                <Cluster Wrap="FlexWrap.NoWrap"
-                         Gap="LayoutGap.Small">
-                    @if (nextAutomaticRefreshAtUtc.HasValue)
-                    {
-                        <TextBlock TextStyle="TextStyle.Caption"
-                                   Value="@AutomaticRefreshText"
-                                   Class="whitespace-nowrap text-chrome-500"
-                                   data-testid="dashboard-refresh-countdown" />
-                    }
-                    <PageHeaderActionButton Icon="refresh"
-                                            Label="Refresh dashboard"
-                                            TooltipText="Refresh dashboard data now."
-                                            Disabled="@isRefreshing"
-                                            IsBusy="@isRefreshing"
-                                            Click="RefreshAsync"
-                                            TestId="dashboard-refresh" />
-                </Cluster>
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <Cluster Wrap="FlexWrap.NoWrap"
+             Gap="LayoutGap.Small">
+        @if (nextAutomaticRefreshAtUtc.HasValue)
+        {
+            <TextBlock TextStyle="TextStyle.Caption"
+                       Value="@AutomaticRefreshText"
+                       Class="whitespace-nowrap text-chrome-500"
+                       data-testid="dashboard-refresh-countdown" />
+        }
+        <PageHeaderActionButton Icon="refresh"
+                                Label="Refresh dashboard"
+                                TooltipText="Refresh dashboard data now."
+                                Disabled="@isRefreshing"
+                                IsBusy="@isRefreshing"
+                                Click="RefreshAsync"
+                                TestId="dashboard-refresh" />
+    </Cluster>
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Operational overview">
+    Recent projects, live execution activity, and observed agent usage in one five-minute snapshot.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    @if (SnapshotData is { } snapshotData)
+    {
+        <CompactStat Label="Total tokens"
+                     Value="@FormatTokens(snapshotData.Usage.ObservedTokens)"
+                     TooltipText="Observed input and output tokens recorded by agent executions." />
+        <CompactStat Label="Known cost (USD)"
+                     Value="@FormatKnownCost(snapshotData.Usage.KnownCostUsd)"
+                     TooltipText="@UsageCostTooltip" />
+    }
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <Grid Gap="LayoutGap.XLarge"
               ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)"

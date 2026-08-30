@@ -5,9 +5,10 @@ using Microsoft.AspNetCore.Components.Rendering;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 /// <summary>
-/// Test-only stand-in for the app shell's <c>AppToolbar</c>: renders <see cref="ChildContent"/>
-/// alongside whatever the page under test registers via <c>AppToolbarActions</c>, so component tests
-/// can assert on toolbar action buttons without pulling in the full <c>MainLayout</c>.
+/// Test-only stand-in for the app shell's <c>AppToolbar</c> (plus its stats row): renders
+/// <see cref="ChildContent"/> alongside whatever the page under test registers via
+/// <c>AppToolbarActions</c> and <c>AppToolbarStats</c>, so component tests can assert on toolbar
+/// action buttons and stat values without pulling in the full <c>MainLayout</c>.
 /// </summary>
 public sealed class AppToolbarActionsTestHost : ComponentBase, IDisposable
 {
@@ -27,6 +28,7 @@ public sealed class AppToolbarActionsTestHost : ComponentBase, IDisposable
     {
         builder.AddContent(0, ChildContent);
         builder.AddContent(1, ToolbarState.ActionsContent);
+        builder.AddContent(2, ToolbarState.StatsContent);
     }
 
     public void Dispose()

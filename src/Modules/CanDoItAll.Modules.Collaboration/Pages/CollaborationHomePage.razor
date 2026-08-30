@@ -1,48 +1,47 @@
 @page "/collaboration"
+@using CanDoItAll.AppComponents
 @inject CollaborationService CollaborationService
 @inject NavigationManager Navigation
 
 <PageTitle>Collaboration</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="Collaboration"
-                    Title="Inbox, threads, and escalation workspace"
-                    Description="Durable notifications and human conversations now live in one canonical module instead of being scattered across transport and timeline views."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="unread"
-                             Value="@workspace.ShellState.UnreadCount.ToString()"
-                             TooltipText="Unread collaboration items waiting for review."
-                             Tone="info" />
-                <CompactStat Label="escalations"
-                             Value="@workspace.Escalations.Count.ToString()"
-                             TooltipText="Threads flagged for explicit human attention."
-                             Tone="warning" />
-                <CompactStat Label="threads"
-                             Value="@workspace.Threads.Count.ToString()"
-                             TooltipText="Durable collaboration threads stored in the app database." />
-                <CompactStat Label="transport"
-                             Value="canonical"
-                             TooltipText="External systems can project signals in, but Collaboration owns the read model."
-                             Tone="success" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="calendar_month"
-                                        Label="Open scheduler"
-                                        TooltipText="Open scheduler planning."
-                                        Click="OpenScheduler" />
-                <PageHeaderActionButton Icon="done_all"
-                                        Label="Mark selected read"
-                                        TooltipText="Mark the selected collaboration thread as read."
-                                        Tone="ButtonTone.Primary"
-                                        Disabled="@(workspace.SelectedThread is null || !workspace.SelectedThread.IsUnread)"
-                                        Click="MarkSelectedThreadAsReadAsync"
-                                        data-testid="collaboration-mark-read" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="calendar_month"
+                            Label="Open scheduler"
+                            TooltipText="Open scheduler planning."
+                            Click="OpenScheduler" />
+    <PageHeaderActionButton Icon="done_all"
+                            Label="Mark selected read"
+                            TooltipText="Mark the selected collaboration thread as read."
+                            Tone="ButtonTone.Primary"
+                            Disabled="@(workspace.SelectedThread is null || !workspace.SelectedThread.IsUnread)"
+                            Click="MarkSelectedThreadAsReadAsync"
+                            data-testid="collaboration-mark-read" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Inbox, threads, and escalation workspace">
+    Durable notifications and human conversations now live in one canonical module instead of being scattered across transport and timeline views.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="unread"
+                 Value="@workspace.ShellState.UnreadCount.ToString()"
+                 TooltipText="Unread collaboration items waiting for review."
+                 Tone="info" />
+    <CompactStat Label="escalations"
+                 Value="@workspace.Escalations.Count.ToString()"
+                 TooltipText="Threads flagged for explicit human attention."
+                 Tone="warning" />
+    <CompactStat Label="threads"
+                 Value="@workspace.Threads.Count.ToString()"
+                 TooltipText="Durable collaboration threads stored in the app database." />
+    <CompactStat Label="transport"
+                 Value="canonical"
+                 TooltipText="External systems can project signals in, but Collaboration owns the read model."
+                 Tone="success" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <Tabs SelectedIndex="@selectedViewIndex"

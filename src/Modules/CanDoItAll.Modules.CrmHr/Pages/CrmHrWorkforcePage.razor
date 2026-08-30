@@ -8,6 +8,7 @@
 @inject HrService HrService
 @inject PartyDirectoryService PartyDirectoryService
 @inject IPartyOrganizationAffiliationService AffiliationService
+@inject IWorkforceRecordQueryService WorkforceRecordQueryService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrWorkforcePage> Logger
@@ -28,6 +29,16 @@
 <AppToolbarHelp Heading="Workforce workspace">
     Keep worker identity, delivery-unit structure, manager lines, and commercial staffing metadata on the shared party model instead of splitting people ops and delivery records.
 </AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="records"
+                 Value="@workforceCount.ToString()"
+                 TooltipText="Workforce records in the shared directory." />
+    <CompactStat Label="selection"
+                 Value="@(selectedWorkspace is null ? "None" : "Active")"
+                 TooltipText="Current workforce workspace selection."
+                 Tone="info" />
+</AppToolbarStats>
 
 <PageScaffold MaxWidthClass="max-w-full"
               FillHeight="true">
@@ -585,6 +596,7 @@
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private long workforceLoadGeneration;
     private long deliveryUnitDialogGeneration;
+    private int workforceCount;
     private int selectedDetailTabIndex = OverviewTabIndex;
     private int workforceBrowserVersion;
     private bool isCapacityWorkspaceLoading;
@@ -651,6 +663,16 @@
             : selectedWorkspace.PartyType == PartyType.Person
                 ? [WorkforceKind.Employee, WorkforceKind.Contractor, WorkforceKind.Freelancer]
                 : [WorkforceKind.DeliveryUnit];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var countResult = await WorkforceRecordQueryService.SearchAsync(
+            new WorkforceRecordQuery(PageIndex: 0, PageSize: 1));
+        if (!isDisposed)
+        {
+            workforceCount = countResult.TotalCount;
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {

@@ -3,6 +3,7 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel
 @using Microsoft.Extensions.Logging
+@inject AppToolbarState ToolbarState
 @inject RecruitingService RecruitingService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
@@ -14,42 +15,40 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Recruiting workspace"
-                    Description="Recruit people and AI agents through interviews, execution evidence, typed analysis, training, rechecks, and an explicitly authorized handoff."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="applications"
-                             Value="@applicationSummary.TotalCount.ToString()"
-                             TooltipText="Candidate pipelines tracked on the shared registry." />
-                <CompactStat Label="interviewing"
-                             Value="@applicationSummary.InterviewingCount.ToString()"
-                             TooltipText="Candidates currently in interview loops."
-                             Tone="info" />
-                <CompactStat Label="offer or hired"
-                             Value="@applicationSummary.OfferOrHiredCount.ToString()"
-                             TooltipText="Applications close enough to require controlled handoff."
-                             Tone="success" />
-                <CompactStat Label="open tasks"
-                             Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")"
-                             TooltipText="Selected candidate training, onboarding, or offboarding actions."
-                             Tone="warning" />
-            </Stats>
-            <Actions>
-                @if (SelectedPartyId.HasValue)
-                {
-                    <PageHeaderActionButton Icon="groups"
-                                            Label="Open workforce"
-                                            TooltipText="Open the linked workforce profile."
-                                            Click="OpenWorkforceAsync"
-                                            data-testid="crmhr-recruiting-open-workforce" />
-                }
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    @if (SelectedPartyId.HasValue)
+    {
+        <PageHeaderActionButton Icon="groups"
+                                Label="Open workforce"
+                                TooltipText="Open the linked workforce profile."
+                                Click="OpenWorkforceAsync"
+                                data-testid="crmhr-recruiting-open-workforce" />
+    }
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Recruiting workspace">
+    Recruit people and AI agents through interviews, execution evidence, typed analysis, training, rechecks, and an explicitly authorized handoff.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="applications"
+                 Value="@applicationSummary.TotalCount.ToString()"
+                 TooltipText="Candidate pipelines tracked on the shared registry." />
+    <CompactStat Label="interviewing"
+                 Value="@applicationSummary.InterviewingCount.ToString()"
+                 TooltipText="Candidates currently in interview loops."
+                 Tone="info" />
+    <CompactStat Label="offer or hired"
+                 Value="@applicationSummary.OfferOrHiredCount.ToString()"
+                 TooltipText="Applications close enough to require controlled handoff."
+                 Tone="success" />
+    <CompactStat Label="open tasks"
+                 Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")"
+                 TooltipText="Selected candidate training, onboarding, or offboarding actions."
+                 Tone="warning" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" />
@@ -414,6 +413,11 @@
                 new("applicationId", ApplicationId?.ToString("D")),
                 new("partyId", PartyId?.ToString("D"))
             ]);
+
+    protected override void OnInitialized()
+    {
+        ToolbarState.SetTabText("Recruiting");
+    }
 
     protected override async Task OnParametersSetAsync()
     {

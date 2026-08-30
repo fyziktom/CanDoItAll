@@ -24,40 +24,38 @@
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextAccessState="@AgentChatAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="Scheduler"
-                    Title="Scheduler and planner"
-                    Description="Plan workflow and process runs with scheduler-owned Quartz CRON triggers and calendar-backed visibility."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="schedules" Value="@Plans.Count.ToString()" TooltipText="Saved run plans." Tone="info" />
-                <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" TooltipText="Plans currently projected into the scheduler runtime." Tone="success" />
-                <CompactStat Label="next 30 days" Value="@CalendarEventCount.ToString()" TooltipText="Projected calendar events." Tone="accent" />
-                <CompactStat Label="failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" TooltipText="Failed dispatch attempts in the current history view." Tone="warning" />
-                <CompactStat Label="no action" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.NoMessages).ToString()" TooltipText="No-message polling runs in the current history view." Tone="neutral" />
-                <CompactStat Label="waiting" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.WaitingForApproval).ToString()" TooltipText="Runs paused for explicit approval." Tone="info" />
-            </Stats>
-            <Actions>
-                <AgentAvatarActionButton AgentName="@SchedulerAgentDisplayName"
-                                         AvatarImageUrl="@SchedulerAgentAvatarImageUrl"
-                                         FallbackText="SA"
-                                         Label="@($"Open {SchedulerAgentDisplayName}")"
-                                         Click="OpenSchedulerAgentAsync"
-                                         Disabled="@(schedulerAgent is null || isOpeningSchedulerAgent || isBusy || AgentChatAccessState != AgentChatContextAccessState.Ready)"
-                                         TestId="scheduler-agent-open"
-                                         TooltipTestId="scheduler-agent-tooltip" />
-                <PageHeaderActionButton Icon="refresh"
-                                        Label="Refresh"
-                                        TooltipText="Refresh scheduler plans, history, and projected events."
-                                        Disabled="@isBusy"
-                                        IsBusy="@isBusy"
-                                        Click="RefreshAsync"
-                                        data-testid="scheduler-refresh" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <AgentAvatarActionButton AgentName="@SchedulerAgentDisplayName"
+                             AvatarImageUrl="@SchedulerAgentAvatarImageUrl"
+                             FallbackText="SA"
+                             Label="@($"Open {SchedulerAgentDisplayName}")"
+                             Click="OpenSchedulerAgentAsync"
+                             Disabled="@(schedulerAgent is null || isOpeningSchedulerAgent || isBusy || AgentChatAccessState != AgentChatContextAccessState.Ready)"
+                             TestId="scheduler-agent-open"
+                             TooltipTestId="scheduler-agent-tooltip" />
+    <PageHeaderActionButton Icon="refresh"
+                            Label="Refresh"
+                            TooltipText="Refresh scheduler plans, history, and projected events."
+                            Disabled="@isBusy"
+                            IsBusy="@isBusy"
+                            Click="RefreshAsync"
+                            data-testid="scheduler-refresh" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Scheduler and planner">
+    Plan workflow and process runs with scheduler-owned Quartz CRON triggers and calendar-backed visibility.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="schedules" Value="@Plans.Count.ToString()" TooltipText="Saved run plans." Tone="info" />
+    <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" TooltipText="Plans currently projected into the scheduler runtime." Tone="success" />
+    <CompactStat Label="next 30 days" Value="@CalendarEventCount.ToString()" TooltipText="Projected calendar events." Tone="accent" />
+    <CompactStat Label="failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" TooltipText="Failed dispatch attempts in the current history view." Tone="warning" />
+    <CompactStat Label="no action" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.NoMessages).ToString()" TooltipText="No-message polling runs in the current history view." Tone="neutral" />
+    <CompactStat Label="waiting" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.WaitingForApproval).ToString()" TooltipText="Runs paused for explicit approval." Tone="info" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {

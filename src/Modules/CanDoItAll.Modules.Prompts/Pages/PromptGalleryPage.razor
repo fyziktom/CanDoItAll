@@ -5,38 +5,36 @@
 
 <PageTitle>Prompt Gallery</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="Shared prompt library"
-                    Title="Prompt gallery"
-                    Description="Browse, filter, version, and maintain the canonical prompts and prompt parts reused by workflows, agents, processes, roles, and chat."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="search" Value="Paged" TooltipText="Search is delegated to the active Gallery search driver." Tone="info" />
-                <CompactStat Label="versions" Value="Immutable" TooltipText="Final versions remain stable when a draft changes." Tone="success" />
-                <CompactStat Label="projection" Value="Optional" TooltipText="A projection driver can replace standard database search without changing Gallery consumers." />
-            </Stats>
-            <Actions>
-                @if (CuratorLauncher.IsAvailable)
-                {
-                    <AgentAvatarActionButton AgentName="@CuratorDisplayName"
-                                             AvatarImageUrl="@curatorPresentation?.AvatarImageUrl"
-                                             FallbackText="PC"
-                                             Label="@($"Open {CuratorDisplayName}")"
-                                             Click="OpenCuratorAsync"
-                                             Disabled="@(isOpeningCurator || isLoadingCuratorPresentation)"
-                                             TestId="prompt-gallery-prompts-curator-open"
-                                             TooltipTestId="prompt-gallery-prompts-curator-tooltip" />
-                }
-                <PageHeaderActionButton Icon="add"
-                                        Label="New item"
-                                        TooltipText="Create a reusable prompt or prompt part."
-                                        Tone="ButtonTone.Primary"
-                                        Click="CreateNewAsync" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    @if (CuratorLauncher.IsAvailable)
+    {
+        <AgentAvatarActionButton AgentName="@CuratorDisplayName"
+                                 AvatarImageUrl="@curatorPresentation?.AvatarImageUrl"
+                                 FallbackText="PC"
+                                 Label="@($"Open {CuratorDisplayName}")"
+                                 Click="OpenCuratorAsync"
+                                 Disabled="@(isOpeningCurator || isLoadingCuratorPresentation)"
+                                 TestId="prompt-gallery-prompts-curator-open"
+                                 TooltipTestId="prompt-gallery-prompts-curator-tooltip" />
+    }
+    <PageHeaderActionButton Icon="add"
+                            Label="New item"
+                            TooltipText="Create a reusable prompt or prompt part."
+                            Tone="ButtonTone.Primary"
+                            Click="CreateNewAsync" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Prompt gallery">
+    Browse, filter, version, and maintain the canonical prompts and prompt parts reused by workflows, agents, processes, roles, and chat.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="search" Value="Paged" TooltipText="Search is delegated to the active Gallery search driver." Tone="info" />
+    <CompactStat Label="versions" Value="Immutable" TooltipText="Final versions remain stable when a draft changes." Tone="success" />
+    <CompactStat Label="projection" Value="Optional" TooltipText="A projection driver can replace standard database search without changing Gallery consumers." />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <PromptGallerySearchList @key="listKey"
                                  PageSize="25"

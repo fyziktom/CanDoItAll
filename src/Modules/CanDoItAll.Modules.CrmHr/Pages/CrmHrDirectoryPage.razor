@@ -1,5 +1,6 @@
 @page "/crm-hr/directory"
 @using Microsoft.Extensions.Logging
+@inject AppToolbarState ToolbarState
 @inject PartyDirectoryService PartyDirectoryService
 @inject PartyDirectoryManagementService ManagementService
 @inject IPartyOrganizationAffiliationService AffiliationService
@@ -13,45 +14,43 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Party directory"
-                    Description="Create and maintain shared party records for people, organizations, delivery units, and AI agents before downstream CRM or HR workflows branch into specialized screens."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="directory"
-                             Value="Server-paged"
-                             TooltipText="Directory records are queried in bounded pages." />
-                <CompactStat Label="search"
-                             Value="Name + tags"
-                             TooltipText="Search and tag filters execute at the data source."
-                             Tone="info" />
-                <CompactStat Label="scope"
-                             Value="4 party types"
-                             TooltipText="People, organizations, organization units, and AI agents share this directory."
-                             Tone="success" />
-                <CompactStat Label="sensitive"
-                             Value="Masked"
-                             TooltipText="Sensitive summaries and tags stay out of list projections."
-                             Tone="warning" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="import_export"
-                                        Label="CSV tools"
-                                        TooltipText="Import or export directory records as CSV."
-                                        Click="OpenImportExportDialog"
-                                        data-testid="crmhr-directory-import-export-button" />
-                <PageHeaderActionButton Icon="person_add"
-                                        Label="New party"
-                                        TooltipText="Create a new shared party record."
-                                        Tone="ButtonTone.Primary"
-                                        Click="CreateNewAsync"
-                                        data-testid="crmhr-directory-new-button" />
-            </Actions>
-        </PageHeader>
-    </Header>
+<AppToolbarActions>
+    <PageHeaderActionButton Icon="import_export"
+                            Label="CSV tools"
+                            TooltipText="Import or export directory records as CSV."
+                            Click="OpenImportExportDialog"
+                            data-testid="crmhr-directory-import-export-button" />
+    <PageHeaderActionButton Icon="person_add"
+                            Label="New party"
+                            TooltipText="Create a new shared party record."
+                            Tone="ButtonTone.Primary"
+                            Click="CreateNewAsync"
+                            data-testid="crmhr-directory-new-button" />
+</AppToolbarActions>
 
+<AppToolbarHelp Heading="Party directory">
+    Create and maintain shared party records for people, organizations, delivery units, and AI agents before downstream CRM or HR workflows branch into specialized screens.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="directory"
+                 Value="Server-paged"
+                 TooltipText="Directory records are queried in bounded pages." />
+    <CompactStat Label="search"
+                 Value="Name + tags"
+                 TooltipText="Search and tag filters execute at the data source."
+                 Tone="info" />
+    <CompactStat Label="scope"
+                 Value="4 party types"
+                 TooltipText="People, organizations, organization units, and AI agents share this directory."
+                 Tone="success" />
+    <CompactStat Label="sensitive"
+                 Value="Masked"
+                 TooltipText="Sensitive summaries and tags stay out of list projections."
+                 Tone="warning" />
+</AppToolbarStats>
+
+<PageScaffold MaxWidthClass="max-w-full">
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Directory" />
@@ -849,6 +848,11 @@
                 ? "No other current affiliations."
                 : $"Other current affiliations: {string.Join("; ", otherAffiliations)}";
         }
+    }
+
+    protected override void OnInitialized()
+    {
+        ToolbarState.SetTabText("Directory");
     }
 
     protected override async Task OnParametersSetAsync()
