@@ -1,6 +1,5 @@
 @page "/crm-hr/directory"
 @using Microsoft.Extensions.Logging
-@inject AppToolbarState ToolbarState
 @inject PartyDirectoryService PartyDirectoryService
 @inject PartyDirectoryManagementService ManagementService
 @inject IPartyOrganizationAffiliationService AffiliationService
@@ -13,6 +12,8 @@
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
+
+<AppToolbarTabText Text="Directory" />
 
 <AppToolbarActions>
     <PageHeaderActionButton Icon="import_export"
@@ -848,11 +849,6 @@
                 ? "No other current affiliations."
                 : $"Other current affiliations: {string.Join("; ", otherAffiliations)}";
         }
-    }
-
-    protected override void OnInitialized()
-    {
-        ToolbarState.SetTabText("Directory");
     }
 
     protected override async Task OnParametersSetAsync()

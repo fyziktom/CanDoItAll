@@ -1,0 +1,14 @@
+@namespace CanDoItAll.AppComponents
+@implements IDisposable
+@inject AppToolbarState ToolbarState
+
+@code {
+    [Parameter]
+    public string? Text { get; set; }
+
+    protected override void OnParametersSet()
+        => ToolbarState.SetTabText(this, Text);
+
+    public void Dispose()
+        => ToolbarState.ClearTabText(this);
+}

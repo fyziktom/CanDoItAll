@@ -3,7 +3,6 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using Microsoft.Extensions.Logging
-@inject AppToolbarState ToolbarState
 @inject IProjectRecordQueryService ProjectRecordQueryService
 @inject ProjectPartyIntegrationService ProjectPartyIntegrationService
 @inject IProjectNodeDetailsBridge ProjectNodeDetailsBridge
@@ -18,6 +17,8 @@
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
+
+<AppToolbarTabText Text="Assignments" />
 
 <AppToolbarHelp Heading="Assignments workspace">
     Keep commercial, staffing, and project allocations aligned with the live project portfolio.
@@ -345,11 +346,6 @@
         SkillCatalog = 1 << 4,
         StaffingRequests = 1 << 5,
         StaffingCandidates = 1 << 6
-    }
-
-    protected override void OnInitialized()
-    {
-        ToolbarState.SetTabText("Assignments");
     }
 
     protected override async Task OnParametersSetAsync()

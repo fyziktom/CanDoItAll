@@ -4,7 +4,6 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using Microsoft.Extensions.Logging
-@inject AppToolbarState ToolbarState
 @inject HrService HrService
 @inject PartyDirectoryService PartyDirectoryService
 @inject IPartyOrganizationAffiliationService AffiliationService
@@ -18,6 +17,8 @@
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
+
+<AppToolbarTabText Text="Workforce" />
 
 <AppToolbarActions>
     <PageHeaderActionButton Icon="asset"
@@ -676,8 +677,6 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        ToolbarState.SetTabText("Workforce");
-
         var requestedPartyId = PartyIdQuery;
         if (requestedPartyId != selectedWorkspace?.PartyId)
         {

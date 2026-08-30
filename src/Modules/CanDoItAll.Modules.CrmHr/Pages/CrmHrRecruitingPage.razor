@@ -3,7 +3,6 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel
 @using Microsoft.Extensions.Logging
-@inject AppToolbarState ToolbarState
 @inject RecruitingService RecruitingService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
@@ -14,6 +13,8 @@
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
+
+<AppToolbarTabText Text="Recruiting" />
 
 <AppToolbarActions>
     @if (SelectedPartyId.HasValue)
@@ -413,11 +414,6 @@
                 new("applicationId", ApplicationId?.ToString("D")),
                 new("partyId", PartyId?.ToString("D"))
             ]);
-
-    protected override void OnInitialized()
-    {
-        ToolbarState.SetTabText("Recruiting");
-    }
 
     protected override async Task OnParametersSetAsync()
     {

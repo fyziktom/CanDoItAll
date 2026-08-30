@@ -8,8 +8,8 @@ namespace CanDoItAll.AppComponents;
 /// buttons, help content, and stats content with the shell's single <c>AppToolbar</c> instance,
 /// instead of each page declaring its own toolbar/help/stats markup. Pages register via
 /// <c>AppToolbarActions</c>/<c>AppToolbarHelp</c>/<c>AppToolbarStats</c> (which clear their own
-/// registration on dispose) and call <see cref="SetTabText"/> directly for the plain-string breadcrumb
-/// tab segment.
+/// registration on dispose) and register the plain-string breadcrumb tab segment via
+/// <c>AppToolbarTabText</c>, which likewise clears its own registration on dispose.
 ///
 /// <see cref="HelpVisible"/>/<see cref="StatsVisible"/> are a single app-wide user preference, not
 /// per-page state, persisted as cookies (not localStorage) specifically so the shell can read the
@@ -22,6 +22,10 @@ namespace CanDoItAll.AppComponents;
 /// <see cref="ActionsContent"/>) are cleared solely by the registering portal component's own
 /// <c>Dispose()</c> when a page navigates away — there is no separate reset step, so a page transition
 /// clears and repopulates the toolbar within a single render rather than visibly flashing empty first.
+/// <see cref="TabText"/> tracks which component instance last set it (<see cref="SetTabText"/> takes an
+/// owner token) so that a late <see cref="ClearTabText"/> from a disposing component that has already
+/// been superseded by a newer one is a no-op instead of wiping the newer value — Blazor does not guarantee
+/// the old page's <c>Dispose()</c> runs before the new page's <c>OnParametersSet</c> during navigation.
 /// </summary>
 public sealed class AppToolbarState(IJSRuntime js)
 {
@@ -29,6 +33,8 @@ public sealed class AppToolbarState(IJSRuntime js)
     public const string StatsVisibleCookieName = "candoitall.app-toolbar.stats-visible";
 
     public string? TabText { get; private set; }
+
+    private object? tabTextOwner;
 
     public string? HelpHeading { get; private set; }
 
@@ -57,14 +63,44 @@ public sealed class AppToolbarState(IJSRuntime js)
         StatsVisible = statsVisibleCookie is null || string.Equals(statsVisibleCookie, "true", StringComparison.Ordinal);
     }
 
-    public void SetTabText(string? tabText)
+    /// <summary>
+    /// Registers <paramref name="tabText"/> as the trailing breadcrumb segment on behalf of
+    /// <paramref name="owner"/>. The owner is remembered so a subsequent <see cref="ClearTabText"/> from a
+    /// different, already-superseded owner does not wipe this value.
+    /// </summary>
+    public void SetTabText(object owner, string? tabText)
     {
+        tabTextOwner = owner;
+
         if (string.Equals(TabText, tabText, StringComparison.Ordinal))
         {
             return;
         }
 
         TabText = tabText;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Clears the breadcrumb tab text registered by <paramref name="owner"/>, but only if
+    /// <paramref name="owner"/> is still the current owner — a no-op otherwise, so a component that
+    /// disposes after a newer page has already registered its own tab text cannot clobber it.
+    /// </summary>
+    public void ClearTabText(object owner)
+    {
+        if (!ReferenceEquals(tabTextOwner, owner))
+        {
+            return;
+        }
+
+        tabTextOwner = null;
+
+        if (TabText is null)
+        {
+            return;
+        }
+
+        TabText = null;
         Changed?.Invoke();
     }
 

@@ -1,5 +1,4 @@
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AppComponents;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Usage;
@@ -38,9 +37,6 @@ public partial class AgentsHomePage
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
-
-    [Inject]
-    public AppToolbarState ToolbarState { get; set; } = default!;
 
     [Inject]
     public DialogService DialogService { get; set; } = default!;
@@ -337,7 +333,6 @@ public partial class AgentsHomePage
     protected override void OnParametersSet()
     {
         ApplyRequestedTab();
-        ToolbarState.SetTabText(SelectedTabText);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

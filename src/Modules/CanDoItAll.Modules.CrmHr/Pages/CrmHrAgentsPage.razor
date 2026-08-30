@@ -1,6 +1,5 @@
 @page "/crm-hr/agents"
 @implements IAsyncDisposable
-@inject AppToolbarState ToolbarState
 @inject AiAgentService AiAgentService
 @inject IAiAgentDirectoryQueryService AiAgentDirectoryQueryService
 @inject NavigationManager Navigation
@@ -10,6 +9,8 @@
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
+
+<AppToolbarTabText Text="Agents" />
 
 <AppToolbarActions>
     <PageHeaderActionButton Icon="smart_toy"
@@ -165,11 +166,6 @@
         : null;
 
     private bool ShouldShowListLoadingState => isListLoading;
-
-    protected override void OnInitialized()
-    {
-        ToolbarState.SetTabText("Agents");
-    }
 
     protected override Task OnParametersSetAsync()
         => LoadAsync(PartyIdQuery);

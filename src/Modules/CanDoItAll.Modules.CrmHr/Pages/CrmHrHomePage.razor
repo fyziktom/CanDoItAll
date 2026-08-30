@@ -1,11 +1,12 @@
 @page "/crm-hr"
 @inject ICrmHrHomeQueryService HomeQueryService
 @inject NavigationManager Navigation
-@inject AppToolbarState ToolbarState
 
 <PageTitle>CRM / HR</PageTitle>
 
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface" />
+
+<AppToolbarTabText Text="Home" />
 
 <AppToolbarActions>
     <PageHeaderActionButton Icon="asset"
@@ -250,7 +251,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ToolbarState.SetTabText("Home");
         homeSnapshot = await HomeQueryService.GetAsync();
     }
 
