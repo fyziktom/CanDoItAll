@@ -40,7 +40,9 @@ public sealed record HistoryAttemptStart(
     HistoryCaller Caller,
     HistoryPolicySnapshot Policy,
     CanonicalEvidenceReference? ContentOwner = null,
-    string? CorrelationId = null);
+    string? CorrelationId = null) {
+    public HistoryExternalReference? ExternalReference { get; init; }
+}
 
 public sealed record HistoryAttemptCompletion(
     HistoryOutcome Outcome,
@@ -60,4 +62,8 @@ public sealed record HistoryDetail(
     HistoryDetailState State,
     HistoryCapturedText? Input = null,
     HistoryCapturedText? Response = null,
-    DateTimeOffset? ExpiresAtUtc = null);
+    DateTimeOffset? ExpiresAtUtc = null) {
+    public IReadOnlyList<HistoryContentSection> Sections { get; init; } = [];
+}
+
+public sealed record HistoryContentSection(string Title, HistoryCapturedText Content);

@@ -158,12 +158,16 @@ public sealed class ProviderRequestHistoryPanelTests {
         Assert.DoesNotContain("late content", cut.Markup);
     }
 
-    [Fact]
-    public void Canonical_owner_is_passed_exactly_and_content_denial_clears_disclosed_metadata() {
+    [Theory]
+    [InlineData(HistorySourceKind.AgentConversation, HistoryOwnerRole.ContentOwner)]
+    [InlineData(HistorySourceKind.SimpleChat, HistoryOwnerRole.ContentOwner)]
+    [InlineData(HistorySourceKind.Workflow, HistoryOwnerRole.PrimaryEvidence)]
+    public void Canonical_owner_is_passed_exactly_and_content_denial_clears_disclosed_metadata(
+        HistorySourceKind kind, HistoryOwnerRole role) {
         var backend = new ProviderHistoryUiFixture();
-        var owner = new CanonicalEvidenceReference(backend.Entry.Partition, HistorySourceKind.SimpleChat, new("conversation"), new("turn"));
+        var owner = new CanonicalEvidenceReference(backend.Entry.Partition, kind, new("conversation"), new("turn"));
         backend.Entry = backend.Entry with { MetadataAuthority = HistoryMetadataAuthority.CanonicalProjection, DetailState = HistoryDetailState.Canonical };
-        backend.Owners = [new(backend.Entry.Id, owner, new(1), HistoryOwnerRole.ContentOwner, HistoryOwnerState.Linked)];
+        backend.Owners = [new(backend.Entry.Id, owner, new(1), role, HistoryOwnerState.Linked)];
         backend.Content = _ => throw new ProviderHistoryException(HistoryFailure.Denied, "Content access denied.");
         using var context = backend.CreateContext();
         var cut = context.Render<ProviderHistoryDetailsDialog>(p => p.Add(x => x.EntryId, backend.Entry.Id));

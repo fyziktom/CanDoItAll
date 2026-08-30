@@ -11,6 +11,7 @@ public static class HistoryAttemptEvidence {
             HistoryRetentionAuthority.HistoryPolicy,
             start.ContentOwner is null ? HistoryDetailState.NotCaptured : HistoryDetailState.PendingCanonical) {
             CorrelationId = start.CorrelationId,
+            ExternalReference = start.ExternalReference,
             RemoteRequest = completion?.RemoteRequest,
             ExpiresAtUtc = Normalize(start.StartedAtUtc.AddDays(start.Policy.Policy.MetadataRetentionDays)),
             Version = completion is null ? 0 : 1

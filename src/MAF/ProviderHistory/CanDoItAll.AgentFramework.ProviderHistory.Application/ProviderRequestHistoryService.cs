@@ -44,7 +44,7 @@ public sealed class ProviderRequestHistoryService(
                 detail = await store.ReadDetailAsync(context, entryId, token);
             } else {
                 var link = metadata.Owners.SingleOrDefault(link => link.Source == owner &&
-                    link.Role == HistoryOwnerRole.ContentOwner && link.State == HistoryOwnerState.Linked);
+                    link.CanReadContent);
                 if (link is null || owner.Partition != context.Partition) {
                     return Unavailable(entryId);
                 }

@@ -10,12 +10,13 @@ public sealed record HistoryInvocationContext(
     HistoryCurrentTurn? CurrentTurn = null,
     string? CorrelationId = null) {
     public HistoryAttemptCollection Attempts { get; } = new();
+    public HistoryExternalReference? ExternalReference { get; init; }
 
     public HistoryInvocationContext CreateChild() {
         var requestId = ProviderRequestId.New();
         return new(requestId, Workload, Caller,
             Owner is null ? null : Owner with { EvidenceId = new(requestId.Value.ToString("N")) },
-            CorrelationId: CorrelationId);
+            CorrelationId: CorrelationId) { ExternalReference = ExternalReference };
     }
 
     public static HistoryInvocationContext Create(HistoryWorkload workload = HistoryWorkload.Direct,

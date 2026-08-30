@@ -120,8 +120,47 @@ public sealed class AgentFileHistorySource(
         return await journal.ReadAsync(source, cancellationToken);
     }
 
-    public Task<HistoryDetail> ReadDetailAsync(CanonicalEvidenceReference source, HistoryEntryId entryId,
-        CancellationToken cancellationToken) => Task.FromResult(new HistoryDetail(entryId, HistoryDetailState.Unavailable));
+    public async Task<HistoryDetail> ReadDetailAsync(CanonicalEvidenceReference source, HistoryEntryId entryId,
+        CancellationToken cancellationToken) {
+        var evidence = await ReadAsync(source, cancellationToken);
+        if (evidence is not { Kind: HistorySourceMutationKind.Upsert } ||
+            evidence.Entry?.Id != entryId && !evidence.Attempts.Any(entry => entry.Id == entryId)) {
+            return new(entryId, HistoryDetailState.Unavailable);
+        }
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        var owner = Guid.ParseExact(source.Owner.Value, "N");
+        var evidenceId = Guid.ParseExact(source.Evidence.Value, "N");
+        var locator = await db.Set<AgentHistoryLocator>().AsNoTracking().SingleOrDefaultAsync(row =>
+            row.PartitionId == source.Partition.StorageLineageId && row.EvidenceId == evidenceId &&
+            row.OwnerId == owner && !row.IsDeleted, cancellationToken);
+        if (locator is null) {
+            return new(entryId, HistoryDetailState.Unavailable);
+        }
+        var store = new FileSandboxWorkspaceStore(paths.ResolveWorkspaceRoot(), new(locator.ScopeKind, locator.ScopeKey));
+        var run = await store.GetExecutionRunAsync(owner, cancellationToken);
+        if (run is null) {
+            return new(entryId, HistoryDetailState.Unavailable);
+        }
+        var sections = new List<HistoryContentSection> {
+            new("Run input summary", Capture(run.InputSummary)),
+            new("Run result summary", Capture(run.ResultSummary))
+        };
+        if (run.ChatSessionId is { } sessionId) {
+            var session = await store.GetChatSessionAsync(sessionId, cancellationToken);
+            if (session is not null && session.AgentId == run.AgentId) {
+                var messages = session.Messages.OrderBy(message => message.CreatedAtUtc).TakeLast(50);
+                var transcript = string.Join("\n\n", messages.Select(message =>
+                    $"{message.Role} · {message.CreatedAtUtc:u}\n{message.Content}"));
+                sections.Insert(0, new("Linked conversation · latest 50 messages (may include other turns)", Capture(transcript)));
+            } else {
+                sections.Add(new("Linked conversation", Capture("The linked conversation is no longer available.")));
+            }
+        }
+        return new(entryId, HistoryDetailState.Canonical) { Sections = sections };
+    }
+
+    private static HistoryCapturedText Capture(string text) => HistoryTextCapture.Capture(text, 32 * 1024, []);
 
     public void Dispose() {
         backfill?.Dispose();

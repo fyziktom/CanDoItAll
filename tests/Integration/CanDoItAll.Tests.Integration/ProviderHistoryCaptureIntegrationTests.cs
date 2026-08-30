@@ -110,6 +110,22 @@ public sealed class ProviderHistoryCaptureIntegrationTests {
         Assert.Equal(2, await db.Set<HistoryDetailRow>().CountAsync());
     }
 
+    [Fact]
+    public async Task Local_project_reference_survives_capture_and_canonical_evidence() {
+        await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
+        var reference = new HistoryExternalReference(Guid.NewGuid().ToString("D"), HistoryExternalReference.LocalProjectType);
+        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.Factory), fixture.Factory,
+            fixture.Runtime, fixture.Capture, fixture.Clock, NullLogger<HistoryInvocationRecorder>.Instance);
+        var context = HistoryInvocationContext.Create(HistoryWorkload.Agent) with { ExternalReference = reference };
+        var start = await recorder.BeginAsync(new(fixture.Start().Provider, HistoryOperation.CompleteChat, context), default);
+        await recorder.CompleteAsync(start, fixture.Completion(), null, default);
+        Assert.Equal(reference, HistoryAttemptEvidence.Create(start, fixture.Completion()).ExternalReference);
+        await using var db = fixture.Factory.CreateDbContext();
+        var row = await db.Set<HistoryEntryRow>().SingleAsync();
+        Assert.Equal(reference.Value, row.ExternalReferenceValue);
+        Assert.Equal(reference.Type, row.ExternalReferenceType);
+    }
+
     private static async Task EnableDetailsAsync(HistoryPersistenceTestDatabase fixture) {
         await using var db = fixture.Factory.CreateDbContext();
         (await db.Set<HistoryPolicyRow>().SingleAsync()).CaptureMode = HistoryCaptureMode.Detailed;

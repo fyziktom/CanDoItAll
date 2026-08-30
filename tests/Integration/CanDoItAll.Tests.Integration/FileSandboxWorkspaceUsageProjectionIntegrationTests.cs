@@ -491,7 +491,14 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
             HistoryEvidence = new(start.RequestId, true, [HistoryAttemptEvidence.Create(start, history.Completion())]),
             RawUsageJson = "{\"prompt\":\"must-not-be-copied\"}"
         };
-        await scenario.Store.SaveExecutionRunDetailAsync(CreateRunDetail(run, agent, history.Clock.Now, "Local", "model", [usage]));
+        var session = new ChatSessionRecord(Guid.NewGuid(), agent, "Retained conversation", history.Clock.Now, history.Clock.Now, [
+            new(Guid.NewGuid(), ChatMessageRole.User, "Full user prompt", history.Clock.Now, 4),
+            new(Guid.NewGuid(), ChatMessageRole.Assistant, new string('x', 200) + " full retained answer password=secret", history.Clock.Now.AddSeconds(1), 60)
+        ]);
+        var runDetail = CreateRunDetail(run, agent, history.Clock.Now, "Local", "model", [usage with { ChatSessionId = session.Id }]);
+        await scenario.Store.SaveExecutionRunDetailAsync(runDetail with {
+            Run = runDetail.Run with { ChatSessionId = session.Id }, ChatSession = session
+        });
         using var queue = new FileHistoryReadyQueue(scenario.WorkspaceRoot);
         Assert.Equal(scenario.Scope, await queue.NextAsync(history.Partition, default));
         var journal = new FileProviderHistoryJournal(scenario.WorkspaceRoot, scenario.Scope);
@@ -525,9 +532,20 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
             Assert.Equal(scenario.Scope.Key, locator.ScopeKey);
             Assert.Empty(await db.Set<HistoryDetailRow>().ToArrayAsync());
         }
-        var summaryOnly = await source.ReadDetailAsync(publication.Mutation.Source, start.EntryId, default);
-        Assert.Equal(HistoryDetailState.Unavailable, summaryOnly.State);
-        Assert.Null(summaryOnly.Input);
+        var content = await source.ReadDetailAsync(publication.Mutation.Source, start.EntryId, default);
+        Assert.Equal(HistoryDetailState.Canonical, content.State);
+        Assert.Null(content.Input);
+        Assert.Equal("summary", content.Sections.Single(section => section.Title == "Run input summary").Content.Text);
+        Assert.Equal("completed", content.Sections.Single(section => section.Title == "Run result summary").Content.Text);
+        var transcript = content.Sections.Single(section => section.Title.StartsWith("Linked conversation", StringComparison.Ordinal)).Content;
+        Assert.Contains("Full user prompt", transcript.Text);
+        Assert.Contains("full retained answer", transcript.Text);
+        Assert.DoesNotContain("password=secret", transcript.Text);
+        Assert.True(transcript.Flags.HasFlag(HistoryDetailFlags.Redacted));
+        Assert.Equal(HistoryDetailState.Unavailable,
+            (await source.ReadDetailAsync(publication.Mutation.Source, HistoryEntryId.New(), default)).State);
+        Assert.Equal(HistoryDetailState.Unavailable,
+            (await source.ReadDetailAsync(publication.Mutation.Source with { Owner = new(Guid.NewGuid().ToString("N")) }, start.EntryId, default)).State);
     }
 
     [Fact]

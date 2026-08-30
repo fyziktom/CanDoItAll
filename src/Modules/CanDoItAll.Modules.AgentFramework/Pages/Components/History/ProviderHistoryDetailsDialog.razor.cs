@@ -25,6 +25,8 @@ public partial class ProviderHistoryDetailsDialog : IDisposable {
         return ReadAsync(token => History.GetDetailAsync(EntryId, owner, token), value => detail = value);
     }
 
+    private void CloseContent() => detail = null;
+
     private async Task ReadAsync<T>(Func<CancellationToken, Task<T>> read, Action<T> publish) {
         if (isLoading || disposed) {
             return;

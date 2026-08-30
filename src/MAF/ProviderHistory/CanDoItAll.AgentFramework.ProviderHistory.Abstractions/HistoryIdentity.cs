@@ -52,6 +52,10 @@ public sealed record HistoryOwnerLink(
     CanonicalEvidenceReference Source,
     HistorySourceVersion Version,
     HistoryOwnerRole Role,
-    HistoryOwnerState State);
+    HistoryOwnerState State) {
+    public bool CanReadContent => State == HistoryOwnerState.Linked &&
+        (Role == HistoryOwnerRole.ContentOwner ||
+            Role == HistoryOwnerRole.PrimaryEvidence && Source.Kind == HistorySourceKind.Workflow);
+}
 
 public sealed record RemoteRequestReference(Guid ConfiguredSourceId, string PublisherRequestId);

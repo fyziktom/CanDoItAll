@@ -83,6 +83,7 @@ internal static class HistoryEntryMapping {
         HistoryMetadataAuthority.Standalone, HistoryRetentionAuthority.HistoryPolicy,
         start.ContentOwner is null ? HistoryDetailState.NotCaptured : HistoryDetailState.PendingCanonical) {
         CorrelationId = start.CorrelationId,
+        ExternalReference = start.ExternalReference,
         ExpiresAtUtc = start.StartedAtUtc.AddDays(start.Policy.Policy.MetadataRetentionDays)
     });
 

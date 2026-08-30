@@ -52,8 +52,39 @@ public sealed class WorkflowHistorySource(
         return row is null ? null : WorkflowHistoryProjection.Create(row.ToObservation(), source.Partition);
     }
 
-    public Task<HistoryDetail> ReadDetailAsync(CanonicalEvidenceReference source, HistoryEntryId entryId,
-        CancellationToken cancellationToken) => Task.FromResult(new HistoryDetail(entryId, HistoryDetailState.Unavailable));
+    public async Task<HistoryDetail> ReadDetailAsync(CanonicalEvidenceReference source, HistoryEntryId entryId,
+        CancellationToken cancellationToken) {
+        var evidence = await ReadAsync(source, cancellationToken);
+        if (evidence is null || evidence.Entry?.Id != entryId && !evidence.Attempts.Any(entry => entry.Id == entryId)) {
+            return new(entryId, HistoryDetailState.Unavailable);
+        }
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        var runId = Guid.ParseExact(source.Owner.Value, "N");
+        var evidenceId = Guid.ParseExact(source.Evidence.Value, "N");
+        var observation = await db.Set<WorkflowUsageObservationRecordEntity>().AsNoTracking()
+            .SingleOrDefaultAsync(row => row.Id == evidenceId && row.RunId == runId, cancellationToken);
+        var run = await db.Set<WorkflowRunRecordEntity>().AsNoTracking()
+            .Where(row => row.RunId == runId).Select(row => new { row.State, Summary = row.Summary.Substring(0, 32768) })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (observation is null || run is null) {
+            return new(entryId, HistoryDetailState.Unavailable);
+        }
+        var events = await db.Set<WorkflowEventRecordEntity>().AsNoTracking()
+            .Where(row => row.RunId == runId && row.NodeId == observation.NodeId)
+            .OrderByDescending(row => row.CreatedAtUtc).ThenByDescending(row => row.Id)
+            .Select(row => new { row.CreatedAtUtc, row.Kind, Message = row.Message.Substring(0, 4096), Length = row.Message.Length })
+            .Take(50).ToArrayAsync(cancellationToken);
+        var eventText = string.Join("\n\n", events.Reverse().Select(row =>
+            $"{row.CreatedAtUtc:u} · {row.Kind}\n{row.Message}{(row.Length > 4096 ? " [truncated]" : string.Empty)}"));
+        return new(entryId, HistoryDetailState.Canonical) {
+            Sections = [
+                new("Workflow run", HistoryTextCapture.Capture($"{runId:D} · {run.State}\n{run.Summary}", 32 * 1024, [])),
+                new($"Node {observation.NodeId} · latest 50 events (may include other attempts)",
+                    HistoryTextCapture.Capture(eventText, 32 * 1024, []))
+            ]
+        };
+    }
 
     private sealed record Position(Guid Id, bool Complete);
 }

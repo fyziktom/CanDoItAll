@@ -161,6 +161,27 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         Assert.Single(await db.Set<HistoryEntryRow>().ToArrayAsync());
         Assert.Null(await adapter.ReadAsync(source with { Owner = new(Guid.NewGuid().ToString("N")) }, default));
         Assert.Equal(1000, restored.InputTokens);
+        Assert.Equal(HistoryDetailState.Unavailable, (await adapter.ReadDetailAsync(source, exact.Id, default)).State);
+        db.Add(new WorkflowRunRecordEntity {
+            RunId = runId.Value, WorkflowId = observation.WorkflowId.Value, VersionId = observation.VersionId.Value,
+            State = WorkflowRunState.Completed, Summary = "Canonical workflow result",
+            CreatedAtUtc = RecordedAtUtc, UpdatedAtUtc = RecordedAtUtc
+        });
+        db.Add(new WorkflowEventRecordEntity {
+            Id = Guid.NewGuid(), RunId = runId.Value, NodeId = observation.NodeId.Value,
+            Message = "Stored node output", CreatedAtUtc = RecordedAtUtc
+        });
+        db.Add(new WorkflowEventRecordEntity {
+            Id = Guid.NewGuid(), RunId = runId.Value, NodeId = "unrelated-node",
+            Message = "Must not be disclosed as this node", CreatedAtUtc = RecordedAtUtc
+        });
+        await db.SaveChangesAsync();
+        var detail = await adapter.ReadDetailAsync(source, exact.Id, default);
+        Assert.Equal(HistoryDetailState.Canonical, detail.State);
+        Assert.Contains("Canonical workflow result", detail.Sections[0].Content.Text);
+        Assert.Contains("Stored node output", detail.Sections[1].Content.Text);
+        Assert.DoesNotContain("unrelated", detail.Sections[1].Content.Text);
+        Assert.Equal(HistoryDetailState.Unavailable, (await adapter.ReadDetailAsync(source, HistoryEntryId.New(), default)).State);
     }
 
     private sealed class FailAfterWorkflowHistorySave(bool enabled) : SaveChangesInterceptor {

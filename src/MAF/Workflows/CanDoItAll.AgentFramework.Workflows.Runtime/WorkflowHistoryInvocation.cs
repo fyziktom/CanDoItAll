@@ -10,6 +10,8 @@ internal static class WorkflowHistoryInvocation {
         return HistoryInvocationContext.Create(HistoryWorkload.Workflow) with {
             RequestId = new(invocationId),
             Caller = WorkflowExecutorExecutionAuditScope.CurrentOrigin?.HistoryCaller ?? new(HistoryAuthenticationKind.Unknown),
+            ExternalReference = WorkflowExecutorExecutionAuditScope.CurrentOrigin is WorkflowLaunchOrigin.ProjectStructureNode project
+                ? new(project.ProjectId.ToString("D"), HistoryExternalReference.LocalProjectType) : null,
             Owner = runId is { } run ? new HistoryOwnerIdentity(HistorySourceKind.Workflow,
                 new(run.Value.ToString("N")), new(invocationId.ToString("N"))) : null
         };

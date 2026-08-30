@@ -23,7 +23,9 @@ public sealed class HistoryInvocationRecorder(
         var start = new HistoryAttemptStart(new(Guid.NewGuid()), partition,
             new(expected.Generation, 0), context.RequestId, new(Guid.NewGuid()), HistoryStorageTimestamp.Normalize(clock.GetUtcNow()),
             invocation.Provider, invocation.Operation, context.Workload, context.Caller,
-            HistoryPolicyStore.Snapshot(row), owner, context.CorrelationId);
+            HistoryPolicyStore.Snapshot(row), owner, context.CorrelationId) {
+            ExternalReference = context.ExternalReference
+        };
         try {
             await capture.BeginAsync(start, context.CurrentTurn, cancellationToken);
         } catch (Exception exception) {

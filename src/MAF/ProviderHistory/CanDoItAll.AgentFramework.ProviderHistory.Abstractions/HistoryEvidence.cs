@@ -49,6 +49,7 @@ public sealed record HistoryCoverage(
 
 public sealed record HistoryExternalReference
 {
+    public const string LocalProjectType = "local-project";
     public const int MaximumValueLength = 256;
     public const int MaximumTypeLength = 64;
 
