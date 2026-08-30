@@ -4,20 +4,20 @@ body {
     margin: 0;
 }
 
-body {
+/*body {*/
     /*font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;*/
-}
+/*}*/
 
-button,
-input,
-textarea,
-select {
-    font: inherit;
-}
+/*button,*/
+/*input,*/
+/*textarea,*/
+/*select {*/
+/*    font: inherit;*/
+/*}*/
 
-a {
-    color: inherit;
-}
+/*a {*/
+/*    color: inherit;*/
+/*}*/
 
 #blazor-error-ui {
     display: none;
