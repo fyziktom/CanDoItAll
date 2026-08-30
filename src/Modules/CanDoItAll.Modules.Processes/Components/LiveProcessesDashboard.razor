@@ -2,6 +2,7 @@
 @using System.Globalization
 @using System.Text.Json
 @using CanDoItAll.AgentFramework.Components
+@using CanDoItAll.AppComponents
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Infrastructure.Persistence
@@ -33,59 +34,69 @@
                                  ContributorPublications="@agentChatContextPublication.ContributorPublications"
                                  ContextNavigationIdentity="@AgentChatNavigationFence" />
 
+<AppToolbarActions>
+    @if (HiddenRelatedRunCount > 0)
+    {
+        <PageHeaderActionButton Icon="visibility"
+                                Label="@($"Show {HiddenRelatedRunCount}")"
+                                TooltipText="Show hidden process cards in this dashboard."
+                                Disabled="@isLoading"
+                                Click="ShowHiddenRunGroupsAsync"
+                                data-testid="live-processes-show-hidden-runs" />
+    }
+    <PageHeaderActionButton Icon="refresh"
+                            Label="Refresh"
+                            TooltipText="Refresh the live process projection."
+                            Disabled="@isLoading"
+                            IsBusy="@isLoading"
+                            Click="ForceRefreshAsync"
+                            data-testid="live-processes-refresh-button" />
+    <PageHeaderActionButton Icon="account_tree"
+                            Label="Definitions"
+                            TooltipText="Open the process definitions workspace."
+                            Disabled="@isLoading"
+                            Click="OpenDefinitionsAsync"
+                            data-testid="live-processes-open-definitions" />
+</AppToolbarActions>
+
+<AppToolbarHelp Heading="@PageTitleText">
+    Track active, attention, and failed process runs against the live projection.
+</AppToolbarHelp>
+
+<AppToolbarStats>
+    <CompactStat Label="definitions"
+                 Value="@DefinitionCountText"
+                 TooltipText="@(shell?.DefinitionCatalog.Summary ?? "Process definitions available in this scope.")"
+                 Tone="info" />
+    <CompactStat Label="active"
+                 Value="@((shell?.LiveRuns.ActiveRunCount ?? 0).ToString("N0", CultureInfo.CurrentCulture))"
+                 TooltipText="Process runs currently active in the live projection."
+                 Tone="success" />
+    <CompactStat Label="attention"
+                 Value="@((shell?.LiveRuns.AttentionRunCount ?? 0).ToString("N0", CultureInfo.CurrentCulture))"
+                 TooltipText="Runs that need operator attention."
+                 Tone="warning" />
+    <CompactStat Label="failed"
+                 Value="@((shell?.LiveRuns.FailedRunCount ?? 0).ToString("N0", CultureInfo.CurrentCulture))"
+                 TooltipText="Failed runs in this scope."
+                 Tone="danger" />
+    <CompactStat Label="last event"
+                 Value="@LastEventText"
+                 TooltipText="Most recent live-run event observed by the projection." />
+    <CompactStat Label="backlog"
+                 Value="@((shell?.Refresh.BacklogEventCount ?? 0).ToString("N0", CultureInfo.CurrentCulture))"
+                 TooltipText="@(shell?.Refresh.Summary ?? "Live process projection is loading.")"
+                 Tone="@ProjectionTone" />
+    <CompactStat Label="status"
+                 Value="@ProjectionStatusText"
+                 TooltipText="@ProjectionTooltip"
+                 Tone="@ProjectionTone" />
+</AppToolbarStats>
+
 <PageScaffold FillHeight="true"
               MaxWidthClass="max-w-full"
               Class="live-processes-page"
               data-testid="live-processes-page">
-    <Header>
-        <Toolbar Class="live-processes-command-strip"
-                 data-testid="live-processes-command-strip">
-            <ToolbarRow Class="live-processes-command-strip__row">
-                <CompactStatStrip Class="min-w-0">
-                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="whitespace-nowrap" Value="Processes" />
-                    <h1 class="live-processes-title">@PageTitleText</h1>
-                    <CompactStat Tone="info"
-                                 Text="@FormatCount(shell?.LiveRuns.ActiveRunCount ?? 0, "active", "active")"
-                                 TooltipText="Process runs currently active in the live projection." />
-                    <CompactStat Tone="warning"
-                                 Text="@FormatCount(shell?.LiveRuns.AttentionRunCount ?? 0, "attention", "attention")"
-                                 TooltipText="Process runs currently needing operator attention." />
-                    <CompactStat Tone="danger"
-                                 Text="@FormatCount(shell?.LiveRuns.FailedRunCount ?? 0, "failed", "failed")"
-                                 TooltipText="Process runs currently failed in the live projection." />
-                    <CompactStat Tone="@ProjectionTone"
-                                 Text="@ProjectionStatusText"
-                                 TooltipText="@ProjectionTooltip" />
-                </CompactStatStrip>
-
-                <ToolbarActions Class="live-processes-command-strip__actions">
-                    @if (HiddenRelatedRunCount > 0)
-                    {
-                        <PageHeaderActionButton Icon="visibility"
-                                                Label="@($"Show {HiddenRelatedRunCount}")"
-                                                TooltipText="Show hidden process cards in this dashboard."
-                                                Disabled="@isLoading"
-                                                Click="ShowHiddenRunGroupsAsync"
-                                                data-testid="live-processes-show-hidden-runs" />
-                    }
-                    <PageHeaderActionButton Icon="refresh"
-                                            Label="Refresh"
-                                            TooltipText="Refresh the live process projection."
-                                            Disabled="@isLoading"
-                                            IsBusy="@isLoading"
-                                            Click="ForceRefreshAsync"
-                                            data-testid="live-processes-refresh-button" />
-                    <PageHeaderActionButton Icon="account_tree"
-                                            Label="Definitions"
-                                            TooltipText="Open the process definitions workspace."
-                                            Disabled="@isLoading"
-                                            Click="OpenDefinitionsAsync"
-                                            data-testid="live-processes-open-definitions" />
-                </ToolbarActions>
-            </ToolbarRow>
-        </Toolbar>
-    </Header>
-
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium"
                Class="live-processes-dashboard min-h-0 flex-1"
@@ -144,35 +155,6 @@
             }
             else if (shell is not null)
             {
-                <div class="live-processes-summary"
-                     data-testid="live-processes-summary">
-                    <CompactStatStrip>
-                        <CompactStat Label="definitions"
-                                     Value="@DefinitionCountText"
-                                     TooltipText="@shell.DefinitionCatalog.Summary"
-                                     Tone="info" />
-                        <CompactStat Label="active"
-                                     Value="@shell.LiveRuns.ActiveRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Active process runs in this scope."
-                                     Tone="success" />
-                        <CompactStat Label="attention"
-                                     Value="@shell.LiveRuns.AttentionRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Runs that need operator attention."
-                                     Tone="warning" />
-                        <CompactStat Label="failed"
-                                     Value="@shell.LiveRuns.FailedRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Failed runs in this scope."
-                                     Tone="danger" />
-                        <CompactStat Label="last event"
-                                     Value="@LastEventText"
-                                     TooltipText="Most recent live-run event observed by the projection." />
-                        <CompactStat Label="backlog"
-                                     Value="@shell.Refresh.BacklogEventCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="@shell.Refresh.Summary"
-                                     Tone="@ProjectionTone" />
-                    </CompactStatStrip>
-                </div>
-
                 <div class="live-processes-tabs-frame"
                      data-testid="live-processes-tabs-frame">
                     <Tabs SelectedIndex="@selectedTabIndex"

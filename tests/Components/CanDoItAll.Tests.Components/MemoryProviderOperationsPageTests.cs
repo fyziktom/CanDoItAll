@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
@@ -183,6 +184,7 @@ public sealed class MemoryProviderOperationsPageTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddScoped<AppToolbarState>();
         context.Services.AddDbContextFactory<AppDbContext>(options =>
             options.UseInMemoryDatabase($"memory-ui-ops-{Guid.NewGuid():N}"));
         context.Services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));

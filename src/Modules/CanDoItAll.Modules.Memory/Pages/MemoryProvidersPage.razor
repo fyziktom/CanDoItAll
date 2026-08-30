@@ -22,11 +22,26 @@
     Generic provider profiles, capability manifests, health, and safe provider selection.
 </AppToolbarHelp>
 
-<PageScaffold MaxWidthClass="max-w-full" data-testid="memory-ui-page">
-    <Lead>
-        <MemoryProvidersSummary Snapshot="@Controller.Snapshot" />
-    </Lead>
+<AppToolbarStats>
+    <CompactStat Label="providers"
+                 Value="@Controller.Snapshot?.ProviderCount.ToString()"
+                 TooltipText="Registered generic memory provider profiles."
+                 Tone="info" />
+    <CompactStat Label="enabled"
+                 Value="@Controller.Snapshot?.EnabledProviderCount.ToString()"
+                 TooltipText="Provider profiles enabled for selection."
+                 Tone="success" />
+    <CompactStat Label="healthy"
+                 Value="@Controller.Snapshot?.HealthyProviderCount.ToString()"
+                 TooltipText="Provider profiles reporting healthy status."
+                 Tone="@(Controller.Snapshot?.HealthyProviderCount > 0 ? "success" : "neutral")" />
+    <CompactStat Label="provider UI"
+                 Value="@Controller.Snapshot?.UiSurfaceCount.ToString()"
+                 TooltipText="Optional provider-specific UI surfaces declared by provider manifests."
+                 Tone="neutral" />
+</AppToolbarStats>
 
+<PageScaffold MaxWidthClass="max-w-full" data-testid="memory-ui-page">
     <ChildContent>
         <div class="memory-ui-root">
             @if (!string.IsNullOrWhiteSpace(Controller.ErrorMessage))

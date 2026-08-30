@@ -1715,8 +1715,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.LaunchStarted, true));
+        var cut = RenderLiveProcessesDashboardWithToolbar(context, launchStarted: true);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
@@ -1752,7 +1751,7 @@ public sealed class ProcessWorkspaceShellTests
         });
 
         Assert.NotNull(cut.Find("[data-testid='live-processes-page']"));
-        Assert.NotNull(cut.Find("[data-testid='live-processes-command-strip']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-refresh-button']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-started-notification']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']"));
@@ -1877,7 +1876,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.Render<LiveProcessesDashboard>();
+        var cut = RenderLiveProcessesDashboardWithToolbar(context);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
         var subprocessCard = cut
@@ -1907,6 +1906,24 @@ public sealed class ProcessWorkspaceShellTests
                 cut.FindAll("[data-testid='live-processes-run-card']"),
                 card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
         });
+    }
+
+    private static IRenderedComponent<AppToolbarActionsTestHost> RenderLiveProcessesDashboardWithToolbar(
+        BunitContext context,
+        bool launchStarted = false)
+    {
+        RenderFragment dashboardContent = builder =>
+        {
+            builder.OpenComponent<LiveProcessesDashboard>(0);
+            if (launchStarted)
+            {
+                builder.AddComponentParameter(1, nameof(LiveProcessesDashboard.LaunchStarted), true);
+            }
+
+            builder.CloseComponent();
+        };
+        return context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(p => p.ChildContent, dashboardContent));
     }
 
     private static IRenderedComponent<AppToolbarActionsTestHost> RenderShellWithToolbar(
