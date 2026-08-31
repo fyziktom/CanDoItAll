@@ -59,19 +59,13 @@
                  Tone="warning" />
 </AppToolbarStats>
 
-<section class="projects-board flex min-h-[26rem] w-full flex-col overflow-hidden rounded-[1.85rem] border border-chrome-200 bg-white/92 shadow-sm shadow-chrome-200/60"
-         data-testid="projects-board">
-    <Stack GapScale="LayoutGap.Small"
-           Class="border-b border-chrome-200 px-4 py-4 sm:px-5"
-           data-testid="projects-command-bar">
-        <Toolbar Class="shadow-none p-0 border-0 mt-2">
             <div class="projects-board__filters">
                 <PrefixedField
                                Class="min-w-0">
                     <TextInput Value="@ProjectSearch"
+                               Density="FormDensity.Comfortable"
                            @oninput="HandleProjectSearchInput"
                            maxlength="@ProjectFileFilter.MaximumTextLength"
-                           Class="h-10"
                            placeholder="Search by name or current phase"
                            data-testid="projects-search-input" />
                 </PrefixedField>
@@ -82,8 +76,8 @@
                                StackOnMobile="true"
                                Class="min-w-0">
                     <SelectInput TValue="ProjectStatus?"
-                                 @bind-Value="StatusFilterProxy"
-                                 Class="h-10 appearance-none">
+                                 Density="FormDensity.Comfortable"
+                                 @bind-Value="StatusFilterProxy">
                         <option value="">All statuses</option>
                         @foreach (var status in Enum.GetValues<ProjectStatus>())
                         {
@@ -99,7 +93,7 @@
                                Class="min-w-0">
                     <SelectInput TValue="ProjectPartyPortfolioCategory?"
                                  @bind-Value="RelatedPartyCategoryFilterProxy"
-                                 Class="h-10 appearance-none"
+                                 Density="FormDensity.Comfortable"
                                  data-testid="project-related-party-category-filter">
                         <option value="">Any relationship</option>
                         @foreach (var category in Enum.GetValues<ProjectPartyPortfolioCategory>())
@@ -115,7 +109,7 @@
                                StackOnMobile="true"
                                Class="min-w-0">
                     <SelectInput @bind-Value="RelatedPartyValueFilterProxy"
-                                 Class="h-10 appearance-none"
+                                 Density="FormDensity.Comfortable"
                                  data-testid="project-related-party-value-filter">
                         <option value="">Any party</option>
                         @foreach (var value in ProjectProjection.AvailableRelatedPartyValues)
@@ -132,7 +126,7 @@
                                Class="min-w-0">
                     <SelectInput TValue="Guid?"
                                  @bind-Value="HierarchyFilterProjectIdProxy"
-                                 Class="h-10 appearance-none"
+                                 Density="FormDensity.Comfortable"
                                  data-testid="hierarchy-filter-project">
                         <option value="">Any project</option>
                         @foreach (var project in MainProjectOptions)
@@ -148,8 +142,8 @@
                                StackOnMobile="true"
                                Class="min-w-0">
                     <SelectInput TValue="ProjectHierarchyFilterMode"
+                                 Density="FormDensity.Comfortable"
                                  @bind-Value="HierarchyFilterModeProxy"
-                                 Class="h-10 appearance-none"
                                  data-testid="hierarchy-filter-mode">
                         <option value="@ProjectHierarchyFilterMode.Descendants">Project scope</option>
                         <option value="@ProjectHierarchyFilterMode.Children">Subprojects</option>
@@ -160,7 +154,8 @@
                     <CheckboxOption
                         TValue="bool"
                             Text="Include subprojects"
-                              Value="@IncludeSubprojects"
+                        Value="@IncludeSubprojects"
+                        Density="FormDensity.Comfortable"
                               ValueChanged="IncludeSubprojectsChanged"
                               Disabled="@(HierarchyFilterProjectId is null || HierarchyFilterMode != ProjectHierarchyFilterMode.Descendants)"
                               aria-label="Include subprojects"
@@ -169,14 +164,12 @@
                                Position="TooltipPosition.Bottom"
                                TestId="projects-reset-filters-tooltip">
                 <Button Tone="ButtonTone.Default"
-                        Class="ui-button--quick"
                         Icon="restart_alt"
-                        aria-label="Reset filters"
-                        Click="ResetFilters" />
+                        Density="ButtonDensity.Comfortable"
+                aria-label="Reset filters"
+                Click="ResetFilters" />
                 </TooltipTarget>
             </div>
-        </Toolbar>
-    </Stack>
 
     @if (isProjectPackageDialogOpen)
     {
@@ -331,7 +324,6 @@
             </Tabs>
         </DetailContent>
     </ListDetailShell>
-</section>
 
 @code {
     [Parameter, EditorRequired]
