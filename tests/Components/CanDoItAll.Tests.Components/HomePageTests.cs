@@ -85,8 +85,8 @@ public sealed class HomePageTests
             cut.FindComponents<Grid>(),
             grid => grid.Instance.Columns == 3);
 
-        var workflowTab = cut.Find("[data-testid='dashboard-workflows-tab']");
-        Assert.Contains("Active workflows", workflowTab.TextContent, StringComparison.Ordinal);
+        var workflowCard = cut.Find("[data-testid='dashboard-workflows-card']");
+        Assert.Contains("Active workflows", workflowCard.TextContent, StringComparison.Ordinal);
         var workflow = cut.Find($"[data-testid='dashboard-workflow-{WorkflowRunId:N}']");
         Assert.Equal(
             $"/agents/workflows?workflowId={WorkflowId:D}&runId={WorkflowRunId:D}",
@@ -95,18 +95,14 @@ public sealed class HomePageTests
         Assert.DoesNotContain("Preparing release artifacts", workflow.TextContent, StringComparison.Ordinal);
         Assert.Equal("Preparing release artifacts", workflow.GetAttribute("title"));
 
-        var processTab = cut.Find("[data-testid='dashboard-processes-tab']");
-        Assert.Contains("Recent processes", processTab.TextContent, StringComparison.Ordinal);
-        processTab.Click();
+        var processCard = cut.Find("[data-testid='dashboard-processes-card']");
+        Assert.Contains("Recent processes", processCard.TextContent, StringComparison.Ordinal);
 
-        cut.WaitForAssertion(() =>
-        {
-            var process = cut.Find($"[data-testid='dashboard-process-{ProcessRunId:N}']");
-            Assert.Equal(
-                $"/processes/live?runId={ProcessRunId:D}",
-                process.GetAttribute("href"));
-            Assert.Contains("Deploy process", process.TextContent, StringComparison.Ordinal);
-        });
+        var process = cut.Find($"[data-testid='dashboard-process-{ProcessRunId:N}']");
+        Assert.Equal(
+            $"/processes/live?runId={ProcessRunId:D}",
+            process.GetAttribute("href"));
+        Assert.Contains("Deploy process", process.TextContent, StringComparison.Ordinal);
 
         var projectionLag = Assert.Single(
             cut.FindComponents<StatusBadge>(),

@@ -128,6 +128,93 @@ tests: component:HomePageTests, component:QuickActionCardTests, e2e:smoke-dashbo
                     }
                 </SectionCard>
             }
+
+            @if (SnapshotData is { } data)
+            {
+                <div data-testid="dashboard-workflows-card">
+                    <SectionCard Title="@WorkflowTabLabel"
+                                 Description="Active or five most recent runs.">
+                        <HeaderActions>
+                            <StatusBadge Tone="neutral" Text="@data.Workflows.Length.ToString()" />
+                        </HeaderActions>
+                        <ChildContent>
+                            @if (data.Workflows.IsEmpty)
+                            {
+                                <EmptyState Eyebrow="Workflows"
+                                            Title="@WorkflowEmptyTitle"
+                                            Description="Workflow run activity will appear here when available." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    @foreach (var workflow in data.Workflows)
+                                    {
+                                        <a href="@BuildWorkflowHref(workflow.WorkflowId, workflow.RunId)"
+                                           title="@workflow.Summary"
+                                           class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                           data-testid="@BuildTestId("dashboard-workflow", workflow.RunId)">
+                                            <SelectionListItem Title="@workflow.WorkflowName"
+                                                               Meta="@FormatUpdatedAt(workflow.UpdatedAtUtc)"
+                                                               Dense="true"
+                                                               Class="!p-2 [&_.cda-selection-list-item__title]:truncate">
+                                                <Status>
+                                                    <StatusBadge Tone="@MapStatusTone(workflow.Status.Tone)"
+                                                                 Text="@workflow.Status.Label" />
+                                                </Status>
+                                            </SelectionListItem>
+                                        </a>
+                                    }
+                                </Stack>
+                            }
+                        </ChildContent>
+                    </SectionCard>
+                </div>
+
+                <div data-testid="dashboard-processes-card">
+                    <SectionCard Title="@ProcessTabLabel"
+                                 Description="Active or five most recent runs.">
+                        <HeaderActions>
+                            <StatusBadge Tone="neutral" Text="@data.Processes.Length.ToString()" />
+                        </HeaderActions>
+                        <ChildContent>
+                            @if (data.Processes.IsEmpty)
+                            {
+                                <EmptyState Eyebrow="Processes"
+                                            Title="@ProcessEmptyTitle"
+                                            Description="Process run activity will appear here when available." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    @foreach (var process in data.Processes)
+                                    {
+                                        <a href="@BuildProcessHref(process.RunId)"
+                                           class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                           data-testid="@BuildTestId("dashboard-process", process.RunId)">
+                                            <SelectionListItem Title="@process.ProcessName"
+                                                               Meta="@BuildProcessMeta(process)"
+                                                               Dense="true"
+                                                               Class="!p-2 [&_.cda-selection-list-item__title]:truncate">
+                                                <Status>
+                                                    <Cluster Gap="LayoutGap.Tiny">
+                                                        <StatusBadge Tone="@MapStatusTone(process.Status.Tone)"
+                                                                     Text="@process.Status.Label" />
+                                                        @if (process.ProjectionIsBehind)
+                                                        {
+                                                            <StatusBadge Tone="warning"
+                                                                         Text="Projection behind" />
+                                                        }
+                                                    </Cluster>
+                                                </Status>
+                                            </SelectionListItem>
+                                        </a>
+                                    }
+                                </Stack>
+                            }
+                        </ChildContent>
+                    </SectionCard>
+                </div>
+            }
         </Grid>
 
         @if (SnapshotRead?.HasRefreshFailure == true)
@@ -172,97 +259,6 @@ tests: component:HomePageTests, component:QuickActionCardTests, e2e:smoke-dashbo
                           Title="Loading operational snapshot"
                           Description="Collecting recent projects, execution activity, and observed agent usage." />
         }
-        else if (SnapshotData is { } data)
-        {
-            <Grid Gap="LayoutGap.XLarge"
-                  ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)">
-                <Stack Class="xl:col-start-2">
-                    <SectionCard Title="Execution activity"
-                                 Description="Active runs when present; otherwise the five most recently updated runs.">
-                        <Tabs @bind-SelectedIndex="selectedActivityTabIndex"
-                              BorderMode="TabsBorderMode.Soft"
-                              OverflowMode="TabsOverflowMode.Wrap"
-                              AriaLabel="Dashboard activity"
-                              data-testid="dashboard-activity-tabs">
-                            <TabItems>
-                                <TabsItem Text="@WorkflowTabLabel"
-                                          Icon="account_tree"
-                                          BadgeText="@data.Workflows.Length.ToString()"
-                                          data-testid="dashboard-workflows-tab">
-                                @if (data.Workflows.IsEmpty)
-                                {
-                                    <EmptyState Eyebrow="Workflows"
-                                                Title="@WorkflowEmptyTitle"
-                                                Description="Workflow run activity will appear here when available." />
-                                }
-                                else
-                                {
-                                    <Stack GapScale="LayoutGap.Tiny">
-                                        @foreach (var workflow in data.Workflows)
-                                        {
-                                            <a href="@BuildWorkflowHref(workflow.WorkflowId, workflow.RunId)"
-                                               title="@workflow.Summary"
-                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
-                                               data-testid="@BuildTestId("dashboard-workflow", workflow.RunId)">
-                                                <SelectionListItem Title="@workflow.WorkflowName"
-                                                                   Meta="@FormatUpdatedAt(workflow.UpdatedAtUtc)"
-                                                                   Dense="true"
-                                                                   Class="!p-2 [&_.cda-selection-list-item__title]:truncate">
-                                                    <Status>
-                                                        <StatusBadge Tone="@MapStatusTone(workflow.Status.Tone)"
-                                                                     Text="@workflow.Status.Label" />
-                                                    </Status>
-                                                </SelectionListItem>
-                                            </a>
-                                        }
-                                    </Stack>
-                                }
-                            </TabsItem>
-                            <TabsItem Text="@ProcessTabLabel"
-                                      Icon="monitor_heart"
-                                      BadgeText="@data.Processes.Length.ToString()"
-                                      data-testid="dashboard-processes-tab">
-                                @if (data.Processes.IsEmpty)
-                                {
-                                    <EmptyState Eyebrow="Processes"
-                                                Title="@ProcessEmptyTitle"
-                                                Description="Process run activity will appear here when available." />
-                                }
-                                else
-                                {
-                                    <Stack GapScale="LayoutGap.Tiny">
-                                        @foreach (var process in data.Processes)
-                                        {
-                                            <a href="@BuildProcessHref(process.RunId)"
-                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
-                                               data-testid="@BuildTestId("dashboard-process", process.RunId)">
-                                                <SelectionListItem Title="@process.ProcessName"
-                                                                   Meta="@BuildProcessMeta(process)"
-                                                                   Dense="true"
-                                                                   Class="!p-2 [&_.cda-selection-list-item__title]:truncate">
-                                                    <Status>
-                                                        <Cluster Gap="LayoutGap.Tiny">
-                                                            <StatusBadge Tone="@MapStatusTone(process.Status.Tone)"
-                                                                         Text="@process.Status.Label" />
-                                                            @if (process.ProjectionIsBehind)
-                                                            {
-                                                                <StatusBadge Tone="warning"
-                                                                             Text="Projection behind" />
-                                                            }
-                                                        </Cluster>
-                                                    </Status>
-                                                </SelectionListItem>
-                                            </a>
-                                        }
-                                    </Stack>
-                                }
-                                </TabsItem>
-                            </TabItems>
-                        </Tabs>
-                    </SectionCard>
-                </Stack>
-            </Grid>
-        }
     </ChildContent>
 </PageScaffold>
 
@@ -277,7 +273,6 @@ tests: component:HomePageTests, component:QuickActionCardTests, e2e:smoke-dashbo
     private bool isInitialLoading = true;
     private bool isRefreshing;
     private bool isDisposed;
-    private int selectedActivityTabIndex;
 
     [Inject]
     private DashboardSnapshotService DashboardSnapshots { get; set; } = null!;

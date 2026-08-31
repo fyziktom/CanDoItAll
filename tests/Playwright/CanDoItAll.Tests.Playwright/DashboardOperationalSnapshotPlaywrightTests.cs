@@ -41,10 +41,7 @@ public sealed class DashboardOperationalSnapshotPlaywrightTests
         await page.GetByTestId("database-startup-continue").ClickAsync();
         await page.GetByText("No projects yet", new PageGetByTextOptions { Exact = true }).WaitForAsync();
         await page.GetByText("No recent workflow runs", new PageGetByTextOptions { Exact = true }).WaitForAsync();
-
-        await page.GetByTestId("dashboard-processes-tab").ClickAsync();
         await page.GetByText("No recent process runs", new PageGetByTextOptions { Exact = true }).WaitForAsync();
-        await page.GetByTestId("dashboard-workflows-tab").ClickAsync();
 
         Assert.Equal(0, await page.Locator("[data-testid^='dashboard-project-']").CountAsync());
         Assert.Equal(0, await page.Locator("[data-testid^='dashboard-workflow-']").CountAsync());
