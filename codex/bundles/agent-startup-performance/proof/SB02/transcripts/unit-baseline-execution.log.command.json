@@ -1,0 +1,26 @@
+{
+  "Project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+  "Phase": "baseline",
+  "Discover": false,
+  "Arguments": [
+    "test",
+    "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "--configuration",
+    "Release",
+    "--artifacts-path",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb02-tests",
+    "--filter",
+    "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests|FullyQualifiedName~CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentProviderCredentialDispatchScopeTests|FullyQualifiedName~CanDoItAll.Tests.Unit.ProviderManagementBoundaryTests|FullyQualifiedName~CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests",
+    "--verbosity",
+    "quiet",
+    "--no-build",
+    "--logger",
+    "trx;LogFileName=selected.trx",
+    "--results-directory",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb02-proof\\unit-baseline-results"
+  ],
+  "WorkingDirectory": "C:/repositories/CanDoItAll",
+  "StartedUtc": "2026-08-31T13:51:31.9516413+00:00",
+  "CompletedUtc": "2026-08-31T13:51:51.3082274+00:00",
+  "ExitCode": 0
+}

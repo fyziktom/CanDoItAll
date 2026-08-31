@@ -1,0 +1,25 @@
+{
+  "WrapperPid": 62088,
+  "DotnetPid": 47476,
+  "DotnetStartedUtc": "2026-08-31T16:23:45.4449728Z",
+  "StartedUtc": "2026-08-31T16:23:45.4594651+00:00",
+  "Executable": "C:/Program Files/dotnet/dotnet.exe",
+  "Arguments": [
+    "run",
+    "--project",
+    "src/App/CanDoItAll.Web",
+    "--configuration",
+    "Release",
+    "--no-build",
+    "--launch-profile",
+    "http",
+    "--artifacts-path",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\asn-20260831"
+  ],
+  "WorkingDirectory": "C:/repositories/CanDoItAll",
+  "EnvironmentEntryCount": 127,
+  "EnvironmentSha256": "ABEF49599CD462046EEAF26A2CA59210C502BF3580A0A0FAC9EB4C49836E1051",
+  "LaunchSettingsSha256": "753EED9E39077AA753C3328AF1C85D489CAA844B3404C262A2730F6C022DC7F3",
+  "ArtifactsPath": "C:/repositories/CanDoItAll/.artifacts/asn-20260831",
+  "ConsolePolicy": "Child inherits the owned hidden wrapper console, permitting bounded exclusive-console shutdown."
+}

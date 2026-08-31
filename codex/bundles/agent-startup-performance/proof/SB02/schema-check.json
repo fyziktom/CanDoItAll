@@ -1,0 +1,18 @@
+{
+  "Scope": "Canonical non-state-gated SB02 schema helpers only; no status fabricated and no whole-bundle completion claimed.",
+  "InvariantIds": [
+    "SB02-I01",
+    "SB02-I02",
+    "SB02-I03",
+    "SB02-I04",
+    "SB02-I05",
+    "SB02-I06",
+    "SB02-I07",
+    "SB02-I08",
+    "SB02-I09"
+  ],
+  "CapabilityClaims": [],
+  "Issues": [],
+  "StatusKept": "In progress",
+  "TestOrBuildExecuted": false
+}

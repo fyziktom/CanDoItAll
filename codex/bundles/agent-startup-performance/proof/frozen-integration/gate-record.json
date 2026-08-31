@@ -1,0 +1,75 @@
+{
+  "GateId": "frozen-integration",
+  "RecordedAtUtc": "2026-08-31T14:52:34.5681011+00:00",
+  "SourceFrozen": true,
+  "FocusedGatePassed": true,
+  "ArtifactTreeHandedOver": true,
+  "RootGoRecorded": true,
+  "Authorization": "Root authorized Components build followed by serial once AllSuppliedSuites after frozen-source verification and storage handoff.",
+  "SourceFreezeSha256": "C28F1425181AB8274F702920351DCCE13FB8EA012D135CCB9C1B36E412C63B26",
+  "SourceFingerprint": "D84CB6EEF79748146ACCB362F8547B1BEA0B58E844686CD64CAC32E0EC5EA1C4",
+  "Head": "3d5def561cd06635a2676c4b86afcb6b49ad169b",
+  "Configuration": "Release",
+  "Binaries": [
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Unit\\release\\CanDoItAll.Tests.Unit.dll",
+      "Sha256": "8FFE4DD93D734A68BE004AE80BB29324F8C22C6DBAB01048F895F400560EA1B0"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Unit\\release\\CanDoItAll.Infrastructure.dll",
+      "Sha256": "F554ADD07385C022B3D70F3B147745C60C99A5A715D0D8095D04C332660CD385"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Unit\\release\\CanDoItAll.AgentFramework.Persistence.dll",
+      "Sha256": "37F0FCC2F0CD38E198FBEF0752CCC81E822B74BA7C987B818B23E1DAB887EA20"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Unit\\release\\CanDoItAll.Modules.AgentFramework.ProviderManagement.dll",
+      "Sha256": "D8F84D158A06410B764BCBD3F0D47219CE7B6E1E15E9BB7F71F14ABE4E53EE38"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Unit\\release\\CanDoItAll.Modules.AgentFramework.dll",
+      "Sha256": "7383F29A624BA143EE28AF239CDA3986093254B4946EBD333DA8E4DE86C938F6"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Components\\release\\CanDoItAll.Tests.Components.dll",
+      "Sha256": "4ED38B79A21CB40D1CFE319C51FA79B788E74D2E8A93FF7167A6DD3411401B59"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Components\\release\\CanDoItAll.Infrastructure.dll",
+      "Sha256": "F554ADD07385C022B3D70F3B147745C60C99A5A715D0D8095D04C332660CD385"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Components\\release\\CanDoItAll.AgentFramework.Persistence.dll",
+      "Sha256": "37F0FCC2F0CD38E198FBEF0752CCC81E822B74BA7C987B818B23E1DAB887EA20"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Components\\release\\CanDoItAll.Modules.AgentFramework.ProviderManagement.dll",
+      "Sha256": "D8F84D158A06410B764BCBD3F0D47219CE7B6E1E15E9BB7F71F14ABE4E53EE38"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Components\\release\\CanDoItAll.Modules.AgentFramework.dll",
+      "Sha256": "7383F29A624BA143EE28AF239CDA3986093254B4946EBD333DA8E4DE86C938F6"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Integration\\release\\CanDoItAll.Tests.Integration.dll",
+      "Sha256": "FC9B338A1B3ED24607FE3F81C998DDC05EDB5BCE186DE0129BBCC38BEC176991"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Integration\\release\\CanDoItAll.Infrastructure.dll",
+      "Sha256": "F554ADD07385C022B3D70F3B147745C60C99A5A715D0D8095D04C332660CD385"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Integration\\release\\CanDoItAll.AgentFramework.Persistence.dll",
+      "Sha256": "37F0FCC2F0CD38E198FBEF0752CCC81E822B74BA7C987B818B23E1DAB887EA20"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Integration\\release\\CanDoItAll.Modules.AgentFramework.ProviderManagement.dll",
+      "Sha256": "D8F84D158A06410B764BCBD3F0D47219CE7B6E1E15E9BB7F71F14ABE4E53EE38"
+    },
+    {
+      "RelativePath": "bin\\CanDoItAll.Tests.Integration\\release\\CanDoItAll.Modules.AgentFramework.dll",
+      "Sha256": "7383F29A624BA143EE28AF239CDA3986093254B4946EBD333DA8E4DE86C938F6"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "host": "native",
+  "capturedUtc": "2026-08-31T17:57:15.467412+00:00",
+  "reviewedHelperSha256": "65ef0b4e059d8b20370cc364da4dd27b6d892b9aa37bc31b1dd9a05a732254de",
+  "referenceFactsSha256": "5c376d1e6eb4fd42a39776a5a8c18c5ba3dc8cba6bc7cd88f8f7b044cc761bc6",
+  "sourceRunFileCount": 1,
+  "sourceRecordsUnchangedAtRecheck": true,
+  "appCalls": false,
+  "sourceWrites": false,
+  "rawArgumentsOrResultsPublished": false,
+  "runs": [
+    {
+      "runId": "3908f2a2-35f6-4009-80f5-f2d69e619bcd",
+      "sessionId": "9c4e6533-c627-41d9-a9c1-4a963c39b6b6",
+      "runSourceSha256": "a1021541a7cb70bc9c5e3e1aa59afca1292d845857163e801864bad7a83bac3a",
+      "serializedStatePresent": true,
+      "runtimeEnvelopePayloadDecoded": true,
+      "calls": [
+        {
+          "callId": "call_3Ut7txS4EYKYA65Ifg8JSDC7",
+          "toolName": "workspace_convert_document",
+          "structuredArgumentsPresent": true,
+          "sourceMatchesApprovedAssetIndex": 0,
+          "previewCharacters": 300
+        }
+      ],
+      "resultPairs": [
+        {
+          "callId": "call_3Ut7txS4EYKYA65Ifg8JSDC7",
+          "toolName": "workspace_convert_document",
+          "structuredJsonResult": false
+        }
+      ]
+    }
+  ],
+  "limits": "Only explicitly supplied run.json files and existing proof helpers/reference facts read. Structured calls/results are decoded from the known runtime envelope, never arbitrary message strings. Runtime snapshots may retain or omit prior calls; call IDs do not independently persist an executionRunId. Result receipts with IDs can be joined to exact-run receipt records. No raw text, prompt, source path, provider data or content is emitted. Exact string hashes intentionally do not normalize line endings/BOMs or silently treat mismatches as equivalent."
+}

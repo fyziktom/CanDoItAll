@@ -1,0 +1,14 @@
+{
+  "CapturedUtc": "2026-08-31T16:06:02.9699635+00:00",
+  "Phase": "capacity2-history",
+  "Total": 23,
+  "Executed": 23,
+  "Passed": 23,
+  "Failed": 0,
+  "NotExecuted": 0,
+  "TrxNotExecutedCounter": 0,
+  "DiscoveryToRuntimeDifferences": [],
+  "NonPassingCases": [],
+  "OriginalDeadlineCase": [],
+  "RawErrorTextPublished": false
+}

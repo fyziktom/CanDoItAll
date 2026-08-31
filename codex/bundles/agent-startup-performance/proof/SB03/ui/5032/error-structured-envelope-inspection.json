@@ -1,0 +1,34 @@
+{
+  "host": "native",
+  "capturedUtc": "2026-08-31T16:54:00.387993+00:00",
+  "reviewedHelperSha256": "65ef0b4e059d8b20370cc364da4dd27b6d892b9aa37bc31b1dd9a05a732254de",
+  "sourceRunFileCount": 2,
+  "sourceRecordsUnchangedAtRecheck": true,
+  "appCalls": false,
+  "sourceWrites": false,
+  "runs": [
+    {
+      "runId": "cc968f49-5d64-4807-8618-377293e5d020",
+      "sessionId": "c94bbc5c-ff32-43bd-88f4-f61309b9dc0d",
+      "serializedStatePresent": true,
+      "calls": [],
+      "resultPairs": [],
+      "newCallIdsRelativeToPrecedingAuthorizedRun": [],
+      "precedingCallIdsRetainedInThisState": true,
+      "callIdAvailable": false,
+      "rawArgumentsOrResultsPublished": false
+    },
+    {
+      "runId": "59350507-ddde-4274-aca9-aeefd09d37f7",
+      "sessionId": "c94bbc5c-ff32-43bd-88f4-f61309b9dc0d",
+      "serializedStatePresent": true,
+      "calls": [],
+      "resultPairs": [],
+      "newCallIdsRelativeToPrecedingAuthorizedRun": [],
+      "precedingCallIdsRetainedInThisState": true,
+      "callIdAvailable": false,
+      "rawArgumentsOrResultsPublished": false
+    }
+  ],
+  "limits": "Only the two specified run.json files were read. Runtime state may retain earlier calls; new IDs are a set difference against the preceding authorized run, not an independently persisted executionRunId on the call. No message, prompt, argument, path or raw result text is emitted. Receipt association remains separately tied to the exact run and single-call metric."
+}

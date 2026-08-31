@@ -1,0 +1,4 @@
+Testovací běh pro C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb02-tests\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRunTrackingIntegrationTests.SendMessageAsync_runtime_failure_persists_failed_log_and_activity_after_store_reopen(failDuringStartup: True)
+    CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRunTrackingIntegrationTests.SendMessageAsync_runtime_failure_persists_failed_log_and_activity_after_store_reopen(failDuringStartup: False)

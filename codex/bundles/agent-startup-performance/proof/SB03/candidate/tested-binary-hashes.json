@@ -1,0 +1,26 @@
+[
+  {
+    "Path": ".artifacts/agent-startup-performance/sb01-tests/bin/CanDoItAll.Tests.Unit/release/CanDoItAll.Tests.Unit.dll",
+    "Sha256": "8FFE4DD93D734A68BE004AE80BB29324F8C22C6DBAB01048F895F400560EA1B0"
+  },
+  {
+    "Path": ".artifacts/agent-startup-performance/sb01-tests/bin/CanDoItAll.Tests.Integration/release/CanDoItAll.Tests.Integration.dll",
+    "Sha256": "FC9B338A1B3ED24607FE3F81C998DDC05EDB5BCE186DE0129BBCC38BEC176991"
+  },
+  {
+    "Path": ".artifacts/agent-startup-performance/sb01-tests/bin/CanDoItAll.Tests.Unit/release/CanDoItAll.AgentFramework.Persistence.dll",
+    "Sha256": "37F0FCC2F0CD38E198FBEF0752CCC81E822B74BA7C987B818B23E1DAB887EA20"
+  },
+  {
+    "Path": ".artifacts/agent-startup-performance/sb01-tests/bin/CanDoItAll.Tests.Integration/release/CanDoItAll.AgentFramework.Persistence.dll",
+    "Sha256": "37F0FCC2F0CD38E198FBEF0752CCC81E822B74BA7C987B818B23E1DAB887EA20"
+  },
+  {
+    "Path": ".artifacts/agent-startup-performance/sb01-tests/bin/CanDoItAll.Tests.Unit/release/CanDoItAll.Infrastructure.dll",
+    "Sha256": "F554ADD07385C022B3D70F3B147745C60C99A5A715D0D8095D04C332660CD385"
+  },
+  {
+    "Path": ".artifacts/agent-startup-performance/sb01-tests/bin/CanDoItAll.Tests.Integration/release/CanDoItAll.Infrastructure.dll",
+    "Sha256": "F554ADD07385C022B3D70F3B147745C60C99A5A715D0D8095D04C332660CD385"
+  }
+]

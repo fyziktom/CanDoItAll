@@ -1,0 +1,122 @@
+{
+  "verifiedUtc": "2026-08-31T16:44:56.552359+00:00",
+  "method": "Independent offline calculation and raw HTTP-parent-span joins; does not invoke the root comparator or applications.",
+  "status": "Pass",
+  "totalCandidateRuns": 14,
+  "serialUiIntervalsVerified": true,
+  "collectorReadyBeforeAllSamples": true,
+  "collectorStopAfterAllSamples": true,
+  "bothCollectorsExited": true,
+  "applicationSignalsFromCaptureStop": false,
+  "sourceHashes": [
+    {
+      "file": "Program.cs",
+      "sha256": "920D7035EDF17AC4792E7CAC068618C762C39740FC02F490A358C7AE55C7AB69",
+      "matchesBaseline": true
+    },
+    {
+      "file": "StartupDispatchCapture.csproj",
+      "sha256": "2DA77DEA12276C94976DD369275EC278D4384C788684CEB915CF39E2A68A0489",
+      "matchesBaseline": true
+    },
+    {
+      "file": "Extract-StartupTimingMetadata.ps1",
+      "sha256": "6C9882AE4928887226178D8899CDAA14785B34AFBCFC3F16511751C6D656C141",
+      "matchesBaseline": true
+    },
+    {
+      "file": "Freeze-StartupConfiguration.ps1",
+      "sha256": "7C37ABDC6D4FFF4F269284746B012CFC1806BB49C975953813A0AA685EF9199E",
+      "matchesBaseline": true
+    }
+  ],
+  "frozenBinaryCountVerified": 8,
+  "helperSha256": "AFBC63722CB8D696EE3E667009254C1F8ABBB9A593C56E28433760F415D96952",
+  "helperTarSha256": "9B1968A9C8C60A3C53A56706413772B0F8B50501F085C7C6DCB1343B454862C9",
+  "clockBefore": {
+    "offsetSeconds": 0.0060729,
+    "uncertaintySeconds": 0.11462665
+  },
+  "clockAfter": {
+    "offsetSeconds": -0.0002882,
+    "uncertaintySeconds": 0.10824285
+  },
+  "hosts": [
+    {
+      "host": "native",
+      "candidateRuns": 7,
+      "warmFreshSessions": 5,
+      "separateFirst": 1,
+      "separateContinuation": 1,
+      "exactRawHttpParentJoins": 7,
+      "unmatchedHttp": 0,
+      "agentConfigurationEqual": true,
+      "runConfigurationEqualFields": [
+        "SourceKind",
+        "SourceId",
+        "AutoApprovePendingToolCalls",
+        "Compatibility",
+        "ContextContributors",
+        "WorkspaceScope",
+        "AuthorityPolicyFingerprint",
+        "AuthorityPolicyVersion"
+      ],
+      "historyBefore": 121,
+      "historyAfter": 128,
+      "persistedPhaseSequencesEqual": true,
+      "beforeMedianSeconds": 12.152916,
+      "afterMedianSeconds": 6.321676,
+      "medianReductionSeconds": 5.83124,
+      "medianReductionPercent": 47.982,
+      "warmGatePass": true,
+      "maximumRepeatRequired": false,
+      "submitMedianRegressed": false,
+      "submitDeltaUncertaintySeconds": 0,
+      "continuationBeforeSeconds": 8.467535,
+      "continuationAfterSeconds": 4.990549,
+      "firstAfterSeconds": 8.106591
+    },
+    {
+      "host": "client",
+      "candidateRuns": 7,
+      "warmFreshSessions": 5,
+      "separateFirst": 1,
+      "separateContinuation": 1,
+      "exactRawHttpParentJoins": 7,
+      "unmatchedHttp": 0,
+      "agentConfigurationEqual": true,
+      "runConfigurationEqualFields": [
+        "SourceKind",
+        "SourceId",
+        "AutoApprovePendingToolCalls",
+        "Compatibility",
+        "ContextContributors",
+        "WorkspaceScope",
+        "AuthorityPolicyFingerprint",
+        "AuthorityPolicyVersion"
+      ],
+      "historyBefore": 15,
+      "historyAfter": 22,
+      "persistedPhaseSequencesEqual": true,
+      "beforeMedianSeconds": 31.669973,
+      "afterMedianSeconds": 22.449116,
+      "medianReductionSeconds": 9.220857,
+      "medianReductionPercent": 29.115,
+      "warmGatePass": true,
+      "maximumRepeatRequired": false,
+      "submitMedianRegressed": false,
+      "submitDeltaUncertaintySeconds": 0.2228695,
+      "continuationBeforeSeconds": 30.878336,
+      "continuationAfterSeconds": 21.571761,
+      "firstAfterSeconds": 24.346431
+    }
+  ],
+  "limitations": [
+    "No first-before-start baseline; after-first samples are separate observations.",
+    "ContextDigest differs for all six baseline and seven candidate runs per host. The unchanged AgentChatContextDigest hashes attachment capture/freshness timestamps and fingerprints; identical digest/full-context bytes are not claimed. Agent and recorded stable run configuration fields match.",
+    "Native browser/server UTC is the same-Windows-clock assumption; not an independent zero-drift measurement.",
+    "Only existing allowlisted persisted phase sequences are compared; phase filtering does not replace full UI/tool/history proof.",
+    "The first broad gate remains failed with retained unrelated assertions/non-reproduced failures.",
+    "Real UI tool/error/approval/reopen matrix and final closure remain pending."
+  ]
+}

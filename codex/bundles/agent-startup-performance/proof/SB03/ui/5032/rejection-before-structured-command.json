@@ -1,0 +1,19 @@
+{
+  "Executable": "python",
+  "Arguments": [
+    "-B",
+    "codex/bundles/agent-startup-performance/proof/SB03/ui/Extract-FileRunEvidence.py",
+    "--host",
+    "native",
+    "--run-id",
+    "3908f2a2-35f6-4009-80f5-f2d69e619bcd"
+  ],
+  "HelperSha256": "A25176EA2B1EBDFBD7AB3BBE3051DA863DE58C59CCD9D56FA3F5FE71616629FD",
+  "StartedUtc": "2026-08-31T17:55:32.816342+00:00",
+  "CompletedUtc": "2026-08-31T17:55:33.0015303+00:00",
+  "ExitCode": 0,
+  "AppCalls": false,
+  "SourceWrites": false,
+  "Stdout": "rejection-before-structured.json",
+  "Stderr": "rejection-before-structured.stderr.txt"
+}

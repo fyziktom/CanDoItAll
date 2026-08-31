@@ -1,0 +1,14 @@
+{
+  "reviewedUtc": "2026-08-31T16:48:26.934819+00:00",
+  "status": "Pass",
+  "beforeSha256": "925B54772B458278650A4E80905BB42FBCF1298D5B70883691549DBF77CAE6CB",
+  "afterSha256": "88A3764A7F57463477DAEAE9D7B8B9584DC5A60B86A5EB78DD22B56C343FC8B4",
+  "onlyLogicalChange": "Resolve Windows Docker CLI using Get-Command docker.exe instead of ambiguous Get-Command docker.",
+  "reason": "The pre-attach lookup returned two Application paths; exact .exe resolution was needed before collectors could attach.",
+  "scope": "Launcher executable resolution only; implementation/filter/binaries/target guards/readiness/bounds/stop protocol unchanged.",
+  "captureId": "candidate-20260831-1627",
+  "captureLifecycleEvidence": "bundle://proof/SB03/performance/after/candidate-20260831-1627/capture-stop-verification.json",
+  "preparedContractHistorical": true,
+  "unsupportedClockAttempt": "BusyBox date did not support requested %N. Attempt rejected before sampling; three valid coreutils date brackets preserved. Invalid result was not used.",
+  "noScriptExecutionDuringThisReview": true
+}

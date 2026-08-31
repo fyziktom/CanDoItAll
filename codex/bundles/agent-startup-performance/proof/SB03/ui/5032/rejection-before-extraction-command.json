@@ -1,0 +1,19 @@
+{
+  "Executable": "python",
+  "Arguments": [
+    ".artifacts/agent-startup-performance/diagnostics/Extract-UiRunEvidence.py",
+    "--host",
+    "native",
+    "--run-id",
+    "3908f2a2-35f6-4009-80f5-f2d69e619bcd"
+  ],
+  "HelperSha256": "65EF0B4E059D8B20370CC364DA4DD27B6D892B9AA37BC31B1DD9A05A732254DE",
+  "StartedUtc": "2026-08-31T17:54:37.6263107+00:00",
+  "CompletedUtc": "2026-08-31T17:54:37.918693+00:00",
+  "ExitCode": 0,
+  "AppCalls": false,
+  "SourceWrites": false,
+  "Stage": "Before root rejection; exact waiting run and session only",
+  "Stdout": "rejection-before-persisted.json",
+  "Stderr": "rejection-before-extraction.stderr.txt"
+}

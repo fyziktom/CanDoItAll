@@ -1,0 +1,51 @@
+{
+  "Executable": "dotnet",
+  "Arguments": [
+    "test",
+    "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+    "--configuration",
+    "Release",
+    "--artifacts-path",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb01-tests",
+    "--verbosity",
+    "quiet",
+    "--no-build",
+    "--no-restore",
+    "--logger",
+    "trx;LogFileName=selected.trx",
+    "--results-directory",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\frozen-validation\\frozen-integration-integration-results"
+  ],
+  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
+  "StartedUtc": "2026-08-31T15:14:23.2550738+00:00",
+  "CompletedUtc": "2026-08-31T15:57:52.7266285+00:00",
+  "ElapsedSeconds": 2609.4715547,
+  "ExitCode": 1,
+  "Scope": "AllSuppliedSuites workspace",
+  "ExpectedCount": 1330,
+  "DatabaseEndpoint": "127.0.0.1:52049; owned container identity checked",
+  "DisabledOptIns": [
+    "CANDOITALL_RUN_LIVE_AGENT_VALIDATION",
+    "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE",
+    "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION",
+    "CANDOITALL_RUN_DOCKER_PROOF",
+    "CANDOITALL_RUN_LIVE_COMFYUI_FLUX_PROOF",
+    "CANDOITALL_SECRET_SERVICE_INTEGRATION",
+    "CANDOITALL_KEYCHAIN_INTEGRATION",
+    "CANDOITALL_REQUIRE_DOCKER_INTEGRATION"
+  ],
+  "ClearedCredentialNames": [
+    "OPENAI_API_KEY",
+    "AZURE_OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY",
+    "GEMINI_API_KEY",
+    "GROQ_API_KEY",
+    "MISTRAL_API_KEY",
+    "OPENROUTER_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "HF_TOKEN",
+    "HUGGINGFACEHUB_API_TOKEN"
+  ],
+  "Configuration": "Release"
+}

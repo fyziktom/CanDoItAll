@@ -1,0 +1,29 @@
+[
+  {
+    "Sample": 1,
+    "WindowsBeforeUtc": "2026-08-31T13:34:34.2838560+00:00",
+    "ContainerUtc": "2026-08-31T13:34:34.423715952Z",
+    "WindowsAfterUtc": "2026-08-31T13:34:34.5427125+00:00",
+    "RoundTripMilliseconds": 258.8565,
+    "DockerMinusWindowsMidpointMilliseconds": 10.4318,
+    "UncertaintyMilliseconds": 129.42825
+  },
+  {
+    "Sample": 2,
+    "WindowsBeforeUtc": "2026-08-31T13:34:34.5571164+00:00",
+    "ContainerUtc": "2026-08-31T13:34:34.677955526Z",
+    "WindowsAfterUtc": "2026-08-31T13:34:34.7924779+00:00",
+    "RoundTripMilliseconds": 235.3615,
+    "DockerMinusWindowsMidpointMilliseconds": 3.1583,
+    "UncertaintyMilliseconds": 117.68075
+  },
+  {
+    "Sample": 3,
+    "WindowsBeforeUtc": "2026-08-31T13:34:34.7937647+00:00",
+    "ContainerUtc": "2026-08-31T13:34:34.914464203Z",
+    "WindowsAfterUtc": "2026-08-31T13:34:35.0230180+00:00",
+    "RoundTripMilliseconds": 229.2533,
+    "DockerMinusWindowsMidpointMilliseconds": 6.0729,
+    "UncertaintyMilliseconds": 114.62665
+  }
+]

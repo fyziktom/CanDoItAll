@@ -1,0 +1,22 @@
+{
+  "ScriptSha256": "925B54772B458278650A4E80905BB42FBCF1298D5B70883691549DBF77CAE6CB",
+  "ExecutableScript": ".artifacts/agent-startup-performance/deployment/Set-StartupCapture.ps1",
+  "ReviewCopy": "Set-StartupCapture.ps1",
+  "Executed": false,
+  "AttachedToApplications": false,
+  "PowerShellSyntaxErrors": 0,
+  "HelperSha256": "AFBC63722CB8D696EE3E667009254C1F8ABBB9A593C56E28433760F415D96952",
+  "HelperTarSha256": "9B1968A9C8C60A3C53A56706413772B0F8B50501F085C7C6DCB1343B454862C9",
+  "FilterVersion": 1,
+  "MaximumSeconds": 1800,
+  "ReadyWaitSeconds": 45,
+  "StopWaitSeconds": 35,
+  "RawTracePersisted": false,
+  "RootMustProvideActualCandidateIdentities": true,
+  "RootMustConfirmQuiescentSamplingGo": true,
+  "RootMustAcceptBothReadyRecordsBeforeUi": true,
+  "StopMarkersRetained": true,
+  "ContainerOrApplicationLifecycleChanges": false,
+  "PublisherIsNeverTarget": true,
+  "ActualSamplingPending": true
+}

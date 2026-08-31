@@ -1,0 +1,24 @@
+{
+  "Native": {
+    "kind": "ready",
+    "targetPid": 60000,
+    "capturePid": 36212,
+    "utc": "2026-08-31T16:27:03.5875062+00:00",
+    "clockFrequency": 10000000,
+    "maximumSeconds": 1800,
+    "filterVersion": 1,
+    "rawTracePersisted": false
+  },
+  "Client": {
+    "kind": "ready",
+    "targetPid": 7,
+    "capturePid": 203,
+    "utc": "2026-08-31T16:27:03.7362226+00:00",
+    "clockFrequency": 1000000000,
+    "maximumSeconds": 1800,
+    "filterVersion": 1,
+    "rawTracePersisted": false
+  },
+  "BothReady": true,
+  "RootMustGateUiAfterThisRecord": true
+}

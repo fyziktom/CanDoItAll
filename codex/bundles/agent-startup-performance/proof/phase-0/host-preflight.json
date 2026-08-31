@@ -1,0 +1,298 @@
+{
+  "SchemaVersion": 1,
+  "CapturedAtUtc": "2026-08-31T13:38:43.6334993+00:00",
+  "Native": {
+    "Port": 5032,
+    "Pid": 58036,
+    "ParentPid": 22496,
+    "ProcessStartedAtUtc": "2026-08-31T10:41:53.0923150Z",
+    "Executable": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\Release\\net10.0\\CanDoItAll.Web.exe",
+    "LaunchProfile": "http",
+    "Configuration": "Release",
+    "Assembly": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\Release\\net10.0\\CanDoItAll.Web.dll",
+    "AssemblySha256": "60F188E37C58754076D6F462C236120EA7B63FB55ADC55C0A8924428F603A83D",
+    "AssemblyProductVersion": "1.0.0+aadd953150e7f659e4060ced6505621c705ea61f",
+    "WorkspaceRoot": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace\\runtime-overrides\\ff24611dad478ec960349d9ad11d1017",
+    "RunRoot": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace\\runtime-overrides\\ff24611dad478ec960349d9ad11d1017\\data\\scopes\\organization\\e5df9ad633dbc6974a0678a74976013c\\execution\\runs",
+    "RuntimeVersion": "10.0.11",
+    "BaselinePreRunCount": 115,
+    "BaselinePreRunCountCaveat": "121 directories observed after six baseline runs; subtracts those six, assuming no other concurrent additions",
+    "PreflightActiveRunsObservation": "latest30 persisted API runs all completed; older runs not exhaustively checked"
+  },
+  "Containers": [
+    {
+      "Name": "candoitall-shared-providers-manual-client-a-1",
+      "Id": "fb12806ab50b7bdadb68175ce79d6efb8596b3f4f62329f07f445ae49074226e",
+      "Image": "sha256:168dc1535d4134a6621db8e3eae8bdc0628c3439e62fc7daade24340691b6bdc",
+      "ImageName": "sha256:168dc1535d4134a6621db8e3eae8bdc0628c3439e62fc7daade24340691b6bdc",
+      "StartedAtUtc": "2026-08-31T12:03:45.560729816Z",
+      "Running": true,
+      "Health": "healthy",
+      "User": "1654:1654",
+      "ReadonlyRootfs": true,
+      "Privileged": false,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "CapDrop": [
+        "ALL"
+      ],
+      "CapAdd": null,
+      "Memory": 2147483648,
+      "NanoCpus": 2000000000,
+      "PidsLimit": 512,
+      "Tmpfs": {
+        "/tmp": "size=128m,mode=1777"
+      },
+      "PortBindings": {
+        "8080/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "5214"
+          }
+        ]
+      },
+      "Mounts": [
+        {
+          "Type": "bind",
+          "Source": "C:\\repositories\\CanDoItAll\\.artifacts\\shared-providers-e2e\\runtime-secrets\\db-client-a-password",
+          "Destination": "/run/secrets/db-password",
+          "RW": false
+        },
+        {
+          "Type": "bind",
+          "Source": "C:\\repositories\\CanDoItAll\\.artifacts\\shared-providers-e2e\\runtime-secrets\\api-client-a-signing-key",
+          "Destination": "/run/secrets/api-signing-key",
+          "RW": false
+        },
+        {
+          "Type": "bind",
+          "Source": "C:\\repositories\\CanDoItAll\\.artifacts\\shared-providers-e2e\\client-a\\data",
+          "Destination": "/data",
+          "RW": true
+        }
+      ],
+      "Networks": [
+        {
+          "Name": "candoitall-shared-providers-manual_app-mesh",
+          "Aliases": [
+            "candoitall-shared-providers-manual-client-a-1",
+            "client-a"
+          ],
+          "NetworkId": "5946a9d3e4f5b7f8a5f908f509ef3a7583a12d666df016c5a78865cdfe613188"
+        },
+        {
+          "Name": "candoitall-shared-providers-manual_client-a-db",
+          "Aliases": [
+            "candoitall-shared-providers-manual-client-a-1",
+            "client-a"
+          ],
+          "NetworkId": "1b61cd5859d5cc0a957b39e8067a4ac351678fa3e6f5fc99f802c29828ef0133"
+        },
+        {
+          "Name": "candoitall-shared-providers-manual_client-a-personal",
+          "Aliases": [
+            "candoitall-shared-providers-manual-client-a-1",
+            "client-a"
+          ],
+          "NetworkId": "9ebb76569c016d6b133dd2dca2b739180e10b981648233997cafb107e809b541"
+        },
+        {
+          "Name": "candoitall-shared-providers-manual_local-ingress",
+          "Aliases": [
+            "candoitall-shared-providers-manual-client-a-1",
+            "client-a"
+          ],
+          "NetworkId": "e18c8c85799749fb8dfbe75332a4dc11b0007e85e78d44437e5a379a31bb64c0"
+        }
+      ],
+      "EnvironmentKeys": [
+        "Api__Authorization__Audience",
+        "Api__Authorization__Enabled",
+        "Api__Authorization__Issuer",
+        "Api__Authorization__SigningKeyFile",
+        "APP_UID",
+        "ASPNET_VERSION",
+        "ASPNETCORE_ENVIRONMENT",
+        "ASPNETCORE_HTTP_PORTS",
+        "CANDOITALL_HOST_BINDING_ID",
+        "ControlPlane__LogsRootPath",
+        "ControlPlane__RootPath",
+        "ControlPlane__RuntimeTemporaryRootPath",
+        "ControlPlane__StateRootPath",
+        "Database__ConnectionString",
+        "Database__PasswordFile",
+        "Database__Provider",
+        "DataProtection__KeyProtection__Provider",
+        "DevelopmentManager__TuningModeEnabled",
+        "DOTNET_RUNNING_IN_CONTAINER",
+        "DOTNET_VERSION",
+        "E2E_LOG_CONTINUITY_MARKER",
+        "FileTools__DesktopLaunch__Enabled",
+        "PATH",
+        "RuntimeHost__Profile",
+        "SecretVault__AllowInsecureDevelopmentProviders",
+        "SecretVault__Provider",
+        "SecretVault__UsageProfile",
+        "SecretVault__VaultPath",
+        "Storage__WorkspaceRoot",
+        "WebHost__HttpsRedirectionEnabled",
+        "WebHost__LocalOperatorUi__TrustedAddresses__0",
+        "Workflows__ExampleSeed__Enabled",
+        "Workflows__ExampleSeed__SeedSampleWorkspaceFiles",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_STATE_HOME"
+      ],
+      "EnvironmentSha256": "7C15BFD616D064CF161FCBDB6E22EDF62F7CC2E022FFAFB930AEC30CD51D1B32"
+    },
+    {
+      "Name": "candoitall-shared-providers-manual-central-1",
+      "Id": "000fadde7e6757f7afd413e3102fa58568e18da4d9a7361d8057bda40c9b966d",
+      "Image": "sha256:b6b502a5487bd8ba7b21a2c3afe18e4846d273fa0445b387a98bf85acda73089",
+      "ImageName": "sha256:b6b502a5487bd8ba7b21a2c3afe18e4846d273fa0445b387a98bf85acda73089",
+      "StartedAtUtc": "2026-08-31T10:43:03.645154542Z",
+      "Running": true,
+      "Health": "healthy",
+      "User": "1654:1654",
+      "ReadonlyRootfs": true,
+      "Privileged": false,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "CapDrop": [
+        "ALL"
+      ],
+      "CapAdd": null,
+      "Memory": 2147483648,
+      "NanoCpus": 2000000000,
+      "PidsLimit": 512,
+      "Tmpfs": {
+        "/tmp": "size=128m,mode=1777"
+      },
+      "PortBindings": {
+        "8080/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "5210"
+          }
+        ]
+      },
+      "Mounts": [
+        {
+          "Type": "bind",
+          "Source": "C:\\repositories\\CanDoItAll\\.artifacts\\shared-providers-e2e\\central\\data",
+          "Destination": "/data",
+          "RW": true
+        },
+        {
+          "Type": "bind",
+          "Source": "C:\\repositories\\CanDoItAll\\.artifacts\\shared-providers-e2e\\runtime-secrets\\db-central-password",
+          "Destination": "/run/secrets/db-password",
+          "RW": false
+        },
+        {
+          "Type": "bind",
+          "Source": "C:\\repositories\\CanDoItAll\\.artifacts\\shared-providers-e2e\\runtime-secrets\\api-central-signing-key",
+          "Destination": "/run/secrets/api-signing-key",
+          "RW": false
+        }
+      ],
+      "Networks": [
+        {
+          "Name": "candoitall-shared-providers-manual_app-mesh",
+          "Aliases": [
+            "candoitall-shared-providers-manual-central-1",
+            "central"
+          ],
+          "NetworkId": "5946a9d3e4f5b7f8a5f908f509ef3a7583a12d666df016c5a78865cdfe613188"
+        },
+        {
+          "Name": "candoitall-shared-providers-manual_central-db",
+          "Aliases": [
+            "candoitall-shared-providers-manual-central-1",
+            "central"
+          ],
+          "NetworkId": "75771f2267cc153ee8fa4521ff0de91c32e59bfb6cfdc8551b15e38407bb4a96"
+        },
+        {
+          "Name": "candoitall-shared-providers-manual_local-ingress",
+          "Aliases": [
+            "candoitall-shared-providers-manual-central-1",
+            "central"
+          ],
+          "NetworkId": "e18c8c85799749fb8dfbe75332a4dc11b0007e85e78d44437e5a379a31bb64c0"
+        },
+        {
+          "Name": "candoitall-shared-providers-manual_upstream-data",
+          "Aliases": [
+            "candoitall-shared-providers-manual-central-1",
+            "central"
+          ],
+          "NetworkId": "09a5f02ba52e99268ce61d79d01c78f0b30b06febb539e9aa716ba660731fdfd"
+        }
+      ],
+      "EnvironmentKeys": [
+        "Api__Authorization__Audience",
+        "Api__Authorization__Enabled",
+        "Api__Authorization__Issuer",
+        "Api__Authorization__SigningKeyFile",
+        "APP_UID",
+        "ASPNET_VERSION",
+        "ASPNETCORE_ENVIRONMENT",
+        "ASPNETCORE_HTTP_PORTS",
+        "CANDOITALL_HOST_BINDING_ID",
+        "ControlPlane__LogsRootPath",
+        "ControlPlane__RootPath",
+        "ControlPlane__RuntimeTemporaryRootPath",
+        "ControlPlane__StateRootPath",
+        "Database__ConnectionString",
+        "Database__PasswordFile",
+        "Database__Provider",
+        "DataProtection__KeyProtection__Provider",
+        "DevelopmentManager__TuningModeEnabled",
+        "DOTNET_RUNNING_IN_CONTAINER",
+        "DOTNET_VERSION",
+        "E2E_LOG_CONTINUITY_MARKER",
+        "FileTools__DesktopLaunch__Enabled",
+        "PATH",
+        "RuntimeHost__Profile",
+        "SecretVault__AllowInsecureDevelopmentProviders",
+        "SecretVault__Provider",
+        "SecretVault__UsageProfile",
+        "SecretVault__VaultPath",
+        "Storage__WorkspaceRoot",
+        "WebHost__HttpsRedirectionEnabled",
+        "WebHost__LocalOperatorUi__TrustedAddresses__0",
+        "Workflows__ExampleSeed__Enabled",
+        "Workflows__ExampleSeed__SeedSampleWorkspaceFiles",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_STATE_HOME"
+      ],
+      "EnvironmentSha256": "28C3A3B38D4811CC38557F1C93E8D2FFB48747EF11C6635F30C017DA5CE30291"
+    }
+  ],
+  "Client": {
+    "Port": 5214,
+    "DotnetPid": 7,
+    "DiagnosticSocket": "/tmp/dotnet-diagnostic-7-8543158-socket",
+    "RuntimeVersion": "10.0.10",
+    "RunRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\shared-providers-e2e\\client-a\\data\\workspace\\data\\scopes\\organization\\3dfd771ef0fef5ef9ff8845e3efa2580\\execution\\runs",
+    "BaselinePreRunCount": 9,
+    "PreflightActiveRunsObservation": "All9 persisted run records completed before baseline"
+  },
+  "Capture": {
+    "NativeCapturePid": 51868,
+    "DockerExecCapturePid": 46772,
+    "NativeStopFile": "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\diagnostics\\stop-native-phase0.signal",
+    "ClientStopFile": "/tmp/agent-startup-diagnostics-20260831.stop",
+    "BoundSeconds": 1800
+  },
+  "UnchangedBoundaries": [
+    "Application binaries, settings and logging levels unchanged during baseline",
+    "No app tests or builds during sampling",
+    "Central publisher and existing PostgreSQL unchanged",
+    "Only helper binaries built; only existing /tmp tmpfs written in client"
+  ]
+}

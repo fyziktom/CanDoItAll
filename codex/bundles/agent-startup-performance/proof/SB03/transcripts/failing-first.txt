@@ -1,0 +1,31 @@
+Run label: SB03 old-code count characterization
+Command: dotnet ["test", "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj", "--configuration", "Release", "--no-build", "--artifacts-path", ".artifacts/agent-startup-performance/sb01-tests", "--filter", "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests", "--logger", "trx;LogFileName=unoptimized-new-tests.trx", "--results-directory", "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb03\\results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 1
+Original command metadata: bundle://proof/SB03/characterization/unoptimized-new-tests-command.json
+Original TRX: bundle://proof/SB03/characterization/unoptimized-new-tests.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+StartedAt: 2026-08-31T14:27:05.3629562+00:00
+FinishedAt: 2026-08-31T14:27:33.2624679+00:00
+Original TRX SHA256: 252919E873C1001F83603CCDA80012D624803D376F3BEA140A135A35C2C47B4A
+Result cases: 19
+Outcomes: {"Failed": 2, "Passed": 17}
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 32) | Failed | 00:00:02.5452913
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Run, remove: True) | Passed | 00:00:01.0727920
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: ChatIndex, shape: UnknownProperty) | Passed | 00:00:01.4468334
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Run, remove: False) | Passed | 00:00:00.9621776
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ChatIndex, remove: True) | Passed | 00:00:01.2942858
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Session, remove: True) | Passed | 00:00:01.0050399
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ExecutionIndex, remove: True) | Passed | 00:00:01.1051499
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ChatIndex, remove: False) | Passed | 00:00:01.2267364
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: Run, shape: Compact) | Passed | 00:00:01.4508444
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: Run, shape: Canonical) | Passed | 00:00:01.4809467
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: UsageIndex, remove: False) | Passed | 00:00:01.2881103
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: Run, shape: UnknownProperty) | Passed | 00:00:01.5889572
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: UsageIndex, remove: True) | Passed | 00:00:01.0513703
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: ChatIndex, shape: Canonical) | Passed | 00:00:01.3328732
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ExecutionIndex, remove: False) | Passed | 00:00:01.2048587
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Recovered_journal_retains_five_raw_comparisons_and_rolls_forward_once | Passed | 00:00:01.4448866
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 1) | Failed | 00:00:01.1461370
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: ChatIndex, shape: Compact) | Passed | 00:00:02.2196348
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Session, remove: False) | Passed | 00:00:01.0163901

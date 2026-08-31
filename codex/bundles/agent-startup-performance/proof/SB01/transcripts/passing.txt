@@ -1,0 +1,127 @@
+Run label: candidate-unit
+Command: dotnet ["test", "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj", "--configuration", "Release", "--no-build", "--artifacts-path", ".artifacts/agent-startup-performance/sb01-tests", "--filter", "FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests|FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests", "--logger", "trx;LogFileName=candidate-unit.trx", "--results-directory", "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb01\\results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+Original command metadata: bundle://proof/SB01/command-metadata.json
+Original TRX: bundle://proof/SB01/candidate/windows-unit.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+TestStartedAt: 2026-08-31T10:01:28.5987268-04:00
+TestFinishedAt: 2026-08-31T10:01:46.8647542-04:00
+Original TRX SHA256: B8068BDC73A76779990EAA5A288F9C8FB50C87D3446DB0626DF8729BA8DC9023
+Result cases: 27
+Outcomes: {"Passed": 27}
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Root_link_swap_after_callback_fails_closed_without_touching_outside_target | Passed | 00:00:00.0032237
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Parent_link_swap_before_commit_fails_closed_without_touching_outside_target | Passed | 00:00:01.8573341
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Mutation_revalidation_rejects_parent_replaced_by_symbolic_link | Passed | 00:00:00.0520366
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Unknown_root_uses_conservative_ordinal_comparison | Passed | 00:00:00.0064875
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_probes_writable_root_and_cleans_probe_file | Passed | 00:00:00.0119218
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Write_creates_missing_managed_root_and_revalidates_it | Passed | 00:00:00.2267461
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload | Passed | 00:00:00.0039730
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file | Passed | 00:00:01.3425971
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Private_write_applies_and_verifies_owner_only_unix_modes | Passed | 00:00:00.0015328
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Callback_case_fact_change_is_reprobed_before_commit | Passed | 00:00:00.1252856
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file | Passed | 00:00:00.4789255
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Unknown_case_facts_are_reprobed_for_existing_descendants | Passed | 00:00:00.1862886
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Exclusive_coordination_times_out_and_recovers_after_owner_releases_handle | Passed | 00:00:00.7706399
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6) | Passed | 00:00:00.7831679
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Policy_rejects_symbolic_link_ancestor | Passed | 00:00:00.0050706
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Backup_contains_previous_complete_version | Passed | 00:00:01.4775261
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Constructor_allows_the_macos_system_var_alias | Passed | 00:00:00.0002545
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_rejects_parent_escape | Passed | 00:00:00.0043828
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Sensitive_root_does_not_authorize_case_distinct_sibling | Passed | 00:00:00.0023267
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Concurrent_writers_commit_one_complete_payload_without_temporary_residue | Passed | 00:00:03.3534030
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Insensitive_root_authorizes_case_variant_of_same_path | Passed | 00:00:00.0022959
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Creating_root_and_descendants_refreshes_unknown_and_known_case_facts | Passed | 00:00:00.3908598
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_rejects_managed_root_that_is_a_symbolic_link | Passed | 00:00:00.0123360
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes | Passed | 00:00:01.0352054
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Cancellation_after_flush_preserves_previous_content | Passed | 00:00:00.1522689
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12) | Passed | 00:00:00.8946810
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_allows_missing_leaf_below_verified_parent | Passed | 00:00:00.0215182
+
+Run label: candidate-linux-unit
+Command: docker ["run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--user", "1654:1654", "--tmpfs", "/tmp:rw,mode=1777", "--env", "DOTNET_ReadyToRun=0", "--env", "DOTNET_HOST_PATH=/usr/share/dotnet/dotnet", "--mount", "type=bind,source=C:/Program Files/dotnet/sdk/10.0.303,target=/sdk,readonly", "--mount", "type=bind,source=C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb01-tests\\bin\\CanDoItAll.Tests.Unit\\release,target=/tests,readonly", "--mount", "type=bind,source=C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb01,target=/proof", "mcr.microsoft.com/dotnet/aspnet:10.0.10", "dotnet", "--fx-version", "10.0.10", "/sdk/vstest.console.dll", "/tests/CanDoItAll.Tests.Unit.dll", "/TestCaseFilter:FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests|FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests", "/logger:trx;LogFileName=candidate-linux-unit.trx", "/ResultsDirectory:/proof/results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+Original command metadata: bundle://proof/SB01/command-metadata.json
+Original TRX: bundle://proof/SB01/candidate/linux-unit.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+TestStartedAt: 2026-08-31T14:01:26.6539138+00:00
+TestFinishedAt: 2026-08-31T14:01:42.2307511+00:00
+Original TRX SHA256: A77F47D52635DCEEC91ADDAE64AA871C6EE87747A58069E31D77F605CE0431C7
+Result cases: 27
+Outcomes: {"Passed": 27}
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Mutation_revalidation_rejects_parent_replaced_by_symbolic_link | Passed | 00:00:00.4469860
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Private_write_applies_and_verifies_owner_only_unix_modes | Passed | 00:00:00.0468024
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Cancellation_after_flush_preserves_previous_content | Passed | 00:00:00.0219197
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Insensitive_root_authorizes_case_variant_of_same_path | Passed | 00:00:00.0007517
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Creating_root_and_descendants_refreshes_unknown_and_known_case_facts | Passed | 00:00:00.0364078
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload | Passed | 00:00:00.0112868
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Parent_link_swap_before_commit_fails_closed_without_touching_outside_target | Passed | 00:00:00.0134564
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Policy_rejects_symbolic_link_ancestor | Passed | 00:00:00.0009114
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12) | Passed | 00:00:00.7098482
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Sensitive_root_does_not_authorize_case_distinct_sibling | Passed | 00:00:00.0003989
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Write_creates_missing_managed_root_and_revalidates_it | Passed | 00:00:00.0168099
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Exclusive_coordination_times_out_and_recovers_after_owner_releases_handle | Passed | 00:00:00.1111644
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_rejects_managed_root_that_is_a_symbolic_link | Passed | 00:00:00.0153852
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Unknown_case_facts_are_reprobed_for_existing_descendants | Passed | 00:00:00.0149311
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_rejects_parent_escape | Passed | 00:00:00.0352356
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes | Passed | 00:00:00.0022582
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Concurrent_writers_commit_one_complete_payload_without_temporary_residue | Passed | 00:00:00.0648517
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Constructor_allows_the_macos_system_var_alias | Passed | 00:00:00.0002574
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_probes_writable_root_and_cleans_probe_file | Passed | 00:00:00.0340369
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6) | Passed | 00:00:00.0273659
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Root_link_swap_after_callback_fails_closed_without_touching_outside_target | Passed | 00:00:00.0382229
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Unknown_root_uses_conservative_ordinal_comparison | Passed | 00:00:00.0146134
+CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_allows_missing_leaf_below_verified_parent | Passed | 00:00:00.0023687
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file | Passed | 00:00:00.0307890
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Callback_case_fact_change_is_reprobed_before_commit | Passed | 00:00:00.0460141
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Backup_contains_previous_complete_version | Passed | 00:00:00.0107639
+CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file | Passed | 00:00:01.3840121
+
+Run label: candidate-integration
+Command: dotnet ["test", "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj", "--configuration", "Release", "--no-build", "--artifacts-path", ".artifacts/agent-startup-performance/sb01-tests", "--filter", "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests", "--logger", "trx;LogFileName=candidate-integration.trx", "--results-directory", "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb01\\results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+Original command metadata: bundle://proof/SB01/command-metadata.json
+Original TRX: bundle://proof/SB01/candidate/windows-integration.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+TestStartedAt: 2026-08-31T10:02:58.1415764-04:00
+TestFinishedAt: 2026-08-31T10:04:59.2870489-04:00
+EnvironmentBootstrap: . .artifacts/agent-startup-performance/test-postgres/Enter-IsolatedPostgresTestEnvironment.ps1
+Original TRX SHA256: C86AF23D256A9963FA51440DC45FF0919CFC60AC709480B6D91C4277BFA2B64E
+Result cases: 31
+Outcomes: {"Passed": 31}
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 7) | Passed | 00:00:01.5506930
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.GetExecutionRunDetailAsync_CorruptPendingUpdateJournal_FailsExplicitlyAndRetainsJournal | Passed | 00:00:01.0150952
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Competing_catalog_changes_publish_coherent_monotonic_snapshots | Passed | 00:00:01.3673205
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 1) | Passed | 00:00:01.4729182
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Catalog_normalization_and_legacy_missing_revision_migrate_monotonically | Passed | 00:00:02.1816884
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.GetExecutionRunDetailAsync_waits_for_workspace_lock_then_reads_initialized_run_detail | Passed | 00:00:04.1948825
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_CancellationBeforeJournal_PersistsNothing | Passed | 00:00:00.8671200
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 4) | Passed | 00:00:08.4036025
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.LoadCatalogAsync_reads_initialized_catalog_when_workspace_lock_is_held | Passed | 00:00:03.3669166
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.CreateChatSessionAsync_does_not_read_unrelated_run_file_when_chat_index_exists | Passed | 00:00:05.1436212
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_start_rejects_a_mutation_that_drops_session_history | Passed | 00:00:00.8852436
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_start_returns_blocked_without_invoking_the_factory | Passed | 00:00:01.2543126
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.SaveCatalogAsync_returns_store_assigned_revision_and_ignores_caller_revision | Passed | 00:00:00.8546309
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateCatalogAsync_PendingRunUpdateJournal_RecoversTargetBeforeCatalogMutation | Passed | 00:00:01.5746285
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_LargeHistory_WalRemainsWithinMeasuredBounds | Passed | 00:00:25.2469850
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 0) | Passed | 00:00:01.3979839
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 8) | Passed | 00:00:01.5703708
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 6) | Passed | 00:00:09.7871516
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Execution_session_and_run_writes_retain_catalog_revision | Passed | 00:00:02.0151266
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_starts_preserve_every_concurrent_user_message | Passed | 00:00:02.2581959
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.SaveExecutionRunDetailAsync_does_not_load_unrelated_run_slices_in_split_storage | Passed | 00:00:03.7817066
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_PausedAfterRunWrite_BlocksSecondStoreReadersUntilCommit | Passed | 00:00:05.2459634
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_CancellationAfterJournal_CompletesCommittedContinuation | Passed | 00:00:04.7242267
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 3) | Passed | 00:00:01.7418739
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.ChatSessionStore_creates_and_updates_split_session_projection | Passed | 00:00:12.1524296
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_start_rejects_stale_catalog_revision_without_persisting | Passed | 00:00:01.2513732
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 2) | Passed | 00:00:01.6477771
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.ListExecutionRunsAsync_waits_for_workspace_lock_then_reads_run_summaries | Passed | 00:00:04.1342194
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.UpdateExecutionRunDetailAsync_serializes_competing_mutations_against_the_latest_run | Passed | 00:00:04.2562083
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 5) | Passed | 00:00:03.4957597
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Catalog_revision_changes_once_for_a_change_and_retains_for_a_noop | Passed | 00:00:01.0586788
+
+Invariant index (editorial mapping to the concrete tests above, not text originally emitted by tests): SB01-I01, SB01-I02, SB01-I03, SB01-I04, SB01-I05, SB01-I06, SB01-I07, SB01-I08
+Security/recovery invariants already passed before optimization and remain regression guards. Only redundant-work count assertions are claimed as old-code failures. Real UI/source-file/approval acceptance remains separately blocked.

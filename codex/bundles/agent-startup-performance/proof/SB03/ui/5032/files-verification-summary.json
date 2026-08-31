@@ -1,0 +1,112 @@
+{
+  "capturedUtc": "2026-08-31T18:03:56.045853+00:00",
+  "host": "native",
+  "status": "Passed",
+  "source": [
+    "files-two-run-persisted.json",
+    "files-structured-calls.json",
+    "../reference-facts.json",
+    "../file-fixtures-final.json"
+  ],
+  "runs": [
+    {
+      "runId": "9fc77bd0-4cbb-404e-9389-88df9128212b",
+      "sessionId": "939dd101-0453-4ad4-aaf5-85cd7ae4d44f",
+      "state": "Completed",
+      "outcome": "Succeeded",
+      "recordCounts": {
+        "logs": 36,
+        "metrics": 2,
+        "usage": 7,
+        "approvals": 1,
+        "receipts": 6
+      },
+      "actualSerializedCallCount": 6,
+      "structuredResultPairCount": 6,
+      "approvedSourceFileCallCount": 3,
+      "allSourceFileCallArgumentsMatchApprovedAssets": true,
+      "exactWholeFileReadContentHashMatchCount": 0,
+      "joinedResultReceipts": [
+        {
+          "callId": "call_1sc4nf6YPIt9iCHC5ZsoWMBo",
+          "toolName": "workspace_convert_document",
+          "executionRunId": "9fc77bd0-4cbb-404e-9389-88df9128212b",
+          "durableReceiptId": "cd887513-ee39-ad50-93ed-6d3f603c4e14",
+          "receiptOutcomeFromStructuredResult": "Succeeded",
+          "mutatesWorkspace": true,
+          "joinedBy": "Exact executionRunId, toolName, startedAtUtc and completedAtUtc"
+        },
+        {
+          "callId": "call_UWa0feCaAfDiAkMIRj51G589",
+          "toolName": "workspace_read_spreadsheet_range",
+          "executionRunId": "9fc77bd0-4cbb-404e-9389-88df9128212b",
+          "durableReceiptId": "3bfb1c68-a45d-9d5e-a3cd-05def68c621e",
+          "receiptOutcomeFromStructuredResult": "Succeeded",
+          "mutatesWorkspace": false,
+          "joinedBy": "Exact executionRunId, toolName, startedAtUtc and completedAtUtc"
+        },
+        {
+          "callId": "call_W2DZTEwL7rfLJWaCawuNC7Qg",
+          "toolName": "workspace_spreadsheet_summary",
+          "executionRunId": "9fc77bd0-4cbb-404e-9389-88df9128212b",
+          "durableReceiptId": "dca532d3-9e43-da50-9cac-0c5738b84755",
+          "receiptOutcomeFromStructuredResult": "Succeeded",
+          "mutatesWorkspace": false,
+          "joinedBy": "Exact executionRunId, toolName, startedAtUtc and completedAtUtc"
+        },
+        {
+          "callId": "call_zA8CKHSLPTVbbgFjta7Y3q9b",
+          "toolName": "workspace_list_directory",
+          "executionRunId": "9fc77bd0-4cbb-404e-9389-88df9128212b",
+          "durableReceiptId": "3b6d260e-6ea7-3f5c-8c92-f55b1ef123eb",
+          "receiptOutcomeFromStructuredResult": "Succeeded",
+          "mutatesWorkspace": false,
+          "joinedBy": "Exact executionRunId, toolName, startedAtUtc and completedAtUtc"
+        }
+      ],
+      "unjoinedSkillCalls": 2,
+      "sessionCurrentMessageCount": 5
+    },
+    {
+      "runId": "78436614-b3b7-4efc-9e0b-b5d66446a4ae",
+      "sessionId": "939dd101-0453-4ad4-aaf5-85cd7ae4d44f",
+      "state": "Completed",
+      "outcome": "Succeeded",
+      "recordCounts": {
+        "logs": 16,
+        "metrics": 1,
+        "usage": 3,
+        "approvals": 0,
+        "receipts": 2
+      },
+      "actualSerializedCallCount": 2,
+      "structuredResultPairCount": 2,
+      "approvedSourceFileCallCount": 2,
+      "allSourceFileCallArgumentsMatchApprovedAssets": true,
+      "exactWholeFileReadContentHashMatchCount": 0,
+      "joinedResultReceipts": [
+        {
+          "callId": "call_ELltfrFSiAnX0JdrcY9iUG5m",
+          "toolName": "workspace_spreadsheet_summary",
+          "executionRunId": "78436614-b3b7-4efc-9e0b-b5d66446a4ae",
+          "durableReceiptId": "052ecf10-d104-0a53-b279-b6bdfad537f1",
+          "receiptOutcomeFromStructuredResult": "Succeeded",
+          "mutatesWorkspace": false,
+          "joinedBy": "Exact executionRunId, toolName, startedAtUtc and completedAtUtc"
+        },
+        {
+          "callId": "call_TIyhaNGQybVEsnWDvfxzJlZy",
+          "toolName": "workspace_read_spreadsheet_range",
+          "executionRunId": "78436614-b3b7-4efc-9e0b-b5d66446a4ae",
+          "durableReceiptId": "0aaaf87d-a461-8556-ab20-fc4498639873",
+          "receiptOutcomeFromStructuredResult": "Succeeded",
+          "mutatesWorkspace": false,
+          "joinedBy": "Exact executionRunId, toolName, startedAtUtc and completedAtUtc"
+        }
+      ],
+      "unjoinedSkillCalls": 0,
+      "sessionCurrentMessageCount": 5
+    }
+  ],
+  "limits": "Persisted supporting evidence, not a substitute for root-observed UI proof. Session counts describe the whole session at capture. Original asset integrity comes from final SHA256/size verification; lexical output-path inequality alone is not a canonical-path or no-write guarantee. The native conversion intentionally creates a derived Markdown artifact. Metrics and usage overlap and are not added together. No live app/provider requests, builds, tests or source changes were made by this summary."
+}

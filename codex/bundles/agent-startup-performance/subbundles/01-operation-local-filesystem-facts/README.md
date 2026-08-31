@@ -2,7 +2,8 @@
 
 ## Status
 
-- `Ready` for later execution; not started. Future execute request and Phase0 entry gate required.
+- Status: Completed
+- Focused gate: Pass. Execution authorization and Phase 0 are satisfied. Integrated real UI, native approvals, performance and final host checkpoint passed; see proof/SB01/manifest.md and proof/SB03/ui/validation-summary.md.
 
 ## Objective
 
@@ -14,7 +15,7 @@ Reduce repeated case-sensitivity probe I/O inside verified filesystem-operation 
 
 ## Prerequisites
 
-- Future execution authorization, current source/host re-anchor and Phase0 paired baseline.
+- Execution authorization, source/host re-anchor and Phase0 paired baseline were satisfied before implementation.
 - Characterize actual root/path freshness and existing negative cases; record test-platform capability.
 - Read architecture/checkpoint/test/performance plans.
 
@@ -68,7 +69,7 @@ Owning tests, selectors and crash-host discovery are defined there.
 - Selection reason: security/freshness and actual atomic write consumers.
 - Expected discovered tests: reconcile named source inventory and added cases before execution; actual nonzero discovery required.
 - Invalidation keys: factory/writer/contracts, path/case/root freshness, permissions/flush/lock behavior, test platform and dependency hashes.
-- Broad-gate decision: Not required unless a public/global contract expands; then reopen under the named rule in test-selection.
+- Broad-gate decision: Executed once at Frozen Integration after scoped CodeAnalytics impact promoted all supplied Unit/Integration/Components suites. Retained failures and root startup-specific acceptance are recorded in reviews/01-execution-report.md; no broad rerun or all-green claim.
 - Critical foundation: yes; real existing-run workspace update/recovery smoke required.
 
 ## Acceptance Checklist

@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "host": "client",
+  "captureStartedUtc": "2026-08-31T17:48:41.053898+00:00",
+  "captureCompletedUtc": "2026-08-31T17:48:41.298629+00:00",
+  "snapshotFileCount": 45,
+  "snapshotSourceBytes": 221447,
+  "sourceRecordsUnchangedAtRecheck": true,
+  "requiresLaterTerminalObservation": false,
+  "limits": "Supporting persisted evidence only. No app calls, locks, recovery or source writes. Hash/list rechecks detect ordinary concurrent changes but are not an atomic snapshot or a guarantee against noncooperating races. Tool text, arguments, message content, provider/model data, environments and serialized contexts are never emitted. Unknown freeform tool outcomes remain UnclassifiedRedacted. Metrics and usage observations are separate overlapping evidence, not additive totals.",
+  "runs": [
+    {
+      "runId": "6994341e-3336-47c0-8cab-5474b41904c2",
+      "agentId": "952b041a-aba0-385b-8e4e-494c4b21d831",
+      "chatSessionId": "d989aa84-831a-4e32-8960-f13b27dad864",
+      "state": "Completed",
+      "outcome": "Succeeded",
+      "isTerminal": true,
+      "revision": 2,
+      "autoApprovePendingToolCalls": false,
+      "pendingApprovals": [],
+      "createdAtUtc": "2026-08-31T17:36:21.311157+00:00",
+      "updatedAtUtc": "2026-08-31T17:37:14.241160+00:00",
+      "startedAtUtc": "2026-08-31T17:36:21.311157+00:00",
+      "completedAtUtc": "2026-08-31T17:37:14.241160+00:00",
+      "pendingApprovalCount": 0,
+      "logs": [
+        {
+          "id": "247f2f4a-037d-4014-ade1-a4fa1697b86f",
+          "createdAtUtc": "2026-08-31T17:36:32.360217+00:00",
+          "state": "Preparing",
+          "phase": "Skills"
+        },
+        {
+          "id": "285ce391-3767-4b6f-90db-8df497f75512",
+          "createdAtUtc": "2026-08-31T17:37:11.778097+00:00",
+          "state": "Persisting",
+          "phase": "Session"
+        },
+        {
+          "id": "2c3bb25c-b37e-40b9-9aca-b6410b1117cc",
+          "createdAtUtc": "2026-08-31T17:36:26.646765+00:00",
+          "state": "Preparing",
+          "phase": "Framework"
+        },
+        {
+          "id": "361ee9c1-3f8d-4997-a818-59bc60cdae50",
+          "createdAtUtc": "2026-08-31T17:37:17.744759+00:00",
+          "state": "Completed",
+          "phase": "Completed"
+        },
+        {
+          "id": "3e68b4f3-9147-41ae-8d54-98fb929c5a3d",
+          "createdAtUtc": "2026-08-31T17:37:02.873616+00:00",
+          "state": "Running",
+          "phase": "Streaming"
+        },
+        {
+          "id": "4a21f22b-88de-4fe5-af70-d19c3ae5bb09",
+          "createdAtUtc": "2026-08-31T17:36:34.684855+00:00",
+          "state": "Preparing",
+          "phase": "Workspace tools"
+        },
+        {
+          "id": "56eafdae-8f17-410b-baac-7b540fc6f3de",
+          "createdAtUtc": "2026-08-31T17:36:38.734789+00:00",
+          "state": "Preparing",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "5a526ed9-4aa6-40fe-90dc-833837d84975",
+          "createdAtUtc": "2026-08-31T17:36:54.962483+00:00",
+          "state": "WaitingOnTool",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "69db6a2f-644b-486a-af62-b513b57266ef",
+          "createdAtUtc": "2026-08-31T17:36:28.678672+00:00",
+          "state": "Preparing",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "877e2b76-105e-448c-810c-d94e8c943342",
+          "createdAtUtc": "2026-08-31T17:36:42.620266+00:00",
+          "state": "Preparing",
+          "phase": "Model parameters"
+        },
+        {
+          "id": "9f735ea3-65bf-4503-b075-05f70a4cb43d",
+          "createdAtUtc": "2026-08-31T17:36:40.804354+00:00",
+          "state": "Preparing",
+          "phase": "Compaction"
+        },
+        {
+          "id": "a4653e04-b609-4e27-b2d1-12defe5821aa",
+          "createdAtUtc": "2026-08-31T17:36:53.174717+00:00",
+          "state": "WaitingOnTool",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "c75ee633-7468-4853-8953-51001673a3cd",
+          "createdAtUtc": "2026-08-31T17:36:30.534396+00:00",
+          "state": "Preparing",
+          "phase": "Context contributors"
+        },
+        {
+          "id": "d9326f92-8ddf-4758-ac77-25a4b3d587bf",
+          "createdAtUtc": "2026-08-31T17:36:36.688616+00:00",
+          "state": "Preparing",
+          "phase": "Runtime tool providers"
+        },
+        {
+          "id": "dd811601-9b76-4af1-9db4-f4f78ac88509",
+          "createdAtUtc": "2026-08-31T17:36:46.899328+00:00",
+          "state": "Running",
+          "phase": "Run"
+        },
+        {
+          "id": "e0936958-0875-4995-af25-c9c61c25fdff",
+          "createdAtUtc": "2026-08-31T17:36:44.538718+00:00",
+          "state": "Preparing",
+          "phase": "Session"
+        },
+        {
+          "id": "ea438d5d-b3d7-4ec8-9c1b-b15b228e2d0b",
+          "createdAtUtc": "2026-08-31T17:36:24.686373+00:00",
+          "state": "Preparing",
+          "phase": "Planning"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "9ab79a74-410c-4db9-a8c7-4f63e8edadfb",
+          "createdAtUtc": "2026-08-31T17:37:14.240879+00:00",
+          "outcome": "Succeeded",
+          "durationMs": 49678,
+          "inputTokens": 36388,
+          "outputTokens": 1635,
+          "toolCalls": 2,
+          "cachedInputTokens": 15801,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "usage": [
+        {
+          "id": "1095ac5a-a2b1-44d1-81b6-c717ac1478d6",
+          "createdAtUtc": "2026-08-31T17:37:14.240782+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 20584,
+          "cachedInputTokens": 15801,
+          "outputTokens": 1436,
+          "reasoningTokens": 0,
+          "totalTokens": 22020,
+          "toolCallCount": 0,
+          "cacheWriteTokens": 0
+        },
+        {
+          "id": "169f0799-2391-4321-b38f-0394c75302da",
+          "createdAtUtc": "2026-08-31T17:37:14.240636+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 15804,
+          "cachedInputTokens": 0,
+          "outputTokens": 199,
+          "reasoningTokens": 0,
+          "totalTokens": 16003,
+          "toolCallCount": 2,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "approvals": [],
+      "receipts": [
+        {
+          "id": "dcbbe204-15a9-d551-853c-e28178403840",
+          "toolName": "workspace_read_file",
+          "startedAtUtc": "2026-08-31T17:36:57.103453+00:00",
+          "completedAtUtc": "2026-08-31T17:36:57.119278+00:00",
+          "durationMilliseconds": 15.825,
+          "outcome": "UnclassifiedRedacted",
+          "sideEffectMode": "Unspecified"
+        },
+        {
+          "id": "e1809c4d-1086-025b-88c4-24a11f3e5243",
+          "toolName": "workspace_read_file",
+          "startedAtUtc": "2026-08-31T17:36:57.008218+00:00",
+          "completedAtUtc": "2026-08-31T17:36:57.039981+00:00",
+          "durationMilliseconds": 31.763,
+          "outcome": "UnclassifiedRedacted",
+          "sideEffectMode": "Unspecified"
+        }
+      ],
+      "sessionSnapshot": {
+        "id": "d989aa84-831a-4e32-8960-f13b27dad864",
+        "latestExecutionRunId": "abb9340f-4546-49a3-b8f3-9b07d662c3d4",
+        "createdAtUtc": "2026-08-31T17:36:18.027072+00:00",
+        "updatedAtUtc": "2026-08-31T17:40:28.840550+00:00",
+        "messageCount": 4,
+        "messageCountsByRole": {
+          "User": 2,
+          "Assistant": 2
+        },
+        "messageTokenEstimateTotal": 2426,
+        "scope": "Current whole-session counts; messages are not attributed to an individual run."
+      },
+      "recordCounts": {
+        "logs": 17,
+        "metrics": 1,
+        "usage": 2,
+        "approvals": 0,
+        "receipts": 2
+      }
+    },
+    {
+      "runId": "abb9340f-4546-49a3-b8f3-9b07d662c3d4",
+      "agentId": "952b041a-aba0-385b-8e4e-494c4b21d831",
+      "chatSessionId": "d989aa84-831a-4e32-8960-f13b27dad864",
+      "state": "Completed",
+      "outcome": "Succeeded",
+      "isTerminal": true,
+      "revision": 2,
+      "autoApprovePendingToolCalls": false,
+      "pendingApprovals": [],
+      "createdAtUtc": "2026-08-31T17:39:53.069276+00:00",
+      "updatedAtUtc": "2026-08-31T17:40:28.840550+00:00",
+      "startedAtUtc": "2026-08-31T17:39:53.069276+00:00",
+      "completedAtUtc": "2026-08-31T17:40:28.840550+00:00",
+      "pendingApprovalCount": 0,
+      "logs": [
+        {
+          "id": "004bf119-b916-4fe0-89b5-b5ac2b654258",
+          "createdAtUtc": "2026-08-31T17:40:18.529404+00:00",
+          "state": "WaitingOnTool",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "0f47bdc3-87f2-491d-bb99-54d790826759",
+          "createdAtUtc": "2026-08-31T17:40:26.451648+00:00",
+          "state": "Persisting",
+          "phase": "Session"
+        },
+        {
+          "id": "11903721-28d2-4657-96dc-71574ecc1fd9",
+          "createdAtUtc": "2026-08-31T17:40:32.039457+00:00",
+          "state": "Completed",
+          "phase": "Completed"
+        },
+        {
+          "id": "12649e69-7119-4104-996c-cd1688de1d46",
+          "createdAtUtc": "2026-08-31T17:40:02.415278+00:00",
+          "state": "Preparing",
+          "phase": "Workspace tools"
+        },
+        {
+          "id": "1a118c2f-4ac6-4a7b-a4e9-8c2fadf4ab0c",
+          "createdAtUtc": "2026-08-31T17:40:07.359762+00:00",
+          "state": "Preparing",
+          "phase": "Compaction"
+        },
+        {
+          "id": "2151e421-95fb-4c03-b96e-61fecf41e0ea",
+          "createdAtUtc": "2026-08-31T17:40:23.248474+00:00",
+          "state": "Running",
+          "phase": "Streaming"
+        },
+        {
+          "id": "23366f23-3847-4961-8cd3-0ec892af7d28",
+          "createdAtUtc": "2026-08-31T17:40:13.270118+00:00",
+          "state": "Running",
+          "phase": "Run"
+        },
+        {
+          "id": "32d6259c-1271-40d8-9608-3f9d291dca46",
+          "createdAtUtc": "2026-08-31T17:40:03.893757+00:00",
+          "state": "Preparing",
+          "phase": "Runtime tool providers"
+        },
+        {
+          "id": "46e1d3d3-8d05-4bf6-961a-14983ec8dc3f",
+          "createdAtUtc": "2026-08-31T17:40:09.036820+00:00",
+          "state": "Preparing",
+          "phase": "Model parameters"
+        },
+        {
+          "id": "5ac8d746-7c3d-4bae-a0c2-6463ff8c9e90",
+          "createdAtUtc": "2026-08-31T17:39:55.518777+00:00",
+          "state": "Preparing",
+          "phase": "Framework"
+        },
+        {
+          "id": "65fd04ec-41f8-437b-874b-1f52dc7df60b",
+          "createdAtUtc": "2026-08-31T17:39:57.386728+00:00",
+          "state": "Preparing",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "a4895c6d-e0fa-44c6-978b-ba11ef30517e",
+          "createdAtUtc": "2026-08-31T17:40:10.965128+00:00",
+          "state": "Preparing",
+          "phase": "Session"
+        },
+        {
+          "id": "ce4ced08-1be8-4fc6-83d0-3d66cbdde19a",
+          "createdAtUtc": "2026-08-31T17:40:05.522819+00:00",
+          "state": "Preparing",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "d0a18c3d-da3d-464f-93af-6d8087dc859c",
+          "createdAtUtc": "2026-08-31T17:39:54.271558+00:00",
+          "state": "Preparing",
+          "phase": "Planning"
+        },
+        {
+          "id": "d2077a0d-344a-4533-a364-365442b7ed7e",
+          "createdAtUtc": "2026-08-31T17:39:59.201228+00:00",
+          "state": "Preparing",
+          "phase": "Context contributors"
+        },
+        {
+          "id": "f650ccc8-d6bb-4e2a-b98f-2e50a859d2c7",
+          "createdAtUtc": "2026-08-31T17:40:00.800192+00:00",
+          "state": "Preparing",
+          "phase": "Skills"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "13b59195-9954-41fc-b2a5-2fea7dae1ee0",
+          "createdAtUtc": "2026-08-31T17:40:28.840314+00:00",
+          "outcome": "Succeeded",
+          "durationMs": 34660,
+          "inputTokens": 37212,
+          "outputTokens": 536,
+          "toolCalls": 1,
+          "cachedInputTokens": 30536,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "usage": [
+        {
+          "id": "18291462-6594-4d5b-8c28-f4cc4596e53e",
+          "createdAtUtc": "2026-08-31T17:40:28.840241+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 20135,
+          "cachedInputTokens": 17074,
+          "outputTokens": 438,
+          "reasoningTokens": 0,
+          "totalTokens": 20573,
+          "toolCallCount": 0,
+          "cacheWriteTokens": 0
+        },
+        {
+          "id": "8807d7f1-a998-4d1c-8851-43ca6bdd4bfc",
+          "createdAtUtc": "2026-08-31T17:40:28.840186+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 17077,
+          "cachedInputTokens": 13462,
+          "outputTokens": 98,
+          "reasoningTokens": 0,
+          "totalTokens": 17175,
+          "toolCallCount": 1,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "approvals": [],
+      "receipts": [
+        {
+          "id": "28aaf409-8a79-3256-8616-5e233a1799aa",
+          "toolName": "workspace_read_file",
+          "startedAtUtc": "2026-08-31T17:40:20.461080+00:00",
+          "completedAtUtc": "2026-08-31T17:40:20.480047+00:00",
+          "durationMilliseconds": 18.967,
+          "outcome": "UnclassifiedRedacted",
+          "sideEffectMode": "Unspecified"
+        }
+      ],
+      "sessionSnapshot": {
+        "id": "d989aa84-831a-4e32-8960-f13b27dad864",
+        "latestExecutionRunId": "abb9340f-4546-49a3-b8f3-9b07d662c3d4",
+        "createdAtUtc": "2026-08-31T17:36:18.027072+00:00",
+        "updatedAtUtc": "2026-08-31T17:40:28.840550+00:00",
+        "messageCount": 4,
+        "messageCountsByRole": {
+          "User": 2,
+          "Assistant": 2
+        },
+        "messageTokenEstimateTotal": 2426,
+        "scope": "Current whole-session counts; messages are not attributed to an individual run."
+      },
+      "recordCounts": {
+        "logs": 16,
+        "metrics": 1,
+        "usage": 2,
+        "approvals": 0,
+        "receipts": 1
+      }
+    }
+  ]
+}

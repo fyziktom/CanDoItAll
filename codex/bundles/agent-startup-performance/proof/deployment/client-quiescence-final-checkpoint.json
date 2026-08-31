@@ -1,0 +1,149 @@
+{
+  "CheckedUtc": "2026-08-31T18:02:15.1490583+00:00",
+  "RunCount": 27,
+  "PreviousCheckpointRunCount": 24,
+  "NewProtectedFileRunCount": 3,
+  "TerminalRunCount": 27,
+  "PendingJournalCount": 0,
+  "PendingApprovalCount": 0,
+  "RunInventory": [
+    {
+      "RunId": "11c451ec-32fc-4925-a5ec-dced22f6ecc8",
+      "State": 5,
+      "Sha256": "4F7E7618E8D3412F1E2BEEBF04E525F36556EC9EFD031811B7977FB1D0239096"
+    },
+    {
+      "RunId": "15e63ab9-2493-4f2e-b990-419db9e85cf7",
+      "State": 5,
+      "Sha256": "19D4EF02A91F42400F996317BC05D2B82B8DC03B7F0BC10B648F8BA98011612A"
+    },
+    {
+      "RunId": "181fb822-158f-48cd-b3b4-d110a2c900fe",
+      "State": 5,
+      "Sha256": "3A41BE999A4CFAE36877475A3B4D7627E9BB4AD22F871DEC99938F3F2A445B19"
+    },
+    {
+      "RunId": "1d43e606-35ed-4181-a062-3fa6186b0761",
+      "State": 5,
+      "Sha256": "72C6747BF81A23583D6A3B3552EC10F5575845B28ED4FC70DAA43761FAF3403F"
+    },
+    {
+      "RunId": "2673d6a8-04c7-403c-ab07-018c1b8841aa",
+      "State": 5,
+      "Sha256": "E2FBC74F5EBFF22E97C9AD140519370E9B2A33CE6A632A344EAC8199931E7492"
+    },
+    {
+      "RunId": "2be3bd81-1fca-4130-9720-b7255d5b24cf",
+      "State": 5,
+      "Sha256": "97F98FC277C3C16A0BB8CEF21C95192467189D2D5EC815C711DD95B0E26BE238"
+    },
+    {
+      "RunId": "3ac494f0-6df7-4619-b6d5-d0a73815efc4",
+      "State": 5,
+      "Sha256": "BF7B102DB49A9A0CB0CF11C1A1E554E96C9A196DFDC39A2C13ADF06F141D9EA2"
+    },
+    {
+      "RunId": "435f6d00-021a-46b2-a695-0b0b6754850a",
+      "State": 5,
+      "Sha256": "7F6F2D8ADDBB7547075568817A314973ED5C6C07DF636CF01F74F32BB51291D9"
+    },
+    {
+      "RunId": "60c8158b-6eec-440e-94b3-c47d7e3ba542",
+      "State": 5,
+      "Sha256": "9611D4E14E44E72CDF99EFA196D1D42289F49084548313F5A2BC761CD715BEB2"
+    },
+    {
+      "RunId": "6994341e-3336-47c0-8cab-5474b41904c2",
+      "State": 5,
+      "Sha256": "EBB0960A897C4F823F2597D7B5251FA210353ECA41326DDA466888ED23202032"
+    },
+    {
+      "RunId": "6c615ccb-e891-4f4f-80cf-b5e52a43367a",
+      "State": 5,
+      "Sha256": "030E9E077E03040FEBEEA7C2EAFF90C885F620A0AD701874AAF4F9B7F761CB6D"
+    },
+    {
+      "RunId": "740e8083-3427-470d-8622-d2a8cedabfcd",
+      "State": 5,
+      "Sha256": "E7E7A861C612E13C951964406B48A0CFA048AC51D86821AA538C3F3639F0B696"
+    },
+    {
+      "RunId": "7888a7f1-fab4-40ff-9c26-a6a986d048a7",
+      "State": 5,
+      "Sha256": "31C83669AB45772A208EFF07A3031EA8CF5B2671CCE9933E81619301E2D9C5CB"
+    },
+    {
+      "RunId": "7bcfc2a7-c2b8-4bd9-ba10-56e0c45fc0f6",
+      "State": 5,
+      "Sha256": "B5D92A40B840FF2850A7A6DA1392D12FFCC7CD0F6F20C47380D368B7E4FA5426"
+    },
+    {
+      "RunId": "819ee972-e4ea-4e69-bd79-d0c5a341d2a7",
+      "State": 5,
+      "Sha256": "4C12D074EC6830F338B6051182C8D6488202D4DB66ED1C08AC1784947739C74E"
+    },
+    {
+      "RunId": "8ea65472-43c8-4416-8b05-d6fd631ab057",
+      "State": 5,
+      "Sha256": "E6DE4D3412A8D92C8DCF25E4E534781462C97FBBA9614C330844DA3B729FCEE4"
+    },
+    {
+      "RunId": "96932be3-4085-49e2-94ff-da710a91dd55",
+      "State": 5,
+      "Sha256": "07F82864C3CDEDF9537B21FAF672403B2540BA62F6A07AF4251CFCCBD735758F"
+    },
+    {
+      "RunId": "a21411e5-12bf-43b2-9b4e-40d381ce2be2",
+      "State": 5,
+      "Sha256": "62DA240A6BA6529601D9242794DB7D853B38EA676272D0AF9170FD8951E571E3"
+    },
+    {
+      "RunId": "abb9340f-4546-49a3-b8f3-9b07d662c3d4",
+      "State": 5,
+      "Sha256": "E785BF5755847BC4C8BFD9A81A6ADE78ED043E457AB7AA9EEF74E8DE56546502"
+    },
+    {
+      "RunId": "ad47ab86-d1ae-480d-bafe-95e5c39afe1e",
+      "State": 5,
+      "Sha256": "7EB4B6779CBEA823D54315DE4CDEC38FAE91029200C95F7E4FE3625A1F83FCB6"
+    },
+    {
+      "RunId": "b3aa5e80-e2dc-403b-9ef6-07583079bb41",
+      "State": 5,
+      "Sha256": "E64970642E009588147E84CE20896C50A1B24EC810654495774B06A1F5C6A06D"
+    },
+    {
+      "RunId": "baf0f065-a869-4eae-a946-7d576c319b62",
+      "State": 5,
+      "Sha256": "347EA7D0236298C351BF1117458D9A4DA0D31FF69064FD0D7CA57432565DBE0C"
+    },
+    {
+      "RunId": "c6a80db1-4c57-458d-80f9-1df865e3406c",
+      "State": 5,
+      "Sha256": "CDDA339C2E3C28A11856D7AFA8652205A004AA7D7568A852E072F11A0CD66F75"
+    },
+    {
+      "RunId": "de851710-c33a-4d6a-b915-838a948bdaa8",
+      "State": 5,
+      "Sha256": "EAE31751A35EFC96ACF17ADC0EA87C4E2679B859A139EC950D6DD4204C721581"
+    },
+    {
+      "RunId": "ebbffadb-976d-4344-88c2-96a0640f7bfe",
+      "State": 5,
+      "Sha256": "4412DD7B6F43C3EB3A87A6B09345C401DC864D557775BAF9B1F97ED764A9B531"
+    },
+    {
+      "RunId": "ec7821e8-0e55-4cf8-a643-205ef2a0c798",
+      "State": 5,
+      "Sha256": "7CD6A882361094A5F35CD892BB0522521B54F65076A05DD1A4484390A36058B3"
+    },
+    {
+      "RunId": "f4b7e37d-84ac-4677-9ab4-489321c8a3a6",
+      "State": 5,
+      "Sha256": "E044E01B18E7D8B7355BF6A642D0F06F5C0E304DB8021EB270EFB4E1ABD4F960"
+    }
+  ],
+  "AppCalls": false,
+  "SourceWrites": false,
+  "InitialGuardCorrection": "Previous checkpoint already included both missing-path runs. Initial hard-coded 29 lower-bound rejected the healthy 27-run inventory; corrected to previous24 plus exact3new source-file runs, with all3IDs verified."
+}

@@ -1,6 +1,6 @@
 # Agent Startup Performance
 
-Prepare safer startup optimizations without changing the working agent execution or durability contract.
+Implement the three approved startup optimizations while preserving the working agent execution and durability contract.
 
 ## Profile
 
@@ -11,7 +11,7 @@ Prepare safer startup optimizations without changing the working agent execution
 
 - Improve actual preparation latency on native **5032** and Docker **5214** through the first three recommendations only.
 - Preserve genuine agent conversations, context/skills, tools, approvals, errors, persisted history, source validation and crash recovery.
-- **Implementation is not authorized by this bundle-preparation request. Do not execute the implementation prompt, tests, browser scenarios, deployments or live mutations until the user asks to execute.**
+- The original request authorized preparation only. The subsequent request in inputs/04-execution-request.md authorizes implementation and proper testing, including the planned controlled replacements of 5032 and 5214.
 - Log accumulation/batching (recommendation 4), fire-and-forget progress, removing per-stage commits, weaker flushes and a logging redesign are **excluded**. The user's rationale about accumulating startup information is preserved in the raw input as a future direction, not silently added to this scope.
 - No new projects, schema/journal migrations, public contract changes, default/provider edits, sibling changes or broad cleanup are planned.
 - Readiness means the plan can be executed after authorization; it does not mean any optimization or regression test has run.
@@ -43,9 +43,23 @@ Source references use `repo://`; future proof uses `bundle://`. The repository c
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Pass`
-- Execution status: `Not started`
-- Subbundle gate review: `Not started`
-- Final closure gate: `Not started`
-- Browser validation analytics: `Not started`
+- Execution status: `Completed` — all three approved optimizations, focused gates, real two-host UI/tools/approvals, paired performance and final host preservation passed; retained broad-test exceptions remain explicit. Authorized by inputs/04-execution-request.md and inputs/05-file-validation-approval.md.
+- Subbundle gate review: `Pass` — all three implementation units, scoped architecture and integrated real UI/performance/host evidence accepted by root.
+- Final closure gate: `Pass` — root and independent review accepted actual behavioral/host proof; unchanged canonical completed-stage validation passed.
+- Browser validation analytics: `Pass` — both named hosts, required UI01–UI06 and applicable approval matrix; native busy-Stop proof retains its preparation/admission limit.
 
-Preparation validation and independent review are recorded in [self-review](reviews/00-bundle-self-review.md). No implementation completion is claimed.
+Preparation validation and independent review are recorded in [self-review](reviews/00-bundle-self-review.md). Measured performance passed. The user granted protected-file transmission permission in inputs/05-file-validation-approval.md; the five source-file runs and full history reload now have actual evidence. Native approval rejection and its reload proof also passed. Root accepted the final host checkpoint and behavioral closure.
+
+Execution started from committed bundle/source HEAD 3d5def561. Earlier preparation-only statements describe the previous request; the new execution request authorizes the implementation and planned tests. No managed dotnetwatch app is active; the existing 5032 Release process was retained for the baseline.
+
+## Frozen candidate checkpoint
+
+All three focused gates, combined failures, architecture reviews and native/Docker builds passed. Candidates are healthy after controlled replacement; rollback evidence is preserved and publisher 5210 is unchanged.
+
+The first broad run remains failed: 9,747 cases, 9,731 passed, 15 failed and one disabled opt-in skip; 39 deferred theory expansions reconcile discovery. History follow-up passed 23/23 after increasing only disposable PostgreSQL capacity. Preview retries passed 2/2 but their initial cause is unproven. Two pre-existing Unit guards and the strict planner index-name guard remain unresolved. No broad suite was repeated. Root accepted startup-specific progression with these retained findings, not an all-green broad gate.
+
+Independent actual-UI performance passed: native median 12.152916 to 6.321676 seconds (47.982% reduction), client 31.669973 to 22.449116 seconds (29.115%), with no repeat trigger or submit regression. Fourteen runs were measured: seven runs in six conversations per host.
+
+Real missing-path tools, safe continuation and bounded close/reload/error-history checks passed; file-browser styles and readable models were inspected. Authorized protected-file comparisons/follow-ups and successful-file history passed on both hosts. Native pending-handle reopening and approval acceptance resumed the same run once, with one conversion receipt. The separate native rejection case and reload proved a durable rejected decision without conversion execution. Root accepted the final host checkpoint and behavioral closure. Source-backed tests supplement, rather than substitute for, the earlier error cases. Execution is Completed; canonical final validation passed. See proof/closure-preparation/completed-validator.log and its exact command metadata.
+
+See [UI checkpoint](proof/SB03/ui/validation-summary.md), [performance verification](proof/SB03/performance/independent-result-verification.json), [broad results](proof/frozen-integration/final-broad-and-attribution-summary.json) and [final host checkpoint](proof/deployment/final-checkpoint.json).

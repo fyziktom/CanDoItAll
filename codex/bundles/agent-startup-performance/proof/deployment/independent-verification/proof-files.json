@@ -1,0 +1,22 @@
+[
+  {
+    "File": "deployed-client-css-and-identity.initial-audit.json",
+    "Sha256": "68C576FBBE2C57F78376840B414E94924A6DB03B8346540991C6C2FEFF0E620A",
+    "Bytes": 2977
+  },
+  {
+    "File": "deployed-client-css-and-identity.json",
+    "Sha256": "18C6CF97B0C84F86AE06550BC8387516E50D3F7C60904A163E5E9D1199BF83EA",
+    "Bytes": 3206
+  },
+  {
+    "File": "final-source-review.json",
+    "Sha256": "04F276C08953C02C695CFCB1FD5457882A54A57B57CEF3F9396D119296D8BA4D",
+    "Bytes": 3685
+  },
+  {
+    "File": "final-source-review.md",
+    "Sha256": "398F7EB06BE09A733866A8DB2FA3C2F59FD0D152F9989EED348ED0EB0E840C95",
+    "Bytes": 4234
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+    "Sha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2"
+  },
+  {
+    "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+    "Sha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0"
+  },
+  {
+    "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+    "Sha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19"
+  },
+  {
+    "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+    "Sha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9"
+  }
+]

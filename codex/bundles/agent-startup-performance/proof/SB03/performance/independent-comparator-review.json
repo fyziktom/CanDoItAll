@@ -1,0 +1,10 @@
+{
+  "recordedUtc": "2026-08-31T15:39:21.7838566+00:00",
+  "status": "PASS-method-preparation-only",
+  "candidateCalculationExecuted": false,
+  "comparatorSha256": "219EF65968247BD4B83C2115BC948A56D32C25C51435A397CEDE525880226BA5",
+  "extractorSha256": "6C9882AE4928887226178D8899CDAA14785B34AFBCFC3F16511751C6D656C141",
+  "baselineExtractorSha256": "6C9882AE4928887226178D8899CDAA14785B34AFBCFC3F16511751C6D656C141",
+  "astSyntaxExitCode": 0,
+  "review": "independent-comparator-review.md"
+}

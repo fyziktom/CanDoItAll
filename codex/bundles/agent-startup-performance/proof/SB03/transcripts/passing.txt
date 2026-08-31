@@ -1,0 +1,165 @@
+Run label: candidate-new-tests
+Command: dotnet ["test", "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj", "--configuration", "Release", "--no-build", "--artifacts-path", ".artifacts/agent-startup-performance/sb01-tests", "--filter", "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests", "--logger", "trx;LogFileName=candidate-new-tests.trx", "--results-directory", "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb03\\results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+Original command metadata: bundle://proof/SB03/candidate/candidate-new-tests-command.json
+Original TRX: bundle://proof/SB03/candidate/candidate-new-tests.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+StartUtc: 2026-08-31T14:37:56.5292150+00:00
+EndUtc: 2026-08-31T14:38:24.0376767+00:00
+Original TRX SHA256: 7CC1AB40A5DA628F9A81055FA9D3B4594F3AEAD8F6EE66DE1800D4075486E68E
+Result cases: 19
+Outcomes: {"Passed": 19}
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ChatIndex, remove: True) | Passed | 00:00:01.5512642
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: ChatIndex, shape: UnknownProperty) | Passed | 00:00:01.3145784
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ChatIndex, remove: False) | Passed | 00:00:01.4627320
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ExecutionIndex, remove: True) | Passed | 00:00:01.2185516
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: UsageIndex, remove: False) | Passed | 00:00:01.2139585
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: Run, shape: UnknownProperty) | Passed | 00:00:01.4937156
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: UsageIndex, remove: True) | Passed | 00:00:01.0876717
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Run, remove: True) | Passed | 00:00:01.2496735
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: ChatIndex, shape: Compact) | Passed | 00:00:02.1456506
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Session, remove: False) | Passed | 00:00:00.9004089
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Session, remove: True) | Passed | 00:00:00.8953651
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: ExecutionIndex, remove: False) | Passed | 00:00:01.2888991
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: Run, shape: Canonical) | Passed | 00:00:01.4055088
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: ChatIndex, shape: Canonical) | Passed | 00:00:01.3439306
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 1) | Passed | 00:00:01.1959814
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Matching_typed_target_retains_raw_comparison_and_canonicalization(kind: Run, shape: Compact) | Passed | 00:00:01.4251929
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Recovered_journal_retains_five_raw_comparisons_and_rolls_forward_once | Passed | 00:00:01.1553247
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Noncooperating_change_before_fresh_validation_fails_and_retains_journal(kind: Run, remove: False) | Passed | 00:00:00.8985177
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 32) | Passed | 00:00:02.3139280
+
+Run label: candidate-unit
+Command: dotnet ["test", "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj", "--configuration", "Release", "--no-build", "--artifacts-path", ".artifacts/agent-startup-performance/sb01-tests", "--filter", "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests", "--logger", "trx;LogFileName=candidate-unit.trx", "--results-directory", "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb03\\results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+Original command metadata: bundle://proof/SB03/candidate/candidate-unit-command.json
+Original TRX: bundle://proof/SB03/candidate/candidate-unit.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+StartUtc: 2026-08-31T14:41:05.7692170+00:00
+EndUtc: 2026-08-31T14:41:12.7182824+00:00
+Original TRX SHA256: 22C26B3EBAEF56F46BF8F5D5B99132ADE6A2477CD7A8253C524A97DD54B73530
+Result cases: 20
+Outcomes: {"Passed": 20}
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_rejects_invalid_page_bounds(pageIndex: 0, pageSize: 0) | Passed | 00:00:00.0447809
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_projection_uses_recorded_scope_then_explicit_legacy_attribution | Passed | 00:00:00.0106107
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Legacy_chat_index_is_upgraded_only_by_first_reporting_query_and_then_served_from_index | Passed | 00:00:00.1801318
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_uses_activity_time_for_window_order_and_trend | Passed | 00:00:00.0213394
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Missing_chat_index_is_rebuilt_once_from_canonical_records_and_persisted | Passed | 00:00:00.7319795
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_rebuilds_a_stale_chat_index_before_filtering | Passed | 00:00:00.1221058
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Workspace_projection_reads_sessions_and_runs_for_one_agent_from_one_index_snapshot | Passed | 00:00:00.0254253
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Active_run_index_is_state_based_and_remains_delta_stable_across_old_run_updates | Passed | 00:00:00.7920663
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_rejects_invalid_page_bounds(pageIndex: 2147483647, pageSize: 100) | Passed | 00:00:00.0356290
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Saving_run_detail_persists_enriched_reporting_fields_without_double_counting_cost | Passed | 00:00:00.0562282
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Execution_summary_rebuilds_and_persists_missing_index_without_loading_chat_projection | Passed | 00:00:00.3834424
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_totals_exclude_process_runs_and_daily_cost_trend_is_bounded | Passed | 00:00:00.0660113
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_applies_plural_failure_state_and_outcome_filters | Passed | 00:00:00.0467033
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_filters_with_the_same_normalized_status_used_by_manager_views | Passed | 00:00:00.0520127
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_filters_project_runs_pages_and_aggregates_from_current_index_only | Passed | 00:00:00.0541617
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_rejects_invalid_page_bounds(pageIndex: 0, pageSize: 101) | Passed | 00:00:00.0276223
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Cancelled_legacy_reporting_upgrade_does_not_publish_partial_checkpoints | Passed | 00:00:01.5583603
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_rejects_blank_source_filters_instead_of_broadening_scope | Passed | 00:00:00.0282361
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Legacy_reporting_upgrade_does_not_overwrite_a_concurrent_index_change | Passed | 00:00:00.1237473
+CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests.Reporting_query_rejects_invalid_page_bounds(pageIndex: -1, pageSize: 25) | Passed | 00:00:00.0255844
+
+Run label: candidate-integration
+Command: dotnet ["test", "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj", "--configuration", "Release", "--no-build", "--artifacts-path", ".artifacts/agent-startup-performance/sb01-tests", "--filter", "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests)&FullyQualifiedName!=CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.File_source_checkpoints_large_manifest_within_host_deadline_and_resumes_after_restart", "--logger", "trx;LogFileName=candidate-integration.trx", "--results-directory", "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb03\\results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+Original command metadata: bundle://proof/SB03/candidate/candidate-integration-command.json
+Original TRX: bundle://proof/SB03/candidate/candidate-integration.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+StartUtc: 2026-08-31T14:41:57.4169998+00:00
+EndUtc: 2026-08-31T14:45:10.3021511+00:00
+EnvironmentBootstrap: .artifacts/agent-startup-performance/test-postgres/Enter-IsolatedPostgresTestEnvironment.ps1
+Original TRX SHA256: 357D99709CB2285EE07BA942A875028A9CA37EC7EA762D16E7B857F5C052AD82
+Result cases: 69
+Outcomes: {"Passed": 69}
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Actual_file_owner_recovers_first_commit_after_expiry_and_deletion(failureStageValue: 1) | Passed | 00:00:03.6114514
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_PausedAfterRunWrite_BlocksSecondStoreReadersUntilCommit | Passed | 00:00:01.3393177
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_FailureAfterCommitBoundary_RollsForwardExactlyOnce(failureStageValue: 0) | Passed | 00:00:01.2545303
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 3) | Passed | 00:00:01.2733201
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.SaveExecutionRunDetailAsync_does_not_load_unrelated_run_slices_in_split_storage | Passed | 00:00:03.4748860
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_FailureAfterCommitBoundary_RollsForwardExactlyOnce(failureStageValue: 2) | Passed | 00:00:01.3776224
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Catalog_normalization_and_legacy_missing_revision_migrate_monotonically | Passed | 00:00:01.5905651
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.UpdateExecutionRunDetailAsync_serializes_competing_mutations_against_the_latest_run | Passed | 00:00:03.5223405
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Legacy_file_binding_and_acknowledgment_recover_without_rebinding_or_duplicates(failureStageValue: 4) | Passed | 00:00:02.0827817
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_start_rejects_a_mutation_that_drops_session_history | Passed | 00:00:00.6536402
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Usage_projection_delta_matches_canonical_rebuild_after_append | Passed | 00:00:01.4527886
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_FailureAfterCommitBoundary_RollsForwardExactlyOnce(failureStageValue: 4) | Passed | 00:00:01.3159382
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.BeginChatBackedRunAsync_ExistingSession_ReadsOnlyLatestHistoricalRunHeader(historicalRunCount: 96) | Passed | 00:00:16.3562767
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.PendingNewRunRecovery_AppliesUsageDeltaWithoutHistoricalPayloadScan | Passed | 00:00:05.4774763
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Legacy_file_binding_and_acknowledgment_recover_without_rebinding_or_duplicates(failureStageValue: 6) | Passed | 00:00:02.1803719
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Competing_catalog_changes_publish_coherent_monotonic_snapshots | Passed | 00:00:00.8306557
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Catalog_revision_changes_once_for_a_change_and_retains_for_a_noop | Passed | 00:00:00.7019856
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.ReserveExecutionRunAsync_FailureAfterCommitBoundary_RecoversEveryProjectionExactlyOnce(failureStageValue: 0) | Passed | 00:00:01.0594239
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 1) | Passed | 00:00:01.2083185
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.BeginChatBackedRunAsync_ActiveLatestRun_BlocksFromSingleHeaderRead | Passed | 00:00:16.1190303
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.GetExecutionRunDetailAsync_waits_for_workspace_lock_then_reads_initialized_run_detail | Passed | 00:00:03.3383552
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Application_file_source_commits_locator_and_index_before_acknowledging(failAfterFlush: False) | Passed | 00:00:02.7924859
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.UpdateCatalogAsync_CorruptExecutionJournal_LeavesCatalogAndWorkspaceIndexUnchanged(journalFileName: "pending-run-detail-update.json") | Passed | 00:00:00.8038680
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Application_file_source_commits_locator_and_index_before_acknowledging(failAfterFlush: True) | Passed | 00:00:03.5106802
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.ReserveExecutionRunAsync_FailureAfterCommitBoundary_RecoversEveryProjectionExactlyOnce(failureStageValue: 3) | Passed | 00:00:01.1758770
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.BeginChatBackedRunAsync_NewSession_DoesNotReadHistoricalRunOrUsagePayloads(historicalRunCount: 96) | Passed | 00:00:17.0802115
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Actual_file_owner_recovers_first_commit_after_expiry_and_deletion(failureStageValue: 0) | Passed | 00:00:03.7470334
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.ReserveExecutionRunAsync_FailureAfterCommitBoundary_RecoversEveryProjectionExactlyOnce(failureStageValue: 4) | Passed | 00:00:01.0908133
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 2) | Passed | 00:00:01.2764051
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.UpdateCatalogAsync_PendingChatRunJournal_RecoversRunBeforeCatalogMutation | Passed | 00:00:01.4024174
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Usage_projection_keeps_delimiter_bearing_model_keys_distinct | Passed | 00:00:01.2196582
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 5) | Passed | 00:00:01.4033118
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.File_backfill_resumes_bounded_metadata_chunks_without_recopying_canonical_bodies | Passed | 00:00:03.9292964
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_CancellationAfterJournal_CompletesCommittedContinuation | Passed | 00:00:01.1270173
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_starts_preserve_every_concurrent_user_message | Passed | 00:00:01.3290601
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_FailureAfterCommitBoundary_RollsForwardExactlyOnce(failureStageValue: 1) | Passed | 00:00:01.2775927
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_LargeHistory_WalRemainsWithinMeasuredBounds | Passed | 00:00:17.0306230
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 4) | Passed | 00:00:01.2388679
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Actual_file_owner_recovers_first_commit_after_expiry_and_deletion(failureStageValue: 2) | Passed | 00:00:03.6218217
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.CreateChatSessionAsync_does_not_read_unrelated_run_file_when_chat_index_exists | Passed | 00:00:04.7470705
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_CancellationAfterJournal_CompletesCommittedRun | Passed | 00:00:01.1282176
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_FailureAfterCommitBoundary_RollsForwardExactlyOnce(failureStageValue: 3) | Passed | 00:00:01.3702273
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_start_rejects_stale_catalog_revision_without_persisting | Passed | 00:00:00.8789305
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Execution_session_and_run_writes_retain_catalog_revision | Passed | 00:00:01.9011215
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.ListExecutionRunsAsync_waits_for_workspace_lock_then_reads_run_summaries | Passed | 00:00:03.9517591
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 8) | Passed | 00:00:01.4425280
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.GetExecutionRunDetailAsync_CorruptPendingUpdateJournal_FailsExplicitlyAndRetainsJournal | Passed | 00:00:00.7919173
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.BeginChatBackedRunAsync_ExistingSession_ReadsOnlyLatestHistoricalRunHeader(historicalRunCount: 4) | Passed | 00:00:01.9917630
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 6) | Passed | 00:00:01.4241075
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.BeginChatBackedRunAsync_NewSession_DoesNotReadHistoricalRunOrUsagePayloads(historicalRunCount: 4) | Passed | 00:00:02.0001421
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.LoadExecutionAsync_CorruptPendingJournal_FailsExplicitlyAndRetainsJournal | Passed | 00:00:00.7064119
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Existing_run_update_rejects_usage_observation_identity_change | Passed | 00:00:00.7666750
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_PausedAfterSlices_BlocksSecondStoreReadersUntilCommit | Passed | 00:00:01.5741651
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 7) | Passed | 00:00:01.3052565
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Legacy_file_binding_and_acknowledgment_recover_without_rebinding_or_duplicates(failureStageValue: 5) | Passed | 00:00:02.5905471
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_FailureAfterCommitBoundary_RollsForwardContinuationExactlyOnce(failureStageValue: 0) | Passed | 00:00:01.2022393
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.ReserveExecutionRunAsync_FailureAfterCommitBoundary_RecoversEveryProjectionExactlyOnce(failureStageValue: 1) | Passed | 00:00:01.2401945
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.UpdateCatalogAsync_CorruptExecutionJournal_LeavesCatalogAndWorkspaceIndexUnchanged(journalFileName: "pending-chat-run-start.json") | Passed | 00:00:00.9274099
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.BeginChatBackedRunAsync_CancellationBeforeJournal_PersistsNothing | Passed | 00:00:00.8839943
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Deleted_project_reconciliation_and_late_file_publication_cannot_restore_history | Passed | 00:00:02.6722967
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.Existing_run_update_rejects_usage_observation_removal | Passed | 00:00:00.8379596
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.ReserveExecutionRunAsync_FailureAfterCommitBoundary_RecoversEveryProjectionExactlyOnce(failureStageValue: 5) | Passed | 00:00:01.0306325
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.LoadCatalogAsync_reads_initialized_catalog_when_workspace_lock_is_held | Passed | 00:00:02.9408346
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.Atomic_chat_run_start_returns_blocked_without_invoking_the_factory | Passed | 00:00:01.0501297
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.ReserveExecutionRunAsync_FailureAfterCommitBoundary_RecoversEveryProjectionExactlyOnce(failureStageValue: 2) | Passed | 00:00:01.1632228
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.ChatSessionStore_creates_and_updates_split_session_projection | Passed | 00:00:10.0730594
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateCatalogAsync_PendingRunUpdateJournal_RecoversTargetBeforeCatalogMutation | Passed | 00:00:01.4655816
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.UpdateExecutionRunDetailAsync_CancellationBeforeJournal_PersistsNothing | Passed | 00:00:00.7819874
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.SaveCatalogAsync_returns_store_assigned_revision_and_ignores_caller_revision | Passed | 00:00:00.6393124
+
+Run label: candidate-deadline-isolated
+Command: dotnet ["test", "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj", "--configuration", "Release", "--no-build", "--artifacts-path", ".artifacts/agent-startup-performance/sb01-tests", "--filter", "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.File_source_checkpoints_large_manifest_within_host_deadline_and_resumes_after_restart", "--logger", "trx;LogFileName=candidate-deadline-isolated.trx", "--results-directory", "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb03\\results"]
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+Original command metadata: bundle://proof/SB03/candidate/candidate-deadline-isolated-command.json
+Original TRX: bundle://proof/SB03/candidate/candidate-deadline-isolated.trx
+Presentation note: reconstructed presentation of existing immutable command/TRX evidence; no tests rerun, results changed or missing timestamps invented.
+StartUtc: 2026-08-31T14:47:19.8213189+00:00
+EndUtc: 2026-08-31T14:48:02.1528007+00:00
+EnvironmentBootstrap: .artifacts/agent-startup-performance/test-postgres/Enter-IsolatedPostgresTestEnvironment.ps1
+Original TRX SHA256: 09B1C50369DE82A8CD2C8018F8B22AB5228F126B31AA0C31A2FC50092488DFFD
+Result cases: 1
+Outcomes: {"Passed": 1}
+CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.File_source_checkpoints_large_manifest_within_host_deadline_and_resumes_after_restart | Passed | 00:00:40.1636294
+
+Invariant index (editorial mapping to the concrete tests above, not text originally emitted by tests): SB03-I01, SB03-I02, SB03-I03, SB03-I04, SB03-I05, SB03-I06, SB03-I07, SB03-I08, SB03-I09, SB03-I10
+Security/recovery invariants already passed before optimization and remain regression guards. Only redundant-work count assertions are claimed as old-code failures. Real UI/source-file/approval acceptance remains separately blocked.

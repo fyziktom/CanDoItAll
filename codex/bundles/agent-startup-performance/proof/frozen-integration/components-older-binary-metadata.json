@@ -1,0 +1,166 @@
+{
+  "BaselineRoot": ".artifacts/agent-label-startup-analysis/test-artifacts/bin/CanDoItAll.Tests.Components/release",
+  "ReadOnlyMetadataInspection": true,
+  "TargetAssembliesLoadedForExecution": false,
+  "Assemblies": [
+    {
+      "Assembly": "CanDoItAll.Tests.Components",
+      "DllSha256": "463F0849CF1023E7EA6F5F66B29C8848FB777B8D204653506F8F56B73B829F4F",
+      "PdbSha256": "2FA11EC58C3052D910ADC0065F5F05D610F86CBF6CB48C09789C6E4227798E75",
+      "PdbGuid": "fe6f31b5-18fb-41c2-844f-8083db219261",
+      "CodeViewGuids": [
+        "fe6f31b5-18fb-41c2-844f-8083db219261"
+      ],
+      "PdbMatchesPeGuid": true,
+      "LastWriteUtc": "2026-08-31T11:59:11.8027334Z",
+      "Documents": [
+        {
+          "Path": "tests/Components/CanDoItAll.Tests.Components/ComponentTestHarness.cs",
+          "PdbSourceSha256": "8A8DC74A4B9F48F694FB87FB7F391FF7848E0603BD1EDBBDBDB0EBA2857035E1",
+          "CurrentSha256": "8A8DC74A4B9F48F694FB87FB7F391FF7848E0603BD1EDBBDBDB0EBA2857035E1",
+          "HeadGitBlobSha256": "8A8DC74A4B9F48F694FB87FB7F391FF7848E0603BD1EDBBDBDB0EBA2857035E1",
+          "HeadCrLfSha256": "98830ABB215300A3B463E67832D75D8D5DDB5A9FB26C116798CB443CFDCD4B71",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        },
+        {
+          "Path": "tests/Components/CanDoItAll.Tests.Components/WorkflowsPageTests.cs",
+          "PdbSourceSha256": "2CBD09F86AA2FEC0863384C0BC6165B7BE95C45BE14AC30D74E0A420C4C5D608",
+          "CurrentSha256": "2CBD09F86AA2FEC0863384C0BC6165B7BE95C45BE14AC30D74E0A420C4C5D608",
+          "HeadGitBlobSha256": "2CBD09F86AA2FEC0863384C0BC6165B7BE95C45BE14AC30D74E0A420C4C5D608",
+          "HeadCrLfSha256": "69F3B166901416BAE9B00338CA60C0EDE94DA5204CD58B0F8392E2ED484546C1",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        }
+      ]
+    },
+    {
+      "Assembly": "CanDoItAll.Modules.AgentFramework",
+      "DllSha256": "0AC0591DC84C73DB7AF7B73A14E4551B2E496CBD024F63B03D1B303F3F28F76F",
+      "PdbSha256": "73D506C0EE573DD4B8AF62C465761ECEACDC2330D58193B30C832A3E4AEB7553",
+      "PdbGuid": "501eba89-4d6f-409f-8c5a-e19006020492",
+      "CodeViewGuids": [
+        "501eba89-4d6f-409f-8c5a-e19006020492"
+      ],
+      "PdbMatchesPeGuid": true,
+      "LastWriteUtc": "2026-08-31T11:58:39.8227087Z",
+      "Documents": [
+        {
+          "Path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
+          "PdbSourceSha256": "43F61583B3F2F113F5A8FD2C38E8F99759903F833DEB83AB10CBF727C79F3C2C",
+          "CurrentSha256": "43F61583B3F2F113F5A8FD2C38E8F99759903F833DEB83AB10CBF727C79F3C2C",
+          "HeadGitBlobSha256": "43F61583B3F2F113F5A8FD2C38E8F99759903F833DEB83AB10CBF727C79F3C2C",
+          "HeadCrLfSha256": "185CBB8A1F61D8720520F1EDF09EAB47A1B865DC6DEBE6F5734840507036298E",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        },
+        {
+          "Path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowPreviewInputSupport.cs",
+          "PdbSourceSha256": "EF2431E7589ED9B3F4EC2CD433EECCFF8AC7C47135086D4B7B676CAF970C607C",
+          "CurrentSha256": "EF2431E7589ED9B3F4EC2CD433EECCFF8AC7C47135086D4B7B676CAF970C607C",
+          "HeadGitBlobSha256": "EF2431E7589ED9B3F4EC2CD433EECCFF8AC7C47135086D4B7B676CAF970C607C",
+          "HeadCrLfSha256": "077F87683B6CC121581D872DECD14592A2C271F45EE756184C3CD1816790426B",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        },
+        {
+          "Path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedAwareProviderRuntimeProfileSnapshotLoader.cs",
+          "PdbSourceSha256": "86FEAD21EB728E11F5F288251D6761E9D4E1910334DAF3AE2E54964FFE250803",
+          "CurrentSha256": "51DDB2B68D86377B67F3472CA3549CDFBEA1C45D9EB2C497189E84C5C7AE708F",
+          "HeadGitBlobSha256": "86FEAD21EB728E11F5F288251D6761E9D4E1910334DAF3AE2E54964FFE250803",
+          "HeadCrLfSha256": "D3DBEA704A5377BEE450085CBA187B113CABC57C12E099D0BD57EFEA32F577C0",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        }
+      ]
+    },
+    {
+      "Assembly": "CanDoItAll.Infrastructure",
+      "DllSha256": "2505B61AE87C8DF994A8412D89D3779BFE56033B3818F56C0FCACD77333677DE",
+      "PdbSha256": "8A0FC0CA65CF49B97A11259D070D386A31B88DDE49756C717C8A8DF1DFA7DD15",
+      "PdbGuid": "08827319-ec58-444b-884b-29a2856c9c68",
+      "CodeViewGuids": [
+        "08827319-ec58-444b-884b-29a2856c9c68"
+      ],
+      "PdbMatchesPeGuid": true,
+      "LastWriteUtc": "2026-08-31T11:56:43.8497947Z",
+      "Documents": [
+        {
+          "Path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "PdbSourceSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "CurrentSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "HeadGitBlobSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "HeadCrLfSha256": "578ED2BBD9DC5FDAC2E8C32A13DC7010D17F510EED2DA81612B6D5C1292FCD7B",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        }
+      ]
+    },
+    {
+      "Assembly": "CanDoItAll.AgentFramework.Persistence",
+      "DllSha256": "1F3B253FE7C931EAFB9D25A25C8EDC6D016830E53C7C5D1402FCAE02A2CAA0D5",
+      "PdbSha256": "E18A47C5948B7D52E8F87218488C62E0AD4036EB6EA0893560411F8F85E34D26",
+      "PdbGuid": "d841d54e-1be4-4887-846b-7049554f06f4",
+      "CodeViewGuids": [
+        "d841d54e-1be4-4887-846b-7049554f06f4"
+      ],
+      "PdbMatchesPeGuid": true,
+      "LastWriteUtc": "2026-08-31T11:57:53.4257332Z",
+      "Documents": [
+        {
+          "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "PdbSourceSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "CurrentSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "HeadGitBlobSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "HeadCrLfSha256": "4E5EB9A10E5C35166E69CF96666B3937E6743B5DC93854F580C50E1A8A05E4DC",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        },
+        {
+          "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "PdbSourceSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "CurrentSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "HeadGitBlobSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "HeadCrLfSha256": "BF1E1667045CC13F1E5A1DEB7A7E2C01B8A5C9C856290C56F9C9B5C90A71298D",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        },
+        {
+          "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "PdbSourceSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "CurrentSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "HeadGitBlobSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "HeadCrLfSha256": "8CE12862342C9F63906478FAE0A6D3AA7D5C288FC2C1F391F538E83CCE6546CA",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        }
+      ]
+    },
+    {
+      "Assembly": "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+      "DllSha256": "DEB2A473A29372D1A94D7A36A2E26E64236FFDC346E28CC6823C57C3CF4E8557",
+      "PdbSha256": "B9C8544F6D1D3018456D6B0200176D976B187E4D6DDA90896B98AB80436BA33F",
+      "PdbGuid": "08b797d0-e177-48b1-a1de-aedc02bc6078",
+      "CodeViewGuids": [
+        "08b797d0-e177-48b1-a1de-aedc02bc6078"
+      ],
+      "PdbMatchesPeGuid": true,
+      "LastWriteUtc": "2026-08-31T11:57:42.7338581Z",
+      "Documents": [
+        {
+          "Path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRuntimeProfileMaterializer.cs",
+          "PdbSourceSha256": "DEAC01CEDE8EBC3B558A0B30036512713F327BF3F96DA77B5EC7B0B3A91E3AC9",
+          "CurrentSha256": "B9C8D484CB5C31E125E97BDE2FD55A6A9BCC30176689E8742A96522081C0DCE6",
+          "HeadGitBlobSha256": "DEAC01CEDE8EBC3B558A0B30036512713F327BF3F96DA77B5EC7B0B3A91E3AC9",
+          "HeadCrLfSha256": "1F28C9ED7C0F71DC64DBF98A8A1E883BCFDBB10C7A5FE5697B65A927830E1E9B",
+          "MatchesHeadWorkingTreeSource": true,
+          "LineEndingMatch": "git-bytes"
+        }
+      ]
+    }
+  ],
+  "FullOutputProvenanceVerified": false,
+  "BaselineExecuted": false,
+  "SourceHead": "3d5def561cd06635a2676c4b86afcb6b49ad169b",
+  "SelectedSourceDocumentsMatchedHead": 10
+}

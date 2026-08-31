@@ -1,0 +1,16 @@
+{
+  "CreatedAfterBaseline": true,
+  "ContainerName": "/candoitall-agent-startup-tests-20260831-1342",
+  "ContainerId": "aa1bac9c700103cc7738d33c1c5b14fbaa076fb128f387747a057951b81db9f9",
+  "ImageId": "sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7",
+  "Ready": "healthy",
+  "Endpoint": "127.0.0.1:52049",
+  "OwnerLabel": "agent-startup-performance-tests",
+  "DataStorage": "dedicated1GiBtmpfs",
+  "MemoryLimitBytes": 2147483648,
+  "CpuLimit": 2,
+  "ConnectionConfiguration": "private ACL-protected ignored file; not included in proof",
+  "Bootstrap": ".artifacts/agent-startup-performance/test-postgres/Enter-IsolatedPostgresTestEnvironment.ps1",
+  "TestIsolation": "Each test leases a unique database; no default5432/liveDBfallback",
+  "ExistingDatabasesChanged": false
+}

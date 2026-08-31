@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "host": "native",
+  "captureStartedUtc": "2026-08-31T17:54:37.713765+00:00",
+  "captureCompletedUtc": "2026-08-31T17:54:37.908444+00:00",
+  "snapshotFileCount": 19,
+  "snapshotSourceBytes": 49361,
+  "sourceRecordsUnchangedAtRecheck": true,
+  "requiresLaterTerminalObservation": true,
+  "limits": "Supporting persisted evidence only. No app calls, locks, recovery or source writes. Hash/list rechecks detect ordinary concurrent changes but are not an atomic snapshot or a guarantee against noncooperating races. Tool text, arguments, message content, provider/model data, environments and serialized contexts are never emitted. Unknown freeform tool outcomes remain UnclassifiedRedacted. Metrics and usage observations are separate overlapping evidence, not additive totals.",
+  "runs": [
+    {
+      "runId": "3908f2a2-35f6-4009-80f5-f2d69e619bcd",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "9c4e6533-c627-41d9-a9c1-4a963c39b6b6",
+      "state": "WaitingOnTool",
+      "outcome": null,
+      "isTerminal": false,
+      "revision": 2,
+      "autoApprovePendingToolCalls": false,
+      "pendingApprovals": [
+        {
+          "approvalId": "ficc_call_3Ut7txS4EYKYA65Ifg8JSDC7",
+          "callId": "call_3Ut7txS4EYKYA65Ifg8JSDC7",
+          "toolName": "workspace_convert_document"
+        }
+      ],
+      "createdAtUtc": "2026-08-31T17:52:59.489468+00:00",
+      "updatedAtUtc": "2026-08-31T17:53:12.105540+00:00",
+      "startedAtUtc": "2026-08-31T17:52:59.489468+00:00",
+      "completedAtUtc": null,
+      "pendingApprovalCount": 1,
+      "logs": [
+        {
+          "id": "10c4f6fb-bf96-45a8-9667-c241af072c7d",
+          "createdAtUtc": "2026-08-31T17:53:04.841016+00:00",
+          "state": "Preparing",
+          "phase": "Execution authority"
+        },
+        {
+          "id": "15ce8f9f-16bf-4c05-9e5b-60cd186a15b8",
+          "createdAtUtc": "2026-08-31T17:53:10.420306+00:00",
+          "state": "Persisting",
+          "phase": "Session"
+        },
+        {
+          "id": "162fc1ab-8fa3-43a8-a846-e43f2346f217",
+          "createdAtUtc": "2026-08-31T17:53:05.214904+00:00",
+          "state": "Preparing",
+          "phase": "Model parameters"
+        },
+        {
+          "id": "4d3ac6e3-d921-48a4-ba8e-8b5de2df720d",
+          "createdAtUtc": "2026-08-31T17:53:04.167528+00:00",
+          "state": "Preparing",
+          "phase": "Runtime tool providers"
+        },
+        {
+          "id": "4e3a05be-b048-4779-899d-673b3c9ab0af",
+          "createdAtUtc": "2026-08-31T17:53:12.105540+00:00",
+          "state": "WaitingOnTool",
+          "phase": "Approval"
+        },
+        {
+          "id": "544887d3-7657-4bf6-9304-7db97024d7c8",
+          "createdAtUtc": "2026-08-31T17:53:03.822980+00:00",
+          "state": "Preparing",
+          "phase": "Workspace tools"
+        },
+        {
+          "id": "56c7a0b6-3b73-4cb0-9a65-6f6a063655c5",
+          "createdAtUtc": "2026-08-31T17:53:03.264000+00:00",
+          "state": "Preparing",
+          "phase": "Context contributors"
+        },
+        {
+          "id": "999faafe-99c4-4c09-b0ef-b0956114cdc2",
+          "createdAtUtc": "2026-08-31T17:53:10.790309+00:00",
+          "state": "WaitingOnTool",
+          "phase": "Approval"
+        },
+        {
+          "id": "bd6af50c-9f4a-44a1-8449-63fb00f9ffa9",
+          "createdAtUtc": "2026-08-31T17:53:05.497835+00:00",
+          "state": "Preparing",
+          "phase": "Session"
+        },
+        {
+          "id": "c1a7419c-8f5a-4b35-a72f-9c5585af4dfd",
+          "createdAtUtc": "2026-08-31T17:53:04.502306+00:00",
+          "state": "Preparing",
+          "phase": "Compaction"
+        },
+        {
+          "id": "c3a14d53-4f1c-4afa-8b1a-350fd0926346",
+          "createdAtUtc": "2026-08-31T17:53:03.533564+00:00",
+          "state": "Preparing",
+          "phase": "Skills"
+        },
+        {
+          "id": "cc6197b2-ab82-49ca-a580-55d7cebc65de",
+          "createdAtUtc": "2026-08-31T17:53:05.843120+00:00",
+          "state": "Running",
+          "phase": "Run"
+        },
+        {
+          "id": "d89f088b-5ac1-4e37-86ef-da2333bb80a2",
+          "createdAtUtc": "2026-08-31T17:53:02.964738+00:00",
+          "state": "Preparing",
+          "phase": "Framework"
+        },
+        {
+          "id": "ff372a22-e16c-4ef4-a92e-c1658f3db2b5",
+          "createdAtUtc": "2026-08-31T17:53:02.702328+00:00",
+          "state": "Preparing",
+          "phase": "Planning"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "51b434b8-f3d3-42bc-9d8c-e9333e9f9cbe",
+          "createdAtUtc": "2026-08-31T17:53:11.131267+00:00",
+          "outcome": "Cancelled",
+          "durationMs": 8438,
+          "inputTokens": 6644,
+          "outputTokens": 372,
+          "toolCalls": 1,
+          "cachedInputTokens": 3840,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "usage": [
+        {
+          "id": "fcef1638-836d-4959-a79f-70d5ffae149f",
+          "createdAtUtc": "2026-08-31T17:53:11.131106+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 6644,
+          "cachedInputTokens": 3840,
+          "outputTokens": 372,
+          "reasoningTokens": 0,
+          "totalTokens": 7016,
+          "toolCallCount": 1,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "approvals": [
+        {
+          "approvalId": "ficc_call_3Ut7txS4EYKYA65Ifg8JSDC7",
+          "callId": "call_3Ut7txS4EYKYA65Ifg8JSDC7",
+          "toolName": "workspace_convert_document",
+          "status": "Pending",
+          "requestedAtUtc": "2026-08-31T17:53:11.131596+00:00",
+          "decidedAtUtc": null
+        }
+      ],
+      "receipts": [],
+      "sessionSnapshot": {
+        "id": "9c4e6533-c627-41d9-a9c1-4a963c39b6b6",
+        "latestExecutionRunId": "3908f2a2-35f6-4009-80f5-f2d69e619bcd",
+        "createdAtUtc": "2026-08-31T17:52:58.367944+00:00",
+        "updatedAtUtc": "2026-08-31T17:53:12.105540+00:00",
+        "messageCount": 2,
+        "messageCountsByRole": {
+          "User": 1,
+          "Assistant": 1
+        },
+        "messageTokenEstimateTotal": 511,
+        "scope": "Current whole-session counts; messages are not attributed to an individual run."
+      },
+      "recordCounts": {
+        "logs": 14,
+        "metrics": 1,
+        "usage": 1,
+        "approvals": 1,
+        "receipts": 0
+      }
+    }
+  ]
+}

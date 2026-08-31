@@ -1,0 +1,13 @@
+Command: rg -n -i "TODO|NotImplementedException|fixture-specific|template-only output|SB01-I0|SB03-I0" "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs" "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs" "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs" "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs"
+WorkingDirectory: C:/repositories/CanDoItAll
+Run label: closure-preparation-owned-source-anti-stub
+ExitCode: 1
+Audit result: Pass. rg exit 1 means no matching line; output was empty. No TODO, NotImplementedException, fixture-specific branch marker, template-only output or proof-invariant marker was found in the four owned production files.
+Review boundary: bounded source scan complements existing independent source/test-design reviews; it is not a general correctness proof or a new test run.
+Metadata recorded at: 2026-08-31T16:55:23.018535+00:00
+Source SHA256: repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4
+Source SHA256: repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F
+Source SHA256: repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs 4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87
+Source SHA256: repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A
+
+Invariant scope: SB03-I01, SB03-I02, SB03-I03, SB03-I04, SB03-I05, SB03-I06, SB03-I07, SB03-I08, SB03-I09, SB03-I10

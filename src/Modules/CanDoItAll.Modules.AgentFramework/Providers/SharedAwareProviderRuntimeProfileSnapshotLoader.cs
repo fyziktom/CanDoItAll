@@ -21,26 +21,8 @@ internal sealed class DatabaseProviderRuntimeProfileSnapshotLoader(
     IProviderRuntimeProfileSnapshotLoader
 {
     public async Task<IReadOnlyList<CanonicalProviderRuntimeProfile>>
-        LoadAllAsync(CancellationToken cancellationToken = default)
-    {
-        await using var dbContext =
-            await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var providers = await dbContext.Set<PersistedProviderProfile>()
-            .AsNoTracking()
-            .Where(item =>
-                item.Id != ProviderProfileWellKnownIds.RuntimeFallbackOllama)
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken);
-        var imports = await dbContext.Set<SharedProviderImport>()
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-        var sources = await dbContext.Set<SharedProviderSource>()
-            .AsNoTracking()
-            .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var importsByProfile = imports
-            .GroupBy(item => item.ProviderProfileId)
-            .Where(group => group.Count() == 1)
-            .ToDictionary(group => group.Key, group => group.Single());
+        LoadAllAsync(CancellationToken cancellationToken = default) {
+        var (providers, importsByProfile, sources) = await LoadPersistedProfilesAsync(cancellationToken);
         var projected = new List<CanonicalProviderRuntimeProfile>();
         foreach (var provider in providers)
         {
@@ -113,23 +95,94 @@ internal sealed class DatabaseProviderRuntimeProfileSnapshotLoader(
 
     public async Task<ProviderConfigurationRevision?> LoadRevisionAsync(
         Guid providerId,
-        CancellationToken cancellationToken = default)
-    {
-        var provider = await LoadAsync(providerId, cancellationToken);
-        return provider?.ConfigurationRevision;
+        CancellationToken cancellationToken = default) {
+        if (providerId == ProviderProfileWellKnownIds.RuntimeFallbackOllama) {
+            return null;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var provider = await dbContext.Set<PersistedProviderProfile>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
+        if (provider is null) {
+            return null;
+        }
+        if (!SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(provider.ConnectorPluginKey)) {
+            return MapPersonal(provider).ConfigurationRevision;
+        }
+
+        var imports = dbContext.Set<SharedProviderImport>().AsNoTracking()
+            .Where(item => item.ProviderProfileId == providerId);
+        var graphs = await (
+            from import in imports
+            join source in dbContext.Set<SharedProviderSource>().AsNoTracking()
+                on new { import.SourceId, HasSingleImport = imports.Count() == 1 }
+                equals new { SourceId = source.Id, HasSingleImport = true } into matchedSources
+            from source in matchedSources.DefaultIfEmpty()
+            select new { Import = import, Source = source })
+            .Take(2)
+            .ToListAsync(cancellationToken);
+        return graphs.Count == 1
+            ? MapSharedRevision(provider, graphs[0].Import, graphs[0].Source)
+            : null;
     }
 
-    public async Task<IReadOnlyDictionary<
-        Guid,
-        ProviderConfigurationRevision>> LoadRevisionsAsync(
-        CancellationToken cancellationToken = default)
-    {
-        var providers = await LoadAllAsync(cancellationToken);
-        return providers
-            .Where(item => item.ConfigurationRevision.HasValue)
-            .ToDictionary(
-                item => item.Profile.Id,
-                item => item.ConfigurationRevision.GetValueOrDefault());
+    public async Task<IReadOnlyDictionary<Guid, ProviderConfigurationRevision>> LoadRevisionsAsync(
+        CancellationToken cancellationToken = default) {
+        var (providers, importsByProfile, sources) = await LoadPersistedProfilesAsync(cancellationToken);
+        var revisions = new Dictionary<Guid, ProviderConfigurationRevision>();
+        foreach (var provider in providers) {
+            ProviderConfigurationRevision? revision;
+            if (!SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(provider.ConnectorPluginKey)) {
+                revision = MapPersonal(provider).ConfigurationRevision;
+            } else if (importsByProfile.TryGetValue(provider.Id, out var import) &&
+                sources.TryGetValue(import.SourceId, out var source)) {
+                revision = MapSharedRevision(provider, import, source);
+            } else {
+                continue;
+            }
+
+            if (revision is { } value) {
+                revisions.Add(provider.Id, value);
+            }
+        }
+        return revisions;
+    }
+
+    private async Task<(
+        IReadOnlyList<PersistedProviderProfile> Providers,
+        IReadOnlyDictionary<Guid, SharedProviderImport> ImportsByProfile,
+        IReadOnlyDictionary<Guid, SharedProviderSource> Sources)> LoadPersistedProfilesAsync(
+        CancellationToken cancellationToken) {
+        await using var dbContext =
+            await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var providers = await dbContext.Set<PersistedProviderProfile>()
+            .AsNoTracking()
+            .Where(item =>
+                item.Id != ProviderProfileWellKnownIds.RuntimeFallbackOllama)
+            .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken);
+        var imports = await dbContext.Set<SharedProviderImport>()
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        var sources = await dbContext.Set<SharedProviderSource>()
+            .AsNoTracking()
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+        var importsByProfile = imports
+            .GroupBy(item => item.ProviderProfileId)
+            .Where(group => group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single());
+        return (providers, importsByProfile, sources);
+    }
+
+    private ProviderConfigurationRevision? MapSharedRevision(
+        PersistedProviderProfile provider,
+        SharedProviderImport import,
+        SharedProviderSource? source) {
+        if (source is null || sharedProviderMaterializer.Validate(provider, import, source).Shape is null) {
+            return null;
+        }
+        return CreateCompositeRevision(provider, import, source);
     }
 
     private CanonicalProviderRuntimeProfile? Map(

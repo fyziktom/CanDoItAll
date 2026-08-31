@@ -1,0 +1,42 @@
+[
+  {
+    "File": "components-older-output-provenance.md",
+    "Sha256": "873A8AA5C75E62D91F4D165C7EB17EBFC54CBB353C9E5FBEC34DF3A2C51FBD87",
+    "Bytes": 5595
+  },
+  {
+    "File": "components-older-output-eligibility.json",
+    "Sha256": "417338844B1E180315E30957FE7E955D2400470E296CF88DF868F4D07C184784",
+    "Bytes": 2220
+  },
+  {
+    "File": "components-output-pdb-inventory.json",
+    "Sha256": "D08ED89D129599E012786932C108DD7DF4DAF343976F05077C2C97A3C3F607C5",
+    "Bytes": 1977178
+  },
+  {
+    "File": "components-output-source-checks.json",
+    "Sha256": "C996685724CAED72D40AAE3762E9281472B4EE36B50D08C0F83904969E75F778",
+    "Bytes": 21779
+  },
+  {
+    "File": "components-older-output-comparison.json",
+    "Sha256": "84C29A4BF120B02C192C9F0519BF921456E0ABC06B3B96F9AEC60FE60ED4BDAD",
+    "Bytes": 50520
+  },
+  {
+    "File": "components-older-template-inventory.json",
+    "Sha256": "87FA8C00DBCE2ABDB59541B1CEEC1B0C0F83E0D1B311DCA2610932ABF32E87D1",
+    "Bytes": 158886
+  },
+  {
+    "File": "components-older-binary-metadata.json",
+    "Sha256": "4396D559358F886C20A560A3462CD1637B5EFBF19C6882116008B6DFADD6BFF9",
+    "Bytes": 9140
+  },
+  {
+    "File": "components-source-causal-analysis.md",
+    "Sha256": "D5F8470BEFDA36C8B44C75E3123657DED853292BC48C94CCC7C3337E9EDC32AA",
+    "Bytes": 5918
+  }
+]

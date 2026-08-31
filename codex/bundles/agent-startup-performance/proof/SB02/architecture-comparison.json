@@ -1,0 +1,28 @@
+{
+  "before": "snap-20260831135127-6a61c183",
+  "after": "snap-20260831142651-6a61c183",
+  "projectReferencesUnchanged": true,
+  "beforeCycleCount": 2,
+  "afterCycleCount": 2,
+  "cyclesUnchanged": true,
+  "beforeSummary": {
+    "projectCount": 2,
+    "typeCount": 633,
+    "memberCount": 6412,
+    "serviceRegistrationCount": 0,
+    "entityCount": 0,
+    "findingCount": 252,
+    "openQuestionCount": 0,
+    "diagnosticCount": 0
+  },
+  "afterSummary": {
+    "projectCount": 2,
+    "typeCount": 634,
+    "memberCount": 6424,
+    "serviceRegistrationCount": 0,
+    "entityCount": 0,
+    "findingCount": 253,
+    "openQuestionCount": 0,
+    "diagnosticCount": 0
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "snapshotId": "snap-20260831135127-6a61c183",
+  "createdUtc": "2026-08-31T13:51:27.3797804+00:00",
+  "request": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+    "scopeProjectNames": [
+      "CanDoItAll.Modules.AgentFramework",
+      "CanDoItAll.Modules.AgentFramework.ProviderManagement"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": false,
+    "includePersistence": false,
+    "includeRisks": true,
+    "includeXmlDocs": false,
+    "includeMermaidExports": false
+  },
+  "hasBlockingErrors": false,
+  "diagnostics": [],
+  "summary": {
+    "projectCount": 2,
+    "typeCount": 633,
+    "memberCount": 6412,
+    "serviceRegistrationCount": 0,
+    "entityCount": 0,
+    "findingCount": 252,
+    "openQuestionCount": 0,
+    "diagnosticCount": 0
+  },
+  "projects": [
+    {
+      "name": "CanDoItAll.Modules.AgentFramework",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "projectReferences": [
+        "proj-candoitall-modules-agentframework-providermanagement"
+      ]
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj",
+      "projectReferences": []
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodeIds": [
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+      ]
+    }
+  ]
+}

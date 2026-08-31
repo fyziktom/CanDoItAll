@@ -111,82 +111,20 @@ public sealed class SharedProviderRuntimeProfileMaterializer
     public SharedProviderRuntimeProfileMaterializationResult Materialize(
         PersistedProviderProfile? profile,
         SharedProviderImport? import,
-        SharedProviderSource? source)
-    {
-        if (profile is null)
-        {
-            return Unavailable(
-                SharedProviderRuntimeProfileAvailability.ProviderProfileMissing);
+        SharedProviderSource? source) {
+        var (availability, shape) = Validate(profile, import, source);
+        if (shape is null) {
+            return Unavailable(availability);
         }
 
-        if (import is null)
-        {
-            return Unavailable(SharedProviderRuntimeProfileAvailability.ImportMissing);
-        }
-
-        if (source is null)
-        {
-            return Unavailable(SharedProviderRuntimeProfileAvailability.SourceMissing);
-        }
-
-        if (!HasValidRelationship(profile, import, source))
-        {
-            return Unavailable(
-                SharedProviderRuntimeProfileAvailability.RelationshipMismatch);
-        }
-
-        if (!TryResolveSourceBaseUri(source, out var sourceBaseUri) ||
-            source.ApiTokenSecretId == Guid.Empty)
-        {
-            return Unavailable(
-                SharedProviderRuntimeProfileAvailability.SourceConfigurationInvalid);
-        }
-
-        var sourceStatusAvailability = ResolveSourceStatusAvailability(source);
-        if (sourceStatusAvailability is
-            SharedProviderRuntimeProfileAvailability.SourceNeverSynchronized or
-            SharedProviderRuntimeProfileAvailability.SourceConfigurationInvalid)
-        {
-            return Unavailable(sourceStatusAvailability);
-        }
-
-        if (source.RemoteInstanceId is not { } sourceInstanceId ||
-            sourceInstanceId.Value == Guid.Empty)
-        {
-            return Unavailable(
-                SharedProviderRuntimeProfileAvailability.SourceConfigurationInvalid);
-        }
-
-        var importAvailability = ResolveImportAvailability(import);
-        if (importAvailability ==
-            SharedProviderRuntimeProfileAvailability.RelationshipMismatch)
-        {
-            return Unavailable(importAvailability);
-        }
-
-        if (!SharedProviderPublicationSnapshotReader.TryRead(import, out var publication) ||
-            !TryResolveRuntimeShape(
-                publication,
-                out var transport,
-                out var purpose))
-        {
-            return Unavailable(
-                SharedProviderRuntimeProfileAvailability.SnapshotInvalid);
-        }
-
-        var baseUri = SharedProviderRoutes.ResolveOpenAiBase(sourceBaseUri);
-        if (!HasValidProfileCache(profile, source, publication, baseUri))
-        {
-            return Unavailable(
-                SharedProviderRuntimeProfileAvailability.ProfileCacheIntegrityMismatch);
-        }
-
-        var availability = ResolveOperationalAvailability(
-            profile,
-            source,
-            sourceStatusAvailability,
-            importAvailability,
-            publication);
+        profile = shape.Profile;
+        import = shape.Import;
+        source = shape.Source;
+        var publication = shape.Publication;
+        var baseUri = shape.BaseUri;
+        var sourceInstanceId = shape.SourceInstanceId;
+        var transport = shape.Transport;
+        var purpose = shape.Purpose;
         var models = CopyModels(publication.Models);
         var effectiveProfile = new SharedProviderEffectiveRuntimeProfile(
             profile.Id,
@@ -226,6 +164,78 @@ public sealed class SharedProviderRuntimeProfileMaterializer
             : SharedProviderRuntimeProfileMaterializationResult.Unavailable(
                 availability,
                 effectiveProfile);
+    }
+
+    internal (SharedProviderRuntimeProfileAvailability Availability, SharedProviderValidatedRuntimeShape? Shape) Validate(
+        PersistedProviderProfile? profile,
+        SharedProviderImport? import,
+        SharedProviderSource? source) {
+        if (profile is null) {
+            return (
+                SharedProviderRuntimeProfileAvailability.ProviderProfileMissing, null);
+        }
+
+        if (import is null) {
+            return (SharedProviderRuntimeProfileAvailability.ImportMissing, null);
+        }
+
+        if (source is null) {
+            return (SharedProviderRuntimeProfileAvailability.SourceMissing, null);
+        }
+
+        if (!HasValidRelationship(profile, import, source)) {
+            return (
+                SharedProviderRuntimeProfileAvailability.RelationshipMismatch, null);
+        }
+
+        if (!TryResolveSourceBaseUri(source, out var sourceBaseUri) ||
+            source.ApiTokenSecretId == Guid.Empty) {
+            return (
+                SharedProviderRuntimeProfileAvailability.SourceConfigurationInvalid, null);
+        }
+
+        var sourceStatusAvailability = ResolveSourceStatusAvailability(source);
+        if (sourceStatusAvailability is
+            SharedProviderRuntimeProfileAvailability.SourceNeverSynchronized or
+            SharedProviderRuntimeProfileAvailability.SourceConfigurationInvalid) {
+            return (sourceStatusAvailability, null);
+        }
+
+        if (source.RemoteInstanceId is not { } sourceInstanceId ||
+            sourceInstanceId.Value == Guid.Empty) {
+            return (
+                SharedProviderRuntimeProfileAvailability.SourceConfigurationInvalid, null);
+        }
+
+        var importAvailability = ResolveImportAvailability(import);
+        if (importAvailability ==
+            SharedProviderRuntimeProfileAvailability.RelationshipMismatch) {
+            return (importAvailability, null);
+        }
+
+        if (!SharedProviderPublicationSnapshotReader.TryRead(import, out var publication) ||
+            !TryResolveRuntimeShape(
+                publication,
+                out var transport,
+                out var purpose)) {
+            return (
+                SharedProviderRuntimeProfileAvailability.SnapshotInvalid, null);
+        }
+
+        var baseUri = SharedProviderRoutes.ResolveOpenAiBase(sourceBaseUri);
+        if (!HasValidProfileCache(profile, source, publication, baseUri)) {
+            return (
+                SharedProviderRuntimeProfileAvailability.ProfileCacheIntegrityMismatch, null);
+        }
+
+        var availability = ResolveOperationalAvailability(
+            profile,
+            source,
+            sourceStatusAvailability,
+            importAvailability,
+            publication);
+        return (availability, new SharedProviderValidatedRuntimeShape(
+            profile, import, source, publication, baseUri, sourceInstanceId, transport, purpose));
     }
 
     private static SharedProviderRuntimeProfileMaterializationResult Unavailable(

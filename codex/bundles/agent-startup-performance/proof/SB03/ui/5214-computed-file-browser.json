@@ -1,0 +1,37 @@
+{
+  "origin": "http://localhost:5214",
+  "source": "Real Playwright MCP computed styles after candidate reload",
+  "css": [
+    {
+      "tag": "SECTION",
+      "class": "ft-file-browser project-structure-file-browser-window__browser w-full flex-1 min-h-0",
+      "display": "block",
+      "background": "rgb(247, 245, 240)",
+      "border": "8px"
+    },
+    {
+      "tag": "DIV",
+      "class": "ft-file-browser__layout has-source-navigation",
+      "display": "grid",
+      "background": "rgba(0, 0, 0, 0)",
+      "border": "0px"
+    },
+    {
+      "tag": "DIV",
+      "class": "ft-file-browser__workspace",
+      "display": "flex",
+      "background": "rgba(0, 0, 0, 0)",
+      "border": "0px"
+    },
+    {
+      "tag": "DIV",
+      "class": "ft-file-browser__results-region",
+      "display": "flex",
+      "background": "rgb(255, 253, 249)",
+      "border": "0px"
+    }
+  ],
+  "screenshot": "5214-file-browser.jpg",
+  "visualReview": "Root inspected: search/scope/type/sort controls, table rows, view toggle and footer styled and aligned; file-browser owns bounded content region.",
+  "sensitiveHistoryExcluded": true
+}

@@ -1,0 +1,11 @@
+{
+  "NewDirectorySecured": true,
+  "ExistingDirectoryRevalidationPassed": true,
+  "ExistingAclUnchanged": true,
+  "OwnerIsCurrentUser": true,
+  "AuditSectionsReadOrWritten": false,
+  "OwnerReassignmentAttempted": false,
+  "VerificationDirectory": "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\deployment\\acl-verification-9ba25b281c4b4d07a281e391259305f6",
+  "SecretsWritten": false,
+  "EarlierAttempt": "Fresh DirectorySecurity plus SetOwner failed without privilege; final code reads/modifies only the Access section and verifies unchanged current owner."
+}

@@ -1,0 +1,11 @@
+# Root independent provider gate
+
+Decision: Pass for the candidate provider implementation and focused downstream tests. Integrated live-host and frozen validation remain separate.
+
+Root reviewed the complete materializer/loader diff, the shared profile mapper and its thinking/price projections, the canonical snapshot consumer, the original composite revision algorithm, and the new corruption/query tests. The extracted internal validation shape retains the original validation order and operational-availability decisions. Full materialization still derives the original effective profile; revision probing avoids that copying. Local mapping is retained to preserve its error behavior.
+
+The selected shared query's cardinality guard prevents source conversion when duplicate imports would previously have been rejected before loading a source. The set path retains all three typed EF materializations, including unrelated source conversion failures. All76unit and35integration cases passed, including unchanged-token single/set stale-lease rejection, malformed/forged metadata, local-mapper failures, duplicate relationship/source-conversion precedence and restored fixture-only unique index. The exact old-code query assertion failed at3reads and the candidate passes at2. The full set remains3reads intentionally.
+
+The new internal record and narrow InternalsVisibleTo grant cross an existing Module→ProviderManagement dependency; there is no new public API, project reference, DI registration, schema, cache, secret storage or runtime dispatch behavior. Scoped before/after snapshots are healthy with unchanged project edges and the same two preexisting cycles. The new record-member-count informational finding is a bounded immutable validation-data carrier, not a behavioral manager.
+
+Allocation evidence is limited to the measured validator operation:2,061,440B versus2,308,608B across8×64-model calls. It does not establish live startup latency. Both tested output trees carry identical Module/ProviderManagement DLL hashes. Full command metadata, discovery/TRX, invariant IDs, source equivalence and scope evidence are retained in the adjacent manifest and artifacts.

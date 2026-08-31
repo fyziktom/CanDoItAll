@@ -1,0 +1,170 @@
+[
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Root_link_swap_after_callback_fails_closed_without_touching_outside_target",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0032237",
+    "Output": "Active coordination handles prevent this root rename on Windows; mandatory affirmative root-link swap runs on Linux."
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Parent_link_swap_before_commit_fails_closed_without_touching_outside_target",
+    "Outcome": "Passed",
+    "Duration": "00:00:01.8573341",
+    "Output": ""
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Mutation_revalidation_rejects_parent_replaced_by_symbolic_link",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0520366",
+    "Output": ""
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0039730",
+    "Output": "Active coordination handles prevent this root rename on Windows; mandatory affirmative recreation runs on Linux."
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Private_write_applies_and_verifies_owner_only_unix_modes",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0015328",
+    "Output": ""
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Callback_case_fact_change_is_reprobed_before_commit",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.1252856",
+    "Output": "Changed case fact was reacquired after the awaited external callback."
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6)",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.7831679",
+    "Output": "Depth 0 policies: 8; depth 6: 8"
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Policy_rejects_symbolic_link_ancestor",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0050706",
+    "Output": ""
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Insensitive_root_authorizes_case_variant_of_same_path",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0022959",
+    "Output": ""
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_rejects_managed_root_that_is_a_symbolic_link",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0123360",
+    "Output": ""
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes",
+    "Outcome": "Passed",
+    "Duration": "00:00:01.0352054",
+    "Output": "Actual insensitive filesystem: exact policies 8, case-variant policies 12."
+  },
+  {
+    "Platform": "windows",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12)",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.8946810",
+    "Output": "Depth 0 policies: 8; depth 12: 8"
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Mutation_revalidation_rejects_parent_replaced_by_symbolic_link",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.4469860",
+    "Output": ""
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Private_write_applies_and_verifies_owner_only_unix_modes",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0468024",
+    "Output": ""
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Insensitive_root_authorizes_case_variant_of_same_path",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0007517",
+    "Output": ""
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0112868",
+    "Output": "Actual Linux same-path root recreation reacquired policy and rejected the missing temporary payload."
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Parent_link_swap_before_commit_fails_closed_without_touching_outside_target",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0134564",
+    "Output": ""
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Policy_rejects_symbolic_link_ancestor",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0009114",
+    "Output": ""
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12)",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.7098482",
+    "Output": "Depth 0 policies: 8; depth 12: 8"
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_rejects_managed_root_that_is_a_symbolic_link",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0153852",
+    "Output": ""
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0022582",
+    "Output": "Case-variant path scenario requires an insensitive filesystem; affirmative execution is required on Windows."
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6)",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0273659",
+    "Output": "Depth 0 policies: 8; depth 6: 8"
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Root_link_swap_after_callback_fails_closed_without_touching_outside_target",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0382229",
+    "Output": "Actual Linux root symlink replacement was rejected; outside target remained unchanged."
+  },
+  {
+    "Platform": "linux",
+    "Test": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Callback_case_fact_change_is_reprobed_before_commit",
+    "Outcome": "Passed",
+    "Duration": "00:00:00.0460141",
+    "Output": "Changed case fact was reacquired after the awaited external callback."
+  }
+]

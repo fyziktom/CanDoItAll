@@ -1,0 +1,4 @@
+Case-sensitive scratch filesystem: affirmative
+Symbolic link creation: affirmative
+File mode: 600
+uid=1654(app) gid=1654(app) groups=1654(app)

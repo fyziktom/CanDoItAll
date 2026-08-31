@@ -1,0 +1,15 @@
+{
+  "Executable": "python",
+  "Arguments": [
+    "-B",
+    "codex/bundles/agent-startup-performance/proof/SB03/ui/5032/Extract-RejectionResult.py"
+  ],
+  "HelperSha256": "5BAB21A1AF10BE22D2F5ADB8ED921689160CC3049D12779493B42B4238F9F1AA",
+  "StartedUtc": "2026-08-31T17:58:22.1972842+00:00",
+  "CompletedUtc": "2026-08-31T17:58:22.355487+00:00",
+  "ExitCode": 0,
+  "AppCalls": false,
+  "SourceWrites": false,
+  "Stdout": "rejection-paired-result.json",
+  "Stderr": "rejection-paired-result.stderr.txt"
+}

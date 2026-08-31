@@ -1,0 +1,70 @@
+{
+  "host": "client",
+  "capturedUtc": "2026-08-31T16:55:31.299472+00:00",
+  "reviewedHelperSha256": "65ef0b4e059d8b20370cc364da4dd27b6d892b9aa37bc31b1dd9a05a732254de",
+  "sourceRunFileCount": 2,
+  "sourceRecordsUnchangedAtRecheck": true,
+  "appCalls": false,
+  "sourceWrites": false,
+  "runs": [
+    {
+      "runId": "ad47ab86-d1ae-480d-bafe-95e5c39afe1e",
+      "sessionId": "f856aa0e-42d4-4f80-a75b-f97f640887a9",
+      "serializedStatePresent": true,
+      "runtimeEnvelopePayloadDecoded": true,
+      "calls": [
+        {
+          "callId": "call_L3DFuEZIxkrVpU5ef9jWjcw6",
+          "toolName": "workspace_stat_path"
+        }
+      ],
+      "resultPairs": [
+        {
+          "callId": "call_L3DFuEZIxkrVpU5ef9jWjcw6",
+          "structuredJsonResult": true,
+          "succeededFalse": true,
+          "existsFalse": true,
+          "pathKindMissing": true,
+          "failedReceiptOrOutcome": true,
+          "missingPathTextMatched": true
+        }
+      ],
+      "newCallIdsRelativeToPrecedingAuthorizedRun": [
+        "call_L3DFuEZIxkrVpU5ef9jWjcw6"
+      ],
+      "precedingCallIdsRetainedInThisState": true,
+      "callIdAvailable": true,
+      "rawArgumentsOrResultsPublished": false
+    },
+    {
+      "runId": "a21411e5-12bf-43b2-9b4e-40d381ce2be2",
+      "sessionId": "f856aa0e-42d4-4f80-a75b-f97f640887a9",
+      "serializedStatePresent": true,
+      "runtimeEnvelopePayloadDecoded": true,
+      "calls": [
+        {
+          "callId": "call_QRcefb1DPCFgbkHBoI7cE4vA",
+          "toolName": "workspace_stat_path"
+        }
+      ],
+      "resultPairs": [
+        {
+          "callId": "call_QRcefb1DPCFgbkHBoI7cE4vA",
+          "structuredJsonResult": true,
+          "succeededFalse": true,
+          "existsFalse": true,
+          "pathKindMissing": true,
+          "failedReceiptOrOutcome": true,
+          "missingPathTextMatched": true
+        }
+      ],
+      "newCallIdsRelativeToPrecedingAuthorizedRun": [
+        "call_QRcefb1DPCFgbkHBoI7cE4vA"
+      ],
+      "precedingCallIdsRetainedInThisState": false,
+      "callIdAvailable": true,
+      "rawArgumentsOrResultsPublished": false
+    }
+  ],
+  "limits": "Only the two specified run.json files were read. Runtime state may retain earlier calls; new IDs are a set difference against the preceding authorized run, not an independently persisted executionRunId on the call. No message, prompt, argument, path or raw result text is emitted. Receipt association remains separately tied to the exact run and single-call metric."
+}

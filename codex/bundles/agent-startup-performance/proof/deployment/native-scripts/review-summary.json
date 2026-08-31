@@ -1,0 +1,9 @@
+{
+  "ReviewedAtUtc": "2026-08-31T15:15:46.8742722+00:00",
+  "ScriptCount": 6,
+  "AllParse": true,
+  "NoSecretPatternMatches": true,
+  "ProtectedBlobCopied": false,
+  "NativeSignalOrLaunchExecutedByReviewer": false,
+  "CaptureOnlyReadRunningApp": true
+}

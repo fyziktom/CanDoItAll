@@ -1,0 +1,91 @@
+{
+  "CompletedUtc": "2026-08-31T16:06:03.7158509+00:00",
+  "FrozenSourcePreserved": true,
+  "FirstBroadRun": [
+    {
+      "Suite": "Unit",
+      "Discovered": 7187,
+      "ResultCases": 7221,
+      "Executed": 7221,
+      "Passed": 7219,
+      "Failed": 2,
+      "Skipped": 0,
+      "Classification": "Two HEAD repository-guard failures; retained, no fixes or reruns."
+    },
+    {
+      "Suite": "Components",
+      "Discovered": 1191,
+      "ResultCases": 1191,
+      "Executed": 1191,
+      "Passed": 1189,
+      "Failed": 2,
+      "Skipped": 0,
+      "Classification": "Two preview fixture failures; exact unchanged quiet pair later passed2/2; cause not proven."
+    },
+    {
+      "Suite": "Integration",
+      "Discovered": 1330,
+      "ResultCases": 1335,
+      "Executed": 1334,
+      "Passed": 1323,
+      "Failed": 11,
+      "Skipped": 1,
+      "Classification": "Ten during owned testserver WAL/disk exhaustion; affected classes later passed23/23. One strict-index-name assertion repeated with efficient alternatePKindex; liveOllama opt-in skipped."
+    }
+  ],
+  "TotalFirstDiscovery": 9708,
+  "TotalFirstResultCases": 9747,
+  "TotalFirstExecuted": 9746,
+  "TotalFirstPassed": 9731,
+  "TotalFirstFailed": 15,
+  "TotalFirstSkipped": 1,
+  "DiscoveryExpansionReconciled": 39,
+  "FocusedAttribution": [
+    {
+      "Phase": "capacity2-history",
+      "Discovered": 23,
+      "Executed": 23,
+      "Passed": 23,
+      "Failed": 0,
+      "Skipped": 0
+    },
+    {
+      "Phase": "capacity2-claim-index",
+      "Discovered": 1,
+      "Executed": 1,
+      "Passed": 0,
+      "Failed": 1,
+      "Skipped": 0
+    },
+    {
+      "Phase": "components-preview-attribution",
+      "Discovered": 2,
+      "Executed": 2,
+      "Passed": 2,
+      "Failed": 0,
+      "Skipped": 0
+    }
+  ],
+  "OlderComponentsComparisonExecuted": false,
+  "OlderComparisonReason": "Candidate exact2 both passed; root condition for older comparison was not met.",
+  "OriginalTwoSecondDeadlineCase": "Passed unchanged in the full Integration run",
+  "CombinedFailureCases": [
+    {
+      "Name": "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRunTrackingIntegrationTests.SendMessageAsync_runtime_failure_persists_failed_log_and_activity_after_store_reopen(failDuringStartup: False)",
+      "Outcome": "Passed",
+      "Duration": "00:00:04.0525652",
+      "StartedUtc": "2026-08-31T11:33:12.2377200-04:00",
+      "EndedUtc": "2026-08-31T11:33:16.2902347-04:00"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRunTrackingIntegrationTests.SendMessageAsync_runtime_failure_persists_failed_log_and_activity_after_store_reopen(failDuringStartup: True)",
+      "Outcome": "Passed",
+      "Duration": "00:00:03.9944513",
+      "StartedUtc": "2026-08-31T11:33:08.2429010-04:00",
+      "EndedUtc": "2026-08-31T11:33:12.2373703-04:00"
+    }
+  ],
+  "AllBroadSuitesGreen": false,
+  "ApplicationHostsChanged": false,
+  "CurrentDisposableDatabaseContainerId": "e6332523c34f9ab4fe8ae7f152df0a042a1d231abaf33633a0e7582909718dd2"
+}

@@ -1,0 +1,20 @@
+{
+  "Executable": "python",
+  "Arguments": [
+    "-B",
+    "codex/bundles/agent-startup-performance/proof/SB03/ui/5032/error-extract-structured-call.py",
+    "--host",
+    "native",
+    "--run-id",
+    "cc968f49-5d64-4807-8618-377293e5d020",
+    "--run-id",
+    "59350507-ddde-4274-aca9-aeefd09d37f7"
+  ],
+  "ScriptSha256": "9C04FDCB5C372C3D6A526ABECB5C1BC3C6B41F4645118DD28851B1C243AA00C3",
+  "StartedUtc": "2026-08-31T16:55:30.9983039+00:00",
+  "CompletedUtc": "2026-08-31T16:55:31.1523845+00:00",
+  "ExitCode": 0,
+  "AppCalls": false,
+  "SourceWrites": false,
+  "Scope": "Exactly authorized two run.json files; decode only typed session-envelope payloadJson, then emit bounded call identifiers and outcome flags"
+}

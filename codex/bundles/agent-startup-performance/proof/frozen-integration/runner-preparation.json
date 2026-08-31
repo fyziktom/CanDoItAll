@@ -1,0 +1,14 @@
+[
+  {
+    "Script": "Run-FrozenTests.ps1",
+    "Sha256": "F2C6622A697EB65852BEEDC62FB1761B8D0565A617322DEBC2D45623909108A4",
+    "SyntaxParsed": true,
+    "Executed": false
+  },
+  {
+    "Script": "Invoke-FrozenBroadGate.ps1",
+    "Sha256": "E6C1818F4D05E30FB1E5AB8BDEDC32818E5204874902398382CC294B63C10C58",
+    "SyntaxParsed": true,
+    "Executed": false
+  }
+]

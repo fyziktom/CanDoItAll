@@ -1,0 +1,361 @@
+{
+  "CapturedUtc": "2026-08-31T17:40:25.7678277+00:00",
+  "RunId": "9fc77bd0-4cbb-404e-9389-88df9128212b",
+  "SessionId": "939dd101-0453-4ad4-aaf5-85cd7ae4d44f",
+  "State": "WaitingOnTool",
+  "PendingApprovalId": "ficc_call_1sc4nf6YPIt9iCHC5ZsoWMBo",
+  "PendingCallId": "call_1sc4nf6YPIt9iCHC5ZsoWMBo",
+  "PendingToolName": "workspace_convert_document",
+  "BeforeSnapshotSha256": "7CA3BFB0346DC3880977FE12D270CD959B6914568D0CBD57589F30BAE2F0E33A",
+  "SourceFiles": [
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/run.json",
+      "Bytes": 54148,
+      "Sha256": "2EF501AADEC5B08DF577BAEAEAC261D3BBEA4B67C529C36CD29F51E815515692"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/run.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/approvals/ficc_call_1sc4nf6YPIt9iCHC5ZsoWMBo.json",
+      "Bytes": 666,
+      "Sha256": "761CB06DFEBF17FBCC6EC4FC513DF72A359664A6F2B99293AD8019CF21BC431D"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/approvals/ficc_call_1sc4nf6YPIt9iCHC5ZsoWMBo.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/audit/receipts/0fb89231252b0b2eca20621e856cfeb5.json",
+      "Bytes": 631,
+      "Sha256": "2D362915AE21779B5E43155A007B1346BA7CF6A069726AC88874C6AD01FC6983"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/audit/receipts/0fb89231252b0b2eca20621e856cfeb5.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/audit/receipts/3b6d260e6ea73f5c8c92f55b1ef123eb.json",
+      "Bytes": 898,
+      "Sha256": "24B58A9EA654FE36D9A896C3E406A6B9E7AA270655C08B937830A8F1BED278E8"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/audit/receipts/3bfb1c68a45d9d5ea3cd05def68c621e.json",
+      "Bytes": 1065,
+      "Sha256": "383786C197867C877C8623524CCC6D3AA0D64CD50802B07369B3BA6DFF5B20BE"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/audit/receipts/dc41eb77e8666c4b3f6e20acced684dc.json",
+      "Bytes": 650,
+      "Sha256": "4CA04A733A53F9F11ECA950E0453F619DE391C39118505E80E607BDECE2BACCC"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/audit/receipts/dc41eb77e8666c4b3f6e20acced684dc.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/audit/receipts/dca532d39e43da509cac0c5738b84755.json",
+      "Bytes": 985,
+      "Sha256": "058C8E131E974C90DFF590C82C41052281E2DA8237988F22BD5CC465FFAD02D5"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/131abc5f770348c5a17cd25aee51c04e.json",
+      "Bytes": 1129,
+      "Sha256": "26D695CB3DDEFF458EB6BEA4AEB5DEB4FE3BF5E84CEDF6FC7523659E5BA36490"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/131abc5f770348c5a17cd25aee51c04e.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/2104a823dac740b3adc0bcb64b27846c.json",
+      "Bytes": 673,
+      "Sha256": "6F59D46DE826B80AC0D7D06169AD086CE72D5D497F0CB6DC2A9DB054867308E4"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/2104a823dac740b3adc0bcb64b27846c.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/4a8c5400983445369f432ae6fce41a2f.json",
+      "Bytes": 537,
+      "Sha256": "24E6789A7DDCADA3B340EA63B0F10D0B19BF589314FEC1EF428169695B445149"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/4a8c5400983445369f432ae6fce41a2f.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/4b7dbc15904742d29182e4ff5c59dcd6.json",
+      "Bytes": 426,
+      "Sha256": "A0C7DB44D6744538358A2759F28D2B0174EF3BEA7B29146A766BD6C5E40DE57E"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/4b7dbc15904742d29182e4ff5c59dcd6.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/50033c9b417246fb9c048f6760d27763.json",
+      "Bytes": 441,
+      "Sha256": "716A965A14DD553BF0E05CFC32D57DEB2B8D1589095237FCE575241697339BC8"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/50033c9b417246fb9c048f6760d27763.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/5bbf702499cd4ac4ba069721e21714fc.json",
+      "Bytes": 446,
+      "Sha256": "33D0F1D11FC6E3B34916D6CF8BE1E86E234198D0633B0A11DA0B2F22B78CEE74"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/5bbf702499cd4ac4ba069721e21714fc.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/747ea80042084b47b273af18897c80ea.json",
+      "Bytes": 432,
+      "Sha256": "77B8ED4CBC597924AD3F68CB906D1C6460B099CBB0A3C13A6AD45BCA7AFB3F1D"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/747ea80042084b47b273af18897c80ea.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/7895b65c120844feb1105255375cc675.json",
+      "Bytes": 457,
+      "Sha256": "21B847677AE83B384163BC7859CD407818409A72F2C93C408F88727E2E3F07C8"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/7895b65c120844feb1105255375cc675.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/9809554808e64d77ab472c6dc321b321.json",
+      "Bytes": 442,
+      "Sha256": "98BFC148A94B8D6DF04FC3660E3520820ECF492D77649DF8997B488C5F0C6065"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/9809554808e64d77ab472c6dc321b321.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/a0baffaaf32d47639fa196317bb012db.json",
+      "Bytes": 374,
+      "Sha256": "7E60EE19EFD03E1410455C08845ED93F9F60AF71B5C442840ABB1F11DBF1C404"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/a0baffaaf32d47639fa196317bb012db.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ab8c264514d64e17ad6e6406a2fb72c2.json",
+      "Bytes": 433,
+      "Sha256": "01C90C65CC2E05509B089621F5B15FE77E39DB5F8378A39CFAC61C918A0C7DB4"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ab8c264514d64e17ad6e6406a2fb72c2.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ab9d438094d941b6bfdff125667b69a3.json",
+      "Bytes": 470,
+      "Sha256": "C2A325902938F23348D70FECBC732E9875A51C2E9C15CAD1F521A7C5DD14CCC9"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ab9d438094d941b6bfdff125667b69a3.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ae1a3474b6bd4a3faaedb0a549f366d4.json",
+      "Bytes": 417,
+      "Sha256": "DFD7A4769E908E4B4C9A3923D148D4088C47E96BC0B42ED910F921999A4A7C3A"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ae1a3474b6bd4a3faaedb0a549f366d4.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/cd11aeeb59de466488993200c6610bdb.json",
+      "Bytes": 397,
+      "Sha256": "78818ADF4CC2F68D9883EE7BB7BFE29F28FA8147E63A2C863648A4984D6BF9BF"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/cd11aeeb59de466488993200c6610bdb.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/d6054b63c8f9453fa00a384efb01976f.json",
+      "Bytes": 448,
+      "Sha256": "E0CE3F79FB0BF93D264BCCAAFAC19F015A431BC2BE6499EF209C944239FC40B2"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/d6054b63c8f9453fa00a384efb01976f.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/da8f60bdbdbf47519cfa506c77587de7.json",
+      "Bytes": 389,
+      "Sha256": "E8693EFEAC407170F152CB571B6413ADD483FA41D69681E52627C8940F025FF6"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/da8f60bdbdbf47519cfa506c77587de7.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/dfcd2e12d3ef409089fc05ab9d735d1f.json",
+      "Bytes": 642,
+      "Sha256": "E54E725AABE44782CF722793A5ADB6E190BAAFEB1BE3C7EC657F0502E63C70F1"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/dfcd2e12d3ef409089fc05ab9d735d1f.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/e0548d8a1235404a8644bd0bf62c61bf.json",
+      "Bytes": 448,
+      "Sha256": "504BA8B43E5AAF6E2C555F56B2B96675DD6B4BAFC652C61799E26701E001FF57"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/e0548d8a1235404a8644bd0bf62c61bf.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ea3fb888f6d448b5b236d33f5a0daccd.json",
+      "Bytes": 519,
+      "Sha256": "F2B259637D84F7D3A26714541541415D57974DC9D018139A44CE088F69B87D0A"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/logs/ea3fb888f6d448b5b236d33f5a0daccd.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/metrics/fb3d18bb27aa496b955c37da38f20bf4.json",
+      "Bytes": 541,
+      "Sha256": "02389C78D2DAA1F4A11D164932F05ABCA653C844D4CB25BEF615A2D79EF1C7E9"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/metrics/fb3d18bb27aa496b955c37da38f20bf4.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/20630c11c855428693c2e9e2397ab458.json",
+      "Bytes": 16993,
+      "Sha256": "C1F6AF896484CF8514E799A3D1CABBCF4569961728599A5DC67812DC9E996A96"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/20630c11c855428693c2e9e2397ab458.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/67b02478dde64a4cb9f5f28dbb39bb0a.json",
+      "Bytes": 16995,
+      "Sha256": "55E11D20D00B62BFCE8867165D061D70CA6BFD5C5217E93CF42BA1A003E2E1CC"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/67b02478dde64a4cb9f5f28dbb39bb0a.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/89b32171c01f4e5e96f7b630273325dd.json",
+      "Bytes": 16994,
+      "Sha256": "81B8E60A39F317B75952A37F69674B60D68D1B60800B32D8E1B129E4DACB9D18"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/89b32171c01f4e5e96f7b630273325dd.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/c06f6ee8553e418fb4b3ef6eb6b61ef4.json",
+      "Bytes": 16996,
+      "Sha256": "F2DD5B5EB28BBCE3170B1E6DD41FD64CB201190CE79082ADD92F103CB9CEE2A5"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/c06f6ee8553e418fb4b3ef6eb6b61ef4.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/e19390e03dc6482b993e4ac1a0f71f09.json",
+      "Bytes": 31113,
+      "Sha256": "F79E26E459B7983855E4B9EDEA6B412BBC532D4026096C0A38BA6CFE62B8C20C"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/e19390e03dc6482b993e4ac1a0f71f09.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/ec8b5e3fe02d426abaea9f445066712b.json",
+      "Bytes": 16993,
+      "Sha256": "3A84B80BA9EA28781115714D1B8A54104FFD8A80655D67A08308B697171E1891"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/usage/ec8b5e3fe02d426abaea9f445066712b.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/workflow-checkpoints/records/09452cd8bb5b4b04a2ff67e843423d30.json",
+      "Bytes": 725,
+      "Sha256": "50C8A191534CE24B436B4D2B8E970F6A7A96E3D7B3AADCFA2BE7A3B96912DCA3"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/workflow-checkpoints/records/09452cd8bb5b4b04a2ff67e843423d30.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "RelativePath": "sessions/939dd10104534ad4aaf585cd7ae4d44f.json",
+      "Bytes": 1865,
+      "Sha256": "3C9E2E0D5B60D664779B803F3255003A9F1B3345F7B1F83A5FF2F31E2AC09D0F"
+    }
+  ],
+  "CheckpointFiles": [
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/workflow-checkpoints/records/09452cd8bb5b4b04a2ff67e843423d30.json",
+      "Bytes": 725,
+      "Sha256": "50C8A191534CE24B436B4D2B8E970F6A7A96E3D7B3AADCFA2BE7A3B96912DCA3"
+    },
+    {
+      "RelativePath": "runs/9fc77bd04cbb404e938988df9128212b/workflow-checkpoints/records/09452cd8bb5b4b04a2ff67e843423d30.json.candoitall.lock",
+      "Bytes": 0,
+      "Sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    }
+  ],
+  "SerializedRuntimeCheckpointPresent": true,
+  "ConversionReceiptCount": 0,
+  "SourceHashesUnchangedAtRecheck": true,
+  "PrivateSourceRecordsCopiedOrPublished": false,
+  "AppCalls": false,
+  "SourceWrites": false,
+  "ApprovalDecisionSent": false
+}

@@ -11,8 +11,7 @@ using AgentFrameworkProviderTransport = CanDoItAll.AgentFramework.Models.Provide
 using ProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
 using ProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
-public sealed class SharedProviderRuntimeProfileMaterializerTests
-{
+public sealed class SharedProviderRuntimeProfileMaterializerTests(Xunit.Abstractions.ITestOutputHelper output) {
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -435,11 +434,84 @@ public sealed class SharedProviderRuntimeProfileMaterializerTests
         }
     }
 
+    [Fact]
+    public void Validate_retains_canonical_shape_for_operationally_disabled_graphs() {
+        var graph = CreateGraph();
+        graph.Source.IsEnabled = false;
+        var (availability, shape) = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SourceDisabled, availability);
+        Assert.NotNull(shape);
+        Assert.Same(graph.Profile, shape.Profile);
+        Assert.Same(graph.Import, shape.Import);
+        Assert.Same(graph.Source, shape.Source);
+        Assert.Equal(graph.Import.RemoteRevision, shape.Publication.Revision);
+        Assert.Equal(AgentFrameworkProviderTransport.Responses, shape.Transport);
+        Assert.Equal(AgentFrameworkProviderPurpose.Chat, shape.Purpose);
+
+        graph.Source.IsEnabled = true;
+        graph.Import.SelectionState = SharedProviderSelectionState.Retired;
+        var retired = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.Retired, retired.Availability);
+        Assert.NotNull(retired.Shape);
+    }
+
+    [Fact]
+    public void Validate_rejects_missing_and_malformed_graphs_without_effective_profiles() {
+        var graph = CreateGraph();
+        var missingProfile = Materializer.Validate(null, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.ProviderProfileMissing, missingProfile.Availability);
+        Assert.Null(missingProfile.Shape);
+        var missingImport = Materializer.Validate(graph.Profile, null, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.ImportMissing, missingImport.Availability);
+        Assert.Null(missingImport.Shape);
+        var missingSource = Materializer.Validate(graph.Profile, graph.Import, null);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SourceMissing, missingSource.Availability);
+        Assert.Null(missingSource.Shape);
+
+        graph.Import.RemoteCatalogSnapshotJson = "{}";
+        var malformed = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SnapshotInvalid, malformed.Availability);
+        Assert.Null(malformed.Shape);
+    }
+
+    [Fact]
+    public void Validate_avoids_effective_model_copy_allocations() {
+        var capabilities = Enumerable.Range(0, 64)
+            .Select(_ => (IReadOnlyList<SharedProviderCapability>)new[] {
+                SharedProviderCapability.Responses,
+                SharedProviderCapability.Streaming
+            }).ToArray();
+        var graph = CreateGraph(modelCapabilities: capabilities);
+        Action validate = () => Assert.NotNull(Materializer.Validate(graph.Profile, graph.Import, graph.Source).Shape);
+        Action materialize = () => Assert.NotNull(Materializer.Materialize(graph.Profile, graph.Import, graph.Source).Profile);
+        for (var index = 0; index < 3; index++) {
+            validate();
+            materialize();
+        }
+        var validationBytes = MeasureAllocatedBytes(validate);
+        var materializationBytes = MeasureAllocatedBytes(materialize);
+        output.WriteLine($"Eight 64-model operations: validation={validationBytes} bytes; full materialization={materializationBytes} bytes.");
+        Assert.True(validationBytes < materializationBytes,
+            $"Validation allocated {validationBytes} bytes; full materialization allocated {materializationBytes} bytes.");
+    }
+
+    private static long MeasureAllocatedBytes(Action action) {
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var index = 0; index < 8; index++) {
+            action();
+        }
+        return GC.GetAllocatedBytesForCurrentThread() - before;
+    }
+
     private static SharedProviderRuntimeProfileMaterializer Materializer { get; } = new();
 
-    private static SharedProviderRuntimeProfileMaterializationResult Materialize(
-        TestGraph graph)
-        => Materializer.Materialize(graph.Profile, graph.Import, graph.Source);
+    private static SharedProviderRuntimeProfileMaterializationResult Materialize(TestGraph graph) {
+        var validation = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        var result = Materializer.Materialize(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(result.Availability, validation.Availability);
+        Assert.Equal(result.Profile is not null, validation.Shape is not null);
+        return result;
+    }
 
     private static SharedProviderEffectiveRuntimeProfile AssertAvailable(
         SharedProviderRuntimeProfileMaterializationResult result)

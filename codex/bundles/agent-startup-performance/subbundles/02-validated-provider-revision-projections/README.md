@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Ready` for later execution; not started.
+- Status: Completed
+
+Candidate focused validation passed76unit+35integration cases with zero skips; independent source and scoped architecture reviews passed. Root accepted integrated real-UI/tools, performance and final host proof; all original broad-test exceptions remain in the root report. Evidence: bundle://proof/SB02/manifest.md and bundle://proof/SB02/semantic-invariants.md.
 
 ## Objective
 
@@ -14,7 +16,7 @@ Reduce revision query/full profile-copying overhead without weakening current va
 
 ## Prerequisites
 
-- Future execution authorization, Phase0 baseline and valid isolated PostgreSQL test-server ownership.
+- Execution authorization, the completed Phase0 baseline and checked isolated PostgreSQL test-server ownership were satisfied before implementation.
 - Characterize single/set/cold/warm probe semantics and full-load parity before edits.
 - SB01 source proof is independent; integrated closure requires both.
 
@@ -75,9 +77,9 @@ Symbols/ownership: supported tracked token rotation.
 - Test project or non-test check: U/I SB02 rows in `plan/test-selection.md`; concrete relational loader plus architecture checks.
 - Filter: seven unit class prefixes and two integration prefixes listed there.
 - Selection reason: loader→validator→snapshot→preparation→credential dispatch contract.
-- Expected discovered tests: 73unit+23integration source cases plus declared new corruption/projection cases; reconcile actual discovery and fail on zero.
+- Expected discovered tests for the declared characterization selection: 76 unit (73 existing + 3 direct validator/allocation cases) + 35 integration (23 existing + 12 added corruption/projection cases); reconcile actual discovery and fail on zero.
 - Invalidation keys: loader, validator, profile mapper, revision algorithm, source/import/profile relationships, DB generation, credential dispatch and test DB mode.
-- Broad-gate decision: Not required; public revision/schema/DI/project-reference change reopens scope.
+- Broad-gate decision: Executed once at Frozen Integration after scoped CodeAnalytics impact promoted all supplied Unit/Integration/Components suites. Retained failures and root startup-specific acceptance are recorded in reviews/01-execution-report.md; no broad rerun or all-green claim.
 - Critical foundation: yes; concrete persisted shared graph through snapshot/preparation is the dependent-flow smoke.
 
 ## Acceptance Checklist

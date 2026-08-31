@@ -1,0 +1,23 @@
+{
+  "capturedUtc": "2026-08-31T18:03:56.048813+00:00",
+  "status": "Passed",
+  "runId": "3908f2a2-35f6-4009-80f5-f2d69e619bcd",
+  "sessionId": "9c4e6533-c627-41d9-a9c1-4a963c39b6b6",
+  "approvalId": "ficc_call_3Ut7txS4EYKYA65Ifg8JSDC7",
+  "callId": "call_3Ut7txS4EYKYA65Ifg8JSDC7",
+  "beforeState": "WaitingOnTool",
+  "beforeApprovalStatus": "Pending",
+  "beforeReceiptCount": 0,
+  "rootSingleRejectClickUtc": "2026-08-31T17:55:54.497Z",
+  "durableDecisionUtc": "2026-08-31T17:55:55.072944+00:00",
+  "afterApprovalStatus": "Rejected",
+  "afterState": "Completed",
+  "afterOutcome": "Succeeded",
+  "afterPendingApprovalCount": 0,
+  "afterReceiptCount": 0,
+  "pairedScalarResultContainsRejected": true,
+  "afterLogCount": 31,
+  "afterSessionMessageCount": 3,
+  "beforeSnapshotSha256": "59179291dd8ba2ffb005913ba031bd254850e6b168656c19d2a817c91da57657",
+  "limits": "The Invoking progress title describes the wrapper path; it does not prove that conversion ran. Rejected durable approval, the same-call rejection result, and zero before/after execution receipts support enforcement. The agent conversation completed successfully after declining the tool: this is not a Failed provider/run or actual running-turn cancellation test. No raw result, prompt or source contents are published."
+}

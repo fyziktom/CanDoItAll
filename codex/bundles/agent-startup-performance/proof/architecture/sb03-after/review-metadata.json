@@ -1,0 +1,14 @@
+{
+  "ReviewedAtUtc": "2026-08-31T15:05:28.6125803+00:00",
+  "BeforeSnapshot": "snap-20260831122755-8dc56aa3",
+  "AfterSnapshot": "snap-20260831145425-6ecd81a6",
+  "SnapshotBuild": "One scoped force-refresh call; complete cached snapshot verified; unused pending original large response wait terminated.",
+  "ReadTools": [
+    "code_analytics_dashboard_get",
+    "code_analytics_solution_inventory_get",
+    "code_analytics_dependencies_get",
+    "code_analytics_findings_get"
+  ],
+  "BroadImpactedTestQueryRun": false,
+  "ApplicationMutation": false
+}

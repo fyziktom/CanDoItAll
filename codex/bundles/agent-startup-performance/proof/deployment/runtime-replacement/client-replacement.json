@@ -1,0 +1,21 @@
+{
+  "StartedUtc": "2026-08-31T16:24:34.9833833+00:00",
+  "OriginalClientId": "fb12806ab50b7bdadb68175ce79d6efb8596b3f4f62329f07f445ae49074226e",
+  "PublisherId": "000fadde7e6757f7afd413e3102fa58568e18da4d9a7361d8057bda40c9b966d",
+  "ImageId": "sha256:a9b6165bf88a2ecbf62884ca76f1af1b7622fbc0b6861eec5c9c57603149bfc6",
+  "SourceFingerprint": "0879aa10acbd798c2de6d7ebed4c4892201fb7a679ad39b2246f6ff38c82920d",
+  "OriginalEnvironmentSha256": "7C15BFD616D064CF161FCBDB6E22EDF62F7CC2E022FFAFB930AEC30CD51D1B32",
+  "ClientPreservationSha256": "EC2508FC894A67326E738F4DA297B40559DDE1FEEF1FF6888EC8DE155ACE9975",
+  "PublisherPreservationSha256": "74A4B46CDF0694C03CC5B3B1336C83A495DD66A45CDF380D6C29BA74A07B9C03",
+  "IdleRunCount": 15,
+  "BackupName": "candoitall-shared-providers-manual-client-a-1-startup-rollback-38d72505",
+  "Outcome": "HealthyCandidateOriginalRetainedStopped",
+  "OriginalExitCode": 0,
+  "OriginalOomKilled": false,
+  "OriginalForcedStopObserved": false,
+  "OriginalGracefulExitObserved": true,
+  "CandidateId": "420d6e8a059ba8d2d6b8d2e60d3cf3fb6036043fe3789137f724a3947192c4dd",
+  "CandidateEnvironmentSha256": "7C15BFD616D064CF161FCBDB6E22EDF62F7CC2E022FFAFB930AEC30CD51D1B32",
+  "PublisherUnchanged": true,
+  "CompletedUtc": "2026-08-31T16:24:49.5983894+00:00"
+}

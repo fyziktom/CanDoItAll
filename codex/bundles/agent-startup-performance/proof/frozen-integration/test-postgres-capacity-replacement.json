@@ -1,0 +1,92 @@
+{
+  "StartedUtc": "2026-08-31T16:00:29.5938967+00:00",
+  "CompletedUtc": "2026-08-31T16:00:46.9826676+00:00",
+  "Authorization": "Root approved after first full Integration and its children exit; preserve original run and stop-retain exact owned server.",
+  "RetainedStoppedContainerId": "aa1bac9c700103cc7738d33c1c5b14fbaa076fb128f387747a057951b81db9f9",
+  "ContainerName": "candoitall-agent-startup-tests-20260831-capacity2",
+  "ContainerId": "e6332523c34f9ab4fe8ae7f152df0a042a1d231abaf33633a0e7582909718dd2",
+  "ImageId": "sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7",
+  "HostEndpoint": "127.0.0.1:52049",
+  "DataTmpfsBytes": 4294967296,
+  "MemoryLimitBytes": 6442450944,
+  "NanoCpus": 2000000000,
+  "Healthy": "healthy",
+  "LiveContainersUnchanged": true,
+  "LiveBefore": [
+    {
+      "Name": "/candoitall-postgres",
+      "Id": "54f1ef278305e7d64f2bfc969df5fc297bd3c5efed57cebd5d81ee2ba16dc62a",
+      "Image": "sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416",
+      "StartedAt": "2026-08-30T12:27:26.671837116Z",
+      "Bindings": [
+        {
+          "HostIp": "",
+          "HostPort": "5432"
+        }
+      ]
+    },
+    {
+      "Name": "/candoitall-shared-providers-manual-central-1",
+      "Id": "000fadde7e6757f7afd413e3102fa58568e18da4d9a7361d8057bda40c9b966d",
+      "Image": "sha256:b6b502a5487bd8ba7b21a2c3afe18e4846d273fa0445b387a98bf85acda73089",
+      "StartedAt": "2026-08-31T10:43:03.645154542Z",
+      "Bindings": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "5210"
+        }
+      ]
+    },
+    {
+      "Name": "/candoitall-shared-providers-manual-client-a-1",
+      "Id": "fb12806ab50b7bdadb68175ce79d6efb8596b3f4f62329f07f445ae49074226e",
+      "Image": "sha256:168dc1535d4134a6621db8e3eae8bdc0628c3439e62fc7daade24340691b6bdc",
+      "StartedAt": "2026-08-31T12:03:45.560729816Z",
+      "Bindings": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "5214"
+        }
+      ]
+    }
+  ],
+  "LiveAfter": [
+    {
+      "Name": "/candoitall-postgres",
+      "Id": "54f1ef278305e7d64f2bfc969df5fc297bd3c5efed57cebd5d81ee2ba16dc62a",
+      "Image": "sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416",
+      "StartedAt": "2026-08-30T12:27:26.671837116Z",
+      "Bindings": [
+        {
+          "HostIp": "",
+          "HostPort": "5432"
+        }
+      ]
+    },
+    {
+      "Name": "/candoitall-shared-providers-manual-central-1",
+      "Id": "000fadde7e6757f7afd413e3102fa58568e18da4d9a7361d8057bda40c9b966d",
+      "Image": "sha256:b6b502a5487bd8ba7b21a2c3afe18e4846d273fa0445b387a98bf85acda73089",
+      "StartedAt": "2026-08-31T10:43:03.645154542Z",
+      "Bindings": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "5210"
+        }
+      ]
+    },
+    {
+      "Name": "/candoitall-shared-providers-manual-client-a-1",
+      "Id": "fb12806ab50b7bdadb68175ce79d6efb8596b3f4f62329f07f445ae49074226e",
+      "Image": "sha256:168dc1535d4134a6621db8e3eae8bdc0628c3439e62fc7daade24340691b6bdc",
+      "StartedAt": "2026-08-31T12:03:45.560729816Z",
+      "Bindings": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "5214"
+        }
+      ]
+    }
+  ],
+  "Credentials": "Reused private existing environment; no values emitted."
+}

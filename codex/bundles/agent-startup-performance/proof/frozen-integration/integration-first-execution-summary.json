@@ -1,0 +1,58 @@
+{
+  "Total": 1335,
+  "Executed": 1334,
+  "Passed": 1323,
+  "Failed": 11,
+  "NotExecuted": 0,
+  "ExitCode": 1,
+  "NonPassing": [
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.Provider_credential_model_and_retention_filters_are_applied_in_sql(offsetMinutes: 240)",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.LiveLocalOllamaThinkingEffortIntegrationTests.Installed_catalog_and_native_effort_mapping_match_thinking_capabilities",
+      "Outcome": "NotExecuted"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.PostgreSql_query_plans_cover_all_provider_and_credential_pages",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.Provider_credential_model_and_retention_filters_are_applied_in_sql(offsetMinutes: -240)",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.Scale_search_obeys_plan_row_and_latency_budgets",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.Coverage_uses_registered_sources_and_reports_pending_outbox",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: \"authorization\")",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: \"password\")",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.Detail_recheck_rejects_source_delete_even_when_old_entry_id_is_known",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.Persistence.PostgreSqlClaimQueryPlanIntegrationTests.PostgreSql_hot_claim_queries_use_dedicated_indexes",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.Equal_timestamps_page_by_entry_id_without_body_or_source_reads",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.Provider_credential_model_and_retention_filters_are_applied_in_sql(offsetMinutes: 0)",
+      "Outcome": "Failed"
+    }
+  ]
+}

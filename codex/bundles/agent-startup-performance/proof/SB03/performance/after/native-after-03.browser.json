@@ -1,0 +1,75 @@
+{
+  "sample": {
+    "id": "native-after-03",
+    "port": 5032,
+    "submitUtc": "2026-08-31T16:28:58.010Z",
+    "submitMono": 227617.5,
+    "firstContentUtc": "2026-08-31T16:29:07.993Z",
+    "firstContentMono": 237600.70000004768,
+    "terminalUiUtc": "2026-08-31T16:29:07.993Z",
+    "terminalUiMono": 237600.70000004768,
+    "stages": [
+      {
+        "stage": "Planning",
+        "utc": "2026-08-31T16:29:01.484Z",
+        "mono": 231091.60000002384
+      },
+      {
+        "stage": "Framework",
+        "utc": "2026-08-31T16:29:01.769Z",
+        "mono": 231376.20000004768
+      },
+      {
+        "stage": "Context contributors",
+        "utc": "2026-08-31T16:29:02.079Z",
+        "mono": 231685.70000004768
+      },
+      {
+        "stage": "Skills",
+        "utc": "2026-08-31T16:29:02.347Z",
+        "mono": 231954.30000001192
+      },
+      {
+        "stage": "Workspace tools",
+        "utc": "2026-08-31T16:29:02.780Z",
+        "mono": 232387.5
+      },
+      {
+        "stage": "Runtime tool providers",
+        "utc": "2026-08-31T16:29:03.088Z",
+        "mono": 232694.90000003576
+      },
+      {
+        "stage": "Compaction",
+        "utc": "2026-08-31T16:29:03.385Z",
+        "mono": 232992
+      },
+      {
+        "stage": "Execution authority",
+        "utc": "2026-08-31T16:29:03.686Z",
+        "mono": 233293
+      },
+      {
+        "stage": "Model parameters",
+        "utc": "2026-08-31T16:29:03.991Z",
+        "mono": 233597.70000004768
+      },
+      {
+        "stage": "Session",
+        "utc": "2026-08-31T16:29:04.347Z",
+        "mono": 233954.5
+      },
+      {
+        "stage": "Run",
+        "utc": "2026-08-31T16:29:04.668Z",
+        "mono": 234275
+      },
+      {
+        "stage": "Streaming",
+        "utc": "2026-08-31T16:29:06.392Z",
+        "mono": 235998.90000003576
+      }
+    ]
+  },
+  "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n2 messages\n31.08.2026 12:29\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 12:28\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 12:29\n\nDecimal is preferable for currency because it represents base-10 values exactly, so amounts like 0.10, 0.01, and 19.99 do not suffer from binary rounding errors. Binary floating point is designed for scientific approximation, so it can produce tiny representation errors that accumulate and lead to incorrect cents in financial calculations.\n\n~110 tokens\ncontent_copy\nCopy assistant message\nWorked for 9s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+}

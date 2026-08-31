@@ -1,0 +1,38 @@
+[
+  {
+    "Phase": "Unoptimized",
+    "Test": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 32)",
+    "Outcome": "Failed",
+    "Output": "Session: validation=1, comparison=1\r\nRun: validation=1, comparison=1\r\nExecutionIndex: validation=1, comparison=1\r\nUsageIndex: validation=1, comparison=1\r\nChatIndex: validation=1, comparison=1"
+  },
+  {
+    "Phase": "Unoptimized",
+    "Test": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Recovered_journal_retains_five_raw_comparisons_and_rolls_forward_once",
+    "Outcome": "Passed",
+    "Output": "Session: validation=1, comparison=1\r\nRun: validation=1, comparison=1\r\nExecutionIndex: validation=1, comparison=1\r\nUsageIndex: validation=1, comparison=1\r\nChatIndex: validation=1, comparison=1"
+  },
+  {
+    "Phase": "Unoptimized",
+    "Test": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 1)",
+    "Outcome": "Failed",
+    "Output": "Session: validation=1, comparison=1\r\nRun: validation=1, comparison=1\r\nExecutionIndex: validation=1, comparison=1\r\nUsageIndex: validation=1, comparison=1\r\nChatIndex: validation=1, comparison=1"
+  },
+  {
+    "Phase": "Candidate",
+    "Test": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 1)",
+    "Outcome": "Passed",
+    "Output": "Session: validation=1, comparison=0\r\nRun: validation=1, comparison=0\r\nExecutionIndex: validation=1, comparison=0\r\nUsageIndex: validation=1, comparison=0\r\nChatIndex: validation=1, comparison=0"
+  },
+  {
+    "Phase": "Candidate",
+    "Test": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Recovered_journal_retains_five_raw_comparisons_and_rolls_forward_once",
+    "Outcome": "Passed",
+    "Output": "Session: validation=1, comparison=1\r\nRun: validation=1, comparison=1\r\nExecutionIndex: validation=1, comparison=1\r\nUsageIndex: validation=1, comparison=1\r\nChatIndex: validation=1, comparison=1"
+  },
+  {
+    "Phase": "Candidate",
+    "Test": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons(logCount: 32)",
+    "Outcome": "Passed",
+    "Output": "Session: validation=1, comparison=0\r\nRun: validation=1, comparison=0\r\nExecutionIndex: validation=1, comparison=0\r\nUsageIndex: validation=1, comparison=0\r\nChatIndex: validation=1, comparison=0"
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "StartUtc": "2026-08-31T14:46:58.1529635+00:00",
+  "EndUtc": "2026-08-31T14:47:00.1139112+00:00",
+  "ExitCode": 0,
+  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
+  "Executable": "dotnet",
+  "Arguments": [
+    "test",
+    "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "--configuration",
+    "Release",
+    "--no-build",
+    "--artifacts-path",
+    ".artifacts/agent-startup-performance/sb01-tests",
+    "--list-tests",
+    "--filter",
+    "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.File_source_checkpoints_large_manifest_within_host_deadline_and_resumes_after_restart"
+  ],
+  "ExpectedCases": 1
+}

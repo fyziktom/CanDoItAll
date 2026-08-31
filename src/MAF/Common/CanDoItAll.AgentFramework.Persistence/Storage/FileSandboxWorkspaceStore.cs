@@ -1000,6 +1000,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                 ExistingRunDetailCommitStage.JournalPersisted);
             return await CommitExistingRunDetailJournalAsync(
                 journal,
+                ExistingRunDetailCommitOrigin.Prepared,
                 CancellationToken.None);
         }
 
@@ -1042,8 +1043,8 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private async Task<ExecutionRunDetail> CommitExistingRunDetailJournalAsync(
         ExistingRunDetailCommitJournal journal,
-        CancellationToken cancellationToken)
-    {
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) {
         ValidateExistingRunDetailCommitJournal(journal);
 
         var currentWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
@@ -1061,12 +1062,14 @@ public sealed partial class FileSandboxWorkspaceStore :
 
         await executionSliceStore.PersistExistingRunSessionAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.SessionPersisted);
 
         await executionSliceStore.PersistExistingRunRecordAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.RunPersisted);
@@ -1085,12 +1088,14 @@ public sealed partial class FileSandboxWorkspaceStore :
 
         await executionSliceStore.PersistExistingRunExecutionIndexAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.ExecutionIndexPersisted);
 
         await executionSliceStore.PersistExistingRunUsageIndexAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.UsageIndexPersisted);
@@ -1104,6 +1109,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         await chatProjectionStore.PersistExistingRunUpdateAsync(
             journal.PersistencePlan,
             journal.ChatProjectionPlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.ChatIndexPersisted);
@@ -1127,6 +1133,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                 $"Pending execution-run update journal '{PendingExistingRunDetailCommitJournalPath}' is empty.");
         await CommitExistingRunDetailJournalAsync(
             journal,
+            ExistingRunDetailCommitOrigin.RecoveredJournal,
             CancellationToken.None);
     }
 
@@ -2248,6 +2255,11 @@ internal sealed record GenericNewRunCommitJournal(
     GenericNewExecutionRunChatProjectionPlan ChatProjectionPlan,
     WorkspaceStorageIndex PreviousWorkspaceIndex,
     WorkspaceStorageIndex TargetWorkspaceIndex);
+
+internal enum ExistingRunDetailCommitOrigin {
+    Prepared,
+    RecoveredJournal
+}
 
 internal enum ExistingRunDetailCommitStage
 {

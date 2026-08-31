@@ -1,0 +1,41 @@
+{
+  "CapturedAtUtc": "2026-08-31T15:15:44.1023637+00:00",
+  "Failures": [
+    {
+      "Name": "CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes",
+      "Duration": "00:00:32.1287737",
+      "StartedUtc": "2026-08-31T11:06:46.6694217-04:00",
+      "CompletedUtc": "2026-08-31T11:07:18.7987213-04:00",
+      "Message": "Bunit.Extensions.WaitForHelpers.WaitForFailedException : The CSS selector and/or predicate did not result in a matching element before the timeout period passed.\n\nIf this test does not fail consistently, the reason may be that\nthe wait timeout is too short, and the runtime did not have enough\ntime to complete the necessary number of renders of the component under test.\nThis can happen on highly utilized or slower hardware, for example.\n\nTo determine if this is the cause, compare the check and render count(s) below\nand see if they match what is expected. If they do not,\nconsider increasing the timeout, either at the individual\nmethod call level, e.g. WaitForElement(\"div\", TimeSpan.FromSeconds(15)),\nor via the static TestContext.DefaultWaitTimeout property.\n\nCheck count: 4.\nComponent render count: 19.\nTotal render count across all components: 0.\r\n---- Bunit.ElementNotFoundException : No elements were found that matches the selector '[data-testid='workflow-canvas-preview-input-dialog']'",
+      "Stack": [
+        "   at Bunit.RenderedComponentWaitForHelperExtensions.WaitForElementCore[TComponent,TElement](IRenderedComponent`1 renderedComponent, String cssSelector, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForElement.cs:line 359\r",
+        "   at Bunit.RenderedComponentWaitForHelperExtensions.WaitForElement[TComponent](IRenderedComponent`1 renderedComponent, String cssSelector) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForElement.cs:line 21\r",
+        "   at CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes() in C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\WorkflowsPageTests.cs:line 1215\r",
+        "   at CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes() in C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\WorkflowsPageTests.cs:line 1247\r",
+        "--- End of stack trace from previous location ---\r",
+        "----- Inner Stack Trace -----\r",
+        "   at Bunit.RenderedComponentExtensions.Find[TComponent,TElement](IRenderedComponent`1 renderedComponent, String cssSelector) in /_/src/bunit/Extensions/RenderedComponentExtensions.cs:line 42\r",
+        "   at Bunit.Extensions.WaitForHelpers.WaitForElementHelper`2.<>c__DisplayClass5_0.<.ctor>b__0() in /_/src/bunit/Extensions/WaitForHelpers/WaitForElementHelper.cs:line 35\r",
+        "   at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args) in /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs:line 173"
+      ]
+    },
+    {
+      "Name": "CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_selects_running_node_from_progress",
+      "Duration": "00:00:32.7789294",
+      "StartedUtc": "2026-08-31T11:05:30.8840593-04:00",
+      "CompletedUtc": "2026-08-31T11:06:03.6719115-04:00",
+      "Message": "Bunit.Extensions.WaitForHelpers.WaitForFailedException : The assertion did not pass within the timeout period.\n\nIf this test does not fail consistently, the reason may be that\nthe wait timeout is too short, and the runtime did not have enough\ntime to complete the necessary number of renders of the component under test.\nThis can happen on highly utilized or slower hardware, for example.\n\nTo determine if this is the cause, compare the check and render count(s) below\nand see if they match what is expected. If they do not,\nconsider increasing the timeout, either at the individual\nmethod call level, e.g. WaitForElement(\"div\", TimeSpan.FromSeconds(15)),\nor via the static TestContext.DefaultWaitTimeout property.\n\nCheck count: 1.\nComponent render count: 34.\nTotal render count across all components: 0.\r\n---- Bunit.ElementNotFoundException : No elements were found that matches the selector '[data-testid='workflow-canvas-test-result']'",
+      "Stack": [
+        "   at Bunit.RenderedComponentWaitForHelperExtensions.WaitForAssertion[TComponent](IRenderedComponent`1 renderedComponent, Action assertion, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForState.cs:line 77\r",
+        "   at CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_selects_running_node_from_progress() in C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\WorkflowsPageTests.cs:line 1382\r",
+        "   at CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_selects_running_node_from_progress() in C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\WorkflowsPageTests.cs:line 1382\r",
+        "--- End of stack trace from previous location ---\r",
+        "----- Inner Stack Trace -----\r",
+        "   at Bunit.RenderedComponentExtensions.Find[TComponent,TElement](IRenderedComponent`1 renderedComponent, String cssSelector) in /_/src/bunit/Extensions/RenderedComponentExtensions.cs:line 42\r",
+        "   at CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.<>c__DisplayClass29_0.<Workflow_canvas_preview_selects_running_node_from_progress>b__2() in C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\WorkflowsPageTests.cs:line 1385\r",
+        "   at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args) in /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs:line 173"
+      ]
+    }
+  ],
+  "Attribution": "Unresolved; exact unchanged-candidate quiet follow-up may be appropriate after first Integration run."
+}

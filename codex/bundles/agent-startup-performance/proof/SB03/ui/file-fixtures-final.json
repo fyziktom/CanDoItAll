@@ -1,0 +1,150 @@
+{
+  "CapturedUtc": "2026-08-31T18:00:25.9841041+00:00",
+  "Purpose": "Final read-only safety verification after user-approved source-file UI, approval and rejection tests",
+  "ReferenceFactsSha256": "5C376D1E6EB4FD42A39776A5A8C18C5BA3DC8CBA6BC7CD88F8F7B044CC761BC6",
+  "AssetCount": 4,
+  "AllFourAssetHashesAndSizesMatch": true,
+  "Assets": [
+    {
+      "Host": "native",
+      "WorkspaceRelativePath": "managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf",
+      "Sha256": "5FB7B3D85554BD2EE0B16ECA58E7C6E57280E8D064547846035222A8CE808388",
+      "Bytes": 1753819,
+      "MatchesReference": true
+    },
+    {
+      "Host": "native",
+      "WorkspaceRelativePath": "managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-pricing-model-8124de720ddd4832a7d00f684928b2ca.xlsx",
+      "Sha256": "FA7BD0ABB37C999F9C8BEA3D264C36730E353FCD1F989F99D9F02A2FA40CACA5",
+      "Bytes": 6933,
+      "MatchesReference": true
+    },
+    {
+      "Host": "client",
+      "WorkspaceRelativePath": "managed-files/project-media/files/e008de3469eb4fea9b47b4c23991b17d/calculator-ui-proposal-31be86e50fe341a9a98916ff30f84bc7.md",
+      "Sha256": "F277E62C7396480EF910B50CDB628F8A68853BFABFAF106A96CE109E2C9FDB88",
+      "Bytes": 6203,
+      "MatchesReference": true
+    },
+    {
+      "Host": "client",
+      "WorkspaceRelativePath": "managed-files/project-media/files/e008de3469eb4fea9b47b4c23991b17d/calculator-ui-proposal-3ba4958578a14522941808f253294940.svg",
+      "Sha256": "745E984CC3392CF4B7670C9B1034FE21FB503DC3F73242DC0862E248A9684FF5",
+      "Bytes": 6635,
+      "MatchesReference": true
+    }
+  ],
+  "SourceFreezeSha256": "C28F1425181AB8274F702920351DCCE13FB8EA012D135CCB9C1B36E412C63B26",
+  "FrozenSourceCount": 13,
+  "AllThirteenSourceHashesMatch": true,
+  "Sources": [
+    {
+      "Path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "Sha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+      "Sha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+      "Sha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+      "Sha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj",
+      "Sha256": "76CEF3BE42BF97761D4829EBCF32239944A8231B65C1466E063DE1927559F507",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRuntimeProfileMaterializer.cs",
+      "Sha256": "B9C8D484CB5C31E125E97BDE2FD55A6A9BCC30176689E8742A96522081C0DCE6",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderValidatedRuntimeShape.cs",
+      "Sha256": "FDA60F7F5C22D82C3BE5F532107F18D476C5F7EFBE1B9BE3CC025575B3B946C2",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedAwareProviderRuntimeProfileSnapshotLoader.cs",
+      "Sha256": "51DDB2B68D86377B67F3472CA3549CDFBEA1C45D9EB2C497189E84C5C7AE708F",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentFrameworkExecutionRunTrackingIntegrationTests.cs",
+      "Sha256": "9C4AC1B6C455D7E53A2BCA0B0F45568488385885A30CCE292AB1982D5A3B1275",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+      "Sha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimeProjectionIntegrationTests.cs",
+      "Sha256": "BAF74E5BE2195A4253FDFBB6462DD063B8C7EF37B6D06A9ED56F0B68D768A289",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+      "Sha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+      "MatchesFreeze": true
+    },
+    {
+      "Path": "tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRuntimeProfileMaterializerTests.cs",
+      "Sha256": "3AC121B9230FFAD305AAA6554D5548DCBF141E05C9D01F33B32479AB07FE8437",
+      "MatchesFreeze": true
+    }
+  ],
+  "Native": {
+    "AppPid": 60000,
+    "ParentPid": 47476,
+    "WrapperPid": 62088,
+    "AppStartedUtc": "2026-08-31T16:23:47.4068894Z",
+    "AppPath": "C:\\repositories\\CanDoItAll\\.artifacts\\asn-20260831\\bin\\CanDoItAll.Web\\release\\CanDoItAll.Web.exe",
+    "DllSha256": "8A51C404722A45CAAE15FBF0A8D4132DF4F7947C4BE8DBDD505076184C263D72",
+    "Bindings": [
+      {
+        "LocalAddress": "::1",
+        "LocalPort": 5032,
+        "OwningProcess": 60000
+      },
+      {
+        "LocalAddress": "127.0.0.1",
+        "LocalPort": 5032,
+        "OwningProcess": 60000
+      }
+    ],
+    "MatchesRecordedCandidate": true
+  },
+  "Client": {
+    "ContainerId": "420d6e8a059ba8d2d6b8d2e60d3cf3fb6036043fe3789137f724a3947192c4dd",
+    "ImageId": "sha256:a9b6165bf88a2ecbf62884ca76f1af1b7622fbc0b6861eec5c9c57603149bfc6",
+    "StartedAtUtc": "2026-08-31T16:24:37.063085641Z",
+    "Health": "healthy",
+    "ReadonlyRootfs": true,
+    "User": "1654:1654",
+    "MatchesRecordedCandidate": true
+  },
+  "Publisher": {
+    "ContainerId": "000fadde7e6757f7afd413e3102fa58568e18da4d9a7361d8057bda40c9b966d",
+    "ImageId": "sha256:b6b502a5487bd8ba7b21a2c3afe18e4846d273fa0445b387a98bf85acda73089",
+    "StartedAtUtc": "2026-08-31T10:43:03.645154542Z",
+    "MatchesOriginalBaseline": true
+  },
+  "AppApiCalls": false,
+  "ProviderCalls": false,
+  "SqlQueries": false,
+  "TestsOrBuilds": false,
+  "SourceOrAssetWrites": false,
+  "UnrelatedDataFilesRead": false,
+  "Limits": "Original four source assets and frozen code are unchanged. The approved conversion produced a separate derived artifact; this record does not assert absence of all workspace writes or re-measure startup."
+}

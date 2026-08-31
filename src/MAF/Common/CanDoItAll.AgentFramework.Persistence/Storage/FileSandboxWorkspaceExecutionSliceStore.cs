@@ -1050,46 +1050,35 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             targetUsageProjection);
     }
 
-    public async Task PersistExistingRunSessionAsync(
+    public Task PersistExistingRunSessionAsync(
         ExistingExecutionRunPersistencePlan plan,
-        CancellationToken cancellationToken)
-    {
-        if (plan.TargetDetail.ChatSession is null)
-        {
-            return;
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) {
+        if (plan.TargetDetail.ChatSession is null) {
+            return Task.CompletedTask;
         }
 
-        var storedSession = await jsonStore.ReadJsonAsync<ChatSessionRecord>(
+        return PersistExistingRunPayloadAsync(
             layout.SessionPath(plan.TargetDetail.ChatSession.Id),
-            cancellationToken);
-        EnsureStoredPayloadIsTransitionCompatible(
-            storedSession,
             plan.PreviousDetail.ChatSession,
             plan.TargetDetail.ChatSession,
             plan.TargetDetail.Run.Id,
-            "chat session");
-        await jsonStore.WriteJsonIfChangedAsync(
-            layout.SessionPath(plan.TargetDetail.ChatSession.Id),
-            plan.TargetDetail.ChatSession,
+            "chat session",
+            origin,
             cancellationToken);
     }
 
-    public async Task PersistExistingRunRecordAsync(
+    public Task PersistExistingRunRecordAsync(
         ExistingExecutionRunPersistencePlan plan,
-        CancellationToken cancellationToken)
-    {
-        var storedRun = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) {
+        return PersistExistingRunPayloadAsync(
             layout.RunPath(plan.TargetDetail.Run.Id),
-            cancellationToken);
-        EnsureStoredPayloadIsTransitionCompatible(
-            storedRun,
             plan.PreviousDetail.Run,
             plan.TargetDetail.Run,
             plan.TargetDetail.Run.Id,
-            "execution run");
-        await jsonStore.WriteJsonIfChangedAsync(
-            layout.RunPath(plan.TargetDetail.Run.Id),
-            plan.TargetDetail.Run,
+            "execution run",
+            origin,
             cancellationToken);
     }
 
@@ -1176,42 +1165,55 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             cancellationToken);
     }
 
-    public async Task PersistExistingRunExecutionIndexAsync(
+    public Task PersistExistingRunExecutionIndexAsync(
         ExistingExecutionRunPersistencePlan plan,
-        CancellationToken cancellationToken)
-    {
-        var currentIndex = await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) {
+        return PersistExistingRunPayloadAsync(
             layout.ExecutionIndexPath,
-            cancellationToken);
-        EnsureStoredPayloadIsTransitionCompatible(
-            currentIndex,
             plan.PreviousIndex,
             plan.TargetIndex,
             plan.TargetDetail.Run.Id,
-            "execution index");
-        await jsonStore.WriteJsonIfChangedAsync(
-            layout.ExecutionIndexPath,
-            plan.TargetIndex,
+            "execution index",
+            origin,
             cancellationToken);
     }
 
-    public async Task PersistExistingRunUsageIndexAsync(
+    public Task PersistExistingRunUsageIndexAsync(
         ExistingExecutionRunPersistencePlan plan,
-        CancellationToken cancellationToken)
-    {
-        var currentProjection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) {
+        return PersistExistingRunPayloadAsync(
             layout.ExecutionUsageIndexPath,
-            cancellationToken);
-        EnsureStoredPayloadIsTransitionCompatible(
-            currentProjection,
             plan.PreviousUsageProjection,
             plan.TargetUsageProjection,
             plan.TargetDetail.Run.Id,
-            "usage index");
-        await jsonStore.WriteJsonIfChangedAsync(
-            layout.ExecutionUsageIndexPath,
-            plan.TargetUsageProjection,
+            "usage index",
+            origin,
             cancellationToken);
+    }
+
+    private async Task PersistExistingRunPayloadAsync<T>(
+        string fullPath,
+        T? previous,
+        T target,
+        Guid executionRunId,
+        string label,
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) where T : class {
+        var stored = await jsonStore.ReadJsonAsync<T>(fullPath, cancellationToken);
+        EnsureStoredPayloadIsTransitionCompatible(
+            stored,
+            previous,
+            target,
+            executionRunId,
+            label);
+        if (origin == ExistingRunDetailCommitOrigin.Prepared &&
+            !HasSamePayload(stored, target)) {
+            await jsonStore.WriteJsonAtomicallyAsync(fullPath, target, cancellationToken);
+        } else {
+            await jsonStore.WriteJsonIfChangedAsync(fullPath, target, cancellationToken);
+        }
     }
 
     public void ValidateExistingRunUpdatePlan(

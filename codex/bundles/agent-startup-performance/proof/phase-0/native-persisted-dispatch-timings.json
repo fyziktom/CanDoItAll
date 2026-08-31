@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "capturedAtUtc": "2026-08-31T13:33:04.4312058+00:00",
+  "eventBoundary": "HttpHandlerDiagnosticListener/System.Net.Http.HttpRequestOut.Start",
+  "runtimeRunBoundary": "persisted log createdAtUtc; this is before awaited durable write, not HTTP dispatch",
+  "responseHeadersBoundary": "HTTP diagnostic Stop; not first UI token",
+  "unmatchedHttpStarts": 0,
+  "otherAgentHttpStarts": 0,
+  "count": 6,
+  "runs": [
+    {
+      "runId": "79f2a71f-25b8-42ee-b354-e2155250dc55",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "265a478e-be7a-4cfa-b7fc-6fc7c2d6d51c",
+      "createdUtc": "2026-08-31T13:27:27.3958335+00:00",
+      "runtimeRunPersistedEventUtc": "2026-08-31T13:27:41.1948428+00:00",
+      "httpDispatchUtc": "2026-08-31T13:27:42.1119873Z",
+      "httpResponseHeadersUtc": "2026-08-31T13:27:44.6710884Z",
+      "firstPersistedStreamingEventUtc": "2026-08-31T13:27:45.9232962+00:00",
+      "completedUtc": "2026-08-31T13:27:47.796381+00:00",
+      "persistedState": 5,
+      "createdToDispatchSeconds": 14.716154,
+      "runtimeRunEventToDispatchSeconds": 0.917144,
+      "traceId": "8fdf7c442c5ce7711f7e6b4b914440f2",
+      "httpSpanId": "a290a009f795ab68",
+      "httpParentSpanId": "f39c62572bd11c9e",
+      "association": "exact-http-parent-span-to-run-activity-span",
+      "stages": [
+        {
+          "utc": "2026-08-31T13:27:33.259359+00:00",
+          "phase": "Planning",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:34.1870193+00:00",
+          "phase": "Framework",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:34.9394377+00:00",
+          "phase": "Context contributors",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:35.5971543+00:00",
+          "phase": "Skills",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:36.4041045+00:00",
+          "phase": "Workspace tools",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:37.1042222+00:00",
+          "phase": "Runtime tool providers",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:37.9795885+00:00",
+          "phase": "Compaction",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:38.8455948+00:00",
+          "phase": "Execution authority",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:39.6404176+00:00",
+          "phase": "Model parameters",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:40.2019815+00:00",
+          "phase": "Session",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:27:41.1948428+00:00",
+          "phase": "Run",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:27:45.9232962+00:00",
+          "phase": "Streaming",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:27:46.898333+00:00",
+          "phase": "Session",
+          "state": 4
+        },
+        {
+          "utc": "2026-08-31T13:27:48.9102158+00:00",
+          "phase": "Completed",
+          "state": 5
+        }
+      ]
+    },
+    {
+      "runId": "fc98eb03-66ef-46bb-8a46-51d262b46400",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "6b9f4a16-1a5e-40c1-9561-68d00fb9afcb",
+      "createdUtc": "2026-08-31T13:30:25.538656+00:00",
+      "runtimeRunPersistedEventUtc": "2026-08-31T13:30:37.4574081+00:00",
+      "httpDispatchUtc": "2026-08-31T13:30:38.3660029Z",
+      "httpResponseHeadersUtc": "2026-08-31T13:30:40.1395454Z",
+      "firstPersistedStreamingEventUtc": "2026-08-31T13:30:40.7128077+00:00",
+      "completedUtc": "2026-08-31T13:30:42.337709+00:00",
+      "persistedState": 5,
+      "createdToDispatchSeconds": 12.827347,
+      "runtimeRunEventToDispatchSeconds": 0.908595,
+      "traceId": "09033abf2116a29fc22c1fbd5639ce30",
+      "httpSpanId": "652f51cf8187cd07",
+      "httpParentSpanId": "1e850df0c8148930",
+      "association": "exact-http-parent-span-to-run-activity-span",
+      "stages": [
+        {
+          "utc": "2026-08-31T13:30:29.3460193+00:00",
+          "phase": "Planning",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:30.0482824+00:00",
+          "phase": "Framework",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:30.683941+00:00",
+          "phase": "Context contributors",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:31.4452407+00:00",
+          "phase": "Skills",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:32.3525329+00:00",
+          "phase": "Workspace tools",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:33.3320247+00:00",
+          "phase": "Runtime tool providers",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:34.1692266+00:00",
+          "phase": "Compaction",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:35.0385294+00:00",
+          "phase": "Execution authority",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:35.84173+00:00",
+          "phase": "Model parameters",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:36.7418051+00:00",
+          "phase": "Session",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:30:37.4574081+00:00",
+          "phase": "Run",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:30:40.7128077+00:00",
+          "phase": "Streaming",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:30:41.4713166+00:00",
+          "phase": "Session",
+          "state": 4
+        },
+        {
+          "utc": "2026-08-31T13:30:43.3543541+00:00",
+          "phase": "Completed",
+          "state": 5
+        }
+      ]
+    },
+    {
+      "runId": "439756c7-6362-4846-92d7-8a5090ffa767",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "dd67c68b-43c8-4282-a1cd-2be8e944b2dd",
+      "createdUtc": "2026-08-31T13:31:03.9475679+00:00",
+      "runtimeRunPersistedEventUtc": "2026-08-31T13:31:14.9744721+00:00",
+      "httpDispatchUtc": "2026-08-31T13:31:15.9447318Z",
+      "httpResponseHeadersUtc": "2026-08-31T13:31:16.7742504Z",
+      "firstPersistedStreamingEventUtc": "2026-08-31T13:31:17.3078569+00:00",
+      "completedUtc": "2026-08-31T13:31:20.543256+00:00",
+      "persistedState": 5,
+      "createdToDispatchSeconds": 11.997164,
+      "runtimeRunEventToDispatchSeconds": 0.97026,
+      "traceId": "25edc9ccd9b10d4c3010245937b3cbe2",
+      "httpSpanId": "99ba85fbb6f316b8",
+      "httpParentSpanId": "941c5f9f7f980969",
+      "association": "exact-http-parent-span-to-run-activity-span",
+      "stages": [
+        {
+          "utc": "2026-08-31T13:31:08.063449+00:00",
+          "phase": "Planning",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:08.6720389+00:00",
+          "phase": "Framework",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:09.4290564+00:00",
+          "phase": "Context contributors",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:10.0679907+00:00",
+          "phase": "Skills",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:10.7590766+00:00",
+          "phase": "Workspace tools",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:11.5264594+00:00",
+          "phase": "Runtime tool providers",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:12.4303486+00:00",
+          "phase": "Compaction",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:13.1057176+00:00",
+          "phase": "Execution authority",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:13.7631395+00:00",
+          "phase": "Model parameters",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:14.3699494+00:00",
+          "phase": "Session",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:14.9744721+00:00",
+          "phase": "Run",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:31:17.3078569+00:00",
+          "phase": "Streaming",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:31:20.01518+00:00",
+          "phase": "Session",
+          "state": 4
+        },
+        {
+          "utc": "2026-08-31T13:31:21.7398142+00:00",
+          "phase": "Completed",
+          "state": 5
+        }
+      ]
+    },
+    {
+      "runId": "29a0f36f-0a15-49ae-977a-d98a7d3e43a7",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "1aba9be6-2772-4284-b6f5-341dbbc9457d",
+      "createdUtc": "2026-08-31T13:31:37.2173675+00:00",
+      "runtimeRunPersistedEventUtc": "2026-08-31T13:31:48.5658316+00:00",
+      "httpDispatchUtc": "2026-08-31T13:31:49.3702839Z",
+      "httpResponseHeadersUtc": "2026-08-31T13:31:50.2973595Z",
+      "firstPersistedStreamingEventUtc": "2026-08-31T13:31:51.1953205+00:00",
+      "completedUtc": "2026-08-31T13:31:53.3307664+00:00",
+      "persistedState": 5,
+      "createdToDispatchSeconds": 12.152916,
+      "runtimeRunEventToDispatchSeconds": 0.804452,
+      "traceId": "44c6a3e8c5139c013a3fca59f6f80f7b",
+      "httpSpanId": "6fbbc84a0c348d1e",
+      "httpParentSpanId": "eb1df6eea45bb29f",
+      "association": "exact-http-parent-span-to-run-activity-span",
+      "stages": [
+        {
+          "utc": "2026-08-31T13:31:41.499478+00:00",
+          "phase": "Planning",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:42.238326+00:00",
+          "phase": "Framework",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:42.9244203+00:00",
+          "phase": "Context contributors",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:43.4318286+00:00",
+          "phase": "Skills",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:44.1851836+00:00",
+          "phase": "Workspace tools",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:45.0372046+00:00",
+          "phase": "Runtime tool providers",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:45.7308778+00:00",
+          "phase": "Compaction",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:46.299227+00:00",
+          "phase": "Execution authority",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:47.0085765+00:00",
+          "phase": "Model parameters",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:47.8644788+00:00",
+          "phase": "Session",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:31:48.5658316+00:00",
+          "phase": "Run",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:31:51.1953205+00:00",
+          "phase": "Streaming",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:31:52.5698924+00:00",
+          "phase": "Session",
+          "state": 4
+        },
+        {
+          "utc": "2026-08-31T13:31:54.3386214+00:00",
+          "phase": "Completed",
+          "state": 5
+        }
+      ]
+    },
+    {
+      "runId": "4b4f1c74-6fbc-4af7-a647-93f900e71964",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "8019f71b-df90-4672-b4db-22cbca6c6c68",
+      "createdUtc": "2026-08-31T13:32:10.2916233+00:00",
+      "runtimeRunPersistedEventUtc": "2026-08-31T13:32:21.2236343+00:00",
+      "httpDispatchUtc": "2026-08-31T13:32:21.9883298Z",
+      "httpResponseHeadersUtc": "2026-08-31T13:32:22.6434602Z",
+      "firstPersistedStreamingEventUtc": "2026-08-31T13:32:23.2320723+00:00",
+      "completedUtc": "2026-08-31T13:32:24.5786794+00:00",
+      "persistedState": 5,
+      "createdToDispatchSeconds": 11.696706,
+      "runtimeRunEventToDispatchSeconds": 0.764696,
+      "traceId": "ed1fa6d6a7e05f50f37474583c8d3b16",
+      "httpSpanId": "b310d34ddde76762",
+      "httpParentSpanId": "58ebfd806d250b74",
+      "association": "exact-http-parent-span-to-run-activity-span",
+      "stages": [
+        {
+          "utc": "2026-08-31T13:32:14.6705501+00:00",
+          "phase": "Planning",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:15.3825341+00:00",
+          "phase": "Framework",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:16.136578+00:00",
+          "phase": "Context contributors",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:16.6851589+00:00",
+          "phase": "Skills",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:17.1843999+00:00",
+          "phase": "Workspace tools",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:18.0582958+00:00",
+          "phase": "Runtime tool providers",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:18.6509567+00:00",
+          "phase": "Compaction",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:19.3124772+00:00",
+          "phase": "Execution authority",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:20.0217702+00:00",
+          "phase": "Model parameters",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:20.597129+00:00",
+          "phase": "Session",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:21.2236343+00:00",
+          "phase": "Run",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:32:23.2320723+00:00",
+          "phase": "Streaming",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:32:23.9755022+00:00",
+          "phase": "Session",
+          "state": 4
+        },
+        {
+          "utc": "2026-08-31T13:32:25.7515184+00:00",
+          "phase": "Completed",
+          "state": 5
+        }
+      ]
+    },
+    {
+      "runId": "01fa2079-b72f-41ea-803c-ae4d830f6ee6",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "8019f71b-df90-4672-b4db-22cbca6c6c68",
+      "createdUtc": "2026-08-31T13:32:48.9209204+00:00",
+      "runtimeRunPersistedEventUtc": "2026-08-31T13:32:56.647695+00:00",
+      "httpDispatchUtc": "2026-08-31T13:32:57.3884557Z",
+      "httpResponseHeadersUtc": "2026-08-31T13:32:57.9783729Z",
+      "firstPersistedStreamingEventUtc": "2026-08-31T13:32:58.8919203+00:00",
+      "completedUtc": "2026-08-31T13:33:00.4959638+00:00",
+      "persistedState": 5,
+      "createdToDispatchSeconds": 8.467535,
+      "runtimeRunEventToDispatchSeconds": 0.740761,
+      "traceId": "cde0b6853045f1a9851bbe09b8fb2ca8",
+      "httpSpanId": "67b2bb43c447cfe3",
+      "httpParentSpanId": "d02916c2ab76db7f",
+      "association": "exact-http-parent-span-to-run-activity-span",
+      "stages": [
+        {
+          "utc": "2026-08-31T13:32:49.5320935+00:00",
+          "phase": "Planning",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:50.2363903+00:00",
+          "phase": "Framework",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:50.9445458+00:00",
+          "phase": "Context contributors",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:51.6308504+00:00",
+          "phase": "Skills",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:52.2776146+00:00",
+          "phase": "Workspace tools",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:52.9578976+00:00",
+          "phase": "Runtime tool providers",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:53.7316336+00:00",
+          "phase": "Compaction",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:54.3647237+00:00",
+          "phase": "Execution authority",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:55.0676156+00:00",
+          "phase": "Model parameters",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:55.9740001+00:00",
+          "phase": "Session",
+          "state": 1
+        },
+        {
+          "utc": "2026-08-31T13:32:56.647695+00:00",
+          "phase": "Run",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:32:58.8919203+00:00",
+          "phase": "Streaming",
+          "state": 2
+        },
+        {
+          "utc": "2026-08-31T13:32:59.7162776+00:00",
+          "phase": "Session",
+          "state": 4
+        },
+        {
+          "utc": "2026-08-31T13:33:01.6028117+00:00",
+          "phase": "Completed",
+          "state": 5
+        }
+      ]
+    }
+  ]
+}

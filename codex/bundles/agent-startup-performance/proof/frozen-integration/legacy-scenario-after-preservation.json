@@ -1,0 +1,12 @@
+{
+  "CompletedUtc": "2026-08-31T16:08:42.0280886+00:00",
+  "OriginalFileCount": 26,
+  "OriginalBytes": 61913.0,
+  "GeneratedFileCount": 26,
+  "GeneratedBytes": 61912.0,
+  "ChangedFilesRestored": 2,
+  "AllOriginalHashesRestored": true,
+  "OriginalSubtree": "artifacts/codex-bundles/project-structure-workflow-runs/proof/scenarios",
+  "FreshRunProofCapture": ".artifacts/agent-startup-performance/frozen-validation/legacy-scenario-after/files",
+  "NoFilesDeleted": true
+}

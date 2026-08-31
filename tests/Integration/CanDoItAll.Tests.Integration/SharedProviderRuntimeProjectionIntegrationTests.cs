@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Data.Common;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -21,6 +22,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -818,6 +821,235 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
 
         Assert.DoesNotContain(corrupt.ProfileId, ids);
         Assert.DoesNotContain(missingProfileId, ids);
+    }
+
+    [Theory]
+    [InlineData(SharedGraphCorruption.MalformedSnapshot)]
+    [InlineData(SharedGraphCorruption.DuplicatedMetadata)]
+    [InlineData(SharedGraphCorruption.ProfileBaseUri)]
+    [InlineData(SharedGraphCorruption.ProfileDefaultModel)]
+    [InlineData(SharedGraphCorruption.ProfileCapabilities)]
+    [InlineData(SharedGraphCorruption.SourceAddress)]
+    [InlineData(SharedGraphCorruption.SourceStatus)]
+    [InlineData(SharedGraphCorruption.ImportSelection)]
+    public async Task Warm_single_and_set_lookups_reject_corruption_without_token_changes(
+        SharedGraphCorruption corruption) {
+        foreach (var useSetLookup in new[] { false, true }) {
+            var seed = await SeedGraphAsync();
+            await using var scope = fixture.Services.CreateAsyncScope();
+            var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
+            var loaded = await registry.GetProviderAsync(seed.ProfileId);
+            Assert.NotNull(loaded);
+            Assert.True(loaded.IsEnabled);
+            var tokens = await ReadGraphTokensAsync(seed);
+
+            await CorruptGraphWithoutTokenChangeAsync(seed, corruption);
+
+            Assert.Equal(tokens, await ReadGraphTokensAsync(seed));
+            if (useSetLookup) {
+                Assert.DoesNotContain(await registry.ListProvidersAsync(), item => item.Id == seed.ProfileId);
+            } else {
+                Assert.Null(await registry.GetProviderAsync(seed.ProfileId));
+            }
+            var loader = scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSnapshotLoader>();
+            Assert.Null(await loader.LoadAsync(seed.ProfileId));
+            Assert.Null(await loader.LoadRevisionAsync(seed.ProfileId));
+            Assert.DoesNotContain(seed.ProfileId, (await loader.LoadRevisionsAsync()).Keys);
+        }
+    }
+
+    [Fact]
+    public async Task Concrete_revision_probes_preserve_full_load_revisions_with_bounded_queries() {
+        var seed = await SeedGraphAsync(modelCapabilities: [
+            [SharedProviderCapability.ChatCompletions],
+            [SharedProviderCapability.ChatCompletions]
+        ]);
+        var recorder = new ProviderQueryRecorder();
+        await using var sourceContext = await fixture.Factory.CreateDbContextAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>((DbContextOptions<AppDbContext>)sourceContext.GetService<IDbContextOptions>())
+            .AddInterceptors(recorder).Options;
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var loader = ActivatorUtilities.CreateInstance<DatabaseProviderRuntimeProfileSnapshotLoader>(
+            scope.ServiceProvider, new RecordingProviderDbContextFactory(options));
+        var full = await loader.LoadAsync(seed.ProfileId);
+        Assert.NotNull(full);
+        Assert.Equal(3, recorder.Commands.Count);
+
+        recorder.Commands.Clear();
+        Assert.Equal(full.ConfigurationRevision, await loader.LoadRevisionAsync(seed.ProfileId));
+        Assert.Equal(2, recorder.Commands.Count);
+
+        var fullSet = (await loader.LoadAllAsync())
+            .Where(item => item.ConfigurationRevision.HasValue)
+            .ToDictionary(item => item.Profile.Id, item => item.ConfigurationRevision!.Value);
+        recorder.Commands.Clear();
+        var revisions = await loader.LoadRevisionsAsync();
+        Assert.Equal(3, recorder.Commands.Count);
+        Assert.Equal(fullSet.OrderBy(item => item.Key), revisions.OrderBy(item => item.Key));
+
+        await SeedGraphAsync();
+        await SeedGraphAsync();
+        recorder.Commands.Clear();
+        Assert.Equal(revisions.Count + 2, (await loader.LoadRevisionsAsync()).Count);
+        Assert.Equal(3, recorder.Commands.Count);
+    }
+
+    [Fact]
+    public async Task Duplicate_imports_are_rejected_before_invalid_source_materialization() {
+        const string indexDefinitionQuery =
+            "SELECT pg_get_indexdef('\"IX_Workspace_SharedProviderImports_ProviderProfileId\"'::regclass) AS \"Value\"";
+        var seed = await SeedGraphAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
+        Assert.NotNull(await registry.GetProviderAsync(seed.ProfileId));
+        await using var context = await fixture.Factory.CreateDbContextAsync();
+        var indexDefinition = await context.Database.SqlQueryRaw<string>(indexDefinitionQuery).SingleAsync();
+        Assert.Contains("CREATE UNIQUE INDEX", indexDefinition, StringComparison.Ordinal);
+        var original = await context.Set<SharedProviderImport>().AsNoTracking()
+            .SingleAsync(item => item.Id == seed.ImportId);
+        var duplicate = new SharedProviderImport();
+        context.Entry(duplicate).CurrentValues.SetValues(original);
+        duplicate.Id = Guid.NewGuid();
+        duplicate.RemotePublicationId = new SharedProviderPublicationId(Guid.NewGuid());
+        var indexDropped = false;
+        try {
+            await context.Database.ExecuteSqlRawAsync(
+                "DROP INDEX \"IX_Workspace_SharedProviderImports_ProviderProfileId\"");
+            indexDropped = true;
+            context.Add(duplicate);
+            await context.SaveChangesAsync();
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"""UPDATE "Workspace_SharedProviderSources" SET "LastCatalogETag" = 'invalid' WHERE "Id" = {seed.SourceId}""");
+            var loader = scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSnapshotLoader>();
+            Assert.Null(await loader.LoadAsync(seed.ProfileId));
+            Assert.Null(await loader.LoadRevisionAsync(seed.ProfileId));
+            Assert.Null(await registry.GetProviderAsync(seed.ProfileId));
+        } finally {
+            await context.Set<SharedProviderImport>().Where(item => item.Id == duplicate.Id).ExecuteDeleteAsync();
+            await context.Set<SharedProviderSource>().Where(item => item.Id == seed.SourceId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.LastCatalogETag, (SharedProviderCatalogEntityTag?)null));
+            if (indexDropped) {
+                await context.Database.ExecuteSqlRawAsync(indexDefinition);
+            }
+            Assert.Equal(indexDefinition,
+                await context.Database.SqlQueryRaw<string>(indexDefinitionQuery).SingleAsync());
+        }
+    }
+
+    [Fact]
+    public async Task Revision_set_preserves_invalid_unrelated_source_value_conversion_failure() {
+        var seed = await SeedGraphAsync();
+        await using var context = await fixture.Factory.CreateDbContextAsync();
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE "Workspace_SharedProviderSources" SET "LastCatalogETag" = 'invalid' WHERE "Id" = {seed.SourceId}""");
+        try {
+            await using var scope = fixture.Services.CreateAsyncScope();
+            var loader = scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSnapshotLoader>();
+            var selectedFullFailure = await Record.ExceptionAsync(() => loader.LoadAsync(seed.ProfileId));
+            var selectedRevisionFailure = await Record.ExceptionAsync(() => loader.LoadRevisionAsync(seed.ProfileId));
+            Assert.NotNull(selectedFullFailure);
+            Assert.NotNull(selectedRevisionFailure);
+            Assert.Equal(selectedFullFailure.GetType(), selectedRevisionFailure.GetType());
+            await context.Set<SharedProviderImport>().Where(item => item.Id == seed.ImportId).ExecuteDeleteAsync();
+            await context.Set<PersistedProviderProfile>().Where(item => item.Id == seed.ProfileId).ExecuteDeleteAsync();
+            var fullFailure = await Record.ExceptionAsync(() => loader.LoadAllAsync());
+            var revisionFailure = await Record.ExceptionAsync(() => loader.LoadRevisionsAsync());
+            Assert.NotNull(fullFailure);
+            Assert.NotNull(revisionFailure);
+            Assert.Equal(fullFailure.GetType(), revisionFailure.GetType());
+        } finally {
+            await context.Set<SharedProviderSource>().Where(item => item.Id == seed.SourceId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.LastCatalogETag, (SharedProviderCatalogEntityTag?)null));
+        }
+    }
+
+    [Fact]
+    public async Task Revision_probes_preserve_local_mapping_failure_without_token_changes() {
+        var seed = await SeedGraphAsync();
+        await using var context = await fixture.Factory.CreateDbContextAsync();
+        var before = await ReadGraphTokensAsync(seed);
+        await context.Set<PersistedProviderProfile>().Where(item => item.Id == seed.ProfileId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.ConnectorPluginKey, "unsupported-test-connector"));
+        try {
+            Assert.Equal(before, await ReadGraphTokensAsync(seed));
+            await using var scope = fixture.Services.CreateAsyncScope();
+            var loader = scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSnapshotLoader>();
+            var fullFailure = await Assert.ThrowsAsync<InvalidOperationException>(() => loader.LoadAsync(seed.ProfileId));
+            var revisionFailure = await Assert.ThrowsAsync<InvalidOperationException>(() => loader.LoadRevisionAsync(seed.ProfileId));
+            Assert.Equal(fullFailure.Message, revisionFailure.Message);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => loader.LoadRevisionsAsync());
+        } finally {
+            await context.Set<PersistedProviderProfile>().Where(item => item.Id == seed.ProfileId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.ConnectorPluginKey,
+                    SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey));
+        }
+    }
+
+    private async Task<(Guid Profile, Guid Import, Guid Source)> ReadGraphTokensAsync(GraphSeed seed) {
+        await using var context = await fixture.Factory.CreateDbContextAsync();
+        var profile = await context.Set<PersistedProviderProfile>().Where(item => item.Id == seed.ProfileId)
+            .Select(item => item.ConcurrencyToken).SingleAsync();
+        var import = await context.Set<SharedProviderImport>().Where(item => item.Id == seed.ImportId)
+            .Select(item => item.ConcurrencyToken).SingleAsync();
+        var source = await context.Set<SharedProviderSource>().Where(item => item.Id == seed.SourceId)
+            .Select(item => item.ConcurrencyToken).SingleAsync();
+        return (profile, import, source);
+    }
+
+    private async Task CorruptGraphWithoutTokenChangeAsync(GraphSeed seed, SharedGraphCorruption corruption) {
+        await using var context = await fixture.Factory.CreateDbContextAsync();
+        var profiles = context.Set<PersistedProviderProfile>().Where(item => item.Id == seed.ProfileId);
+        var imports = context.Set<SharedProviderImport>().Where(item => item.Id == seed.ImportId);
+        var sources = context.Set<SharedProviderSource>().Where(item => item.Id == seed.SourceId);
+        var affected = corruption switch {
+            SharedGraphCorruption.MalformedSnapshot => await imports.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.RemoteCatalogSnapshotJson, "{}")),
+            SharedGraphCorruption.DuplicatedMetadata => await imports.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.RemoteDisplayName, "Forged display name")),
+            SharedGraphCorruption.ProfileBaseUri => await profiles.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.BaseUrl, "https://forged.example.test/")),
+            SharedGraphCorruption.ProfileDefaultModel => await profiles.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.DefaultModel, "forged-model")),
+            SharedGraphCorruption.ProfileCapabilities => await profiles.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.SupportsStreaming, item => !item.SupportsStreaming)),
+            SharedGraphCorruption.SourceAddress => await sources.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.BaseUri, "not-an-absolute-uri")),
+            SharedGraphCorruption.SourceStatus => await sources.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.Status, (SharedProviderSourceStatus)int.MaxValue)),
+            SharedGraphCorruption.ImportSelection => await imports.ExecuteUpdateAsync(setters =>
+                setters.SetProperty(item => item.SelectionState, (SharedProviderSelectionState)int.MaxValue)),
+            _ => throw new ArgumentOutOfRangeException(nameof(corruption), corruption, null)
+        };
+        Assert.Equal(1, affected);
+    }
+
+    public enum SharedGraphCorruption {
+        MalformedSnapshot,
+        DuplicatedMetadata,
+        ProfileBaseUri,
+        ProfileDefaultModel,
+        ProfileCapabilities,
+        SourceAddress,
+        SourceStatus,
+        ImportSelection
+    }
+
+    private sealed class RecordingProviderDbContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext> {
+        public AppDbContext CreateDbContext() => new(options);
+    }
+
+    private sealed class ProviderQueryRecorder : DbCommandInterceptor {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default) {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
     }
 
     [Fact]

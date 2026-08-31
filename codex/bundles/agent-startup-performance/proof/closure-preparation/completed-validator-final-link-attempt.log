@@ -1,0 +1,2 @@
+Bundle validation failed:
+- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\reviews\01-execution-report.md:188: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py

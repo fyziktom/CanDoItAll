@@ -1,0 +1,20 @@
+{
+  "Executable": "python",
+  "Arguments": [
+    "-B",
+    "codex/bundles/agent-startup-performance/proof/SB03/ui/5032/error-extract-structured-call.py",
+    "--host",
+    "native",
+    "--run-id",
+    "cc968f49-5d64-4807-8618-377293e5d020",
+    "--run-id",
+    "59350507-ddde-4274-aca9-aeefd09d37f7"
+  ],
+  "ScriptSha256": "2C4C9788FBACC6D9D24D19B7ADACC4FDD5DB8484C39FB54EF5EEF033B3FF6C98",
+  "StartedUtc": "2026-08-31T16:54:00.2715402+00:00",
+  "CompletedUtc": "2026-08-31T16:54:00.4028204+00:00",
+  "ExitCode": 0,
+  "AppCalls": false,
+  "SourceWrites": false,
+  "Scope": "Exactly the authorized two run.json files; bounded structured protocol fields only"
+}

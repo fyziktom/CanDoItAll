@@ -1,0 +1,15 @@
+{
+  "sample": {
+    "id": "native-after-continuation",
+    "port": 5032,
+    "initialMessages": 2,
+    "submitUtc": "2026-08-31T16:30:29.830Z",
+    "submitMono": 319437.10000002384,
+    "firstContentUtc": "2026-08-31T16:30:38.418Z",
+    "firstContentMono": 328025,
+    "terminalUiUtc": "2026-08-31T16:30:38.418Z",
+    "terminalUiMono": 328025,
+    "stages": []
+  },
+  "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure \u00b7 QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure \u00b7 QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n4 messages\n31.08.2026 12:30\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 12:29\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 12:29\n\nDecimal is preferable for currency because it represents base-10 fractions exactly, so values like 0.10 and 0.01 don\u2019t suffer from the rounding errors common in binary floating point. That makes totals, taxes, and balances more reliable and easier to match to human expectations and financial rules.\n\n~98 tokens\ncontent_copy\nCopy assistant message\nUser\n31.08.2026 12:30\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 12:30\n\nDecimal is preferable for currency because it can represent base-10 amounts like 0.01 exactly, avoiding the tiny rounding errors that binary floating point can introduce. That makes money calculations more accurate and consistent for sums, taxes, and balances.\n\n~105 tokens\ncontent_copy\nCopy assistant message\nWorked for 8s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+}

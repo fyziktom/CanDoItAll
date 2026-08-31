@@ -1,0 +1,13 @@
+{
+  "ObservedUtc": "2026-08-31T18:00:23.0105088+00:00",
+  "InitialSafetyCaptureExitCode": 1,
+  "Reason": "CIM CreationDate truncates native start timestamp to microseconds, while authority records 100ns precision",
+  "ExpectedStartUtc": "2026-08-31T16:23:47.4068894Z",
+  "CimStartUtc": "2026-08-31T16:23:47.406889Z",
+  "ProcessStartUtc": "2026-08-31T16:23:47.4068894Z",
+  "AllThreeProcessIdsAndParentRelationshipsMatched": true,
+  "ExecutablePathMatched": true,
+  "Correction": "Use Get-Process StartTime at the same precision as baseline, without loosening exact identity comparison",
+  "AppCalls": false,
+  "HostChanges": false
+}

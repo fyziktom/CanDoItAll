@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "createdUtc": "2026-08-31T15:13:06.580464+00:00",
+  "restartScriptSha256": "DDA3CF0E05E68D1FDADFBE23A6ADC30775DF460802473FCB32C3642DF42CFA5D",
+  "restartReviewStatus": "Root independent review required before actual execution; WhatIf passed after alias projection correction.",
+  "sourceCssPath": "CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileBrowser.Components/Components/FileBrowser.razor.css",
+  "sourceCssSha256": "77740EC0F084975BD10BF431DDDFA24C86185BE3BEC2E9B42239F2358E59D984",
+  "publishedImageCssVerified": false,
+  "publishedImageCssAcceptance": "Pending real5214 static asset and UI verification after authorized replacement. No image export during integration quiet gate.",
+  "preservationContract": [
+    "Only exact original client5214 is eligible for replacement; publisher5210 is never a mutation target.",
+    "Baseline IDs/image IDs/StartedAt/environment hash, mounts, network IDs+aliases and security/resources must match before admission.",
+    "Fresh complete Config/HostConfig/mount/configured-network hashes are checked across replacement; Env remains byte-for-byte equivalent.",
+    "Configured IPAMConfig, aliases, Links, DriverOpts and gateway priorities retained; runtime assigned address/MAC/endpoint fields not copied.",
+    "Both pre/post stop checks require terminal completed runs, no pending approvals or journals, and unchanged run hashes.",
+    "Image/source fingerprint frozen; stopped original retained; candidate health failure invokes only owned-candidate cleanup and original rollback.",
+    "Exit137/OOM is a forced stop, never a graceful shutdown claim."
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "baselineHashProvenance": "Git blob SHA256 from 3d5def561 normalized to LF; not a retrospectively claimed baseline executable/worktree hash.",
+  "sources": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedAwareProviderRuntimeProfileSnapshotLoader.cs",
+      "role": "owned",
+      "sha256": "51ddb2b68d86377b67f3472ca3549cdfbea1c45d9eb2c497189e84c5c7ae708f",
+      "normalizedSha256": "51ddb2b68d86377b67f3472ca3549cdfbea1c45d9eb2c497189e84c5c7ae708f",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "86fead21eb728e11f5f288251d6761e9d4e1910334daf3ae2e54964ffe250803"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRuntimeProfileMaterializer.cs",
+      "role": "owned",
+      "sha256": "b9c8d484cb5c31e125e97bde2fd55a6a9bcc30176689e8742a96522081c0dce6",
+      "normalizedSha256": "b9c8d484cb5c31e125e97bde2fd55a6a9bcc30176689e8742a96522081c0dce6",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "deac01cede8ebc3b558a0b30036512713f327bf3f96da77b5ec7b0b3a91e3ac9"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderValidatedRuntimeShape.cs",
+      "role": "owned",
+      "sha256": "fda60f7f5c22d82c3be5f532107f18d476c5f7efbe1b9be3cc025575b3b946c2",
+      "normalizedSha256": "fda60f7f5c22d82c3be5f532107f18d476c5f7efbe1b9be3cc025575b3b946c2",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj",
+      "role": "owned",
+      "sha256": "76cef3be42bf97761d4829ebcf32239944a8231b65c1466e063de1927559f507",
+      "normalizedSha256": "76cef3be42bf97761d4829ebcf32239944a8231b65c1466e063de1927559f507",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "ef65b6c73858b00bd47d80f5a6640c4dc40f689d80b3ebb49f9ce7efbff7bebf"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRuntimeProfileMaterializerTests.cs",
+      "role": "owned",
+      "sha256": "3ac121b9230ffad305aaa6554d5548dcbf141e05c9d01f33b32479ab07fe8437",
+      "normalizedSha256": "3ac121b9230ffad305aaa6554d5548dcbf141e05c9d01f33b32479ab07fe8437",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "abcaec369c1c01fab97071c9e1a0c248e458391f7ee72630d6df4d039554a7a8"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimeProjectionIntegrationTests.cs",
+      "role": "owned",
+      "sha256": "baf74e5be2195a4253fdfbb6462dd063b8c7ef37b6d06a9ed56f0b68d768a289",
+      "normalizedSha256": "baf74e5be2195a4253fdfbb6462dd063b8c7ef37b6d06a9ed56f0b68d768a289",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "22444a1117aff967b79a9e88f75ef06c0a134b6afbd26bd8350e571436136b80"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs",
+      "role": "context",
+      "sha256": "a385b2cc1557205589c932b433f5a9a8482274f6bf8f135f0c0b2444be294a68",
+      "normalizedSha256": "a385b2cc1557205589c932b433f5a9a8482274f6bf8f135f0c0b2444be294a68",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "a385b2cc1557205589c932b433f5a9a8482274f6bf8f135f0c0b2444be294a68"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/PersistedProviderProfileMapper.cs",
+      "role": "context",
+      "sha256": "b9362042fe3d6f8f8fe927183952cc2c1193068895c6993aa4bea2e75183992a",
+      "normalizedSha256": "b9362042fe3d6f8f8fe927183952cc2c1193068895c6993aa4bea2e75183992a",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "b9362042fe3d6f8f8fe927183952cc2c1193068895c6993aa4bea2e75183992a"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/ProviderRuntimeProfileSnapshotService.cs",
+      "role": "context",
+      "sha256": "d2a6544c585d02f16a162213aad44414d4531e1bd41ba048954808e30edd2721",
+      "normalizedSha256": "d2a6544c585d02f16a162213aad44414d4531e1bd41ba048954808e30edd2721",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "d2a6544c585d02f16a162213aad44414d4531e1bd41ba048954808e30edd2721"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderPublicationSnapshotReader.cs",
+      "role": "context",
+      "sha256": "2c698b39c02bd59be0b52c394e6ad2c3789e402102d58d26e1ff4b760c38284a",
+      "normalizedSha256": "2c698b39c02bd59be0b52c394e6ad2c3789e402102d58d26e1ff4b760c38284a",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "2c698b39c02bd59be0b52c394e6ad2c3789e402102d58d26e1ff4b760c38284a"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceConfiguration.cs",
+      "role": "context",
+      "sha256": "7d7a95dbc9487e57914508ac551a0449aeafe5da1c8a06b5da4c75cc2f8dde01",
+      "normalizedSha256": "7d7a95dbc9487e57914508ac551a0449aeafe5da1c8a06b5da4c75cc2f8dde01",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "7d7a95dbc9487e57914508ac551a0449aeafe5da1c8a06b5da4c75cc2f8dde01"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderImportConfiguration.cs",
+      "role": "context",
+      "sha256": "6a95cc183b00155e81cde9cadb156427e7697ffa4fd19f39cb3a477bbf1f84ca",
+      "normalizedSha256": "6a95cc183b00155e81cde9cadb156427e7697ffa4fd19f39cb3a477bbf1f84ca",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "6a95cc183b00155e81cde9cadb156427e7697ffa4fd19f39cb3a477bbf1f84ca"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs",
+      "role": "context",
+      "sha256": "31bed27a8688c5934a4ac597308b6820bcef6cc762c31fa42d16e197e1759b53",
+      "normalizedSha256": "31bed27a8688c5934a4ac597308b6820bcef6cc762c31fa42d16e197e1759b53",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "31bed27a8688c5934a4ac597308b6820bcef6cc762c31fa42d16e197e1759b53"
+    },
+    {
+      "path": "src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCanonicalRevision.cs",
+      "role": "context",
+      "sha256": "63a7ccafef1576ecbea6743f411a4e1d9e00d8e92a7a6f98162323b59ced9b0c",
+      "normalizedSha256": "63a7ccafef1576ecbea6743f411a4e1d9e00d8e92a7a6f98162323b59ced9b0c",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "63a7ccafef1576ecbea6743f411a4e1d9e00d8e92a7a6f98162323b59ced9b0c"
+    },
+    {
+      "path": "src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCatalogContracts.cs",
+      "role": "context",
+      "sha256": "fa8aadb40cd98456e0e8b8eb6122c84effcaaf36d4d2fb883ac9f455730775cc",
+      "normalizedSha256": "fa8aadb40cd98456e0e8b8eb6122c84effcaaf36d4d2fb883ac9f455730775cc",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "fa8aadb40cd98456e0e8b8eb6122c84effcaaf36d4d2fb883ac9f455730775cc"
+    },
+    {
+      "path": "src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCatalogTransportContracts.cs",
+      "role": "context",
+      "sha256": "b3bfc35283a06ec535fb94be26e727d1e79ad1fd4ef502318721459473a8af9b",
+      "normalizedSha256": "b3bfc35283a06ec535fb94be26e727d1e79ad1fd4ef502318721459473a8af9b",
+      "baselineGitCommit": "3d5def561",
+      "baselineGitBlobNormalizedSha256": "b3bfc35283a06ec535fb94be26e727d1e79ad1fd4ef502318721459473a8af9b"
+    }
+  ],
+  "binaries": [
+    {
+      "suite": "Unit",
+      "path": ".artifacts/agent-startup-performance/sb02-tests/bin/CanDoItAll.Tests.Unit/release/CanDoItAll.Tests.Unit.dll",
+      "sha256": "c738afbf45276607640d8fbacffe7afaaf96f125a12a18561485d065e0b19ceb"
+    },
+    {
+      "suite": "Unit",
+      "path": ".artifacts/agent-startup-performance/sb02-tests/bin/CanDoItAll.Tests.Unit/release/CanDoItAll.Modules.AgentFramework.dll",
+      "sha256": "e2485b6ff64bed5595584f31ffd6092e2c3103bd28ddc551a757628a703168ad"
+    },
+    {
+      "suite": "Unit",
+      "path": ".artifacts/agent-startup-performance/sb02-tests/bin/CanDoItAll.Tests.Unit/release/CanDoItAll.Modules.AgentFramework.ProviderManagement.dll",
+      "sha256": "6f132a3eaa91b11fbf0fa3d9eaf0e15b5b701f060e7c8bf6bf927bb1c8226a94"
+    },
+    {
+      "suite": "Integration",
+      "path": ".artifacts/agent-startup-performance/sb02-tests/bin/CanDoItAll.Tests.Integration/release/CanDoItAll.Tests.Integration.dll",
+      "sha256": "08960d404133be96914d15aa4b92eccbfcf0bbb385a0afb2456cef62946743fa"
+    },
+    {
+      "suite": "Integration",
+      "path": ".artifacts/agent-startup-performance/sb02-tests/bin/CanDoItAll.Tests.Integration/release/CanDoItAll.Modules.AgentFramework.dll",
+      "sha256": "e2485b6ff64bed5595584f31ffd6092e2c3103bd28ddc551a757628a703168ad"
+    },
+    {
+      "suite": "Integration",
+      "path": ".artifacts/agent-startup-performance/sb02-tests/bin/CanDoItAll.Tests.Integration/release/CanDoItAll.Modules.AgentFramework.ProviderManagement.dll",
+      "sha256": "6f132a3eaa91b11fbf0fa3d9eaf0e15b5b701f060e7c8bf6bf927bb1c8226a94"
+    }
+  ]
+}

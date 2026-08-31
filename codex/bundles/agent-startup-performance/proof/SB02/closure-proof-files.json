@@ -1,0 +1,52 @@
+[
+  {
+    "Path": "manifest.md",
+    "Sha256": "7704B0B637724774736E44CA14F3F02F7975958F80FD3D382DADF662B7E2BB0A",
+    "Bytes": 8626
+  },
+  {
+    "Path": "semantic-invariants.md",
+    "Sha256": "E92D63D87C34A1CBCFA5BC8E0D3CC7ACE8FBB8DCBB3583CE31BC9ED12137B5A6",
+    "Bytes": 24378
+  },
+  {
+    "Path": "semantic-evidence.md",
+    "Sha256": "B01A69283C02AF9A89A4214E17F02A18812A9BAF9AD995706015DC5F24A1117B",
+    "Bytes": 2475
+  },
+  {
+    "Path": "Audit-Sb02RetainedProof.py",
+    "Sha256": "935A3B7F4F05197F635EFD59E94266EDB7FF85225E6442E49446A4A84574F47E",
+    "Bytes": 4211
+  },
+  {
+    "Path": "schema-check.json",
+    "Sha256": "E77E8FF00A990629856AC822AE9EC271FC13B399E209809E03D90D49DD40C4E8",
+    "Bytes": 421
+  },
+  {
+    "Path": "schema-check.initial.json",
+    "Sha256": "FBF9033FE7DDA1E40E85DAED4C35F29715FFB04269A8EA84B27C7118217AE6B7",
+    "Bytes": 459
+  },
+  {
+    "Path": "transcripts/query-failing-first.md",
+    "Sha256": "97AFC36735D12DF914D2FBC6B245DB5F207E9B837D8EDE3312A017311B55982F",
+    "Bytes": 2189
+  },
+  {
+    "Path": "transcripts/integration-passing.md",
+    "Sha256": "D13B8546FC234E150266BFF2E047069C87880D6466842B9D62C6B1F782FEBB9A",
+    "Bytes": 8232
+  },
+  {
+    "Path": "transcripts/unit-passing.md",
+    "Sha256": "AEC186EBBA97C6338672C6CF9853345645574B61A634F4E2B4D6635676175A3C",
+    "Bytes": 13426
+  },
+  {
+    "Path": "transcripts/anti-stub-audit.log",
+    "Sha256": "713A7D550796F2A3DE39D43113BDA0DD2C1778CDC8595A06643B4BB6521C0031",
+    "Bytes": 2099
+  }
+]

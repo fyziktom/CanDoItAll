@@ -1,0 +1,42 @@
+[
+  {
+    "path": "image-build.command.json",
+    "sha256": "590dcfe1b1495cce427a370c4ddf14b35a8e3b0d752ff8cb855532c686e46158",
+    "bytes": 1364
+  },
+  {
+    "path": "image-build.log",
+    "sha256": "a3acbd47f19fe88bdd6fe16ef19091783ac6ff34c21fcf80b39d5773918e5590",
+    "bytes": 57512
+  },
+  {
+    "path": "image-id.txt",
+    "sha256": "7aa9a1ba5e2847fddad4ee582850e77d6768db77756d59bec806d5ba4e4685ac",
+    "bytes": 71
+  },
+  {
+    "path": "image-result.json",
+    "sha256": "a9b8d27172bd548fcf41e3c4898331550070f4b67d2e646748cbfee5d2892306",
+    "bytes": 552
+  },
+  {
+    "path": "README.md",
+    "sha256": "4718ce3ef7665c3f1a9f37221cb4176af7a866dccbfeabf210f0061523ee6f58",
+    "bytes": 4589
+  },
+  {
+    "path": "source-input-manifest.json",
+    "sha256": "43b992789dc24a0fdfc68676d532f7e44dd9d57bdb045dafb27390f1a1c56c10",
+    "bytes": 1294002
+  },
+  {
+    "path": "verification-contract.json",
+    "sha256": "6e5526c4d248dec10d4f65fd65ed243bb966f8f9f32612d79fb54b9edfe65d14",
+    "bytes": 1654
+  },
+  {
+    "path": "Verify-StartupClientCandidate.ps1",
+    "sha256": "80bc56714c1dd53e505c46f3d632551b351c8916e9d03cfe7b652a49495004b5",
+    "bytes": 7331
+  }
+]

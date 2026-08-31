@@ -1,0 +1,20 @@
+{
+  "Executable": "dotnet",
+  "Arguments": [
+    "publish",
+    "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "--configuration",
+    "Release",
+    "--artifacts-path",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\deployment\\native-build",
+    "--output",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\deployment\\native-publish",
+    "-p:UseLocalCanDoItAllLibraries=true",
+    "--verbosity",
+    "minimal"
+  ],
+  "WorkingDirectory": "C:/repositories/CanDoItAll",
+  "StartedUtc": "2026-08-31T14:50:31.3401912+00:00",
+  "CompletedUtc": "2026-08-31T14:52:23.4412485+00:00",
+  "ExitCode": 1
+}

@@ -1,0 +1,25 @@
+{
+  "recordedUtc": "2026-08-31T15:38:44.3180037+00:00",
+  "helperSha256": "65EF0B4E059D8B20370CC364DA4DD27B6D892B9AA37BC31B1DD9A05A732254DE",
+  "source": ".artifacts/agent-startup-performance/diagnostics/Extract-UiRunEvidence.py",
+  "portableCopy": "proof/SB03/ui/Extract-UiRunEvidence.py",
+  "workingDirectory": "C:\\repositories\\CanDoItAll",
+  "validations": [
+    {
+      "command": "python -c \"import ast,pathlib; p=pathlib.Path('.artifacts/agent-startup-performance/diagnostics/Extract-UiRunEvidence.py'); ast.parse(p.read_text(encoding='utf-8')); print('AST syntax PASS; no source records read.')\"",
+      "exitCode": 0,
+      "timing": "Historical tool invocation reconstructed exactly; start/completion timestamps not captured"
+    },
+    {
+      "command": "python '.artifacts/agent-startup-performance/diagnostics/Extract-UiRunEvidence.py' --help",
+      "exitCode": 0,
+      "timing": "Historical tool invocation reconstructed exactly; start/completion timestamps not captured"
+    },
+    {
+      "commandMetadata": "helper-selfcheck/native-baseline.command.json",
+      "exitCode": 0,
+      "evidence": "helper-selfcheck/native-baseline.json",
+      "purpose": "Baseline helper self-check only; no candidate acceptance claim"
+    }
+  ]
+}

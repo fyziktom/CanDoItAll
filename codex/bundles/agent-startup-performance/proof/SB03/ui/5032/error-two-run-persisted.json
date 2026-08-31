@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "host": "native",
+  "captureStartedUtc": "2026-08-31T16:51:51.688213+00:00",
+  "captureCompletedUtc": "2026-08-31T16:51:52.083348+00:00",
+  "snapshotFileCount": 41,
+  "snapshotSourceBytes": 136603,
+  "sourceRecordsUnchangedAtRecheck": true,
+  "requiresLaterTerminalObservation": false,
+  "limits": "Supporting persisted evidence only. No app calls, locks, recovery or source writes. Hash/list rechecks detect ordinary concurrent changes but are not an atomic snapshot or a guarantee against noncooperating races. Tool text, arguments, message content, provider/model data, environments and serialized contexts are never emitted. Unknown freeform tool outcomes remain UnclassifiedRedacted. Metrics and usage observations are separate overlapping evidence, not additive totals.",
+  "runs": [
+    {
+      "runId": "cc968f49-5d64-4807-8618-377293e5d020",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "c94bbc5c-ff32-43bd-88f4-f61309b9dc0d",
+      "state": "Completed",
+      "outcome": "Succeeded",
+      "isTerminal": true,
+      "revision": 2,
+      "autoApprovePendingToolCalls": false,
+      "pendingApprovals": [],
+      "createdAtUtc": "2026-08-31T16:40:09.334826+00:00",
+      "updatedAtUtc": "2026-08-31T16:40:21.905677+00:00",
+      "startedAtUtc": "2026-08-31T16:40:09.334826+00:00",
+      "completedAtUtc": "2026-08-31T16:40:21.905677+00:00",
+      "pendingApprovalCount": 0,
+      "logs": [
+        {
+          "id": "0bd715a0-c4ec-4b92-8c88-91b52532a2e7",
+          "createdAtUtc": "2026-08-31T16:40:12.752518+00:00",
+          "state": "Preparing",
+          "phase": "Framework"
+        },
+        {
+          "id": "17b71b69-f900-4164-b372-a9ce99b8a71d",
+          "createdAtUtc": "2026-08-31T16:40:13.537541+00:00",
+          "state": "Preparing",
+          "phase": "Skills"
+        },
+        {
+          "id": "2992a1ad-37a1-4b85-ad45-7167def2419a",
+          "createdAtUtc": "2026-08-31T16:40:14.747530+00:00",
+          "state": "Preparing",
+          "phase": "Execution authority"
+        },
+        {
+          "id": "2c8cf209-c69f-435e-bf1b-7c7b6b508443",
+          "createdAtUtc": "2026-08-31T16:40:13.085618+00:00",
+          "state": "Preparing",
+          "phase": "Context contributors"
+        },
+        {
+          "id": "2d9e3f46-67a1-4222-938e-3ac1f8586c98",
+          "createdAtUtc": "2026-08-31T16:40:21.534919+00:00",
+          "state": "Persisting",
+          "phase": "Session"
+        },
+        {
+          "id": "308f2a81-3804-4b57-920c-2154c61be96c",
+          "createdAtUtc": "2026-08-31T16:40:12.410534+00:00",
+          "state": "Preparing",
+          "phase": "Planning"
+        },
+        {
+          "id": "4a4184c5-506f-4dcf-8bb7-6ca5e9520087",
+          "createdAtUtc": "2026-08-31T16:40:15.424274+00:00",
+          "state": "Preparing",
+          "phase": "Session"
+        },
+        {
+          "id": "4d739ec6-5528-4c17-9146-b5acd3f34ea2",
+          "createdAtUtc": "2026-08-31T16:40:15.750868+00:00",
+          "state": "Running",
+          "phase": "Run"
+        },
+        {
+          "id": "6ee3a8f7-8246-472b-8d13-c75c8b586ca6",
+          "createdAtUtc": "2026-08-31T16:40:14.112141+00:00",
+          "state": "Preparing",
+          "phase": "Runtime tool providers"
+        },
+        {
+          "id": "7b017d47-feb7-43ec-9338-d1e248c7eb3c",
+          "createdAtUtc": "2026-08-31T16:40:13.829716+00:00",
+          "state": "Preparing",
+          "phase": "Workspace tools"
+        },
+        {
+          "id": "a13bb67c-c21a-48aa-b135-5d121fd9464b",
+          "createdAtUtc": "2026-08-31T16:40:18.640725+00:00",
+          "state": "WaitingOnTool",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "b6fc4ace-3377-4566-8d5a-15e8123a22bb",
+          "createdAtUtc": "2026-08-31T16:40:20.619607+00:00",
+          "state": "Running",
+          "phase": "Streaming"
+        },
+        {
+          "id": "b81e54d7-70de-4238-8fcb-ba074ea676d4",
+          "createdAtUtc": "2026-08-31T16:40:15.093980+00:00",
+          "state": "Preparing",
+          "phase": "Model parameters"
+        },
+        {
+          "id": "eefc5784-fa46-4b9f-9b3a-32b568e628ba",
+          "createdAtUtc": "2026-08-31T16:40:14.424878+00:00",
+          "state": "Preparing",
+          "phase": "Compaction"
+        },
+        {
+          "id": "f0ff1ff2-75fc-45cd-b03e-286013799755",
+          "createdAtUtc": "2026-08-31T16:40:22.432890+00:00",
+          "state": "Completed",
+          "phase": "Completed"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "17c449be-9062-4169-8c1e-6b1378315b6d",
+          "createdAtUtc": "2026-08-31T16:40:21.905416+00:00",
+          "outcome": "Succeeded",
+          "durationMs": 9508,
+          "inputTokens": 10860,
+          "outputTokens": 207,
+          "toolCalls": 1,
+          "cachedInputTokens": 7680,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "usage": [
+        {
+          "id": "2220bf65-2940-473c-8ffe-5d1010e47eea",
+          "createdAtUtc": "2026-08-31T16:40:21.905353+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 4606,
+          "cachedInputTokens": 3840,
+          "outputTokens": 48,
+          "reasoningTokens": 0,
+          "totalTokens": 4654,
+          "toolCallCount": 0,
+          "cacheWriteTokens": 0
+        },
+        {
+          "id": "980b3f09-32b6-4863-b03e-87fe4ba4be4b",
+          "createdAtUtc": "2026-08-31T16:40:21.905334+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 6254,
+          "cachedInputTokens": 3840,
+          "outputTokens": 159,
+          "reasoningTokens": 0,
+          "totalTokens": 6413,
+          "toolCallCount": 1,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "approvals": [],
+      "receipts": [
+        {
+          "id": "363f1146-6277-0552-a079-c70899cd4507",
+          "toolName": "workspace_stat_path",
+          "startedAtUtc": "2026-08-31T16:40:19.034696+00:00",
+          "completedAtUtc": "2026-08-31T16:40:19.036618+00:00",
+          "durationMilliseconds": 1.922,
+          "outcome": "Failed",
+          "sideEffectMode": "Unspecified"
+        }
+      ],
+      "sessionSnapshot": {
+        "id": "c94bbc5c-ff32-43bd-88f4-f61309b9dc0d",
+        "latestExecutionRunId": "59350507-ddde-4274-aca9-aeefd09d37f7",
+        "createdAtUtc": "2026-08-31T16:40:08.320842+00:00",
+        "updatedAtUtc": "2026-08-31T16:49:12.411192+00:00",
+        "messageCount": 4,
+        "messageCountsByRole": {
+          "User": 2,
+          "Assistant": 2
+        },
+        "messageTokenEstimateTotal": 565,
+        "scope": "Current whole-session counts; messages are not attributed to an individual run."
+      },
+      "recordCounts": {
+        "logs": 15,
+        "metrics": 1,
+        "usage": 2,
+        "approvals": 0,
+        "receipts": 1
+      }
+    },
+    {
+      "runId": "59350507-ddde-4274-aca9-aeefd09d37f7",
+      "agentId": "300a1315-d133-1159-a6b1-b02433ce78c0",
+      "chatSessionId": "c94bbc5c-ff32-43bd-88f4-f61309b9dc0d",
+      "state": "Completed",
+      "outcome": "Succeeded",
+      "isTerminal": true,
+      "revision": 2,
+      "autoApprovePendingToolCalls": false,
+      "pendingApprovals": [],
+      "createdAtUtc": "2026-08-31T16:49:00.104168+00:00",
+      "updatedAtUtc": "2026-08-31T16:49:12.411192+00:00",
+      "startedAtUtc": "2026-08-31T16:49:00.104168+00:00",
+      "completedAtUtc": "2026-08-31T16:49:12.411192+00:00",
+      "pendingApprovalCount": 0,
+      "logs": [
+        {
+          "id": "0945dc4b-caa9-43b0-95c5-a614dbf01520",
+          "createdAtUtc": "2026-08-31T16:49:00.569938+00:00",
+          "state": "Preparing",
+          "phase": "Planning"
+        },
+        {
+          "id": "1d36b7d5-3933-42ec-948c-3dd6e8398111",
+          "createdAtUtc": "2026-08-31T16:49:09.540133+00:00",
+          "state": "WaitingOnTool",
+          "phase": "OtherRedacted"
+        },
+        {
+          "id": "28d63070-047f-4b3f-b08e-b277780ef504",
+          "createdAtUtc": "2026-08-31T16:49:11.320949+00:00",
+          "state": "Running",
+          "phase": "Streaming"
+        },
+        {
+          "id": "41d3acec-f305-4e38-916d-0fe791ea3ee3",
+          "createdAtUtc": "2026-08-31T16:49:02.767178+00:00",
+          "state": "Preparing",
+          "phase": "Workspace tools"
+        },
+        {
+          "id": "4dcc1f14-9560-43c2-8a8d-8de936cb08d3",
+          "createdAtUtc": "2026-08-31T16:49:01.175450+00:00",
+          "state": "Preparing",
+          "phase": "Framework"
+        },
+        {
+          "id": "540c09e6-211d-4c22-9573-87fc541d92fb",
+          "createdAtUtc": "2026-08-31T16:49:02.278892+00:00",
+          "state": "Preparing",
+          "phase": "Skills"
+        },
+        {
+          "id": "5daf5e53-b1b6-477d-ade1-281f5ddb9bff",
+          "createdAtUtc": "2026-08-31T16:49:01.736837+00:00",
+          "state": "Preparing",
+          "phase": "Context contributors"
+        },
+        {
+          "id": "7183dc5b-e482-4843-b84e-5fc45822386a",
+          "createdAtUtc": "2026-08-31T16:49:03.326403+00:00",
+          "state": "Preparing",
+          "phase": "Runtime tool providers"
+        },
+        {
+          "id": "88f62f4a-c771-4976-a63c-b900ff214326",
+          "createdAtUtc": "2026-08-31T16:49:05.931016+00:00",
+          "state": "Preparing",
+          "phase": "Session"
+        },
+        {
+          "id": "946ca5c0-0840-41dd-8eac-4ecae350550e",
+          "createdAtUtc": "2026-08-31T16:49:04.080152+00:00",
+          "state": "Preparing",
+          "phase": "Compaction"
+        },
+        {
+          "id": "b09294cb-2728-4422-b936-ac91975b980a",
+          "createdAtUtc": "2026-08-31T16:49:04.767757+00:00",
+          "state": "Preparing",
+          "phase": "Execution authority"
+        },
+        {
+          "id": "b40f58c3-4cc5-4ecb-ba25-618d7ee19d75",
+          "createdAtUtc": "2026-08-31T16:49:06.460114+00:00",
+          "state": "Running",
+          "phase": "Run"
+        },
+        {
+          "id": "c2b7ff5a-81c7-4496-8004-9744d92c9026",
+          "createdAtUtc": "2026-08-31T16:49:13.197088+00:00",
+          "state": "Completed",
+          "phase": "Completed"
+        },
+        {
+          "id": "c87ab268-1398-4cc2-8879-0b37b28e2516",
+          "createdAtUtc": "2026-08-31T16:49:11.857018+00:00",
+          "state": "Persisting",
+          "phase": "Session"
+        },
+        {
+          "id": "f5c29bf4-6028-477a-9767-92455994daf2",
+          "createdAtUtc": "2026-08-31T16:49:05.360318+00:00",
+          "state": "Preparing",
+          "phase": "Model parameters"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "89451623-1115-40c8-9c5b-15ff51d22bc5",
+          "createdAtUtc": "2026-08-31T16:49:12.410969+00:00",
+          "outcome": "Succeeded",
+          "durationMs": 11853,
+          "inputTokens": 11364,
+          "outputTokens": 191,
+          "toolCalls": 1,
+          "cachedInputTokens": 7680,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "usage": [
+        {
+          "id": "7acb121c-b78c-4f44-9c66-bb9975bec04b",
+          "createdAtUtc": "2026-08-31T16:49:12.410885+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 6642,
+          "cachedInputTokens": 3840,
+          "outputTokens": 169,
+          "reasoningTokens": 0,
+          "totalTokens": 6811,
+          "toolCallCount": 1,
+          "cacheWriteTokens": 0
+        },
+        {
+          "id": "b19058f1-36e0-4520-aed3-9de24583f0a5",
+          "createdAtUtc": "2026-08-31T16:49:12.410903+00:00",
+          "usageStatus": "Observed",
+          "explicitRunIdentityPresent": true,
+          "inputTokens": 4722,
+          "cachedInputTokens": 3840,
+          "outputTokens": 22,
+          "reasoningTokens": 0,
+          "totalTokens": 4744,
+          "toolCallCount": 0,
+          "cacheWriteTokens": 0
+        }
+      ],
+      "approvals": [],
+      "receipts": [
+        {
+          "id": "8ab95eeb-e8f6-6757-992c-701f21af35ba",
+          "toolName": "workspace_stat_path",
+          "startedAtUtc": "2026-08-31T16:49:09.917474+00:00",
+          "completedAtUtc": "2026-08-31T16:49:09.918264+00:00",
+          "durationMilliseconds": 0.79,
+          "outcome": "Failed",
+          "sideEffectMode": "Unspecified"
+        }
+      ],
+      "sessionSnapshot": {
+        "id": "c94bbc5c-ff32-43bd-88f4-f61309b9dc0d",
+        "latestExecutionRunId": "59350507-ddde-4274-aca9-aeefd09d37f7",
+        "createdAtUtc": "2026-08-31T16:40:08.320842+00:00",
+        "updatedAtUtc": "2026-08-31T16:49:12.411192+00:00",
+        "messageCount": 4,
+        "messageCountsByRole": {
+          "User": 2,
+          "Assistant": 2
+        },
+        "messageTokenEstimateTotal": 565,
+        "scope": "Current whole-session counts; messages are not attributed to an individual run."
+      },
+      "recordCounts": {
+        "logs": 15,
+        "metrics": 1,
+        "usage": 2,
+        "approvals": 0,
+        "receipts": 1
+      }
+    }
+  ]
+}

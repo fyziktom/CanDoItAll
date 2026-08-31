@@ -1,0 +1,75 @@
+{
+  "sample": {
+    "id": "native-after-first",
+    "port": 5032,
+    "submitUtc": "2026-08-31T16:27:24.435Z",
+    "submitMono": 134042.20000004768,
+    "firstContentUtc": "2026-08-31T16:27:38.050Z",
+    "firstContentMono": 147656.80000001192,
+    "terminalUiUtc": "2026-08-31T16:27:38.050Z",
+    "terminalUiMono": 147656.90000003576,
+    "stages": [
+      {
+        "stage": "Planning",
+        "utc": "2026-08-31T16:27:28.462Z",
+        "mono": 138068.90000003576
+      },
+      {
+        "stage": "Framework",
+        "utc": "2026-08-31T16:27:28.757Z",
+        "mono": 138364
+      },
+      {
+        "stage": "Context contributors",
+        "utc": "2026-08-31T16:27:29.181Z",
+        "mono": 138787.80000001192
+      },
+      {
+        "stage": "Skills",
+        "utc": "2026-08-31T16:27:29.484Z",
+        "mono": 139091.20000004768
+      },
+      {
+        "stage": "Workspace tools",
+        "utc": "2026-08-31T16:27:29.932Z",
+        "mono": 139539.10000002384
+      },
+      {
+        "stage": "Runtime tool providers",
+        "utc": "2026-08-31T16:27:30.430Z",
+        "mono": 140037.10000002384
+      },
+      {
+        "stage": "Compaction",
+        "utc": "2026-08-31T16:27:30.762Z",
+        "mono": 140369.20000004768
+      },
+      {
+        "stage": "Execution authority",
+        "utc": "2026-08-31T16:27:31.179Z",
+        "mono": 140786.30000001192
+      },
+      {
+        "stage": "Model parameters",
+        "utc": "2026-08-31T16:27:31.558Z",
+        "mono": 141165.30000001192
+      },
+      {
+        "stage": "Session",
+        "utc": "2026-08-31T16:27:31.941Z",
+        "mono": 141548.20000004768
+      },
+      {
+        "stage": "Run",
+        "utc": "2026-08-31T16:27:32.283Z",
+        "mono": 141890.40000003576
+      },
+      {
+        "stage": "Streaming",
+        "utc": "2026-08-31T16:27:35.985Z",
+        "mono": 145592.60000002384
+      }
+    ]
+  },
+  "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n2 messages\n31.08.2026 12:27\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 12:27\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 12:27\n\nDecimal is preferable for currency because it can represent common base-10 amounts exactly, avoiding the tiny rounding errors that binary floating point introduces for values like 0.1 or 0.01. That makes calculations, totals, and comparisons more reliable for money, where even small precision errors can cause visible discrepancies.\n\n~95 tokens\ncontent_copy\nCopy assistant message\nWorked for 12s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+}

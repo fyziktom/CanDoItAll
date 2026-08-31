@@ -1,0 +1,810 @@
+{
+  "samples": [
+    {
+      "sample": {
+        "id": "native-before-01",
+        "port": 5032,
+        "submitUtc": "2026-08-31T13:27:26.982Z",
+        "submitMono": 707997.0999999642,
+        "firstContentUtc": "2026-08-31T13:27:50.139Z",
+        "firstContentMono": 731154.0999999642,
+        "terminalUiUtc": "2026-08-31T13:27:50.139Z",
+        "terminalUiMono": 731154.1999999881,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:27:34.186Z",
+            "mono": 715201.3999999762
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:27:34.91Z",
+            "mono": 715925.0999999642
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:27:35.597Z",
+            "mono": 716611.7999999523
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:27:36.387Z",
+            "mono": 717402
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:27:37.103Z",
+            "mono": 718118.3999999762
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:27:37.978Z",
+            "mono": 718992.3999999762
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:27:38.846Z",
+            "mono": 719861.0999999642
+          },
+          {
+            "stage": "Execution authority",
+            "utc": "2026-08-31T13:27:39.636Z",
+            "mono": 720650.7999999523
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:27:40.203Z",
+            "mono": 721218.3999999762
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:27:41.196Z",
+            "mono": 722210.5
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:27:42.065Z",
+            "mono": 723079.7999999523
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:27:46.734Z",
+            "mono": 727749.1999999881
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n2 messages\n31.08.2026 9:27\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 9:27\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 9:27\n\nDecimal is preferable for currency because it represents base-10 values exactly, so amounts like 0.10, 0.01, and 19.99 do not suffer from binary rounding errors. Binary floating point is optimized for scientific calculations, but it can introduce tiny representation errors that accumulate and lead to incorrect totals, comparisons, or ledger balances.\n\n~103 tokens\ncontent_copy\nCopy assistant message\nWorked for 21s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "native-before-02",
+        "port": 5032,
+        "submitUtc": "2026-08-31T13:30:25.071Z",
+        "submitMono": 886086.0999999642,
+        "firstContentUtc": "2026-08-31T13:30:44.365Z",
+        "firstContentMono": 905379.5,
+        "terminalUiUtc": "2026-08-31T13:30:44.365Z",
+        "terminalUiMono": 905379.5,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:30:30.049Z",
+            "mono": 891064.1999999881
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:30:30.662Z",
+            "mono": 891676.8999999762
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:30:31.446Z",
+            "mono": 892460.7999999523
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:30:32.353Z",
+            "mono": 893367.7999999523
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:30:33.332Z",
+            "mono": 894347.0999999642
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:30:34.155Z",
+            "mono": 895169.8999999762
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:30:35.039Z",
+            "mono": 896054.2999999523
+          },
+          {
+            "stage": "Execution authority",
+            "utc": "2026-08-31T13:30:35.839Z",
+            "mono": 896853.5
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:30:36.742Z",
+            "mono": 897757.1999999881
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:30:37.458Z",
+            "mono": 898472.7999999523
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:30:38.343Z",
+            "mono": 899357.8999999762
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:30:41.211Z",
+            "mono": 902225.5999999642
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n2 messages\n31.08.2026 9:30\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 9:30\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 9:30\n\nDecimal is preferable for currency because it can represent base-10 values like 0.10 and 0.01 exactly, avoiding the rounding errors that binary floating point introduces for many common money amounts. That means calculations, totals, and comparisons stay predictable and accurate to the cent, which is essential for financial software.\n\n~103 tokens\ncontent_copy\nCopy assistant message\nWorked for 17s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "native-before-03",
+        "port": 5032,
+        "submitUtc": "2026-08-31T13:31:03.545Z",
+        "submitMono": 924559.5999999642,
+        "firstContentUtc": "2026-08-31T13:31:22.68Z",
+        "firstContentMono": 943694.5,
+        "terminalUiUtc": "2026-08-31T13:31:22.68Z",
+        "terminalUiMono": 943694.5,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:31:08.674Z",
+            "mono": 929689
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:31:09.394Z",
+            "mono": 930409.3999999762
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:31:10.069Z",
+            "mono": 931084
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:31:10.759Z",
+            "mono": 931773.8999999762
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:31:11.527Z",
+            "mono": 932541.5999999642
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:31:12.427Z",
+            "mono": 933441.5999999642
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:31:13.107Z",
+            "mono": 934121.5999999642
+          },
+          {
+            "stage": "Execution authority",
+            "utc": "2026-08-31T13:31:13.76Z",
+            "mono": 934775.5
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:31:14.37Z",
+            "mono": 935385
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:31:14.975Z",
+            "mono": 935989.8999999762
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:31:15.917Z",
+            "mono": 936931.7999999523
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:31:18.119Z",
+            "mono": 939134.3999999762
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n2 messages\n31.08.2026 9:31\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 9:31\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 9:31\n\nDecimal is preferable for currency because it represents base-10 values exactly, so amounts like 0.10, 0.01, and 19.99 can be stored and calculated without tiny binary rounding errors. Binary floating point is optimized for scientific computation, but it can produce fractions like 0.1 + 0.2 = 0.30000000000000004, which is unacceptable when exact monetary totals, tax, and rounding rules matter.\n\n~128 tokens\ncontent_copy\nCopy assistant message\nWorked for 17s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "native-before-04",
+        "port": 5032,
+        "submitUtc": "2026-08-31T13:31:36.799Z",
+        "submitMono": 957814.5,
+        "firstContentUtc": "2026-08-31T13:31:55.676Z",
+        "firstContentMono": 976690.5,
+        "terminalUiUtc": "2026-08-31T13:31:55.676Z",
+        "terminalUiMono": 976690.5,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:31:42.239Z",
+            "mono": 963253.8999999762
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:31:42.894Z",
+            "mono": 963909.0999999642
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:31:43.432Z",
+            "mono": 964447.2999999523
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:31:44.185Z",
+            "mono": 965200.3999999762
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:31:45.037Z",
+            "mono": 966052.3999999762
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:31:45.726Z",
+            "mono": 966741.0999999642
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:31:46.3Z",
+            "mono": 967314.5
+          },
+          {
+            "stage": "Execution authority",
+            "utc": "2026-08-31T13:31:47.008Z",
+            "mono": 968023.3999999762
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:31:47.865Z",
+            "mono": 968880.0999999642
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:31:48.566Z",
+            "mono": 969581.3999999762
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:31:49.351Z",
+            "mono": 970366.3999999762
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:31:51.855Z",
+            "mono": 972869.7999999523
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n2 messages\n31.08.2026 9:31\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 9:31\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 9:31\n\nDecimal is preferable for currency because it represents base-10 values exactly, so amounts like 0.1 and 0.01 do not suffer from binary rounding errors. Binary floating point can introduce tiny approximation mistakes that accumulate across additions, subtractions, tax, and interest calculations, leading to incorrect money totals.\n\n~100 tokens\ncontent_copy\nCopy assistant message\nWorked for 17s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "native-before-05",
+        "port": 5032,
+        "submitUtc": "2026-08-31T13:32:09.909Z",
+        "submitMono": 990924.2999999523,
+        "firstContentUtc": "2026-08-31T13:32:26.703Z",
+        "firstContentMono": 1007717.3999999762,
+        "terminalUiUtc": "2026-08-31T13:32:26.703Z",
+        "terminalUiMono": 1007717.3999999762,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:32:15.383Z",
+            "mono": 996398.0999999642
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:32:16.105Z",
+            "mono": 997119.6999999881
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:32:16.685Z",
+            "mono": 997700.2999999523
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:32:17.185Z",
+            "mono": 998199.6999999881
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:32:18.058Z",
+            "mono": 999073.2999999523
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:32:18.647Z",
+            "mono": 999661.5
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:32:19.313Z",
+            "mono": 1000327.7999999523
+          },
+          {
+            "stage": "Execution authority",
+            "utc": "2026-08-31T13:32:20.019Z",
+            "mono": 1001034
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:32:20.597Z",
+            "mono": 1001612.1999999881
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:32:21.224Z",
+            "mono": 1002239.1999999881
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:32:21.934Z",
+            "mono": 1002949.1999999881
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:32:23.874Z",
+            "mono": 1004888.7999999523
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n2 messages\n31.08.2026 9:32\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 9:32\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 9:32\n\nDecimal is preferable for currency because it can represent base-10 amounts like 0.10 and 19.99 exactly, avoiding the rounding errors that binary floating point introduces for many decimal fractions. That exactness makes arithmetic, comparisons, and financial reporting more reliable and prevents small errors from accumulating across transactions.\n\n~95 tokens\ncontent_copy\nCopy assistant message\nWorked for 15s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "native-before-continuation",
+        "port": 5032,
+        "initialMessages": 2,
+        "submitUtc": "2026-08-31T13:32:48.535Z",
+        "submitMono": 1029550.3999999762,
+        "firstContentUtc": "2026-08-31T13:33:02.624Z",
+        "firstContentMono": 1043639.0999999642,
+        "terminalUiUtc": "2026-08-31T13:33:02.624Z",
+        "terminalUiMono": 1043639.0999999642,
+        "stages": []
+      },
+      "text": "ACTIVE AGENT CHAT\n\nSpreadsheet Analyst\n\nSpreadsheet and tabular-data worker\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · QuotationPDFs Tests\nContext access allowed\nFollowing: Project structure · QuotationPDFs Tests / canvas\nlink_off\nDetach\nActive\nCompleted\n4 messages\n31.08.2026 9:33\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n31.08.2026 9:32\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 9:32\n\nDecimal is preferable for currency because it can represent base-10 amounts like 0.10 and 19.99 exactly, avoiding the rounding errors that binary floating point introduces for many decimal fractions. That exactness makes arithmetic, comparisons, and financial reporting more reliable and prevents small errors from accumulating across transactions.\n\n~95 tokens\ncontent_copy\nCopy assistant message\nUser\n31.08.2026 9:32\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n31.08.2026 9:33\n\nDecimal is preferable for currency because it can represent base-10 amounts like 0.10 and 19.99 exactly, while binary floating point often cannot. That exactness avoids rounding surprises and makes financial calculations more reliable.\n\n~92 tokens\ncontent_copy\nCopy assistant message\nWorked for 12s\n14 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "client-before-01",
+        "port": 5214,
+        "submitUtc": "2026-08-31T13:33:14.476Z",
+        "submitMono": 929090.1000000238,
+        "firstContentUtc": "2026-08-31T13:34:04.225Z",
+        "firstContentMono": 978839.5,
+        "terminalUiUtc": "2026-08-31T13:34:04.225Z",
+        "terminalUiMono": 978839.6000000238,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:33:20.712Z",
+            "mono": 935326.2000000477
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:33:22.906Z",
+            "mono": 937520
+          },
+          {
+            "stage": "Approval policy",
+            "utc": "2026-08-31T13:33:25.024Z",
+            "mono": 939638.4000000358
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:33:27.35Z",
+            "mono": 941963.9000000358
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:33:29.63Z",
+            "mono": 944244.2000000477
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:33:32.102Z",
+            "mono": 946716.3000000119
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:33:34.988Z",
+            "mono": 949601.7000000477
+          },
+          {
+            "stage": "Capability compatibility",
+            "utc": "2026-08-31T13:33:37.847Z",
+            "mono": 952461.6000000238
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:33:40.465Z",
+            "mono": 955079
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:33:42.539Z",
+            "mono": 957153.5
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:33:45.072Z",
+            "mono": 959685.7000000477
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:33:47.706Z",
+            "mono": 962319.8000000119
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:33:53.305Z",
+            "mono": 967919.3000000119
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · Calculator\nContext access allowed\nFollowing: Project structure · Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n2 messages\n08/31/2026 13:33\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 13:33\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 13:33\n\nDecimal is preferable for currency because it represents base-10 values exactly, avoiding the rounding errors that occur when binary floating point approximates values such as 0.1. This ensures predictable totals, comparisons, and financial results.\n\n~49 tokens\ncontent_copy\nCopy assistant message\nWorked for 41s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "client-before-02",
+        "port": 5214,
+        "submitUtc": "2026-08-31T13:34:22.923Z",
+        "submitMono": 997537.3000000119,
+        "firstContentUtc": "2026-08-31T13:35:12.195Z",
+        "firstContentMono": 1046809.6000000238,
+        "terminalUiUtc": "2026-08-31T13:35:12.195Z",
+        "terminalUiMono": 1046809.6000000238,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:34:28.165Z",
+            "mono": 1002779.6000000238
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:34:30.607Z",
+            "mono": 1005221.3000000119
+          },
+          {
+            "stage": "Approval policy",
+            "utc": "2026-08-31T13:34:32.709Z",
+            "mono": 1007323.5
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:34:35.367Z",
+            "mono": 1009981.5
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:34:37.661Z",
+            "mono": 1012275.3000000119
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:34:39.917Z",
+            "mono": 1014531.5
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:34:42.7Z",
+            "mono": 1017314.1000000238
+          },
+          {
+            "stage": "Capability compatibility",
+            "utc": "2026-08-31T13:34:45.051Z",
+            "mono": 1019665.5
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:34:47.584Z",
+            "mono": 1022198.4000000358
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:34:49.972Z",
+            "mono": 1024586.5
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:34:52.578Z",
+            "mono": 1027191.9000000358
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:34:54.82Z",
+            "mono": 1029434.3000000119
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:35:00.613Z",
+            "mono": 1035226.9000000358
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · Calculator\nContext access allowed\nFollowing: Project structure · Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n2 messages\n08/31/2026 13:35\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 13:34\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 13:35\n\nDecimal is preferable for currency because it represents base-10 values exactly, avoiding the rounding errors that binary floating point can introduce for amounts such as 0.10. This makes financial calculations, comparisons, and totals predictable and accurate.\n\n~50 tokens\ncontent_copy\nCopy assistant message\nWorked for 40s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "client-before-03",
+        "port": 5214,
+        "submitUtc": "2026-08-31T13:35:45.675Z",
+        "submitMono": 1080289,
+        "firstContentUtc": "2026-08-31T13:36:34.244Z",
+        "firstContentMono": 1128858.1000000238,
+        "terminalUiUtc": "2026-08-31T13:36:34.244Z",
+        "terminalUiMono": 1128858.2000000477,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:35:51.23Z",
+            "mono": 1085844.6000000238
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:35:53.343Z",
+            "mono": 1087957.1000000238
+          },
+          {
+            "stage": "Approval policy",
+            "utc": "2026-08-31T13:35:55.568Z",
+            "mono": 1090181.800000012
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:35:57.732Z",
+            "mono": 1092346.4000000358
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:35:59.914Z",
+            "mono": 1094528.6000000238
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:36:02.334Z",
+            "mono": 1096948.2000000477
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:36:04.866Z",
+            "mono": 1099479.800000012
+          },
+          {
+            "stage": "Capability compatibility",
+            "utc": "2026-08-31T13:36:07.105Z",
+            "mono": 1101719.1000000238
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:36:09.28Z",
+            "mono": 1103894
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:36:12.44Z",
+            "mono": 1107054.300000012
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:36:14.868Z",
+            "mono": 1109482.6000000238
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:36:17.154Z",
+            "mono": 1111767.9000000358
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:36:23.347Z",
+            "mono": 1117960.9000000358
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · Calculator\nContext access allowed\nFollowing: Project structure · Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n2 messages\n08/31/2026 13:36\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 13:35\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 13:36\n\nDecimal is preferable for currency because it represents base-10 values exactly, avoiding the rounding errors that binary floating point can introduce when representing common amounts such as 0.10. This makes financial calculations, comparisons, and totals more predictable and auditable.\n\n~54 tokens\ncontent_copy\nCopy assistant message\nWorked for 40s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "client-before-04",
+        "port": 5214,
+        "submitUtc": "2026-08-31T13:36:47.757Z",
+        "submitMono": 1142371.1000000238,
+        "firstContentUtc": "2026-08-31T13:37:36.927Z",
+        "firstContentMono": 1191541.4000000358,
+        "terminalUiUtc": "2026-08-31T13:37:36.927Z",
+        "terminalUiMono": 1191541.4000000358,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:36:53.302Z",
+            "mono": 1147916.2000000477
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:36:55.569Z",
+            "mono": 1150183
+          },
+          {
+            "stage": "Approval policy",
+            "utc": "2026-08-31T13:36:57.884Z",
+            "mono": 1152498.1000000238
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:37:00.213Z",
+            "mono": 1154827.1000000238
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:37:02.532Z",
+            "mono": 1157146
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:37:04.859Z",
+            "mono": 1159473.5
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:37:07.129Z",
+            "mono": 1161743.300000012
+          },
+          {
+            "stage": "Capability compatibility",
+            "utc": "2026-08-31T13:37:09.469Z",
+            "mono": 1164083.5
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:37:12.24Z",
+            "mono": 1166854.4000000358
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:37:14.477Z",
+            "mono": 1169091.5
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:37:17.202Z",
+            "mono": 1171816.6000000238
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:37:20.086Z",
+            "mono": 1174700.1000000238
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:37:26.455Z",
+            "mono": 1181069.4000000358
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · Calculator\nContext access allowed\nFollowing: Project structure · Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n2 messages\n08/31/2026 13:37\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 13:36\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 13:37\n\nDecimal is preferable for currency because it represents base-10 values exactly, avoiding the rounding errors that binary floating point can introduce when storing decimal fractions such as 0.10. This produces more predictable totals, comparisons, and financial reports.\n\n~51 tokens\ncontent_copy\nCopy assistant message\nWorked for 41s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "client-before-05",
+        "port": 5214,
+        "submitUtc": "2026-08-31T13:38:01.939Z",
+        "submitMono": 1216553.5,
+        "firstContentUtc": "2026-08-31T13:38:52.512Z",
+        "firstContentMono": 1267125.800000012,
+        "terminalUiUtc": "2026-08-31T13:38:52.512Z",
+        "terminalUiMono": 1267125.800000012,
+        "stages": [
+          {
+            "stage": "Planning",
+            "utc": "2026-08-31T13:38:07.575Z",
+            "mono": 1222188.7000000477
+          },
+          {
+            "stage": "Framework",
+            "utc": "2026-08-31T13:38:09.798Z",
+            "mono": 1224412.300000012
+          },
+          {
+            "stage": "Approval policy",
+            "utc": "2026-08-31T13:38:12.175Z",
+            "mono": 1226788.7000000477
+          },
+          {
+            "stage": "Context contributors",
+            "utc": "2026-08-31T13:38:14.621Z",
+            "mono": 1229235.1000000238
+          },
+          {
+            "stage": "Skills",
+            "utc": "2026-08-31T13:38:16.994Z",
+            "mono": 1231607.800000012
+          },
+          {
+            "stage": "Workspace tools",
+            "utc": "2026-08-31T13:38:19.379Z",
+            "mono": 1233993.6000000238
+          },
+          {
+            "stage": "Runtime tool providers",
+            "utc": "2026-08-31T13:38:22.252Z",
+            "mono": 1236866.2000000477
+          },
+          {
+            "stage": "Capability compatibility",
+            "utc": "2026-08-31T13:38:24.489Z",
+            "mono": 1239102.7000000477
+          },
+          {
+            "stage": "Compaction",
+            "utc": "2026-08-31T13:38:26.782Z",
+            "mono": 1241396.2000000477
+          },
+          {
+            "stage": "Model parameters",
+            "utc": "2026-08-31T13:38:29.127Z",
+            "mono": 1243740.800000012
+          },
+          {
+            "stage": "Session",
+            "utc": "2026-08-31T13:38:31.421Z",
+            "mono": 1246035.4000000358
+          },
+          {
+            "stage": "Run",
+            "utc": "2026-08-31T13:38:34.241Z",
+            "mono": 1248854.7000000477
+          },
+          {
+            "stage": "Streaming",
+            "utc": "2026-08-31T13:38:40.572Z",
+            "mono": 1255186.4000000358
+          }
+        ]
+      },
+      "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · Calculator\nContext access allowed\nFollowing: Project structure · Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n2 messages\n08/31/2026 13:38\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 13:38\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 13:38\n\ndecimal represents base-10 fractional values more accurately, avoiding many rounding errors that occur when binary floating point approximates values such as 0.10. This makes it better suited for currency calculations, where predictable rounding and exact financial totals are essential.\n\n~85 tokens\ncontent_copy\nCopy assistant message\nWorked for 42s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    },
+    {
+      "sample": {
+        "id": "client-before-continuation",
+        "port": 5214,
+        "initialMessages": 2,
+        "submitUtc": "2026-08-31T13:39:13.682Z",
+        "submitMono": 1288296.5,
+        "firstContentUtc": "2026-08-31T13:40:01.458Z",
+        "firstContentMono": 1336071.9000000358,
+        "terminalUiUtc": "2026-08-31T13:40:01.458Z",
+        "terminalUiMono": 1336071.9000000358,
+        "stages": []
+      },
+      "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure · Calculator\nContext access allowed\nFollowing: Project structure · Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n4 messages\n08/31/2026 13:39\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 13:38\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 13:38\n\ndecimal represents base-10 fractional values more accurately, avoiding many rounding errors that occur when binary floating point approximates values such as 0.10. This makes it better suited for currency calculations, where predictable rounding and exact financial totals are essential.\n\n~85 tokens\ncontent_copy\nCopy assistant message\nUser\n08/31/2026 13:39\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 13:39\n\ndecimal represents base-10 fractional values more accurately, avoiding many rounding errors that binary floating point can introduce for amounts such as 0.10. This makes it preferable for currency calculations, where predictable rounding and accurate financial totals are essential.\n\n~74 tokens\ncontent_copy\nCopy assistant message\nWorked for 39s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+    }
+  ],
+  "source": "Real Playwright MCP UI sends and read-only DOM observer"
+}

@@ -1,0 +1,127 @@
+{
+  "ok": true,
+  "complete": false,
+  "confidence": "Low",
+  "fallbackKind": "AllSuppliedSuites",
+  "fallbackReason": "Static traversal exhausted its explicit member budget.",
+  "diagnosticCounts": {
+    "TIA1006": 595,
+    "TIA2001": 1,
+    "TIA3004": 1
+  },
+  "health": [
+    {
+      "suiteName": "Unit",
+      "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Unit.slnx",
+      "projectCount": 127,
+      "sourceTestCount": 5623,
+      "isHealthy": true,
+      "diagnosticCount": 393
+    },
+    {
+      "suiteName": "Integration",
+      "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Integration.slnx",
+      "projectCount": 126,
+      "sourceTestCount": 1067,
+      "isHealthy": true,
+      "diagnosticCount": 158
+    },
+    {
+      "suiteName": "Components",
+      "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Components.slnx",
+      "projectCount": 124,
+      "sourceTestCount": 1078,
+      "isHealthy": true,
+      "diagnosticCount": 256
+    }
+  ],
+  "resolved": [
+    {
+      "changeIndex": 0,
+      "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Unit.slnx",
+      "sourcePath": "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\FileSystem\\DurableFileWriter.cs",
+      "lineRanges": [
+        {
+          "startLine": 381,
+          "endLine": 386
+        },
+        {
+          "startLine": 405,
+          "endLine": 417
+        }
+      ],
+      "symbolKey": "CanDoItAll.Infrastructure|M:CanDoItAll.Infrastructure.DurableFileWriter.EnsureDirectoryTree(System.String,System.String,System.Boolean)",
+      "symbolDisplayName": "CanDoItAll.Infrastructure.DurableFileWriter.EnsureDirectoryTree(string, string, bool)",
+      "projectName": "CanDoItAll.Infrastructure",
+      "projectPath": "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj",
+      "changeShape": "BodyOnly",
+      "isPublicApi": false,
+      "behaviorIntent": "BehaviorPreservingImplementation",
+      "resolutionMessage": "Changed lines are structurally confined to an executable member body.",
+      "isResolved": true
+    }
+  ],
+  "required": [
+    {
+      "suiteName": "All supplied suites",
+      "workspacePath": "",
+      "projectName": "All test projects",
+      "projectPath": "",
+      "scopeKind": "AllSuppliedSuites",
+      "selectors": [],
+      "impactedSourceTestCount": 7768,
+      "selectedSourceTestCount": 7768,
+      "additionalSourceTestCount": 0,
+      "representativeReasons": []
+    }
+  ],
+  "conditional": [],
+  "containment": [
+    {
+      "changedSymbol": "CanDoItAll.Infrastructure.DurableFileWriter.EnsureDirectoryTree(string, string, bool)",
+      "sourcePath": "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\FileSystem\\DurableFileWriter.cs",
+      "directTestCount": 0,
+      "indirectTestCount": 3025,
+      "applied": false,
+      "explanation": "Containment is blocked because another change, workspace, or traversal condition requires a broad fallback.",
+      "promotionTriggers": [
+        "A direct helper test fails or discovers zero runtime tests.",
+        "The signature, attributes, accessibility, nullability, defaults, base/interface contract, DI registration, or serialized shape changed.",
+        "The optimization may affect observable output, exceptions, ordering, timing, concurrency, allocation-sensitive behavior, or numeric precision.",
+        "Reflection, dynamic dispatch, generated code, or an unhealthy workspace makes the static relationship path incomplete."
+      ]
+    }
+  ],
+  "correlationId": "code-analytics_fd8ef1acefab46c0ab06b2e72b4030eb",
+  "timestampUtc": "2026-08-31T14:15:58.0454385+00:00",
+  "representativeDiagnostics": [
+    {
+      "code": "TIA2001",
+      "message": "Reverse impact traversal exceeded the configured 5000 member budget. The result requires a broader fallback."
+    },
+    {
+      "code": "TIA3004",
+      "message": "Dynamic, reflection, expression-tree, or function-pointer dispatch prevents a complete static relationship proof. All supplied suites are required."
+    },
+    {
+      "code": "TIA1006",
+      "message": "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\Components\\Modals\\DialogService.cs:32: Reflection or expression dispatch through 'System.Type.IsAssignableFrom(System.Type?)'."
+    },
+    {
+      "code": "TIA1006",
+      "message": "C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Components\\Composition\\FileInteractionRendererRegistry.cs:25: Reflection or expression dispatch through 'System.Reflection.MemberInfo.GetCustomAttributes(System.Type, bool)'."
+    },
+    {
+      "code": "TIA1006",
+      "message": "C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Components\\Composition\\FileInteractionRendererRegistry.cs:25: Reflection or expression dispatch through 'System.Type.GetProperty(string)'."
+    },
+    {
+      "code": "TIA1006",
+      "message": "C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Components\\Composition\\FileInteractionRendererRegistry.cs:25: Reflection or expression dispatch through 'System.Type.IsAssignableFrom(System.Type?)'."
+    },
+    {
+      "code": "TIA1006",
+      "message": "C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Spreadsheet\\Preview\\SpreadsheetWorkbookPreviewReader.cs:290: Reflection or expression dispatch through 'System.Reflection.Assembly.GetManifestResourceStream(string)'."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "Executable": "python",
+  "Arguments": [
+    ".artifacts/agent-startup-performance/diagnostics/Extract-UiRunEvidence.py",
+    "--host",
+    "native",
+    "--run-id",
+    "cc968f49-5d64-4807-8618-377293e5d020"
+  ],
+  "HelperSha256": "65EF0B4E059D8B20370CC364DA4DD27B6D892B9AA37BC31B1DD9A05A732254DE",
+  "StartedUtc": "2026-08-31T16:45:10.7853576+00:00",
+  "CompletedUtc": "2026-08-31T16:45:11.1266128+00:00",
+  "ExitCode": 0,
+  "AppCalls": false,
+  "SourceWrites": false,
+  "Scope": "Exact root-supplied run and its exact session only",
+  "Stdout": "error-persisted-run.json",
+  "Stderr": "error-extraction.stderr.txt"
+}

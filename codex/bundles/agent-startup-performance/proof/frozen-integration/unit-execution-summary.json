@@ -1,0 +1,18 @@
+{
+  "Total": 7221,
+  "Executed": 7221,
+  "Passed": 7219,
+  "Failed": 2,
+  "NotExecuted": 0,
+  "ExitCode": 1,
+  "NonPassing": [
+    {
+      "Name": "CanDoItAll.Tests.Unit.Infrastructure.CrossPlatformCiWorkflowTests.Active_workflow_defines_three_actual_host_gates_with_pinned_sibling_sources",
+      "Outcome": "Failed"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Unit.Infrastructure.RepositoryNamingHygieneTests.RepositoryNamingHygiene_active_tests_do_not_contain_work_package_identifiers",
+      "Outcome": "Failed"
+    }
+  ]
+}

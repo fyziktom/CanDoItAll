@@ -1,0 +1,349 @@
+{
+  "decision": "Pass",
+  "before": {
+    "snapshotId": "snap-20260831122755-8dc56aa3",
+    "createdUtc": "2026-08-31T12:27:55.6267473+00:00",
+    "request": {
+      "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+      "scopeProjectNames": [
+        "CanDoItAll.Abstractions",
+        "CanDoItAll.AgentFramework.Abstractions",
+        "CanDoItAll.AgentFramework.Core",
+        "CanDoItAll.AgentFramework.Models",
+        "CanDoItAll.AgentFramework.Persistence",
+        "CanDoItAll.Infrastructure",
+        "CanDoItAll.Modules.AgentFramework"
+      ],
+      "scopeNamespacePrefixes": [],
+      "includeDi": true,
+      "includePersistence": true,
+      "includeRisks": true,
+      "includeXmlDocs": false,
+      "includeMermaidExports": false
+    },
+    "summary": {
+      "projectCount": 5,
+      "typeCount": 2234,
+      "memberCount": 18647,
+      "serviceRegistrationCount": 111,
+      "entityCount": 22,
+      "findingCount": 719,
+      "openQuestionCount": 29,
+      "diagnosticCount": 29
+    },
+    "solution": {
+      "name": "CanDoItAll.Modules.AgentFramework",
+      "path": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+      "projectCount": 5,
+      "documentCount": 583
+    },
+    "projects": [
+      {
+        "name": "CanDoItAll.AgentFramework.Core",
+        "projectId": "proj-candoitall-agentframework-core",
+        "documentCount": 173,
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj"
+      },
+      {
+        "name": "CanDoItAll.AgentFramework.Models",
+        "projectId": "proj-candoitall-agentframework-models",
+        "documentCount": 106,
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj"
+      },
+      {
+        "name": "CanDoItAll.AgentFramework.Persistence",
+        "projectId": "proj-candoitall-agentframework-persistence",
+        "documentCount": 31,
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj"
+      },
+      {
+        "name": "CanDoItAll.Infrastructure",
+        "projectId": "proj-candoitall-infrastructure",
+        "documentCount": 94,
+        "path": "../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj"
+      },
+      {
+        "name": "CanDoItAll.Modules.AgentFramework",
+        "projectId": "proj-candoitall-modules-agentframework",
+        "documentCount": 179,
+        "path": "CanDoItAll.Modules.AgentFramework.csproj"
+      }
+    ],
+    "projectReferenceEdges": [
+      "proj-candoitall-agentframework-core->proj-candoitall-agentframework-models",
+      "proj-candoitall-agentframework-persistence->proj-candoitall-agentframework-core",
+      "proj-candoitall-agentframework-persistence->proj-candoitall-agentframework-models",
+      "proj-candoitall-agentframework-persistence->proj-candoitall-infrastructure",
+      "proj-candoitall-modules-agentframework->proj-candoitall-agentframework-core",
+      "proj-candoitall-modules-agentframework->proj-candoitall-agentframework-models",
+      "proj-candoitall-modules-agentframework->proj-candoitall-agentframework-persistence",
+      "proj-candoitall-modules-agentframework->proj-candoitall-infrastructure"
+    ],
+    "cycles": [
+      {
+        "level": "Module",
+        "nodeIds": [
+          "mod-proj-candoitall-infrastructure-candoitall-infrastru-003f42c311d9",
+          "mod-proj-candoitall-infrastructure-candoitall-infrastru-7e6c193df708"
+        ]
+      },
+      {
+        "level": "Module",
+        "nodeIds": [
+          "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+          "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+        ]
+      },
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+        ]
+      },
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+          "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+        ]
+      }
+    ],
+    "diagnosticGroups": {
+      "Info DI0001": 28,
+      "Info EF0005": 1
+    }
+  },
+  "after": {
+    "snapshotId": "snap-20260831145425-6ecd81a6",
+    "createdUtc": "2026-08-31T14:54:25.7365731+00:00",
+    "request": {
+      "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+      "scopeProjectNames": [
+        "CanDoItAll.AgentFramework.Core",
+        "CanDoItAll.AgentFramework.Models",
+        "CanDoItAll.AgentFramework.Persistence",
+        "CanDoItAll.Infrastructure",
+        "CanDoItAll.Modules.AgentFramework"
+      ],
+      "scopeNamespacePrefixes": [],
+      "includeDi": true,
+      "includePersistence": true,
+      "includeRisks": true,
+      "includeXmlDocs": false,
+      "includeMermaidExports": true
+    },
+    "summary": {
+      "projectCount": 5,
+      "typeCount": 2235,
+      "memberCount": 18652,
+      "serviceRegistrationCount": 111,
+      "entityCount": 22,
+      "findingCount": 719,
+      "openQuestionCount": 29,
+      "diagnosticCount": 40
+    },
+    "solution": {
+      "name": "CanDoItAll.Modules.AgentFramework",
+      "path": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+      "projectCount": 5,
+      "documentCount": 583
+    },
+    "projects": [
+      {
+        "name": "CanDoItAll.AgentFramework.Core",
+        "projectId": "proj-candoitall-agentframework-core",
+        "documentCount": 173,
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj"
+      },
+      {
+        "name": "CanDoItAll.AgentFramework.Models",
+        "projectId": "proj-candoitall-agentframework-models",
+        "documentCount": 106,
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj"
+      },
+      {
+        "name": "CanDoItAll.AgentFramework.Persistence",
+        "projectId": "proj-candoitall-agentframework-persistence",
+        "documentCount": 31,
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj"
+      },
+      {
+        "name": "CanDoItAll.Infrastructure",
+        "projectId": "proj-candoitall-infrastructure",
+        "documentCount": 94,
+        "path": "../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj"
+      },
+      {
+        "name": "CanDoItAll.Modules.AgentFramework",
+        "projectId": "proj-candoitall-modules-agentframework",
+        "documentCount": 179,
+        "path": "CanDoItAll.Modules.AgentFramework.csproj"
+      }
+    ],
+    "projectReferenceEdges": [
+      "proj-candoitall-agentframework-core->proj-candoitall-agentframework-models",
+      "proj-candoitall-agentframework-persistence->proj-candoitall-agentframework-core",
+      "proj-candoitall-agentframework-persistence->proj-candoitall-agentframework-models",
+      "proj-candoitall-agentframework-persistence->proj-candoitall-infrastructure",
+      "proj-candoitall-modules-agentframework->proj-candoitall-agentframework-core",
+      "proj-candoitall-modules-agentframework->proj-candoitall-agentframework-models",
+      "proj-candoitall-modules-agentframework->proj-candoitall-agentframework-persistence",
+      "proj-candoitall-modules-agentframework->proj-candoitall-infrastructure"
+    ],
+    "cycles": [
+      {
+        "level": "Module",
+        "nodeIds": [
+          "mod-proj-candoitall-infrastructure-candoitall-infrastru-003f42c311d9",
+          "mod-proj-candoitall-infrastructure-candoitall-infrastru-7e6c193df708"
+        ]
+      },
+      {
+        "level": "Module",
+        "nodeIds": [
+          "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+          "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+        ]
+      },
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+        ]
+      },
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+          "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+        ]
+      }
+    ],
+    "diagnosticGroups": {
+      "Info DI0001": 28,
+      "Info EF0005": 1,
+      "Info MRD0001": 11
+    }
+  },
+  "sameLoadedProjects": true,
+  "projectEdgesUnchanged": true,
+  "cyclesUnchanged": true,
+  "projectCycleCountAfter": 0,
+  "addedFindings": [],
+  "removedFindings": [],
+  "changedFindingDescriptions": [
+    {
+      "id": "finding-file-size-doc-foundation-candoitall-infrastructure-42226a6aecf1",
+      "rule": "COMPLEXITY-001",
+      "severity": "Warning",
+      "before": "../../Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs has 656 lines.",
+      "after": "../../Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs has 666 lines.",
+      "path": "../../Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs"
+    },
+    {
+      "id": "finding-file-size-doc-maf-common-candoitall-agentframework-d56c870c1450",
+      "rule": "COMPLEXITY-001",
+      "severity": "Warning",
+      "before": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs has 1542 lines.",
+      "after": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs has 1550 lines.",
+      "path": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs"
+    },
+    {
+      "id": "finding-file-size-doc-maf-common-candoitall-agentframework-e903e4856a93",
+      "rule": "COMPLEXITY-001",
+      "severity": "Warning",
+      "before": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs has 3372 lines.",
+      "after": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs has 3374 lines.",
+      "path": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs"
+    },
+    {
+      "id": "finding-file-size-doc-maf-common-candoitall-agentframework-243c937172c9",
+      "rule": "COMPLEXITY-001",
+      "severity": "Warning",
+      "before": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs has 2271 lines.",
+      "after": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs has 2283 lines.",
+      "path": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs"
+    },
+    {
+      "id": "finding-type-size-type-proj-candoitall-agentframework-persi-2836cbd4ae3e",
+      "rule": "COMPLEXITY-002",
+      "severity": "Info",
+      "before": "CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceExecutionSliceStore exposes 110 source members.",
+      "after": "CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceExecutionSliceStore exposes 111 source members.",
+      "path": "../../MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs"
+    },
+    {
+      "id": "finding-type-size-type-proj-candoitall-modules-agentframewo-32136fc75123",
+      "rule": "COMPLEXITY-002",
+      "severity": "Info",
+      "before": "CanDoItAll.Modules.AgentFramework.DatabaseProviderRuntimeProfileSnapshotLoader exposes 10 source members.",
+      "after": "CanDoItAll.Modules.AgentFramework.DatabaseProviderRuntimeProfileSnapshotLoader exposes 12 source members.",
+      "path": "Providers/SharedAwareProviderRuntimeProfileSnapshotLoader.cs"
+    }
+  ],
+  "newDiagnostics": [
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Core was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Core was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Models was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Models was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Persistence was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Persistence was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Infrastructure was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Infrastructure.Storage was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.Pages was truncated to 80 types."
+    }
+  ],
+  "scopeNotes": [
+    "Before requested two additional unavailable Abstractions names; both actual inventories contain exactly the same five projects and583documents.",
+    "After enabled Mermaid exports; eleven extra Info MRD0001 messages describe diagram-only80-type truncation, not missing model facts. Full dependency facts are used for graph/cycle comparisons.",
+    "SB02 ProviderManagement/new IVT and SharedProviderValidatedRuntimeShape are outside this five-project scope and separately reviewed in proof/SB02/architecture-review.md and architecture-comparison.json.",
+    "No broad impacted-tests query, production/test edit, test execution or deployment was performed for this review."
+  ]
+}

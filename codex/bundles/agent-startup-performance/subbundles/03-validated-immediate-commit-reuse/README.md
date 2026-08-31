@@ -2,11 +2,12 @@
 
 ## Status
 
-- `Ready` for later execution; not started. SB01 dependency not yet executed.
+- Status: Completed
+- Focused gate: Pass. Execution authorization and Phase 0 are satisfied. Integrated real UI, native approvals, performance and final host checkpoint passed; see proof/SB03/manifest.md and proof/SB03/ui/validation-summary.md.
 
 ## Objective
 
-Remove redundant persisted-state rereads/repeated projection preparation from the immediate existing-run commit while retaining complete recovery validation, metadata publication and durability.
+Remove up to five redundant raw comparison reads from changed payloads in the immediate existing-run commit, while retaining every fresh conflict-validation read, both journal validations, the full chat-target rebuild, complete recovery behavior, metadata publication and durability.
 
 ## Covered Inputs
 
@@ -15,7 +16,7 @@ Remove redundant persisted-state rereads/repeated projection preparation from th
 
 ## Prerequisites
 
-- Future execution authorization, Phase0 baseline and SB01 security/downstream gate.
+- Execution authorization, Phase0 baseline and SB01 security/downstream gate: satisfied; see inputs/04-execution-request.md and proof/SB01/independent-review.md.
 - SB02 may be independent of implementation but must pass before frozen combined proof.
 - Characterize required timestamps/index metadata and all recovery boundaries first.
 
@@ -58,7 +59,7 @@ Owning tests, selectors and crash-host discovery are defined there.
 1. Characterize immediate and recovery paths, per-collection reads, canonical projection outputs and all failure boundaries.
 2. Make immediate trust explicit and private/typed; a recovered journal cannot opt into trust. Preserve journal schema/version/previous-target snapshots, order and deletion.
 3. Reuse already validated in-memory plans within the uninterrupted lock; retain fresh actual write/commit safety. Do not assume a workspace lock protects against noncooperating filesystem edits where the old contract checked them.
-4. Remove duplicate historical reads/projection preparation only when current checks are provably redundant. Preserve run/session UpdatedAtUtc, agent LastUsedAtUtc, execution/workspace/usage/chat revision metadata and current summary selection.
+4. Apply the accepted narrow branch only: after the existing fresh typed read and transition validation, a Prepared payload that differs from its target uses the unchanged atomic writer directly. Matching typed targets and every RecoveredJournal path retain WriteJsonIfChangedAsync, including its fresh raw comparison and canonicalization. Scope is session, run, execution index, aggregate usage index and the separate chat-index owner. Do not change JsonStore globally, ProviderUsageObservation/history, collection diffs, either journal validation, or complete chat-target rebuilding. Preserve run/session UpdatedAtUtc, agent LastUsedAtUtc, all revision metadata and summary selection.
 5. Preserve pre-journal cancellation/no writes and post-journal CancellationToken.None committed continuation; preserve history atomicity and exactly-once effects.
 6. Validate all isolated safety tests, then freeze integrated source with SB01/SB02 and perform the full two-host UI/performance protocol.
 
@@ -75,7 +76,7 @@ Owning tests, selectors and crash-host discovery are defined there.
 - Selection reason: immediate/recovery distinction, projections, cancellation and current user-visible agent behavior.
 - Expected discovered tests:20projection unit+70integration source cases; combined5orchestration+2cancellation+1running-Stop+9component cases, plus declared new tests. Reconcile runtime discovery, no zero/early-return proof.
 - Invalidation keys: lock interval, journal/schema/order, projection metadata, JSON/history, source/test/dependency hashes and both host/fixture configs.
-- Broad-gate decision: Not required; schema/public/DI/shared-contract expansion reopens scope before any once-only frozen broad gate.
+- Broad-gate decision: Executed once at Frozen Integration after scoped CodeAnalytics impact promoted all supplied Unit/Integration/Components suites. Retained failures and root startup-specific acceptance are recorded in reviews/01-execution-report.md; no broad rerun or all-green claim.
 - Critical foundation: yes; combined actual conversations/tools/reopen on5032and5214 are mandatory downstream proof.
 
 ## Acceptance Checklist
@@ -86,7 +87,7 @@ Owning tests, selectors and crash-host discovery are defined there.
 - Second-store readers cannot observe intermediate writes; competing updates use latest detail with no lost logs/transcript.
 - Progress-only update preserves usage totals but advances required activity/revision fields. Latest-session/active-run index semantics survive updates to old runs.
 - New usage, approvals, tool receipts, artifacts/checkpoints and terminal/failure transitions still publish projections/history exactly once.
-- Canonical full rebuild equals optimized projection; immediate historical rereads decrease, recovery still performs complete validation.
+- Canonical full rebuild equals the published projection; up to five immediate raw comparison reads decrease while fresh validation reads and complete recovery remain. Canonical/compact/unknown-property matching-target behavior is covered for both the generic payload helper and separate chat owner.
 - Every applicable progress entry remains awaited/durable/ordered and survives reload; no batching or disabled stage.
 - UI01-UI06 pass on both instances; applicable approval proof passes; real tool-backed answers verified against source assets.
 - Paired performance gate passes on both hosts; no proxy marker or unmeasured microbenchmark substitutes for actual startup.

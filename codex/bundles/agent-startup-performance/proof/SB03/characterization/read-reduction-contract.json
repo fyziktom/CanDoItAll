@@ -1,0 +1,21 @@
+{
+  "MeasuredPhase": "JournalPersisted through ChatIndexPersisted",
+  "Payloads": [
+    "ChatSessionRecord",
+    "ExecutionRunRecord",
+    "ExecutionStorageIndex",
+    "AgentUsageProjection",
+    "ExecutionChatIndex"
+  ],
+  "LogCounts": [
+    1,
+    32
+  ],
+  "BeforeDeserializationPerPayload": 1,
+  "BeforeRawComparisonPerPayload": 1,
+  "CandidateExpectedDeserializationPerPayload": 1,
+  "CandidateExpectedRawComparisonPerPayload": 0,
+  "Excluded": "ProviderUsageObservation history records and all collection diffs",
+  "ReadObserver": "FileSandboxWorkspaceJsonReadDiagnostics (successful physical reads)",
+  "OldCodeExpectedFailures": 2
+}

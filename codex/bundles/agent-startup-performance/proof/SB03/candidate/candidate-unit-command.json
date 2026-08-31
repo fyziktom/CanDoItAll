@@ -1,0 +1,23 @@
+{
+  "StartUtc": "2026-08-31T14:41:05.7692170+00:00",
+  "EndUtc": "2026-08-31T14:41:12.7182824+00:00",
+  "ExitCode": 0,
+  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
+  "Executable": "dotnet",
+  "Arguments": [
+    "test",
+    "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "--configuration",
+    "Release",
+    "--no-build",
+    "--artifacts-path",
+    ".artifacts/agent-startup-performance/sb01-tests",
+    "--filter",
+    "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceChatProjectionStoreTests",
+    "--logger",
+    "trx;LogFileName=candidate-unit.trx",
+    "--results-directory",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb03\\results"
+  ],
+  "ExpectedCases": 20
+}

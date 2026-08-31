@@ -1,0 +1,15 @@
+{
+  "sample": {
+    "id": "client-after-continuation",
+    "port": 5214,
+    "initialMessages": 2,
+    "submitUtc": "2026-08-31T16:36:59.528Z",
+    "submitMono": 706147,
+    "firstContentUtc": "2026-08-31T16:37:34.488Z",
+    "firstContentMono": 741107.1000000238,
+    "terminalUiUtc": "2026-08-31T16:37:34.488Z",
+    "terminalUiMono": 741107.1000000238,
+    "stages": []
+  },
+  "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure \u00b7 Calculator\nContext access allowed\nFollowing: Project structure \u00b7 Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n4 messages\n08/31/2026 16:37\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 16:36\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 16:36\n\nDecimal is preferable for currency because it represents base-10 values exactly, avoiding the rounding errors that occur when binary floating point approximates many decimal fractions. This produces more accurate totals, comparisons, and financial records.\n\n~46 tokens\ncontent_copy\nCopy assistant message\nUser\n08/31/2026 16:36\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 16:37\n\nDecimal is preferable for currency because it represents base-10 amounts exactly, avoiding the approximation errors binary floating point can introduce for values such as 0.10. This makes monetary totals, comparisons, rounding, and stored financial records more predictable.\n\n~76 tokens\ncontent_copy\nCopy assistant message\nWorked for 28s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+}

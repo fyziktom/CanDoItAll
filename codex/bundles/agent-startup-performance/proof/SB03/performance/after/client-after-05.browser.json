@@ -1,0 +1,80 @@
+{
+  "sample": {
+    "id": "client-after-05",
+    "port": 5214,
+    "submitUtc": "2026-08-31T16:36:03.694Z",
+    "submitMono": 650313,
+    "firstContentUtc": "2026-08-31T16:36:39.842Z",
+    "firstContentMono": 686460.8000000119,
+    "terminalUiUtc": "2026-08-31T16:36:39.842Z",
+    "terminalUiMono": 686460.8000000119,
+    "stages": [
+      {
+        "stage": "Planning",
+        "utc": "2026-08-31T16:36:08.177Z",
+        "mono": 654795.8999999762
+      },
+      {
+        "stage": "Framework",
+        "utc": "2026-08-31T16:36:09.668Z",
+        "mono": 656286.8000000119
+      },
+      {
+        "stage": "Approval policy",
+        "utc": "2026-08-31T16:36:11.307Z",
+        "mono": 657926.1000000238
+      },
+      {
+        "stage": "Context contributors",
+        "utc": "2026-08-31T16:36:13.153Z",
+        "mono": 659772.3000000119
+      },
+      {
+        "stage": "Skills",
+        "utc": "2026-08-31T16:36:14.930Z",
+        "mono": 661548.6000000238
+      },
+      {
+        "stage": "Workspace tools",
+        "utc": "2026-08-31T16:36:16.385Z",
+        "mono": 663004.5
+      },
+      {
+        "stage": "Runtime tool providers",
+        "utc": "2026-08-31T16:36:17.908Z",
+        "mono": 664527.1000000238
+      },
+      {
+        "stage": "Capability compatibility",
+        "utc": "2026-08-31T16:36:19.682Z",
+        "mono": 666301.1999999881
+      },
+      {
+        "stage": "Compaction",
+        "utc": "2026-08-31T16:36:21.579Z",
+        "mono": 668198
+      },
+      {
+        "stage": "Model parameters",
+        "utc": "2026-08-31T16:36:23.397Z",
+        "mono": 670016.5
+      },
+      {
+        "stage": "Session",
+        "utc": "2026-08-31T16:36:25.380Z",
+        "mono": 671998.5
+      },
+      {
+        "stage": "Run",
+        "utc": "2026-08-31T16:36:27.080Z",
+        "mono": 673698.8999999762
+      },
+      {
+        "stage": "Streaming",
+        "utc": "2026-08-31T16:36:31.310Z",
+        "mono": 677928.6999999881
+      }
+    ]
+  },
+  "text": "ACTIVE AGENT CHAT\n\nPortfolio Architect\n\nArchitecture steward\n\nminimize\nrestart_alt\nvisibility_off\nProject structure \u00b7 Calculator\nContext access allowed\nFollowing: Project structure \u00b7 Calculator / canvas\nlink_off\nDetach\nActive\nCompleted\nAuto Approve\n2 messages\n08/31/2026 16:36\n\nNew exploration thread\n\nedit\nedit\nadd_comment\nNew thread\nterminal\nRuntime details\nUser\n08/31/2026 16:36\n\nExplain why decimal is preferable to binary floating point for currency calculations, in two sentences. Do not invoke tools.\n\n~31 tokens\ncontent_copy\nCopy user message\nAssistant\n08/31/2026 16:36\n\nDecimal is preferable for currency because it represents base-10 values exactly, avoiding the rounding errors that occur when binary floating point approximates many decimal fractions. This produces more accurate totals, comparisons, and financial records.\n\n~46 tokens\ncontent_copy\nCopy assistant message\nWorked for 30s\n15 steps\nCompleted. Execution run response persisted...\nCompleted\nThe agent operation completed.\nlibrary_books\nlibrary books\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing"
+}

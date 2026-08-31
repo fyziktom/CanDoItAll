@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CanDoItAll.Modules.AgentFramework" />
     <InternalsVisibleTo Include="CanDoItAll.Tests.Unit" />
     <InternalsVisibleTo Include="CanDoItAll.Tests.Integration" />
   </ItemGroup>

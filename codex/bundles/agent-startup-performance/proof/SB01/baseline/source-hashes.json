@@ -1,0 +1,30 @@
+[
+  {
+    "Path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+    "Sha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB"
+  },
+  {
+    "Path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+    "Sha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7"
+  },
+  {
+    "Path": "src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+    "Sha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842"
+  },
+  {
+    "Path": "tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+    "Sha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201"
+  },
+  {
+    "Path": "tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+    "Sha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83"
+  },
+  {
+    "Path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+    "Sha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F"
+  },
+  {
+    "Path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+    "Sha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B"
+  }
+]

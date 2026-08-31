@@ -1,0 +1,10 @@
+{
+  "baselineCommit": "3d5def561",
+  "compositeRevisionAndGuidWriter": {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedAwareProviderRuntimeProfileSnapshotLoader.cs",
+    "normalizedTextEqual": true,
+    "sha256": "b6ea9c97153b09c49bdefde8f9de00bb0f6bdaf31ada17e22079c210213e34a5"
+  },
+  "unchangedContextCount": 10,
+  "unchangedContextsMatchBaselineGitBlobs": true
+}

@@ -1,0 +1,5 @@
+Testovací běh pro C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01\results\baseline-unit.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    19, Přeskočeno:     0, Celkem:    19, Doba trvání: 934 ms - CanDoItAll.Tests.Unit.dll (net10.0)

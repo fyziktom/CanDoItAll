@@ -1,0 +1,65 @@
+{
+  "CapturedUtc": "2026-08-31T15:54:36.4439325+00:00",
+  "Phase": "frozen-integration-unit",
+  "Total": 7221,
+  "Executed": 7221,
+  "Passed": 7219,
+  "Failed": 2,
+  "NotExecuted": 0,
+  "DiscoveryToRuntimeDifferences": [
+    {
+      "Method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+      "Discovered": 1,
+      "Runtime": 8,
+      "Delta": 7
+    },
+    {
+      "Method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+      "Discovered": 1,
+      "Runtime": 8,
+      "Delta": 7
+    },
+    {
+      "Method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+      "Discovered": 1,
+      "Runtime": 21,
+      "Delta": 20
+    }
+  ],
+  "NonPassingCases": [
+    {
+      "Name": "CanDoItAll.Tests.Unit.Infrastructure.CrossPlatformCiWorkflowTests.Active_workflow_defines_three_actual_host_gates_with_pinned_sibling_sources",
+      "Outcome": "Failed",
+      "StartedUtc": "2026-08-31T10:52:57.5633312-04:00",
+      "EndedUtc": "2026-08-31T10:52:57.5834725-04:00",
+      "Duration": "00:00:00.0093023",
+      "Category": "RequiresReview",
+      "SqlStates": [],
+      "ExceptionTypes": [],
+      "SourceLocations": [
+        {
+          "Path": "C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\CrossPlatformCiWorkflowTests.cs",
+          "Line": 91
+        }
+      ]
+    },
+    {
+      "Name": "CanDoItAll.Tests.Unit.Infrastructure.RepositoryNamingHygieneTests.RepositoryNamingHygiene_active_tests_do_not_contain_work_package_identifiers",
+      "Outcome": "Failed",
+      "StartedUtc": "2026-08-31T10:53:07.2854872-04:00",
+      "EndedUtc": "2026-08-31T10:53:10.1876924-04:00",
+      "Duration": "00:00:02.9013361",
+      "Category": "RequiresReview",
+      "SqlStates": [],
+      "ExceptionTypes": [],
+      "SourceLocations": [
+        {
+          "Path": "C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\RepositoryNamingHygieneTests.cs",
+          "Line": 33
+        }
+      ]
+    }
+  ],
+  "OriginalDeadlineCase": [],
+  "RawErrorTextPublished": false
+}

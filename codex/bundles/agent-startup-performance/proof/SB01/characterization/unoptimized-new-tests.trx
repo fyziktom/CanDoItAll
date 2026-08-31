@@ -1,0 +1,267 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="33a784a5-0eca-430a-ace9-e5fc5580e818" name="lucys@LUCYSPOWER 2026-08-31 09:57:44" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-31T09:57:44.0191443-04:00" queuing="2026-08-31T09:57:44.0191447-04:00" start="2026-08-31T09:57:42.0058328-04:00" finish="2026-08-31T09:57:45.3375382-04:00" />
+  <TestSettings name="default" id="fd9d8f47-bd46-47c7-b97c-c64845fd4609">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-31_09_57_44" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="094e6da0-0bd0-4ee4-8038-fed4d9337dd9" testId="848da119-da36-23d1-b802-4b478129c691" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Constructor_allows_the_macos_system_var_alias" computerName="LUCYSPOWER" duration="00:00:00.0001880" startTime="2026-08-31T09:57:43.9389704-04:00" endTime="2026-08-31T09:57:43.9390470-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="094e6da0-0bd0-4ee4-8038-fed4d9337dd9" />
+    <UnitTestResult executionId="e432af95-bc59-4e3c-b920-6ba449e181aa" testId="1d680640-838c-993e-b23a-fb6e80656ab6" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Write_creates_missing_managed_root_and_revalidates_it" computerName="LUCYSPOWER" duration="00:00:00.0251095" startTime="2026-08-31T09:57:44.6286336-04:00" endTime="2026-08-31T09:57:44.6539970-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e432af95-bc59-4e3c-b920-6ba449e181aa" />
+    <UnitTestResult executionId="6eeb4d35-5871-49cf-bd35-a56ac20b71c2" testId="f98222d3-24d1-887b-130c-251479c653d2" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Root_link_swap_after_callback_fails_closed_without_touching_outside_target" computerName="LUCYSPOWER" duration="00:00:00.0008532" startTime="2026-08-31T09:57:44.5193159-04:00" endTime="2026-08-31T09:57:44.5193988-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6eeb4d35-5871-49cf-bd35-a56ac20b71c2">
+      <Output>
+        <StdOut>Active coordination handles prevent this root rename on Windows; mandatory affirmative root-link swap runs on Linux.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="811f3000-146d-49ef-81ba-aa0710ad2ea3" testId="458a85ab-25b3-d858-7136-9d61f4da4c7b" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6)" computerName="LUCYSPOWER" duration="00:00:00.0724762" startTime="2026-08-31T09:57:44.0510188-04:00" endTime="2026-08-31T09:57:44.1190533-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="811f3000-146d-49ef-81ba-aa0710ad2ea3">
+      <Output>
+        <StdOut>Depth 0 policies: 8; depth 6: 20</StdOut>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: 8&#xD;
+Actual:   20</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(Int32 depth) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\DurableFileWriterTests.cs:line 276&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="424a39c8-5624-4340-ad7b-dcb72cf2465c" testId="0c7e76c6-cabb-1b3e-e205-17680787615c" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_rejects_managed_root_that_is_a_symbolic_link" computerName="LUCYSPOWER" duration="00:00:00.0028057" startTime="2026-08-31T09:57:43.9302477-04:00" endTime="2026-08-31T09:57:43.9303176-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="424a39c8-5624-4340-ad7b-dcb72cf2465c" />
+    <UnitTestResult executionId="09a56e6e-bc70-4c47-9990-7d438ce07a54" testId="9f117112-f153-3b28-141a-fb6b49ad6dcf" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Private_write_applies_and_verifies_owner_only_unix_modes" computerName="LUCYSPOWER" duration="00:00:00.0005048" startTime="2026-08-31T09:57:44.5195419-04:00" endTime="2026-08-31T09:57:44.5195854-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="09a56e6e-bc70-4c47-9990-7d438ce07a54" />
+    <UnitTestResult executionId="f3f070f6-137b-4763-9f2e-ba6ee9b7644b" testId="63f1a694-7a87-b0a7-ef4f-9d0bb3d4a8cb" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12)" computerName="LUCYSPOWER" duration="00:00:00.1880693" startTime="2026-08-31T09:57:43.8413147-04:00" endTime="2026-08-31T09:57:44.0457348-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f3f070f6-137b-4763-9f2e-ba6ee9b7644b">
+      <Output>
+        <StdOut>Depth 0 policies: 8; depth 12: 32</StdOut>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: 8&#xD;
+Actual:   32</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(Int32 depth) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\DurableFileWriterTests.cs:line 276&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="303a9dd4-83b6-418f-a0e5-aba843006f82" testId="8d1e6e3a-a6b0-5ba5-7cba-925727ab4d35" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_allows_missing_leaf_below_verified_parent" computerName="LUCYSPOWER" duration="00:00:00.0019944" startTime="2026-08-31T09:57:43.9309394-04:00" endTime="2026-08-31T09:57:43.9309894-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="303a9dd4-83b6-418f-a0e5-aba843006f82" />
+    <UnitTestResult executionId="cad9d021-1888-4cfe-a8fb-74131d8b5b57" testId="039ad6b1-c217-6a2f-848c-6b83f06c43a5" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Creating_root_and_descendants_refreshes_unknown_and_known_case_facts" computerName="LUCYSPOWER" duration="00:00:00.0541310" startTime="2026-08-31T09:57:44.5197531-04:00" endTime="2026-08-31T09:57:44.5729921-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cad9d021-1888-4cfe-a8fb-74131d8b5b57" />
+    <UnitTestResult executionId="c488ca7d-7c0a-4ba5-9ab5-4fb5f0556d8e" testId="811f5b0c-56b3-b82e-ef36-354c1d615a57" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_probes_writable_root_and_cleans_probe_file" computerName="LUCYSPOWER" duration="00:00:00.0061421" startTime="2026-08-31T09:57:43.9325880-04:00" endTime="2026-08-31T09:57:43.9387100-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c488ca7d-7c0a-4ba5-9ab5-4fb5f0556d8e" />
+    <UnitTestResult executionId="de712b8f-da1c-4ba8-b238-4df7af665101" testId="ae577b7e-9d63-2b89-53f6-2854d4c77710" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Backup_contains_previous_complete_version" computerName="LUCYSPOWER" duration="00:00:00.0492631" startTime="2026-08-31T09:57:45.2096697-04:00" endTime="2026-08-31T09:57:45.2590128-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="de712b8f-da1c-4ba8-b238-4df7af665101" />
+    <UnitTestResult executionId="d24885a2-6174-4ee1-bee4-6ac033e25ca9" testId="3a72d2ba-ba6f-d269-76d0-bbe79092d708" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file" computerName="LUCYSPOWER" duration="00:00:00.0442455" startTime="2026-08-31T09:57:44.1202893-04:00" endTime="2026-08-31T09:57:44.1647681-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d24885a2-6174-4ee1-bee4-6ac033e25ca9" />
+    <UnitTestResult executionId="12a26887-ea30-43a9-a119-dd001c5add53" testId="a8c35db6-7dd2-87ec-7f14-92273693df34" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Concurrent_writers_commit_one_complete_payload_without_temporary_residue" computerName="LUCYSPOWER" duration="00:00:00.2053266" startTime="2026-08-31T09:57:44.2046729-04:00" endTime="2026-08-31T09:57:44.4102956-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="12a26887-ea30-43a9-a119-dd001c5add53" />
+    <UnitTestResult executionId="8be10006-17e8-4d02-beba-4453036e6514" testId="6796def0-6bb8-e98e-33f4-522216d36929" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Cancellation_after_flush_preserves_previous_content" computerName="LUCYSPOWER" duration="00:00:00.0392496" startTime="2026-08-31T09:57:44.1650129-04:00" endTime="2026-08-31T09:57:44.2044417-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8be10006-17e8-4d02-beba-4453036e6514" />
+    <UnitTestResult executionId="67ad1b7a-9e61-4e9b-94af-cc0a57f1aa25" testId="3e5ca6e1-40ca-e61b-4bdd-ac96a2a36966" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload" computerName="LUCYSPOWER" duration="00:00:00.0008307" startTime="2026-08-31T09:57:45.2598933-04:00" endTime="2026-08-31T09:57:45.2599991-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="67ad1b7a-9e61-4e9b-94af-cc0a57f1aa25">
+      <Output>
+        <StdOut>Active coordination handles prevent this root rename on Windows; mandatory affirmative recreation runs on Linux.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="beacc8c0-c292-4435-83a6-e983a1174f29" testId="80228303-ac95-91d0-163b-13859075a506" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Mutation_revalidation_rejects_parent_replaced_by_symbolic_link" computerName="LUCYSPOWER" duration="00:00:00.0721389" startTime="2026-08-31T09:57:43.8428157-04:00" endTime="2026-08-31T09:57:43.9210174-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="beacc8c0-c292-4435-83a6-e983a1174f29" />
+    <UnitTestResult executionId="70139769-bfa0-4ddf-b869-e42ef3217860" testId="934221e0-b135-8fae-d19f-cd19f563b183" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Policy_rejects_symbolic_link_ancestor" computerName="LUCYSPOWER" duration="00:00:00.0034247" startTime="2026-08-31T09:57:43.9701440-04:00" endTime="2026-08-31T09:57:43.9702268-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="70139769-bfa0-4ddf-b869-e42ef3217860" />
+    <UnitTestResult executionId="04ef7f91-bf17-42af-8f3f-e0b90d65479b" testId="c0728721-5a63-9a5a-cbd7-5a936beeab05" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Parent_link_swap_before_commit_fails_closed_without_touching_outside_target" computerName="LUCYSPOWER" duration="00:00:00.0257780" startTime="2026-08-31T09:57:44.6025299-04:00" endTime="2026-08-31T09:57:44.6284011-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="04ef7f91-bf17-42af-8f3f-e0b90d65479b" />
+    <UnitTestResult executionId="cebb3f14-e038-4897-bc9a-ac85799d0d5b" testId="0164e9e2-8276-c98e-6683-f17ad89c04cd" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_rejects_parent_escape" computerName="LUCYSPOWER" duration="00:00:00.0013595" startTime="2026-08-31T09:57:43.9315262-04:00" endTime="2026-08-31T09:57:43.9324263-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cebb3f14-e038-4897-bc9a-ac85799d0d5b" />
+    <UnitTestResult executionId="82da86d3-2e58-4901-9435-df93bf3a309b" testId="7a674b93-413f-019e-3788-1fb86068cdaa" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes" computerName="LUCYSPOWER" duration="00:00:00.0885034" startTime="2026-08-31T09:57:44.4105379-04:00" endTime="2026-08-31T09:57:44.4999049-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="82da86d3-2e58-4901-9435-df93bf3a309b">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\DurableFileWriterTests.cs:line 369&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="7c1449da-1d67-4b16-b1fb-4d6dbff16480" testId="8f6d7ccc-cad7-1a6a-7ba0-1579d9333a97" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Sensitive_root_does_not_authorize_case_distinct_sibling" computerName="LUCYSPOWER" duration="00:00:00.0010965" startTime="2026-08-31T09:57:43.9313379-04:00" endTime="2026-08-31T09:57:43.9313976-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7c1449da-1d67-4b16-b1fb-4d6dbff16480" />
+    <UnitTestResult executionId="459f14b6-4210-4fdb-abd0-294a1dbb8364" testId="31d2e26e-e0da-53ad-5fb7-3f94d9c611b7" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file" computerName="LUCYSPOWER" duration="00:00:00.4087956" startTime="2026-08-31T09:57:44.6543809-04:00" endTime="2026-08-31T09:57:45.0633302-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="459f14b6-4210-4fdb-abd0-294a1dbb8364" />
+    <UnitTestResult executionId="26c48b5e-b770-462c-b3c5-8b95e9825d49" testId="925ef394-b99f-5a51-acaa-613676ff6980" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Callback_case_fact_change_is_reprobed_before_commit" computerName="LUCYSPOWER" duration="00:00:00.0167181" startTime="2026-08-31T09:57:44.5012246-04:00" endTime="2026-08-31T09:57:44.5169520-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="26c48b5e-b770-462c-b3c5-8b95e9825d49">
+      <Output>
+        <StdOut>Changed case fact was reacquired after the awaited external callback.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="13640ae6-5603-4441-aa62-09d08b9c0a1a" testId="18e774a3-d7cd-459d-b3d5-c66fd02f3e80" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Unknown_case_facts_are_reprobed_for_existing_descendants" computerName="LUCYSPOWER" duration="00:00:00.0287703" startTime="2026-08-31T09:57:44.5732064-04:00" endTime="2026-08-31T09:57:44.6021617-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="13640ae6-5603-4441-aa62-09d08b9c0a1a" />
+    <UnitTestResult executionId="a7d4924e-2214-4a63-b60c-ffb2334b1f7a" testId="d76072eb-2965-b10c-5890-aab29b2c9df4" testName="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Exclusive_coordination_times_out_and_recovers_after_owner_releases_handle" computerName="LUCYSPOWER" duration="00:00:00.1451430" startTime="2026-08-31T09:57:45.0636327-04:00" endTime="2026-08-31T09:57:45.2091967-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a7d4924e-2214-4a63-b60c-ffb2334b1f7a" />
+    <UnitTestResult executionId="8dafd025-f437-4f59-8fe5-f3f289a8e4a7" testId="1138ee92-f71a-8895-7d91-6273308fe94c" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Unknown_root_uses_conservative_ordinal_comparison" computerName="LUCYSPOWER" duration="00:00:00.0036874" startTime="2026-08-31T09:57:43.9311318-04:00" endTime="2026-08-31T09:57:43.9311891-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8dafd025-f437-4f59-8fe5-f3f289a8e4a7" />
+    <UnitTestResult executionId="187f0565-554b-421a-8e03-ecf39e3b4d7e" testId="6c757617-679d-320b-209b-8f36f6aa3832" testName="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Insensitive_root_authorizes_case_variant_of_same_path" computerName="LUCYSPOWER" duration="00:00:00.0014051" startTime="2026-08-31T09:57:43.9706348-04:00" endTime="2026-08-31T09:57:43.9706872-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="187f0565-554b-421a-8e03-ecf39e3b4d7e" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Unknown_root_uses_conservative_ordinal_comparison" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="1138ee92-f71a-8895-7d91-6273308fe94c">
+      <Execution id="8dafd025-f437-4f59-8fe5-f3f289a8e4a7" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Unknown_root_uses_conservative_ordinal_comparison" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12)" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="63f1a694-7a87-b0a7-ef4f-9d0bb3d4a8cb">
+      <Execution id="f3f070f6-137b-4763-9f2e-ba6ee9b7644b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Existing_exact_descendants_do_not_add_case_probes_or_payload_commits" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="7a674b93-413f-019e-3788-1fb86068cdaa">
+      <Execution id="82da86d3-2e58-4901-9435-df93bf3a309b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Case_variant_descendants_keep_fresh_policy_probes" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_rejects_managed_root_that_is_a_symbolic_link" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="0c7e76c6-cabb-1b3e-e205-17680787615c">
+      <Execution id="424a39c8-5624-4340-ad7b-dcb72cf2465c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Factory_rejects_managed_root_that_is_a_symbolic_link" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Callback_case_fact_change_is_reprobed_before_commit" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="925ef394-b99f-5a51-acaa-613676ff6980">
+      <Execution id="26c48b5e-b770-462c-b3c5-8b95e9825d49" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Callback_case_fact_change_is_reprobed_before_commit" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="3a72d2ba-ba6f-d269-76d0-bbe79092d708">
+      <Execution id="d24885a2-6174-4ee1-bee4-6ac033e25ca9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Constructor_allows_the_macos_system_var_alias" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="848da119-da36-23d1-b802-4b478129c691">
+      <Execution id="094e6da0-0bd0-4ee4-8038-fed4d9337dd9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Constructor_allows_the_macos_system_var_alias" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Sensitive_root_does_not_authorize_case_distinct_sibling" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="8f6d7ccc-cad7-1a6a-7ba0-1579d9333a97">
+      <Execution id="7c1449da-1d67-4b16-b1fb-4d6dbff16480" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Sensitive_root_does_not_authorize_case_distinct_sibling" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_rejects_parent_escape" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="0164e9e2-8276-c98e-6683-f17ad89c04cd">
+      <Execution id="cebb3f14-e038-4897-bc9a-ac85799d0d5b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="ResolveContainedPath_rejects_parent_escape" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Creating_root_and_descendants_refreshes_unknown_and_known_case_facts" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="039ad6b1-c217-6a2f-848c-6b83f06c43a5">
+      <Execution id="cad9d021-1888-4cfe-a8fb-74131d8b5b57" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Creating_root_and_descendants_refreshes_unknown_and_known_case_facts" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Factory_probes_writable_root_and_cleans_probe_file" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="811f5b0c-56b3-b82e-ef36-354c1d615a57">
+      <Execution id="c488ca7d-7c0a-4ba5-9ab5-4fb5f0556d8e" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Factory_probes_writable_root_and_cleans_probe_file" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Backup_contains_previous_complete_version" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="ae577b7e-9d63-2b89-53f6-2854d4c77710">
+      <Execution id="de712b8f-da1c-4ba8-b238-4df7af665101" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Backup_contains_previous_complete_version" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Policy_rejects_symbolic_link_ancestor" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="934221e0-b135-8fae-d19f-cd19f563b183">
+      <Execution id="70139769-bfa0-4ddf-b869-e42ef3217860" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Policy_rejects_symbolic_link_ancestor" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Mutation_revalidation_rejects_parent_replaced_by_symbolic_link" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="80228303-ac95-91d0-163b-13859075a506">
+      <Execution id="beacc8c0-c292-4435-83a6-e983a1174f29" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Mutation_revalidation_rejects_parent_replaced_by_symbolic_link" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6)" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="458a85ab-25b3-d858-7136-9d61f4da4c7b">
+      <Execution id="811f3000-146d-49ef-81ba-aa0710ad2ea3" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Existing_exact_descendants_do_not_add_case_probes_or_payload_commits" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Parent_link_swap_before_commit_fails_closed_without_touching_outside_target" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="c0728721-5a63-9a5a-cbd7-5a936beeab05">
+      <Execution id="04ef7f91-bf17-42af-8f3f-e0b90d65479b" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Parent_link_swap_before_commit_fails_closed_without_touching_outside_target" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Exclusive_coordination_times_out_and_recovers_after_owner_releases_handle" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="d76072eb-2965-b10c-5890-aab29b2c9df4">
+      <Execution id="a7d4924e-2214-4a63-b60c-ffb2334b1f7a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Exclusive_coordination_times_out_and_recovers_after_owner_releases_handle" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="31d2e26e-e0da-53ad-5fb7-3f94d9c611b7">
+      <Execution id="459f14b6-4210-4fdb-abd0-294a1dbb8364" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Cancellation_after_flush_preserves_previous_content" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="6796def0-6bb8-e98e-33f4-522216d36929">
+      <Execution id="8be10006-17e8-4d02-beba-4453036e6514" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Cancellation_after_flush_preserves_previous_content" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Unknown_case_facts_are_reprobed_for_existing_descendants" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="18e774a3-d7cd-459d-b3d5-c66fd02f3e80">
+      <Execution id="13640ae6-5603-4441-aa62-09d08b9c0a1a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Unknown_case_facts_are_reprobed_for_existing_descendants" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.Insensitive_root_authorizes_case_variant_of_same_path" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="6c757617-679d-320b-209b-8f36f6aa3832">
+      <Execution id="187f0565-554b-421a-8e03-ecf39e3b4d7e" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="Insensitive_root_authorizes_case_variant_of_same_path" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Private_write_applies_and_verifies_owner_only_unix_modes" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="9f117112-f153-3b28-141a-fb6b49ad6dcf">
+      <Execution id="09a56e6e-bc70-4c47-9990-7d438ce07a54" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Private_write_applies_and_verifies_owner_only_unix_modes" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Concurrent_writers_commit_one_complete_payload_without_temporary_residue" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="a8c35db6-7dd2-87ec-7f14-92273693df34">
+      <Execution id="12a26887-ea30-43a9-a119-dd001c5add53" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Concurrent_writers_commit_one_complete_payload_without_temporary_residue" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="3e5ca6e1-40ca-e61b-4bdd-ac96a2a36966">
+      <Execution id="67ad1b7a-9e61-4e9b-94af-cc0a57f1aa25" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Write_creates_missing_managed_root_and_revalidates_it" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="1d680640-838c-993e-b23a-fb6e80656ab6">
+      <Execution id="e432af95-bc59-4e3c-b920-6ba449e181aa" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Write_creates_missing_managed_root_and_revalidates_it" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Root_link_swap_after_callback_fails_closed_without_touching_outside_target" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="f98222d3-24d1-887b-130c-251479c653d2">
+      <Execution id="6eeb4d35-5871-49cf-bd35-a56ac20b71c2" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests" name="Root_link_swap_after_callback_fails_closed_without_touching_outside_target" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests.ResolveContainedPath_allows_missing_leaf_below_verified_parent" storage="c:\repositories\candoitall\.artifacts\agent-startup-performance\sb01-tests\bin\candoitall.tests.unit\release\candoitall.tests.unit.dll" id="8d1e6e3a-a6b0-5ba5-7cba-925727ab4d35">
+      <Execution id="303a9dd4-83b6-418f-a0e5-aba843006f82" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.Storage.PhysicalFileSystemPathPolicyTests" name="ResolveContainedPath_allows_missing_leaf_below_verified_parent" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="848da119-da36-23d1-b802-4b478129c691" executionId="094e6da0-0bd0-4ee4-8038-fed4d9337dd9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1d680640-838c-993e-b23a-fb6e80656ab6" executionId="e432af95-bc59-4e3c-b920-6ba449e181aa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f98222d3-24d1-887b-130c-251479c653d2" executionId="6eeb4d35-5871-49cf-bd35-a56ac20b71c2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="458a85ab-25b3-d858-7136-9d61f4da4c7b" executionId="811f3000-146d-49ef-81ba-aa0710ad2ea3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0c7e76c6-cabb-1b3e-e205-17680787615c" executionId="424a39c8-5624-4340-ad7b-dcb72cf2465c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9f117112-f153-3b28-141a-fb6b49ad6dcf" executionId="09a56e6e-bc70-4c47-9990-7d438ce07a54" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="63f1a694-7a87-b0a7-ef4f-9d0bb3d4a8cb" executionId="f3f070f6-137b-4763-9f2e-ba6ee9b7644b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8d1e6e3a-a6b0-5ba5-7cba-925727ab4d35" executionId="303a9dd4-83b6-418f-a0e5-aba843006f82" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="039ad6b1-c217-6a2f-848c-6b83f06c43a5" executionId="cad9d021-1888-4cfe-a8fb-74131d8b5b57" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="811f5b0c-56b3-b82e-ef36-354c1d615a57" executionId="c488ca7d-7c0a-4ba5-9ab5-4fb5f0556d8e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ae577b7e-9d63-2b89-53f6-2854d4c77710" executionId="de712b8f-da1c-4ba8-b238-4df7af665101" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3a72d2ba-ba6f-d269-76d0-bbe79092d708" executionId="d24885a2-6174-4ee1-bee4-6ac033e25ca9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a8c35db6-7dd2-87ec-7f14-92273693df34" executionId="12a26887-ea30-43a9-a119-dd001c5add53" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6796def0-6bb8-e98e-33f4-522216d36929" executionId="8be10006-17e8-4d02-beba-4453036e6514" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3e5ca6e1-40ca-e61b-4bdd-ac96a2a36966" executionId="67ad1b7a-9e61-4e9b-94af-cc0a57f1aa25" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="80228303-ac95-91d0-163b-13859075a506" executionId="beacc8c0-c292-4435-83a6-e983a1174f29" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="934221e0-b135-8fae-d19f-cd19f563b183" executionId="70139769-bfa0-4ddf-b869-e42ef3217860" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c0728721-5a63-9a5a-cbd7-5a936beeab05" executionId="04ef7f91-bf17-42af-8f3f-e0b90d65479b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0164e9e2-8276-c98e-6683-f17ad89c04cd" executionId="cebb3f14-e038-4897-bc9a-ac85799d0d5b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7a674b93-413f-019e-3788-1fb86068cdaa" executionId="82da86d3-2e58-4901-9435-df93bf3a309b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8f6d7ccc-cad7-1a6a-7ba0-1579d9333a97" executionId="7c1449da-1d67-4b16-b1fb-4d6dbff16480" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="31d2e26e-e0da-53ad-5fb7-3f94d9c611b7" executionId="459f14b6-4210-4fdb-abd0-294a1dbb8364" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="925ef394-b99f-5a51-acaa-613676ff6980" executionId="26c48b5e-b770-462c-b3c5-8b95e9825d49" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="18e774a3-d7cd-459d-b3d5-c66fd02f3e80" executionId="13640ae6-5603-4441-aa62-09d08b9c0a1a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d76072eb-2965-b10c-5890-aab29b2c9df4" executionId="a7d4924e-2214-4a63-b60c-ffb2334b1f7a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1138ee92-f71a-8895-7d91-6273308fe94c" executionId="8dafd025-f437-4f59-8fe5-f3f289a8e4a7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6c757617-679d-320b-209b-8f36f6aa3832" executionId="187f0565-554b-421a-8e03-ecf39e3b4d7e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="27" executed="27" passed="24" failed="3" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.36]   Discovering: CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.24]   Discovered:  CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.28]   Starting:    CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.52]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.52]       Expected: 8&#xD;
+[xUnit.net 00:00:01.52]       Actual:   32&#xD;
+[xUnit.net 00:00:01.52]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.52]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\DurableFileWriterTests.cs(276,0): at CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(Int32 depth)&#xD;
+[xUnit.net 00:00:01.52]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:01.52]       Output:&#xD;
+[xUnit.net 00:00:01.52]         Depth 0 policies: 8; depth 12: 32&#xD;
+[xUnit.net 00:00:01.59]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.59]       Expected: 8&#xD;
+[xUnit.net 00:00:01.59]       Actual:   20&#xD;
+[xUnit.net 00:00:01.59]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.59]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\DurableFileWriterTests.cs(276,0): at CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(Int32 depth)&#xD;
+[xUnit.net 00:00:01.59]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:01.59]       Output:&#xD;
+[xUnit.net 00:00:01.59]         Depth 0 policies: 8; depth 6: 20&#xD;
+[xUnit.net 00:00:01.97]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:01.97]       Expected: True&#xD;
+[xUnit.net 00:00:01.97]       Actual:   False&#xD;
+[xUnit.net 00:00:01.97]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.97]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\DurableFileWriterTests.cs(369,0): at CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes()&#xD;
+[xUnit.net 00:00:01.97]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:02.73]   Finished:    CanDoItAll.Tests.Unit&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-31T09:57:44.0480157-04:00">
+        <Text>[xUnit.net 00:00:01.52]     CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-31T09:57:44.1196903-04:00">
+        <Text>[xUnit.net 00:00:01.59]     CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-31T09:57:44.5005514-04:00">
+        <Text>[xUnit.net 00:00:01.97]     CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

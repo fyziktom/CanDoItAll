@@ -1,0 +1,20 @@
+{
+  "CheckedUtc": "2026-08-31T17:01:30.8999537+00:00",
+  "ClientId": "420d6e8a059ba8d2d6b8d2e60d3cf3fb6036043fe3789137f724a3947192c4dd",
+  "ClientRunCount": 24,
+  "ClientPendingJournals": 0,
+  "ClientNonterminalRuns": 0,
+  "ClientHealth": "healthy",
+  "PublisherId": "000fadde7e6757f7afd413e3102fa58568e18da4d9a7361d8057bda40c9b966d",
+  "PublisherStartUnchanged": true,
+  "NativeAppPid": 60000,
+  "NativeHealth": 200,
+  "FrozenSourceCount": 13,
+  "FrozenSourceHashesMatch": true,
+  "OwnedUiRequestsInFlight": 0,
+  "NativeRunCount": 131,
+  "NativeTerminalRunCount": 130,
+  "NativeHistoricalPausedApprovalUnchanged": true,
+  "AdditionalNativeNoToolUiProbeCompleted": true,
+  "AdditionalNativeRunningLabelObservation": "Timeout; no successful Running-state assertion or close actions from this optional probe."
+}

@@ -1,0 +1,495 @@
+{
+  "status": "Focused proof indexed; integrated protected-file UI acceptance blocked",
+  "invariants": [
+    {
+      "invariantId": "SB03-I01",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Origin is ephemeral trusted call-site control, never persisted authority",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "candidate/production.patch; baseline/source-hashes.json; unchanged ExistingRunDetailCommitJournal declaration; recovered-journal test; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "FileSandboxWorkspaceStore.SaveExecutionRunDetailCoreAsync passes Prepared; RecoverPendingExistingRunDetailCommitAsync passes RecoveredJournal; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "candidate/production.patch; baseline/source-hashes.json; unchanged ExistingRunDetailCommitJournal declaration; recovered-journal test",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I02",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Both journal validations and fresh workspace/session/run/index conflicts remain",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Noncooperating_change_before_fresh_validation_fails_and_retains_journal: ten cases covering foreign and missing versions of all five payloads; candidate-new-tests.trx; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Store.CommitExistingRunDetailJournalAsync; Slice.PersistExistingRunPayloadAsync; Chat.PersistExistingRunUpdateAsync; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Noncooperating_change_before_fresh_validation_fails_and_retains_journal: ten cases covering foreign and missing versions of all five payloads; candidate-new-tests.trx",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I03",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Ordinary Prepared commits remove exactly five raw comparisons, keep five fresh deserializations",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons: one and32prior logs; characterization two expected failures; candidate19passed read output; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Slice helper after EnsureStoredPayloadIsTransitionCompatible; chat final branch after full rebuild/current validation; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons: one and32prior logs; characterization two expected failures; candidate19passed read output",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I04",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Matching typed JSON retains byte comparison, canonicalization and no-op semantics",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Matching_typed_target_retains_raw_comparison_and_canonicalization: Run and ChatIndex each canonical, compact and unknown-property JSON (six cases); exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Slice helper else branch; chat else branch; unchanged JsonStore.WriteJsonIfChangedAsync; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Matching_typed_target_retains_raw_comparison_and_canonicalization: Run and ChatIndex each canonical, compact and unknown-property JSON (six cases)",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I05",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Recovered journals retain complete validation and all old comparison behavior, roll forward once",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Recovered_journal_retains_five_raw_comparisons_and_rolls_forward_once; ExistingRunUpdateRecoveryIntegrationTests all nine commit-boundary cases; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Store.RecoverPendingExistingRunDetailCommitAsync; origin short circuit; unchanged deletion after final stage; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Recovered_journal_retains_five_raw_comparisons_and_rolls_forward_once; ExistingRunUpdateRecoveryIntegrationTests all nine commit-boundary cases",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I06",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Every log/metadata/projection revision survives; aggregate usage is distinct from observation history",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons asserts exact new log count, unchanged transcript and observation bytes/totals/cost, advancing/synchronized execution/usage/chat revisions, LastUsedAtUtc equals updated run timestamp; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Existing run persistence plan, untouched collection diffs and JsonStore history handling; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Prepared_progress_commit_retains_five_conflict_reads_without_duplicate_raw_comparisons asserts exact new log count, unchanged transcript and observation bytes/totals/cost, advancing/synchronized execution/usage/chat revisions, LastUsedAtUtc equals updated run timestamp",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I07",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Cancellation, callback stage order, errors and locks remain authoritative",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "ExistingRunUpdateRecoveryIntegrationTests; StoreLockIntegrationTests; production.patch; inherited SB01 actual Linux path/link/private-mode proof; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "ExistingRunDetailCommitStage calls; post-journal CancellationToken.None; original durable writer; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "ExistingRunUpdateRecoveryIntegrationTests; StoreLockIntegrationTests; production.patch; inherited SB01 actual Linux path/link/private-mode proof",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I08",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Other new-run/admission/chat/history behavior does not change",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "ChatRunCommitRecoveryIntegrationTests12; GenericNewRunCommitRecoveryIntegrationTests6; UsageProjectionIntegrationTests15; AdmissionReadScalingIntegrationTests6; ChatProjectionStoreTests20; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Unchanged GenericNewRun/ChatBackedRun and record-collection routes; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "ChatRunCommitRecoveryIntegrationTests12; GenericNewRunCommitRecoveryIntegrationTests6; UsageProjectionIntegrationTests15; AdmissionReadScalingIntegrationTests6; ChatProjectionStoreTests20",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I09",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Optimized path cannot bypass canonical JSON/writer security or usage-history hooks",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "unchanged JsonStore SHA256 in baseline and candidate hashes; candidate/production.patch; real SB01 writer/link/flush-stage proof (stage callbacks are not physical flush syscall counts); exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Existing JsonStore.WriteJsonAtomicallyAsync/WriteObservedJsonAsync; aggregate helper callers limited to four known types; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "unchanged JsonStore SHA256 in baseline and candidate hashes; candidate/production.patch; real SB01 writer/link/flush-stage proof (stage callbacks are not physical flush syscall counts)",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB03-I10",
+      "sourceRawNote": "N001/N004; SB03 also owns N003 integrated proof",
+      "expectedBehavior": "Additional typed serialization/read savings do not imply net latency improvement",
+      "disallowedShallowImplementation": "Skipping fresh payload conflict checks, trusting recovered JSON as Prepared, suppressing log/metadata writes, or weakening canonicalization/recovery.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB03/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "isolated read counts only; actual both-host frozen diagnostic/UI performance acceptance remains separate; exact original case results: bundle://proof/SB03/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "beforeSha256": "CB71B6F7FB8AB5885668A3510E1C0E1F0F4C9AAC2DEB8035AD5C8054DA43F6E2",
+          "afterSha256": "EEC080B7ABFA8CB156DF1550EFA4BDD3D83E77438EF79002BD38B735A681780F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "beforeSha256": "3C831FA2B2C5A36A2625AAF377E70D00F0876AC48A3F515D875738F6F5DF3AA0",
+          "afterSha256": "4076153302E455C3C099596419100783382E5FB9D4E2CCA3EEA26EC2BE7ACC87",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "beforeSha256": "0C033229047D37C942559A7C397E0D30038F01CC9971468009D7D0AD9E154A19",
+          "afterSha256": "CC862E3F5CBBF451416591DE21B1EDABB2B7F6B0643D8485382E29967C92751A",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "beforeSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "afterSha256": "7CE911C88D76750D0ADEC65D8B38EB083E1AE17A1DBF2B38C4E31EAB83B1FBF9",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "F5B00C07FC9C02BD4BC02CCBC44E0D9AFE617973C722DAE91EB0C93DCE14936C",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceChatProjectionStoreTests.cs",
+          "beforeSha256": null,
+          "afterSha256": "889C893A8E38D25A8B620DEBB27F3DD394F2D50ADCDCE74DC06E16178A994A57",
+          "beforeNote": "Not in this baseline hash inventory; added test or unchanged contextual test, not an invented before hash"
+        }
+      ],
+      "productionAssertions": "Prepared-only RequiresSave/HasSamePayload comparison; source review and bounded audit: bundle://proof/SB03/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "isolated read counts only; actual both-host frozen diagnostic/UI performance acceptance remains separate",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    }
+  ]
+}

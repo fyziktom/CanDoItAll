@@ -1,0 +1,68 @@
+[
+  {
+    "Phase": "Baseline",
+    "Platform": "Windows",
+    "Expected": 19,
+    "Total": 19,
+    "Passed": 19,
+    "Failed": 0,
+    "Started": "2026-08-31T09:48:59.9788973-04:00",
+    "Finished": "2026-08-31T09:49:02.4860517-04:00",
+    "Proof": "baseline/windows-unit.trx"
+  },
+  {
+    "Phase": "Baseline",
+    "Platform": "Linux",
+    "Expected": 19,
+    "Total": 19,
+    "Passed": 19,
+    "Failed": 0,
+    "Started": "2026-08-31T13:49:46.5346494+00:00",
+    "Finished": "2026-08-31T13:50:07.4804643+00:00",
+    "Proof": "baseline/linux-unit.trx"
+  },
+  {
+    "Phase": "Baseline",
+    "Platform": "Windows",
+    "Expected": 31,
+    "Total": 31,
+    "Passed": 31,
+    "Failed": 0,
+    "Started": "2026-08-31T09:51:59.7431697-04:00",
+    "Finished": "2026-08-31T09:54:07.7890884-04:00",
+    "Proof": "baseline/windows-integration.trx"
+  },
+  {
+    "Phase": "Candidate",
+    "Platform": "Windows",
+    "Expected": 27,
+    "Total": 27,
+    "Passed": 27,
+    "Failed": 0,
+    "Started": "2026-08-31T10:01:28.5987268-04:00",
+    "Finished": "2026-08-31T10:01:46.8647542-04:00",
+    "Proof": "candidate/windows-unit.trx"
+  },
+  {
+    "Phase": "Candidate",
+    "Platform": "Linux",
+    "Expected": 27,
+    "Total": 27,
+    "Passed": 27,
+    "Failed": 0,
+    "Started": "2026-08-31T14:01:26.6539138+00:00",
+    "Finished": "2026-08-31T14:01:42.2307511+00:00",
+    "Proof": "candidate/linux-unit.trx"
+  },
+  {
+    "Phase": "Candidate",
+    "Platform": "Windows",
+    "Expected": 31,
+    "Total": 31,
+    "Passed": 31,
+    "Failed": 0,
+    "Started": "2026-08-31T10:02:58.1415764-04:00",
+    "Finished": "2026-08-31T10:04:59.2870489-04:00",
+    "Proof": "candidate/windows-integration.trx"
+  }
+]

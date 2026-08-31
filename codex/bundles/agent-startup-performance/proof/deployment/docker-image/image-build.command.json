@@ -1,0 +1,30 @@
+{
+  "Arguments": [
+    "build",
+    "--progress=plain",
+    "--file",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\aspi-20260831\\CanDoItAll\\src\\App\\CanDoItAll.Web\\Dockerfile",
+    "--tag",
+    "candoitall-app:agent-startup-performance-20260831",
+    "--iidfile",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\deployment\\docker-candidate-20260831\\image-id.txt",
+    "--build-context",
+    "components=C:\\repositories\\CanDoItAll\\.artifacts\\aspi-20260831\\CanDoItAll.Components",
+    "--build-context",
+    "filetools=C:\\repositories\\CanDoItAll\\.artifacts\\aspi-20260831\\CanDoItAll.FileTools",
+    "--build-arg",
+    "BUILD_DATE=2026-08-31T14:55:42.9653606+00:00",
+    "--build-arg",
+    "BUILD_REVISION=3d5def561cd06635a2676c4b86afcb6b49ad169b",
+    "--build-arg",
+    "BUILD_SOURCE_FINGERPRINT=0879aa10acbd798c2de6d7ebed4c4892201fb7a679ad39b2246f6ff38c82920d",
+    "--build-arg",
+    "BUILD_VERSION=agent-startup-performance-0879aa10acbd",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\aspi-20260831\\CanDoItAll"
+  ],
+  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
+  "StartedUtc": "2026-08-31T14:55:42.9761609+00:00",
+  "CompletedUtc": "2026-08-31T14:59:14.3714465+00:00",
+  "ExitCode": 0,
+  "SourceFingerprint": "0879aa10acbd798c2de6d7ebed4c4892201fb7a679ad39b2246f6ff38c82920d"
+}

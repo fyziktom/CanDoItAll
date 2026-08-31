@@ -1,0 +1,23 @@
+Command: python codex/bundles/agent-startup-performance/proof/SB02/Audit-Sb02RetainedProof.py
+Working directory: repo://.
+Run label: offline-retained-sb02-anti-stub-audit
+StartedUtc: 2026-08-31T16:51:16.624012+00:00
+This command reads frozen source and retained results only; no tests/builds/provider calls run.
+Source hashes verified: 16
+No placeholder production implementation found; canonical validation/cardinality/local-map branches retained.
+unit-candidate: cases=76, failures=0
+integration-candidate: cases=35, failures=0
+integration-characterized: cases=34, failures=0
+integration-query-red: cases=1, failures=1
+INVARIANT-ID: SB02-I01; retained passing cases=8; source/test boundary=Warm_single_and_set_lookups_reject_corruption_without_token_changes
+INVARIANT-ID: SB02-I02; retained passing cases=1; source/test boundary=Validate_retains_canonical_shape_for_operationally_disabled_graphs
+INVARIANT-ID: SB02-I03; retained passing cases=1; source/test boundary=Revision_probes_preserve_local_mapping_failure_without_token_changes
+INVARIANT-ID: SB02-I04; retained passing cases=1; source/test boundary=Duplicate_imports_are_rejected_before_invalid_source_materialization
+INVARIANT-ID: SB02-I05; retained passing cases=1; source/test boundary=Revision_set_preserves_invalid_unrelated_source_value_conversion_failure
+INVARIANT-ID: SB02-I06; retained passing cases=1; source/test boundary=Concrete_revision_probes_preserve_full_load_revisions_with_bounded_queries
+INVARIANT-ID: SB02-I07; retained passing cases=10; source/test boundary=AgentProviderCredentialDispatchScopeTests
+INVARIANT-ID: SB02-I08; retained passing cases=1; source/test boundary=Projection_preserves_shared_origin_typed_credential_network_and_remote_capability_constraints
+INVARIANT-ID: SB02-I09; retained passing cases=1; source/test boundary=Validate_avoids_effective_model_copy_allocations
+No new secret cache, fallback or omitted canonical validator is claimed by this proof; manual source/architecture review remains separately retained.
+CompletedUtc: 2026-08-31T16:51:16.636031+00:00
+ExitCode: 0

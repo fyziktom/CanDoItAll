@@ -1,0 +1,47 @@
+{
+  "StartedUtc": "2026-08-31T16:23:40.4126639+00:00",
+  "Authorization": "Root cleanup GO: stop-and-retain only owned capacity2, retain old stopped container; no further tests/builds/app requests.",
+  "CapacityContainerId": "e6332523c34f9ab4fe8ae7f152df0a042a1d231abaf33633a0e7582909718dd2",
+  "CapacityName": "/candoitall-agent-startup-tests-20260831-capacity2",
+  "OldContainerId": "aa1bac9c700103cc7738d33c1c5b14fbaa076fb128f387747a057951b81db9f9",
+  "OldName": "/candoitall-agent-startup-tests-20260831-1342",
+  "ImageId": "sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7",
+  "BeforeHealthy": "healthy",
+  "BeforeOomKilled": false,
+  "BeforeRestartCount": 0,
+  "NoSpaceLogCount": 0,
+  "OutOfMemoryLogCount": 0,
+  "ErrorLogCount": 6,
+  "RawLogsPublished": false,
+  "ActiveOwnedTestProcessCount": 0,
+  "LiveBefore": [
+    {
+      "Name": "/candoitall-postgres",
+      "Id": "54f1ef278305e7d64f2bfc969df5fc297bd3c5efed57cebd5d81ee2ba16dc62a",
+      "Image": "sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416",
+      "StartedAt": "2026-08-30T12:27:26.671837116Z",
+      "Running": true
+    },
+    {
+      "Name": "/candoitall-shared-providers-manual-central-1",
+      "Id": "000fadde7e6757f7afd413e3102fa58568e18da4d9a7361d8057bda40c9b966d",
+      "Image": "sha256:b6b502a5487bd8ba7b21a2c3afe18e4846d273fa0445b387a98bf85acda73089",
+      "StartedAt": "2026-08-31T10:43:03.645154542Z",
+      "Running": true
+    },
+    {
+      "Name": "/candoitall-shared-providers-manual-client-a-1",
+      "Id": "fb12806ab50b7bdadb68175ce79d6efb8596b3f4f62329f07f445ae49074226e",
+      "Image": "sha256:168dc1535d4134a6621db8e3eae8bdc0628c3439e62fc7daade24340691b6bdc",
+      "StartedAt": "2026-08-31T12:03:45.560729816Z",
+      "Running": true
+    }
+  ],
+  "NativeBefore": {
+    "ProcessId": 58036,
+    "ParentProcessId": 22496,
+    "CreationDate": "2026-08-31T06:41:53.092315-04:00",
+    "ExecutablePath": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\Release\\net10.0\\CanDoItAll.Web.exe",
+    "ParentCreationDate": "2026-08-31T06:41:50.660161-04:00"
+  }
+}

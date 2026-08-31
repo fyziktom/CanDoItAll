@@ -1,0 +1,23 @@
+{
+  "StartUtc": "2026-08-31T14:37:56.5292150+00:00",
+  "EndUtc": "2026-08-31T14:38:24.0376767+00:00",
+  "ExitCode": 0,
+  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
+  "Executable": "dotnet",
+  "Arguments": [
+    "test",
+    "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "--configuration",
+    "Release",
+    "--no-build",
+    "--artifacts-path",
+    ".artifacts/agent-startup-performance/sb01-tests",
+    "--filter",
+    "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests",
+    "--logger",
+    "trx;LogFileName=candidate-new-tests.trx",
+    "--results-directory",
+    "C:\\repositories\\CanDoItAll\\.artifacts\\agent-startup-performance\\sb03\\results"
+  ],
+  "ExpectedCases": 19
+}

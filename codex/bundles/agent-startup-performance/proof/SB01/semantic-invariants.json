@@ -1,0 +1,445 @@
+{
+  "status": "Focused proof indexed; integrated protected-file UI acceptance blocked",
+  "invariants": [
+    {
+      "invariantId": "SB01-I01",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Exact-root containment does not depend on case mode; variants retain refresh",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Existing_exact_descendants_do_not_add_case_probes_or_payload_commits; Case_variant_descendants_keep_fresh_policy_probes; candidate/platform-and-probe-evidence.json; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "DurableFileWriter.EnsureDirectoryTree; source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Existing_exact_descendants_do_not_add_case_probes_or_payload_commits; Case_variant_descendants_keep_fresh_policy_probes; candidate/platform-and-probe-evidence.json",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB01-I02",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Every original per-segment path/native-root/reparse check remains fresh",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Policy_rejects_symbolic_link_ancestor; Mutation_revalidation_rejects_parent_replaced_by_symbolic_link; candidate/linux-unit.trx; candidate/production.patch; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "EnsureDirectoryTree; PhysicalFileSystemPathPolicy.EnsureSafePath; source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Policy_rejects_symbolic_link_ancestor; Mutation_revalidation_rejects_parent_replaced_by_symbolic_link; candidate/linux-unit.trx; candidate/production.patch",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB01-I03",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Unknown/create/callback boundaries acquire fresh policy",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Unknown_case_facts_are_reprobed_for_existing_descendants; Creating_root_and_descendants_refreshes_unknown_and_known_case_facts; Callback_case_fact_change_is_reprobed_before_commit; candidate/windows-unit.trx; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "EnsureDirectoryTree; WriteStreamAsync; source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Unknown_case_facts_are_reprobed_for_existing_descendants; Creating_root_and_descendants_refreshes_unknown_and_known_case_facts; Callback_case_fact_change_is_reprobed_before_commit; candidate/windows-unit.trx",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB01-I04",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Durable payload flush/coordination/atomic replacement/cancellation code remains unchanged",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "candidate/production.patch; Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file; Cancellation_after_flush_preserves_previous_content; Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file; candidate/windows-unit.trx and linux-unit.trx; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "WriteStreamAsync; CommitWithRetryAsync; AcquireCoordinationAsync; source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "candidate/production.patch; Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file; Cancellation_after_flush_preserves_previous_content; Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file; candidate/windows-unit.trx and linux-unit.trx",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB01-I05",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Root/link mutation cannot redirect the candidate write outside managed root",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "Root_link_swap_after_callback_fails_closed_without_touching_outside_target; Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload; candidate/platform-and-probe-evidence.json; candidate/linux-capabilities.log; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "WriteStreamAsync post-callback acquisition and RevalidateMutationTarget; source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "Root_link_swap_after_callback_fails_closed_without_touching_outside_target; Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload; candidate/platform-and-probe-evidence.json; candidate/linux-capabilities.log",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB01-I06",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Physical policy public semantics and dependencies are unchanged",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "baseline/source-hashes.json and candidate/source-binary-hashes.json; candidate/production.patch; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "PhysicalFileSystemPathPolicyFactory.Create; path contracts; source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "baseline/source-hashes.json and candidate/source-binary-hashes.json; candidate/production.patch",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB01-I07",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Eligible existing-depth probe work decreases without skipping payload commit stages",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "characterization/unoptimized-new-tests.trx (expected old-code failures); candidate/windows-unit.trx and linux-unit.trx: D0/D6/D12=8 after versus8/20/32 before; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "EnsureDirectoryTree; source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "characterization/unoptimized-new-tests.trx (expected old-code failures); candidate/windows-unit.trx and linux-unit.trx: D0/D6/D12=8 after versus8/20/32 before",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    },
+    {
+      "invariantId": "SB01-I08",
+      "sourceRawNote": "N001/N004",
+      "expectedBehavior": "Real dependent workspace locking/recovery remains equivalent",
+      "disallowedShallowImplementation": "Skipping fresh filesystem/containment, callback, flush or coordination checks; global cached filesystem authority.",
+      "failingFirstTest": "Optimization count assertions failed on old code: bundle://proof/SB01/transcripts/failing-first.txt. Unchanged safety/recovery behavior was already passing and is preserved; no claim every invariant failed on old code.",
+      "passingTest": "baseline/windows-integration.trx and candidate/windows-integration.trx:31/31, all nine update fault boundaries and competing readers/writers; exact original case results: bundle://proof/SB01/transcripts/passing.txt",
+      "changedSourceFiles": [
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+          "beforeSha256": "85B098DED5B4266E724FB46487553DE65E4CF27C14A7ADBF8E55C445B85C02EB",
+          "afterSha256": "EA65BB573D0FE78A43793A4CB5947C701A1357EE026F0E68A39EA4E5F5E098A4",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+          "beforeSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "afterSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://src/Foundation/CanDoItAll.Infrastructure.Abstractions/FileSystem/PhysicalFileSystemPathContracts.cs",
+          "beforeSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "afterSha256": "D9CA48A32B706DCA1B374DC4D51FCD4FA3DABB08DDC4CB9D6993F5901821C842",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+          "beforeSha256": "F89571E87325D36EB76918A5A5841011510E1513AC42A54E22C91B09CD3AE201",
+          "afterSha256": "CAB6F85EAA7004DF0DEEB72B1664BA90660F61F369B2A5A026AF8804FDE2FEC8",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/PhysicalFileSystemPathPolicyTests.cs",
+          "beforeSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "afterSha256": "DE9AF3DE04746C05FC88616784599816BE866DB526927C494FED1597640E6A83",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceStoreLockIntegrationTests.cs",
+          "beforeSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "afterSha256": "515AF660E98863BBEBBE988DDD5E09FF4EA28EB290CAF87C2F1838B5A026D71F",
+          "beforeNote": "Captured baseline hash"
+        },
+        {
+          "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+          "beforeSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "afterSha256": "D1662E6E33E341E9DE5269B1C2256375C5EE65AF06AA5D63A80D191E6522BE9B",
+          "beforeNote": "Captured baseline hash"
+        }
+      ],
+      "productionAssertions": "FileSandboxWorkspaceStore existing-run methods (unchanged in SB01); source review and bounded audit: bundle://proof/SB01/transcripts/anti-stub.txt",
+      "redTeamNegativeCase": "baseline/windows-integration.trx and candidate/windows-integration.trx:31/31, all nine update fault boundaries and competing readers/writers",
+      "downstreamDependencyCheck": "SB03 focused tests, combined terminal-failure and both-host actual HTTP performance passed. Full successful source-file UI02/UI03/native conversion approval remain blocked pending explicit payload/destination approval; no final closure."
+    }
+  ]
+}
