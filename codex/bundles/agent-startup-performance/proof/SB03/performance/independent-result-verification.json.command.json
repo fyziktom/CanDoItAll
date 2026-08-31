@@ -1,8 +1,0 @@
-{
-  "command": "python .artifacts/agent-startup-performance/diagnostics/Verify-CandidateEvidence.py",
-  "workingDirectory": "C:\\repositories\\CanDoItAll",
-  "startedUtc": "2026-08-31T16:44:56.4351476+00:00",
-  "completedUtc": "2026-08-31T16:44:56.5634512+00:00",
-  "exitCode": 0,
-  "scriptSha256": "2207A27805527BCD288BFDE1BA9825C7B865F4F47E5CF6F7176C0AD07667C511"
-}

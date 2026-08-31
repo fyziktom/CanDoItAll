@@ -1,9 +1,0 @@
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "### Error\nTimeoutError: page.waitForFunction: Timeout 30000ms exceeded."
-    }
-  ],
-  "isError": true
-}

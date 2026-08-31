@@ -1,2 +1,0 @@
-Bundle validation failed:
-- C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\subbundles\11-shared-access-failure-recovery\README.md: final closure requires status `Completed` or `Blocked`, found `Completed. Behavioral/architecture proof and final regression review pass;`

@@ -1,4 +1,0 @@
-Command: rg -n 'CanDoItAll.Modules.LlmChats|SimpleChat|simple-chat|simple_chat' src/UI src/MAF/Common/CanDoItAll.AgentFramework.Components src/Modules/CanDoItAll.Modules.AgentFramework src/Modules/CanDoItAll.Modules.Processes src/App/CanDoItAll.Web/Components
-StartedUtc: 2026-08-16T10:45:15.4810696+00:00
-Result: no matches in production UI scope.
-ExitCode: 0

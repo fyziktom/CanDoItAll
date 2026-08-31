@@ -1,5 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Playwright\release\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb09-ui-complete.trx
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 10 s - CanDoItAll.Tests.Playwright.dll (net10.0)

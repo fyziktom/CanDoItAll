@@ -1,5 +1,0 @@
-{"kind":"ready","targetPid":24000,"capturePid":24000,"utc":"2026-08-31T13:23:57.805704+00:00","clockFrequency":10000000,"maximumSeconds":4,"filterVersion":1,"rawTracePersisted":false}
-{"kind":"http-send-start","utc":"2026-08-31T13:23:58.3868478Z","relativeMilliseconds":588.8478,"traceId":"15c2d8e25b55c25a0c1cc1b1da646eee","spanId":"d52b599c4817f616","parentSpanId":"750ed12385ae816e","method":"POST","status":null}
-{"kind":"http-send-stop","utc":"2026-08-31T13:23:58.4066461Z","relativeMilliseconds":608.6461,"traceId":"15c2d8e25b55c25a0c1cc1b1da646eee","spanId":"d52b599c4817f616","parentSpanId":"750ed12385ae816e","method":null,"status":"OK"}
-{"kind":"agent-run-trace","utc":"2026-08-31T13:23:58.4102892Z","relativeMilliseconds":612.2892,"runId":"93b40ac4-f4e9-4bc1-88a4-c8012a8f0440","traceId":"15c2d8e25b55c25a0c1cc1b1da646eee","spanId":"750ed12385ae816e","parentSpanId":"0000000000000000"}
-{"kind":"stopped","utc":"2026-08-31T13:24:02.6671834+00:00","capturedHttpStarts":1,"capturedRunMappings":1,"unexpectedArguments":0}

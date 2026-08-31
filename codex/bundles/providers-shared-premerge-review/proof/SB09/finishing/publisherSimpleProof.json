@@ -1,9 +1,0 @@
-{
-  "url": "http://localhost:5210/agents?tab=request-history",
-  "capturedUtc": "2026-08-31T11:02:06.565Z",
-  "viewport": {
-    "width": 1920,
-    "height": 1080
-  },
-  "text": "Request evidence\n\nMetadata and explicitly requested bounded content.\n\nclose\nClose\nENTRY / PROVIDER\n013b0bc1-741b-4a7e-8e03-ad81153d4132\nOpenAI default · c1c103db-707e-3f52-8809-8d804fc171d1\ngpt-5.6-luna\nEXECUTION\nSharedRelay · CompleteChat · Succeeded\nProviderCallAttempt · AttemptStarted\n2026-08-31 11:00:41 UTC\nREQUEST / ATTEMPT\n013b0bc1-741b-4a7e-8e03-ad81153d4132\n013b0bc1-741b-4a7e-8e03-ad81153d4132\nCALLER AUTHENTICATION\nManagedCredential\nCredential ID: b28a9acb-727f-4a76-8987-e49be29145bf\nSubject: shared-providers-e2e-client\nIssuer: CanDoItAll.SharedProviders.E2E.Central\nUSAGE\n174 input / 40 output · Complete\nCached input: 0 · Cache write: Unavailable\nReasoning: 20 · Images: Unavailable\nPRICE EVIDENCE\nPartial estimate\nVersion: provider-execution-pricing-v1\nSource revision: abbec0a7-2f96-45c5-9050-fbdbfc6e15c6\nProfile hash: d41bcafd9d5e51e5dce28dacebce59ffe6b110b7df18bfd07971e0d5b91eb4ff\nOWNERSHIP / RETENTION\nCanonicalProjection · HistoryPolicy\nDetail: NotCaptured\nExpires: 2026-09-30 11:00:41 UTC\nEXTERNAL REFERENCE\nUnavailable\nCORRELATION\n0HNO79IJAQ3R8:00000002\nCanonical evidence\n\nExisting records retain their own content and retention. The history index does not copy their conversations.\n\nSharedRelay · 013b0bc1741b4a7e8e03ad81153d4132 · 013b0bc1741b4a7e8e03ad81153d4132\nPrimaryEvidence · Linked\n\nContent loads on request in a separate read-only dialog. API keys are never included.\n\nClose"
-}

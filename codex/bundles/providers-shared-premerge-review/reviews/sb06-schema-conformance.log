@@ -1,1 +1,0 @@
-{"validator": "jsonschema 4.25.1 / Draft 2020-12", "operations": ["ChatCompletions", "ImageGenerations", "Responses"], "cases": 28, "result": "pass"}

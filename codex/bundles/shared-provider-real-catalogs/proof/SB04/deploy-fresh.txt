@@ -1,6 +1,0 @@
- Volume candoitall-spui-fresh_app-data Creating 
- Volume candoitall-spui-fresh_app-data Created 
- Container candoitall-spui-fresh-app-1 Creating 
- Container candoitall-spui-fresh-app-1 Created 
- Container candoitall-spui-fresh-app-1 Starting 
- Container candoitall-spui-fresh-app-1 Started 

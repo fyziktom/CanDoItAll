@@ -1,3 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Playwright\release\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
-Jsou k dispozici následující testy:
-    CanDoItAll.Tests.Playwright.ProviderHistoryPremergeUiTests.Isolated_history_paging_details_and_policy_remain_explicit

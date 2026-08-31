@@ -1,7 +1,0 @@
-Bundle validation failed:
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\subbundles\01-operation-local-filesystem-facts\README.md: completed-stage validation does not allow subbundle status `In progress`
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\subbundles\02-validated-provider-revision-projections\README.md: completed-stage validation does not allow subbundle status `In progress`
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\subbundles\03-validated-immediate-commit-reuse\README.md: completed-stage validation does not allow subbundle status `In progress`
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\subbundles\01-operation-local-filesystem-facts\README.md: final closure requires status `Completed` or `Blocked`, found `In progress`
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\subbundles\02-validated-provider-revision-projections\README.md: final closure requires status `Completed` or `Blocked`, found `In progress`
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\subbundles\03-validated-immediate-commit-reuse\README.md: final closure requires status `Completed` or `Blocked`, found `In progress`

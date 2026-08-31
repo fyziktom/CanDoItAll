@@ -1,2 +1,0 @@
-"Name","PreviouslyFailed","Message"
-"CanDoItAll.Tests.Unit.AgentFramework.WorkflowCatalogTests.ComponentLibraryAcceptsStructuredOutputForOllama","True","System.InvalidOperationException : LLM Call Component '512b1751-bfb9-41b3-bd1d-178ecce16650' model 'llama3.2' requires a model price row on provider 'Ollama chat'."

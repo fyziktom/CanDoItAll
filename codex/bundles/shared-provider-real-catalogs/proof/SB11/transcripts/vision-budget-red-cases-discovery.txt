@@ -1,9 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Jsou k dispozici následující testy:
-    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: ChatCompletions)
-    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: Responses)
-    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: ChatCompletions)
-    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: Responses)
-    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: ChatCompletions)
-    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: Responses)
-    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields

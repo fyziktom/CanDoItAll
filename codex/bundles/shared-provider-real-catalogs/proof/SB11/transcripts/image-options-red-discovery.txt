@@ -1,6 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Jsou k dispozici následující testy:
-    CanDoItAll.Tests.Unit.AgentFramework.ImageGenerationAgentRuntimeToolProviderTests.Invalid_image_options_are_safe_retryable_and_corrected_requests_succeed(size: "1536x864", quality: null, format: null, label: "image size")
-    CanDoItAll.Tests.Unit.AgentFramework.ImageGenerationAgentRuntimeToolProviderTests.Invalid_image_options_are_safe_retryable_and_corrected_requests_succeed(size: null, quality: "private-secret-marker", format: null, label: "image quality")
-    CanDoItAll.Tests.Unit.AgentFramework.ImageGenerationAgentRuntimeToolProviderTests.Invalid_image_options_are_safe_retryable_and_corrected_requests_succeed(size: null, quality: null, format: "gif", label: "image output format")
-    CanDoItAll.Tests.Unit.AgentFramework.ImageGenerationAgentRuntimeToolProviderTests.Image_tool_schema_explains_supported_options_and_provider_defaults

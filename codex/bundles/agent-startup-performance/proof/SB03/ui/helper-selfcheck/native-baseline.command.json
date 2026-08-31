@@ -1,8 +1,0 @@
-{
-  "command": "python .artifacts/agent-startup-performance/diagnostics/Extract-UiRunEvidence.py --host native --run-id 79f2a71f-25b8-42ee-b354-e2155250dc55",
-  "workingDirectory": "C:\\repositories\\CanDoItAll",
-  "startedUtc": "2026-08-31T15:35:51.9214457+00:00",
-  "completedUtc": "2026-08-31T15:35:52.2778251+00:00",
-  "exitCode": 0,
-  "purpose": "Root-authorized single known native baseline run; helper self-check, not candidate UI proof"
-}

@@ -1,6 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-[xUnit.net 00:00:03.11]     CanDoItAll.Tests.Unit.AgentFramework.WorkflowCatalogTests.ComponentLibraryAcceptsStructuredOutputForOllama [FAIL]
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB07\unit-broad.trx
-
-Neúspěšné!  - Neúspěšné:     1, Úspěšné:  7014, Přeskočeno:     0, Celkem:  7015, Doba trvání: 2 m 36 s - CanDoItAll.Tests.Unit.dll (net10.0)

@@ -1,9 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-[xUnit.net 00:00:05.96]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Responses_terminal_event_completes_without_chat_done_marker(type: "response.completed", status: "in_progress", succeeds: False) [FAIL]
-[xUnit.net 00:00:05.99]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Responses_terminal_event_completes_without_chat_done_marker(type: "response.failed", status: "failed", succeeds: False) [FAIL]
-[xUnit.net 00:00:05.99]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Responses_terminal_event_completes_without_chat_done_marker(type: "response.incomplete", status: "incomplete", succeeds: False) [FAIL]
-[xUnit.net 00:00:05.99]     CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.Responses_terminal_event_completes_without_chat_done_marker(type: "response.completed", status: "completed", succeeds: True) [FAIL]
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB07\responses-terminal-red.trx
-
-Neúspěšné!  - Neúspěšné:     4, Úspěšné:     0, Přeskočeno:     0, Celkem:     4, Doba trvání: 159 ms - CanDoItAll.Tests.Integration.dll (net10.0)

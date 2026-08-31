@@ -1,7 +1,0 @@
-"Run","Total","Passed","Failed","Skipped"
-"unit-verification","206","206","0","0"
-"components-verification","46","46","0","0"
-"relay-integration-after-discovery","56","56","0","0"
-"unit-broad","7015","7014","1","0"
-"components-broad","1156","1103","53","0"
-"integration-broad","1140","1121","18","1"

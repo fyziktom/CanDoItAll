@@ -1,8 +1,0 @@
-{
-  "StartedUtc": "2026-08-31T14:49:55.2633812+00:00",
-  "CompletedUtc": "2026-08-31T14:51:36.8712474+00:00",
-  "ExitCode": 0,
-  "Sdk": "10.0.303",
-  "Command": "dotnet build tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --artifacts-path .artifacts/agent-startup-performance/sb01-tests --verbosity quiet",
-  "SourceFingerprint": "D84CB6EEF79748146ACCB362F8547B1BEA0B58E844686CD64CAC32E0EC5EA1C4"
-}

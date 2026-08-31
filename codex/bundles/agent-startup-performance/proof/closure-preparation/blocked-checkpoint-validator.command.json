@@ -1,8 +1,0 @@
-{
-  "Command": "python C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/agent-startup-performance --profile feedback --stage completed --repo-root .",
-  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
-  "StartedUtc": "2026-08-31T17:08:30.1404031+00:00",
-  "CompletedUtc": "2026-08-31T17:08:30.2664119+00:00",
-  "ExitCode": 1,
-  "Purpose": "Blocked checkpoint; required private-file UI/approval permission outstanding; not final closure"
-}

@@ -1,5 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb02-tests\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-Soubor výsledků: C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb02-proof\integration-baseline-results\selected.trx
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:    23, Přeskočeno:     0, Celkem:    23, Doba trvání: 34 s - CanDoItAll.Tests.Integration.dll (net10.0)

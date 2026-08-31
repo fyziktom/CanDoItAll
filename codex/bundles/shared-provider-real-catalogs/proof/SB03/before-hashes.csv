@@ -1,8 +1,0 @@
-"Path","Hash"
-"src/App/CanDoItAll.Web/Infrastructure/LocalOperatorAuthenticationStateProvider.cs","EB6DCC6FF953CA0DB56293A591F6C60B3E0A811104E4514FB65CA5E329C2C5E4"
-"src/App/CanDoItAll.Web/Infrastructure/InteractiveServerServiceCollectionExtensions.cs","6DA689242D29E21CE252C1A479964FE05E72172C87797ED59858EC2FEB7A7652"
-"src/App/CanDoItAll.Web/Infrastructure/LocalOperatorUiOptions.cs","ABSENT"
-"tests/Components/CanDoItAll.Tests.Components/LocalOperatorAuthenticationStateProviderTests.cs","17B35F5618AD90143881B8DF88DBBA4DF371A44411436160DA7D7CD7554F105E"
-"tests/Components/CanDoItAll.Tests.Components/LocalOperatorUiAccessTests.cs","ABSENT"
-"tests/Integration/CanDoItAll.Tests.Integration/ApiAccessAuthorizationIntegrationTests.cs","E38866ECC27256B3D64E9EA31B8028464FF39D115B9D022693BA6706EC4E0F6F"
-"codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/Restart-TestInstances.ps1","DB8F5E4BBC1EFDF320FB05E1D9CADD706534438DD1A1B35B6DCD939EE214D6F2"

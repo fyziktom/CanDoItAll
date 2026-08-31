@@ -1,6 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb02-tests\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-[xUnit.net 00:00:11.72]     CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.Concrete_revision_probes_preserve_full_load_revisions_with_bounded_queries [FAIL]
-Soubor výsledků: C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb02-proof\integration-query-red-results\selected.trx
-
-Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 498 ms - CanDoItAll.Tests.Integration.dll (net10.0)

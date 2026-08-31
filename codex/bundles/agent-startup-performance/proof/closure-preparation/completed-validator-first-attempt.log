@@ -1,9 +1,0 @@
-Bundle validation failed:
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB01\manifest.md: referenced artifact path does not exist: /tmp
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB01\manifest.md: referenced artifact path does not exist: /sdk/vstest.console.dll
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB01\manifest.md: referenced artifact path does not exist: /TestCaseFilter
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB01\manifest.md: referenced artifact path does not exist: /logger:trx;LogFileName=
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB01\manifest.md: referenced artifact path does not exist: /ResultsDirectory:/proof/results
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB01\manifest.md: referenced artifact path does not exist: /tests
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB01\manifest.md: referenced artifact path does not exist: /proof
-- C:\repositories\CanDoItAll\codex\bundles\agent-startup-performance\proof\SB03\manifest.md: semantic capability claims require ## Proof Claim To Code Matrix for portable proof

@@ -1,6 +1,0 @@
-command: python codex/bundles/shared-providers/scripts/validate_subbundle.py codex/bundles/shared-providers --phase closure --subbundle SB06
-working-directory: C:\repositories\CanDoItAll
-duration-seconds: 0.191
-exit-code: 0
-output:
-PASS: SB06 closure gate passed

@@ -1,9 +1,0 @@
-{
-  "Command": "python C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/agent-startup-performance --profile feedback --stage completed --repo-root .",
-  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
-  "StartedUtc": "2026-08-31T18:09:41.3575147+00:00",
-  "CompletedUtc": "2026-08-31T18:09:41.5495701+00:00",
-  "ExitCode": 0,
-  "ValidatorSha256": "C14614DD79806DC0260412209EEEC6C5FF0C7208B5B621AF40FFE8391CD0AB87",
-  "Purpose": "Final verification of Completed/Pass documentation after root and independent behavioral/UI/performance/host acceptance; original broad failures and validator attempts retained"
-}

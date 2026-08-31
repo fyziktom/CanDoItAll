@@ -1,3 +1,0 @@
-Command: python C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/shared-provider-real-catalogs --stage completed
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs
-ExitCode: 0

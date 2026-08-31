@@ -1,5 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-provider-real-catalogs\proof\SB05\component-tests.trx
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:    11, Přeskočeno:     0, Celkem:    11, Doba trvání: 56 s - CanDoItAll.Tests.Components.dll (net10.0)

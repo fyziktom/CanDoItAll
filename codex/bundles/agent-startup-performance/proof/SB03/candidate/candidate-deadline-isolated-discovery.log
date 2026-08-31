@@ -1,3 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\.artifacts\agent-startup-performance\sb01-tests\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Jsou k dispozici následující testy:
-    CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.File_source_checkpoints_large_manifest_within_host_deadline_and_resumes_after_restart
