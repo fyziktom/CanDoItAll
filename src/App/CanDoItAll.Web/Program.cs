@@ -14,6 +14,7 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -41,6 +42,9 @@ using System.Diagnostics;
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseStaticWebAssets();
 DatabasePasswordFileConfiguration.Apply(builder.Configuration, builder.Environment.ContentRootPath);
+ApiAuthorizationSigningKeyFileConfiguration.Apply(
+    builder.Configuration,
+    builder.Environment.ContentRootPath);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
 var databaseOptions = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
 var webHostOptions = builder.Configuration.GetSection(WebHostRuntimeOptions.SectionName).Get<WebHostRuntimeOptions>() ?? new WebHostRuntimeOptions();
@@ -108,6 +112,7 @@ if (apiOptions.Authorization.Enabled)
     app.UseAuthorization();
 }
 
+app.UseMiddleware<AccessContextReferenceMiddleware>();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapCanDoItAllManagedFiles();
@@ -438,10 +443,9 @@ if (app.Environment.IsDevelopment())
 
     app.MapGet("/_dev/agentframework/credential", async (
         IAgentProviderCredentialResolver providerCredentialResolver,
-        ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
+        IProviderRuntimeAdministrationService providerAdministration) =>
     {
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var providers = await workspaceService.ListProvidersAsync();
+        var providers = await providerAdministration.ListProvidersAsync();
         var provider = providers
             .FirstOrDefault(item => string.Equals(item.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.OrdinalIgnoreCase))
             ?? providers.FirstOrDefault(item => item.Kind is CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi or CanDoItAll.AgentFramework.Models.ProviderKind.AzureOpenAi);
@@ -492,6 +496,7 @@ if (app.Environment.IsDevelopment())
         string? processStepId,
         string? messageId,
         IAgentProviderCredentialResolver providerCredentialResolver,
+        IProviderRuntimeAdministrationService providerAdministration,
         ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
     {
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
@@ -505,7 +510,7 @@ if (app.Environment.IsDevelopment())
             });
         }
 
-        var provider = (await workspaceService.ListProvidersAsync())
+        var provider = (await providerAdministration.ListProvidersAsync())
             .FirstOrDefault(item => item.Id == agent.ProviderProfileId);
         if (provider is null)
         {
@@ -559,7 +564,7 @@ if (app.Environment.IsDevelopment())
         object providerProbe;
         try
         {
-            var providerResult = await workspaceService.RunProviderTestChatAsync(
+            var providerResult = await providerAdministration.RunProviderTestChatAsync(
                 provider.Id,
                 new ProviderTestChatRequest(
                     string.Empty,

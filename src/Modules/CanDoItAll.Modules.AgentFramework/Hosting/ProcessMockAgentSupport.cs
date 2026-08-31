@@ -1,7 +1,8 @@
 using CanDoItAll.AgentFramework.Models;
-using ProcessMockProvider = CanDoItAll.Modules.Workspace.ProcessMockProviderAdapter;
 
 namespace CanDoItAll.Modules.AgentFramework.Hosting;
+
+using ProviderConnectorDefaults = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorDefaults;
 
 public sealed class ProcessMockAgentOptions
 {
@@ -12,9 +13,9 @@ public sealed class ProcessMockAgentOptions
 
 public static class ProcessMockAgentCatalog
 {
-    public const string ProviderBaseUrl = ProcessMockProvider.BaseUrl;
+    public const string ProviderBaseUrl = ProviderConnectorDefaults.ProcessMockBaseUrl;
     public const string ProviderName = "Process Mock Agent Provider";
-    public const string Model = ProcessMockProvider.DefaultModel;
+    public const string Model = ProviderConnectorDefaults.ProcessMockModel;
     public const string AgentTag = "process-mock-agent";
     public const string RoleTagPrefix = "process-mock-role:";
     public const string BranchRepairsRequired = "repairs-required";

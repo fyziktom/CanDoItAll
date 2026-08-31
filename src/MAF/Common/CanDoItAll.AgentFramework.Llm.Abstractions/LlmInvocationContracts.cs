@@ -208,6 +208,10 @@ public sealed record LlmInvocationRequest
         Settings = settings;
     }
 
+    [System.Text.Json.Serialization.JsonIgnore]
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext History { get; init; } =
+        CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext.Create();
+
     public ProviderProfile Provider { get; }
 
     public string Model { get; }

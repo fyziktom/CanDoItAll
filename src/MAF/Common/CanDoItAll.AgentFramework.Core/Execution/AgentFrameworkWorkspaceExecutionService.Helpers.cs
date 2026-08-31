@@ -768,7 +768,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             StructuredOutputSchemaVersion: jsonSchemaOutput?.Version ?? string.Empty,
             StructuredOutputSchemaStrict: jsonSchemaOutput?.Strict ?? false)
         {
-            InitialActivityOperationId = initialActivityOperationId
+            InitialActivityOperationId = initialActivityOperationId,
+            HistoryCaller = context.HistoryCaller
         };
     }
 

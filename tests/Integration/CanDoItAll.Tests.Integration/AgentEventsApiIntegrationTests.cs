@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using CanDoItAll.AgentFramework.ProviderHistory;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -8,6 +11,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Web.Api;
@@ -112,6 +116,59 @@ public sealed class AgentEventsApiIntegrationTests
             out _));
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Direct_provider_endpoints_replace_posted_history_with_validated_caller(bool stream, bool authenticated) {
+        var provider = CreateProvider();
+        var administration = DispatchProxy.Create<IProviderRuntimeAdministrationService, ProviderAdministrationProxy>();
+        using var proxy = (ProviderAdministrationProxy)(object)administration;
+        proxy.Completion.SetResult(new(provider.DefaultModel, "completed", 1, 1));
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: authenticated,
+            configureServices: services => {
+                services.RemoveAll<IProviderRuntimeAdministrationService>();
+                services.AddSingleton(administration);
+                services.RemoveAll<IProviderRuntimeProfileSource>();
+                services.AddSingleton<IProviderRuntimeProfileSource>(new StaticProviderSource(provider));
+            },
+            useInMemoryDatabase: true);
+        var credentialIds = new List<ManagedCredentialId>();
+        for (var index = 0; index < 2; index++) {
+            Guid? expectedCredentialId = null;
+            if (authenticated) {
+                var issued = host.App.Services.GetRequiredService<IApiTokenService>().IssueToken(new() {
+                    Subject = "same-client", DisplayName = $"test-key-{index}", Scopes = [ApiAccessScopeNames.Api]
+                });
+                host.Client.DefaultRequestHeaders.Authorization = new(issued.TokenType, issued.Token);
+                expectedCredentialId = Guid.ParseExact(new JwtSecurityTokenHandler().ReadJwtToken(issued.Token)
+                    .Claims.Single(claim => claim.Type == ApiManagedTokenClaims.TokenId).Value, "N");
+            }
+            var endpoint = stream ? "chat-completions/stream" : "test-chat";
+            using var response = await host.Client.PostAsJsonAsync(
+                $"/api/agents/providers/{provider.Id:D}/{endpoint}", new {
+                    model = provider.DefaultModel, systemPrompt = "do not copy prior system text",
+                    messages = Array.Empty<object>(), prompt = "current turn",
+                    history = new { caller = new { credentialId = Guid.NewGuid() }, owner = new { ownerId = Guid.NewGuid() } }
+                });
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var history = Assert.IsType<ProviderTestChatRequest>(proxy.Request).History;
+            Assert.Null(history.Owner);
+            Assert.Equal("current turn", history.CurrentTurn?.Input);
+            Assert.Equal(authenticated ? HistoryAuthenticationKind.ManagedCredential : HistoryAuthenticationKind.AuthenticationDisabled,
+                history.Caller.Kind);
+            Assert.Equal(expectedCredentialId, history.Caller.CredentialId?.Value);
+            if (authenticated) {
+                Assert.Equal("same-client", history.Caller.Subject);
+                Assert.False(string.IsNullOrWhiteSpace(history.Caller.Issuer));
+                credentialIds.Add(history.Caller.CredentialId!.Value);
+            }
+        }
+        Assert.Equal(authenticated ? 2 : 0, credentialIds.Distinct().Count());
+    }
+
     [Fact]
     public async Task Unknown_provider_stream_returns_not_found_before_starting_sse()
     {
@@ -137,10 +194,10 @@ public sealed class AgentEventsApiIntegrationTests
     public async Task Provider_stream_cancels_and_observes_dispatch_when_running_frame_fails()
     {
         var provider = CreateProvider();
-        var workspaceService =
-            DispatchProxy.Create<IAgentFrameworkWorkspaceService, ProviderWorkspaceProxy>();
-        using var workspaceProxy =
-            (ProviderWorkspaceProxy)(object)workspaceService;
+        var providerAdministration =
+            DispatchProxy.Create<IProviderRuntimeAdministrationService, ProviderAdministrationProxy>();
+        using var providerAdministrationProxy =
+            (ProviderAdministrationProxy)(object)providerAdministration;
         var context = new DefaultHttpContext();
         await using var body = new ThrowOnRunningFrameStream();
         context.Response.Body = body;
@@ -154,13 +211,13 @@ public sealed class AgentEventsApiIntegrationTests
                     [],
                     "Test cancellation ownership."),
                 context,
-                workspaceService,
+                providerAdministration,
                 new StaticProviderSource(provider),
                 Options.Create(new ApiAccessOptions()),
                 NullLogger<ProviderChatCompletionApiRequest>.Instance));
 
-        await workspaceProxy.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(1));
-        Assert.True(workspaceProxy.Completion.Task.IsCanceled);
+        await providerAdministrationProxy.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(providerAdministrationProxy.Completion.Task.IsCanceled);
     }
 
     [Fact]
@@ -519,9 +576,10 @@ public sealed class AgentEventsApiIntegrationTests
         }
     }
 
-    private class ProviderWorkspaceProxy : DispatchProxy, IDisposable
+    private class ProviderAdministrationProxy : DispatchProxy, IDisposable
     {
         private CancellationTokenRegistration cancellationRegistration;
+        public ProviderTestChatRequest? Request { get; private set; }
 
         public TaskCompletionSource<ProviderTestChatResult> Completion { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -534,13 +592,14 @@ public sealed class AgentEventsApiIntegrationTests
             object?[]? args)
         {
             if (targetMethod?.Name !=
-                nameof(IAgentFrameworkWorkspaceService.RunProviderTestChatAsync))
+                nameof(IProviderRuntimeAdministrationService.RunProviderTestChatAsync))
             {
                 throw new NotSupportedException(
-                    $"Unexpected workspace call '{targetMethod?.Name}'.");
+                    $"Unexpected provider-administration call '{targetMethod?.Name}'.");
             }
 
-            var cancellationToken = (CancellationToken)args![2]!;
+            Request = (ProviderTestChatRequest)args![1]!;
+            var cancellationToken = (CancellationToken)args[2]!;
             cancellationRegistration = cancellationToken.Register(() =>
             {
                 Cancelled.TrySetResult();

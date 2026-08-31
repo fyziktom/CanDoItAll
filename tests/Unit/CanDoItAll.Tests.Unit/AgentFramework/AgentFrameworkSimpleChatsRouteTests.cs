@@ -6,6 +6,17 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentFrameworkSimpleChatsRouteTests
 {
+    [Theory]
+    [InlineData(AgentWorkspaceTabs.Providers)]
+    [InlineData(AgentWorkspaceTabs.RequestHistory)]
+    public void History_hosts_round_trip_without_inheriting_chat_or_team_routes(string tab) {
+        var state = AgentWorkspaceRouteState.Parse(tab, null, Guid.NewGuid(), "conversations", null, Guid.NewGuid().ToString("D"), "agents");
+        Assert.Equal(tab, state.Tab);
+        Assert.Null(state.TeamId);
+        Assert.Equal(ProviderUsageWorkloadSelection.Agents, state.UsageSelection);
+        Assert.Equal($"/agents?tab={tab}", AgentWorkspaceRouteState.Build(state));
+    }
+
     [Fact]
     public void DefinitionsAreTheDefaultSimpleChatWorkspaceView()
     {

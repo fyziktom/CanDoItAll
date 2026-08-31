@@ -1,6 +1,6 @@
 <Stack GapScale="LayoutGap.Large">
     <FormSection Title="Provider and governance"
-                 Description="Bind the agent to the shared Workspace provider registry, name a human steward, and make the operational review state explicit before the agent is reused elsewhere.">
+                 Description="Bind the agent to the canonical provider catalog, name a human steward, and make the operational review state explicit before the agent is reused elsewhere.">
         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
             <div>
                 <label class="cda-field-label">Provider profile</label>
@@ -99,8 +99,8 @@
             if (selectedProvider is null)
             {
                 return ProviderOptions.Count == 0
-                    ? "No provider profiles exist yet. Create them in Workspace settings before binding this agent."
-                    : "Link a Workspace provider profile here to reuse the shared provider registry and default model contract.";
+                    ? "No provider profiles exist yet. Create one on the Agents provider tab before binding this agent."
+                    : "Link a provider profile here to reuse the canonical provider catalog and default model contract.";
             }
 
             var modelText = string.IsNullOrWhiteSpace(selectedProvider.DefaultModel)

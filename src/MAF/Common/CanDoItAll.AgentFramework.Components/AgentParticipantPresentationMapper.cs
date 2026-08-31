@@ -54,11 +54,13 @@ public static class AgentParticipantPresentationMapper
         string? shellTestId,
         string? selectTestId,
         IReadOnlyList<ParticipantActionPresentation> actions,
-        ConversationPresentationKey? key = null)
-    {
+        ConversationPresentationKey? key = null,
+        ProviderProfile? provider = null) {
         var displayName = string.IsNullOrWhiteSpace(agent.Name) ? "Agent" : agent.Name.Trim();
         var role = ResolveRole(agent);
-        var model = string.IsNullOrWhiteSpace(agent.Model) ? "No model configured" : agent.Model.Trim();
+        var model = string.IsNullOrWhiteSpace(agent.Model)
+            ? "No model configured"
+            : provider?.GetModelDisplayName(agent.Model) ?? agent.Model.Trim();
         var workload = AgentWorkloadDisplay.ResolveLabel(agent.Workload);
         var tags = VisibleTags(agent);
         var participant = new ConversationParticipantPresentation(
@@ -68,7 +70,7 @@ public static class AgentParticipantPresentationMapper
             avatarImageUrl: agent.AvatarImageUrl,
             avatarSeed: ResolveAvatarSeed(agent, "Agent"),
             avatarFallbackText: BuildInitials(ResolveAvatarSeed(agent, "Agent")),
-            searchText: string.Join(' ', agent.Name, agent.RoleTitle, agent.Summary, agent.Model),
+            searchText: string.Join(' ', agent.Name, agent.RoleTitle, agent.Summary, model),
             detailsText: $"{role}. {model}. {workload}. {(tags.Count == 0 ? "No visible tags" : $"Tags: {string.Join(", ", tags)}")}.",
             badges: [new(isBusy ? "Preparing" : workload, isBusy ? PresentationTone.Default : PresentationTone.Info)],
             tags: tags,

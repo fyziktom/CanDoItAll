@@ -1,32 +1,47 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
-using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-using WorkspaceProviderHealthResult = CanDoItAll.Modules.Workspace.ProviderHealthResult;
+using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
 internal sealed class AgentFrameworkProviderRuntimeGateway(
-    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IProviderRuntimeAdministrationService providerAdministration,
     IProviderRuntimeProfileSource providerSource,
-    IActivityStream activityStream) : IProviderRuntimeGateway
+    IProviderRuntimeDescriptorStore descriptorStore,
+    IProviderRuntimePool runtimePool,
+    IActivityStream activityStream,
+    ILogger<AgentFrameworkProviderRuntimeGateway> logger) :
+    IProviderHealthCheckService,
+    IProviderPromptExecutionService,
+    IProviderInferenceRelayRuntime
 {
-    public async Task<WorkspaceProviderHealthResult> CheckHealthAsync(
+    private const string InferenceRelayCredentialIdentity = "shared-provider-relay";
+
+    public async Task<ProviderHealthCheckResult> CheckHealthAsync(
         Guid providerProfileId,
         CancellationToken cancellationToken = default)
     {
+        AgentFrameworkProviderProfile? provider = null;
         try
         {
-            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-            var provider = await providerSource.GetProviderAsync(providerProfileId, cancellationToken);
+            provider = await providerSource.GetProviderAsync(
+                providerProfileId,
+                cancellationToken);
             if (provider is null)
             {
-                return new WorkspaceProviderHealthResult(false, "Provider profile not found.");
+                return new ProviderHealthCheckResult(false, "Provider profile not found.");
             }
 
-            var result = await workspaceService.TestProviderAsync(providerProfileId, cancellationToken);
+            var result = ProviderFailureDisclosurePolicy.SanitizeHealthResult(
+                provider,
+                await providerAdministration.TestProviderAsync(
+                    providerProfileId,
+                    cancellationToken));
             await activityStream.RecordAsync(
                 new ActivityWriteRequest(
                     "providers",
@@ -38,33 +53,56 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     Route: "/agents?tab=providers"),
                 cancellationToken);
 
-            return new WorkspaceProviderHealthResult(result.Success, result.Summary);
+            return new ProviderHealthCheckResult(result.Success, result.Summary);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception)
         {
-            return new WorkspaceProviderHealthResult(false, exception.Message);
+            if (provider is null)
+            {
+                logger.LogWarning(
+                    "Provider runtime profile lookup failed during {Operation}. FailureType={FailureType}.",
+                    ProviderFailureOperation.HealthCheck,
+                    exception.GetType().FullName);
+            }
+
+            return new ProviderHealthCheckResult(
+                false,
+                provider is null
+                    ? ProviderFailureDisclosurePolicy
+                        .SanitizedProfileLookupFailureMessage
+                    : ProviderFailureDisclosurePolicy.SelectMessage(
+                        provider,
+                        ProviderFailureOperation.HealthCheck,
+                        exception.Message));
         }
     }
 
-    public async Task<Result<ProviderExecutionResponse>> SendAsync(
-        ProviderExecutionRequest request,
+    public async Task<Result<ProviderPromptExecutionResponse>> ExecuteAsync(
+        ProviderPromptExecutionRequest request,
         CancellationToken cancellationToken = default)
     {
+        AgentFrameworkProviderProfile? provider = null;
         try
         {
-            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-            var provider = await providerSource.GetProviderAsync(request.ProviderProfileId, cancellationToken);
+            provider = await providerSource.GetProviderAsync(
+                request.ProviderProfileId,
+                cancellationToken);
             if (provider is { IsEnabled: false })
             {
                 provider = null;
             }
             if (provider is null)
             {
-                return Result<ProviderExecutionResponse>.Failure(
+                return Result<ProviderPromptExecutionResponse>.Failure(
                     Error.Validation("Provider profile not found or disabled."));
             }
 
-            var response = await workspaceService.RunProviderTestChatAsync(
+            var response = await providerAdministration.RunProviderTestChatAsync(
                 request.ProviderProfileId,
                 new ProviderTestChatRequest(
                     request.ModelOverride ?? provider.DefaultModel,
@@ -84,8 +122,8 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     Route: "/agents?tab=providers"),
                 cancellationToken);
 
-            return Result<ProviderExecutionResponse>.Success(
-                new ProviderExecutionResponse(
+            return Result<ProviderPromptExecutionResponse>.Success(
+                new ProviderPromptExecutionResponse(
                     provider.Name,
                     response.Model,
                     response.ResponseText,
@@ -95,9 +133,85 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                         ? "Sensitive content was included in the outbound payload."
                         : null));
         }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
-            return Result<ProviderExecutionResponse>.Failure(Error.Failure(exception.Message));
+            if (provider is null)
+            {
+                logger.LogWarning(
+                    "Provider runtime profile lookup failed during {Operation}. FailureType={FailureType}.",
+                    ProviderFailureOperation.RuntimeRequest,
+                    exception.GetType().FullName);
+            }
+
+            var message = provider is null
+                ? ProviderFailureDisclosurePolicy
+                    .SanitizedProfileLookupFailureMessage
+                : ProviderFailureDisclosurePolicy.SelectMessage(
+                    provider,
+                    ProviderFailureOperation.RuntimeRequest,
+                    exception.Message);
+            return Result<ProviderPromptExecutionResponse>.Failure(
+                Error.Failure(message));
+        }
+    }
+
+    public async Task<ProviderInferenceRelayTransportResponse> SendAsync(
+        ProviderInferenceRelayRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        descriptorStore.Upsert(
+            request.Provider,
+            request.Provider.ConnectorPluginKey,
+            request.Credential is null
+                ? string.Empty
+                : InferenceRelayCredentialIdentity);
+        var handle = await runtimePool.GetRequiredAsync(
+            request.Provider.Id,
+            cancellationToken);
+        var query = request.Operation == ProviderInferenceRelayOperation.ImageGenerations
+            ? new ProviderDispatchQuery(
+                request.Provider,
+                AgentProviderCapabilityKind.ImageGeneration,
+                AgentProviderOperationKind.GenerateImage,
+                request.Model)
+            : new ProviderDispatchQuery(
+                request.Provider,
+                AgentProviderCapabilityKind.ChatCompletion,
+                AgentProviderOperationKind.CompleteChat,
+                request.Model);
+        return await handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<ProviderInferenceRelayRequest>(
+                query,
+                request),
+            async (context, token) =>
+            {
+                EnsureProviderKindMatches(
+                    context.Descriptor,
+                    context.Query.Provider);
+                var driver = handle.ProviderFactory.Resolve<
+                    IProviderInferenceRelayDriver>(
+                    context.Query.Provider.Kind);
+                return await driver.RelayAsync(
+                    context.Payload,
+                    token);
+            },
+            cancellationToken);
+    }
+
+    private static void EnsureProviderKindMatches(
+        ProviderRuntimeDescriptor descriptor,
+        AgentFrameworkProviderProfile provider)
+    {
+        if (descriptor.ProviderKind != provider.Kind)
+        {
+            throw new InvalidOperationException(
+                "Provider runtime descriptor kind does not match the inference-relay provider kind.");
         }
     }
 }

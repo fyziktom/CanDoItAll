@@ -156,7 +156,7 @@ public sealed class LlmChatConversationEngine(
         var operationId = new LlmChatOperationId(admission.UserEntry.TurnId);
         await using var lease = await runtimeLeaseFactory.AcquireAsync(cancellationToken).ConfigureAwait(false);
         EnsureCurrent(lease);
-        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity));
+        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity) { HistoryCaller = operationScope.Current?.HistoryCaller });
         await foreach (var update in streamingPort
             .StreamAsync(admission.InvocationRequest, lease.CancellationToken)
             .ConfigureAwait(false))
@@ -269,7 +269,7 @@ public sealed class LlmChatConversationEngine(
 
         await using var lease = await runtimeLeaseFactory.AcquireAsync(cancellationToken).ConfigureAwait(false);
         EnsureCurrent(lease);
-        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity));
+        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity) { HistoryCaller = operationScope.Current?.HistoryCaller });
         try
         {
             var result = await execute(lease.CancellationToken).ConfigureAwait(false);

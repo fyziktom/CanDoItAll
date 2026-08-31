@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentApiFailureContractIntegrationTests
@@ -335,8 +337,23 @@ public sealed class AgentApiFailureContractIntegrationTests
             jwtEnabled: false,
             useInMemoryDatabase: true);
 
-        var retainedSecretId = Guid.NewGuid();
-        var retainedSecretProvider = CreateOtherwiseValidProviderEditor();
+        Guid retainedSecretId;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var secretResult = await scope.ServiceProvider
+                .GetRequiredService<SecretService>()
+                .SaveAsync(new SecretEditorModel
+                {
+                    Name = "Provider validation probe key",
+                    Kind = SecretKind.ApiKey,
+                    SecretValue = "provider-validation-probe",
+                    Scope = "workspace"
+                });
+            Assert.True(secretResult.IsSuccess);
+            retainedSecretId = secretResult.Value;
+        }
+
+        var retainedSecretProvider = CreateOtherwiseValidProviderEditor(retainedSecretId);
         retainedSecretProvider.ApiKeyEnvironmentVariable =
             $"secret:{retainedSecretId:D}";
         retainedSecretProvider.ConfigurationJson =
@@ -464,7 +481,7 @@ public sealed class AgentApiFailureContractIntegrationTests
 
         foreach (var scenario in scenarios)
         {
-            var editor = CreateOtherwiseValidProviderEditor();
+            var editor = CreateOtherwiseValidProviderEditor(retainedSecretId);
             scenario.Configure(editor);
 
             using var response = await host.Client.PostAsJsonAsync(
@@ -499,15 +516,15 @@ public sealed class AgentApiFailureContractIntegrationTests
     [Fact]
     public async Task Provider_save_storage_failure_is_not_misclassified_as_request_validation()
     {
-        var workspaceService = DispatchProxy.Create<
-            IAgentFrameworkWorkspaceService,
+        var providerAdministration = DispatchProxy.Create<
+            IProviderRuntimeAdministrationService,
             ProviderSaveStorageFailureProxy>();
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentFrameworkWorkspaceService>();
-                services.AddSingleton(workspaceService);
+                services.RemoveAll<IProviderRuntimeAdministrationService>();
+                services.AddSingleton(providerAdministration);
             },
             useInMemoryDatabase: true,
             environmentName: Environments.Production);
@@ -665,15 +682,18 @@ public sealed class AgentApiFailureContractIntegrationTests
         };
     }
 
-    private static ProviderProfileEditorModel CreateOtherwiseValidProviderEditor()
+    private static ProviderProfileEditorModel CreateOtherwiseValidProviderEditor(
+        Guid? secretRecordId = null)
     {
+        var resolvedSecretRecordId = secretRecordId ??
+            new Guid("970f8eb8-3596-4113-9c4b-5fd921dd4389");
+
         return new ProviderProfileEditorModel
         {
             Name = "Provider validation probe",
             Kind = ProviderKind.OpenAi,
             BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable =
-                "secret:970f8eb8-3596-4113-9c4b-5fd921dd4389",
+            ApiKeyEnvironmentVariable = $"secret:{resolvedSecretRecordId:D}",
             DefaultModel = "gpt-5",
             ConfigurationJson = "{}"
         };
@@ -793,14 +813,14 @@ public sealed class AgentApiFailureContractIntegrationTests
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
-            if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.SaveProviderAsync))
+            if (targetMethod?.Name == nameof(IProviderRuntimeAdministrationService.SaveProviderAsync))
             {
                 return Task.FromException<Guid>(
                     new InvalidOperationException(Secret));
             }
 
             throw new InvalidOperationException(
-                $"Workspace service member '{targetMethod?.Name}' was not expected in this API test.");
+                $"Provider administration member '{targetMethod?.Name}' was not expected in this API test.");
         }
     }
 }

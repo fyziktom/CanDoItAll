@@ -577,6 +577,7 @@ public sealed class RuntimeHostPlatformCapabilityTests
             "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
             "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
             "src/Foundation/CanDoItAll.Infrastructure/Storage/ExternalTargetPathRegistry.cs",
+            "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderSourceUriPolicy.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs",

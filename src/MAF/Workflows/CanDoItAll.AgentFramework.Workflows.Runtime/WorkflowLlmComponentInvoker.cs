@@ -62,14 +62,16 @@ public sealed class WorkflowLlmComponentInvoker(
                     $"Workflow LLM component '{effectiveComponent.Name}' JSON result.")
                 : null,
             settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature),
-            correlationId: $"workflow:{definition.Id:N}:{node.Id}");
+            correlationId: $"workflow:{definition.Id:N}:{node.Id}") {
+                History = WorkflowHistoryInvocation.Create(invocationId)
+            };
 
         LlmInvocationResult response;
         try
         {
             response = await llmInvocationPort.InvokeAsync(request, cancellationToken);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception)
         {
             var failureCompletedAtUtc = clock.GetUtcNow();
             var failureUsage = (exception as LlmInvocationException)?.Usage;
@@ -86,6 +88,10 @@ public sealed class WorkflowLlmComponentInvoker(
                     : checked(failureUsage.InputTokens + failureUsage.OutputTokens),
                 toolCallCount: 0,
                 failureCompletedAtUtc);
+            unavailable = WorkflowHistoryInvocation.Attach(unavailable, request.History);
+            if (exception is OperationCanceledException cancelled) {
+                throw new WorkflowUsageCancellationException(cancelled, [unavailable]);
+            }
             throw new WorkflowUsageObservationException(exception.Message, exception, [unavailable]);
         }
 
@@ -112,6 +118,7 @@ public sealed class WorkflowLlmComponentInvoker(
                 completedAtUtc)
         };
 
+        usageObservations[0] = WorkflowHistoryInvocation.Attach(usageObservations[0], request.History);
         var payload = response.ResponseText.Trim();
         try
         {

@@ -100,6 +100,7 @@
                                                           EntityName="@form.Name"
                                                           EntityDescription="@form.Summary"
                                                           EntityKind="Simple Chat"
+                                                          DefaultImageSeed="@DefinitionAvatar.Seed"
                                                           Disabled="@isBusy"
                                                           TestIdPrefix="llm-chat-definition-avatar" />
                                         </AvatarActions>
@@ -324,7 +325,7 @@
         FirstNonEmpty(form?.Name, "Simple Chat avatar"),
         form?.AvatarImageUrl,
         BuildInitials(FirstNonEmpty(form?.Name, "Simple Chat")),
-        FirstNonEmpty(form?.Name, "Simple Chat avatar"));
+        current?.Definition.DefinitionId.ToString("D") ?? FirstNonEmpty(form?.Name, "Simple Chat avatar"));
 
     private IReadOnlyList<LlmChatThinkingEffort> ThinkingEffortChoices
         => SelectedModelCapability?.ThinkingEffort.AllowedEfforts ?? [];

@@ -117,7 +117,8 @@ public sealed class PersistentWorkflowResumeBoundaryStoreInMemoryTests
             dataProtectionProvider);
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
             factory,
-            dataProtectionProvider);
+            dataProtectionProvider,
+            new WorkflowHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(timeProvider)));
         var checkpointStore = new PersistentWorkflowBackendCheckpointPayloadStore(
             factory,
             dataProtectionProvider,

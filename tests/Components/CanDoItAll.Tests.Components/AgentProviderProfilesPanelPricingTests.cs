@@ -1,10 +1,10 @@
 using AngleSharp.Html.Dom;
 using Bunit;
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
@@ -14,17 +14,15 @@ public sealed class AgentProviderProfilesPanelPricingTests
     public async Task Provider_editor_surfaces_model_prices_on_dedicated_prices_tab()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
-        var workspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var secretRecordId = Guid.NewGuid();
+        var providerAdministration = harness.Context.Services.GetRequiredService<IProviderRuntimeAdministrationService>();
 
-        await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        await providerAdministration.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "AAA Priced Provider",
-            Kind = ProviderKind.OpenAi,
-            BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable = $"secret:{secretRecordId:D}",
+            Kind = ProviderKind.Ollama,
+            BaseUrl = "http://127.0.0.1:11434",
             DefaultModel = "priced-model",
-            Transport = ProviderTransportKind.Responses,
+            Transport = ProviderTransportKind.ChatCompletions,
             Purpose = ProviderProfilePurpose.Chat,
             IsEnabled = true,
             SupportsStreaming = true,
@@ -42,7 +40,7 @@ public sealed class AgentProviderProfilesPanelPricingTests
             ]
         });
         var savedProvider = Assert.Single(
-            await workspaceService.ListProvidersAsync(),
+            await providerAdministration.ListProvidersAsync(),
             provider => provider.Name == "AAA Priced Provider");
         Assert.Contains(savedProvider.ModelPrices, price => price.Model == "priced-model");
 

@@ -11,6 +11,8 @@ using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
+
 public partial class AgentChatPanel : IAsyncDisposable
 {
     private const string AgentThreadsHelpText =
@@ -51,6 +53,9 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
 
     [Inject]
     public IAgentVoiceService VoiceService { get; set; } = default!;
@@ -1176,7 +1181,7 @@ public partial class AgentChatPanel : IAsyncDisposable
     private async Task RefreshAgentCatalogAsync()
     {
         var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        var providersTask = WorkspaceService.ListProvidersAsync();
+        var providersTask = ProviderRuntimeAdministrationService.ListProvidersAsync();
         agents = await agentsTask;
         providers = await providersTask;
         var privateProviderIds = providers

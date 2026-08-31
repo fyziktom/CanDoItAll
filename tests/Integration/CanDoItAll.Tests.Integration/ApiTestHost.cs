@@ -63,7 +63,8 @@ internal sealed class ApiTestHost : IAsyncDisposable
         string? environmentName = null,
         IFakeAgentRuntime? agentRuntimeOverride = null,
         CanDoItAllTestEnvironment? sharedTestEnvironment = null,
-        TestDatabaseProfile? sharedActiveProfile = null)
+        TestDatabaseProfile? sharedActiveProfile = null,
+        Action<WebApplication>? configureApplication = null)
     {
         if ((sharedTestEnvironment is null) != (sharedActiveProfile is null))
         {
@@ -157,6 +158,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
             app.UseAuthentication();
             app.UseAuthorization();
         }
+
+        configureApplication?.Invoke(app);
+        app.UseMiddleware<AccessContextReferenceMiddleware>();
 
         app.MapCanDoItAllApiDocumentation();
 

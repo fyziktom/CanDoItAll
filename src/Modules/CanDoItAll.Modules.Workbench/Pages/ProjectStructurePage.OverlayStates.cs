@@ -344,5 +344,5 @@ public sealed record ProjectStructureTranscriptActionDialogState(
     ProjectLlmActionKind ActionKind,
     Guid? SelectedProviderId,
     string LastProviderName,
-    IReadOnlyList<ProviderProfileSummary> Providers,
+    IReadOnlyList<ProviderProfile> Providers,
     string Error);

@@ -89,7 +89,9 @@ public sealed record WorkflowUsageObservation(
     DateTimeOffset? StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     DateTimeOffset RecordedAtUtc,
-    WorkflowLaunchOrigin? Origin);
+    WorkflowLaunchOrigin? Origin) {
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation? HistoryEvidence { get; init; }
+}
 
 public sealed record WorkflowUsageObservationContext(
     WorkflowRunId? RunId,
@@ -191,7 +193,7 @@ public static class WorkflowUsageObservationFactory
             context.StartedAtUtc,
             context.CompletedAtUtc,
             observation.CreatedAtUtc,
-            context.Origin);
+            context.Origin) { HistoryEvidence = observation.HistoryEvidence };
 
         WorkflowUsageObservationValidator.ThrowIfInvalid(fact);
         return fact;

@@ -614,6 +614,9 @@ public sealed record ExecutionInvocationContext(
     string MessageId = "",
     ExecutionInvocationPolicy? Policy = null)
 {
+    [JsonIgnore]
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; init; }
+
     public static ExecutionInvocationContext Empty { get; } = new(
         SourceKind: "manual",
         SourceId: string.Empty,
@@ -657,6 +660,11 @@ public sealed record AgentRuntimeExecutionOptions(
 {
     [JsonIgnore]
     public AgentExecutionOperationId? ActivityOperationId { get; init; }
+
+    [JsonIgnore]
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext History { get; init; } =
+        CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext.Create(
+            CanDoItAll.AgentFramework.ProviderHistory.HistoryWorkload.Agent);
 
     [JsonIgnore]
     public AgentRuntimeTransientContext? TransientContext { get; init; }
@@ -826,6 +834,8 @@ public sealed record ExecutionRunRecord(
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AgentExecutionOperationId? InitialActivityOperationId { get; init; }
+
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ProviderRequestCompatibilityEvidence? EntryAgentRequestCompatibilityEvidence { get; init; }

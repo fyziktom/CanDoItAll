@@ -526,7 +526,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             if (model.ProviderProfileId.HasValue && selectedProvider is null)
             {
                 return Result<AiTechnicalAgentSaveResult>.Failure(
-                    Error.Validation("Provider profile must reference an existing workspace provider.", "crmhr.ai-agent.provider-invalid"));
+                    Error.Validation("Provider profile must reference an existing provider.", "crmhr.ai-agent.provider-invalid"));
             }
 
             var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);

@@ -15,7 +15,7 @@
                              Tone="info" />
                 <CompactStat Label="providers"
                              Value="@ResolveSummaryValue(providerCount)"
-                             TooltipText="Workspace-owned providers executed through AgentFramework."
+                                  TooltipText="Provider profiles executed through AgentFramework."
                              Tone="success" />
                 <CompactStat Label="bound resources"
                              Value="@ResolveSummaryValue(boundResourceCount)"
@@ -94,6 +94,10 @@
         @if (string.Equals(selectedTab, AgentWorkspaceTabs.Providers, StringComparison.Ordinal))
         {
             <AgentProviderProfilesPanel />
+        }
+        else if (selectedTab == AgentWorkspaceTabs.RequestHistory) {
+            <CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel
+                Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.AllAuthorized())" />
         }
         else if (string.Equals(selectedTab, AgentWorkspaceTabs.Voice, StringComparison.Ordinal))
         {

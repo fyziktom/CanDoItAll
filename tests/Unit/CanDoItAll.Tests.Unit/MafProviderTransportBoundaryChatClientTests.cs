@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Extensions.AI;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
@@ -9,6 +10,38 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafProviderTransportBoundaryChatClientTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task History_preserves_timeout_through_transport_boundary(bool streaming, bool shared) {
+        var provider = CreateProvider();
+        if (shared) {
+            provider = provider with { CredentialBinding = new(Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid()) };
+        }
+        var timeout = new TaskCanceledException("private deadline", new TimeoutException("private cause"));
+        var recorder = new CanDoItAll.Tests.Unit.RecordingProviderHistory();
+        using var boundary = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(nonStreamingException: timeout, streamingException: timeout), provider, provider.DefaultModel);
+        using var client = new ProviderHistoryChatClient(boundary, provider, provider.DefaultModel, recorder, TimeProvider.System);
+        var failure = await Record.ExceptionAsync(async () => {
+            if (streaming) {
+                await foreach (var update in client.GetStreamingResponseAsync(CreateMessages())) {
+                }
+            } else {
+                await client.GetResponseAsync(CreateMessages());
+            }
+        });
+        Assert.NotNull(failure);
+        Assert.Equal(CanDoItAll.AgentFramework.ProviderHistory.HistoryOutcome.TimedOut,
+            Assert.Single(recorder.Completions).Completion.Outcome);
+        if (shared) {
+            Assert.DoesNotContain("private", failure.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     [Fact]
     public async Task Non_streaming_transport_failure_is_marked_with_provider_identity()
     {
@@ -25,6 +58,123 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         Assert.Equal(provider.Id, exception.ProviderProfileId);
         Assert.Equal(provider.DefaultModel, exception.Model);
         Assert.Same(transportFailure, exception.InnerException);
+
+        var sourceSecretId = Guid.Parse(
+            "4cf1b375-b3c5-4f80-84ae-d23f4897ccbf");
+        var sourceProvider = provider with
+        {
+            BaseUrl = "http://10.23.45.67:43123/openai/v1",
+            CredentialBinding = new ProviderCredentialBinding(
+                sourceSecretId,
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.Parse("5c745ad6-4ccd-4921-a966-e64c3ace17c1")),
+            ModelSelectionConstraint = new ProviderModelSelectionConstraint(
+                [provider.DefaultModel])
+        };
+        const string remoteMarker = "raw-private-provider-failure";
+        using var sourceClient = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(
+                nonStreamingException: new HttpRequestException(
+                    $"{remoteMarker} at {sourceProvider.BaseUrl}; secret={sourceSecretId:D}.")),
+            sourceProvider,
+            sourceProvider.DefaultModel);
+
+        var sourceException = await Assert.ThrowsAsync<
+            MafProviderTransportException>(() =>
+            sourceClient.GetResponseAsync(CreateMessages()));
+
+        var boundary = Assert.IsType<ProviderFailureBoundaryException>(
+            sourceException.InnerException);
+        Assert.Equal(ProviderFailureOperation.RuntimeRequest,
+            boundary.Operation);
+        Assert.Null(boundary.InnerException);
+        Assert.Equal(
+            typeof(HttpRequestException).FullName,
+            boundary.DiagnosticFailureType);
+        Assert.Contains(
+            ProviderFailureDisclosurePolicy.SanitizedRuntimeFailureMessage,
+            sourceException.ToString(),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            sourceProvider.BaseUrl,
+            sourceException.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            sourceSecretId.ToString("D"),
+            sourceException.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            remoteMarker,
+            sourceException.ToString(),
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Shared_authentication_failure_reaches_display_through_real_transport_boundary(bool streaming) {
+        var provider = CreateProvider() with {
+            CredentialBinding = new ProviderCredentialBinding(Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid())
+        };
+        var upstream = new HttpRequestException("private-source-secret", null, System.Net.HttpStatusCode.Unauthorized);
+        using var client = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(nonStreamingException: upstream, streamingException: upstream), provider, provider.DefaultModel);
+        var failure = await Assert.ThrowsAsync<MafProviderTransportException>(async () => {
+            if (streaming) {
+                await foreach (var _ in client.GetStreamingResponseAsync(CreateMessages())) {
+                }
+            } else {
+                await client.GetResponseAsync(CreateMessages());
+            }
+        });
+        var boundary = Assert.IsType<ProviderFailureBoundaryException>(failure.InnerException);
+        Assert.Equal(401, boundary.DiagnosticStatusCode);
+        Assert.Null(boundary.InnerException);
+        var usage = new AgentRuntimeUsageException("Provider failed.", failure, [],
+            failureOrigin: AgentRuntimeFailureOrigin.Provider);
+
+        Assert.True(AgentProviderFailureDisplayFormatter.TryFormat(provider, usage, out var display));
+        Assert.Contains("HTTP 401", display.ProviderDetail, StringComparison.Ordinal);
+        Assert.Contains("Shared provider connections", display.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-source-secret", display.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Source_managed_transport_preserves_safe_nested_failure_type()
+    {
+        var provider = CreateProvider();
+        var sourceProvider = provider with
+        {
+            CredentialBinding = new ProviderCredentialBinding(
+                Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.NewGuid())
+        };
+        var sanitizedFailure = ProviderFailureDisclosurePolicy.CreateBoundaryException(
+            sourceProvider,
+            ProviderFailureOperation.RuntimeRequest,
+            new HttpRequestException("Sensitive remote detail."));
+        using var client = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(nonStreamingException: sanitizedFailure),
+            sourceProvider,
+            sourceProvider.DefaultModel);
+
+        var exception = await Assert.ThrowsAsync<MafProviderTransportException>(() =>
+            client.GetResponseAsync(CreateMessages()));
+
+        var boundary = Assert.IsType<ProviderFailureBoundaryException>(
+            exception.InnerException);
+        Assert.Null(boundary.InnerException);
+        Assert.Equal(
+            typeof(HttpRequestException).FullName,
+            boundary.DiagnosticFailureType);
+        Assert.DoesNotContain(
+            "Sensitive remote detail.",
+            exception.ToString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]

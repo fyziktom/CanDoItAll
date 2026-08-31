@@ -7,9 +7,81 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentDefinitionFactoryThinkingEffortTests
 {
     [Fact]
+    public void Create_LocalManualModelOverrideStillRequiresPrice() {
+        var provider = CreateProvider(ProviderKind.OpenAi, "local-default") with {
+            ModelPrices = [new("local-default", 1m, 0m, 2m)]
+        };
+        var editor = CreateEditor(provider);
+        editor.Model = "local-unpriced";
+
+        var error = Assert.Throws<InvalidOperationException>(() => CreateDefinition(editor, [provider]));
+
+        Assert.Contains("requires a model price row", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Create_PublishedSharedModelWithoutPriceCanBeSelected() {
+        var provider = CreateProvider(ProviderKind.OpenAi, "route-default") with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            SuggestedModels = ["route-default", "route-secondary"],
+            ModelSelectionConstraint = new(["route-default", "route-secondary"]),
+            ModelCatalog = [new("route-default", "Default model"), new("route-secondary", "Unpriced model")],
+            ModelPrices = []
+        };
+        var editor = CreateEditor(provider);
+        editor.Model = "route-secondary";
+
+        var definition = CreateDefinition(editor, [provider]);
+
+        Assert.Equal("route-secondary", definition.Model);
+        Assert.Empty(provider.ModelPrices);
+    }
+
+    [Fact]
+    public void Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice() {
+        var provider = CreateProvider(ProviderKind.OpenAi, "route-default") with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            SuggestedModels = ["route-default"],
+            ModelSelectionConstraint = new(["route-default"]),
+            ModelCatalog = [new("route-default", "Default model")],
+            ModelPrices = [new("unpublished-route", 1m, 0m, 2m)]
+        };
+        var editor = CreateEditor(provider);
+        editor.Model = "unpublished-route";
+
+        var error = Assert.Throws<ProviderModelSelectionException>(() => CreateDefinition(editor, [provider]));
+
+        Assert.Equal(ProviderModelSelectionException.PublicMessage, error.Message);
+        Assert.DoesNotContain("unpublished-route", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("route-default")]
+    public void Create_SharedProviderWithoutPublishedConstraintIsRejected(string model) {
+        var provider = CreateProvider(ProviderKind.OpenAi, "route-default") with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            SuggestedModels = ["route-default"],
+            ModelPrices = [new("route-default", 1m, 0m, 2m)]
+        };
+        var editor = CreateEditor(provider);
+        editor.Model = model;
+
+        var error = Assert.Throws<ProviderModelSelectionException>(() => CreateDefinition(editor, [provider]));
+
+        Assert.Equal(ProviderModelSelectionException.PublicMessage, error.Message);
+    }
+
+    [Fact]
     public void Create_ExplicitNoneCanonicalizesConfigurationAndRehydratesEditor()
     {
-        var provider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Sol);
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Sol,
+            ProviderTransportKind.Responses);
         var editor = CreateEditor(provider);
         editor.ThinkingEffortOverride = AgentReasoningEffortLevel.None;
         editor.ConfigurationJson =
@@ -299,7 +371,10 @@ public sealed class AgentDefinitionFactoryThinkingEffortTests
     [Fact]
     public void Create_UsesProviderDefaultWhenAgentModelIsEmpty()
     {
-        var provider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Luna);
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Luna,
+            ProviderTransportKind.Responses);
         var editor = CreateEditor(provider);
         editor.Model = "  ";
         editor.ThinkingEffortOverride = AgentReasoningEffortLevel.Max;
@@ -346,7 +421,10 @@ public sealed class AgentDefinitionFactoryThinkingEffortTests
         };
     }
 
-    private static ProviderProfile CreateProvider(ProviderKind kind, string defaultModel)
+    private static ProviderProfile CreateProvider(
+        ProviderKind kind,
+        string defaultModel,
+        ProviderTransportKind transport = ProviderTransportKind.ChatCompletions)
     {
         return new ProviderProfile(
             Id: Guid.NewGuid(),
@@ -355,7 +433,7 @@ public sealed class AgentDefinitionFactoryThinkingEffortTests
             BaseUrl: "http://provider.test",
             ApiKeyEnvironmentVariable: string.Empty,
             DefaultModel: defaultModel,
-            Transport: ProviderTransportKind.ChatCompletions,
+            Transport: transport,
             IsEnabled: true,
             SupportsStreaming: true,
             SupportsTools: true,

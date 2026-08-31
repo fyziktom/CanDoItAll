@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
+
 public sealed record AgentDetailsDialogResult(Guid? AgentId, bool Deleted);
 
 public partial class AgentDetailsDialog
@@ -27,6 +29,9 @@ public partial class AgentDetailsDialog
 
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
 
     [Inject]
     public ProjectsService ProjectsService { get; set; } = default!;
@@ -89,6 +94,12 @@ public partial class AgentDetailsDialog
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
+
+    private async Task RefreshRuntimeProvidersAsync() {
+        providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
+        areProvidersLoaded = true;
+        providerLoadErrorMessage = null;
+    }
 
     private IReadOnlyList<ConversationProviderOption> RuntimeProviderOptions
         => AgentProviderPresentationMapper.Map(providers);
@@ -203,7 +214,7 @@ public partial class AgentDetailsDialog
         {
             var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
             var providersTask = InitialProviders is null
-                ? WorkspaceService.ListProvidersAsync()
+            ? ProviderRuntimeAdministrationService.ListProvidersAsync()
                 : Task.FromResult<IReadOnlyList<ProviderProfile>>(InitialProviders);
             var capabilitiesTask = WorkspaceService.ListCapabilitiesAsync();
             var secretsTask = SecretService.ListForPickerAsync();
@@ -839,14 +850,14 @@ public partial class AgentDetailsDialog
         var model = ResolveEditorRuntimeModel(provider);
         var modelLabel = string.IsNullOrWhiteSpace(model)
             ? "the selected model"
-            : $"model '{model}'";
+            : $"model '{provider.GetModelDisplayName(model)}'";
 
         if (!AgentProviderModelParameterPolicy.IsOpenAiLikeProvider(provider.Kind))
         {
             return $"Configured model parameters are sent for {modelLabel}.";
         }
 
-        if (AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider.Kind, model))
+        if (AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider, model))
         {
             return $"Temperature will be omitted for {modelLabel}. Provider defaults apply.";
         }

@@ -1,0 +1,47 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.AgentFramework.ProviderManagement
+@using CanDoItAll.SharedProviders.Abstractions
+@inject ISharedProviderManagementService ManagementService
+
+<Stack GapScale="LayoutGap.Small">
+    <Cluster>
+        <Button Text="Refresh shared provider" Icon="sync" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                IsBusy="busy" Disabled="busy" Click="RefreshAsync" data-testid="shared-provider-refresh-capabilities" />
+    </Cluster>
+    @if (message is not null) {
+        <Alert AlertStyle="@(failed ? AlertStyle.Danger : AlertStyle.Success)" data-testid="shared-provider-refresh-result">@message</Alert>
+    }
+</Stack>
+
+@code {
+    [Parameter] public Guid ProviderId { get; set; }
+    [Parameter] public EventCallback Refreshed { get; set; }
+    private bool busy;
+    private bool failed;
+    private string? message;
+
+    private async Task RefreshAsync() {
+        busy = true;
+        message = null;
+        try {
+            var sources = await ManagementService.ListSourcesAsync();
+            var source = sources.SingleOrDefault(item => item.Imports.Any(import => import.ProviderProfileId == ProviderId))
+                ?? throw new InvalidOperationException("The shared connection was not found. Open provider connections to inspect it.");
+            var selected = source.Imports.Where(import => import.SelectionState == SharedProviderSelectionState.Selected)
+                .Select(import => import.RemotePublicationId).ToHashSet();
+            var result = await ManagementService.SynchronizeSourceAsync(source.Source.Id, selected);
+            failed = !result.IsSuccessful;
+            message = failed
+                ? result.Failure?.SanitizedMessage ?? $"Source synchronization failed: {result.Outcome}."
+                : "Shared models and thinking settings refreshed. Your unsaved selections were preserved.";
+            if (!failed) {
+                await Refreshed.InvokeAsync();
+            }
+        } catch (Exception exception) {
+            failed = true;
+            message = $"Shared provider refresh failed: {exception.Message}";
+        } finally {
+            busy = false;
+        }
+    }
+}

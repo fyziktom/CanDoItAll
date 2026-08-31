@@ -62,7 +62,7 @@ internal sealed class InputAttachmentPreparer(
                         imageModel,
                         string.Empty,
                         [],
-                        analysisPrompt),
+                        analysisPrompt) { History = runtimeOptions.History },
                     imageModel,
                     [new ProviderChatAttachment(
                         attachment.Name,

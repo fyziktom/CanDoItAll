@@ -1,35 +1,31 @@
 <ListDetailShell ListPaneWidth="25rem"
                  data-testid="agents-provider-profiles-panel">
     <ListHeader>
-        <ListPanelHeader Title="Provider profiles"
-                         Description="AgentFramework provider catalog, including workspace profiles and seeded runtime providers."
-                         Count="@($"{FilteredProviders.Count} profile(s)")">
+        <ListPanelHeader Title="Provider profiles" Dense="true">
             <Actions>
-                <Button Text="New provider"
-                        Icon="add"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Click="ResetProviderAsync"
-                        data-testid="providers-new" />
-                <Button Text="Refresh"
-                        Icon="refresh"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Click="LoadAsync"
-                        data-testid="providers-refresh" />
+                <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
+                    <Button Icon="add" title="New provider" aria-label="New provider"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="ResetProviderAsync" data-testid="providers-new" />
+                    <Button Icon="refresh" title="Refresh providers" aria-label="Refresh providers"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="LoadAsync" data-testid="providers-refresh" />
+                    <Button Icon="hub" title="Shared provider connections" aria-label="Shared provider connections"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="@(() => sharedConnectionsOpen = true)" data-testid="providers-connections" />
+                </Cluster>
             </Actions>
             <Filters>
-                <FilterBar ResultText="@($"{FilteredProviders.Count} of {providers.Count} provider(s)")">
-                    <input @bind="providerSearch"
-                           @bind:event="oninput"
-                           class="cda-input min-w-[14rem] flex-1"
-                           placeholder="Search providers"
-                           data-testid="providers-search" />
-                    <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Click="ResetProviderSearch" />
-                </FilterBar>
+                <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny" data-testid="providers-filter">
+                    <input @bind="providerSearch" @bind:event="oninput"
+                           class="cda-input min-w-0 flex-1" placeholder="Search providers"
+                           aria-label="Search providers" data-testid="providers-search" />
+                    <Button Icon="filter_alt_off" title="Reset filter" aria-label="Reset provider filter"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="ResetProviderSearch" data-testid="providers-search-reset" />
+                    <span class="shrink-0 text-xs text-slate-500" data-testid="providers-filter-count"
+                          aria-label="Provider results">@FilteredProviders.Count / @providers.Count</span>
+                </Cluster>
             </Filters>
         </ListPanelHeader>
     </ListHeader>
@@ -39,7 +35,7 @@
         {
             <EmptyState Eyebrow="Loading"
                         Title="Loading provider catalog"
-                        Description="AgentFramework is reading workspace-backed and seeded provider profiles." />
+                        Description="AgentFramework is reading persisted and seeded provider profiles." />
         }
         else if (FilteredProviders.Count == 0)
         {
@@ -68,8 +64,6 @@
     </DetailHeader>
 
     <DetailContent>
-        <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
-            <Stack Class="agent-provider-editor-form min-h-full" GapScale="LayoutGap.XXLarge">
                 <div class="agent-provider-editor-tabs-shell">
                     <Tabs @bind-SelectedIndex="providerEditorTabIndex"
                           RenderMode="TabRenderMode.Server"
@@ -79,6 +73,13 @@
                           AriaLabel="Provider editor tabs"
                           data-testid="provider-editor-tabs">
                         <TabsItem Text="Connection" Icon="plug" data-testid="provider-editor-tab-connection">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
                             <div class="agent-provider-connection-tab">
                                 <FormSection Title="Identity" Description="Provider identity, endpoint, model, and grouping tags. Tags drive the tree and future capability search.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2" ColumnsXl="4">
@@ -90,13 +91,15 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Default model</label>
-                                        <InputText @bind-Value="providerModel.DefaultModel"
+                                        <InputText @bind-Value="ProviderDefaultModelText"
                                                    class="cda-input"
                                                    data-testid="providers-model-input" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Provider kind</label>
-                                        <InputSelect @bind-Value="providerModel.Kind"
+                                        <InputSelect TValue="ProviderKind" Value="@providerModel.Kind"
+                                                     ValueChanged="ChangeProviderKind"
+                                                     ValueExpression="@(() => providerModel.Kind)"
                                                      class="cda-input"
                                                      data-testid="providers-kind-select">
                                             @foreach (var kind in Enum.GetValues<ProviderKind>())
@@ -137,7 +140,7 @@
                                         }
                                         @foreach (var secret in secrets)
                                         {
-                                            <option value="@AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id)">@secret.Name</option>
+                                            <option value="@CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata.CreateSecretReference(secret.Id)">@secret.Name</option>
                                         }
                                     </InputSelect>
                                     @if (HasUnavailableSecretReference)
@@ -160,16 +163,37 @@
                                            InputTestId="providers-tags-input" />
                                 </FormSection>
                             </div>
+                            </fieldset>
+                            </ProviderProfileEditorForm>
                         </TabsItem>
                         <TabsItem Text="Prices" Icon="paid" data-testid="provider-editor-tab-prices">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
                             <div class="agent-provider-prices-tab">
                                 <ProviderModelPricingEditor Model="providerModel"
+                                                            ModelNames="@providerModel.SuggestedModels"
+                                                            SourceManaged="@SelectedProviderIsSourceManaged"
+                                                            Provider="@SelectedProvider"
                                                             PricingKind="@providerModel.Kind"
                                                             DefaultModel="@providerModel.DefaultModel"
                                                             OnRefreshPrices="RefreshProviderModelPricesAsync" />
                             </div>
+                            </fieldset>
+                            </ProviderProfileEditorForm>
                         </TabsItem>
                         <TabsItem Text="Runtime" Icon="tune" data-testid="provider-editor-tab-runtime">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
                             <div class="agent-provider-runtime-tab">
                                 <FormSection Title="Runtime behavior" Description="Keep transport and advertised runtime capabilities explicit.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
@@ -218,36 +242,39 @@
                                     </Grid>
                                 </FormSection>
                             </div>
+                            </fieldset>
+                            </ProviderProfileEditorForm>
+                        </TabsItem>
+                        <TabsItem Text="Thinking" Icon="psychology" data-testid="provider-editor-tab-thinking">
+                            <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       Save="SaveProviderAsync" Clear="ResetProviderAsync"
+                                                       Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
+                                                       Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
+                            <ProviderModelThinkingEditor @key="providerModel" Model="providerModel" Provider="SelectedProvider"
+                                                         Refreshed="RefreshProvidersAfterSharedChangeAsync" />
+                            </ProviderProfileEditorForm>
+                        </TabsItem>
+                        <TabsItem Text="Sharing" Icon="share" data-testid="provider-editor-tab-sharing">
+                            <SharedProviderManagementPanel ProviderProfileId="providerModel.Id"
+                                                           ProvidersChanged="RefreshProvidersAfterSharedChangeAsync" />
+                        </TabsItem>
+                        <TabsItem Text="History" Icon="history" data-testid="provider-editor-tab-history">
+                            @if (providerModel.Id is { } providerId) {
+                                <CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel @key="providerId"
+                                    Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.SingleProvider(new(providerId)))" />
+                            } else {
+                                <EmptyState Title="Save this provider first" Description="Request history is scoped to a saved provider identity." />
+                            }
                         </TabsItem>
                     </Tabs>
                 </div>
 
-                <StickyActionFooter StatusLabel="Provider profiles">
-                    <SecondaryActions>
-                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
-                        @if (providerModel.Id.HasValue)
-                        {
-                            <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@isBusy" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
-                        }
-                    </SecondaryActions>
-                    <PrimaryActions>
-                        <Button Text="Save provider"
-                                Type="submit"
-                                Disabled="@isBusy"
-                                IsBusy="@isBusy"
-                                data-testid="providers-save" />
-                    </PrimaryActions>
-                    <DangerActions>
-                        @if (providerModel.Id.HasValue)
-                        {
-                            <Button Text="Delete"
-                                    ButtonStyle="ButtonStyle.Danger"
-                                    Disabled="@isBusy"
-                                    Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
-                        }
-                    </DangerActions>
-                </StickyActionFooter>
-            </Stack>
-        </EditForm>
     </DetailContent>
 </ListDetailShell>
+
+@if (sharedConnectionsOpen) {
+    <SharedProviderSourcesDialog Secrets="secrets"
+                                 ProvidersChanged="RefreshProvidersAfterSharedChangeAsync"
+                                 OnClose="@(() => sharedConnectionsOpen = false)" />
+}

@@ -211,6 +211,7 @@ public sealed class AgentDetailsDialogDeletionTests
         {
             context.JSInterop.Mode = JSRuntimeMode.Loose;
             context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddStubProviderRuntimeAdministration();
             context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
             context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
             var avatarGenerationService = new AgentAvatarGenerationService(

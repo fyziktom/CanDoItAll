@@ -392,7 +392,11 @@ public sealed class WorkflowCatalogTests
             ProviderTransportKind.ChatCompletions,
             ProviderProfilePurpose.Chat,
             "llama3.2",
-            ["llama3.2"]);
+            ["llama3.2"]) with {
+                ModelPrices = [new ProviderModelTokenPrice("llama3.2", 0m, 0m, 0m) {
+                    TariffKind = ProviderTariffKind.ExplicitFree
+                }]
+            };
         var catalog = CreateCatalog([ollamaProvider]);
 
         var component = await catalog.SaveComponentAsync(

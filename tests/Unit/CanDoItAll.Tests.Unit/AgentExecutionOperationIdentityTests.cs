@@ -128,7 +128,8 @@ public sealed class AgentExecutionOperationIdentityTests
             method.Invoke(
                 null,
                 [
-                    CreateRun(),
+                    CreateRun() with { HistoryCaller = new(CanDoItAll.AgentFramework.ProviderHistory.HistoryAuthenticationKind.ManagedCredential,
+                        new(Guid.Parse("00000000-0000-4000-8000-000000000042")), Subject: "original-client") },
                     activityOperationId,
                     null,
                     null,
@@ -142,6 +143,8 @@ public sealed class AgentExecutionOperationIdentityTests
                 ]));
 
         Assert.Equal(activityOperationId, options.ActivityOperationId);
+        Assert.Equal("original-client", options.History.Caller.Subject);
+        Assert.Equal(Guid.Parse("00000000-0000-4000-8000-000000000042"), options.History.Caller.CredentialId!.Value.Value);
     }
 
     private static ExecutionRunRecord CreateRun()

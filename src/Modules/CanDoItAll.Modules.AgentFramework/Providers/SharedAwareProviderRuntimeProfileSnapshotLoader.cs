@@ -1,0 +1,260 @@
+using System.Security.Cryptography;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace CanDoItAll.Modules.AgentFramework;
+
+using PersistedProviderProfile =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using ProviderProfileWellKnownIds =
+    CanDoItAll.AgentFramework.Models.ProviderProfileWellKnownIds;
+
+internal sealed class DatabaseProviderRuntimeProfileSnapshotLoader(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ProviderProfileMapper providerMapper,
+    SharedProviderProfileMapper sharedProviderMapper,
+    SharedProviderRuntimeProfileMaterializer sharedProviderMaterializer,
+    IOptions<ProviderInitializationOptions> providerInitialization) :
+    IProviderRuntimeProfileSnapshotLoader
+{
+    public async Task<IReadOnlyList<CanonicalProviderRuntimeProfile>>
+        LoadAllAsync(CancellationToken cancellationToken = default) {
+        var (providers, importsByProfile, sources) = await LoadPersistedProfilesAsync(cancellationToken);
+        var projected = new List<CanonicalProviderRuntimeProfile>();
+        foreach (var provider in providers)
+        {
+            var mapped = Map(provider, importsByProfile, sources);
+            if (mapped is not null)
+            {
+                projected.Add(mapped);
+            }
+        }
+
+        if (providerInitialization.Value.SeedDefaults) {
+            projected.Add(new CanonicalProviderRuntimeProfile(
+                providerMapper.CreateRuntimeFallback(),
+                ConfigurationRevision: null));
+        }
+        return projected
+            .OrderBy(
+                item => item.Profile.Name,
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public async Task<CanonicalProviderRuntimeProfile?> LoadAsync(
+        Guid providerId,
+        CancellationToken cancellationToken = default)
+    {
+        if (providerId ==
+            ProviderProfileWellKnownIds.RuntimeFallbackOllama)
+        {
+            return providerInitialization.Value.SeedDefaults
+                ? new CanonicalProviderRuntimeProfile(providerMapper.CreateRuntimeFallback(), ConfigurationRevision: null)
+                : null;
+        }
+
+        await using var dbContext =
+            await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var provider = await dbContext.Set<PersistedProviderProfile>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item => item.Id == providerId,
+                cancellationToken);
+        if (provider is null)
+        {
+            return null;
+        }
+
+        if (!SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
+                provider.ConnectorPluginKey))
+        {
+            return MapPersonal(provider);
+        }
+
+        var imports = await dbContext.Set<SharedProviderImport>()
+            .AsNoTracking()
+            .Where(item => item.ProviderProfileId == provider.Id)
+            .Take(2)
+            .ToListAsync(cancellationToken);
+        if (imports.Count != 1)
+        {
+            return null;
+        }
+
+        var source = await dbContext.Set<SharedProviderSource>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item => item.Id == imports[0].SourceId,
+                cancellationToken);
+        return MapShared(provider, imports[0], source);
+    }
+
+    public async Task<ProviderConfigurationRevision?> LoadRevisionAsync(
+        Guid providerId,
+        CancellationToken cancellationToken = default) {
+        if (providerId == ProviderProfileWellKnownIds.RuntimeFallbackOllama) {
+            return null;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var provider = await dbContext.Set<PersistedProviderProfile>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
+        if (provider is null) {
+            return null;
+        }
+        if (!SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(provider.ConnectorPluginKey)) {
+            return MapPersonal(provider).ConfigurationRevision;
+        }
+
+        var imports = dbContext.Set<SharedProviderImport>().AsNoTracking()
+            .Where(item => item.ProviderProfileId == providerId);
+        var graphs = await (
+            from import in imports
+            join source in dbContext.Set<SharedProviderSource>().AsNoTracking()
+                on new { import.SourceId, HasSingleImport = imports.Count() == 1 }
+                equals new { SourceId = source.Id, HasSingleImport = true } into matchedSources
+            from source in matchedSources.DefaultIfEmpty()
+            select new { Import = import, Source = source })
+            .Take(2)
+            .ToListAsync(cancellationToken);
+        return graphs.Count == 1
+            ? MapSharedRevision(provider, graphs[0].Import, graphs[0].Source)
+            : null;
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, ProviderConfigurationRevision>> LoadRevisionsAsync(
+        CancellationToken cancellationToken = default) {
+        var (providers, importsByProfile, sources) = await LoadPersistedProfilesAsync(cancellationToken);
+        var revisions = new Dictionary<Guid, ProviderConfigurationRevision>();
+        foreach (var provider in providers) {
+            ProviderConfigurationRevision? revision;
+            if (!SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(provider.ConnectorPluginKey)) {
+                revision = MapPersonal(provider).ConfigurationRevision;
+            } else if (importsByProfile.TryGetValue(provider.Id, out var import) &&
+                sources.TryGetValue(import.SourceId, out var source)) {
+                revision = MapSharedRevision(provider, import, source);
+            } else {
+                continue;
+            }
+
+            if (revision is { } value) {
+                revisions.Add(provider.Id, value);
+            }
+        }
+        return revisions;
+    }
+
+    private async Task<(
+        IReadOnlyList<PersistedProviderProfile> Providers,
+        IReadOnlyDictionary<Guid, SharedProviderImport> ImportsByProfile,
+        IReadOnlyDictionary<Guid, SharedProviderSource> Sources)> LoadPersistedProfilesAsync(
+        CancellationToken cancellationToken) {
+        await using var dbContext =
+            await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var providers = await dbContext.Set<PersistedProviderProfile>()
+            .AsNoTracking()
+            .Where(item =>
+                item.Id != ProviderProfileWellKnownIds.RuntimeFallbackOllama)
+            .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken);
+        var imports = await dbContext.Set<SharedProviderImport>()
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        var sources = await dbContext.Set<SharedProviderSource>()
+            .AsNoTracking()
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+        var importsByProfile = imports
+            .GroupBy(item => item.ProviderProfileId)
+            .Where(group => group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single());
+        return (providers, importsByProfile, sources);
+    }
+
+    private ProviderConfigurationRevision? MapSharedRevision(
+        PersistedProviderProfile provider,
+        SharedProviderImport import,
+        SharedProviderSource? source) {
+        if (source is null || sharedProviderMaterializer.Validate(provider, import, source).Shape is null) {
+            return null;
+        }
+        return CreateCompositeRevision(provider, import, source);
+    }
+
+    private CanonicalProviderRuntimeProfile? Map(
+        PersistedProviderProfile provider,
+        IReadOnlyDictionary<Guid, SharedProviderImport> importsByProfile,
+        IReadOnlyDictionary<Guid, SharedProviderSource> sources)
+    {
+        if (!SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
+                provider.ConnectorPluginKey))
+        {
+            return MapPersonal(provider);
+        }
+
+        if (!importsByProfile.TryGetValue(provider.Id, out var import) ||
+            !sources.TryGetValue(import.SourceId, out var source))
+        {
+            return null;
+        }
+
+        return MapShared(provider, import, source);
+    }
+
+    private CanonicalProviderRuntimeProfile MapPersonal(
+        PersistedProviderProfile provider)
+    {
+        return new CanonicalProviderRuntimeProfile(
+            providerMapper.Map(provider),
+            new ProviderConfigurationRevision(provider.ConcurrencyToken));
+    }
+
+    private CanonicalProviderRuntimeProfile? MapShared(
+        PersistedProviderProfile provider,
+        SharedProviderImport import,
+        SharedProviderSource? source)
+    {
+        var materialization = sharedProviderMaterializer.Materialize(
+            provider,
+            import,
+            source);
+        return materialization.Profile is null || source is null
+            ? null
+            : new CanonicalProviderRuntimeProfile(
+                sharedProviderMapper.Map(materialization),
+                CreateCompositeRevision(provider, import, source));
+    }
+
+    private static ProviderConfigurationRevision CreateCompositeRevision(
+        PersistedProviderProfile provider,
+        SharedProviderImport import,
+        SharedProviderSource source)
+    {
+        Span<byte> material = stackalloc byte[96];
+        WriteGuid(material, 0, provider.Id);
+        WriteGuid(material, 16, provider.ConcurrencyToken);
+        WriteGuid(material, 32, import.Id);
+        WriteGuid(material, 48, import.ConcurrencyToken);
+        WriteGuid(material, 64, source.Id);
+        WriteGuid(material, 80, source.ConcurrencyToken);
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(material, hash);
+        return new ProviderConfigurationRevision(new Guid(hash[..16]));
+    }
+
+    private static void WriteGuid(
+        Span<byte> destination,
+        int offset,
+        Guid value)
+    {
+        if (!value.TryWriteBytes(destination[offset..(offset + 16)]))
+        {
+            throw new InvalidOperationException(
+                "The provider revision identifier could not be serialized.");
+        }
+    }
+}

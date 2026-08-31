@@ -103,7 +103,9 @@ internal static class LlmChatOperationsApi
             return error!;
         }
 
-        var result = await service.SendAsync(command!, cancellationToken).ConfigureAwait(false);
+        var result = await service.SendAsync(command! with {
+            HistoryCaller = ProviderHistoryRequestContext.Caller(httpRequest.HttpContext)
+        }, cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return LlmChatApiResults.FromFailure(result.Errors, body.Value!.OperationId);

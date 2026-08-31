@@ -172,6 +172,8 @@ public sealed record LlmChatInvocationRecord
         PricingVersion = normalizedPricingVersion;
     }
 
+    public IReadOnlyList<CanDoItAll.AgentFramework.ProviderHistory.HistoryEntry> HistoryAttempts { get; init; } = [];
+
     public const int MaximumFinishReasonLength = 100;
     public const int MaximumPricingVersionLength = 64;
 

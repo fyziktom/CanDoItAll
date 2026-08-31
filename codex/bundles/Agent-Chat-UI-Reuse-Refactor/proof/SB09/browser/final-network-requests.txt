@@ -1,4 +1,0 @@
-99. [GET] http://127.0.0.1:5218/_blazor/initializers => [200] OK
-101. [POST] http://127.0.0.1:5218/_blazor/negotiate?negotiateVersion=1 => [200] OK
-
-Note: 122 static requests not shown, run with "static" option to see them.

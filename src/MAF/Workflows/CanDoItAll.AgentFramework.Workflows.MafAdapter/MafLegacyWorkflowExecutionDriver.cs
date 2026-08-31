@@ -106,7 +106,7 @@ internal sealed class MafLegacyWorkflowExecutionDriver
         }
 
         var eventBindings = MafWorkflowEventBindingIndex.FromDefinition(definition);
-        using var auditScope = WorkflowExecutorExecutionAuditScope.Push(runId);
+        using var auditScope = WorkflowExecutorExecutionAuditScope.Push(runId, request.Origin);
         var externalRequestCapture = new WorkflowBackendExternalRequestCapture();
         using var externalRequestScope = WorkflowExternalRequestCaptureScope.Push(externalRequestCapture);
         var progressObserver = new WorkflowBackendProgressEventObserver(

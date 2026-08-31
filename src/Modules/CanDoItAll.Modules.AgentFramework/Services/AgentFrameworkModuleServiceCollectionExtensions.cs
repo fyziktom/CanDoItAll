@@ -25,6 +25,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Git;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -34,6 +35,7 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Conversations.Shell;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.Tools.Documents;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Memory.Application;
@@ -194,6 +196,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<MafAgentRuntime>().DiagnosticsPort);
         services.TryAddScoped<IProviderModelAdministrationRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<MafAgentRuntime>().ModelAdministrationPort);
+        services.TryAddScoped<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
+            serviceProvider.GetRequiredService<IProviderDiagnosticsRuntime>(),
+            serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
@@ -204,36 +209,25 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
             AgentProviderUsageProjectionSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
+            SharedProviderRelayUsageProjectionSource>());
         services.TryAddScoped<ProviderUsageQueryService>();
+        services.TryAddScoped<
+            ISharedProviderImageCapabilityRelay,
+            SharedProviderImageCapabilityRelay>();
         services.TryAddScoped<IAgentRecruitingEvidenceStore>(serviceProvider =>
             (IAgentRecruitingEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentRecruitingEvidenceService, AgentRecruitingEvidenceService>();
         services.TryAddSingleton<IAgentExecutionCancellationRegistry, AgentExecutionCancellationRegistry>();
-        services.AddScoped<WorkspaceAgentProviderProfileMapper>();
+        services.TryAddSingleton<SharedProviderRuntimeProfileMaterializer>();
+        services.AddScoped<SharedProviderProfileMapper>();
         services.AddScoped<
             IProviderRuntimeProfileSnapshotLoader,
             DatabaseProviderRuntimeProfileSnapshotLoader>();
-        services.AddSingleton<
-            CanonicalProviderRuntimeProfileSnapshotService>();
-        services.AddSingleton<IProviderRuntimeProfileSource>(
-            serviceProvider => serviceProvider.GetRequiredService<
-                CanonicalProviderRuntimeProfileSnapshotService>());
-        services.AddSingleton<IProviderRuntimeProfileSnapshotSource>(
-            serviceProvider => serviceProvider.GetRequiredService<
-                CanonicalProviderRuntimeProfileSnapshotService>());
-        services.AddSingleton<IProviderRuntimeProfileSnapshotInitializer>(
-            serviceProvider => serviceProvider.GetRequiredService<
-                CanonicalProviderRuntimeProfileSnapshotService>());
-        services.AddSingleton<IProviderRuntimeProfileSnapshotUpdater>(
-            serviceProvider => serviceProvider.GetRequiredService<
-                CanonicalProviderRuntimeProfileSnapshotService>());
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<
-                IWorkspaceProviderProfileCommitObserver,
-                AgentFrameworkProviderRuntimeSnapshotCommitObserver>());
-        services.AddScoped<WorkspaceBackedAgentProviderProfileRegistry>();
-        services.AddScoped<IProviderProfileRegistry>(serviceProvider =>
-            serviceProvider.GetRequiredService<WorkspaceBackedAgentProviderProfileRegistry>());
+                IProviderProfileCommitObserver,
+                SharedProviderCatalogProjectionCommitObserver>());
         services.TryAddSingleton<AgentReferenceDataInvalidationHub>();
         services.TryAddSingleton<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentReferenceDataInvalidationHub>());
@@ -342,7 +336,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<ScenarioHarnessService>();
         services.AddScoped<IDatabaseTransferHandler, AiAgentsDatabaseTransferHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, AgentFrameworkShellNavigationContributor>());
-        services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
+        services.AddScoped<AgentFrameworkProviderRuntimeGateway>();
+        services.AddScoped<IProviderHealthCheckService>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
+        services.AddScoped<IProviderPromptExecutionService>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
+        services.AddScoped<IProviderInferenceRelayRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
         services.TryAddScoped<IPluginStorageGateway, PluginStorageGateway>();
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
@@ -393,6 +393,15 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
         services.Replace(ServiceDescriptor.Scoped<IWorkflowLaunchIdempotencyQueryStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
+        services.TryAddSingleton<WorkflowHistoryProjection>();
+        services.AddSingleton<WorkflowHistorySource>();
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistoryTransferParticipant, AgentHistoryTransferParticipant>();
+        services.AddSingleton<AgentHistoryPublicationStore>();
+        services.AddSingleton<AgentFileHistorySource>();
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<AgentFileHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistorySourceMaintenance>(provider => provider.GetRequiredService<AgentFileHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<WorkflowHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistorySourceMaintenance>(provider => provider.GetRequiredService<WorkflowHistorySource>());
         services.TryAddScoped<PersistentWorkflowUsageObservationStore>();
         services.Replace(ServiceDescriptor.Scoped<IWorkflowUsageObservationStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowUsageObservationStore>()));
