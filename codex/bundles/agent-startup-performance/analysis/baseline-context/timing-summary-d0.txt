@@ -1,0 +1,14 @@
+Isolated scratch-only diagnostic; production Release DLLs unchanged.
+Scratch: C:\repositories\CanDoItAll\.artifacts\agent-label-startup-analysis\io-probe\bin\Release\net10.0\scratch-be3ebc9bce1341718b3f685f9c534c2f
+Warmup: 2 iterations excluded from each sample group.
+Timing milliseconds: n | mean | median | p90 | min | max
+Production factory.Create: 16 | 1.338 | 1.322 | 1.532 | 1.144 | 1.626
+Equivalent case probe: WriteThrough + Flush(true): 16 | 1.055 | 1.026 | 1.251 | 0.835 | 1.386
+Equivalent case probe: neither WriteThrough nor Flush(true): 16 | 0.602 | 0.564 | 0.882 | 0.444 | 1.019
+Durable 1 KiB write total: 10 | 22.258 | 21.903 | 25.017 | 19.882 | 26.392
+Factory.Create inside each durable write: 10 | 11.463 | 11.181 | 13.567 | 9.941 | 13.996
+Durable write excluding timed factory.Create calls: 10 | 10.796 | 10.651 | 12.363 | 9.419 | 12.395
+Durable write start to public beforeCommit callback: 10 | 17.643 | 17.065 | 20.024 | 15.302 | 20.616
+Policy creations per measured durable write: 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+Policy creation share of total durable write time: 51.5%
+DurableFileWriteStage observer is internal; only public factory and beforeCommit APIs used.

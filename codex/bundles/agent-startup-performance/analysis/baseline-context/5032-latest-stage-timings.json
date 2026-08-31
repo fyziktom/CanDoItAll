@@ -1,0 +1,50 @@
+{
+  "Source": "http://localhost:5032/api/agents/execution-runs/9320c5b5-b548-417c-b1ac-e1375a4a4b7e",
+  "Note": "Offsets observed in existing executionLog timestamps; no new run launched.",
+  "Timings": [
+    {
+      "Phase": "Planning",
+      "SinceCreatedSeconds": 7.053
+    },
+    {
+      "Phase": "Framework",
+      "SinceCreatedSeconds": 8.025
+    },
+    {
+      "Phase": "Approval policy",
+      "SinceCreatedSeconds": 8.938
+    },
+    {
+      "Phase": "Context contributors",
+      "SinceCreatedSeconds": 10.006
+    },
+    {
+      "Phase": "Skills",
+      "SinceCreatedSeconds": 11.04
+    },
+    {
+      "Phase": "Workspace tools",
+      "SinceCreatedSeconds": 12.339
+    },
+    {
+      "Phase": "Runtime tool providers",
+      "SinceCreatedSeconds": 13.812
+    },
+    {
+      "Phase": "Compaction",
+      "SinceCreatedSeconds": 15.038
+    },
+    {
+      "Phase": "Model parameters",
+      "SinceCreatedSeconds": 16.228
+    },
+    {
+      "Phase": "Session",
+      "SinceCreatedSeconds": 17.311
+    },
+    {
+      "Phase": "Run",
+      "SinceCreatedSeconds": 18.216
+    }
+  ]
+}
