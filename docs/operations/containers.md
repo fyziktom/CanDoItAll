@@ -27,6 +27,11 @@ file only to the app and database services as a read-only secret.
 The image build requires `CanDoItAll.Components` and `CanDoItAll.FileTools` beside this
 repository. Compose passes both directories as named build contexts, and the Dockerfile
 builds against their direct project references rather than NuGet substitutes.
+The named-context copies explicitly exclude `bin` and `obj`, so host build output cannot
+mix with Linux-generated Razor markup and scoped CSS. Keep these exclusions even when a
+sibling repository has its own `.dockerignore`. The `COPY --exclude` option requires
+Dockerfile frontend 1.19 or later; the `docker/dockerfile:1` syntax directive selects the
+current stable frontend.
 
 PostgreSQL reads `POSTGRES_PASSWORD_FILE` only while initializing an empty `db-data`
 volume. Replacing `.secrets/db-password` does **not** rotate the role password in an

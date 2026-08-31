@@ -10,8 +10,8 @@ FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_SDK_VERSION} AS build
 WORKDIR /source
 
 COPY . .
-COPY --from=components . /CanDoItAll.Components
-COPY --from=filetools . /CanDoItAll.FileTools
+COPY --from=components --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.Components
+COPY --from=filetools --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.FileTools
 RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages \
     dotnet restore "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" \
     /p:UseLocalCanDoItAllLibraries=true
