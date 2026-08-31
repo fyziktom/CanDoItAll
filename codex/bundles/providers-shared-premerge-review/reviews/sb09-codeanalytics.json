@@ -1,0 +1,479 @@
+{
+  "tool": "CodeAnalytics",
+  "snapshotId": "snap-20260831000620-9c068da1",
+  "createdUtc": "2026-08-31T00:06:20.0360428+00:00",
+  "scope": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+    "scopeProjectNames": [
+      "CanDoItAll.AgentFramework.Maf",
+      "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
+      "CanDoItAll.AgentFramework.ProviderHistory.Application",
+      "CanDoItAll.AgentFramework.ProviderHistory.Persistence",
+      "CanDoItAll.AgentFramework.Providers",
+      "CanDoItAll.Composition",
+      "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+      "CanDoItAll.SharedProviders.Http",
+      "CanDoItAll.Web"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": true,
+    "includePersistence": true,
+    "includeRisks": true,
+    "includeXmlDocs": false,
+    "includeMermaidExports": true
+  },
+  "summary": {
+    "projectCount": 9,
+    "typeCount": 1093,
+    "memberCount": 7317,
+    "serviceRegistrationCount": 57,
+    "entityCount": 0,
+    "findingCount": 309,
+    "openQuestionCount": 16,
+    "diagnosticCount": 24
+  },
+  "cycles": [],
+  "projects": [
+    {
+      "projectId": "proj-candoitall-agentframework-maf",
+      "name": "CanDoItAll.AgentFramework.Maf",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providerhistory-abstractions",
+        "proj-candoitall-agentframework-providers"
+      ],
+      "packageReferences": [
+        "Microsoft.Agents.AI",
+        "Microsoft.Agents.AI.A2A",
+        "Microsoft.Agents.AI.OpenAI",
+        "Microsoft.Agents.AI.Workflows",
+        "Microsoft.Extensions.AI",
+        "Microsoft.Extensions.AI.OpenAI",
+        "ModelContextProtocol",
+        "OllamaSharp",
+        "OpenAI",
+        "OpenTelemetry.Api"
+      ],
+      "documentCount": 109
+    },
+    {
+      "projectId": "proj-candoitall-agentframework-providerhistory-abstractions",
+      "name": "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
+      "path": "src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [],
+      "packageReferences": [],
+      "documentCount": 15
+    },
+    {
+      "projectId": "proj-candoitall-agentframework-providerhistory-application",
+      "name": "CanDoItAll.AgentFramework.ProviderHistory.Application",
+      "path": "src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/CanDoItAll.AgentFramework.ProviderHistory.Application.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providerhistory-abstractions"
+      ],
+      "packageReferences": [
+        "Microsoft.Extensions.Logging.Abstractions"
+      ],
+      "documentCount": 12
+    },
+    {
+      "projectId": "proj-candoitall-agentframework-providerhistory-persistence",
+      "name": "CanDoItAll.AgentFramework.ProviderHistory.Persistence",
+      "path": "src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providerhistory-abstractions",
+        "proj-candoitall-agentframework-providerhistory-application"
+      ],
+      "packageReferences": [],
+      "documentCount": 45
+    },
+    {
+      "projectId": "proj-candoitall-agentframework-providers",
+      "name": "CanDoItAll.AgentFramework.Providers",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providerhistory-abstractions"
+      ],
+      "packageReferences": [],
+      "documentCount": 32
+    },
+    {
+      "projectId": "proj-candoitall-composition",
+      "name": "CanDoItAll.Composition",
+      "path": "src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providerhistory-persistence",
+        "proj-candoitall-modules-agentframework-providermanagement",
+        "proj-candoitall-sharedproviders-http"
+      ],
+      "packageReferences": [],
+      "documentCount": 17
+    },
+    {
+      "projectId": "proj-candoitall-modules-agentframework-providermanagement",
+      "name": "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providerhistory-abstractions",
+        "proj-candoitall-agentframework-providerhistory-persistence",
+        "proj-candoitall-agentframework-providers"
+      ],
+      "packageReferences": [
+        "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "Microsoft.Extensions.Hosting.Abstractions",
+        "Microsoft.Extensions.Http",
+        "Microsoft.Extensions.Logging.Abstractions"
+      ],
+      "documentCount": 78
+    },
+    {
+      "projectId": "proj-candoitall-sharedproviders-http",
+      "name": "CanDoItAll.SharedProviders.Http",
+      "path": "src/Integration/CanDoItAll.SharedProviders.Http/CanDoItAll.SharedProviders.Http.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providers"
+      ],
+      "packageReferences": [
+        "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "Microsoft.Extensions.Http",
+        "Microsoft.Extensions.Logging.Abstractions"
+      ],
+      "documentCount": 16
+    },
+    {
+      "projectId": "proj-candoitall-web",
+      "name": "CanDoItAll.Web",
+      "path": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-providerhistory-abstractions",
+        "proj-candoitall-composition",
+        "proj-candoitall-modules-agentframework-providermanagement"
+      ],
+      "packageReferences": [
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.CanvasLib",
+        "CanDoItAll.Components.Charts",
+        "CanDoItAll.Components.Gantt",
+        "CanDoItAll.Components.Mermaid",
+        "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "Microsoft.AspNetCore.OpenApi",
+        "Microsoft.EntityFrameworkCore.Design",
+        "Microsoft.EntityFrameworkCore.Relational",
+        "Microsoft.OpenApi",
+        "Swashbuckle.AspNetCore.SwaggerUI"
+      ],
+      "documentCount": 112
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+        "line": 99,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+        "line": 101,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+        "line": 103,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 26,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 28,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 31,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 38,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 40,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 42,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 44,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 50,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 90,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 91,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0002",
+      "severity": "Warning",
+      "message": "Service type could not be resolved for AddSingleton.",
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+        "line": 99,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0002",
+      "severity": "Warning",
+      "message": "Service type could not be resolved for AddSingleton.",
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+        "line": 101,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0002",
+      "severity": "Warning",
+      "message": "Service type could not be resolved for AddSingleton.",
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+        "line": 103,
+        "column": 9
+      }
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Maf was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Maf was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Providers was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Providers was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.ProviderManagement was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.ProviderManagement was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Web was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Web.Api was truncated to 80 types."
+    }
+  ],
+  "topFindings": [
+    {
+      "findingId": "finding-file-size-doc-src-app-candoitall-composition-hostca-88f1b1220c57",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/App/CanDoItAll.Composition/HostCapabilitySnapshotProjector.cs has 395 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-app-candoitall-composition-hostcapabilitysnapsh-5cc6c757a987"
+      ],
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/HostCapabilitySnapshotProjector.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-app-candoitall-composition-runtim-062288785ed0",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs has 1621 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-app-candoitall-composition-runtimehostserviceco-874d0b2c0a5a"
+      ],
+      "source": {
+        "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-app-candoitall-web-api-agentapire-02a0cf9d55cf",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/App/CanDoItAll.Web/Api/AgentApiResponseContracts.cs has 607 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-app-candoitall-web-api-agentapiresponsecontracts-cs"
+      ],
+      "source": {
+        "path": "src/App/CanDoItAll.Web/Api/AgentApiResponseContracts.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-app-candoitall-web-api-agenteventsapi-cs",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/App/CanDoItAll.Web/Api/AgentEventsApi.cs has 564 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-app-candoitall-web-api-agenteventsapi-cs"
+      ],
+      "source": {
+        "path": "src/App/CanDoItAll.Web/Api/AgentEventsApi.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-app-candoitall-web-api-agentsapi-cs",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/App/CanDoItAll.Web/Api/AgentsApi.cs has 1080 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-app-candoitall-web-api-agentsapi-cs"
+      ],
+      "source": {
+        "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs"
+      }
+    }
+  ]
+}

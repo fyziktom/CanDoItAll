@@ -1,0 +1,338 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="fcf4cb0e-16fb-429a-9fa6-97112a3a602a" name="lucys@LUCYSPOWER 2026-08-30 18:51:09" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-30T18:51:09.8885251-04:00" queuing="2026-08-30T18:51:09.8885254-04:00" start="2026-08-30T18:51:03.3848748-04:00" finish="2026-08-30T18:51:09.8964391-04:00" />
+  <TestSettings name="default" id="9032cf93-1c14-4fcb-b244-6601d51c60cd">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-30_18_51_09" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="4faff62d-a4eb-492d-b24f-df555b983a8a" testId="78bad0a2-4682-f1b0-4463-e799678e34fc" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete)" computerName="LUCYSPOWER" duration="00:00:00.0052635" startTime="2026-08-30T18:51:09.6854041-04:00" endTime="2026-08-30T18:51:09.6889712-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4faff62d-a4eb-492d-b24f-df555b983a8a">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a8b19326-5fc6-42f6-beb6-e7879add1752" testId="b3640870-fd78-bbd8-72ae-77bc6f880586" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout)" computerName="LUCYSPOWER" duration="00:00:00.0035525" startTime="2026-08-30T18:51:09.7512274-04:00" endTime="2026-08-30T18:51:09.7546459-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a8b19326-5fc6-42f6-beb6-e7879add1752">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="43c0244a-13c6-4c72-a55e-0fd468d8b198" testId="896de066-ba67-d416-9320-4c628d68099a" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout)" computerName="LUCYSPOWER" duration="00:00:00.0140282" startTime="2026-08-30T18:51:09.7277411-04:00" endTime="2026-08-30T18:51:09.7414136-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="43c0244a-13c6-4c72-a55e-0fd468d8b198">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f7e832f1-edad-4a52-899c-6683cd571569" testId="66c46b97-42f7-3c89-ca11-82cba27bc22e" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect)" computerName="LUCYSPOWER" duration="00:00:00.8494828" startTime="2026-08-30T18:51:08.8215591-04:00" endTime="2026-08-30T18:51:09.6691304-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f7e832f1-edad-4a52-899c-6683cd571569">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="62e918a2-440b-4319-8af9-21cd1011b732" testId="f24888fe-4596-86c3-0efc-324f39953c3f" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed)" computerName="LUCYSPOWER" duration="00:00:00.0043521" startTime="2026-08-30T18:51:09.7421697-04:00" endTime="2026-08-30T18:51:09.7464196-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="62e918a2-440b-4319-8af9-21cd1011b732">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="fcb2f0a1-7958-4f64-b114-050dba46cc47" testId="a083cf09-1e89-5de1-6722-74c52a491e7a" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect)" computerName="LUCYSPOWER" duration="00:00:00.0366098" startTime="2026-08-30T18:51:09.6897887-04:00" endTime="2026-08-30T18:51:09.7267674-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fcb2f0a1-7958-4f64-b114-050dba46cc47">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ef48ae4e-d4d3-4968-84dc-03ebbfc11212" testId="c31822a5-e820-b588-63a3-32e924e155b3" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed)" computerName="LUCYSPOWER" duration="00:00:00.0033081" startTime="2026-08-30T18:51:09.7470858-04:00" endTime="2026-08-30T18:51:09.7504672-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ef48ae4e-d4d3-4968-84dc-03ebbfc11212">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="9aa7d6f5-c200-43ba-b2be-a9fa7d7db1e1" testId="66a34118-fe50-f861-36c7-401f00549d3b" testName="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed)" computerName="LUCYSPOWER" duration="00:00:00.0124156" startTime="2026-08-30T18:51:09.6837067-04:00" endTime="2026-08-30T18:51:09.6838864-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9aa7d6f5-c200-43ba-b2be-a9fa7d7db1e1">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotNull() Failure: Value is null</Message>
+          <StackTrace>   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="896de066-ba67-d416-9320-4c628d68099a">
+      <Execution id="43c0244a-13c6-4c72-a55e-0fd468d8b198" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="b3640870-fd78-bbd8-72ae-77bc6f880586">
+      <Execution id="a8b19326-5fc6-42f6-beb6-e7879add1752" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="c31822a5-e820-b588-63a3-32e924e155b3">
+      <Execution id="ef48ae4e-d4d3-4968-84dc-03ebbfc11212" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="a083cf09-1e89-5de1-6722-74c52a491e7a">
+      <Execution id="fcb2f0a1-7958-4f64-b114-050dba46cc47" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="66c46b97-42f7-3c89-ca11-82cba27bc22e">
+      <Execution id="f7e832f1-edad-4a52-899c-6683cd571569" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="66a34118-fe50-f861-36c7-401f00549d3b">
+      <Execution id="9aa7d6f5-c200-43ba-b2be-a9fa7d7db1e1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="78bad0a2-4682-f1b0-4463-e799678e34fc">
+      <Execution id="4faff62d-a4eb-492d-b24f-df555b983a8a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="f24888fe-4596-86c3-0efc-324f39953c3f">
+      <Execution id="62e918a2-440b-4319-8af9-21cd1011b732" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests" name="StreamingFailure_IsObservedByPinnedSdk" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="78bad0a2-4682-f1b0-4463-e799678e34fc" executionId="4faff62d-a4eb-492d-b24f-df555b983a8a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b3640870-fd78-bbd8-72ae-77bc6f880586" executionId="a8b19326-5fc6-42f6-beb6-e7879add1752" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="896de066-ba67-d416-9320-4c628d68099a" executionId="43c0244a-13c6-4c72-a55e-0fd468d8b198" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="66c46b97-42f7-3c89-ca11-82cba27bc22e" executionId="f7e832f1-edad-4a52-899c-6683cd571569" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f24888fe-4596-86c3-0efc-324f39953c3f" executionId="62e918a2-440b-4319-8af9-21cd1011b732" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a083cf09-1e89-5de1-6722-74c52a491e7a" executionId="fcb2f0a1-7958-4f64-b114-050dba46cc47" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c31822a5-e820-b588-63a3-32e924e155b3" executionId="ef48ae4e-d4d3-4968-84dc-03ebbfc11212" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="66a34118-fe50-f861-36c7-401f00549d3b" executionId="9aa7d6f5-c200-43ba-b2be-a9fa7d7db1e1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="8" executed="8" passed="0" failed="8" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.33]   Discovering: CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.53]   Discovered:  CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.56]   Starting:    CanDoItAll.Tests.Integration&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Seeded OpenAI provider bootstrap for profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {7ddd1d19-3730-403a-98d5-8cf07ecba076} with creation date 2026-08-30 22:51:07Z, activation date 2026-08-30 22:51:07Z, and expiration date 2026-11-28 22:51:07Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {7ddd1d19-3730-403a-98d5-8cf07ecba076} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 866 entities to in-memory store.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 111 created and 0 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:54171&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\57e0ff872da34c0a8b36be5462b54218&#xD;
+fail: CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryMaintenanceHostedService[0]&#xD;
+      History maintenance failed with InvalidOperationException; inspect projection checkpoints and database availability.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - application/json 212&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_upstream_stream_failed for operation Responses and request 0HNO6T4N9T4IS:00000001 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - 200 - text/event-stream;+charset=utf-8 702.9443ms&#xD;
+[xUnit.net 00:00:05.79]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.79]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.80]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.80]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.80]         --- End of stack trace from previous location ---&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - application/json 212&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_response_not_completed for operation Responses and request 0HNO6T4N9T4IS:00000002 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - 200 - text/event-stream;+charset=utf-8 5.3879ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - application/json 212&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+[xUnit.net 00:00:05.81]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.81]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.81]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.81]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.81]         --- End of stack trace from previous location ---&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_response_not_completed for operation Responses and request 0HNO6T4N9T4IS:00000003 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - 200 - text/event-stream;+charset=utf-8 2.2448ms&#xD;
+[xUnit.net 00:00:05.81]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.81]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.81]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.81]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.81]         --- End of stack trace from previous location ---&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/chat/completions - application/json 193&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/chat/completions'&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_upstream_stream_failed for operation ChatCompletions and request 0HNO6T4N9T4IS:00000004 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/chat/completions'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/chat/completions - 200 - text/event-stream;+charset=utf-8 2.9549ms&#xD;
+[xUnit.net 00:00:05.85]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.85]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.85]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.85]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.85]         --- End of stack trace from previous location ---&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - application/json 212&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_stream_idle_timeout for operation Responses and request 0HNO6T4N9T4IS:00000005 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - 200 - text/event-stream;+charset=utf-8 10.8700ms&#xD;
+[xUnit.net 00:00:05.86]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.86]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.86]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.86]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.86]         --- End of stack trace from previous location ---&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/chat/completions - application/json 193&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/chat/completions'&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_upstream_stream_invalid for operation ChatCompletions and request 0HNO6T4N9T4IS:00000006 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/chat/completions'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/chat/completions - 200 - text/event-stream;+charset=utf-8 1.8908ms&#xD;
+[xUnit.net 00:00:05.87]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.87]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.87]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.87]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.87]         --- End of stack trace from previous location ---&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - application/json 212&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_upstream_stream_invalid for operation Responses and request 0HNO6T4N9T4IS:00000007 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/responses'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/responses - 200 - text/event-stream;+charset=utf-8 0.9736ms&#xD;
+[xUnit.net 00:00:05.87]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.87]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.87]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.87]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.87]         --- End of stack trace from previous location ---&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/chat/completions - application/json 193&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: POST /api/shared-providers/openai/v1/chat/completions'&#xD;
+warn: CanDoItAll.Web.Api.SharedProviderInferenceApi.LogCategory[0]&#xD;
+      Shared-provider stream completed with failure shared_provider_stream_idle_timeout for operation ChatCompletions and request 0HNO6T4N9T4IS:00000008 after headers started.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: POST /api/shared-providers/openai/v1/chat/completions'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 POST http://127.0.0.1:54171/api/shared-providers/openai/v1/chat/completions - 200 - text/event-stream;+charset=utf-8 1.5507ms&#xD;
+[xUnit.net 00:00:05.88]       Assert.NotNull() Failure: Value is null&#xD;
+[xUnit.net 00:00:05.88]       Stack Trace:&#xD;
+[xUnit.net 00:00:05.88]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(120,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.88]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs(123,0): at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure)&#xD;
+[xUnit.net 00:00:05.88]         --- End of stack trace from previous location ---&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+[xUnit.net 00:00:05.91]   Finished:    CanDoItAll.Tests.Integration&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.6719348-04:00">
+        <Text>[xUnit.net 00:00:05.79]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.6842795-04:00">
+        <Text>[xUnit.net 00:00:05.81]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.6893914-04:00">
+        <Text>[xUnit.net 00:00:05.81]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.7272381-04:00">
+        <Text>[xUnit.net 00:00:05.85]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.7417773-04:00">
+        <Text>[xUnit.net 00:00:05.86]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.7467297-04:00">
+        <Text>[xUnit.net 00:00:05.87]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.7508524-04:00">
+        <Text>[xUnit.net 00:00:05.87]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T18:51:09.7549424-04:00">
+        <Text>[xUnit.net 00:00:05.88]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout) [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

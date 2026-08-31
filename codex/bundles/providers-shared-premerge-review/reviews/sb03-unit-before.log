@@ -1,0 +1,96 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:01.42]     CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "client_secret") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "client_secret") [70 ms]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Sub-string found
+                           ↓ (pos 18)
+String: "{"client_secret":"fixture-secret value\\"t"···
+Found:  "fixture-secret"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(String key) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryLifecycleTests.cs:line 43
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:01.47]     CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "password") [FAIL]
+[xUnit.net 00:00:01.47]     CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "authorization") [FAIL]
+[xUnit.net 00:00:01.48]     CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "api_key") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "password") [< 1 ms]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Sub-string found
+                      ↓ (pos 13)
+String: "{"password":"fixture-secret value\\"tail","···
+Found:  "fixture-secret"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(String key) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryLifecycleTests.cs:line 43
+   at InvokeStub_ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "authorization") [< 1 ms]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Sub-string found
+                           ↓ (pos 18)
+String: "{"authorization":"fixture-secret value\\"t"···
+Found:  "fixture-secret"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(String key) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryLifecycleTests.cs:line 43
+   at InvokeStub_ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(key: "api_key") [< 1 ms]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Sub-string found
+                     ↓ (pos 12)
+String: "{"api_key":"fixture-secret value\\"tail",""···
+Found:  "fixture-secret"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(String key) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryLifecycleTests.cs:line 43
+   at InvokeStub_ProviderHistoryLifecycleTests.QuotedCredentialKey_IsRedacted(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:01.48]     CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialAtCaptureBoundary_DoesNotLeak [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialAtCaptureBoundary_DoesNotLeak [< 1 ms]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Sub-string found
+                      ↓ (pos 13)
+String: "{"password":"sssssssssssssssssss"
+Found:  "ssssssss"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.QuotedCredentialAtCaptureBoundary_DoesNotLeak() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryLifecycleTests.cs:line 52
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:01.53]     CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: True, wrapped: True) [FAIL]
+[xUnit.net 00:00:01.53]     CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: False, wrapped: True) [FAIL]
+[xUnit.net 00:00:01.54]     CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: True, wrapped: False) [FAIL]
+[xUnit.net 00:00:01.54]     CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: False, wrapped: False) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: True, wrapped: True) [8 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: TimedOut
+Actual:   Failed
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(Boolean streaming, Boolean wrapped) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryCaptureTests.cs:line 34
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: False, wrapped: True) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: TimedOut
+Actual:   Failed
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(Boolean streaming, Boolean wrapped) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryCaptureTests.cs:line 34
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: True, wrapped: False) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: TimedOut
+Actual:   Cancelled
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(Boolean streaming, Boolean wrapped) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryCaptureTests.cs:line 34
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(streaming: False, wrapped: False) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: TimedOut
+Actual:   Cancelled
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProviderHistoryCaptureTests.ExplicitTimeout_IsRecordedAsTimedOut(Boolean streaming, Boolean wrapped) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderHistoryCaptureTests.cs:line 34
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb03-unit-before.trx
+
+Neúspěšné!  - Neúspěšné:     9, Úspěšné:    35, Přeskočeno:     0, Celkem:    44, Doba trvání: 317 ms - CanDoItAll.Tests.Unit.dll (net10.0)

@@ -39,11 +39,7 @@ internal sealed class SharedProviderInferenceOpenApiContract
             return Task.CompletedTask;
         }
 
-        var jsonSchema = new OpenApiSchema
-        {
-            Type = JsonSchemaType.Object,
-            Description = RequestDescription(contract.Operation)
-        };
+        var jsonSchema = SharedProviderOpenApiSchemas.Request(contract.Operation);
         operation.RequestBody = new OpenApiRequestBody
         {
             Required = true,
@@ -127,18 +123,6 @@ internal sealed class SharedProviderInferenceOpenApiContract
 
         return Task.CompletedTask;
     }
-
-    private static string RequestDescription(
-        SharedProviderRelayOperation operation) => operation switch
-    {
-        SharedProviderRelayOperation.ChatCompletions =>
-            "OpenAI-compatible chat-completions request. Supported top-level fields: model, messages, stream, tools, tool_choice, parallel_tool_calls, response_format, temperature, top_p, stop, max_tokens, and max_completion_tokens.",
-        SharedProviderRelayOperation.Responses =>
-            "OpenAI-compatible Responses request. Supported top-level fields: model, input, instructions, stream, tools, tool_choice, text, temperature, top_p, and max_output_tokens.",
-        SharedProviderRelayOperation.ImageGenerations =>
-            "OpenAI-compatible image-generation request. Supported top-level fields: model, prompt, n, size, quality, response_format, and output_format. Only base64 image output is supported.",
-        _ => throw new ArgumentOutOfRangeException(nameof(operation))
-    };
 
     private static OpenApiHeader CreateStringHeader(
         string description,

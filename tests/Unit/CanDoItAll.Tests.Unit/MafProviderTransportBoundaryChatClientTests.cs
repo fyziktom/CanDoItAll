@@ -10,6 +10,38 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafProviderTransportBoundaryChatClientTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task History_preserves_timeout_through_transport_boundary(bool streaming, bool shared) {
+        var provider = CreateProvider();
+        if (shared) {
+            provider = provider with { CredentialBinding = new(Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid()) };
+        }
+        var timeout = new TaskCanceledException("private deadline", new TimeoutException("private cause"));
+        var recorder = new CanDoItAll.Tests.Unit.RecordingProviderHistory();
+        using var boundary = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(nonStreamingException: timeout, streamingException: timeout), provider, provider.DefaultModel);
+        using var client = new ProviderHistoryChatClient(boundary, provider, provider.DefaultModel, recorder, TimeProvider.System);
+        var failure = await Record.ExceptionAsync(async () => {
+            if (streaming) {
+                await foreach (var update in client.GetStreamingResponseAsync(CreateMessages())) {
+                }
+            } else {
+                await client.GetResponseAsync(CreateMessages());
+            }
+        });
+        Assert.NotNull(failure);
+        Assert.Equal(CanDoItAll.AgentFramework.ProviderHistory.HistoryOutcome.TimedOut,
+            Assert.Single(recorder.Completions).Completion.Outcome);
+        if (shared) {
+            Assert.DoesNotContain("private", failure.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     [Fact]
     public async Task Non_streaming_transport_failure_is_marked_with_provider_identity()
     {

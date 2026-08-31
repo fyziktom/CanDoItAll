@@ -38,7 +38,8 @@ public sealed class HistoryTextProtector(IDataProtectionProvider protection, IPr
             InputRevision = inputRevision,
             Part = part,
             CapturedAtUtc = start.StartedAtUtc,
-            ExpiresAtUtc = start.StartedAtUtc.AddDays(start.Policy.Policy.DetailRetentionDays),
+            ExpiresAtUtc = part == HistoryDetailPart.Input ? start.InputExpiresAtUtc
+                : start.StartedAtUtc.AddDays(start.Policy.Policy.DetailRetentionDays),
             CapturedBytes = captured.CapturedBytes,
             OriginalBytes = captured.OriginalBytes,
             Flags = captured.Flags

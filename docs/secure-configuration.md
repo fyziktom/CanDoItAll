@@ -6,6 +6,22 @@ Configure `OPENAI_API_KEY` through an environment variable, user-secret, enterpr
 
 If a provider key is ever committed, treat it as compromised and rotate or revoke it outside the repository before reuse.
 
+## Shared providers and captured request content
+
+Treat a consumer's shared-source token as a credential: bind it through the secret vault,
+never in a source URL or exported catalog. HTTPS public destinations are the default;
+HTTP loopback is supported for local development. Other HTTP/private-network sources
+need explicit source policy and remain subject to destination/DNS and redirect checks.
+See [shared providers](shared-providers.md#network-and-credential-policy).
+
+[Request history](provider-request-history.md) defaults to Light metadata-only capture.
+Detailed standalone text is bounded, redacted and encrypted, and content access is
+separate from metadata access. Redaction masks known credential forms and configured
+secrets; it cannot detect all sensitive content. Canonical content remains owned and
+authorized by its original execution flow. Old retained data is not retroactively
+redacted by a code update: disable new Detailed capture, rotate affected secrets and
+review the explicit retention cleanup preview if exposure is suspected.
+
 ## Secret Vault
 
 Stored workspace secrets go through `ISecretVault`. The app stores secret metadata in the database, but the secret value is stored behind a vault reference such as `vault:v1:...`.

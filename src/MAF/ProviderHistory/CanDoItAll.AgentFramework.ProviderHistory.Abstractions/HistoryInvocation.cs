@@ -38,6 +38,20 @@ public sealed class HistoryAttemptCollection {
     private readonly object gate = new();
     private readonly List<HistoryAttemptStart> attempts = [];
     private readonly Dictionary<ProviderAttemptId, HistoryAttemptCompletion> completions = [];
+    private readonly Dictionary<long, DateTimeOffset> inputExpiries = [];
+
+    public DateTimeOffset FreezeInputExpiry(long revision, DateTimeOffset expiresAtUtc) {
+        lock (gate) {
+            if (inputExpiries.TryGetValue(revision, out var existing)) {
+                return existing;
+            }
+            if (inputExpiries.Count >= MaximumAttempts) {
+                throw new ProviderHistoryException(HistoryFailure.Unavailable, "The request exceeded its history input revision limit.");
+            }
+            inputExpiries.Add(revision, expiresAtUtc);
+            return expiresAtUtc;
+        }
+    }
 
     public int Count {
         get {

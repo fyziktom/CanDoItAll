@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Ready`
+- State: Completed
 - Proof tier: Behavioral
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -57,11 +57,11 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] One still-retained retry prevents input deletion; last-reference expiry allows eventual deletion.
-- [ ] No cross-partition deletion, active-attempt deletion, retained canonical-content deletion, quota underflow or unbounded scan/materialization.
-- [ ] Repeated bounded passes finish; independent concurrent insertion/cleanup is safe.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] One still-retained retry prevents input deletion; last-reference expiry allows eventual deletion.
+- [x] No cross-partition deletion, active-attempt deletion, retained canonical-content deletion, quota underflow or unbounded scan/materialization.
+- [x] Repeated bounded passes finish; independent concurrent insertion/cleanup is safe.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

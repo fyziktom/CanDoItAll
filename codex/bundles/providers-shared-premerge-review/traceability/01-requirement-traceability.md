@@ -1,24 +1,24 @@
-# Requirement and Input Traceability
+# Requirement and input traceability
 
-| Input / requirement | Finding / evidence | Owning units | Planned proof | Closure |
+| Input / requirement | Finding / evidence | Owning units | Current proof | Closure |
 | --- | --- | --- | --- | --- |
-| N01 / R01,R09 | Prioritized review; source/base hashes; old locked closure | SB01, SB09 | Public SDK behavior, frozen current-source gates, manual handoff | Not solved: repairs/proof pending |
-| N02 / R01,R02,R05,R06 | SP-01..04; four performance findings; DC02 | SB01, SB02, SB04, SB05, SB06 | Positive/negative protocol/network/retention tests, allocation/query measurements, schema conformance | Not solved |
-| N03 / R03,R04 | H01/H02, retention and canonical source inspection | SB03, SB04 | Synthetic decrypted capture, timeout/cancellation separation, referenced/orphan lifecycle | Not solved |
-| N04 / R05,R10 | Two-pass performance report, 160-file scan, architecture maps and snapshots | SB01–SB06, SB09 | Isolated seams, no new partial, reference graph, targeted measurements | Review solved; execution proof pending |
-| N05 / R06,R07,R08,R09 | DC01–04; exact package/schema/migration inventory | SB06, SB07, SB08, SB09 | Docs validator; schema/skill/live parity; EF/upgrade; historical handoff | Bundle prepared; improvements not solved |
-| N06 / R10 | Supplied engineering instructions and architecture decisions | Every unit | Typed small changes, explicit failure, safe logs, no XML/partial/extra project growth | Preparation respected; verify execution |
+| N01 / R01,R09 | Original review and preserved manual merge/host constraints | SB01, SB09 | Final owning Integration179; browser1; frozen Stable9,424/9,424 with source-verified deferred theory expansion | Partially solved: final host/export/independent review remain |
+| N02 / R01,R02,R05,R06 | SP-01..04; performance findings; DC02 | SB01, SB02, SB04, SB05, SB06 | Public SDK negatives, imported graph, orphan lifecycle, paired allocations, generated schema +28 validator cases | Solved for identified repairs |
+| N03 / R03,R04 | H01/H02; retention/canonical ownership | SB03, SB04 | Decrypted synthetic capture, actual driver timeout, actual recorder retry expiry, bounded PostgreSQL cleanup | Solved for identified repairs |
+| N04 / R05,R10 | Requested performance/C# skills | SB01–SB06, SB09 | Before/after workload report; nine direct builds; refreshed nine-project CodeAnalytics, architecture audit | Solved in implemented scope |
+| N05 / R06,R07,R08,R09 | DC01–04; API/skill/schema inventory | SB06, SB07, SB08, SB09 | Docs197; skill sources4; two actual upgrade lanes; generated SQL; final export/install still blocked | Partially solved |
+| N06 / R10 | Engineering instructions | Every unit | Typed minimal changes; no new project/runtime partial/XML; safe disclosure; no merge or authority reset | Solved in implemented scope |
 
 | Finding group | Primary owner | Reopen dependency |
 | --- | --- | --- |
-| SP-01/SP-03/SP-04 | SB01 | SB05/SB06/SB07/SB08/SB09 |
-| SP-02 | SB02 | SB05/SB06/SB07/SB08/SB09 |
-| H01/H02 | SB03 | SB07/SB09; SB06/SB08 if contract changes |
-| Performance orphan input | SB04 | SB05/SB07/SB08/SB09 |
-| Performance cache/sets/copies | SB05 | SB06 if wire drift; SB07/SB09 |
-| DC02 | SB06 | SB07/SB08/SB09 |
-| DC01 | SB07 | SB08/SB09 |
-| DC03 | SB08 | SB09 |
-| DC04 | SB07/SB09 | Original shared-providers gates retain historical facts |
+| SP-01/SP-03/SP-04 | SB01 Completed | SB05/SB06/SB07/SB08/SB09 |
+| SP-02 | SB02 Completed | SB05/SB06/SB07/SB08/SB09 |
+| H01/H02 | SB03 Completed | SB07/SB09; SB06/SB08 if wire changes |
+| Orphan input retention | SB04 Completed | SB05/SB07/SB08/SB09 |
+| Cache/allowlist/response-copy work | SB05 Completed | SB06 if wire changes; SB07/SB09 |
+| DC02 | SB06 Completed | SB07/SB08/SB09 |
+| DC01 | SB07 Completed | SB08/SB09 |
+| DC03 | SB08 Blocked on final capture/install | SB09 |
+| DC04 | SB07 done; SB09 still gated | Historical three-application authority/proof remains unchanged |
 
-Review/preparation completion must not mark runtime repair rows Solved. At execution closure use Solved, Partially solved or Not solved with exact proof paths. Every finding is owned; conditional risks in the reports require explicit disposition, not silent deletion.
+Current source and evidence: bundle://reviews/01-execution-report.md and bundle://proof/SB09/manifest.md. The new execution request is retained in inputs/03-execution-request.md. Documentation and hash-only edits do not invalidate frozen product test proof; code/config/dependency changes reopen their owning gates.

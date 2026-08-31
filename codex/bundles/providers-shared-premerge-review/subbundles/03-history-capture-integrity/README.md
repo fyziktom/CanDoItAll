@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Ready`
+- State: Completed
 - Proof tier: Behavioral
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -63,11 +63,11 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] Quoted documented keys and known configured secrets are absent from decrypted synthetic persisted details; Light mode stays body-free.
-- [ ] Explicit timeout is TimedOut, cancelled caller remains Cancelled, ordinary failure remains Failed, late cancellation does not erase success/usage.
-- [ ] No automatic provider replay on history-finalization failure; canonical content remains linked without duplicate body.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] Quoted documented keys and known configured secrets are absent from decrypted synthetic persisted details; Light mode stays body-free.
+- [x] Explicit timeout is TimedOut, cancelled caller remains Cancelled, ordinary failure remains Failed, late cancellation does not erase success/usage.
+- [x] No automatic provider replay on history-finalization failure; canonical content remains linked without duplicate body.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

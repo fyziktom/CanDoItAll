@@ -1,0 +1,53 @@
+{
+  "sdk": "10.0.303",
+  "builds": [
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.Web/release/CanDoItAll.Web.dll",
+      "sha256": "04BF5BEA9724D6BF990DBE8820770DDA7A67D9F9201EB5344EF316523FDBBFAE",
+      "lastWriteUtc": "2026-08-30T23:37:18.4296000Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.SharedProviders.Http/release/CanDoItAll.SharedProviders.Http.dll",
+      "sha256": "66E233A897EC4BED31984CDECD3ACCC716572992094E2E99D248B65E49CCDC3C",
+      "lastWriteUtc": "2026-08-30T23:23:13.8296448Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/release/CanDoItAll.AgentFramework.ProviderHistory.Abstractions.dll",
+      "sha256": "E86B4F9185BB85D5E1EEC210CAFF37B816E7C0EAFC98EF4721D6F0B4256870CA",
+      "lastWriteUtc": "2026-08-30T23:02:09.8988240Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.AgentFramework.ProviderHistory.Application/release/CanDoItAll.AgentFramework.ProviderHistory.Application.dll",
+      "sha256": "EF9E2179F91294CA94B500D1DAF5280AAC91B9D57857C129E631A40C591AB49B",
+      "lastWriteUtc": "2026-08-30T23:02:23.1770863Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.AgentFramework.ProviderHistory.Persistence/release/CanDoItAll.AgentFramework.ProviderHistory.Persistence.dll",
+      "sha256": "20927068C3AC56DB0CDAB09AA25DA1E36010FC6C92F5E5B07B2BA610AACF1C7C",
+      "lastWriteUtc": "2026-08-30T23:02:23.4560061Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.AgentFramework.Maf/release/CanDoItAll.AgentFramework.Maf.dll",
+      "sha256": "6E2334D5076DAE2E0880F29AEF8C76F63E1B01E66ACFD72218FE93AC5AB93C99",
+      "lastWriteUtc": "2026-08-30T23:07:59.7869032Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.AgentFramework.Providers/release/CanDoItAll.AgentFramework.Providers.dll",
+      "sha256": "4448BB725CF2741073D2695F25DC8B7E1DF6772A5060F2A03B238D22B7C9FA6F",
+      "lastWriteUtc": "2026-08-30T23:07:47.0858813Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.Modules.AgentFramework.ProviderManagement/release/CanDoItAll.Modules.AgentFramework.ProviderManagement.dll",
+      "sha256": "2545E32627A79AD5D0AF193742EB47796397A74C564E9F3EF950A7E6E407C8BC",
+      "lastWriteUtc": "2026-08-30T23:23:02.2929755Z"
+    },
+    {
+      "path": "artifacts/premerge/bin/CanDoItAll.Composition/release/CanDoItAll.Composition.dll",
+      "sha256": "AE1D79538ED64DEA5A22A4470C88B55B5E0AE7C3C0C218AB7B83633E2E787212",
+      "lastWriteUtc": "2026-08-30T23:23:14.5638622Z"
+    }
+  ],
+  "userHostWasNotRestarted": true,
+  "user5032ProcessId": 35584,
+  "configuration": "Release"
+}

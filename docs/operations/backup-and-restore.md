@@ -7,6 +7,26 @@ and local vault payloads remain consistent. This guide covers only the repositor
 development Compose instance. For the separate installed Windows database, use
 [Installed Windows Web App](installed-web-app.md#backup-and-restore).
 
+## Provider sharing and history preservation
+
+Sharing identities, publications, imports and source-secret references live in the
+database. Preserve their stable IDs together with vault material; copying database rows
+without accessible credentials does not restore a usable source. Generic AI-provider
+transfer explicitly refuses publication/import references in either database and secret
+replacement affecting a target shared source. Do not bypass that guard: a successful
+history-only transfer does not establish support for moving the full sharing graph.
+
+[Provider request history](../provider-request-history.md) contains partition-bound
+metadata, quota, policy, projection checkpoints and encrypted standalone details.
+Canonical agent, Simple Chat and workflow content stays with its owning data/files.
+Capture database, application data, Data Protection and vault state consistently.
+Database-only restore can leave content or credentials unavailable even when metadata
+looks intact. Retention cleanup must preserve retained attempt references and cannot be
+used as an automatic substitute for a consistent backup.
+
+The premerge upgrade/preservation checks use disposable databases. Their fixture
+creation or cleanup commands must never target a live development or installed profile.
+
 ## Backup
 
 Create an ignored artifact directory, then capture a custom-format dump:

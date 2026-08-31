@@ -8,6 +8,66 @@ using CanDoItAll.AgentFramework.Providers;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProviderHistoryCaptureTests {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task ExplicitTimeout_IsRecordedAsTimedOut(bool streaming, bool wrapped) {
+        var history = new RecordingProviderHistory();
+        Exception timeout = new TaskCanceledException("deadline", new TimeoutException("elapsed"));
+        if (wrapped) {
+            timeout = new HttpRequestException("transport wrapper", timeout);
+        }
+        var driver = new ProviderHistoryTestDriver { OnInvoke = () => throw timeout };
+        var factory = Factory(driver, history);
+        var failure = await Record.ExceptionAsync(async () => {
+            if (streaming) {
+                await foreach (var update in factory.Resolve<IProviderStreamingChatCompletionDriver>(ProviderKind.OpenAi)
+                    .StreamChatAsync(ChatRequest())) {
+                }
+            } else {
+                await factory.Resolve<IProviderChatCompletionDriver>(ProviderKind.OpenAi).CompleteChatAsync(ChatRequest());
+            }
+        });
+        Assert.Same(timeout, failure);
+        Assert.Equal(HistoryOutcome.TimedOut, Assert.Single(history.Completions).Completion.Outcome);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CancellationWithoutTimeoutEvidence_IsRecordedAsCancelled(bool cancelCaller) {
+        var history = new RecordingProviderHistory();
+        using var caller = new CancellationTokenSource();
+        var factory = Factory(new() {
+            OnInvoke = () => {
+                if (cancelCaller) {
+                    caller.Cancel();
+                }
+                throw new OperationCanceledException(caller.Token);
+            }
+        }, history);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => factory.Resolve<IProviderChatCompletionDriver>(ProviderKind.OpenAi)
+            .CompleteChatAsync(ChatRequest(), caller.Token));
+        Assert.Equal(HistoryOutcome.Cancelled, Assert.Single(history.Completions).Completion.Outcome);
+    }
+
+    [Fact]
+    public async Task LateCancellation_PreservesObservedTerminalEvidence() {
+        var history = new RecordingProviderHistory();
+        var raw = new ProviderHistoryTestDriver { AfterTerminalFailure = new TaskCanceledException("late disposal") };
+        var driver = Factory(raw, history).Resolve<IProviderStreamingChatCompletionDriver>(ProviderKind.OpenAi);
+        await Assert.ThrowsAsync<TaskCanceledException>(async () => {
+            await foreach (var update in driver.StreamChatAsync(ChatRequest())) {
+            }
+        });
+        var completion = Assert.Single(history.Completions).Completion;
+        Assert.Equal(HistoryOutcome.Succeeded, completion.Outcome);
+        Assert.Equal(10, completion.Usage.InputTokens);
+        Assert.Equal(5, completion.Usage.OutputTokens);
+    }
+
     [Fact]
     public void Caller_context_is_not_accepted_from_execution_or_chat_command_json() {
         var caller = new HistoryCaller(HistoryAuthenticationKind.ManagedCredential, new(Guid.NewGuid()), Subject: "forged");

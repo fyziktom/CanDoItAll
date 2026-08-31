@@ -44,6 +44,28 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     private static readonly DateTimeOffset Now =
         new(2026, 8, 25, 12, 0, 0, TimeSpan.Zero);
 
+    [Theory]
+    [InlineData("http://localhost:5032/")]
+    [InlineData("http://127.0.0.1:5032/")]
+    [InlineData("http://[::1]:5032/")]
+    public async Task PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(string address) {
+        var seed = await SeedGraphAsync(new Uri(address));
+        await using (var db = await fixture.Factory.CreateDbContextAsync()) {
+            var source = await db.Set<SharedProviderSource>().SingleAsync(row => row.Id == seed.SourceId);
+            source.AllowInsecurePrivateNetwork = false;
+            await db.SaveChangesAsync();
+        }
+        var profile = (await LoadCanonicalAsync(seed.ProfileId)).Profile;
+        Assert.Equal(ProviderNetworkAccessPolicy.PublicOnly, profile.NetworkAccessPolicy);
+        var selector = fixture.Services.GetRequiredService<IProviderHttpClientSelector>();
+        Assert.True(selector.TryGetClient(profile, out var client));
+        Assert.NotNull(client);
+        Assert.Throws<ProviderHttpClientSelectionException>(() => selector.TryGetClient(
+            profile with { BaseUrl = "http://10.0.0.8/v1" }, out _));
+        Assert.Throws<ProviderHttpClientSelectionException>(() => selector.TryGetClient(
+            profile with { BaseUrl = "http://example.com/v1" }, out _));
+    }
+
     [Fact]
     public async Task SharedThinkingEffort_Persisted_snapshot_materializes_capabilities_and_preserves_hidden_model_membership() {
         var thinking = new SharedProviderThinkingCapability(SharedProviderThinkingSupport.Supported,
@@ -282,7 +304,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
 
         var insecurePublicProfile = projected with
         {
-            BaseUrl = "http://127.0.0.1:43123/openai/v1",
+            BaseUrl = "http://10.0.0.8:43123/openai/v1",
             NetworkAccessPolicy = ProviderNetworkAccessPolicy.PublicOnly
         };
         Assert.Throws<ProviderHttpClientSelectionException>(() =>

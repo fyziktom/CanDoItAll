@@ -90,7 +90,17 @@ public static class ProviderFailureDisclosurePolicy
             diagnosticFailureType,
             diagnosticException is ProviderFailureBoundaryException nestedBoundary
                 ? nestedBoundary.DiagnosticStatusCode
-                : diagnosticStatusCode);
+                : diagnosticStatusCode,
+            HasTimeoutCause(diagnosticException));
+    }
+
+    private static bool HasTimeoutCause(Exception? exception) {
+        for (var cause = exception; cause is not null; cause = cause.InnerException) {
+            if (cause is TimeoutException or ProviderFailureBoundaryException { IsTimeout: true }) {
+                return true;
+            }
+        }
+        return false;
     }
 
     internal static string GetSanitizedMessage(ProviderFailureOperation operation)
@@ -121,7 +131,8 @@ public sealed class ProviderFailureBoundaryException : InvalidOperationException
         Guid providerId,
         ProviderFailureOperation operation,
         string? diagnosticFailureType,
-        int? diagnosticStatusCode)
+        int? diagnosticStatusCode,
+        bool isTimeout = false)
         : base(ProviderFailureDisclosurePolicy.GetSanitizedMessage(operation))
     {
         if (providerId == Guid.Empty)
@@ -135,6 +146,7 @@ public sealed class ProviderFailureBoundaryException : InvalidOperationException
         Operation = operation;
         DiagnosticFailureType = diagnosticFailureType;
         DiagnosticStatusCode = diagnosticStatusCode;
+        IsTimeout = isTimeout;
     }
 
     public Guid ProviderId { get; }
@@ -144,4 +156,6 @@ public sealed class ProviderFailureBoundaryException : InvalidOperationException
     public string? DiagnosticFailureType { get; }
 
     public int? DiagnosticStatusCode { get; }
+
+    public bool IsTimeout { get; }
 }

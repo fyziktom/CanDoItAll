@@ -246,7 +246,12 @@ public sealed class SharedProviderStreamingIntegrationTests(
         using var response = await fixture.Host.Client.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead);
-        string body = await response.Content.ReadAsStringAsync().WaitAsync(TestTimeout);
+        await using var bodyStream = await response.Content.ReadAsStreamAsync();
+        using var reader = new StreamReader(bodyStream);
+        string? body = await reader.ReadLineAsync().WaitAsync(TestTimeout);
+        var readFailure = await Record.ExceptionAsync(() => reader.ReadToEndAsync().WaitAsync(TestTimeout));
+        Assert.True(readFailure is IOException or HttpRequestException);
+        Assert.NotNull(body);
         var relayStream = await capturedStream.Task.WaitAsync(TestTimeout);
         var completion = await relayStream.Completion.WaitAsync(TestTimeout);
 
@@ -820,14 +825,15 @@ internal sealed class DispatcherHarness : IAsyncDisposable
 
     public ValueTask<SharedProviderRelayDispatchResult> DispatchAsync(
         SharedProviderRelayOperation operation,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool stream = true)
     {
         string payload = operation switch
         {
             SharedProviderRelayOperation.ChatCompletions =>
-                $$"""{"model":"{{ModelId.Value}}","messages":[{"role":"user","content":"hello"}],"stream":true}""",
+                $$"""{"model":"{{ModelId.Value}}","messages":[{"role":"user","content":"hello"}],"stream":{{(stream ? "true" : "false")}}}""",
             SharedProviderRelayOperation.Responses =>
-                $$"""{"model":"{{ModelId.Value}}","input":"hello","stream":true}""",
+                $$"""{"model":"{{ModelId.Value}}","input":"hello","stream":{{(stream ? "true" : "false")}}}""",
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
         var policyResult = requestPolicy.Normalize(
@@ -896,12 +902,14 @@ internal sealed class ChunkSequenceStream : Stream
 {
     private readonly IReadOnlyList<byte[]> chunks;
     private readonly Exception? terminalException;
+    private readonly Task? afterFirstChunk;
     private int chunkIndex;
     private int chunkOffset;
 
     public ChunkSequenceStream(
         IReadOnlyList<ReadOnlyMemory<byte>> chunks,
-        Exception? terminalException = null)
+        Exception? terminalException = null,
+        Task? afterFirstChunk = null)
     {
         ArgumentNullException.ThrowIfNull(chunks);
         if (chunks.Count == 0 || chunks.Any(chunk => chunk.IsEmpty))
@@ -911,6 +919,7 @@ internal sealed class ChunkSequenceStream : Stream
 
         this.chunks = chunks.Select(chunk => chunk.ToArray()).ToArray();
         this.terminalException = terminalException;
+        this.afterFirstChunk = afterFirstChunk;
     }
 
     public bool IsDisposed { get; private set; }
@@ -947,12 +956,14 @@ internal sealed class ChunkSequenceStream : Stream
     public override int Read(byte[] buffer, int offset, int count)
         => ReadCore(buffer.AsSpan(offset, count));
 
-    public override ValueTask<int> ReadAsync(
+    public override async ValueTask<int> ReadAsync(
         Memory<byte> buffer,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
-        return ValueTask.FromResult(ReadCore(buffer.Span));
+        if (chunkIndex > 0 && afterFirstChunk is not null) {
+            await afterFirstChunk.WaitAsync(cancellationToken);
+        }
+        return ReadCore(buffer.Span);
     }
 
     public override Task<int> ReadAsync(
@@ -961,8 +972,7 @@ internal sealed class ChunkSequenceStream : Stream
         int count,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(ReadCore(buffer.AsSpan(offset, count)));
+        return ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
     }
 
     public override void Flush()

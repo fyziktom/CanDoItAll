@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Pending prerequisites`
+- State: Completed
 - Proof tier: Behavioral
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -58,11 +58,11 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] Allowed/denied request subset, limits, order/comparer semantics, model/price behavior and failure outcomes unchanged.
-- [ ] Publication/profile edits and secret deletion in another scope/process invalidate stale routing; no cache-only authorization.
-- [ ] Allocation/query work measurably drops in targeted workloads; no claimed universal speedup or correctness-changing optimization.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] Allowed/denied request subset, limits, order/comparer semantics, model/price behavior and failure outcomes unchanged.
+- [x] Publication/profile edits and secret deletion in another scope/process invalidate stale routing; no cache-only authorization.
+- [x] Allocation/query work measurably drops in targeted workloads; no claimed universal speedup or correctness-changing optimization.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

@@ -47,10 +47,6 @@ internal sealed class SharedProviderHttpRelayClient(
                 headers.UpstreamRequestId);
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = await ReadBoundedAsync(
-                    response.Content,
-                    SharedProviderFailure.MaximumMessageLength,
-                    timeoutSource.Token).ConfigureAwait(false);
                 var failure = SharedProviderRelayFailureMapper.FromUpstream(
                     response.StatusCode,
                     response.Headers.TryGetValues("retry-after", out var retryValues)
@@ -58,7 +54,9 @@ internal sealed class SharedProviderHttpRelayClient(
                             ? retryAfter
                             : null
                         : null,
-                    System.Text.Encoding.UTF8.GetString(errorBody));
+                    rawResponseBody: null);
+                var errorBody = await ReadDiagnosticPrefixAsync(response.Content, timeoutSource.Token, cancellationToken)
+                    .ConfigureAwait(false);
                 var diagnostic = SharedProviderRelayFailureMapper.DescribeUpstreamFailure(errorBody);
                 logger.LogWarning(
                     "Shared-provider upstream rejected {Operation} for connector {ConnectorPluginKey} with HTTP {StatusCode}: {Code}, parameter {Parameter}.",
@@ -153,6 +151,23 @@ internal sealed class SharedProviderHttpRelayClient(
         {
             transportResponse?.Dispose();
             timeoutSource?.Dispose();
+        }
+    }
+
+    private async ValueTask<ReadOnlyMemory<byte>> ReadDiagnosticPrefixAsync(
+        HttpContent content, CancellationToken timeoutToken, CancellationToken callerToken) {
+        var buffer = new byte[SharedProviderFailure.MaximumMessageLength];
+        try {
+            await using var source = await content.ReadAsStreamAsync(timeoutToken).ConfigureAwait(false);
+            var length = await source.ReadAtLeastAsync(buffer, buffer.Length, throwOnEndOfStream: false, timeoutToken)
+                .ConfigureAwait(false);
+            return buffer.AsMemory(0, length);
+        } catch (Exception exception) when (
+            exception is IOException or HttpRequestException ||
+            exception is OperationCanceledException && !callerToken.IsCancellationRequested) {
+            logger.LogWarning("Shared-provider error diagnostics could not be read; preserving the upstream HTTP failure. Failure type {FailureType}.",
+                exception.GetType().Name);
+            return ReadOnlyMemory<byte>.Empty;
         }
     }
 
@@ -298,9 +313,10 @@ internal static class SharedProviderRelayResponsePolicy
     };
 
     public static byte[] RewriteBuffered(
-        ReadOnlySpan<byte> payloadUtf8,
+        ReadOnlyMemory<byte> payloadUtf8,
         SharedProviderRoutingModelId publicModelId,
-        SharedProviderRelayOperation operation)
+        SharedProviderRelayOperation operation,
+        bool isStreamingEvent = false)
     {
         if (payloadUtf8.IsEmpty)
         {
@@ -309,11 +325,16 @@ internal static class SharedProviderRelayResponsePolicy
 
         try
         {
-            using var document = JsonDocument.Parse(payloadUtf8.ToArray(), JsonOptions);
-            if (document.RootElement.ValueKind != JsonValueKind.Object ||
-                document.RootElement.TryGetProperty("error", out _))
-            {
+            using var document = JsonDocument.Parse(payloadUtf8, JsonOptions);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                root.TryGetProperty("error", out var error) && error.ValueKind != JsonValueKind.Null) {
                 throw new InvalidDataException("The upstream response envelope is invalid.");
+            }
+            if (!isStreamingEvent && operation == SharedProviderRelayOperation.Responses &&
+                (!root.TryGetProperty("status", out var status) || status.ValueKind != JsonValueKind.String ||
+                    status.GetString() != "completed")) {
+                throw new InvalidDataException("The upstream provider did not complete the response.");
             }
 
             if (operation == SharedProviderRelayOperation.ImageGenerations)
@@ -356,7 +377,8 @@ internal static class SharedProviderRelayResponsePolicy
             rewritten = RewriteBuffered(
                 System.Text.Encoding.UTF8.GetBytes(data),
                 publicModelId,
-                operation);
+                operation,
+                isStreamingEvent: true);
         }
         catch (InvalidDataException exception)
         {

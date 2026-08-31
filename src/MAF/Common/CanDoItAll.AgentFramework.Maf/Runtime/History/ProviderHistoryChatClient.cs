@@ -30,11 +30,9 @@ internal sealed class ProviderHistoryChatClient(IChatClient inner, ProviderProfi
                 bool moved;
                 try {
                     moved = await enumerator.MoveNextAsync();
-                } catch (OperationCanceledException) {
-                    outcome = terminalObserved ? HistoryOutcome.Succeeded : HistoryOutcome.Cancelled;
-                    throw;
-                } catch {
-                    outcome = terminalObserved ? HistoryOutcome.Succeeded : HistoryOutcome.Failed;
+                } catch (Exception exception) {
+                    outcome = terminalObserved ? HistoryOutcome.Succeeded
+                        : ProviderHistoryFailureOutcome.Classify(exception, cancellationToken);
                     throw;
                 }
                 if (!moved) {

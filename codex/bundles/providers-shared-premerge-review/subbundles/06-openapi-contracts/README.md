@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Pending prerequisites`
+- State: Completed
 - Proof tier: Behavioral
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -58,11 +58,11 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] Protocol identifier/enum schemas express real string forms/tokens, not empty objects.
-- [ ] Representative accepted payloads conform; prohibited fields/values are documented and rejected consistently.
-- [ ] Generated errors/stream terminals match SB01; route/schema tests prove semantics beyond endpoint presence.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] Protocol identifier/enum schemas express real string forms/tokens, not empty objects.
+- [x] Representative accepted payloads conform; prohibited fields/values are documented and rejected consistently.
+- [x] Generated errors/stream terminals match SB01; route/schema tests prove semantics beyond endpoint presence.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

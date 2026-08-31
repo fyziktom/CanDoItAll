@@ -6,7 +6,7 @@ namespace CanDoItAll.AgentFramework.ProviderHistory;
 public static class HistoryTextCapture {
     private const string Redacted = "[redacted]";
     private static readonly Regex CredentialPattern = new(
-        """(?i)(?:bearer\s+[a-z0-9._~+/-]+=*|(?:api[_-]?key|password|client[_-]?secret|authorization)\s*[:=]\s*["']?[^\s"',;}]+)""",
+        """(?i)(?:bearer\s+[a-z0-9._~+/-]+=*|(?:api[_-]?key|password|client[_-]?secret|authorization)["']?\s*[:=]\s*(?:"(?:\\.|[^"\\])*"?|'(?:\\.|[^'\\])*'?|[^\s"',;}]+))""",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
         TimeSpan.FromMilliseconds(100));
 

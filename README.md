@@ -227,6 +227,8 @@ Start with:
 - [Internal communication](docs/architecture/internal-communication.md)
 - [Module map](docs/architecture/modules.md)
 - [Documentation index](docs/README.md)
+- [Shared providers](docs/shared-providers.md)
+- [Provider request history](docs/provider-request-history.md)
 
 ## Styling
 

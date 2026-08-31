@@ -59,6 +59,32 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         "response_format",
         "output_format");
 
+    private static readonly FrozenSet<string> StreamOptionsProperties = Set("include_usage");
+    private static readonly FrozenSet<string> ReasoningProperties = Set(SharedProviderRelayThinkingPolicy.ResponsesEffortProperty);
+    private static readonly FrozenSet<string> InputMessageProperties = Set("role", "content", "name");
+    private static readonly FrozenSet<string> AssistantMessageProperties = Set("role", "content", "name", "tool_calls");
+    private static readonly FrozenSet<string> ToolMessageProperties = Set("role", "content", "tool_call_id");
+    private static readonly FrozenSet<string> FunctionCallItemProperties = Set("type", "id", "call_id", "name", "arguments", "status");
+    private static readonly FrozenSet<string> FunctionOutputProperties = Set("type", "call_id", "output");
+    private static readonly FrozenSet<string> ResponsesMessageProperties = Set("role", "content", "type");
+    private static readonly FrozenSet<string> ReasoningItemProperties = Set("type", "id", "summary", "content", "encrypted_content", "status");
+    private static readonly FrozenSet<string> TextPartProperties = Set("type", "text");
+    private static readonly FrozenSet<string> OutputTextPartProperties = Set("type", "text", "annotations");
+    private static readonly FrozenSet<string> ChatToolProperties = Set("type", "function");
+    private static readonly FrozenSet<string> ResponsesToolProperties = Set("type", "name", "description", "parameters", "strict");
+    private static readonly FrozenSet<string> FunctionProperties = Set("name", "description", "parameters", "strict");
+    private static readonly FrozenSet<string> FunctionNameProperties = Set("name");
+    private static readonly FrozenSet<string> ResponsesToolChoiceProperties = Set("type", "name");
+    private static readonly FrozenSet<string> ResponsesTextProperties = Set("format");
+    private static readonly FrozenSet<string> TypeProperties = Set("type");
+    private static readonly FrozenSet<string> ChatSchemaFormatProperties = Set("type", "json_schema");
+    private static readonly FrozenSet<string> ResponsesSchemaProperties = Set("type", "name", "description", "schema", "strict");
+    private static readonly FrozenSet<string> SchemaProperties = Set("name", "description", "schema", "strict");
+    private static readonly FrozenSet<string> ToolCallProperties = Set("id", "type", "function");
+    private static readonly FrozenSet<string> FunctionArgumentsProperties = Set("name", "arguments");
+    private static readonly FrozenSet<string> ImagePartProperties = Set("type", "image_url");
+    private static readonly FrozenSet<string> ImageUrlProperties = Set("url", "detail");
+
     public SharedProviderRelayRequestPolicyResult Normalize(
         SharedProviderRelayOperation operation,
         ReadOnlyMemory<byte> payloadUtf8,
@@ -202,7 +228,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             string? unknownOption = null;
             if (!hasStreamingEnabled ||
                 streamOptions.ValueKind != JsonValueKind.Object ||
-                !HasOnlyProperties(streamOptions, Set("include_usage"), out unknownOption) ||
+                !HasOnlyProperties(streamOptions, StreamOptionsProperties, out unknownOption) ||
                 !streamOptions.TryGetProperty("include_usage", out var includeUsage) ||
                 includeUsage.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
             {
@@ -229,7 +255,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         if (root.TryGetProperty(SharedProviderRelayThinkingPolicy.ResponsesReasoningProperty, out var reasoning) &&
             reasoning.ValueKind != JsonValueKind.Null) {
             if (reasoning.ValueKind != JsonValueKind.Object ||
-                !HasOnlyProperties(reasoning, Set(SharedProviderRelayThinkingPolicy.ResponsesEffortProperty), out _) ||
+                !HasOnlyProperties(reasoning, ReasoningProperties, out _) ||
                 reasoning.TryGetProperty(SharedProviderRelayThinkingPolicy.ResponsesEffortProperty, out var effort) &&
                 effort.ValueKind != JsonValueKind.Null &&
                 (effort.ValueKind != JsonValueKind.String ||
@@ -374,7 +400,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             return Validation("The resolved provider does not support streaming.", "stream");
         }
 
-        IReadOnlySet<string> declaredFunctionNames = Set();
+        IReadOnlySet<string> declaredFunctionNames = FrozenSet<string>.Empty;
         if (root.TryGetProperty("tools", out var tools))
         {
             if (!support.SupportsFunctionTools)
@@ -504,9 +530,9 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         string roleName = role.GetString()!;
         var allowedProperties = roleName switch
         {
-            "system" or "developer" or "user" => Set("role", "content", "name"),
-            "assistant" => Set("role", "content", "name", "tool_calls"),
-            "tool" => Set("role", "content", "tool_call_id"),
+            "system" or "developer" or "user" => InputMessageProperties,
+            "assistant" => AssistantMessageProperties,
+            "tool" => ToolMessageProperties,
             _ => throw new InvalidOperationException("The validated chat role is unsupported.")
         };
         if (!HasOnlyProperties(message, allowedProperties, out var unknown))
@@ -604,7 +630,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         {
             if (!HasOnlyProperties(
                     item,
-                    Set("type", "id", "call_id", "name", "arguments", "status"),
+                    FunctionCallItemProperties,
                     out var unknown))
             {
                 return Validation("A function call contains an unsupported field.", unknown ?? "input");
@@ -634,7 +660,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             string.Equals(type.GetString(), "function_call_output", StringComparison.Ordinal);
         if (isFunctionOutput)
         {
-            if (!HasOnlyProperties(item, Set("type", "call_id", "output"), out var unknown))
+            if (!HasOnlyProperties(item, FunctionOutputProperties, out var unknown))
             {
                 return Validation("A function output contains an unsupported field.", unknown ?? "input");
             }
@@ -653,7 +679,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             return null;
         }
 
-        if (!HasOnlyProperties(item, Set("role", "content", "type"), out var messageUnknown))
+        if (!HasOnlyProperties(item, ResponsesMessageProperties, out var messageUnknown))
         {
             return Validation("A Responses input message contains an unsupported field.", messageUnknown ?? "input");
         }
@@ -684,7 +710,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
     {
         if (!HasOnlyProperties(
                 item,
-                Set("type", "id", "summary", "content", "encrypted_content", "status"),
+                ReasoningItemProperties,
                 out var unknown))
         {
             return Validation("A Responses reasoning item contains an unsupported field.", unknown ?? "input");
@@ -750,7 +776,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
                 return "a part must be an object";
             }
 
-            if (!HasOnlyProperties(part, Set("type", "text"), out _))
+            if (!HasOnlyProperties(part, TextPartProperties, out _))
             {
                 return "a part contains an unsupported field";
             }
@@ -813,8 +839,8 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             if (string.Equals(type.GetString(), expectedTextPartType, StringComparison.Ordinal))
             {
                 var allowedTextProperties = allowsResponseOutputText
-                    ? Set("type", "text", "annotations")
-                    : Set("type", "text");
+                    ? OutputTextPartProperties
+                    : TextPartProperties;
                 if (!HasOnlyProperties(part, allowedTextProperties, out _) ||
                     !part.TryGetProperty("text", out var text) ||
                     text.ValueKind != JsonValueKind.String ||
@@ -864,7 +890,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         SharedProviderRelayOperation operation,
         out IReadOnlySet<string> declaredFunctionNames)
     {
-        declaredFunctionNames = Set();
+        declaredFunctionNames = FrozenSet<string>.Empty;
         if (tools.ValueKind != JsonValueKind.Array || tools.GetArrayLength() is < 1 or > MaximumTools)
         {
             return Validation("The tools field is invalid.", "tools");
@@ -901,7 +927,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
 
         if (operation == SharedProviderRelayOperation.ChatCompletions)
         {
-            if (!HasOnlyProperties(tool, Set("type", "function"), out _) ||
+            if (!HasOnlyProperties(tool, ChatToolProperties, out _) ||
                 !tool.TryGetProperty("function", out var function) ||
                 !IsValidFunctionDefinition(function))
             {
@@ -913,7 +939,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         }
 
         if (operation != SharedProviderRelayOperation.Responses ||
-            !HasOnlyProperties(tool, Set("type", "name", "description", "parameters", "strict"), out _) ||
+            !HasOnlyProperties(tool, ResponsesToolProperties, out _) ||
             !tool.TryGetProperty("name", out var responseName) ||
             !IsName(responseName))
         {
@@ -946,7 +972,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
     private static bool IsValidFunctionDefinition(JsonElement function)
     {
         if (function.ValueKind != JsonValueKind.Object ||
-            !HasOnlyProperties(function, Set("name", "description", "parameters", "strict"), out _) ||
+            !HasOnlyProperties(function, FunctionProperties, out _) ||
             !function.TryGetProperty("name", out var name) ||
             !IsName(name))
         {
@@ -990,10 +1016,10 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         JsonElement name;
         if (operation == SharedProviderRelayOperation.ChatCompletions)
         {
-            if (!HasOnlyProperties(toolChoice, Set("type", "function"), out _) ||
+            if (!HasOnlyProperties(toolChoice, ChatToolProperties, out _) ||
                 !toolChoice.TryGetProperty("function", out var function) ||
                 function.ValueKind != JsonValueKind.Object ||
-                !HasOnlyProperties(function, Set("name"), out _) ||
+                !HasOnlyProperties(function, FunctionNameProperties, out _) ||
                 !function.TryGetProperty("name", out name))
             {
                 return false;
@@ -1001,7 +1027,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         }
         else if (operation == SharedProviderRelayOperation.Responses)
         {
-            if (!HasOnlyProperties(toolChoice, Set("type", "name"), out _) ||
+            if (!HasOnlyProperties(toolChoice, ResponsesToolChoiceProperties, out _) ||
                 !toolChoice.TryGetProperty("name", out name))
             {
                 return false;
@@ -1025,7 +1051,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         if (propertyName == "text")
         {
             if (structured.ValueKind != JsonValueKind.Object ||
-                !HasOnlyProperties(structured, Set("format"), out _) ||
+                !HasOnlyProperties(structured, ResponsesTextProperties, out _) ||
                 !structured.TryGetProperty("format", out format))
             {
                 return Validation("The Responses text format is invalid.", propertyName);
@@ -1046,7 +1072,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         var typeName = type.GetString();
         if (typeName == "text")
         {
-            return HasOnlyProperties(format, Set("type"), out _)
+            return HasOnlyProperties(format, TypeProperties, out _)
                 ? null
                 : Validation("The text response format is invalid.", propertyName);
         }
@@ -1058,7 +1084,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
 
         if (typeName == "json_object")
         {
-            return HasOnlyProperties(format, Set("type"), out _)
+            return HasOnlyProperties(format, TypeProperties, out _)
                 ? null
                 : Validation("The JSON-object response format is invalid.", propertyName);
         }
@@ -1066,7 +1092,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         JsonElement schemaContainer;
         if (operation == SharedProviderRelayOperation.ChatCompletions)
         {
-            if (!HasOnlyProperties(format, Set("type", "json_schema"), out _) ||
+            if (!HasOnlyProperties(format, ChatSchemaFormatProperties, out _) ||
                 !format.TryGetProperty("json_schema", out schemaContainer))
             {
                 return Validation("The JSON-schema response format is invalid.", propertyName);
@@ -1082,8 +1108,8 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         }
 
         var allowedSchemaProperties = operation == SharedProviderRelayOperation.Responses
-            ? Set("type", "name", "description", "schema", "strict")
-            : Set("name", "description", "schema", "strict");
+            ? ResponsesSchemaProperties
+            : SchemaProperties;
         if (schemaContainer.ValueKind != JsonValueKind.Object ||
             !HasOnlyProperties(schemaContainer, allowedSchemaProperties, out _) ||
             !schemaContainer.TryGetProperty("name", out var name) ||
@@ -1125,7 +1151,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         foreach (var toolCall in toolCalls.EnumerateArray())
         {
             if (toolCall.ValueKind != JsonValueKind.Object ||
-                !HasOnlyProperties(toolCall, Set("id", "type", "function"), out _) ||
+                !HasOnlyProperties(toolCall, ToolCallProperties, out _) ||
                 !toolCall.TryGetProperty("id", out var id) ||
                 !IsName(id) ||
                 !toolCall.TryGetProperty("type", out var type) ||
@@ -1133,7 +1159,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
                 !string.Equals(type.GetString(), "function", StringComparison.Ordinal) ||
                 !toolCall.TryGetProperty("function", out var function) ||
                 function.ValueKind != JsonValueKind.Object ||
-                !HasOnlyProperties(function, Set("name", "arguments"), out _) ||
+                !HasOnlyProperties(function, FunctionArgumentsProperties, out _) ||
                 !function.TryGetProperty("name", out var name) ||
                 !IsName(name) ||
                 !function.TryGetProperty("arguments", out var arguments) ||
@@ -1153,10 +1179,10 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
     {
         if (operation == SharedProviderRelayOperation.ChatCompletions)
         {
-            return HasOnlyProperties(part, Set("type", "image_url"), out _) &&
+            return HasOnlyProperties(part, ImagePartProperties, out _) &&
                 part.TryGetProperty("image_url", out var imageUrl) &&
                 imageUrl.ValueKind == JsonValueKind.Object &&
-                HasOnlyProperties(imageUrl, Set("url", "detail"), out _) &&
+                HasOnlyProperties(imageUrl, ImageUrlProperties, out _) &&
                 imageUrl.TryGetProperty("url", out var chatImageUrl) &&
                 (!imageUrl.TryGetProperty("detail", out var detail) ||
                     detail.ValueKind == JsonValueKind.String &&
@@ -1166,7 +1192,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
 
         if (operation == SharedProviderRelayOperation.Responses)
         {
-            return HasOnlyProperties(part, Set("type", "image_url"), out _) &&
+            return HasOnlyProperties(part, ImagePartProperties, out _) &&
                 part.TryGetProperty("image_url", out var responsesImageUrl) &&
                 IsDataImageUrl(responsesImageUrl);
         }

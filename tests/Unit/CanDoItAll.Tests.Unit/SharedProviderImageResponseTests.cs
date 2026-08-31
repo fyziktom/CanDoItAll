@@ -9,6 +9,20 @@ public sealed class SharedProviderImageResponseTests {
     private static readonly SharedProviderRoutingModelId ModelId = SharedProviderRoutingModelIdCodec.Create(
         new SharedProviderPublicationId(Guid.Parse("b67b558a-00b3-4f54-96fd-6f71677c00e7")), "gpt-image-1-mini");
 
+    [Fact]
+    public void BufferedPayload_OwnershipAndLimitsRemainValid() {
+        var buffer = Encoding.UTF8.GetBytes("prefix" + """{"status":"completed","model":"private","error":null,"usage":{"input_tokens":2,"output_tokens":3}}""" + "suffix");
+        ReadOnlyMemory<byte> payload = buffer.AsMemory(6, buffer.Length - 12);
+        var rewritten = SharedProviderRelayResponsePolicy.RewriteBuffered(payload, ModelId, SharedProviderRelayOperation.Responses);
+        var usage = SharedProviderRelayUsageExtractor.ExtractBuffered(SharedProviderRelayOperation.Responses, payload);
+        buffer.AsSpan().Fill((byte)'x');
+        using var document = JsonDocument.Parse(rewritten);
+        Assert.Equal(ModelId.Value, document.RootElement.GetProperty("model").GetString());
+        Assert.Equal((2L, 3L), (usage.InputTokens, usage.OutputTokens));
+        Assert.Throws<InvalidDataException>(() => SharedProviderRelayResponsePolicy.RewriteBuffered(
+            ReadOnlyMemory<byte>.Empty, ModelId, SharedProviderRelayOperation.Responses));
+    }
+
     [Theory]
     [InlineData("\"background\":\"opaque\"")]
     [InlineData("\"output_format\":\"png\"")]
@@ -54,14 +68,14 @@ public sealed class SharedProviderImageResponseTests {
     [Fact]
     public void Image_urls_remain_rejected_even_when_base64_is_present() {
         Assert.Throws<InvalidDataException>(() => SharedProviderRelayResponsePolicy.RewriteBuffered(
-            "{\"data\":[{\"b64_json\":\"AQID\",\"url\":\"http://private.example\"}]}"u8,
+            "{\"data\":[{\"b64_json\":\"AQID\",\"url\":\"http://private.example\"}]}"u8.ToArray(),
             ModelId, SharedProviderRelayOperation.ImageGenerations));
     }
 
     [Fact]
     public void Legacy_image_response_still_works_without_inventing_metadata() {
         var result = SharedProviderRelayResponsePolicy.RewriteBuffered(
-            "{\"created\":1713833628,\"data\":[{\"b64_json\":\"AQID\"}]}"u8,
+            "{\"created\":1713833628,\"data\":[{\"b64_json\":\"AQID\"}]}"u8.ToArray(),
             ModelId, SharedProviderRelayOperation.ImageGenerations);
 
         using var document = JsonDocument.Parse(result);

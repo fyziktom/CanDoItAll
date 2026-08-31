@@ -42,6 +42,7 @@ public sealed record HistoryAttemptStart(
     CanonicalEvidenceReference? ContentOwner = null,
     string? CorrelationId = null) {
     public HistoryExternalReference? ExternalReference { get; init; }
+    public DateTimeOffset InputExpiresAtUtc { get; init; } = StartedAtUtc.AddDays(Policy.Policy.DetailRetentionDays);
 }
 
 public sealed record HistoryAttemptCompletion(

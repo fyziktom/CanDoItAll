@@ -1,0 +1,265 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:14.71]     CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://localhost:5032/") [FAIL]
+[xUnit.net 00:00:14.74]     CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://[::1]:5032/") [FAIL]
+[xUnit.net 00:00:14.76]     CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://127.0.0.1:5032/") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://localhost:5032/") [991 ms]
+  Chybová zpráva:
+   CanDoItAll.AgentFramework.Providers.ProviderHttpClientSelectionException : The shared-provider runtime HTTP binding is invalid.
+  Trasování zásobníku:
+     at CanDoItAll.Composition.SharedProviderRuntimeHttpClientSelector.TryGetClient(ProviderProfile provider, HttpClient& client) in C:\repositories\CanDoItAll\src\App\CanDoItAll.Composition\SharedProviderRuntimeHttpClientSelector.cs:line 57
+   at CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(String address) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderRuntimeProjectionIntegrationTests.cs:line 61
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://[::1]:5032/") [27 ms]
+  Chybová zpráva:
+   CanDoItAll.AgentFramework.Providers.ProviderHttpClientSelectionException : The shared-provider runtime HTTP binding is invalid.
+  Trasování zásobníku:
+     at CanDoItAll.Composition.SharedProviderRuntimeHttpClientSelector.TryGetClient(ProviderProfile provider, HttpClient& client) in C:\repositories\CanDoItAll\src\App\CanDoItAll.Composition\SharedProviderRuntimeHttpClientSelector.cs:line 57
+   at CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(String address) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderRuntimeProjectionIntegrationTests.cs:line 61
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://127.0.0.1:5032/") [18 ms]
+  Chybová zpráva:
+   CanDoItAll.AgentFramework.Providers.ProviderHttpClientSelectionException : The shared-provider runtime HTTP binding is invalid.
+  Trasování zásobníku:
+     at CanDoItAll.Composition.SharedProviderRuntimeHttpClientSelector.TryGetClient(ProviderProfile provider, HttpClient& client) in C:\repositories\CanDoItAll\src\App\CanDoItAll.Composition\SharedProviderRuntimeHttpClientSelector.cs:line 57
+   at CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(String address) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderRuntimeProjectionIntegrationTests.cs:line 61
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:16.90]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: "\"completed\"", error: "null", succeeds: True) [FAIL]
+[xUnit.net 00:00:16.92]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect) [FAIL]
+[xUnit.net 00:00:16.92]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed) [FAIL]
+[xUnit.net 00:00:16.92]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: "\"completed\"", error: "null", succeeds: True) [2 ms]
+  Chybová zpráva:
+   Assert.IsType() Failure: Value is not the exact type
+Expected: typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayDispatchResult+Buffered)
+Actual:   typeof(CanDoItAll.SharedProviders.Abstractions.SharedProviderRelayDispatchResult+Failed)
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(String status, String error, Boolean succeeds) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 36
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(String status, String error, Boolean succeeds) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 40
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect) [17 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "first"
+Actual:   ""
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 119
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed) [1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "first"
+Actual:   ""
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 119
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "first"
+Actual:   ""
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 119
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:17.65]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect) [FAIL]
+[xUnit.net 00:00:17.65]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout) [FAIL]
+[xUnit.net 00:00:17.67]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed) [FAIL]
+[xUnit.net 00:00:17.67]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed) [FAIL]
+[xUnit.net 00:00:17.68]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout) [FAIL]
+[xUnit.net 00:00:17.68]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: GatewayTimeout, chunked: True) [FAIL]
+[xUnit.net 00:00:17.68]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: GatewayTimeout, chunked: False) [FAIL]
+[xUnit.net 00:00:17.68]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: TooManyRequests, chunked: True) [FAIL]
+[xUnit.net 00:00:17.68]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: TooManyRequests, chunked: False) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect) [728 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "first"
+Actual:   ""
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 119
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed) [14 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "first"
+Actual:   ""
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 119
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout) [10 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: GatewayTimeout, chunked: True) [2 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Timeout
+Actual:   UpstreamFailure
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 59
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 62
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: GatewayTimeout, chunked: False) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Timeout
+Actual:   UpstreamFailure
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 59
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 62
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: TooManyRequests, chunked: True) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: RateLimited
+Actual:   UpstreamFailure
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 59
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 62
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: TooManyRequests, chunked: False) [< 1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: RateLimited
+Actual:   UpstreamFailure
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 59
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(HttpStatusCode status, Boolean chunked) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 62
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:20.93]     CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "password") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "password") [3 s]
+  Chybová zpráva:
+   Assert.All() Failure: 2 out of 2 items in the collection did not pass.
+[0]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 68, EntryId = null, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                  ↓ (pos 13)
+            String: "{"password":"unique-sensitive-fixture val"···
+            Found:  "unique-sensitive-fixture"
+[1]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 68, EntryId = b6f08c6b-e06f-484f-b4b2-706b0dd279e1, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                  ↓ (pos 13)
+            String: "{"password":"unique-sensitive-fixture val"···
+            Found:  "unique-sensitive-fixture"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:23.85]     CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "authorization") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "authorization") [2 s]
+  Chybová zpráva:
+   Assert.All() Failure: 2 out of 2 items in the collection did not pass.
+[0]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 73, EntryId = null, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                       ↓ (pos 18)
+            String: "{"authorization":"unique-sensitive-fixtur"···
+            Found:  "unique-sensitive-fixture"
+[1]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 73, EntryId = 9968d07b-9661-4962-b064-dc2692cc539b, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                       ↓ (pos 18)
+            String: "{"authorization":"unique-sensitive-fixtur"···
+            Found:  "unique-sensitive-fixture"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:26.22]     CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "api_key") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "api_key") [2 s]
+  Chybová zpráva:
+   Assert.All() Failure: 2 out of 2 items in the collection did not pass.
+[0]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 67, EntryId = null, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                 ↓ (pos 12)
+            String: "{"api_key":"unique-sensitive-fixture valu"···
+            Found:  "unique-sensitive-fixture"
+[1]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 67, EntryId = ea83d8fa-be2d-4056-a67c-913970e0549b, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                 ↓ (pos 12)
+            String: "{"api_key":"unique-sensitive-fixture valu"···
+            Found:  "unique-sensitive-fixture"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:28.86]     CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "client_secret") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "client_secret") [2 s]
+  Chybová zpráva:
+   Assert.All() Failure: 2 out of 2 items in the collection did not pass.
+[0]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 73, EntryId = null, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                       ↓ (pos 18)
+            String: "{"client_secret":"unique-sensitive-fixtur"···
+            Found:  "unique-sensitive-fixture"
+[1]: Item:  HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 73, EntryId = 80cfb9ac-ac05-4334-b706-583c70e813d7, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = PriorContextNotCaptured, ··· }
+     Error: Assert.DoesNotContain() Failure: Sub-string found
+                                       ↓ (pos 18)
+            String: "{"client_secret":"unique-sensitive-fixtur"···
+            Found:  "unique-sensitive-fixture"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+   at CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(String key) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryCaptureIntegrationTests.cs:line 32
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:31.36]     CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.RetainedRetry_PreservesSharedInput [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.RetainedRetry_PreservesSharedInput [2 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.RetainedRetry_PreservesSharedInput() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 50
+   at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.RetainedRetry_PreservesSharedInput() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 51
+   at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.RetainedRetry_PreservesSharedInput() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 51
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:33.68]     CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.Cleanup_IsBoundedAndPartitionIsolated [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.Cleanup_IsBoundedAndPartitionIsolated [2 s]
+  Chybová zpráva:
+   Assert.Empty() Failure: Collection was not empty
+Collection: [HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 0, EntryId = null, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = None, ··· }, HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 0, EntryId = null, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = None, ··· }, HistoryDetailRow { CapturedAtUtc = 2026-08-28T12:00:00.0000000+00:00, CapturedBytes = 0, EntryId = null, ExpiresAtUtc = 2026-09-04T12:00:00.0000000+00:00, Flags = None, ··· }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.Cleanup_IsBoundedAndPartitionIsolated() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 95
+   at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.Cleanup_IsBoundedAndPartitionIsolated() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 95
+   at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.Cleanup_IsBoundedAndPartitionIsolated() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 95
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:36.72]     CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.ExpiredOrphanInput_IsDeletedAfterFinalAttempt [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.ExpiredOrphanInput_IsDeletedAfterFinalAttempt [3 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 1
+Actual:   0
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.ExpiredOrphanInput_IsDeletedAfterFinalAttempt() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 23
+   at CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.ExpiredOrphanInput_IsDeletedAfterFinalAttempt() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryPersistenceIntegrationTests.cs:line 28
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb01-04-before.trx
+
+Neúspěšné!  - Neúspěšné:    23, Úspěšné:     6, Přeskočeno:     0, Celkem:    29, Doba trvání: 25 s - CanDoItAll.Tests.Integration.dll (net10.0)

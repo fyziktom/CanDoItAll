@@ -1,71 +1,104 @@
-# Execution Report
+# Execution report
 
 ## Status
 
-- Execution state: `Not started`.
-- Preparation delivered review and repair instructions only.
-- Current merge-readiness decision: repairs and required proof remain outstanding.
+- State: Blocked
+- Final closure: Blocked by the explicitly listed export, active-copy, independent-review and original host obligations.
 
-## Outcome Check
+Execution request: 2026-08-30. Implementation baseline: providers-shared at bb154a0ac4df3b3da092246db30e516521dde7c4 (bundle commit); reviewed product head 3fc10d2db7ba7e4e15bc94f50e66f815f31c4219; development/origin-development 1625b336e4f60ddb64987240c3a3dc485591d20f.
 
-Requested review/preparation is complete once the readiness gate passes. R01–R09 implementation/closure remain unexecuted. No production fixes, committed schema exports, SharedInfo edits, installed-skill writes, merge or deployment occurred.
+Product repairs and SB01–SB07 are complete. SB08 is blocked on final canonical host/export/active-copy work. SB09 frozen Stable validation passed 9,424/9,424 with no failures/skips; original hosted authority and independent execution verification remain open. This is not a merge-ready declaration. No commit, push, merge, Docker lifecycle, paid upstream call or live-profile migration was performed.
 
-## Preparation Commands and Results
+## Implemented outcome
 
-| Check | Expected / actual | Result / limit |
+- Buffered Responses requires completed status and no non-null error. Failed/incomplete streams abort after headers. Bounded optional diagnostic reads preserve status/Retry-After.
+- Imported loopback runtime selection now uses the same source URI policy as discovery, without granting arbitrary HTTP/private-network authority.
+- Quoted credentials redact before encryption. Explicit timeout classification survives the sanitized provider boundary through a safe typed flag; cancellation and terminal evidence remain distinct.
+- Bounded partition-locked retention removes expired empty orphan inputs. A bounded logical-request/revision deadline prevents late retry recapture; response deadlines remain per attempt. No EF model change.
+- Reused constant field sets, owned-memory response parsing and lightweight persisted catalog version stamps reduce measured allocations while preserving current secret/eligibility checks.
+- Web-owned schema mapping describes identifiers, enum tokens and the strict supported request subset. Exactly five sharing operations remain; no history/source-management HTTP API was invented.
+- Six project READMEs, sharing/history guides and API/architecture/pricing/privacy/backup/migration navigation are updated. SharedInfo adds a shared-provider skill and refreshes related Agents, LLM Chats and Workflows source guidance.
+
+## Validation identity
+
+SDK 10.0.303; Release; one MSBuild worker; source references. Components 8372c1d55f21b349f8e859470b02eeb4421e96ca and FileTools c95dd07208a6d48724443317cdc6cfe67a13020a were clean. Isolated outputs: artifacts/premerge, because user Web PID35584 locks normal Release output. The managed dotnetwatch session was already ExitedUnexpectedly, not a healthy watch owner.
+
+PostgreSQL tests explicitly use the repository local fixture connection and UUID disposable databases, preventing implicit Docker fallback. Browser proof uses its own disposable database/files and random port. Secrets/connection strings are not published in the proof.
+
+## Commands and results
+
+Exact command flags, project paths, filters and environment: bundle://proof/SB09/command-index.md. Tests use Release, isolated artifacts, no build/restore, one MSBuild worker and TRX output. Discovery precedes execution. Actual output is retained in the indexed TRX and discovery logs.
+
+| Gate | Expected / actual | Result / artifact |
 | --- | --- | --- |
-| git branch/status/base comparison | providers-shared; initial clean tree; development/origin development agree | HEAD 3fc10d2db7ba7e4e15bc94f50e66f815f31c4219, base 1625b336e4f60ddb64987240c3a3dc485591d20f; 29 commits |
-| Scoped CodeAnalytics | nonempty projects/documents; diagnostics inspected | 4/88 history+HTTP, 4/144 providers; no scoped cycle; partial factory DI noted |
-| Source-derived .NET credential regex reproduction | plain credential redacts; quoted keys tested | 1 plain case redacts, 3 quoted-key cases remain unchanged; analysis/redaction-reproduction.json |
-| Product Test-Documentation.ps1 | zero findings | FAIL: 6 missing READMEs (DC01) |
-| Existing SharedInfo Test-CanDoItAllWebOpenApi.ps1 | old manifest/snapshot consistency | PASS for old artifact only; not current product parity |
-| Existing localhost OpenAPI read | read-only comparison | Two endpoints equal text; revision not attested, not final export |
-| Performance scan | 160 scoped production files / exact recipe counts | analysis/performance-scan-counts.csv, locations.csv, scope.json and report |
-| Prepared bundle validator | semantic surfaces populated | See reviews/00-bundle-self-review.md and preparation-validation.txt |
+| Nine changed production projects built directly | 9 / 9 | Pass, zero warnings/errors; sb09-builds.log |
+| Product and Stable Release restore/build | Both graphs | Pass, zero warnings/errors; scripts/Build-FrozenGate.ps1 and sb09-builds.log |
+| Final owning Integration | 179 / 179 | Pass; sb01-08-final.trx |
+| Capture/relay/network owning Unit | 145 / 145 | Pass; sb01-04-unit-owning.trx |
+| Hot-path/cache/memory Unit | 110 / 110 | Pass; sb05-unit.trx; overlap is not counted as unique new tests |
+| Paired performance + recorder workloads | 10 / 10, before and after | Pass; sb05-baseline.trx and sb05-after.trx |
+| Catalog plans, concurrent history, both upgrade lanes | 6 / 6 | Pass; sb05-08-final.trx |
+| Generated semantic OpenAPI suite | 5 / 5 | Pass; sb06-schema.trx and final Integration |
+| Real JSON Schema validation | 28 / 28 across three operations | Pass; sb06-final-conformance.log |
+| Documentation | 197 maintained Markdown files | Pass; sb07-final-documentation.log |
+| Bundle structure, prepared/completed stages | Both | Pass; execution-structure-validation.txt and execution-completed-structure-validation.txt; semantic final closure remains Blocked |
+| SharedInfo current skill validator | 4 / 4 source skills | Pass; sb08-skills.log |
+| SharedInfo repository validator | Complete source tree | Blocked/1 failure: updated workflow route absent from stale snapshot; sb08-sharedinfo-draft.log |
+| Exact installer preview | Five selected packages | Pass/preview only; sb08-install-preview.log |
+| EF pending model | No differences | Pass; sb08-pending-model.log |
+| SQL export | Full, development delta, reviewed-head delta | Generated; hashes in proof/SB09/artifacts.json; reviewed-head delta is BOM-only empty SQL |
+| Isolated browser scenario | 1 / 1, seven inspected screenshots | Pass; sb09-ui-complete.trx and proof/SB09/ui-review.md |
+| Scoped CodeAnalytics | 9 projects / 436 documents | No scoped cycles; partial DI/EF limitations recorded in architecture gate |
+| CP-MERGE-FROZEN Stable | 9,424 / 9,424: 1,190 Components + 1,237 Integration + 22 AgentFramework Memory + 196 Memory + 6,779 Unit | Pass; one invocation, exit0, no skips/failures; sb09-stable-results.json and sb09-stable.log |
 
-Product build/test discovery/execution: not run. Expected/actual executable test counts are therefore not claimed.
+The initial discovery listing contains 9,369 display entries, not fully expanded rows. Seven existing MemberData methods expand to 55 additional runtime rows (Integration +5, Memory +16, Unit +34). Each data source and all method/count differences were inspected; scripts/Reconcile-StableDiscovery.py rejects missing methods and any unexplained difference. Original discovery is preserved in sb09-stable-counts.json; exact expanded cases, sources/hashes and TRX identities are in sb09-stable-results.json. This corrects the original case-count estimate without changing the selected scope or rerunning it.
 
-## Execution Commands
-
-For each future unit fill: test project/check; exact filter/FQN; reason; expected/actual discovery; source/test/configuration/dependency identity; invalidation keys; broad-gate decision; command/exit code/result. Use plan/02-validation-strategy.md and unit cases. No --no-build without a matching refreshed assembly.
+The Stable filter is Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true. Its named trigger is shared persistence/migration, cross-cutting runtime and public-contract merge closure. No automatic second broad run after documentation/hash edits.
 
 ## Subbundle Gate Results
 
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| SB01 | Ready for execution request | Not run | Planned | Not started | Behavioral; Relay completion and failure contract |
-| SB02 | Ready for execution request | Not run | Planned | Not started | Behavioral; Consistent source network policy |
-| SB03 | Ready for execution request | Not run | Planned | Not started | Behavioral; History capture redaction and outcome integrity |
-| SB04 | Ready for execution request | Not run | Planned | Not started | Behavioral; Bounded orphan input-detail cleanup |
-| SB05 | Pending prerequisites | Not run | Planned | Not started | Behavioral; Bounded provider hot-path work |
-| SB06 | Pending prerequisites | Not run | Planned | Not started | Behavioral; OpenAPI contract semantics |
-| SB07 | Pending prerequisites | Not run | Planned | Not started | Standard; Maintained product documentation |
-| SB08 | Pending prerequisites | Not run | Planned | Not started | Behavioral; SharedInfo API skills and schema export |
-| SB09 | Pending prerequisites | Not run | Planned | Not started | Governed; Frozen pre-merge proof and manual handoff |
+| SB01 | Pass | Pass | SDK/runtime/schema | Completed | Failed-first eight SDK cases then final public behavior proof |
+| SB02 | Pass | Pass | Imported actual driver graph | Completed | Loopback positives and non-loopback negatives |
+| SB03 | Pass | Pass | Persistence and real provider boundary | Completed | Synthetic decrypted redaction and real driver timeout |
+| SB04 | Pass | Pass | Recorder retries, concurrency, transfer | Completed | Naive deletion regression repaired with frozen deadline |
+| SB05 | Pass | Pass | Existing cache safety plus actual catalog mutation | Completed | Measured allocations; capacity limits explicit |
+| SB06 | Pass | Pass | Generated schema plus actual validator | Completed | Scalar/array item and 28 payload checks |
+| SB07 | Pass | Pass | Maintained docs validation and source review | Completed | Current docs supersede duplicate old SB10 implementation |
+| SB08 | Pass for source/SQL work | Blocked | Two real migration lanes pass | Blocked | Canonical final capture, support manifest/README and active copies outstanding |
+| SB09 | Pass for permitted validation | Blocked | Frozen Stable passed, 9,424/9,424 | Blocked | Original host authority, final export and independent verifier remain required |
 
 ## Browser Validation Analytics
 
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
-| SB09 | /agents provider/global History; Settings | 1920x1080 | Planned explicit lazy Search, paging, detail overlay, policy flow | Future proof/SB09 artifacts | Not run |
+| SB09 | Agents route: global Request history and provider History; Settings route: provider-history | 1920×1080 | Real .NET Playwright fixture, 15 explicit visual rows, actual authorized UI/persistence | Seven inspected normal/detail/content/policy/preview states | Pass for isolated UI; not original multi-instance inference |
 
-No UI implementation change is planned. Preserve existing primary table/tabs/forms, dialog and scroll ownership. Review normal/open-overlay screenshots and action visibility; no mobile validation.
-
-## Governed Final Proof
-
-SB09 must create proof/SB09/manifest.md, semantic-invariants.md, changed-file hashes and transcripts, a production behavior artifact matrix (capture producer, history consumer, terminal/retention lifecycle, negative tests), and independent verifier review. Reuse valid unit proof with exact hashes; never invent missing failing-first evidence after implementation.
+Primary surfaces, first viewport, scrolling, overlay layering and actions are reviewed in proof/SB09/ui-review.md. No mobile or layout refactor is claimed.
 
 ## Raw Note Closure
 
 | Raw note | Status | Proof |
 | --- | --- | --- |
-| N01 pre-merge review/manual merge | Partially solved | analysis/03-prioritized-review.md; merge recommendation waits for SB09 |
-| N02 provider bugs/performance/unfinished work | Partially solved | provider-review.md, performance-review.md and SB01/SB02/SB04/SB05/SB06 plans |
-| N03 request logging | Partially solved | synthetic H01 proof and H02/retention source review; SB03/SB04 repairs pending |
-| N04 requested performance/C# skills | Solved for review | performance passes/scan; architecture maps, scoped CodeAnalytics; execution gates pending |
-| N05 bundle/docs/SharedInfo/schema plan | Solved for preparation | SB06–SB09, docs-contracts-review.md; actual updates/exports pending |
-| N06 engineering constraints | Solved for preparation | no production edits; execution architecture/style gates specified |
+| N01 pre-merge review/manual merge | Partially solved | Repairs and focused proof pass; final authority/export/review remain |
+| N02 shared providers/performance/unfinished work | Solved for identified repairs | SB01/SB02/SB04/SB05/SB06; 179 final Integration and measured workloads |
+| N03 request logging | Solved for identified repairs | SB03/SB04 production capture and retention proof |
+| N04 requested performance/C# skills | Solved | Architecture gate, codeanalytics, direct builds and before/after measurements |
+| N05 bundle/docs/SharedInfo/schema | Partially solved | Product docs, API skill sources, EF SQL/upgrade pass; final OpenAPI and installation pending |
+| N06 engineering constraints | Solved in implemented scope | Typed small changes; no project/partial/XML growth, merge or authority expansion |
 
-## Residual Risks
+## Remaining concrete work and authority
 
-Targeted source review is not exhaustive. Required fixes/proof are outstanding obligations, not accepted residual risk. Conditional capacity/SDK retry/native replay limitations must be explicitly documented or characterized. Original SB07 authority/topology and current host identity cannot be inferred from historical passes.
+Exact bounded actions and prerequisites: [remaining-gates handoff](04-remaining-gates.md).
+
+1. Briefly stop/restart the user's canonical 5032 app under explicit authority, run the identified final Release host, and authorize pre-commit capture with baseline commit + workingTreeClean:false. scripts/Export-ApiContract.ps1 checks exclusive PID ownership, executable, start time, assembly hash, canonical server and byte equality. Update SharedInfo support README after actual counts, run its validators, then install only the five previewed packages and reopen/hash active copies.
+2. Preserve the original seven-lifecycle/seven-image history. Obtain one replacement SB07 three-application lifecycle plus one application image build, under cumulative nine/nine ceilings reserving one for SB12. No paid call, unlimited retry, unrelated live/browser gate or budget reset is implied.
+3. Complete an independent execution source/proof review. The preparation reviewers did not review the implemented repairs; implementing-agent audit and CodeAnalytics are labelled honestly.
+4. After those actions, reconcile final source/export/active-copy proof and re-evaluate merge readiness. The single frozen Stable run is complete and passed; no second broad run is needed for documentation/hash-only edits.
+
+See repo://codex/bundles/shared-providers/PREMERGE-REPAIR-HANDOFF.md and bundle://plan/03-historical-handoff.md. Missing required proof is a blocker, not an accepted residual risk.
+
+## Limitations
+
+This is not exhaustive certification of every branch path or universal OpenAI compatibility. History records application-visible attempts, not every opaque SDK retry. Redaction is bounded known-pattern protection, not universal DLP. Capacity guidance is local evidence plus declared scheduler scenarios, not a production throughput promise. No live data was migrated or erased.

@@ -1,0 +1,69 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:05.79]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect) [FAIL]
+[xUnit.net 00:00:05.81]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed) [FAIL]
+[xUnit.net 00:00:05.81]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete) [FAIL]
+[xUnit.net 00:00:05.85]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect) [FAIL]
+[xUnit.net 00:00:05.86]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout) [FAIL]
+[xUnit.net 00:00:05.87]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed) [FAIL]
+[xUnit.net 00:00:05.87]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed) [FAIL]
+[xUnit.net 00:00:05.88]     CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect) [849 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed) [12 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete) [5 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect) [36 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout) [14 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed) [4 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed) [3 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout) [3 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value is null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 120
+   at CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(SharedProviderRelayOperation operation, StreamFailure failure) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderPremergeRelayTests.cs:line 123
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb01-sdk-before.trx
+
+Neúspěšné!  - Neúspěšné:     8, Úspěšné:     0, Přeskočeno:     0, Celkem:     8, Doba trvání: 934 ms - CanDoItAll.Tests.Integration.dll (net10.0)

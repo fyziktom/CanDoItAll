@@ -27,8 +27,8 @@ internal sealed class ProviderHistoryObservation(
             evidence = observe(result);
             outcome = evidence.Outcome ?? HistoryOutcome.Succeeded;
             return result;
-        } catch (OperationCanceledException) {
-            outcome = HistoryOutcome.Cancelled;
+        } catch (Exception exception) {
+            outcome = ProviderHistoryFailureOutcome.Classify(exception, cancellationToken);
             throw;
         } finally {
             await CompleteAsync(outcome, evidence);

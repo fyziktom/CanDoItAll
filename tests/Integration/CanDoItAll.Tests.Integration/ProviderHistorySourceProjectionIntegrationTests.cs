@@ -232,14 +232,11 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         Assert.Equal(1, await retention.PurgeExpiredDetailAsync(fixture.Partition, 500, default));
         Assert.Equal(0, await retention.PurgeExpiredMetadataAsync(fixture.Partition, 500, default));
         await fixture.Capture.CompleteAsync(start, fixture.Completion(), "late expired response", default);
-        Assert.Equal(1, await retention.PurgeExpiredMetadataAsync(fixture.Partition, 500, default));
+        Assert.Equal(2, await retention.PurgeExpiredMetadataAsync(fixture.Partition, 500, default));
         var retry = start with { EntryId = HistoryEntryId.New(), AttemptId = ProviderAttemptId.New(), StartedAtUtc = fixture.Clock.Now };
         await fixture.Capture.BeginAsync(retry, new("retained only seven days", 0), default);
         await using var db = fixture.Factory.CreateDbContext();
-        var input = await db.Set<HistoryDetailRow>().SingleAsync();
-        Assert.Empty(input.ProtectedText);
-        Assert.Equal(0, input.StoredBytes);
-        Assert.Equal(start.StartedAtUtc.AddDays(7), input.ExpiresAtUtc);
+        Assert.Empty(await db.Set<HistoryDetailRow>().ToArrayAsync());
         Assert.Equal(HistoryDetailState.Expired, (await db.Set<HistoryEntryRow>().SingleAsync()).DetailState);
         Assert.Equal(0, (await db.Set<HistoryPolicyRow>().SingleAsync()).UsedDetailBytes);
     }

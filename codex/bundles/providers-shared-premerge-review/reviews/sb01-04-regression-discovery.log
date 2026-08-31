@@ -1,0 +1,31 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "password")
+    CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "api_key")
+    CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "client_secret")
+    CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(key: "authorization")
+    CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.ExpiredOrphanInput_IsDeletedAfterFinalAttempt
+    CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.RetainedRetry_PreservesSharedInput
+    CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.ConcurrentInputAttachmentAndCleanup_PreservesReferences
+    CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.Cleanup_IsBoundedAndPartitionIsolated
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: "\"completed\"", error: "null", succeeds: True)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: "\"completed\"", error: "{\"message\":\"private upstream detail\"}", succeeds: False)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: "\"failed\"", error: "null", succeeds: False)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: "\"incomplete\"", error: "null", succeeds: False)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: null, error: "null", succeeds: False)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.BufferedResponses_RequireSuccessfulCompletion(status: "42", error: "null", succeeds: False)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: TooManyRequests, chunked: False)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: TooManyRequests, chunked: True)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: GatewayTimeout, chunked: False)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.OversizedUpstreamError_PreservesStatusAndRetryAfter(status: GatewayTimeout, chunked: True)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Failed)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Incomplete)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Timeout)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Malformed)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: Responses, failure: Disconnect)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Timeout)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Malformed)
+    CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.StreamingFailure_IsObservedByPinnedSdk(operation: ChatCompletions, failure: Disconnect)
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://localhost:5032/")
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://127.0.0.1:5032/")
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.PublicOnlyLoopback_ImportedRuntimeSelectsRestrictedHttpClient(address: "http://[::1]:5032/")

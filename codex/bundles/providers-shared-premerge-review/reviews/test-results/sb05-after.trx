@@ -1,0 +1,381 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="092a02a4-759e-477d-be17-df8996384688" name="lucys@LUCYSPOWER 2026-08-30 19:23:29" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-30T19:23:29.0080843-04:00" queuing="2026-08-30T19:23:29.0080848-04:00" start="2026-08-30T19:23:25.4381577-04:00" finish="2026-08-30T19:23:54.7910622-04:00" />
+  <TestSettings name="default" id="84690d9e-72e1-4718-8403-90417673c9e4">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-30_19_23_29" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="72c28cc7-7ad3-4010-b27a-986c33ef1664" testId="948faa3a-043e-4f5b-2191-57b86186c0f8" testName="CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.Actual_recorder_keeps_input_expiry_after_orphan_cleanup_but_allows_new_revision" computerName="LUCYSPOWER" duration="00:00:02.5827303" startTime="2026-08-30T19:23:52.0811537-04:00" endTime="2026-08-30T19:23:54.6639597-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="72c28cc7-7ad3-4010-b27a-986c33ef1664" />
+    <UnitTestResult executionId="5c7e7829-d92b-4d2c-b927-06adb2fd0bce" testId="9c27b6f0-efe4-4c42-56e2-84b4ad9c0b87" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 1)" computerName="LUCYSPOWER" duration="00:00:11.1495989" startTime="2026-08-30T19:23:27.6952870-04:00" endTime="2026-08-30T19:23:38.8464450-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5c7e7829-d92b-4d2c-b927-06adb2fd0bce">
+      <Output>
+        <StdOut>{"Workload":"catalog-cache","Publications":1,"ModelsPerPublication":32,"Repetitions":20,"ElapsedMilliseconds":[5.2445,4.8846,4.6925,4.1107,4.4929,4.2687,4.5413,4.4592,3.8685,4.6822,5.8404,5.5317,5.3589,4.6409,5.3522,14.7731,4.6359,4.4311,4.7569,4.6122],"AllocatedBytesPerRequest":135782,"CommandsPerRequest":2,"Sql":["SELECT w.\u0022Id\u0022, w.\u0022CreatedAtUtc\u0022, w.\u0022PublicId\u0022\r\nFROM \u0022Workspace_SharedProviderServiceIdentity\u0022 AS w\r\nWHERE w.\u0022Id\u0022 = \u00277d5f45ad-9b13-4f1a-9284-260e2e07c92c\u0027\r\nLIMIT 2","SELECT w.\u0022Id\u0022, w.\u0022PublicId\u0022, w.\u0022ConcurrencyToken\u0022, w0.\u0022Id\u0022, w0.\u0022ConcurrencyToken\u0022, s.\u0022Id\u0022 IS NOT NULL\r\nFROM \u0022Workspace_ProviderSharePublications\u0022 AS w\r\nINNER JOIN \u0022Workspace_ProviderProfiles\u0022 AS w0 ON w.\u0022ProviderProfileId\u0022 = w0.\u0022Id\u0022\r\nLEFT JOIN \u0022Security_SecretRecords\u0022 AS s ON w0.\u0022ApiKeySecretId\u0022 = s.\u0022Id\u0022\r\nWHERE w.\u0022IsPublished\u0022"]}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="84d0f9d2-c923-4685-85f5-08fede5eba45" testId="c95ae313-3564-6af4-4aaf-f24b2c4303be" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 256)" computerName="LUCYSPOWER" duration="00:00:00.2344248" startTime="2026-08-30T19:23:47.8885938-04:00" endTime="2026-08-30T19:23:48.1226429-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="84d0f9d2-c923-4685-85f5-08fede5eba45">
+      <Output>
+        <StdOut>{"Workload":"normalization","Messages":256,"Repetitions":1000,"ElapsedMilliseconds":214.5838,"AllocatedBytesPerRequest":158174}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a79a86e0-54dc-44ae-a61e-87ff4912a5e2" testId="cb6e8dec-a424-0ecf-2c2f-f0f44cfb9781" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 32)" computerName="LUCYSPOWER" duration="00:00:00.0302301" startTime="2026-08-30T19:23:48.1299344-04:00" endTime="2026-08-30T19:23:48.1600962-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a79a86e0-54dc-44ae-a61e-87ff4912a5e2">
+      <Output>
+        <StdOut>{"Workload":"normalization","Messages":32,"Repetitions":1000,"ElapsedMilliseconds":29.4767,"AllocatedBytesPerRequest":25681}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f4c50963-bfc9-433b-b7f9-3e8e46d0fc40" testId="a058cdb7-0b7a-c1b5-8f67-4c0235e85054" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BufferedRelayAllocations(mebibytes: 64)" computerName="LUCYSPOWER" duration="00:00:01.0101893" startTime="2026-08-30T19:23:26.6465258-04:00" endTime="2026-08-30T19:23:27.6650797-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f4c50963-bfc9-433b-b7f9-3e8e46d0fc40">
+      <Output>
+        <StdOut>{"Workload":"buffered-relay","Mebibytes":64,"Repetitions":5,"ElapsedMilliseconds":[117.5145,144.5625,149.3205,121.3782,71.5727],"AllocatedBytesPerRequest":416266497,"PeakWorkingSetBytes":2275577856}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f38ffc5d-4962-4941-ad9c-5236ba90a372" testId="0ed1902a-fe89-2554-2743-fb54aece7a99" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 1)" computerName="LUCYSPOWER" duration="00:00:00.0067827" startTime="2026-08-30T19:23:48.1228550-04:00" endTime="2026-08-30T19:23:48.1297269-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f38ffc5d-4962-4941-ad9c-5236ba90a372">
+      <Output>
+        <StdOut>{"Workload":"normalization","Messages":1,"Repetitions":1000,"ElapsedMilliseconds":6.3746,"AllocatedBytesPerRequest":4656}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="48be2156-5ab8-4725-b74b-96ac5ed8ac5d" testId="e69cbc8a-170f-2a8a-892c-21d3cbb2d45e" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 50)" computerName="LUCYSPOWER" duration="00:00:04.1250263" startTime="2026-08-30T19:23:38.8484774-04:00" endTime="2026-08-30T19:23:42.9727604-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="48be2156-5ab8-4725-b74b-96ac5ed8ac5d">
+      <Output>
+        <StdOut>{"Workload":"catalog-cache","Publications":50,"ModelsPerPublication":32,"Repetitions":20,"ElapsedMilliseconds":[3.767,4.0678,3.6169,3.4185,2.7945,3.2272,2.9298,2.9353,3.2071,2.8962,3.2884,3.1157,3.9114,2.8954,5.7106,3.7559,3.4921,3.536,3.4731,3.992],"AllocatedBytesPerRequest":185210,"CommandsPerRequest":2,"Sql":["SELECT w.\u0022Id\u0022, w.\u0022CreatedAtUtc\u0022, w.\u0022PublicId\u0022\r\nFROM \u0022Workspace_SharedProviderServiceIdentity\u0022 AS w\r\nWHERE w.\u0022Id\u0022 = \u00277d5f45ad-9b13-4f1a-9284-260e2e07c92c\u0027\r\nLIMIT 2","SELECT w.\u0022Id\u0022, w.\u0022PublicId\u0022, w.\u0022ConcurrencyToken\u0022, w0.\u0022Id\u0022, w0.\u0022ConcurrencyToken\u0022, s.\u0022Id\u0022 IS NOT NULL\r\nFROM \u0022Workspace_ProviderSharePublications\u0022 AS w\r\nINNER JOIN \u0022Workspace_ProviderProfiles\u0022 AS w0 ON w.\u0022ProviderProfileId\u0022 = w0.\u0022Id\u0022\r\nLEFT JOIN \u0022Security_SecretRecords\u0022 AS s ON w0.\u0022ApiKeySecretId\u0022 = s.\u0022Id\u0022\r\nWHERE w.\u0022IsPublished\u0022"]}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b5463011-ca6f-40ee-b4c3-33c819b470d8" testId="904542d3-78d6-2bf7-7ee0-9bc028b15262" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BoundedOrphanCleanupPlanAndDrain" computerName="LUCYSPOWER" duration="00:00:03.9157756" startTime="2026-08-30T19:23:48.1602344-04:00" endTime="2026-08-30T19:23:52.0762172-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b5463011-ca6f-40ee-b4c3-33c819b470d8">
+      <Output>
+        <StdOut>Orphan candidate EXPLAIN: [
+  {
+    "Plan": {
+      "Node Type": "Limit",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Startup Cost": 0.29,
+      "Total Cost": 54.97,
+      "Plan Rows": 500,
+      "Plan Width": 24,
+      "Actual Startup Time": 0.023,
+      "Actual Total Time": 0.335,
+      "Actual Rows": 500,
+      "Actual Loops": 1,
+      "Shared Hit Blocks": 15,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0,
+      "Plans": [
+        {
+          "Node Type": "Nested Loop",
+          "Parent Relationship": "Outer",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Join Type": "Anti",
+          "Startup Cost": 0.29,
+          "Total Cost": 1093.85,
+          "Plan Rows": 9999,
+          "Plan Width": 24,
+          "Actual Startup Time": 0.023,
+          "Actual Total Time": 0.306,
+          "Actual Rows": 500,
+          "Actual Loops": 1,
+          "Inner Unique": false,
+          "Join Filter": "(e.\"InputDetailId\" = d.\"Id\")",
+          "Rows Removed by Join Filter": 0,
+          "Shared Hit Blocks": 15,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Index Scan",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "IX_ProviderHistory_Details_PartitionId_ExpiresAtUtc_Id",
+              "Relation Name": "ProviderHistory_Details",
+              "Alias": "d",
+              "Startup Cost": 0.29,
+              "Total Cost": 968.85,
+              "Plan Rows": 10000,
+              "Plan Width": 24,
+              "Actual Startup Time": 0.019,
+              "Actual Total Time": 0.117,
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Index Cond": "((\"PartitionId\" = '1e7fe580-cdcc-4c90-8337-509b043fb769'::uuid) AND (\"ExpiresAtUtc\" &lt;= '2026-08-28 12:00:00+00'::timestamp with time zone))",
+              "Rows Removed by Index Recheck": 0,
+              "Filter": "((\"EntryId\" IS NULL) AND (\"Part\" = 0) AND (\"StoredBytes\" = 0))",
+              "Rows Removed by Filter": 0,
+              "Shared Hit Blocks": 15,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Parent Relationship": "Inner",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "ProviderHistory_Entries",
+              "Alias": "e",
+              "Startup Cost": 0.00,
+              "Total Cost": 0.00,
+              "Plan Rows": 1,
+              "Plan Width": 16,
+              "Actual Startup Time": 0.000,
+              "Actual Total Time": 0.000,
+              "Actual Rows": 0,
+              "Actual Loops": 500,
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "Planning": {
+      "Shared Hit Blocks": 114,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning Time": 0.824,
+    "Triggers": [
+    ],
+    "Execution Time": 0.388
+  }
+]&#xD;
+{"Workload":"orphan-drain","Rows":10000,"BatchSize":500,"ElapsedMilliseconds":381.1003}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2b634a35-88ef-4856-87bd-4ac14410da12" testId="86465960-ed2a-4914-caa0-71f6046a9b39" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 200)" computerName="LUCYSPOWER" duration="00:00:04.9139244" startTime="2026-08-30T19:23:42.9733435-04:00" endTime="2026-08-30T19:23:47.8871629-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b634a35-88ef-4856-87bd-4ac14410da12">
+      <Output>
+        <StdOut>{"Workload":"catalog-cache","Publications":200,"ModelsPerPublication":32,"Repetitions":20,"ElapsedMilliseconds":[3.1381,2.5954,2.9741,2.8807,2.9411,3.1579,2.8108,3.2968,3.9458,4.5667,5.0718,5.331,3.9387,3.9023,3.8436,3.7686,3.3968,3.6379,3.3552,4.5692],"AllocatedBytesPerRequest":352555,"CommandsPerRequest":2,"Sql":["SELECT w.\u0022Id\u0022, w.\u0022CreatedAtUtc\u0022, w.\u0022PublicId\u0022\r\nFROM \u0022Workspace_SharedProviderServiceIdentity\u0022 AS w\r\nWHERE w.\u0022Id\u0022 = \u00277d5f45ad-9b13-4f1a-9284-260e2e07c92c\u0027\r\nLIMIT 2","SELECT w.\u0022Id\u0022, w.\u0022PublicId\u0022, w.\u0022ConcurrencyToken\u0022, w0.\u0022Id\u0022, w0.\u0022ConcurrencyToken\u0022, s.\u0022Id\u0022 IS NOT NULL\r\nFROM \u0022Workspace_ProviderSharePublications\u0022 AS w\r\nINNER JOIN \u0022Workspace_ProviderProfiles\u0022 AS w0 ON w.\u0022ProviderProfileId\u0022 = w0.\u0022Id\u0022\r\nLEFT JOIN \u0022Security_SecretRecords\u0022 AS s ON w0.\u0022ApiKeySecretId\u0022 = s.\u0022Id\u0022\r\nWHERE w.\u0022IsPublished\u0022"]}</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2cb16488-3b06-4b12-b37b-5ef726aaac85" testId="d8426e68-fc6b-b711-5898-55c1da5f2bc1" testName="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BufferedRelayAllocations(mebibytes: 1)" computerName="LUCYSPOWER" duration="00:00:00.0278462" startTime="2026-08-30T19:23:27.6751673-04:00" endTime="2026-08-30T19:23:27.6930880-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2cb16488-3b06-4b12-b37b-5ef726aaac85">
+      <Output>
+        <StdOut>{"Workload":"buffered-relay","Mebibytes":1,"Repetitions":5,"ElapsedMilliseconds":[2.857,2.5018,2.6872,2.3923,2.3781],"AllocatedBytesPerRequest":6317497,"PeakWorkingSetBytes":2315055104}</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.Actual_recorder_keeps_input_expiry_after_orphan_cleanup_but_allows_new_revision" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="948faa3a-043e-4f5b-2191-57b86186c0f8">
+      <Execution id="72c28cc7-7ad3-4010-b27a-986c33ef1664" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests" name="Actual_recorder_keeps_input_expiry_after_orphan_cleanup_but_allows_new_revision" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 256)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="c95ae313-3564-6af4-4aaf-f24b2c4303be">
+      <Execution id="84d0f9d2-c923-4685-85f5-08fede5eba45" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="NormalizationAllocations" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 200)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="86465960-ed2a-4914-caa0-71f6046a9b39">
+      <Execution id="2b634a35-88ef-4856-87bd-4ac14410da12" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="CatalogCacheAllocationsAndCrossScopeRevocation" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BoundedOrphanCleanupPlanAndDrain" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="904542d3-78d6-2bf7-7ee0-9bc028b15262">
+      <Execution id="b5463011-ca6f-40ee-b4c3-33c819b470d8" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="BoundedOrphanCleanupPlanAndDrain" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BufferedRelayAllocations(mebibytes: 1)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="d8426e68-fc6b-b711-5898-55c1da5f2bc1">
+      <Execution id="2cb16488-3b06-4b12-b37b-5ef726aaac85" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="BufferedRelayAllocations" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 1)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="9c27b6f0-efe4-4c42-56e2-84b4ad9c0b87">
+      <Execution id="5c7e7829-d92b-4d2c-b927-06adb2fd0bce" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="CatalogCacheAllocationsAndCrossScopeRevocation" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 32)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="cb6e8dec-a424-0ecf-2c2f-f0f44cfb9781">
+      <Execution id="a79a86e0-54dc-44ae-a61e-87ff4912a5e2" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="NormalizationAllocations" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BufferedRelayAllocations(mebibytes: 64)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="a058cdb7-0b7a-c1b5-8f67-4c0235e85054">
+      <Execution id="f4c50963-bfc9-433b-b7f9-3e8e46d0fc40" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="BufferedRelayAllocations" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 1)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="0ed1902a-fe89-2554-2743-fb54aece7a99">
+      <Execution id="f38ffc5d-4962-4941-ad9c-5236ba90a372" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="NormalizationAllocations" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 50)" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="e69cbc8a-170f-2a8a-892c-21d3cbb2d45e">
+      <Execution id="48be2156-5ab8-4725-b74b-96ac5ed8ac5d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests" name="CatalogCacheAllocationsAndCrossScopeRevocation" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="948faa3a-043e-4f5b-2191-57b86186c0f8" executionId="72c28cc7-7ad3-4010-b27a-986c33ef1664" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9c27b6f0-efe4-4c42-56e2-84b4ad9c0b87" executionId="5c7e7829-d92b-4d2c-b927-06adb2fd0bce" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c95ae313-3564-6af4-4aaf-f24b2c4303be" executionId="84d0f9d2-c923-4685-85f5-08fede5eba45" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cb6e8dec-a424-0ecf-2c2f-f0f44cfb9781" executionId="a79a86e0-54dc-44ae-a61e-87ff4912a5e2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a058cdb7-0b7a-c1b5-8f67-4c0235e85054" executionId="f4c50963-bfc9-433b-b7f9-3e8e46d0fc40" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0ed1902a-fe89-2554-2743-fb54aece7a99" executionId="f38ffc5d-4962-4941-ad9c-5236ba90a372" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e69cbc8a-170f-2a8a-892c-21d3cbb2d45e" executionId="48be2156-5ab8-4725-b74b-96ac5ed8ac5d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="904542d3-78d6-2bf7-7ee0-9bc028b15262" executionId="b5463011-ca6f-40ee-b4c3-33c819b470d8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="86465960-ed2a-4914-caa0-71f6046a9b39" executionId="2b634a35-88ef-4856-87bd-4ac14410da12" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d8426e68-fc6b-b711-5898-55c1da5f2bc1" executionId="2cb16488-3b06-4b12-b37b-5ef726aaac85" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="10" executed="10" passed="10" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.30]   Discovering: CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.56]   Discovered:  CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.60]   Starting:    CanDoItAll.Tests.Integration&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Seeded OpenAI provider bootstrap for profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {39d6cac7-cef8-40cb-872b-58f193733267} with creation date 2026-08-30 23:23:36Z, activation date 2026-08-30 23:23:36Z, and expiration date 2026-11-28 23:23:36Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {39d6cac7-cef8-40cb-872b-58f193733267} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 866 entities to in-memory store.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 111 created and 0 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:61143&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\94830857a108496581f0f618fbb98930&#xD;
+fail: CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryMaintenanceHostedService[0]&#xD;
+      History maintenance failed with InvalidOperationException; inspect projection checkpoints and database availability.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {93e7f7ba-5c21-4f56-911b-3acc418ddbf5} with creation date 2026-08-30 23:23:41Z, activation date 2026-08-30 23:23:41Z, and expiration date 2026-11-28 23:23:41Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {93e7f7ba-5c21-4f56-911b-3acc418ddbf5} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:61145&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\f458519bdc094ce3b7219a006c0ad678&#xD;
+fail: CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryMaintenanceHostedService[0]&#xD;
+      History maintenance failed with InvalidOperationException; inspect projection checkpoints and database availability.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {68c1630d-8a09-47be-87c9-af4936a4aae7} with creation date 2026-08-30 23:23:45Z, activation date 2026-08-30 23:23:45Z, and expiration date 2026-11-28 23:23:45Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {68c1630d-8a09-47be-87c9-af4936a4aae7} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:60110&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\2319593f5be5498b9553a3640124f8c7&#xD;
+fail: CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryMaintenanceHostedService[0]&#xD;
+      History maintenance failed with InvalidOperationException; inspect projection checkpoints and database availability.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+[xUnit.net 00:00:28.65]   Finished:    CanDoItAll.Tests.Integration&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

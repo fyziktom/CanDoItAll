@@ -32,6 +32,7 @@ public sealed class HistoryRetentionStore(IDbContextFactory<AppDbContext> factor
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
+        await HistoryPolicyStore.LockAsync(db, partition.StorageLineageId, cancellationToken);
         var now = clock.GetUtcNow();
         var rows = await db.Set<HistoryEntryRow>().Where(row =>
             row.PartitionId == partition.StorageLineageId &&
@@ -47,8 +48,16 @@ public sealed class HistoryRetentionStore(IDbContextFactory<AppDbContext> factor
             .ExecuteDeleteAsync(cancellationToken);
         db.RemoveRange(rows);
         await db.SaveChangesAsync(cancellationToken);
+        var remaining = maximumItems - rows.Count;
+        var removedInputs = remaining == 0 ? 0 : await db.Set<HistoryDetailRow>()
+            .Where(detail => detail.PartitionId == partition.StorageLineageId &&
+                detail.Part == HistoryDetailPart.Input && detail.EntryId == null &&
+                detail.ExpiresAtUtc <= now && detail.StoredBytes == 0 &&
+                !db.Set<HistoryEntryRow>().Any(entry => entry.InputDetailId == detail.Id))
+            .OrderBy(detail => detail.ExpiresAtUtc).ThenBy(detail => detail.Id).Take(remaining)
+            .ExecuteDeleteAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return rows.Count;
+        return rows.Count + removedInputs;
     }
 
     private static void ValidateBatch(int maximumItems) {

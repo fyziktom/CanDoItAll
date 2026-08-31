@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Ready`
+- State: Completed
 - Proof tier: Behavioral
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -54,11 +54,11 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] All three accepted loopback forms invoke a fake provider under default policy.
-- [ ] Non-loopback HTTP remains rejected unless explicitly allowed by current policy.
-- [ ] No persisted flag is silently changed to AllowPrivateNetwork and no transport bypass is introduced.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] All three accepted loopback forms invoke a fake provider under default policy.
+- [x] Non-loopback HTTP remains rejected unless explicitly allowed by current policy.
+- [x] No persisted flag is silently changed to AllowPrivateNetwork and no transport bypass is introduced.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

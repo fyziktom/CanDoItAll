@@ -1,0 +1,12 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.Actual_recorder_keeps_input_expiry_after_orphan_cleanup_but_allows_new_revision
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 1)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 32)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.NormalizationAllocations(messages: 256)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BufferedRelayAllocations(mebibytes: 1)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BufferedRelayAllocations(mebibytes: 64)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 1)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 50)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.CatalogCacheAllocationsAndCrossScopeRevocation(publications: 200)
+    CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.BoundedOrphanCleanupPlanAndDrain

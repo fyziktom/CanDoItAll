@@ -1,0 +1,7 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape
+    CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_OperationSchemas_MatchAcceptedSubset(operation: ChatCompletions, suffix: "chat/completions", inputProperty: "messages")
+    CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_OperationSchemas_MatchAcceptedSubset(operation: Responses, suffix: "responses", inputProperty: "input")
+    CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_OperationSchemas_MatchAcceptedSubset(operation: ImageGenerations, suffix: "images/generations", inputProperty: "prompt")
+    CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_UnsupportedFieldsAndFeatures_AreExplicit

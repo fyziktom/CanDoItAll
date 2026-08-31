@@ -1,0 +1,129 @@
+{
+  "state": "Before authorized active synchronization; source snapshot remains stale",
+  "packages": [
+    {
+      "kind": "active",
+      "package": "_candoitall-api-shared",
+      "file": "manifest.json",
+      "sha256": "ABE9344C86D410561F18AC561AE23E4EA6E1CE09206EB06E3E970BB22429510D"
+    },
+    {
+      "kind": "active",
+      "package": "_candoitall-api-shared",
+      "file": "README.md",
+      "sha256": "67EAC5D609A5B1591D209B54980D8CFA8398B2880EE7C7A87D5C8C72F8528C3A"
+    },
+    {
+      "kind": "active",
+      "package": "_candoitall-api-shared",
+      "file": "references\\candoitall-web.openapi.json",
+      "sha256": "4F47CB76201A7A5A12212CACCBD9A5F7F7698C095CD84E9500C5F54010A49CE4"
+    },
+    {
+      "kind": "active",
+      "package": "_candoitall-api-shared",
+      "file": "references\\partner-api-migration.md",
+      "sha256": "7E9ED6A07EA088308E139C2CE1AD48D7D96838879CD1933DFC94DC8B95FB13F3"
+    },
+    {
+      "kind": "active",
+      "package": "candoitall-api-shared-providers",
+      "exists": false
+    },
+    {
+      "kind": "active",
+      "package": "candoitall-api-agents",
+      "file": "SKILL.md",
+      "sha256": "7B522676D31CEE749DEC55E33D9EF08F523652A8F3BC795C85507AB5D6EC398B"
+    },
+    {
+      "kind": "active",
+      "package": "candoitall-api-agents",
+      "file": "references\\partner-api-contracts.md",
+      "sha256": "D2BC37C222E4BF62A638503D8394C952470EF9E2B1E13A5A19841ADF533212DF"
+    },
+    {
+      "kind": "active",
+      "package": "candoitall-api-llm-chats",
+      "exists": false
+    },
+    {
+      "kind": "active",
+      "package": "candoitall-api-workflows",
+      "file": "SKILL.md",
+      "sha256": "FA3B5D4EA7F3650F817B2C9D9159AA4BF7D8A526243D71AEEF631C9ABD4C0556"
+    },
+    {
+      "kind": "active",
+      "package": "candoitall-api-workflows",
+      "file": "references\\stable-identity-and-idempotency.md",
+      "sha256": "10466B497D2A8DE7B9E9186A05C8DA7FFD3AA893B68B12D63811DF87E16A57FE"
+    },
+    {
+      "kind": "source",
+      "package": "_candoitall-api-shared",
+      "file": "manifest.json",
+      "sha256": "B42E794BFCAE33D7D413CCBF3ADEC246D7DC91DC8E08B9A894D648A43AC174E8"
+    },
+    {
+      "kind": "source",
+      "package": "_candoitall-api-shared",
+      "file": "README.md",
+      "sha256": "52725EEE35A38EA480FD41855F393036B7450C3669C8C0B4AA86F55F7871C691"
+    },
+    {
+      "kind": "source",
+      "package": "_candoitall-api-shared",
+      "file": "references\\candoitall-web.openapi.json",
+      "sha256": "376E5EA35D4C5FF99FEDC32012E67F18033F54245C10CE0C054FF0FAE997B797"
+    },
+    {
+      "kind": "source",
+      "package": "_candoitall-api-shared",
+      "file": "references\\partner-api-migration.md",
+      "sha256": "7E9ED6A07EA088308E139C2CE1AD48D7D96838879CD1933DFC94DC8B95FB13F3"
+    },
+    {
+      "kind": "source",
+      "package": "candoitall-api-shared-providers",
+      "file": "SKILL.md",
+      "sha256": "B7E34619B7C1B1FC190BB582B759A62F8A982EF8F22E5D9EE5F654AE7EE0F803"
+    },
+    {
+      "kind": "source",
+      "package": "candoitall-api-shared-providers",
+      "file": "references\\protocol.md",
+      "sha256": "474A9C6B469C0415436E459F8D1D49C63420262FF1340E6AF162F8BC0718D2F4"
+    },
+    {
+      "kind": "source",
+      "package": "candoitall-api-agents",
+      "file": "SKILL.md",
+      "sha256": "D29C83559F401CC7654767284104986B82CDB3A5F1AE9D697DC2175053C2485F"
+    },
+    {
+      "kind": "source",
+      "package": "candoitall-api-agents",
+      "file": "references\\partner-api-contracts.md",
+      "sha256": "D2BC37C222E4BF62A638503D8394C952470EF9E2B1E13A5A19841ADF533212DF"
+    },
+    {
+      "kind": "source",
+      "package": "candoitall-api-llm-chats",
+      "file": "SKILL.md",
+      "sha256": "641F1403D945FF874397352B21B17AACD9CEAF13FF4763F1C484AA1985E63364"
+    },
+    {
+      "kind": "source",
+      "package": "candoitall-api-workflows",
+      "file": "SKILL.md",
+      "sha256": "EB4CFC7359B16ABB66CA65F212D1E499A114F4B48B918FB85926BF33C9EDC202"
+    },
+    {
+      "kind": "source",
+      "package": "candoitall-api-workflows",
+      "file": "references\\stable-identity-and-idempotency.md",
+      "sha256": "10466B497D2A8DE7B9E9186A05C8DA7FFD3AA893B68B12D63811DF87E16A57FE"
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:05.48]     CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape [1 s]
+  Chybová zpráva:
+   System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.
+  Trasování zásobníku:
+     at System.Text.Json.JsonElement.GetProperty(String propertyName)
+   at CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderOpenApiSchemaTests.cs:line 39
+--- End of stack trace from previous location ---
+  Zprávy standardního výstupu:
+ Catalog publication schema: {
+        "required": [
+          "publicationId",
+          "revision",
+          "displayName",
+          "purpose",
+          "transport",
+          "defaultModelId",
+          "models",
+          "health",
+          "isPrivateProvider"
+        ],
+        "type": "object",
+        "properties": {
+          "publicationId": {
+            "$ref": "#/components/schemas/SharedProviderPublicationId"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/SharedProviderPublicRevision"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/SharedProviderPurpose"
+          },
+          "transport": {
+            "$ref": "#/components/schemas/SharedProviderTransport"
+          },
+          "defaultModelId": {
+            "$ref": "#/components/schemas/SharedProviderRoutingModelId"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SharedProviderCatalogModel"
+            }
+          },
+          "health": {
+            "$ref": "#/components/schemas/SharedProviderCatalogHealth"
+          },
+          "isPrivateProvider": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+ Catalog model schema: {
+        "required": [
+          "id",
+          "displayName",
+          "capabilities"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SharedProviderRoutingModelId"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array"
+          },
+          "price": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderCatalogPrice"
+              }
+            ]
+          },
+          "thinking": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderThinkingCapability"
+              }
+            ]
+          },
+          "isSuggested": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+ Catalog thinking schema: {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderThinkingCapability"
+              }
+            ]
+          }
+
+
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb06-scalars.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 1 s - CanDoItAll.Tests.Integration.dll (net10.0)

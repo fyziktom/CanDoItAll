@@ -1,0 +1,25 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Components\release\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb09-stable_net10.0_20260830204137.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:  1190, Přeskočeno:     0, Celkem:  1190, Doba trvání: 13 m 50 s - CanDoItAll.Tests.Components.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb09-stable_net10.0_20260830212509.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:  1237, Přeskočeno:     0, Celkem:  1237, Doba trvání: 43 m 29 s - CanDoItAll.Tests.Integration.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.AgentFramework.Memory.Tests\release\CanDoItAll.AgentFramework.Memory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb09-stable_net10.0_20260830212510.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    22, Přeskočeno:     0, Celkem:    22, Doba trvání: 268 ms - CanDoItAll.AgentFramework.Memory.Tests.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Memory.Tests\release\CanDoItAll.Memory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb09-stable_net10.0_20260830212521.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:   196, Přeskočeno:     0, Celkem:   196, Doba trvání: 9 s - CanDoItAll.Memory.Tests.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Unit\release\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb09-stable_net10.0_20260830212722.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:  6779, Přeskočeno:     0, Celkem:  6779, Doba trvání: 1 m 57 s - CanDoItAll.Tests.Unit.dll (net10.0)

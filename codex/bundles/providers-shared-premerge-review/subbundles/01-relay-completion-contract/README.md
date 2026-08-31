@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Ready`
+- State: Completed
 - Proof tier: Behavioral
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -58,12 +58,12 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] Completed error:null envelope returns 200 with correct public model/usage; non-null errors remain failures.
-- [ ] Oversized error diagnostics remain bounded, preserve category/Retry-After and disclose no raw upstream text.
-- [ ] External SDK cannot accept a failed stream as successful; internal audit and external outcome agree.
-- [ ] Caller disconnect, first-chunk flushing and once-only finalization still work.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] Completed error:null envelope returns 200 with correct public model/usage; non-null errors remain failures.
+- [x] Oversized error diagnostics remain bounded, preserve category/Retry-After and disclose no raw upstream text.
+- [x] External SDK cannot accept a failed stream as successful; internal audit and external outcome agree.
+- [x] Caller disconnect, first-chunk flushing and once-only finalization still work.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

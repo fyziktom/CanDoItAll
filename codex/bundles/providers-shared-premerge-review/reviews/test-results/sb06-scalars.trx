@@ -1,0 +1,308 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="3e10e8b3-7da2-483c-9bf3-d9c0a9feb2a4" name="lucys@LUCYSPOWER 2026-08-30 19:36:01" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-30T19:36:01.5238287-04:00" queuing="2026-08-30T19:36:01.5238292-04:00" start="2026-08-30T19:35:55.5357020-04:00" finish="2026-08-30T19:36:01.5297643-04:00" />
+  <TestSettings name="default" id="b3f5109f-c893-48c2-ae01-8e4e0fe3a3e0">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-30_19_36_01" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="4f5bc1f0-b3ce-4c0c-a15e-ad6ac2e3f7bb" testId="4d34cb55-26e8-ec3d-f015-dcbec3d340ef" testName="CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape" computerName="LUCYSPOWER" duration="00:00:01.5042108" startTime="2026-08-30T19:35:59.8969680-04:00" endTime="2026-08-30T19:36:01.3967694-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4f5bc1f0-b3ce-4c0c-a15e-ad6ac2e3f7bb">
+      <Output>
+        <StdOut>Catalog publication schema: {
+        "required": [
+          "publicationId",
+          "revision",
+          "displayName",
+          "purpose",
+          "transport",
+          "defaultModelId",
+          "models",
+          "health",
+          "isPrivateProvider"
+        ],
+        "type": "object",
+        "properties": {
+          "publicationId": {
+            "$ref": "#/components/schemas/SharedProviderPublicationId"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/SharedProviderPublicRevision"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/SharedProviderPurpose"
+          },
+          "transport": {
+            "$ref": "#/components/schemas/SharedProviderTransport"
+          },
+          "defaultModelId": {
+            "$ref": "#/components/schemas/SharedProviderRoutingModelId"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SharedProviderCatalogModel"
+            }
+          },
+          "health": {
+            "$ref": "#/components/schemas/SharedProviderCatalogHealth"
+          },
+          "isPrivateProvider": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }&#xD;
+Catalog model schema: {
+        "required": [
+          "id",
+          "displayName",
+          "capabilities"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SharedProviderRoutingModelId"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array"
+          },
+          "price": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderCatalogPrice"
+              }
+            ]
+          },
+          "thinking": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderThinkingCapability"
+              }
+            ]
+          },
+          "isSuggested": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }&#xD;
+Catalog thinking schema: {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderThinkingCapability"
+              }
+            ]
+          }</StdOut>
+        <ErrorInfo>
+          <Message>System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.</Message>
+          <StackTrace>   at System.Text.Json.JsonElement.GetProperty(String propertyName)&#xD;
+   at CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderOpenApiSchemaTests.cs:line 39&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.integration\release\candoitall.tests.integration.dll" id="4d34cb55-26e8-ec3d-f015-dcbec3d340ef">
+      <Execution id="4f5bc1f0-b3ce-4c0c-a15e-ad6ac2e3f7bb" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests" name="OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="4d34cb55-26e8-ec3d-f015-dcbec3d340ef" executionId="4f5bc1f0-b3ce-4c0c-a15e-ad6ac2e3f7bb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.23]   Discovering: CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.37]   Discovered:  CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.39]   Starting:    CanDoItAll.Tests.Integration&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (565d957c-fad2-ad3e-f544-bcdefcd646b9) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:fcc6734ded82e8bb. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring agent provider bootstrap for non-relational profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Seeded OpenAI provider bootstrap for profile 565d957c-fad2-ad3e-f544-bcdefcd646b9.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 is ready.&#xD;
+info: CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService[0]&#xD;
+      Prepared canonical provider runtime snapshot for database profile 565d957c-fad2-ad3e-f544-bcdefcd646b9 at generation 0. ProviderCount=6.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {cbc45688-3f4e-42dd-a3a1-ad1b0532725b} with creation date 2026-08-30 23:35:58Z, activation date 2026-08-30 23:35:58Z, and expiration date 2026-11-28 23:35:58Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {cbc45688-3f4e-42dd-a3a1-ad1b0532725b} may be persisted to storage in unencrypted form.&#xD;
+warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]&#xD;
+      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 866 entities to in-memory store.&#xD;
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]&#xD;
+      Prompt Gallery seed import completed with 111 created and 0 existing items from 111 packaged components.&#xD;
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]&#xD;
+      Verified canonical Prompt Gallery bindings for workflow LLM components.&#xD;
+info: CanDoItAll.Composition.LlmChatOperationDispatcherHostedService[0]&#xD;
+      Starting 1 LLM Chat dispatcher worker(s). CandidateBatchSize=16 MaximumQueuedAge=00:05:00 MaximumOperationDuration=00:30:00.&#xD;
+info: CanDoItAll.Composition.HostCapabilityStartupValidator[0]&#xD;
+      Runtime host profile WindowsInteractive is ready. OptionalUnavailable=FileToolsDesktop, DesktopFileOpen, InteractiveTerminal, NativeProcessDiscovery.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:58279&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\919afaeba7b94cfa9d0a8dc8b85af14b&#xD;
+fail: CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryMaintenanceHostedService[0]&#xD;
+      History maintenance failed with InvalidOperationException; inspect projection checkpoints and database availability.&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:58279/openapi/v1.json - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /openapi/{documentName}.json'&#xD;
+info: Microsoft.AspNetCore.Mvc.Infrastructure.DefaultActionDescriptorCollectionProvider[1]&#xD;
+      No action descriptors found. This may indicate an incorrectly configured application or missing application parts. To learn more, visit https://aka.ms/aspnet/mvc/app-parts&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /openapi/{documentName}.json'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:58279/openapi/v1.json - 200 - application/json;charset=utf-8 1417.3130ms&#xD;
+[xUnit.net 00:00:05.48]       System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.&#xD;
+[xUnit.net 00:00:05.49]       Stack Trace:&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+[xUnit.net 00:00:05.49]            at System.Text.Json.JsonElement.GetProperty(String propertyName)&#xD;
+[xUnit.net 00:00:05.49]         C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderOpenApiSchemaTests.cs(39,0): at CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape()&#xD;
+[xUnit.net 00:00:05.49]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:05.49]       Output:&#xD;
+[xUnit.net 00:00:05.49]         Catalog publication schema: {
+        "required": [
+          "publicationId",
+          "revision",
+          "displayName",
+          "purpose",
+          "transport",
+          "defaultModelId",
+          "models",
+          "health",
+          "isPrivateProvider"
+        ],
+        "type": "object",
+        "properties": {
+          "publicationId": {
+            "$ref": "#/components/schemas/SharedProviderPublicationId"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/SharedProviderPublicRevision"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/SharedProviderPurpose"
+          },
+          "transport": {
+            "$ref": "#/components/schemas/SharedProviderTransport"
+          },
+          "defaultModelId": {
+            "$ref": "#/components/schemas/SharedProviderRoutingModelId"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SharedProviderCatalogModel"
+            }
+          },
+          "health": {
+            "$ref": "#/components/schemas/SharedProviderCatalogHealth"
+          },
+          "isPrivateProvider": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }&#xD;
+[xUnit.net 00:00:05.49]         Catalog model schema: {
+        "required": [
+          "id",
+          "displayName",
+          "capabilities"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SharedProviderRoutingModelId"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array"
+          },
+          "price": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderCatalogPrice"
+              }
+            ]
+          },
+          "thinking": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderThinkingCapability"
+              }
+            ]
+          },
+          "isSuggested": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }&#xD;
+[xUnit.net 00:00:05.49]         Catalog thinking schema: {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharedProviderThinkingCapability"
+              }
+            ]
+          }&#xD;
+[xUnit.net 00:00:05.51]   Finished:    CanDoItAll.Tests.Integration&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-30T19:36:01.3992680-04:00">
+        <Text>[xUnit.net 00:00:05.48]     CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.OpenApi_CustomProtocolScalarsAndEnums_MatchWireShape [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

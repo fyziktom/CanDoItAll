@@ -15,6 +15,7 @@ internal sealed class ProviderHistoryTestDriver : IProviderChatCompletionDriver,
     public bool EmptyFirstResponse { get; init; }
     public bool NoUsage { get; init; }
     public bool FailAfterStreamUsage { get; init; }
+    public Exception? AfterTerminalFailure { get; init; }
     public TaskCompletionSource? ContinueStream { get; init; }
     public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query) => ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(5));
     public ProviderChatStreamingMode ResolveStreamingMode(ProviderChatCompletionRequest request) => ProviderChatStreamingMode.Incremental;
@@ -40,6 +41,9 @@ internal sealed class ProviderHistoryTestDriver : IProviderChatCompletionDriver,
         yield return new ProviderChatCompleted(request.Model, 10, 5, "stop") {
             ObservedUsage = new(HistoryUsageState.Complete, 10, 5, 0)
         };
+        if (AfterTerminalFailure is { } failure) {
+            throw failure;
+        }
     }
 
     public Task<ProviderImageGenerationResult> GenerateImageAsync(ProviderImageGenerationRequest request, CancellationToken cancellationToken = default) {

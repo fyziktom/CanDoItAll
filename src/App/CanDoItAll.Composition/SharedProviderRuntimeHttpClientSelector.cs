@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Http;
+using CanDoItAll.SharedProviders.Abstractions;
 
 namespace CanDoItAll.Composition;
 
@@ -12,7 +13,7 @@ using AgentFrameworkProviderKind =
     CanDoItAll.AgentFramework.Models.ProviderKind;
 
 internal sealed class SharedProviderRuntimeHttpClientSelector(
-    IHttpClientFactory httpClientFactory) : IProviderHttpClientSelector,
+    IHttpClientFactory httpClientFactory, ISharedProviderSourceUriPolicy uriPolicy) : IProviderHttpClientSelector,
     IDisposable
 {
     private readonly Lazy<HttpClient> publicClient = new(
@@ -54,11 +55,15 @@ internal sealed class SharedProviderRuntimeHttpClientSelector(
             throw CreateSelectionException(provider);
         }
 
+        try {
+            baseUri = uriPolicy.Normalize(baseUri, provider.NetworkAccessPolicy == ProviderNetworkAccessPolicy.AllowPrivateNetwork
+                ? SharedProviderSourceNetworkPolicy.AllowPrivateNetwork : SharedProviderSourceNetworkPolicy.PublicOnly);
+        } catch (ArgumentException) {
+            throw CreateSelectionException(provider);
+        }
+
         client = baseUri.Scheme == Uri.UriSchemeHttp
-            ? provider.NetworkAccessPolicy ==
-                ProviderNetworkAccessPolicy.AllowPrivateNetwork
-                ? privateHttpClient.Value
-                : throw CreateSelectionException(provider)
+            ? privateHttpClient.Value
             : baseUri.Scheme == Uri.UriSchemeHttps
                 ? provider.NetworkAccessPolicy switch
                 {

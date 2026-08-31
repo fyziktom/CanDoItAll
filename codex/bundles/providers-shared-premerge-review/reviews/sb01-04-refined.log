@@ -1,0 +1,5 @@
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Integration\release\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\providers-shared-premerge-review\reviews\test-results\sb01-04-refined.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    33, Přeskočeno:     0, Celkem:    33, Doba trvání: 57 s - CanDoItAll.Tests.Integration.dll (net10.0)

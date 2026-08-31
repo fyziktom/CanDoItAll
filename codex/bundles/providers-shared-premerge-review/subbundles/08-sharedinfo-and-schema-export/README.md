@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Pending prerequisites`
+- State: Blocked
 - Proof tier: Behavioral
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 

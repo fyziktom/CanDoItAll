@@ -6,7 +6,18 @@ namespace CanDoItAll.SharedProviders.Http;
 public static class SharedProviderRelayUsageExtractor {
     public static SharedProviderRelayUsage ExtractBuffered(
         SharedProviderRelayOperation operation,
-        ReadOnlySpan<byte> payloadUtf8) {
+        ReadOnlySpan<byte> payloadUtf8) => ExtractBuffered(operation, (ReadOnlyMemory<byte>)payloadUtf8.ToArray());
+
+    public static SharedProviderRelayUsage ExtractBuffered(
+        SharedProviderRelayOperation operation,
+        byte[] payloadUtf8) {
+        ArgumentNullException.ThrowIfNull(payloadUtf8);
+        return ExtractBuffered(operation, (ReadOnlyMemory<byte>)payloadUtf8);
+    }
+
+    public static SharedProviderRelayUsage ExtractBuffered(
+        SharedProviderRelayOperation operation,
+        ReadOnlyMemory<byte> payloadUtf8) {
         if (!Enum.IsDefined(operation)) {
             throw new ArgumentOutOfRangeException(nameof(operation));
         }
@@ -16,7 +27,7 @@ public static class SharedProviderRelayUsageExtractor {
         }
 
         try {
-            using var document = JsonDocument.Parse(payloadUtf8.ToArray(), StrictJsonOptions);
+            using var document = JsonDocument.Parse(payloadUtf8, StrictJsonOptions);
             return ExtractFromRoot(operation, document.RootElement);
         }
         catch (JsonException) {

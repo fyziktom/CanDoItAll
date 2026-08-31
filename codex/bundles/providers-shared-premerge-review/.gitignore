@@ -1,0 +1,6 @@
+# Retain reviewed bundle proof while global build/runtime artifacts stay ignored.
+!proof/
+!proof/**
+!reviews/*.log
+!reviews/test-results/
+!reviews/test-results/*.trx

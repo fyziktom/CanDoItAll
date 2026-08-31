@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Pending prerequisites`
+- State: Blocked
 - Proof tier: Governed
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -62,10 +62,10 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 - [ ] Every required case has nonzero expected/actual discovery, exact result and matching source/config/dependency identity.
 - [ ] No open P1/P2 correctness/security or required contract/documentation/migration gap; optional capacity limits explicit.
-- [ ] Original hosted gate either proved or remains an explicit merge blocker; no fake pass or silent authority reset.
+- [x] Original hosted gate either proved or remains an explicit merge blocker; no fake pass or silent authority reset.
 - [ ] Bundle prepared/completed-stage validation, architecture gate and independent evidence review agree with code state.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

@@ -1,6 +1,6 @@
 # Prioritized Pre-Merge Review
 
-**Repair and verify before merge. No production fixes made.**
+**Preparation snapshot, 2026-08-30: repair and verify before merge; no production fixes had been made at review time.** Current implementation results and remaining gates are in [the execution report](../reviews/01-execution-report.md).
 
 | ID | Priority | Problem | Owner |
 | --- | --- | --- | --- |

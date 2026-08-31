@@ -282,6 +282,7 @@ internal static class SharedProviderInferenceApi
                     completionFailure.Code.Value,
                     operation,
                     httpContext.TraceIdentifier);
+                httpContext.Abort();
             }
         }
         catch (OperationCanceledException) when (httpContext.RequestAborted.IsCancellationRequested)
@@ -294,6 +295,7 @@ internal static class SharedProviderInferenceApi
                 operation,
                 httpContext.TraceIdentifier,
                 exception.GetType().Name);
+            httpContext.Abort();
         }
         finally
         {

@@ -33,6 +33,27 @@ public sealed class ProviderHistoryLifecycleTests {
         Assert.Equal("[redacted]", HistoryTextCapture.Capture(text, 1024, []).Text);
     }
 
+    [Theory]
+    [InlineData("password")]
+    [InlineData("api_key")]
+    [InlineData("client_secret")]
+    [InlineData("authorization")]
+    public void QuotedCredentialKey_IsRedacted(string key) {
+        var captured = HistoryTextCapture.Capture($"{{\"{key}\":\"fixture-secret value\\\"tail\",\"safe\":\"visible\"}}", 1024, []);
+        Assert.DoesNotContain("fixture-secret", captured.Text);
+        Assert.DoesNotContain("tail", captured.Text);
+        Assert.Contains("visible", captured.Text);
+        Assert.True(captured.Flags.HasFlag(HistoryDetailFlags.Redacted));
+    }
+
+    [Fact]
+    public void QuotedCredentialAtCaptureBoundary_DoesNotLeak() {
+        var captured = HistoryTextCapture.Capture("{\"password\":\"" + new string('s', 4096) + "\"}", 32, []);
+        Assert.DoesNotContain(new string('s', 8), captured.Text);
+        Assert.True(captured.Flags.HasFlag(HistoryDetailFlags.Redacted));
+        Assert.True(captured.Flags.HasFlag(HistoryDetailFlags.Truncated));
+    }
+
     [Fact]
     public void Late_cancellation_is_ignored_but_conflicting_completion_is_rejected() {
         var terminal = Completion(HistoryOutcome.Succeeded, HistoryUsageState.Complete);

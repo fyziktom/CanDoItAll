@@ -6,6 +6,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
@@ -43,12 +45,16 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable {
     internal HistoryPartition Partition { get; private set; }
     internal HistoryMaintenanceContext Maintenance => new(Partition, Runtime.GetSnapshot(), Runtime);
 
-    internal static async Task<HistoryPersistenceTestDatabase> CreateAsync() {
+    internal static async Task<HistoryPersistenceTestDatabase> CreateAsync(bool migrate = false) {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
         var result = new HistoryPersistenceTestDatabase(PostgresTestDatabaseLease.Create("provider-history"));
         try {
             await using var db = result.Factory.CreateDbContext();
-            await db.Database.EnsureCreatedAsync();
+            if (migrate) {
+                await db.Database.GetService<IMigrator>().MigrateAsync("20260830104752_AddProviderHistoryExternalReference");
+            } else {
+                await db.Database.EnsureCreatedAsync();
+            }
             result.Partition = await new HistoryPartitionStore(result.Factory).GetAsync(default);
             result.Access.Context = new(result.Partition, new(0, 0),
                 new(HistoryAuthenticationKind.TrustedLocalOperator), null);

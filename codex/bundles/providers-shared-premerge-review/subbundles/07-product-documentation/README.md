@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: `Pending prerequisites`
+- State: Completed
 - Proof tier: Standard
-- Execution: not started; this file is a plan, not proof.
+- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
 
 ## Objective
 
@@ -59,11 +59,11 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] Test-Documentation.ps1 reports zero missing project README/link/metadata errors.
-- [ ] Operator can configure publication/import and distinguish catalog scope, invoke scope, history UI/service authority and unsupported remote APIs.
-- [ ] Docs describe backup dependencies (DB, canonical files/journals, protection keys), recovery, schema deployment and truthful limitations.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] Test-Documentation.ps1 reports zero missing project README/link/metadata errors.
+- [x] Operator can configure publication/import and distinguish catalog scope, invoke scope, history UI/service authority and unsupported remote APIs.
+- [x] Docs describe backup dependencies (DB, canonical files/journals, protection keys), recovery, schema deployment and truthful limitations.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 

@@ -1,0 +1,24 @@
+INV-ARCH: changed production source anti-stub and boundary review
+src/App/CanDoItAll.Composition/SharedProviderRuntimeHttpClientSelector.cs
+src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs
+src/App/CanDoItAll.Web/Api/SharedProviderInferenceApi.cs
+src/App/CanDoItAll.Web/Api/SharedProviderInferenceOpenApiContract.cs
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderHttpRelayClient.cs
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayRequestPolicy.cs
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayUsageExtractor.cs
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/HistoryStreamingChatDriver.cs
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/ProviderHistoryChatClient.cs
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/ProviderHistoryObservation.cs
+src/MAF/Common/CanDoItAll.AgentFramework.Providers/Diagnostics/ProviderFailureDisclosurePolicy.cs
+src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/HistoryEntry.cs
+src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/HistoryInvocation.cs
+src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/HistoryTextCapture.cs
+src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryDetailStore.cs
+src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryInvocationRecorder.cs
+src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryRetentionStore.cs
+src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryTextProtector.cs
+src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogQueryService.cs
+src/App/CanDoItAll.Web/Api/SharedProviderOpenApiSchemas.cs
+src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/ProviderHistoryFailureOutcome.cs
+Scan exit: 1 (1 means no matching markers)
+Project and build-configuration diff:

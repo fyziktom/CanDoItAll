@@ -15,7 +15,9 @@ public sealed class HistoryDetailStore(HistoryTextProtector protector, TimeProvi
         if (start.Policy.Policy.CaptureMode == HistoryCaptureMode.Light) {
             return (null, HistoryDetailState.NotCaptured);
         }
-        if (start.StartedAtUtc.AddDays(start.Policy.Policy.DetailRetentionDays) <= clock.GetUtcNow()) {
+        var expiresAtUtc = part == HistoryDetailPart.Input ? start.InputExpiresAtUtc
+            : start.StartedAtUtc.AddDays(start.Policy.Policy.DetailRetentionDays);
+        if (expiresAtUtc <= clock.GetUtcNow()) {
             return (null, HistoryDetailState.Expired);
         }
         try {

@@ -26,6 +26,9 @@ public sealed class HistoryInvocationRecorder(
             HistoryPolicyStore.Snapshot(row), owner, context.CorrelationId) {
             ExternalReference = context.ExternalReference
         };
+        if (context.CurrentTurn is { } turn) {
+            start = start with { InputExpiresAtUtc = context.Attempts.FreezeInputExpiry(turn.InputRevision, start.InputExpiresAtUtc) };
+        }
         try {
             await capture.BeginAsync(start, context.CurrentTurn, cancellationToken);
         } catch (Exception exception) {

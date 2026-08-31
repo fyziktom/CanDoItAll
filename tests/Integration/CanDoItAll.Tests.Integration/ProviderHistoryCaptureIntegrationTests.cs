@@ -13,6 +13,81 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProviderHistoryCaptureIntegrationTests {
+    [Fact]
+    public async Task Actual_recorder_keeps_input_expiry_after_orphan_cleanup_but_allows_new_revision() {
+        await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
+        await EnableDetailsAsync(fixture);
+        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.Factory), fixture.Factory,
+            fixture.Runtime, fixture.Capture, fixture.Clock, NullLogger<HistoryInvocationRecorder>.Instance);
+        var context = HistoryInvocationContext.Create(currentTurn: new("original input", 0));
+        var invocation = new HistoryInvocation(fixture.Start().Provider, HistoryOperation.CompleteChat, context);
+        var first = await recorder.BeginAsync(invocation, default);
+        await recorder.CompleteAsync(first, fixture.Completion(), "response", default);
+        fixture.Clock.Now += TimeSpan.FromDays(40);
+        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        await retention.PurgeExpiredDetailAsync(fixture.Partition, 10, default);
+        await retention.PurgeExpiredMetadataAsync(fixture.Partition, 10, default);
+        var retry = await recorder.BeginAsync(invocation, default);
+        Assert.Equal(first.InputExpiresAtUtc, retry.InputExpiresAtUtc);
+        await using var db = fixture.Factory.CreateDbContext();
+        Assert.Empty(await db.Set<HistoryDetailRow>().ToArrayAsync());
+        Assert.Equal(HistoryDetailState.Expired, (await db.Set<HistoryEntryRow>().SingleAsync()).DetailState);
+        var revised = await recorder.BeginAsync(invocation with {
+            Context = context with { CurrentTurn = new("new revision", 1) }
+        }, default);
+        Assert.True(revised.InputExpiresAtUtc > fixture.Clock.Now);
+        var input = await db.Set<HistoryDetailRow>().SingleAsync();
+        Assert.Equal(1, input.InputRevision);
+        Assert.Equal("new revision", fixture.Text.Read(input).Text);
+    }
+
+    [Fact]
+    public async Task HttpClientDeadline_WithActiveCallerToken_IsPersistedAsTimedOut() {
+        await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
+        using var handler = new DeterministicHttpMessageHandler(async (_, cancellationToken) => {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The fake deadline handler cannot finish normally.");
+        });
+        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromMilliseconds(50) };
+        using var caller = new CancellationTokenSource();
+        var driver = CreateFactory(fixture, http).Resolve<IProviderChatCompletionDriver>(ProviderKind.OpenAi);
+        var provider = Provider();
+        var failure = await Record.ExceptionAsync(() => driver.CompleteChatAsync(
+            new(provider, provider.DefaultModel, "", [], "hello"), caller.Token));
+        Assert.NotNull(failure);
+        Assert.False(caller.IsCancellationRequested);
+        Assert.IsAssignableFrom<OperationCanceledException>(failure);
+        await using var db = fixture.Factory.CreateDbContext();
+        var entry = await db.Set<HistoryEntryRow>().SingleAsync();
+        Assert.Equal(HistoryOutcome.TimedOut, entry.Outcome);
+        Assert.Equal(HistoryUsageState.Unavailable, entry.UsageState);
+    }
+
+    [Theory]
+    [InlineData("password")]
+    [InlineData("api_key")]
+    [InlineData("client_secret")]
+    [InlineData("authorization")]
+    public async Task QuotedCredentials_AreAbsentFromDecryptedPersistedInputAndResponse(string key) {
+        await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
+        await EnableDetailsAsync(fixture);
+        var policy = await fixture.Policy.GetAsync(default);
+        var start = fixture.Start(policy);
+        var text = $"{{\"{key}\":\"unique-sensitive-fixture value\\\"tail\",\"safe\":\"visible\"}}";
+        await fixture.Capture.BeginAsync(start, new(text, 0), default);
+        await fixture.Capture.CompleteAsync(start, fixture.Completion(), text, default);
+        await using var db = fixture.Factory.CreateDbContext();
+        var bodies = await db.Set<HistoryDetailRow>().ToArrayAsync();
+        Assert.Equal(2, bodies.Length);
+        Assert.All(bodies, body => {
+            var captured = fixture.Text.Read(body);
+            Assert.DoesNotContain("unique-sensitive-fixture", captured.Text);
+            Assert.DoesNotContain("tail", captured.Text);
+            Assert.Contains("visible", captured.Text);
+            Assert.True(captured.Flags.HasFlag(HistoryDetailFlags.Redacted));
+        });
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

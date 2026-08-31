@@ -54,6 +54,7 @@ public static class ApiServiceCollectionExtensions
         services.ConfigureLlmChatApiJson();
         services.AddOpenApi(options =>
         {
+            options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
             options.AddOperationTransformer(
