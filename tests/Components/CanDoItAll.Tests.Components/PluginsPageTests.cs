@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using Bunit;
+using CanDoItAll.Tests.Components.AgentFramework;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Plugins.Pages;
@@ -23,7 +24,13 @@ public sealed class PluginsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.Render<PluginsPage>();
+        RenderFragment pluginsPageContent = builder =>
+        {
+            builder.OpenComponent<PluginsPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(component => component.ChildContent, pluginsPageContent));
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
         await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-office365-mail']").Click());
@@ -200,7 +207,13 @@ public sealed class PluginsPageTests
         var lifetime = harness.Context.Services.GetRequiredService<TestHostApplicationLifetime>();
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.Render<PluginsPage>();
+        RenderFragment pluginsPageContent = builder =>
+        {
+            builder.OpenComponent<PluginsPage>(0);
+            builder.CloseComponent();
+        };
+        var cut = harness.Context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(component => component.ChildContent, pluginsPageContent));
 
         Assert.DoesNotContain("plugin-package-upload", cut.Markup, StringComparison.Ordinal);
         await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-packages-open']").Click());

@@ -28,7 +28,7 @@ public sealed class PresentationBadgeListTests
         Assert.Contains("cda-badge--tone-success", shell.QuerySelectorAll(".cda-badge")[0].ClassList);
         Assert.Contains("cda-badge--tone-warning", shell.QuerySelectorAll(".cda-badge")[1].ClassList);
         Assert.Equal("Ready for execution", shell.QuerySelector(".cda-badge")?.GetAttribute("title"));
-        Assert.Equal("check_circle", shell.QuerySelector(".material-icons")?.TextContent.Trim());
+        Assert.Equal("check_circle", shell.QuerySelector(".material-symbols-rounded")?.TextContent.Trim());
     }
 
     [Fact]

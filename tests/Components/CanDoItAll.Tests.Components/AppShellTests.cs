@@ -23,7 +23,7 @@ public sealed class AppShellTests : BunitContext
             .Add(component => component.CurrentRoute, "scheduler")
             .Add(component => component.TopBar, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Shell status</div>"))));
 
-        Assert.Contains("app-shell-workbar", cut.Markup);
+        Assert.DoesNotContain("app-shell-workbar", cut.Markup);
         Assert.Contains("shell-nav-test-lab", cut.Markup);
         Assert.Contains("shell-nav-scheduler", cut.Markup);
         Assert.DoesNotContain("shell-nav-automation", cut.Markup);
@@ -79,7 +79,7 @@ public sealed class AppShellTests : BunitContext
     }
 
     [Fact]
-    public void Brand_icon_uses_default_for_missing_values_and_allows_an_override()
+    public void Modern_shell_omits_the_retired_sidebar_brand_mark()
     {
         var defaultCut = Render<AppShell>();
         var blankCut = Render<AppShell>(parameters => parameters
@@ -87,9 +87,9 @@ public sealed class AppShellTests : BunitContext
         var customCut = Render<AppShell>(parameters => parameters
             .Add(component => component.BrandIconName, "rocket_launch"));
 
-        Assert.Equal("apps", defaultCut.Find(".app-shell-brand-mark").TextContent.Trim());
-        Assert.Equal("apps", blankCut.Find(".app-shell-brand-mark").TextContent.Trim());
-        Assert.Equal("rocket_launch", customCut.Find(".app-shell-brand-mark").TextContent.Trim());
+        Assert.Empty(defaultCut.FindAll(".app-shell-brand-mark"));
+        Assert.Empty(blankCut.FindAll(".app-shell-brand-mark"));
+        Assert.Empty(customCut.FindAll(".app-shell-brand-mark"));
     }
 
     [Fact]
