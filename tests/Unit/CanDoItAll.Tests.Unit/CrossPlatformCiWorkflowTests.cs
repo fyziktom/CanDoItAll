@@ -104,8 +104,14 @@ public sealed class CrossPlatformCiWorkflowTests
             "App",
             "CanDoItAll.Web",
             "Dockerfile"));
-        Assert.Contains("COPY --from=components . /CanDoItAll.Components", dockerfile, StringComparison.Ordinal);
-        Assert.Contains("COPY --from=filetools . /CanDoItAll.FileTools", dockerfile, StringComparison.Ordinal);
+        Assert.Contains(
+            "COPY --from=components --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.Components",
+            dockerfile,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "COPY --from=filetools --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.FileTools",
+            dockerfile,
+            StringComparison.Ordinal);
         Assert.DoesNotContain("UseLocalCanDoItAllLibraries=false", dockerfile, StringComparison.Ordinal);
     }
 
