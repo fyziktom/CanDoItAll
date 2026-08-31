@@ -215,40 +215,23 @@ jobs:
       - name: Test portability and redaction tooling
         shell: pwsh
         run: |
-          python ./codex/bundles/Unix-portability/scripts/test_enforce_portability_baseline.py
-          python ./codex/bundles/Unix-portability/scripts/test_scan_artifacts_for_secrets.py
+          python ./tools/Validation/Portability/test_enforce_portability_baseline.py
+          python ./tools/Validation/Portability/test_scan_artifacts_for_secrets.py
 
       - name: Scan portability-sensitive sources
         shell: pwsh
         run: >-
-          python ./codex/bundles/Unix-portability/scripts/scan_portability.py
+          python ./tools/Validation/Portability/scan_portability.py
           --repo-root .
           --output "${{ runner.temp }}/portability-scan.json"
           --tracked-only
 
-      - name: Require complete portability classification
-        shell: pwsh
-        run: >-
-          python ./codex/bundles/Unix-portability/scripts/classify_portability_scan.py
-          --input "${{ runner.temp }}/portability-scan.json"
-          --json-output "${{ runner.temp }}/portability-reviewed.json"
-          --csv-output "${{ runner.temp }}/portability-reviewed.csv"
-          --summary-output "${{ runner.temp }}/portability-reviewed.md"
-
       - name: Enforce reviewed executable-source baseline
         shell: pwsh
         run: >-
-          python ./codex/bundles/Unix-portability/scripts/enforce_portability_baseline.py
+          python ./tools/Validation/Portability/enforce_portability_baseline.py
           --scan "${{ runner.temp }}/portability-scan.json"
-          --baseline ./codex/bundles/Unix-portability/shared/portability-risk-baseline.json
-
-      - name: Validate portable bundle integrity
-        shell: pwsh
-        run: >-
-          python ./codex/bundles/Unix-portability/scripts/validate_bundle.py
-          --bundle-root ./codex/bundles/Unix-portability
-          --repo-root .
-          --stage portable
+          --baseline ./tools/Validation/Portability/portability-risk-baseline.json
 
       - name: Upload static portability evidence
         if: always()

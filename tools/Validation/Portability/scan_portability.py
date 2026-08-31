@@ -387,11 +387,12 @@ def main() -> int:
     args = parse_args()
     repo_root = args.repo_root.expanduser().resolve()
     output = args.output.expanduser().resolve()
+    script_path = Path(__file__).resolve()
     if not (repo_root / "CanDoItAll.slnx").is_file():
         print("ERROR: repo root does not contain CanDoItAll.slnx", file=sys.stderr)
         return 2
 
-    default_patterns = Path(__file__).resolve().parent.parent / "shared/platform-sensitive-patterns.txt"
+    default_patterns = script_path.with_name("platform-sensitive-patterns.txt")
     patterns_path = args.patterns.expanduser().resolve() if args.patterns else default_patterns
     try:
         patterns = load_patterns(patterns_path)
@@ -400,7 +401,15 @@ def main() -> int:
         return 2
 
     tracked_only = args.tracked_only
-    files = enumerate_files(repo_root, tracked_only=tracked_only, output=output)
+    policy_paths = {
+        patterns_path,
+        script_path.with_name("portability-risk-baseline.json"),
+    }
+    files = [
+        path
+        for path in enumerate_files(repo_root, tracked_only=tracked_only, output=output)
+        if path.resolve() not in policy_paths
+    ]
     findings: list[dict] = []
     scanned_files = 0
     skipped_large_or_binary = 0
@@ -433,13 +442,18 @@ def main() -> int:
         branch = "unknown"
         dirty = False
 
+    try:
+        generator = script_path.relative_to(repo_root).as_posix()
+    except ValueError:
+        generator = script_path.name
+
     severity_counts = Counter(finding["severity"] for finding in findings)
     category_counts = Counter(finding["category"] for finding in findings)
     owner_counts = Counter(finding["owner_domain"] for finding in findings)
     document = {
         "schema_version": 2,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "generator": "scripts/scan_portability.py",
+        "generator": generator,
         "host": {
             "system": platform.system(),
             "release": platform.release(),

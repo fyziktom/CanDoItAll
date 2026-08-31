@@ -116,7 +116,7 @@ def write_baseline(path: Path, scan: dict, counter: Counter[tuple[str, str, str]
     baseline = {
         "schema_version": SCHEMA_VERSION,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "review_gate": "A07 Core Gate C4 portability static guard",
+        "review_gate": "CI portability-static executable-source baseline",
         "patterns_sha256": scan["scan"]["patterns_sha256"],
         "policy_categories": list(POLICY_CATEGORIES),
         "protected_prefixes": list(PROTECTED_PREFIXES),
