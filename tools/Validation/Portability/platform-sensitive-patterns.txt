@@ -1,0 +1,23 @@
+# category<TAB>regular expression
+windows-path	%LOCALAPPDATA%|%APPDATA%|%USERPROFILE%|[A-Za-z]:\\|\\\\
+windows-executable	\b(?:powershell|powershell\.exe|cmd\.exe|\.cmd|\.bat|\.exe)\b
+os-branch	OperatingSystem\.Is(?:Windows|Linux|MacOS)
+case-policy	StringComparer\.OrdinalIgnoreCase|StringComparison\.OrdinalIgnoreCase
+path-api	Path\.(?:Combine|GetFullPath|IsPathRooted|GetRelativePath|DirectorySeparatorChar|AltDirectorySeparatorChar|PathSeparator|GetInvalidFileNameChars)
+path-normalization	\.Replace\s*\([^\n]*(?:DirectorySeparatorChar|AltDirectorySeparatorChar|['"]\\\\['"]|['"]/['"])
+environment	Environment\.(?:ExpandEnvironmentVariables|GetEnvironmentVariable|SetEnvironmentVariable|GetFolderPath)
+filesystem-enumeration	Directory\.(?:Enumerate\w*|GetFiles|GetDirectories)|FileSystemWatcher
+link-reparse	ReparsePoint|ResolveLinkTarget|LinkTarget|SymbolicLink
+atomic-write	File\.(?:WriteAll|Move|Replace|Delete)|FileStream
+permissions	UnixFileMode|SetUnixFileMode|GetUnixFileMode|chmod|umask
+dataprotection	IDataProtectionProvider|AddDataProtection|PersistKeysToFileSystem|ProtectKeysWith
+dpapi	ProtectedData|DataProtectionScope
+secret-provider	SecretVault|Keychain|SecretService|vault\.key|AzureKeyVault|HashiCorp
+process-start	ProcessStartInfo|new\s+Process\b|Process\.Start|Kill\s*\(
+shell-elevation	powershell(?:\.exe)?|pwsh|cmd(?:\.exe)?|/bin/(?:sh|bash|zsh)|UseShellExecute|Verb\s*=\s*["']runas|sudo|pkexec|osascript
+manager-discovery	System\.Management|ManagementObject|GetProcessesByName|/proc
+mcp	Mcp|stdio|PlaywrightMcp|npx|npm\.cmd
+external-tool	ExternalProcess|DockerHostTool|DesktopFileLauncher|FileTools
+direct-process-host	new\s+LocalWorkspaceProcessHost
+process-domain	ProcessDriverLayer|ProcessDriverDescriptor|ProcessRecovery|Escalation
+absolute-path-field	ExecutablePath|WorkspaceRoot|RootPath|WorkingDirectory|LocalPath|RepositoryPath|AllowedExternalRoot
