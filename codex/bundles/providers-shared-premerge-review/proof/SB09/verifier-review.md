@@ -2,7 +2,11 @@
 
 Status: BLOCKED for final independent closure. This artifact records the implementing agent's adversarial source/proof audit and independent CodeAnalytics output. It is not a second independent agent/human review.
 
-## Checked
+## Finishing update2026-08-31
+
+Canonical export and active copies now pass. The real5032 PDF/Excel flow,5214 shared agent and two-turn Simple Chat,5210 persisted request records, desktop screenshots and focused coordinator regression are recorded in bundle://reviews/05-finishing-acceptance.md. A direct Workbench UI->Conversations.Shell UI reference is justified and the52-project/182-edge graph has no cycles. Current source/artifacts are separately hashed in bundle://proof/SB09/finishing/manifest.json. This remains implementing-agent evidence; independent review is still open.
+
+## Original checkpoint checked
 
 - Negative pinned SDK tests consume the first real delta before upstream failure, so they detect transport abort rather than a fabricated internal completion flag.
 - The corrected eight-case pre-fix SDK run fails all cases. Earlier setup failures are not counted as failing-first evidence.
@@ -22,4 +26,4 @@ Status: BLOCKED for final independent closure. This artifact records the impleme
 
 A separate reviewer must read manifest.md, semantic-invariants.md, changed-files.json, artifacts.json, passing/failing-first transcripts and final source diff, then affirm the production/caller/privacy/retention/schema semantics. Preparation's independent reviews cannot be reused as implementation review.
 
-Remaining authority/host/export obligations are explicit in the execution report and historical handoff. Completion is blocked rather than downgraded to a residual risk.
+Only the original three-application authority/proof and independent review remain; final export and current two-instance live proof are complete. Completion is blocked rather than downgraded to a residual risk.

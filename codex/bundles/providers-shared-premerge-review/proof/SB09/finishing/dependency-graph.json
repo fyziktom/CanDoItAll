@@ -1,0 +1,9 @@
+{
+  "root": "src\\Modules\\CanDoItAll.Modules.Workbench\\CanDoItAll.Modules.Workbench.csproj",
+  "projects": 52,
+  "edges": 182,
+  "workbenchReferencesConversationShell": true,
+  "shellReferencesWorkbench": false,
+  "cycles": [],
+  "unresolved": []
+}

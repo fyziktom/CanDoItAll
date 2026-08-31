@@ -3,11 +3,11 @@
 ## Status
 
 - State: Blocked
-- Final closure: Blocked by the explicitly listed export, active-copy, independent-review and original host obligations.
+- Final closure: Blocked only by independent implementation review and the original three-application proof. The latest finishing lane and SB08 export/active-copy work passed; see reviews/05-finishing-acceptance.md.
 
 Execution request: 2026-08-30. Implementation baseline: providers-shared at bb154a0ac4df3b3da092246db30e516521dde7c4 (bundle commit); reviewed product head 3fc10d2db7ba7e4e15bc94f50e66f815f31c4219; development/origin-development 1625b336e4f60ddb64987240c3a3dc485591d20f.
 
-Product repairs and SB01–SB07 are complete. SB08 is blocked on final canonical host/export/active-copy work. SB09 frozen Stable validation passed 9,424/9,424 with no failures/skips; original hosted authority and independent execution verification remain open. This is not a merge-ready declaration. No commit, push, merge, Docker lifecycle, paid upstream call or live-profile migration was performed.
+SB01–SB08 are complete after the 2026-08-31 finishing request. Updated5032 and Docker5210/5214 are running; real local/shared agent, two-turn Simple Chat and publisher persistence checks passed. SB09 frozen Stable validation passed9,424/9,424; original three-application proof and independent execution review remain open. No commit, push or merge was performed. The validation sections below preserve the original implementation-phase record; current host/adoption/inference/export evidence supersedes its historical no-live-action limits in reviews/05-finishing-acceptance.md.
 
 ## Implemented outcome
 
@@ -81,21 +81,22 @@ Primary surfaces, first viewport, scrolling, overlay layering and actions are re
 
 | Raw note | Status | Proof |
 | --- | --- | --- |
-| N01 pre-merge review/manual merge | Partially solved | Repairs and focused proof pass; final authority/export/review remain |
+| N01 pre-merge review/manual merge | Partially solved | Repairs and focused proof pass; live acceptance/export are in reviews/05-finishing-acceptance.md; original host and independent review remain |
 | N02 shared providers/performance/unfinished work | Solved for identified repairs | SB01/SB02/SB04/SB05/SB06; 179 final Integration and measured workloads |
 | N03 request logging | Solved for identified repairs | SB03/SB04 production capture and retention proof |
 | N04 requested performance/C# skills | Solved | Architecture gate, codeanalytics, direct builds and before/after measurements |
-| N05 bundle/docs/SharedInfo/schema | Partially solved | Product docs, API skill sources, EF SQL/upgrade pass; final OpenAPI and installation pending |
-| N06 engineering constraints | Solved in implemented scope | Typed small changes; no project/partial/XML growth, merge or authority expansion |
+| N05 bundle/docs/SharedInfo/schema | Solved | Product docs, EF SQL/upgrade and final live OpenAPI/installed hashes pass; proof/SB09/finishing/api-export.json and installed-skill-hashes.json |
+| N06 engineering constraints | Solved in implemented scope | Typed small changes; no new project/runtime partial/XML; justified UI reference in architecture/02-csharp-dependency-direction.md; no merge or authority expansion |
+| N07 live finishing request | Solved | reviews/05-finishing-acceptance.md and proof/SB09/finishing: actual local/shared tool/file transcripts, two-turn Simple Chat,5 persisted publisher rows,4 focused component tests and3 healthy running hosts |
 
 ## Remaining concrete work and authority
 
 Exact bounded actions and prerequisites: [remaining-gates handoff](04-remaining-gates.md).
 
-1. Briefly stop/restart the user's canonical 5032 app under explicit authority, run the identified final Release host, and authorize pre-commit capture with baseline commit + workingTreeClean:false. scripts/Export-ApiContract.ps1 checks exclusive PID ownership, executable, start time, assembly hash, canonical server and byte equality. Update SharedInfo support README after actual counts, run its validators, then install only the five previewed packages and reopen/hash active copies.
+1. Completed under the latest finishing request: rebuilt/restarted all three named apps, identified5032 pre-commit export with byte parity, current SharedInfo support inventory, validators, five installed packages and11 matching active files. See reviews/05-finishing-acceptance.md. Do not request these permissions again.
 2. Preserve the original seven-lifecycle/seven-image history. Obtain one replacement SB07 three-application lifecycle plus one application image build, under cumulative nine/nine ceilings reserving one for SB12. No paid call, unlimited retry, unrelated live/browser gate or budget reset is implied.
 3. Complete an independent execution source/proof review. The preparation reviewers did not review the implemented repairs; implementing-agent audit and CodeAnalytics are labelled honestly.
-4. After those actions, reconcile final source/export/active-copy proof and re-evaluate merge readiness. The single frozen Stable run is complete and passed; no second broad run is needed for documentation/hash-only edits.
+4. Source/export/active-copy proof is reconciled in the finishing manifest. Re-evaluate overall merge readiness only after the remaining original hosted and independent-review gates. The single frozen Stable run is complete; the UI-only finishing change has its own4-case proof.
 
 See repo://codex/bundles/shared-providers/PREMERGE-REPAIR-HANDOFF.md and bundle://plan/03-historical-handoff.md. Missing required proof is a blocker, not an accepted residual risk.
 

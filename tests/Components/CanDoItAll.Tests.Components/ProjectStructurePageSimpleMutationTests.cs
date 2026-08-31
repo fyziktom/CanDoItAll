@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Conversations.Shell;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -25,6 +26,29 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructurePageSimpleMutationTests
 {
+    [Fact]
+    public async Task Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var shell = harness.Context.Services.GetRequiredService<IConversationShellCoordinator>();
+        var projectId = await CreateProjectAsync(projectsService, "Project agents catalogue");
+        var cut = harness.Context.Render<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        WaitForCanvasWorkbench(cut);
+
+        cut.Find("[data-testid='project-structure-agents-toggle']").Click();
+
+        Assert.True(shell.Snapshot().IsCatalogVisible);
+        Assert.Equal(ConversationCatalogKindFilter.Agents, shell.Snapshot().KindFilter);
+        await cut.InvokeAsync(shell.HideCatalog);
+
+        cut.Find("[data-testid='project-structure-agents-toggle']").Click();
+
+        Assert.True(shell.Snapshot().IsCatalogVisible);
+        cut.Find("[data-testid='project-structure-agents-toggle']").Click();
+        Assert.False(shell.Snapshot().IsCatalogVisible);
+    }
+
     [Fact]
     public async Task Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state()
     {

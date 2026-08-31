@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="9b783021-dff8-4212-af87-0e360e6f1bbd" name="lucys@LUCYSPOWER 2026-08-31 06:36:42" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-31T06:36:42.1837454-04:00" queuing="2026-08-31T06:36:42.1837458-04:00" start="2026-08-31T06:36:28.8412165-04:00" finish="2026-08-31T06:36:42.1894534-04:00" />
+  <TestSettings name="default" id="a5bc924b-d708-44c4-b1f4-8654a35e1cba">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-31_06_36_42" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="09f7a4a0-4529-429a-bd4a-c3b058803278" testId="3f5284c9-8a9c-ff4e-31e4-6005b6fe8879" testName="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close" computerName="LUCYSPOWER" duration="00:00:12.2909673" startTime="2026-08-31T06:36:29.7127700-04:00" endTime="2026-08-31T06:36:42.0226704-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="09f7a4a0-4529-429a-bd4a-c3b058803278">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProjectStructurePageSimpleMutationTests.cs:line 41&#xD;
+   at CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProjectStructurePageSimpleMutationTests.cs:line 49&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.components\release\candoitall.tests.components.dll" id="3f5284c9-8a9c-ff4e-31e4-6005b6fe8879">
+      <Execution id="09f7a4a0-4529-429a-bd4a-c3b058803278" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Components\release\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests" name="Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="3f5284c9-8a9c-ff4e-31e4-6005b6fe8879" executionId="09f7a4a0-4529-429a-bd4a-c3b058803278" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.18]   Discovering: CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.35]   Discovered:  CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.38]   Starting:    CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:12.72]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:12.72]       Expected: True&#xD;
+[xUnit.net 00:00:12.72]       Actual:   False&#xD;
+[xUnit.net 00:00:12.72]       Stack Trace:&#xD;
+[xUnit.net 00:00:12.72]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProjectStructurePageSimpleMutationTests.cs(41,0): at CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close()&#xD;
+[xUnit.net 00:00:12.72]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProjectStructurePageSimpleMutationTests.cs(49,0): at CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close()&#xD;
+[xUnit.net 00:00:12.72]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:12.73]   Finished:    CanDoItAll.Tests.Components&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-31T06:36:42.0256902-04:00">
+        <Text>[xUnit.net 00:00:12.71]     CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

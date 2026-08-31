@@ -1,0 +1,57 @@
+[
+  {
+    "package": "_candoitall-api-shared",
+    "path": "manifest.json",
+    "sha256": "38E2EE7BCD8055E5E6B97025B398F90F2DB005010C27B538B083FBB4710DE32D"
+  },
+  {
+    "package": "_candoitall-api-shared",
+    "path": "README.md",
+    "sha256": "F9A1F1466A7A4D2AD269C72B3A4776A9E4BB1C0D8AEF2040034C1EB36FB8F285"
+  },
+  {
+    "package": "_candoitall-api-shared",
+    "path": "references\\candoitall-web.openapi.json",
+    "sha256": "14FE4C527863FF84948ED96D3D7A3B16FD46D3E315E673E96EEF3911C3D2A52B"
+  },
+  {
+    "package": "_candoitall-api-shared",
+    "path": "references\\partner-api-migration.md",
+    "sha256": "7E9ED6A07EA088308E139C2CE1AD48D7D96838879CD1933DFC94DC8B95FB13F3"
+  },
+  {
+    "package": "candoitall-api-shared-providers",
+    "path": "SKILL.md",
+    "sha256": "B7E34619B7C1B1FC190BB582B759A62F8A982EF8F22E5D9EE5F654AE7EE0F803"
+  },
+  {
+    "package": "candoitall-api-shared-providers",
+    "path": "references\\protocol.md",
+    "sha256": "474A9C6B469C0415436E459F8D1D49C63420262FF1340E6AF162F8BC0718D2F4"
+  },
+  {
+    "package": "candoitall-api-agents",
+    "path": "SKILL.md",
+    "sha256": "D29C83559F401CC7654767284104986B82CDB3A5F1AE9D697DC2175053C2485F"
+  },
+  {
+    "package": "candoitall-api-agents",
+    "path": "references\\partner-api-contracts.md",
+    "sha256": "D2BC37C222E4BF62A638503D8394C952470EF9E2B1E13A5A19841ADF533212DF"
+  },
+  {
+    "package": "candoitall-api-llm-chats",
+    "path": "SKILL.md",
+    "sha256": "641F1403D945FF874397352B21B17AACD9CEAF13FF4763F1C484AA1985E63364"
+  },
+  {
+    "package": "candoitall-api-workflows",
+    "path": "SKILL.md",
+    "sha256": "EB4CFC7359B16ABB66CA65F212D1E499A114F4B48B918FB85926BF33C9EDC202"
+  },
+  {
+    "package": "candoitall-api-workflows",
+    "path": "references\\stable-identity-and-idempotency.md",
+    "sha256": "10466B497D2A8DE7B9E9186A05C8DA7FFD3AA893B68B12D63811DF87E16A57FE"
+  }
+]

@@ -1,0 +1,9 @@
+
+Name                            Kind    Status    Target
+----                            ----    ------    ------
+_candoitall-api-shared          Support Installed C:\Users\lucys\.codex\skills\_candoitall-api-shared
+candoitall-api-agents           Skill   Installed C:\Users\lucys\.codex\skills\candoitall-api-agents
+candoitall-api-llm-chats        Skill   Installed C:\Users\lucys\.codex\skills\candoitall-api-llm-chats
+candoitall-api-shared-providers Skill   Installed C:\Users\lucys\.codex\skills\candoitall-api-shared-providers
+candoitall-api-workflows        Skill   Installed C:\Users\lucys\.codex\skills\candoitall-api-workflows
+

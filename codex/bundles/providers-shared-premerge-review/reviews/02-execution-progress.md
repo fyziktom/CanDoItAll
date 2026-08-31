@@ -1,8 +1,10 @@
 # Execution progress
 
+Current update2026-08-31: SB01–SB08 Completed; SB09 Blocked only on original three-application proof and independent implementation review. The requested three running instances and live acceptance passed, as did final API export and five-package/11-file active parity. See reviews/05-finishing-acceptance.md. The sections below preserve the earlier implementation checkpoint and its then-unresolved gates.
+
 Execution authorized 2026-08-30. Entry HEAD `bb154a0ac` adds the reviewed bundle to product HEAD `3fc10d2db7ba7e4e15bc94f50e66f815f31c4219`. Development baseline: `1625b336e4f60ddb64987240c3a3dc485591d20f`. No merge, push, commit, live profile migration or paid upstream call has been performed.
 
-## Working state
+## Original implementation checkpoint
 
 - SB01–04: completed. Final combined owning Integration: 179/179, including relay/SDK/network/capture/persistence/source projection/catalog/schema/migration owners. Owning Unit: 145/145. Real recorder late-retry expiry and distinct-revision behavior also pass.
 - SB05: completed constant allowlist caching, owned-memory response parsing and cheap persisted catalog stamps. Public usage-extractor span compatibility is retained; byte arrays use memory without a full copy. Cache invalidation/memory lifetime Unit: 110/110. Identical ten-case baseline/after workloads pass. Final six-case selection adds catalog SQL EXPLAIN, concurrent history and both upgrade lanes. Maintenance capacity scenarios and limits are in 03-performance-capacity.md.
@@ -11,7 +13,7 @@ Execution authorized 2026-08-30. Entry HEAD `bb154a0ac` adds the reviewed bundle
 - SB08: source skills and database proof complete; final export/installation blocked. Four source skills validate and the exact five-package installer preview passes. SharedInfo validation has one expected stale-snapshot workflow-route mismatch, so no current-contract pass is claimed. Both exact-development and populated reviewed-head rehearsals pass. EF reports no pending model changes; full/development/reviewed-head SQL generated, with the latter empty except BOM. EF tool 10.0.3 warns about runtime 10.0.4 but succeeds. Final capture script rejects the unrelated running host; canonical export, support README/manifest and active synchronization remain open.
 - SB09: nine direct affected builds and product/Stable Release graphs pass with zero warnings/errors. Isolated desktop browser scenario passes with seven inspected screenshots at 1920×1080. Current nine-project CodeAnalytics/source audit and governed evidence manifests are recorded. The single frozen Stable invocation passed 9,424/9,424 with zero skips/failures (Components1,190, Integration1,237, AgentFramework Memory22, Memory196, Unit6,779). The 9,369 discovery display entries expand through seven source-verified MemberData methods; all 55 additional rows are reconciled in sb09-stable-results.json. Independent execution review and the original distinct three-application authority/proof remain open.
 
-## Validation environment
+## Original validation environment
 
 .NET SDK 10.0.303 / Release / local sibling source references / xUnit VSTest. Builds use `--artifacts-path ./artifacts/premerge /m:1` because the user's existing Web process locks normal Release binaries. That process was not stopped. PostgreSQL tests explicitly select the repository's local fixture connection; only UUID disposable databases are created/dropped, preventing an implicit Docker fallback. No general Docker lifecycle authority is inferred.
 

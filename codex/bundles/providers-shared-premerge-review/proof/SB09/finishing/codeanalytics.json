@@ -1,0 +1,160 @@
+[
+  {
+    "stage": "finishingBeforeSnapshot",
+    "snapshotId": "snap-20260831103116-dfe9b686",
+    "createdUtc": "2026-08-31T10:31:16.4090471+00:00",
+    "request": {
+      "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workbench\\CanDoItAll.Modules.Workbench.csproj",
+      "scopeProjectNames": [
+        "CanDoItAll.Conversations.Shell",
+        "CanDoItAll.Modules.Workbench"
+      ],
+      "scopeNamespacePrefixes": [],
+      "includeDi": false,
+      "includePersistence": false,
+      "includeRisks": false,
+      "includeXmlDocs": false,
+      "includeMermaidExports": false
+    },
+    "summary": {
+      "projectCount": 1,
+      "typeCount": 897,
+      "memberCount": 7631,
+      "serviceRegistrationCount": 0,
+      "entityCount": 0,
+      "findingCount": 0,
+      "openQuestionCount": 0,
+      "diagnosticCount": 0
+    },
+    "projects": [
+      {
+        "projectId": "proj-candoitall-modules-workbench",
+        "name": "CanDoItAll.Modules.Workbench",
+        "path": "CanDoItAll.Modules.Workbench.csproj",
+        "targetFrameworks": [
+          "net10.0"
+        ],
+        "projectReferences": [],
+        "packageReferences": [
+          "CanDoItAll.Components.BaseLib",
+          "CanDoItAll.Components.CanvasLib",
+          "CanDoItAll.Components.Charts",
+          "CanDoItAll.Components.Gantt",
+          "CanDoItAll.Components.Mermaid",
+          "CanDoItAll.FileTools.Desktop",
+          "CanDoItAll.FileTools.FileBrowser.Components",
+          "CanDoItAll.FileTools.FileBrowser.Core",
+          "CanDoItAll.FileTools.FileInteraction.Components",
+          "CanDoItAll.FileTools.FileInteraction.Core",
+          "CanDoItAll.FileTools.FileInteraction.Markdown",
+          "CanDoItAll.FileTools.FileInteraction.Spreadsheet",
+          "Microsoft.AspNetCore.Components.Web",
+          "Microsoft.Extensions.Http"
+        ],
+        "documentCount": 249
+      }
+    ],
+    "projectReferences": [],
+    "cycles": [],
+    "diagnostics": [],
+    "hasBlockingErrors": false
+  },
+  {
+    "stage": "finishingAfterSnapshot",
+    "snapshotId": "snap-20260831104137-dfe9b686",
+    "createdUtc": "2026-08-31T10:41:37.4568906+00:00",
+    "request": {
+      "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workbench\\CanDoItAll.Modules.Workbench.csproj",
+      "scopeProjectNames": [
+        "CanDoItAll.Conversations.Shell",
+        "CanDoItAll.Modules.Workbench"
+      ],
+      "scopeNamespacePrefixes": [],
+      "includeDi": false,
+      "includePersistence": false,
+      "includeRisks": false,
+      "includeXmlDocs": false,
+      "includeMermaidExports": false
+    },
+    "summary": {
+      "projectCount": 2,
+      "typeCount": 914,
+      "memberCount": 7744,
+      "serviceRegistrationCount": 0,
+      "entityCount": 0,
+      "findingCount": 0,
+      "openQuestionCount": 0,
+      "diagnosticCount": 2
+    },
+    "projects": [
+      {
+        "projectId": "proj-candoitall-conversations-shell",
+        "name": "CanDoItAll.Conversations.Shell",
+        "path": "../../UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj",
+        "targetFrameworks": [
+          "net10.0"
+        ],
+        "projectReferences": [],
+        "packageReferences": [
+          "CanDoItAll.Components.BaseLib",
+          "CanDoItAll.Components.Common",
+          "CanDoItAll.Components.OverlayLib",
+          "Microsoft.AspNetCore.Components.Web",
+          "Microsoft.Extensions.DependencyInjection.Abstractions"
+        ],
+        "documentCount": 9
+      },
+      {
+        "projectId": "proj-candoitall-modules-workbench",
+        "name": "CanDoItAll.Modules.Workbench",
+        "path": "CanDoItAll.Modules.Workbench.csproj",
+        "targetFrameworks": [
+          "net10.0"
+        ],
+        "projectReferences": [
+          "proj-candoitall-conversations-shell"
+        ],
+        "packageReferences": [
+          "CanDoItAll.Components.BaseLib",
+          "CanDoItAll.Components.CanvasLib",
+          "CanDoItAll.Components.Charts",
+          "CanDoItAll.Components.Gantt",
+          "CanDoItAll.Components.Mermaid",
+          "CanDoItAll.FileTools.Desktop",
+          "CanDoItAll.FileTools.FileBrowser.Components",
+          "CanDoItAll.FileTools.FileBrowser.Core",
+          "CanDoItAll.FileTools.FileInteraction.Components",
+          "CanDoItAll.FileTools.FileInteraction.Core",
+          "CanDoItAll.FileTools.FileInteraction.Markdown",
+          "CanDoItAll.FileTools.FileInteraction.Spreadsheet",
+          "Microsoft.AspNetCore.Components.Web",
+          "Microsoft.Extensions.Http"
+        ],
+        "documentCount": 249
+      }
+    ],
+    "projectReferences": [
+      {
+        "edgeId": "dep-projectreference-proj-candoitall-modules-workbench-dceff5f55fa4",
+        "kind": "ProjectReference",
+        "fromId": "proj-candoitall-modules-workbench",
+        "toId": "proj-candoitall-conversations-shell",
+        "weight": 1
+      }
+    ],
+    "cycles": [],
+    "diagnostics": [
+      {
+        "code": "DEP0002",
+        "severity": "Warning",
+        "message": "Duplicate type display name detected: Microsoft.CodeAnalysis.EmbeddedAttribute."
+      },
+      {
+        "code": "DEP0002",
+        "severity": "Warning",
+        "message": "Duplicate type display name detected: Microsoft.Extensions.Validation.Embedded.ValidatableTypeAttribute."
+      }
+    ],
+    "hasBlockingErrors": false
+  }
+]

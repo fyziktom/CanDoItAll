@@ -4,7 +4,7 @@
 
 - State: Blocked
 - Proof tier: Governed
-- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
+- Execution: original proof plus authorized 2026-08-31 live finishing lane completed. Current evidence: reviews/05-finishing-acceptance.md and proof/SB09/finishing. Overall closure remains blocked on original three-application proof and independent review; export/install are complete.
 
 ## Objective
 
@@ -12,7 +12,7 @@ Give the user a current-source merge recommendation backed by focused, migration
 
 ## Covered Inputs
 
-- R09/R10 and closure of N01–N06; DC04
+- R09/R10 and closure of N01–N06; DC04; N07 / inputs/04-finishing-request.md (live restart, complex local/shared tasks, Simple Chat, publisher persistence, repair and leave-running).
 
 ## Prerequisites
 
@@ -76,7 +76,7 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## C# Architecture Impact
 
-No new architecture implemented here. Independently verify boundaries, .csproj direction, absence of runtime partial growth and actual composition paths.
+Finishing acceptance repaired the existing ProjectStructurePage coordinator wiring. The justified Workbench UI -> Conversations.Shell UI reference is recorded in architecture/02-csharp-dependency-direction.md;52-project/182-edge closure and focused4-case component proof passed. No new project or runtime partial. Independent final verification remains required.
 
 ## Boundary Ownership
 
@@ -111,4 +111,4 @@ No new architecture implemented here. Independently verify boundaries, .csproj d
 
 ## Non-goals
 
-- No merge/push/deployment, paid upstream call, unrelated sibling refactor, invented remote history API or broad UI redesign.
+- No merge/push, unrelated sibling refactor, invented remote history API or broad UI redesign. The latest user request explicitly authorized bounded live inference and adopting updated builds on the three named instances; it did not reset the historical three-application budget.

@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="f1410680-0ecb-4b96-93bf-13d09c9fc5e4" name="lucys@LUCYSPOWER 2026-08-31 06:38:54" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-31T06:38:54.8993628-04:00" queuing="2026-08-31T06:38:54.8993633-04:00" start="2026-08-31T06:38:43.7813998-04:00" finish="2026-08-31T06:38:59.5912170-04:00" />
+  <TestSettings name="default" id="462148ed-f33d-49e2-b1fd-0059c13240d6">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-31_06_38_54" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="511a138f-08bd-4fe8-aece-3c889fa8dc13" testId="ad8b3aaa-2caf-a7ff-7e1b-18c3793b1cf2" testName="CanDoItAll.Tests.Components.Conversations.ConversationShellHostTests.Coordinator_renders_only_the_single_focused_descriptor_across_sources" computerName="LUCYSPOWER" duration="00:00:00.0283862" startTime="2026-08-31T06:38:59.4378529-04:00" endTime="2026-08-31T06:38:59.4656003-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="511a138f-08bd-4fe8-aece-3c889fa8dc13" />
+    <UnitTestResult executionId="c433b961-76c2-4b41-8461-cbc1869b58bd" testId="dbf6faff-4ac8-e086-7155-b07f06e35e80" testName="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state" computerName="LUCYSPOWER" duration="00:00:04.5596283" startTime="2026-08-31T06:38:54.8858155-04:00" endTime="2026-08-31T06:38:59.4337040-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c433b961-76c2-4b41-8461-cbc1869b58bd" />
+    <UnitTestResult executionId="de61b1cb-e312-4921-9758-2315774201ab" testId="34275886-6939-9cb8-1e88-76270d10abc5" testName="CanDoItAll.Tests.Components.Conversations.ConversationShellHostTests.Catalog_merges_sources_filters_both_axes_and_routes_declared_actions_to_the_owner" computerName="LUCYSPOWER" duration="00:00:00.0357218" startTime="2026-08-31T06:38:59.4657609-04:00" endTime="2026-08-31T06:38:59.5013802-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="de61b1cb-e312-4921-9758-2315774201ab" />
+    <UnitTestResult executionId="193cbc88-bad4-47bd-b300-c780ed6f9661" testId="3f5284c9-8a9c-ff4e-31e4-6005b6fe8879" testName="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close" computerName="LUCYSPOWER" duration="00:00:10.3640872" startTime="2026-08-31T06:38:44.5005158-04:00" endTime="2026-08-31T06:38:54.8721816-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="193cbc88-bad4-47bd-b300-c780ed6f9661" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Components.Conversations.ConversationShellHostTests.Catalog_merges_sources_filters_both_axes_and_routes_declared_actions_to_the_owner" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.components\release\candoitall.tests.components.dll" id="34275886-6939-9cb8-1e88-76270d10abc5">
+      <Execution id="de61b1cb-e312-4921-9758-2315774201ab" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Components\release\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.Conversations.ConversationShellHostTests" name="Catalog_merges_sources_filters_both_axes_and_routes_declared_actions_to_the_owner" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.components\release\candoitall.tests.components.dll" id="3f5284c9-8a9c-ff4e-31e4-6005b6fe8879">
+      <Execution id="193cbc88-bad4-47bd-b300-c780ed6f9661" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Components\release\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests" name="Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests.Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.components\release\candoitall.tests.components.dll" id="dbf6faff-4ac8-e086-7155-b07f06e35e80">
+      <Execution id="c433b961-76c2-4b41-8461-cbc1869b58bd" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Components\release\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.ProjectStructure.ProjectStructurePageSimpleMutationTests" name="Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.Conversations.ConversationShellHostTests.Coordinator_renders_only_the_single_focused_descriptor_across_sources" storage="c:\repositories\candoitall\artifacts\premerge\bin\candoitall.tests.components\release\candoitall.tests.components.dll" id="ad8b3aaa-2caf-a7ff-7e1b-18c3793b1cf2">
+      <Execution id="511a138f-08bd-4fe8-aece-3c889fa8dc13" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\artifacts\premerge\bin\CanDoItAll.Tests.Components\release\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.Conversations.ConversationShellHostTests" name="Coordinator_renders_only_the_single_focused_descriptor_across_sources" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="ad8b3aaa-2caf-a7ff-7e1b-18c3793b1cf2" executionId="511a138f-08bd-4fe8-aece-3c889fa8dc13" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dbf6faff-4ac8-e086-7155-b07f06e35e80" executionId="c433b961-76c2-4b41-8461-cbc1869b58bd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="34275886-6939-9cb8-1e88-76270d10abc5" executionId="de61b1cb-e312-4921-9758-2315774201ab" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3f5284c9-8a9c-ff4e-31e4-6005b6fe8879" executionId="193cbc88-bad4-47bd-b300-c780ed6f9661" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="4" executed="4" passed="4" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.15]   Discovering: CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.28]   Discovered:  CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.30]   Starting:    CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:15.32]   Finished:    CanDoItAll.Tests.Components&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

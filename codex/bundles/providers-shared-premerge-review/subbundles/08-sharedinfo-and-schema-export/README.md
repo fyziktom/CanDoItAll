@@ -2,9 +2,9 @@
 
 ## Status
 
-- State: Blocked
+- State: Completed
 - Proof tier: Behavioral
-- Execution: authorized 2026-08-30; current results and limits in reviews/01-execution-report.md and proof/SB09/manifest.md.
+- Execution: original proof plus authorized 2026-08-31 final capture/install; current results in reviews/05-finishing-acceptance.md and proof/SB09/finishing. Exact five-package source/active parity:11 files. Canonical export276 paths/308 operations/486 schemas and all validators passed.
 
 ## Objective
 
@@ -16,7 +16,7 @@ Publish one accurate reusable API contract/skill source set and separate reprodu
 
 ## Prerequisites
 
-- SB06 schema and SB07 docs accepted; final runtime source identity known. SharedInfo changes are explicitly future scope; never edit installed copies as source.
+- SB06 schema and SB07 docs accepted; final runtime source identity known. SharedInfo source changes and final synchronization are complete; never edit installed copies as source.
 - Read root constraints, analysis evidence and plan/02-validation-strategy.md before edits.
 
 ## Exact Source References
@@ -60,17 +60,17 @@ repo:// paths resolve from the product repository; bundle:// paths resolve from 
 
 ## Acceptance Checklist
 
-- [ ] Final live document bytes and snapshot hash/route/operation/schema counts match; scalar/request semantics satisfy SB06.
-- [ ] One shared snapshot source of truth; new skill and affected API guidance link its manifest and defer to a different target host's live schema.
-- [ ] Skill source/active hashes and validator results recorded after authorized synchronization; no raw credentials in artifact.
-- [ ] EF model/migrations agree; SQL generated without live DB mutation; lane A upgrades exact development migration 20260822013043_AddWorkflowNativeCheckpointRequestUniqueness to final while preserving existing provider profiles/canonical agent/Simple Chat/workflow data and proving new schema/backfill; lane B starts at reviewed head with populated sharing/history tables and validates repair migrations or preservation/transfer if no migration is needed.
-- [ ] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
-- [ ] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
+- [x] Final live document bytes and snapshot hash/route/operation/schema counts match; scalar/request semantics satisfy SB06.
+- [x] One shared snapshot source of truth; new skill and affected API guidance link its manifest and defer to a different target host's live schema.
+- [x] Skill source/active hashes and validator results recorded after authorized synchronization; no raw credentials in artifact.
+- [x] EF model/migrations agree; SQL generated without live DB mutation; lane A upgrades exact development migration 20260822013043_AddWorkflowNativeCheckpointRequestUniqueness to final while preserving existing provider profiles/canonical agent/Simple Chat/workflow data and proving new schema/backfill; lane B starts at reviewed head with populated sharing/history tables and validates repair migrations or preservation/transfer if no migration is needed.
+- [x] Keep strong identifiers/enums, explicit errors, safe logs, Egyptian braces and one statement per line.
+- [x] No production XML comments, unrelated refactor, silent fallback or inferred permission expansion.
 
 ## Proof Required
 
 - Follow plan/02-validation-strategy.md for exact Release build/discovery/test command form; record commands, exit codes, expected/actual cases, source hashes and dependency mode.
-- Old SharedInfo validator currently passes a stale snapshot; require identified live-vs-export parity, not just old internal hash consistency.
+- Identified live-vs-export byte parity and installed-file hashes pass; the older internally consistent stale snapshot is historical only.
 - Record realistic positive and adversarial negative proof, source producer/consumer/lifecycle assertions where applicable, and anti-stub review. Failing-first proof must exercise the reported defect.
 - Record evidence in reviews/01-execution-report.md; separate governed manifests are not required for this unit.
 

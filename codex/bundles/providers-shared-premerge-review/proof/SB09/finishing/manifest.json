@@ -1,0 +1,601 @@
+{
+  "generatedUtc": "2026-08-31T11:23:57.953658+00:00",
+  "status": "Live finishing acceptance passed; overall merge closure blocked on original three-app proof and independent review.",
+  "note": "Historical SB09 hashes are preserved. This manifest identifies current finishing changes and artifacts; no clean-commit claim.",
+  "sources": [
+    {
+      "repository": "repo",
+      "baselineCommit": "aadd953150e7f659e4060ced6505621c705ea61f",
+      "files": [
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/README.md",
+          "beforeSha256": "57F80DD740152957F2CD3F8AB3EC3D7DE3A81446F0E5A1F709CB26BB32ECDE88",
+          "afterSha256": "C76C2319BA1C263E0A4B3B0D1A11C00D0E47B9483A75113A9B4359DB9FFA284A"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/architecture/02-csharp-dependency-direction.md",
+          "beforeSha256": "D4AD0BC1D91A99CAB6563DCB862400FF137D2EB978BF5EFEE7DC8D81149DAE3E",
+          "afterSha256": "C726A9C13FA69A8CC39AF6CE0F7894B8A4937CB02496197371831CAD41EC62E5"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/inputs/04-finishing-request.md",
+          "beforeSha256": null,
+          "afterSha256": "FE0C52A371DE480BEDF8AD43040A0871AF3203BC5A2BE26CCB6FB2AC02AFCEE9"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/requirements/01-normalized-requirements.md",
+          "beforeSha256": "AA813323A943A4CB691C9DFA28F0445543D0477CAD341CDADDD9639BF859008D",
+          "afterSha256": "C5BA62B3506B651BC38250C70189D44E7E920E3C1076AB093ACC1BE93E4D4ED7"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/reviews/01-execution-report.md",
+          "beforeSha256": "AE118A0A05285D62B40874852830DB22A3F936DBA63C3071CD8C1D1EC3FCE3D7",
+          "afterSha256": "EA43F0030A87AAF8AFC80D6ECCC05D22775B4D50B17D1A1FBC393DCF5DC01DED"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/reviews/02-execution-progress.md",
+          "beforeSha256": "B1EFCCEEC4874B27F994B8D6EE004FA851F938EC00D4AA3359F15D711ECA019B",
+          "afterSha256": "FE7730A0D592915B363EA312B5066735C8F7210608BF1AB62A6555EFB86713BD"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/reviews/04-remaining-gates.md",
+          "beforeSha256": "83E980436677254B23352A93A443D3461ABD661BC58D659EE547E045FB6D3E12",
+          "afterSha256": "668B301CB4889621504449619DD890400BD557BD86C63C189654BD2870F88141"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/reviews/05-finishing-acceptance.md",
+          "beforeSha256": null,
+          "afterSha256": "F5FB5468C2F0CEAFB1F1B02111480A9056AFDE1DFD3BB8D3F7249DD49250106E"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/reviews/csharp-architecture-gate.md",
+          "beforeSha256": "69F16FD0A5C649CED003C09EDB0FB3E735213463C8A1C5EC385E6374BE221666",
+          "afterSha256": "5064E5BF5AF653A32A353E332B31C953B3D03F38B695F0777D03F016399351AC"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/scripts/Export-ApiContract.ps1",
+          "beforeSha256": "6AECBCC4513AEBF99DC13F9D12119F77EBBF0D9948A1239CA554C6806BE4DE66",
+          "afterSha256": "25878D6F52C33DC58408F395E11CA98AB87F0A3733370F6EBB5395BD3BA02157"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/scripts/Record-FinishingProof.py",
+          "beforeSha256": null,
+          "afterSha256": "F4CD6231CBDC3B6C18CE37CA83FF9F83F6C299350D5A27CF290B2C34ACC0392B"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/scripts/Restart-LiveTestInstances.ps1",
+          "beforeSha256": null,
+          "afterSha256": "E1853DE5565EF39FFFBE53FDDE0E4A81A76FCFFE690C3BC358648FA2A04E4D9B"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/scripts/Verify-FinishingDependencies.py",
+          "beforeSha256": null,
+          "afterSha256": "6F117D517BFD8918183CC2EB8D82DF30DE8BB0822DB005EB57632A319CDDC55C"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/subbundles/08-sharedinfo-and-schema-export/README.md",
+          "beforeSha256": "C9C06E21D7AA6CEAB9935E07EB758CBD29A77BD73E1A8462D73747EEB803994E",
+          "afterSha256": "53FB17AECBF92FE0B1DF6506244E291DB2D7A2EBDD0304057D8349646E0EB8C9"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/subbundles/09-premerge-proof-and-handoff/README.md",
+          "beforeSha256": "36033D4AC6851D12CC92D68F6582E68E3055E0B59335EDF4C8F1174A481DA2DA",
+          "afterSha256": "ADC486CE877CE34CDA9814969F409929F965E75FBF00DE19673FA3BB9F4651E2"
+        },
+        {
+          "path": "repo://codex/bundles/providers-shared-premerge-review/traceability/01-requirement-traceability.md",
+          "beforeSha256": "2BD584F8C506898C9379074851D02BBE168F750DE77BB032E1957C5C14736595",
+          "afterSha256": "5C65BCBDC7C0036050B8D3C45AC91A35924EFF6594E98087807A0E1E7B6ADCE4"
+        },
+        {
+          "path": "repo://src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+          "beforeSha256": "1BC4FD19B4D1EC2C42F60B25FCA019DBE39954FF06D996310960D41A27FC8929",
+          "afterSha256": "0047429BC51A82F61F9EEF877664D228EAC585A4842CD875B5869382BC86BEE5"
+        },
+        {
+          "path": "repo://src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.AgentWindows.cs",
+          "beforeSha256": "D22AEFA2B4CDA3E5955E28C6C584983C1318ECF1B5F2D0F8E5CCE11DC53513A6",
+          "afterSha256": "D2731C9CD455995645A813D6E92F06433736267D373C79DAC9E3BEF8343E1E79"
+        },
+        {
+          "path": "repo://src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+          "beforeSha256": "50171ED40690E4717BD08047F94181F955115F133761AEF9F618E4196E522BD5",
+          "afterSha256": "C015C794303EB342EC25B1435BE5D3D5987C09373EE775CB97954C3198278D73"
+        },
+        {
+          "path": "repo://tests/Components/CanDoItAll.Tests.Components/ProjectStructurePageSimpleMutationTests.cs",
+          "beforeSha256": "C9ACB33FDC588371C1C947E647AC0032420F649E5CA6C38D944071A916732DEF",
+          "afterSha256": "DC797F6A31DE382A2A4311D46919EDE11048629A0177621832E5A20FEDD2C295"
+        }
+      ]
+    },
+    {
+      "repository": "sharedinfo",
+      "baselineCommit": "053f8b356fbc8a28bf822e0a051c25804bd81b65",
+      "files": [
+        {
+          "path": "sharedinfo://codex/README.md",
+          "beforeSha256": "4E1A7D2047024A4181AADF25D413CE4ABCBC99746665DB3E775C1A6600FA5DB3",
+          "afterSha256": "91BE264EA92A06363B31F4C989F7402F2C859979F6DF504F1A4E98702962A817"
+        },
+        {
+          "path": "sharedinfo://codex/skills/_candoitall-api-shared/README.md",
+          "beforeSha256": "52725EEE35A38EA480FD41855F393036B7450C3669C8C0B4AA86F55F7871C691",
+          "afterSha256": "F9A1F1466A7A4D2AD269C72B3A4776A9E4BB1C0D8AEF2040034C1EB36FB8F285"
+        },
+        {
+          "path": "sharedinfo://codex/skills/_candoitall-api-shared/manifest.json",
+          "beforeSha256": "F80B85D32EFE235DEDF0AB3737AFEF82CCA188387D3CD8B202BB251E9FDE8595",
+          "afterSha256": "38E2EE7BCD8055E5E6B97025B398F90F2DB005010C27B538B083FBB4710DE32D"
+        },
+        {
+          "path": "sharedinfo://codex/skills/_candoitall-api-shared/references/candoitall-web.openapi.json",
+          "beforeSha256": "376E5EA35D4C5FF99FEDC32012E67F18033F54245C10CE0C054FF0FAE997B797",
+          "afterSha256": "14FE4C527863FF84948ED96D3D7A3B16FD46D3E315E673E96EEF3911C3D2A52B"
+        },
+        {
+          "path": "sharedinfo://codex/skills/candoitall-api-agents/SKILL.md",
+          "beforeSha256": "79DF34985E441364A004B89C0A253B91EEEECA9C53C9EE19C303C4A40811AEF8",
+          "afterSha256": "D29C83559F401CC7654767284104986B82CDB3A5F1AE9D697DC2175053C2485F"
+        },
+        {
+          "path": "sharedinfo://codex/skills/candoitall-api-llm-chats/SKILL.md",
+          "beforeSha256": "ECFC98B015C3800BD6A7ABB74FB2139B0940E62755A353EA6AE947CC6D30BBD9",
+          "afterSha256": "641F1403D945FF874397352B21B17AACD9CEAF13FF4763F1C484AA1985E63364"
+        },
+        {
+          "path": "sharedinfo://codex/skills/candoitall-api-shared-providers/SKILL.md",
+          "beforeSha256": null,
+          "afterSha256": "B7E34619B7C1B1FC190BB582B759A62F8A982EF8F22E5D9EE5F654AE7EE0F803"
+        },
+        {
+          "path": "sharedinfo://codex/skills/candoitall-api-shared-providers/references/protocol.md",
+          "beforeSha256": null,
+          "afterSha256": "474A9C6B469C0415436E459F8D1D49C63420262FF1340E6AF162F8BC0718D2F4"
+        },
+        {
+          "path": "sharedinfo://codex/skills/candoitall-api-workflows/SKILL.md",
+          "beforeSha256": "FA3B5D4EA7F3650F817B2C9D9159AA4BF7D8A526243D71AEEF631C9ABD4C0556",
+          "afterSha256": "EB4CFC7359B16ABB66CA65F212D1E499A114F4B48B918FB85926BF33C9EDC202"
+        }
+      ]
+    }
+  ],
+  "unchangedOriginalBehavior": [
+    {
+      "path": "repo://src/App/CanDoItAll.Composition/SharedProviderRuntimeHttpClientSelector.cs",
+      "sha256": "79DD9F8F35D65FAB8F69C294AD5B001F621B22A4E14229450A45215207BE1222",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs",
+      "sha256": "8C2040C67EA590CB6A1F95F0B24BF71DC4C7293898F56E10A7A8E9BBCFC49952",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/SharedProviderInferenceApi.cs",
+      "sha256": "F1CCD1E273561029D7EA450AAAA6515AC5C00264717221F48837257C469A0124",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/SharedProviderInferenceOpenApiContract.cs",
+      "sha256": "7188D71060194A16C19233902274FADAC744885F3AB3E9604EEA4EAB4F65F0B4",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/SharedProviderOpenApiSchemas.cs",
+      "sha256": "344CA76B21B869B3F154BEB925B7626F0014BAA5460591BB4123584FACBC4CC1",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/README.md",
+      "sha256": "893CE4C8D0C10198C88FCADF21441531E96CB3395EC1B19468718ED313CBEB1F",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Foundation/CanDoItAll.Migrations.PostgreSql/README.md",
+      "sha256": "566F26E13C74492229149B590981B8BF9AB1E9517C85B4E0CB0D014CC6232F2C",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Abstractions/README.md",
+      "sha256": "F443B52AFC16DB6BAE2309130CD19ECF4BFD541FE4692BA6CAA1F2AA2C5279DE",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Http/README.md",
+      "sha256": "F83A847BC785FA2449BBAC1C814C261C22D42D92A71B9E691005CBC7F6450607",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderHttpRelayClient.cs",
+      "sha256": "EDDFDB74047D74BFA8710A8130FBF87B050E68B9FCA74542C62EF1A54F737B26",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayRequestPolicy.cs",
+      "sha256": "F8C987E70E6CD1FD4FC6941685B7C8E2602EE30B0B001EFA45C0A2431C10B68D",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayUsageExtractor.cs",
+      "sha256": "16407FC26A48A926CE256726D6143FF8E1AE2813C5C88FFC49339B31ED0F80BA",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/HistoryStreamingChatDriver.cs",
+      "sha256": "D52185A02445B7828567D2908672F437CDD68A29E79F14FB3971F42FA3C4CFF5",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/ProviderHistoryChatClient.cs",
+      "sha256": "8036710BD5D1E4B003F0B72E2BC5E7221DF60E4E2EEBDDEADEB79037541AC67F",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/ProviderHistoryFailureOutcome.cs",
+      "sha256": "46C32D57449B385C57A49C6A28F272379A619E4EAB6A977D099CD69B3A9095E6",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/History/ProviderHistoryObservation.cs",
+      "sha256": "358709F9841F84C725AB9A2F98990F1E3CAE07F8AF1AC1B888DF9CE08E13F057",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Providers/Diagnostics/ProviderFailureDisclosurePolicy.cs",
+      "sha256": "13C58C5D50F57D2192AB22A4B5C2A7681D5B3366AD36C3B7D57F198E5F5B7682",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/HistoryEntry.cs",
+      "sha256": "B205FF5A8EEA6A28E55C06E148F22B7E8FAD4568857F823D9F9B25A3E4F3AEDD",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/HistoryInvocation.cs",
+      "sha256": "4B2776B93E75880C379C51424D197AFDD943DC5DDC7170C9CDBB69613DE78CBD",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/README.md",
+      "sha256": "88F6CF1538DAB6F2518C0FA113F2596F263093484AD05AD76457C12998F595F2",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/HistoryTextCapture.cs",
+      "sha256": "5AF70403E891EEDB54682753DC1E3D212A1F3C343A0EFE7EDD046907A149BECF",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/README.md",
+      "sha256": "1E09FEA09FA10DFF7ADBB6CFAED8157A2D84C83D91A5B28390447641774CA6EB",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryDetailStore.cs",
+      "sha256": "9BF1F0579F66824910FDC156169E1DAA1B25671AF5E9291344290E3C9ADB45E8",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryInvocationRecorder.cs",
+      "sha256": "9A0C4B51F5A27F9417CD9AE865DA73BDA147664DE4AA38083201C9CBEFB66A43",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryRetentionStore.cs",
+      "sha256": "81276F0298CE61F8BA54C1F11859B3FE5EC6AED89007EBAED506263E03EC3F97",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryTextProtector.cs",
+      "sha256": "067EB71C1E833F0646F2FE4547588C2B2492DD4279845DE7BC48B20622EF3EF2",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/README.md",
+      "sha256": "9F84EFB43E924684EB6F725BFBD07E55EEFFD4B72749D22D67FC95537C09756F",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/README.md",
+      "sha256": "0503229363A90D3842CB1C68104935922F107CF3FDAC0815A9A6DDB09B55D698",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogQueryService.cs",
+      "sha256": "E63477BC1069763BFC5EBF03AD6F7E9AAAC62F21A7D38CD832D453571DE1CFF4",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/HistoryPersistenceTestDatabase.cs",
+      "sha256": "C7A07FBC51D92FA8509C9B83DFE9E3E865DE8649E7017C14448854F0D4987777",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/ProviderHistoryCaptureIntegrationTests.cs",
+      "sha256": "87136EDFEFB93EA6A413187B00A15F39F3F56F3BFF46422FEBFF23946A80A919",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/ProviderHistoryPersistenceIntegrationTests.cs",
+      "sha256": "9F154726F169969F0A09F632A454807B7A5FF2578E14C7056795959697113514",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/ProviderHistorySourceProjectionIntegrationTests.cs",
+      "sha256": "52339AE20EE729FAA85F64956CD4DA77B2BFDD8DEC95C48AD10FBE2F2D3405E2",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderOpenApiSchemaTests.cs",
+      "sha256": "3B103C73D6EB7B6B95F6549404BD3D80A846FC43E6F69AB44442B69156E76432",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergePerformanceTests.cs",
+      "sha256": "8FC691E5EE6355F2C3EE7C5984BE161134BC22E95ADDDB92F47043F80EF391B6",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergeRelayTests.cs",
+      "sha256": "8ECB323C3981AAAA681DF60EDE8629D7AEB69A6978639F9287C247BB27FFDBA6",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergeUpgradeTests.cs",
+      "sha256": "97154DC616B6EC11F8E57F6724DEE623626B19D46FC1E1BAB6EE3882F52CFA7C",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimeProjectionIntegrationTests.cs",
+      "sha256": "22444A1117AFF967B79A9E88F75EF06C0A134B6AFBD26BD8350E571436136B80",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderStreamingIntegrationTests.cs",
+      "sha256": "182FCA1AB99C1A86D2276D99FF7FE675E6B432053ECA1A2382BB3BCAF64C3A43",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Playwright/CanDoItAll.Tests.Playwright/ProviderHistoryPremergeUiTests.cs",
+      "sha256": "56ADB3F769A808DE2EAA6F01FF1B71141865E8485204ABE719831D359292FF15",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/MafProviderTransportBoundaryChatClientTests.cs",
+      "sha256": "60D03F47E03C811B0F203917FC60D446023A7936C9A9E3B0EBBB41DA3E2AE576",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProviderHistoryCaptureTests.cs",
+      "sha256": "9DA0EF58E734881AADCE1261E95E73F32DCC7B4B73F8C15AF3C5B1C094C7D072",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProviderHistoryLifecycleTests.cs",
+      "sha256": "D390B81605EC074EBDA56888B823980A80D5B1BA4FF27CBD2BA9473C863C63B8",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProviderHistoryTestDriver.cs",
+      "sha256": "0914BB980A28FD057C1DFE0653CB8A676E1218229069A3E6A13B9D7E1E549779",
+      "matchesOriginalProof": true
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderImageResponseTests.cs",
+      "sha256": "460DDD62747C2E712A5C10920A72AF26433B17F69E47E3F89B4B56C85F5364E3",
+      "matchesOriginalProof": true
+    }
+  ],
+  "activeSkillFilesVerified": 11,
+  "dependencies": [
+    {
+      "repository": "CanDoItAll.Components",
+      "commit": "8372c1d55f21b349f8e859470b02eeb4421e96ca",
+      "status": []
+    },
+    {
+      "repository": "CanDoItAll.FileTools",
+      "commit": "c95dd07208a6d48724443317cdc6cfe67a13020a",
+      "status": []
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "bundle://proof/SB09/finishing/5032-catalogue.jpg",
+      "sha256": "B4EEC9EAD6188C2FCF826131C055188AA58E7D341DE00BC786DB22903CF6A127",
+      "bytes": 227678
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5032-final-build.log",
+      "sha256": "3F02AAA6ED42EA82DA796F778278F78D4D02C160212C2AF03EFC7F7B0703E121",
+      "bytes": 23654
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5032-project-normal.jpg",
+      "sha256": "C7A075375F2356FD560A6D0A9E4D8C872CC6F3E9A1B7D28695C19746D17B0980",
+      "bytes": 190391
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5032-work-history.png",
+      "sha256": "3552E845AD56B4E50AFCFCDA77461DD06CE70C860124CDEC80DFA0F50CC72823",
+      "bytes": 227669
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5210-agent-request-detail.png",
+      "sha256": "50ECDB013F5BB39FCAC6245019BA46416A6230D2C3D45F37C812AC60B58E5A2D",
+      "bytes": 332860
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5210-request-history.png",
+      "sha256": "F34AF8F94DB21FED633744BC6991A62511F136077DADC1DCB03B6AA170E02C7F",
+      "bytes": 261990
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5210-simple-chat-request-detail.png",
+      "sha256": "540B9F41B85329AF08067C48FF9F04A6920BAC8CD15C9345531EFE77D61F88A6",
+      "bytes": 317152
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5214-simple-chat-reloaded.png",
+      "sha256": "15195E9213A6C0327C52955A680CA737D558630C84AF8DE6CB486BAA97D60D39",
+      "bytes": 273540
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5214-simple-chat.png",
+      "sha256": "725EBBE7427C5C01D7B81A2A68793F3D5A195332911A9E84BEB535DB0BFF86B6",
+      "bytes": 263757
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/5214-work-history.png",
+      "sha256": "112468CFEAC8C079FA867BDF9D2B6D4B8B157320E85740383047AD22228D121D",
+      "bytes": 221287
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/api-export.json",
+      "sha256": "C24CA70D2818E219222873E1D852A5A4F857024C7CA58C338402D1E66F90D8B4",
+      "bytes": 464
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/bundle-completed-validation.log",
+      "sha256": "5A883476DB93F1CF398700332ADCD924327283E5B12D92D67638C533571564B1",
+      "bytes": 114
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/bundle-prepared-validation.log",
+      "sha256": "4E31934187DB4180E0129426A7236DCDF7442EAB774AADCC04D3E572901F650D",
+      "bytes": 113
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/catalog-after.log",
+      "sha256": "B572C0DFDC21B6D545809826914BC209CB292F218512E43E1EB9D5080F5B4EFB",
+      "bytes": 24051
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/catalog-after.trx",
+      "sha256": "36F500802584918BC713388A2C9DBC195C1723C238239CA7A5BB272B72B96DE1",
+      "bytes": 8045
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/catalog-before.log",
+      "sha256": "CBF02D2EB09CD9159CE2ED058609FF9EDB175CD23DA3A70A4E0F078661E07C78",
+      "bytes": 24110
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/catalog-before.trx",
+      "sha256": "6940DE24453B64C2F57532BB156EF9CB50D66D044F9A4F5F7D42197DA23D43C6",
+      "bytes": 5451
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/codeanalytics.json",
+      "sha256": "FF7D8F9CF55925721CEAFAAD2F85D2DA982B2A9EC7340232F39092B7E0B2E280",
+      "bytes": 5399
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/commands.md",
+      "sha256": "B7B1AD6C79C4B2E2AB6157192262759A108DCDD299D1BE50252D13B6A53066F0",
+      "bytes": 4835
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/dependency-graph.json",
+      "sha256": "A3EE32E8D17D1350E9FB566AD04A881F3D4CB9C0B217ECF53851AB3455843B4E",
+      "bytes": 258
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/docker-final-build.log",
+      "sha256": "597883DCB68E79DF2F1842AEF40C2F2F9F9D55B10479CB61F573EF6774D4297C",
+      "bytes": 50145
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/docker-final-replacement.log",
+      "sha256": "5DAE359668A4D2918299DA92E78EBE125F72CE7D2E7EBD91DAE07B0AC78E2C2E",
+      "bytes": 343
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/installed-skill-hashes.json",
+      "sha256": "4629CF894E14E1FC513957DCBE0D621D5A8146BB57F40A8CB2B7BD3263E3F475",
+      "bytes": 1933
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/localAgentProof.json",
+      "sha256": "0013BC114FC711994E0CD14459A8E008E00A7DCAE8C61CA6D7188E587E8184B5",
+      "bytes": 14237
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/log-review.json",
+      "sha256": "9037BCDBFFC55FC793BA1C39BD672971A1635A13A48E809C73FB0A8CE0619FA0",
+      "bytes": 497
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/publisherAgentProof.json",
+      "sha256": "199FF228DA5DE868B7C02D401076F6641788F4809EA53225AF2D53D629098304",
+      "bytes": 2309
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/publisherFinalRows.json",
+      "sha256": "4B8938A966F202F68A5E878ED8E436103166F7F373C7C79DB257E57B551130B7",
+      "bytes": 2069
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/publisherSimpleProof.json",
+      "sha256": "C713C65450FD5117D77BDBB70A4969897FB487D34456823D45F1FCF5AA6348B5",
+      "bytes": 1652
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/runtime.json",
+      "sha256": "B43AF92BF762468A6D7965C09D4BB9BFCAF6D6F402D641701B085FEE97452D80",
+      "bytes": 3453
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/shared-file-ground-truth.json",
+      "sha256": "F2E1F7F959B0CFEE2740FE187DFBA602C92B8141D5CC72017FCEE957FF963C51",
+      "bytes": 785
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/sharedAgentProof.json",
+      "sha256": "E6ED5384B68DBB39F4E4320713E109C09F600F03C4780183388B2B40D399C105",
+      "bytes": 10801
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/sharedinfo-openapi-validation.log",
+      "sha256": "BE44367A4E026749248F741E1F69187F1F0DF93FEF074A1846C54DA9986A1506",
+      "bytes": 459
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/sharedinfo-validation.log",
+      "sha256": "A99ACC1A50AD22EC44F502C2798A91D643F5730808F682BD235E8D8560DDFFB6",
+      "bytes": 169
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/simpleChatProof.json",
+      "sha256": "D642CB51EFA827EDAB6885A71B58AF151DCAAEB894043000AC76FCA100A12E11",
+      "bytes": 1797
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/simpleChatReloadProof.json",
+      "sha256": "506A2246F382AA24A6D8C63961A09E715A68B75240ACBA9EFC44E91F66A5758F",
+      "bytes": 1494
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/skills-install-preview.log",
+      "sha256": "20E4EE913D890391A1B04AF9E251A4B544518D383D347BFD9555A87B02C7D0F9",
+      "bytes": 633
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/skills-install.log",
+      "sha256": "82B9F9B8A7B8B949C24AAAEF26B8685054D7D3E15136AB717CAC27B90484ACA6",
+      "bytes": 647
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/skills-validation.log",
+      "sha256": "5DF24F98D713A131E78A8E052B7CEE87A19CB3611595617C940DD016A1762D41",
+      "bytes": 176
+    },
+    {
+      "path": "bundle://proof/SB09/finishing/test-postgres-cleanup.log",
+      "sha256": "F24C4F1A7933B3F207C4B2313612C7AAF51DEFD0B27DD6835DEC7E56DD69D73A",
+      "bytes": 188
+    }
+  ]
+}

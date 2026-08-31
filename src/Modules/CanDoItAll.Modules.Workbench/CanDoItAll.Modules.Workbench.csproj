@@ -42,6 +42,7 @@
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="..\..\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />

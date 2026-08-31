@@ -1,4 +1,4 @@
-﻿@page "/projects/{ProjectId:guid}/structure"
+@page "/projects/{ProjectId:guid}/structure"
 @* codex-capsule
 kind: page
 name: ProjectStructurePage
@@ -14,6 +14,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.AgentFramework.Providers
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
+@using CanDoItAll.Conversations.Shell
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.Modules.Security
@@ -43,7 +44,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectStructurePage> Logger
-@inject IFloatingAgentChatCoordinator FloatingAgentChatCoordinator
+@inject IConversationShellCoordinator ConversationShellCoordinator
 @implements IAsyncDisposable
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
@@ -122,7 +123,7 @@ else
                                                        ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
                                                        FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
-                                                       AgentWindowVisible="@FloatingAgentChatCoordinator.Snapshot().IsCatalogVisible"
+                                                       AgentWindowVisible="@ConversationShellCoordinator.Snapshot().IsCatalogVisible"
                                                        GanttViewVisible="@IsGanttViewVisible"
                                                        ActiveTool="@canvasToolMode"
                                                        CanUseDependencyTool="@(selectedNode is not null)"

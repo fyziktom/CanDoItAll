@@ -1,0 +1,9 @@
+
+Name                            Kind    Status  Target
+----                            ----    ------  ------
+_candoitall-api-shared          Support Preview C:\Users\lucys\.codex\skills\_candoitall-api-shared
+candoitall-api-agents           Skill   Preview C:\Users\lucys\.codex\skills\candoitall-api-agents
+candoitall-api-llm-chats        Skill   Preview C:\Users\lucys\.codex\skills\candoitall-api-llm-chats
+candoitall-api-shared-providers Skill   Preview C:\Users\lucys\.codex\skills\candoitall-api-shared-providers
+candoitall-api-workflows        Skill   Preview C:\Users\lucys\.codex\skills\candoitall-api-workflows
+

@@ -1,0 +1,24 @@
+# Finishing command and artifact index
+
+All commands ran from the product repository unless stated otherwise. Release uses local Components/FileTools source references. Secrets and connection strings are deliberately omitted; inference was performed through the visible app UI using existing configured providers.
+
+| Operation | Command / interaction | Result / artifact |
+| --- | --- | --- |
+| Final local build | dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release /m:1 | exit0, zero warnings/errors; 5032-final-build.log |
+| Normal running host | dotnet run --project src/App/CanDoItAll.Web -c Release --no-build --launch-profile http, launched hidden | Web PID58036 / parent22496; runtime.json |
+| Failing-first regression | dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj -c Release --artifacts-path artifacts/premerge /m:1 --filter FullyQualifiedName~Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close --logger trx --results-directory .artifacts/premerge-finishing-20260831/tests; isolated PostgreSQL control on52039 | one expected assertion failure; catalog-before.log / catalog-before.trx |
+| Passing affected regression | Same test project/configuration with the three-part FQN selector in reviews/05-finishing-acceptance.md; isolated52039 PostgreSQL | expected4, actual4, zero skipped/failed; catalog-after.log / catalog-after.trx |
+| Docker image | docker buildx build --load --build-context components=../CanDoItAll.Components --build-context filetools=../CanDoItAll.FileTools -f src/App/CanDoItAll.Web/Dockerfile -t candoitall-app:premerge-aadd95315-catalog .; BUILD_* provenance arguments identify aadd95315 plus source-diff fingerprint | successful Release publish; docker-final-build.log; image identity in runtime.json |
+| Preserve live Docker configurations | scripts/Restart-LiveTestInstances.ps1 -Image candoitall-app:premerge-aadd95315-catalog -BackupSuffix premerge-before-catalog-20260831 | exit0; docker-final-replacement.log; environment and HostConfig equality with retained rollback containers in runtime.json |
+| Local/shared acceptance | Visible project Agents catalogue, existing agent, read-only prompt, actual tool execution, final answer; bounded two-turn existing Simple Chat | localAgentProof.json, sharedAgentProof.json, simpleChatProof.json, simpleChatReloadProof.json |
+| Publisher persistent evidence | Agents -> Request history -> Search -> Details, after completed client requests | publisherFinalRows.json, publisherAgentProof.json, publisherSimpleProof.json; inspected desktop screenshots |
+| Canonical OpenAPI | scripts/Export-ApiContract.ps1 -ExpectedProcessId 58036 -ExpectedAssemblySha256 60F188E37C58754076D6F462C236120EA7B63FB55ADC55C0A8924428F603A83D -WebAssemblyPath src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll -SharedInfoRoot ../CanDoItAll.SharedInfo -AllowPrecommit | byte equality at both canonical endpoints; api-export.json |
+| SharedInfo checks | tools/validation/Test-CanDoItAllWebOpenApi.ps1; tools/validation/Test-SharedInfo.ps1 in SharedInfo | zero failures; sharedinfo-openapi-validation.log / sharedinfo-validation.log |
+| Package synchronization | SharedInfo tools/install/codex/Install-CodexSkills.ps1, exact five packages listed in report; preview then apply | skills-install-preview.log / skills-install.log;11 source/active hashes in installed-skill-hashes.json |
+| Installed skill validation | Python .system/skill-creator/scripts/quick_validate.py for each of the four installed API skills, PyYAML isolated in ignored artifacts | all4 pass; skills-validation.log |
+| Dependency audit | Python scripts/Verify-FinishingDependencies.py |52 projects/182 edges, no cycles/unresolved; dependency-graph.json and scoped codeanalytics.json |
+| Structural gates | Python candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/providers-shared-premerge-review --profile feedback --stage prepared; same with completed | both exit0; bundle-prepared-validation.log / bundle-completed-validation.log; semantic merge gate remains Blocked |
+| Final provenance | Python scripts/Record-FinishingProof.py; git diff --check | manifest.json, original45 behavior file hashes unchanged,11 active skill hashes verified; whitespace check passed |
+| Test fixture cleanup | Verify exact created container ID, image, dynamic published52039 port and control database; docker stop --timeout 20 then docker rm --volumes that ID | test-postgres-cleanup.log; no application/data service removed |
+
+The export's working-tree status hash is the capture-time snapshot. Later proof/document changes do not change the exported running assembly or API contract; current changes are hashed in manifest.json. Test/control secrets stay in ignored artifacts and are not part of the bundle.

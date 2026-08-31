@@ -1,0 +1,51 @@
+{
+  "url": "http://localhost:5210/agents?tab=request-history",
+  "capturedUtc": "2026-08-31T11:01:40.973Z",
+  "rows": [
+    {
+      "text": "2026-08-31 11:00:41 UTC\nAttemptStarted · ProviderCallAttempt\tOpenAI default\ngpt-5.6-luna\tSharedRelay · CompleteChat\nSucceeded\tKey b28a9acb · shared-providers-e2e-client\t174 input / 40 output · Complete\nPartial estimate\t\nDetails",
+      "buttons": [
+        {
+          "text": "Details",
+          "testid": "history-details"
+        }
+      ]
+    },
+    {
+      "text": "2026-08-31 10:59:45 UTC\nAttemptStarted · ProviderCallAttempt\tOpenAI default\ngpt-5.6-luna\tSharedRelay · CompleteChat\nSucceeded\tKey b28a9acb · shared-providers-e2e-client\t91 input / 119 output · Complete\nPartial estimate\t\nDetails",
+      "buttons": [
+        {
+          "text": "Details",
+          "testid": "history-details"
+        }
+      ]
+    },
+    {
+      "text": "2026-08-31 10:47:32 UTC\nAttemptStarted · ProviderCallAttempt\tOpenAI default\ngpt-5.6-luna\tSharedRelay · CompleteChat\nSucceeded\tKey b28a9acb · shared-providers-e2e-client\t28,292 input / 1,339 output · Complete\nPartial estimate\t\nDetails",
+      "buttons": [
+        {
+          "text": "Details",
+          "testid": "history-details"
+        }
+      ]
+    },
+    {
+      "text": "2026-08-31 10:47:21 UTC\nAttemptStarted · ProviderCallAttempt\tOpenAI default\ngpt-5.6-luna\tSharedRelay · CompleteChat\nSucceeded\tKey b28a9acb · shared-providers-e2e-client\t19,048 input / 168 output · Complete\nPartial estimate\t\nDetails",
+      "buttons": [
+        {
+          "text": "Details",
+          "testid": "history-details"
+        }
+      ]
+    },
+    {
+      "text": "2026-08-31 10:47:12 UTC\nAttemptStarted · ProviderCallAttempt\tOpenAI default\ngpt-5.6-luna\tSharedRelay · CompleteChat\nSucceeded\tKey b28a9acb · shared-providers-e2e-client\t15,790 input / 155 output · Complete\nPartial estimate\t\nDetails",
+      "buttons": [
+        {
+          "text": "Details",
+          "testid": "history-details"
+        }
+      ]
+    }
+  ]
+}

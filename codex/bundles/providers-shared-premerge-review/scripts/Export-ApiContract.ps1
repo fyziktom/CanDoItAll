@@ -64,10 +64,14 @@ $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json -AsHa
 $manifest.source.branch = $branch
 $manifest.source.commit = $baseline
 $manifest.source.workingTreeClean = $status.Count -eq 0
-$manifest.source.workingTreeNote = 'Pre-merge capture. Commit identifies the baseline; changed-file hashes in product SB09 proof identify uncommitted repairs. No automatic commit was made.'
+$manifest.source.workingTreeNote = if ($status.Count) {
+    'Pre-merge capture from the committed repair baseline plus uncommitted finishing changes. Product SB09 finishing proof identifies changed-file hashes. No automatic commit was made.'
+} else {
+    'Capture from the recorded clean source commit. No automatic commit was made.'
+}
 $manifest.source.workingTreeStatusSha256 = $statusHash
 $manifest.source.captureNote = "Identified Release host PID $ExpectedProcessId; Web assembly SHA-256 $assemblyHash. Both canonical endpoints returned identical $($openApiBytes.Length)-byte documents. Runtime details remain in product proof."
-$manifest.source.generatedUtc = [DateTimeOffset]::UtcNow.ToString('O')
+$manifest.source.generatedUtc = [DateTimeOffset]::UtcNow.UtcDateTime.ToString('O')
 $manifest.artifact.sha256 = $hash
 $manifest.artifact.openapiVersion = $document.openapi
 $manifest.artifact.documentTitle = $document.info.title

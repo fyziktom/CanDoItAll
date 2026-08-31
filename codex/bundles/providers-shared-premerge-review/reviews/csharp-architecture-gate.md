@@ -1,6 +1,6 @@
 # C# Architecture Gate Result
 
-Status: Pass with follow-up for implemented SB01–SB07; final merge closure remains blocked by SB08/SB09 proof and authority.
+Status: Pass with follow-up for implemented SB01–SB08 and the bounded finishing UI repair; final merge closure remains blocked by SB09 original host proof and independent review.
 
 ## Findings
 
@@ -11,9 +11,13 @@ Status: Pass with follow-up for implemented SB01–SB07; final merge closure rem
 | Resolved | Quoted credentials and sanitized timeout causes were mishandled | Decrypted persistence tests, real OpenAI driver HttpClient deadline, boundary unit negatives | Keep redaction before encryption and typed timeout flag |
 | Resolved | Orphan input tombstones accumulated; removal alone could recapture expired input | Actual recorder retry/revision test and populated retention/transfer tests | Preserve frozen input expiry and bounded cleanup |
 | Follow-up | Existing request-policy and composition files remain large | Scoped CodeAnalytics and original inventory | Do not expand unrelated responsibilities; no size-only extraction in this repair |
-| Proof | Final canonical export, active packages, independent verifier and original three-app gate remain open | SB08/SB09 and historical handoff | No merge recommendation until resolved |
+| Proof | Canonical export/active packages and live finishing lane pass; independent verifier and original three-app gate remain open | SB08/SB09 and reviews/05-finishing-acceptance.md | No overall merge recommendation until resolved |
 
-## Dependency direction
+## Finishing UI dependency checkpoint
+
+Workbench UI now references Conversations.Shell UI directly to drive the actual rendered catalogue; no inward provider/domain dependency. Before snapshot snap-20260831103116-dfe9b686 loaded only Workbench, so its empty filtered edge list is not whole-graph proof. After snap-20260831104137-dfe9b686 loads both projects, shows the intended edge and zero cycles, with two generated-attribute DEP0002 duplicates. The explicit reachable ProjectReference audit covers52 projects/182 edges, no unresolved references/cycles and no Shell->Workbench edge. Four focused page/shell component tests pass after the new case failed before the repair. No new partial or project.
+
+## Original dependency direction
 
 Current snapshot: snap-20260831000620-9c068da1, nine affected projects / 436 documents; no scoped dependency cycles. See sb09-codeanalytics.json. Three pre-existing factory DI resolution warnings remain at composition registration lines 99/101/103. The tool reports zero scoped EF entities and is not used as persistence completeness proof; actual migrations and PostgreSQL tests provide that evidence.
 

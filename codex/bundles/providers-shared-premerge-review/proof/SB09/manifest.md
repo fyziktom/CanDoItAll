@@ -1,6 +1,6 @@
 # SB09 governed proof manifest
 
-Status: BLOCKED for final closure; local implementation/validation complete. Owned requirements R01–R10 and raw notes N01–N06.
+Status: BLOCKED for final closure only on original three-application proof and independent implementation review. Owned requirements R01–R10 and raw notes N01–N07. Finishing live acceptance and SB08 are complete. Current baseline aadd953150e7f659e4060ced6505621c705ea61f plus UI repair: bundle://proof/SB09/finishing/manifest.json and bundle://reviews/05-finishing-acceptance.md. Earlier hashes below are preserved historical checkpoint evidence, not silently regenerated under a different baseline.
 
 - Semantic contract: bundle://proof/SB09/semantic-invariants.md
 - Changed source/test/docs/skill hashes: bundle://proof/SB09/changed-files.json
@@ -16,7 +16,7 @@ Status: BLOCKED for final closure; local implementation/validation complete. Own
 - Verifier scope/remaining review: bundle://proof/SB09/verifier-review.md
 - Structural validation: bundle://reviews/execution-structure-validation.txt and bundle://reviews/execution-completed-structure-validation.txt (Pass); semantic final closure remains Blocked
 
-## Source identity
+## Original source identity
 
 Product branch providers-shared, baseline bb154a0ac4df3b3da092246db30e516521dde7c4; reviewed product head 3fc10d2db7ba7e4e15bc94f50e66f815f31c4219; development 1625b336e4f60ddb64987240c3a3dc485591d20f. Working tree is intentionally uncommitted. The source manifest records SHA-256 before/after for changed files, with null before for new files; proof/raw output is indexed separately to avoid recursive self-hashing.
 
@@ -34,9 +34,9 @@ The two migration lanes preserve actual values, canonical file hashes, identitie
 
 ## Open gates
 
-- Final canonical localhost:5032 export/SharedInfo support manifest+README and live-byte parity await identified-host and explicit pre-commit capture authority. Existing draft source skills are not installed yet.
-- Repository/active skill hash parity is therefore pending for _candoitall-api-shared, candoitall-api-shared-providers, candoitall-api-agents, candoitall-api-llm-chats and candoitall-api-workflows. Preview exists; no active copy is claimed current.
+- Closed2026-08-31: canonical localhost:5032 capture and SharedInfo snapshot/manifest/README pass identified-host byte parity. SHA-25614FE4C527863FF84948ED96D3D7A3B16FD46D3E315E673E96EEF3911C3D2A52B; bundle://proof/SB09/finishing/api-export.json.
+- Closed2026-08-31: all11 source/active files across the five selected packages match after installation; bundle://proof/SB09/finishing/installed-skill-hashes.json. Four skill validators and both SharedInfo validators pass.
 - Original three-application SB07 lifecycle/image authority is unchanged and unexecuted. Two-instance history or isolated visual proof is not a substitute.
 - A separate independent execution verifier is required; current source audit is by the implementing agent plus CodeAnalytics.
 
-This manifest deliberately blocks final closure until these facts are resolved. No merge, push, commit or deployment was performed.
+This manifest deliberately blocks overall merge closure on the two remaining gates. The finishing request authorized adoption on5032/5210/5214 and bounded live inference; these actions passed and the apps remain running. No merge, push or commit was performed.
