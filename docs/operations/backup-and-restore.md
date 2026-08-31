@@ -3,8 +3,9 @@
 The `db-data` and `app-data` volumes form the authoritative development state. Use a
 PostgreSQL-native logical backup for the database and capture `app-data` only while the
 application is stopped so workspace files, control-plane state, Data Protection keys,
-and local vault payloads remain consistent. This guide covers only the repository's
-development Compose instance. For the separate installed Windows database, use
+and local vault payloads remain consistent. The commands below target the repository's
+default development Compose instance; the persistent manual shared-provider client has
+[a separate recovery procedure](#manual-shared-provider-client). For the installed Windows database, use
 [Installed Windows Web App](installed-web-app.md#backup-and-restore).
 
 ## Provider sharing and history preservation
@@ -26,6 +27,35 @@ used as an automatic substitute for a consistent backup.
 
 The premerge upgrade/preservation checks use disposable databases. Their fixture
 creation or cleanup commands must never target a live development or installed profile.
+
+## Manual Shared-Provider Client
+
+The manual client's external `/data` volume and its existing client-A PostgreSQL
+database form one recovery unit. Do not use the default-development commands below for
+this instance. Stop only the verified client and confirm its writers have finished
+before capturing a native database dump and a filesystem archive of the named volume.
+Keep the matching vault, Data Protection keys, mount identity and private runtime
+configuration with the backup; never print secrets or copy them into tracked proof.
+
+The migration operator uses [Docker's archive implementation](https://github.com/moby/go-archive/blob/main/archive.go),
+which truncates filesystem modification times to whole seconds. Restore validation
+compares those recorded times exactly; fractions below one second are not preserved.
+File bytes, paths, modes and descendant UID/GID remain exact. Only `/data` ownership
+changes to `1654:1654`; its mode and recorded whole-second modification time are restored
+explicitly. Timestamps embedded in application JSON remain unchanged file content.
+
+Restore into a new empty named volume and an isolated database. Verify file integrity,
+ownership for the configured non-root user, health and representative workspace and
+credential access before cutover. Normal stop and container replacement preserve the
+external volume; never remove it with volume pruning or an E2E reset operation.
+
+The old `.artifacts/shared-providers-e2e/client-a/data` directory is only the migration
+snapshot. Once the client has written to the named volume, starting an old bind-mounted
+rollback container would combine stale files with the current database. For an image
+rollback, preserve the current volume and database if the old image is compatible.
+For a data rollback, restore the matching database and filesystem backup together.
+Keep the old container stopped and retain both copies until recovery is validated;
+never run two client containers against the same database and data.
 
 ## Backup
 
