@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using CanDoItAll.Infrastructure.Persistence;
@@ -165,6 +166,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
             services.AddSingleton<TimeProvider>(fixture.Clock);
             services.AddSingleton<IDatabaseRuntimeState>(fixture.Runtime);
             services.AddSingleton<IDatabaseRuntimeWriteFence>(fixture.Runtime);
+            services.AddSingleton<ICanonicalRuntimeDatabase>(fixture);
             services.AddProviderHistoryPersistence();
         }).Build();
         await host.StartAsync();
@@ -202,6 +204,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
             services.AddSingleton<TimeProvider>(fixture.Clock);
             services.AddSingleton<IDatabaseRuntimeState>(runtime);
             services.AddSingleton<IDatabaseRuntimeWriteFence>(runtime);
+            services.AddSingleton<ICanonicalRuntimeDatabase>(fixture);
             services.AddSingleton<IHistorySourceMaintenance>(broken);
             services.AddSingleton<IHistorySourceMaintenance>(fileIo);
             services.AddProviderHistoryPersistence();

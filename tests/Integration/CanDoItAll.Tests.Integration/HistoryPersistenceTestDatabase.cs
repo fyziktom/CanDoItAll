@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
-internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable {
+internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanonicalRuntimeDatabase {
     private readonly PostgresTestDatabaseLease lease;
     private HistoryPersistenceTestDatabase(PostgresTestDatabaseLease lease) {
         this.lease = lease;
@@ -26,6 +26,15 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable {
         Processor = new(Factory, Clock, NullLogger<HistoryOutboxProcessor>.Instance);
         Policy = new(Factory, Access, Clock,
             new(Access, Reads, Clock, NullLogger<HistoryAuthorizedOperation>.Instance), Runtime, Runtime);
+        Profile = new(
+            new() {
+                DisplayName = "Provider history test database",
+                ProviderKind = DatabaseProviderKind.PostgreSql,
+                SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+                PostgreSql = new() { DatabaseName = lease.DatabaseName }
+            },
+            DatabaseProfileResolutionSource.ExplicitOverride,
+            lease.ConnectionString);
     }
 
     internal TestFactory Factory { get; }
@@ -44,6 +53,8 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable {
     internal HistoryPolicyStore Policy { get; }
     internal HistoryPartition Partition { get; private set; }
     internal HistoryMaintenanceContext Maintenance => new(Partition, Runtime.GetSnapshot(), Runtime);
+    public ResolvedDatabaseProfile Profile { get; }
+    public long Generation => Runtime.Generation;
 
     internal static async Task<HistoryPersistenceTestDatabase> CreateAsync(bool migrate = false) {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
