@@ -25,4 +25,4 @@ Product owners adapt their domain/runtime state into the contracts in this proje
 ## Related docs
 
 - Repository architecture: `docs/architecture/overview.md`
-- Agent Chat refactor ADR: `codex/bundles/Agent-Chat-UI-Reuse-Refactor/architecture/00-architecture-decision-record.md`
+- Conversation components boundary: `docs/architecture/conversation-components-boundary.md`

@@ -26,8 +26,11 @@ public sealed class ProviderHistoryPremergeUiTests(PlaywrightAppFixture fixture,
         var factory = new ContextFactory(new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(fixture.DatabaseConnectionString).Options);
         var providerId = await SeedVisualRowsAsync(factory);
-        var evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "codex", "bundles",
-            "providers-shared-premerge-review", "proof", "SB09", "screenshots");
+        var evidence = Path.Combine(
+            PlaywrightTestHostPaths.RepositoryRoot,
+            "artifacts",
+            "playwright",
+            "provider-history");
         Directory.CreateDirectory(evidence);
         await using var context = await fixture.Browser.NewContextAsync(new() {
             ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1

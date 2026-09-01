@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +17,7 @@ public sealed class HistoryMaintenanceHostedService(
     HistoryOutboxProcessor projection,
     HistoryRecoveryStore recovery,
     HistoryRetentionStore retention,
+    ICanonicalRuntimeDatabase database,
     IHostApplicationLifetime lifetime,
     TimeProvider clock,
     ILogger<HistoryMaintenanceHostedService> logger) : BackgroundService {
@@ -23,6 +25,12 @@ public sealed class HistoryMaintenanceHostedService(
     private int nextSource;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        var providerKind = database.Profile.Profile.ProviderKind;
+        if (providerKind != DatabaseProviderKind.PostgreSql) {
+            logger.LogInformation("History maintenance is inactive for database provider {ProviderKind}; provider history persistence requires PostgreSQL.",
+                providerKind);
+            return;
+        }
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var registration = lifetime.ApplicationStarted.Register(() => started.TrySetResult());
         await started.Task.WaitAsync(stoppingToken);

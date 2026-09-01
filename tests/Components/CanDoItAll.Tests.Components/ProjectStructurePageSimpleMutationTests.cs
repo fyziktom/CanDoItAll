@@ -17,6 +17,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -27,7 +28,8 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectStructurePageSimpleMutationTests
 {
     [Fact]
-    public async Task Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close() {
+    public async Task Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close()
+    {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var shell = harness.Context.Services.GetRequiredService<IConversationShellCoordinator>();
@@ -36,16 +38,20 @@ public sealed class ProjectStructurePageSimpleMutationTests
             parameters => parameters.Add(page => page.ProjectId, projectId));
         WaitForCanvasWorkbench(cut);
 
-        cut.Find("[data-testid='project-structure-agents-toggle']").Click();
+        Assert.False(shell.Snapshot().IsCatalogVisible);
+        await cut.Find("[data-testid='project-structure-agents-toggle']")
+            .ClickAsync(new MouseEventArgs());
 
         Assert.True(shell.Snapshot().IsCatalogVisible);
         Assert.Equal(ConversationCatalogKindFilter.Agents, shell.Snapshot().KindFilter);
         await cut.InvokeAsync(shell.HideCatalog);
 
-        cut.Find("[data-testid='project-structure-agents-toggle']").Click();
+        await cut.Find("[data-testid='project-structure-agents-toggle']")
+            .ClickAsync(new MouseEventArgs());
 
         Assert.True(shell.Snapshot().IsCatalogVisible);
-        cut.Find("[data-testid='project-structure-agents-toggle']").Click();
+        await cut.Find("[data-testid='project-structure-agents-toggle']")
+            .ClickAsync(new MouseEventArgs());
         Assert.False(shell.Snapshot().IsCatalogVisible);
     }
 
