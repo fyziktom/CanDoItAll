@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-31T23:09:14.737265+00:00",
+  "generated_utc": "2026-09-01T21:36:09.997266+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14236,
+  "allowance_count": 14245,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -70966,13 +70966,49 @@
     {
       "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "235c00d9c88c1c27ddc06d5fd8c48de5db6b55eaf96a7c2c2f38561dbf1ed8e4",
+      "source_fingerprint": "17c9649210045dcda7b54354989cbe23670c798b9b3a15d0ac71a181ad6e3258",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "246d16f6a030f00b9a87dde17a92de9b89e66b385e8995ef725121412bf8480f",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "617d6fb4d57cbf2b3ba0b71e4ce347785acf152b0f9783d8e196dc1b386dd2f4",
       "count": 1
     },
     {
       "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "68021679efe3e9e17bfeba3ff96eeb0994c8c9cfdcc29edbedac856becdfcf1d",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "6cc5cfe0059776f3257a390e1759d54e2eaa353d2f6c9bd88950b5463423de9e",
+      "count": 2
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "79ae19cd18bcd3650c62142dba5287dede73ceebd6b1a32fcc97c741731e7aa3",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b45766d01e70b6f44d743744401ee9600b630f939d0d22ad8a3911432f247868",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ce8ab9b942ced2e9b3f1843fbd9379d21f86e45d1fab0ecf2102131897f03317",
       "count": 1
     },
     {
@@ -70991,6 +71027,18 @@
       "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
       "category": "case-policy",
       "source_fingerprint": "332ee2dffefdae27dde24bcd04dfc2861cdb5d8c09532a03bd5906a50a7182fa",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "path-api",
+      "source_fingerprint": "28497941a93858b66ea37f7586d14dc53470dec4163377c476cddfb9b4efa2cc",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/MacOsManagerProcessDiscovery.cs",
+      "category": "path-api",
+      "source_fingerprint": "36ad1b999e5bec14d2b60acb3c42e912dcdca539e70f137bb2aec9287419e0b4",
       "count": 1
     },
     {
