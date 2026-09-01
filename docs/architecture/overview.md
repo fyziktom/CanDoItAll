@@ -25,6 +25,28 @@ flowchart TB
     Infrastructure --> PostgreSQL[("PostgreSQL")]
 ```
 
+## Shared provider and request history boundaries
+
+`SharedProviders.Abstractions` owns framework-neutral protocol values and ports;
+`SharedProviders.Http` owns HTTP adapters, bounded JSON/SSE parsing and network policy.
+ProviderManagement owns publication, source/import reconciliation and catalog/routing
+projection. Web owns HTTP authorization, correlation and generated schemas; Composition
+selects transports and registers the production implementations.
+
+ProviderHistory Abstractions separates attempt/caller/owner/policy contracts from the
+Application recorder, capture lifecycle and projections, and the PostgreSQL Persistence
+stores. The MAF/provider and lightweight LLM adapters observe application-visible calls.
+Canonical source content is linked rather than copied into standalone details. UI
+components explicitly search and load authorized details; they do not own persistence.
+
+Catalog cache hits check persisted publication/profile versions and required-secret
+existence before reuse. Input retention freezes the deadline per logical request/input
+revision; deleting an expired orphan tombstone cannot renew a late retry's capture.
+These responsibilities stay in existing owners without new project references.
+
+See [shared providers](../shared-providers.md) and
+[request history](../provider-request-history.md) for operating behavior.
+
 ## Layer Responsibilities
 
 | Layer | Responsibility |

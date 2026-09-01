@@ -38,6 +38,13 @@ compatibility redirect that preserves supported definition, conversation, and vi
 The server-side UI orchestrates typed application services. Remote automation uses the HTTP routes
 below; UI components do not duplicate provider execution, transaction, lease, or transcript rules.
 
+When API authorization is enabled, an anonymous trusted-local browser receives only
+the three Simple Chats scopes in its circuit-local access identity. OS headless mode
+does not disable this browser capability. Existing authenticated users retain their
+actual scopes; API requests and authorized-file HTTP routes still require authentication.
+See [local container browser access](operations/containers.md#local-browser-access-with-api-authorization-enabled)
+for the explicit, loopback-published Docker ingress configuration.
+
 ## Runtime Bounds And Configuration
 
 LLM Chat execution remains a database-backed queue. `LlmChats:Dispatcher:WorkerCount` starts a fixed

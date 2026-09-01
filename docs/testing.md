@@ -109,6 +109,40 @@ Quarantine is not a passing result. Remove a quarantine only with focused replac
 
 Run this after changing maintained Markdown, repository metadata, public paths, or source-truth claims represented by the validator.
 
+## Portability Static Gate
+
+This gate is mandatory before closing any change under `.github`, `src`, `Templates`,
+or `tools`, or any protected root build/configuration file. The baseline fingerprints
+reviewed portability-sensitive source. A legitimate source edit can therefore produce
+both an `ADDED` finding and a `STALE` allowance even when the resulting code remains
+portable.
+
+Run the same tooling used by CI from the repository root:
+
+```powershell
+$portabilityScan = Join-Path ([System.IO.Path]::GetTempPath()) "candoitall-portability-scan.json"
+
+python ./tools/Validation/Portability/test_enforce_portability_baseline.py
+python ./tools/Validation/Portability/test_scan_artifacts_for_secrets.py
+python ./tools/Validation/Portability/scan_portability.py --repo-root . --output $portabilityScan --tracked-only
+python ./tools/Validation/Portability/enforce_portability_baseline.py --scan $portabilityScan --baseline ./tools/Validation/Portability/portability-risk-baseline.json
+```
+
+If enforcement reports a delta, inspect every finding. Repair new platform assumptions,
+hard-coded machine paths, shell coupling, or other genuine portability defects. When
+the source is intentionally platform-specific or a previously reviewed finding merely
+moved or disappeared, refresh the baseline in the same change only after that review:
+
+```powershell
+python ./tools/Validation/Portability/enforce_portability_baseline.py --scan $portabilityScan --baseline ./tools/Validation/Portability/portability-risk-baseline.json --write-baseline
+git diff -- ./tools/Validation/Portability/portability-risk-baseline.json
+python ./tools/Validation/Portability/enforce_portability_baseline.py --scan $portabilityScan --baseline ./tools/Validation/Portability/portability-risk-baseline.json
+```
+
+Do not use `--write-baseline` to conceal an unexplained result, weaken scanner patterns,
+or defer the update to a later change. `ADDED` and `STALE` findings both block closure
+until the code and reviewed baseline agree and the final no-write enforcement passes.
+
 ## Focused HTTP Integration
 
 For CRM/HR API changes, build the affected production project and run the real HTTP-host

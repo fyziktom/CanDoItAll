@@ -24,11 +24,30 @@ public enum AgentProviderOperationKind
     CreateOrUpdateModel
 }
 
-public sealed record ProviderDispatchQuery(
-    ProviderProfile Provider,
-    AgentProviderCapabilityKind Capability,
-    AgentProviderOperationKind Operation,
-    string Model);
+public sealed record ProviderDispatchQuery
+{
+    public ProviderDispatchQuery(
+        ProviderProfile provider,
+        AgentProviderCapabilityKind capability,
+        AgentProviderOperationKind operation,
+        string model)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ProviderModelSelectionPolicy.EnsureAllowed(provider, model);
+        Provider = provider;
+        Capability = capability;
+        Operation = operation;
+        Model = model;
+    }
+
+    public ProviderProfile Provider { get; }
+
+    public AgentProviderCapabilityKind Capability { get; }
+
+    public AgentProviderOperationKind Operation { get; }
+
+    public string Model { get; }
+}
 
 public sealed record ProviderDispatchKey(
     Guid ProviderProfileId,

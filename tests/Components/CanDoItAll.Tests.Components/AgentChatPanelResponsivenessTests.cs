@@ -791,6 +791,7 @@ public sealed class AgentChatPanelResponsivenessTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton(orchestratorService);
         context.Services.AddSingleton<IAgentExecutionActivityReader>(

@@ -8,7 +8,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowUsageObservationStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) :
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    WorkflowHistoryProjection history) :
     IWorkflowUsageObservationStore,
     IWorkflowUsageAnalyticsStore
 {
@@ -32,6 +33,8 @@ public sealed class PersistentWorkflowUsageObservationStore(
         for (var attempt = 1; attempt <= 2; attempt++)
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var transaction = dbContext.Database.IsRelational()
+                ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
             var ids = canonical.Keys.Select(id => id.Value).ToArray();
             var existing = await dbContext.Set<WorkflowUsageObservationRecordEntity>()
                 .AsNoTracking()
@@ -58,7 +61,11 @@ public sealed class PersistentWorkflowUsageObservationStore(
                 canonical.Values.Select(WorkflowUsageObservationRecordEntity.FromObservation));
             try
             {
+                await history.StageAsync(dbContext, canonical.Values, cancellationToken);
                 await dbContext.SaveChangesAsync(cancellationToken);
+                if (transaction is not null) {
+                    await transaction.CommitAsync(cancellationToken);
+                }
                 return;
             }
             catch (DbUpdateException) when (attempt == 1)
@@ -457,6 +464,8 @@ public sealed class WorkflowUsageObservationRecordEntity
 
     public Guid Id { get; set; }
 
+    public string HistoryEvidenceJson { get; set; } = "null";
+
     public Guid RunId { get; set; }
 
     public Guid WorkflowId { get; set; }
@@ -536,6 +545,7 @@ public sealed class WorkflowUsageObservationRecordEntity
     public static WorkflowUsageObservationRecordEntity FromObservation(WorkflowUsageObservation observation) => new()
     {
         Id = observation.Id.Value,
+        HistoryEvidenceJson = JsonSerializer.Serialize(observation.HistoryEvidence),
         RunId = observation.RunId?.Value ?? throw new WorkflowUsageObservationCorrelationException(observation.Id),
         WorkflowId = observation.WorkflowId.Value,
         VersionId = observation.VersionId.Value,
@@ -615,7 +625,9 @@ public sealed class WorkflowUsageObservationRecordEntity
             RecordedAtUtc,
             string.IsNullOrWhiteSpace(OriginJson)
                 ? null
-                : JsonSerializer.Deserialize<WorkflowLaunchOrigin>(OriginJson, JsonOptions));
+                : JsonSerializer.Deserialize<WorkflowLaunchOrigin>(OriginJson, JsonOptions)) {
+                    HistoryEvidence = JsonSerializer.Deserialize<CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation>(HistoryEvidenceJson)
+                };
 }
 
 internal sealed class WorkflowUsageObservationRecordEntityConfiguration :
@@ -624,6 +636,7 @@ internal sealed class WorkflowUsageObservationRecordEntityConfiguration :
     public void Configure(EntityTypeBuilder<WorkflowUsageObservationRecordEntity> builder)
     {
         builder.ToTable("AgentFramework_WorkflowUsageObservations");
+        builder.Property(record => record.HistoryEvidenceJson).HasColumnType("jsonb").HasDefaultValue("null").IsRequired();
         builder.HasKey(record => record.Id);
         builder.Property(record => record.RunId).IsRequired();
         builder.Property(record => record.NodeId).HasMaxLength(200).IsRequired();

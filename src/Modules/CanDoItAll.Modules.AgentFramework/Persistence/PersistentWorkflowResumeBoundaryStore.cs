@@ -14,13 +14,16 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     private readonly IDbContextFactory<AppDbContext> dbContextFactory;
     private readonly IDataProtector responseProtector;
     private readonly IDataProtector checkpointPayloadProtector;
+    private readonly WorkflowHistoryProjection historyProjection;
 
     public PersistentWorkflowResumeBoundaryStore(
         IDbContextFactory<AppDbContext> dbContextFactory,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        WorkflowHistoryProjection historyProjection)
     {
         this.dbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
         ArgumentNullException.ThrowIfNull(dataProtectionProvider);
+        this.historyProjection = historyProjection ?? throw new ArgumentNullException(nameof(historyProjection));
         responseProtector = dataProtectionProvider.CreateProtector(
             PersistentWorkflowExternalResponseOperationStore.DataProtectionPurpose);
         checkpointPayloadProtector = dataProtectionProvider.CreateProtector(
@@ -683,7 +686,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         }
     }
 
-    private static async Task AddBackendResultRecordsAsync(
+    private async Task AddBackendResultRecordsAsync(
         AppDbContext dbContext,
         WorkflowBackendStartResult result,
         CancellationToken cancellationToken)
@@ -733,9 +736,13 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
             .Where(observation => usageIds.Contains(observation.Id))
             .Select(observation => observation.Id)
             .ToArrayAsync(cancellationToken);
-        dbContext.Set<WorkflowUsageObservationRecordEntity>().AddRange(result.UsageObservations
-            .Where(observation => !existingUsageIds.Contains(observation.Id.Value))
-            .Select(WorkflowUsageObservationRecordEntity.FromObservation));
+        var newUsage = result.UsageObservations
+            .Where(observation => !existingUsageIds.Contains(observation.Id.Value)).ToArray();
+        dbContext.Set<WorkflowUsageObservationRecordEntity>().AddRange(
+            newUsage.Select(WorkflowUsageObservationRecordEntity.FromObservation));
+        if (newUsage.Length > 0) {
+            await historyProjection.StageAsync(dbContext, newUsage, cancellationToken);
+        }
     }
 
     private static WorkflowExternalRequestBoundaryRecord CreateBoundary(

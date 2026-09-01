@@ -1,8 +1,0 @@
-Cutover guard failed:
-- Broad runtime reference: src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/AgentFrameworkWorkspaceService.cs
-- Broad runtime reference: src/MAF/Common/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs
-- Broad runtime reference: src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs
-- Broad runtime reference: src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs
-- Broad runtime reference: src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ScenarioHarnessAgentRuntime.cs
-- Broad runtime reference: src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs
-- Broad runtime reference: src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/AgentFrameworkWorkspaceFactory.cs

@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
@@ -433,7 +435,8 @@ public sealed class LlmChatTurnTransactionIntegrationTests
             LlmChatOperationStatus.Pending,
             seeded.Now,
             0,
-            projectScope);
+            projectScope) { HistoryCaller = new(HistoryAuthenticationKind.ManagedCredential,
+                new(Guid.NewGuid()), "issuer", "client", "client credential") };
 
         var admitted = await repository.AdmitAsync(operation);
         dbContext.ChangeTracker.Clear();
@@ -442,6 +445,7 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         Assert.True(admitted.Created);
         Assert.Equal(projectScope, admitted.Operation.AttributionScope);
         Assert.Equal(projectScope, reloaded!.AttributionScope);
+        Assert.Equal(operation.HistoryCaller, reloaded.HistoryCaller);
     }
 
     [Fact]
@@ -451,7 +455,7 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         await using var dbContext = database.CreateDbContext();
         var seeded = await SeedConversationAsync(dbContext, admitted: false);
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
-        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
         var store = new EfLlmConversationStore(dbContext);
         var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var operationScope = new LlmChatOperationScopeAccessor();
@@ -495,7 +499,7 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         await using var dbContext = database.CreateDbContext();
         var seeded = await SeedConversationAsync(dbContext, admitted: true);
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
-        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
         var store = new EfLlmConversationStore(dbContext);
         var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var operationScope = new LlmChatOperationScopeAccessor();
@@ -553,7 +557,7 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         await using var dbContext = database.CreateDbContext();
         var seeded = await SeedConversationAsync(dbContext, admitted: true);
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
-        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
         var store = new EfLlmConversationStore(dbContext);
         var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var operationScope = new LlmChatOperationScopeAccessor();
@@ -590,6 +594,88 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         }));
 
         await AssertAdmittedAndNonterminalAsync(dbContext, seeded, LlmChatOperationStatus.Running);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Actual_chat_audit_links_expired_attempts_and_rolls_back_its_outbox(bool rollback) {
+        await using var history = await HistoryPersistenceTestDatabase.CreateAsync();
+        await using var dbContext = history.Factory.CreateDbContext();
+        var seeded = await SeedConversationAsync(dbContext, admitted: true);
+        history.Clock.Now = seeded.Now;
+        var source = new CanonicalEvidenceReference(history.Partition, HistorySourceKind.SimpleChat,
+            new(seeded.TurnId.ToString("N")), new(seeded.TurnId.ToString("N")));
+        var start = history.Start() with { ContentOwner = source, Workload = HistoryWorkload.SimpleChat };
+        var terminal = history.Completion();
+        await history.Capture.BeginAsync(start, null, default);
+        await history.Capture.CompleteAsync(start, terminal, null, default);
+        var retry = start with { EntryId = HistoryEntryId.New(), AttemptId = ProviderAttemptId.New() };
+        await history.Capture.BeginAsync(retry, null, default);
+        await history.Capture.CompleteAsync(retry, terminal, null, default);
+        history.Clock.Now += TimeSpan.FromDays(40);
+        Assert.Equal(2, await new HistoryRetentionStore(history.Factory, history.Clock)
+            .PurgeExpiredMetadataAsync(history.Partition, 20, default));
+
+        var operations = new EfLlmChatOperationRepository(dbContext);
+        var invocations = new EfLlmChatInvocationRecordRepository(dbContext, new(history.Outbox));
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var scope = new LlmChatOperationScopeAccessor();
+        var evidence = new LlmChatOperationEvidenceService(operations, invocations, unitOfWork, scope,
+            history.Clock, LlmChatIntegrationEventJournalFactory.Create(dbContext, operations, unitOfWork, scope, history.Clock));
+        var record = new LlmChatInvocationRecord(new(seeded.TurnId), seeded.Document.Provider.ProviderId,
+            ProviderKind.OpenAi, "Provider", "model", null, null, 1, new(1000, 500, 0),
+            LlmChatInvocationOutcome.Succeeded, "", seeded.Now, history.Clock.Now, "canonical-test") {
+                HistoryAttempts = [HistoryAttemptEvidence.Create(start, terminal), HistoryAttemptEvidence.Create(retry, terminal)]
+            };
+
+        if (rollback) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async token => {
+                await evidence.RecordInvocationAsync(record, token);
+                await dbContext.SaveChangesAsync(token);
+                throw new InvalidOperationException("Injected failure after actual invocation and outbox flush.");
+            }));
+            dbContext.ChangeTracker.Clear();
+            Assert.Empty(await dbContext.Set<LlmChatInvocationRecordRow>().ToListAsync());
+            Assert.Empty(await dbContext.Set<HistoryOutboxRow>().ToListAsync());
+            Assert.Empty(await dbContext.Set<HistoryEntryRow>().ToListAsync());
+            return;
+        }
+
+        await evidence.RecordInvocationAsync(record);
+        Assert.Equal(2, await history.Processor.ProcessAsync(history.Partition, 20, default));
+        dbContext.ChangeTracker.Clear();
+        var rows = await dbContext.Set<HistoryEntryRow>().ToArrayAsync();
+        Assert.Equal(2, rows.Length);
+        Assert.All(rows, row => {
+            Assert.Equal(10, row.InputTokens);
+            Assert.Equal(0.01m, row.Amount);
+            Assert.Equal(HistoryGranularity.ProviderCallAttempt, row.Granularity);
+            Assert.Equal(HistoryRetentionAuthority.CanonicalOwner, row.RetentionAuthority);
+            Assert.Equal(HistoryDetailState.Canonical, row.DetailState);
+            Assert.Null(row.InputDetailId);
+        });
+        Assert.Equal(0.02m, rows.Sum(row => row.Amount));
+        Assert.Empty(await dbContext.Set<HistoryDetailRow>().ToListAsync());
+        Assert.Equal(4, await dbContext.Set<HistoryOwnerRow>().CountAsync());
+        var restored = Assert.Single(await invocations.ListAsync(new(seeded.TurnId)));
+        Assert.Equal(record.HistoryAttempts, restored.HistoryAttempts);
+        Assert.Equal(1000, restored.Usage.InputTokens);
+        var adapter = new LlmChatHistorySource(history.Factory, history.Outbox);
+        var linked = await adapter.ReadAsync(source, default);
+        Assert.NotNull(linked);
+        Assert.Equal(2, linked.Attempts.Count);
+        var detail = await adapter.ReadDetailAsync(source, start.EntryId, default);
+        Assert.Equal(HistoryDetailState.Canonical, detail.State);
+        Assert.NotNull(detail.Input);
+        var progress = await adapter.ProcessAsync(history.Maintenance, null, 1, default);
+        Assert.False(progress.BackfillComplete);
+        var resumed = await new LlmChatHistorySource(history.Factory, history.Outbox)
+            .ProcessAsync(history.Maintenance, progress.Cursor, 1, default);
+        Assert.True(resumed.BackfillComplete);
+        Assert.Equal(1, await history.Processor.ProcessAsync(history.Partition, 10, default));
+        Assert.Equal(2, await dbContext.Set<HistoryEntryRow>().CountAsync());
+        Assert.Null(await adapter.ReadAsync(source with { Owner = new(Guid.NewGuid().ToString("N")) }, default));
     }
 
     private static async Task AssertAdmittedAndNonterminalAsync(
@@ -1916,7 +2002,7 @@ public sealed class LlmChatOperationDispatchClaimIntegrationTests
             var remoteScope = new LlmChatOperationScopeAccessor();
             var remoteEvidence = new LlmChatOperationEvidenceService(
                 remoteRepository,
-                new EfLlmChatInvocationRecordRepository(remoteContext),
+                new EfLlmChatInvocationRecordRepository(remoteContext, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System))),
                 remoteUnitOfWork,
                 remoteScope,
                 TimeProvider.System,
@@ -2119,7 +2205,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(row => row.AttributionScopeKind, WorkspaceScopeKind.Project)
                 .SetProperty(row => row.AttributionScopeKey, attributedProjectId.ToString("D")));
-        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions());
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), new(TimeProvider.System));
         var context = new DatabaseTransferContext(
             CreateProfile(source.ConnectionString),
             CreateProfile(target.ConnectionString),
@@ -2160,6 +2246,38 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         Assert.Equal(seeded.OperationId, operationEvent.OperationId);
         Assert.Equal(1, operationEvent.Sequence);
         Assert.Equal(LlmChatOperationEventKind.StateChanged, operationEvent.Kind);
+        var factory = new LlmChatTestDbContextFactory(target);
+        var partition = await new HistoryPartitionStore(factory).GetAsync(default);
+        Assert.Single(await targetContext.Set<HistoryOutboxRow>().AsNoTracking().ToArrayAsync());
+        var processor = new HistoryOutboxProcessor(factory, TimeProvider.System, NullLogger<HistoryOutboxProcessor>.Instance);
+        Assert.Equal(1, await processor.ProcessAsync(partition, 10, default));
+        var history = await targetContext.Set<HistoryEntryRow>().AsNoTracking().SingleAsync();
+        Assert.Equal(audit.InputTokens, history.InputTokens);
+        Assert.Equal(audit.CalculatedCostUsd, history.Amount);
+        Assert.Empty(await targetContext.Set<HistoryDetailRow>().ToArrayAsync());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(context));
+        Assert.True(await targetContext.Set<LlmChatConversationRow>().AnyAsync(row => row.Id == seeded.ConversationId));
+    }
+
+    [Fact]
+    public async Task Chat_transfer_rejects_foreign_attempt_lineage_before_any_target_commit() {
+        await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("chatforeignsource");
+        await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("chatforeigntarget");
+        await using var foreign = await HistoryPersistenceTestDatabase.CreateAsync();
+        _ = await SeedCompleteGraphAsync(source);
+        await using var sourceContext = source.CreateDbContext();
+        var row = await sourceContext.Set<LlmChatInvocationRecordRow>().SingleAsync();
+        row.HistoryAttemptsJson = System.Text.Json.JsonSerializer.Serialize(new[] { HistoryAttemptEvidence.Create(foreign.Start(), foreign.Completion()) });
+        await sourceContext.SaveChangesAsync();
+        await using var targetContext = target.CreateDbContext();
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), new(TimeProvider.System));
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(new(
+            CreateProfile(source.ConnectionString), CreateProfile(target.ConnectionString),
+            sourceContext, targetContext, true)));
+        await using var verification = target.CreateDbContext();
+        Assert.Empty(await verification.Set<LlmChatConversationRow>().ToListAsync());
+        Assert.Empty(await verification.Set<HistoryOutboxRow>().ToListAsync());
+        Assert.Empty(await verification.Set<HistoryStorageIdentity>().ToListAsync());
     }
 
     [Fact]
@@ -2170,7 +2288,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var result = await new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions()).TransferAsync(new DatabaseTransferContext(
+        var result = await new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), new(TimeProvider.System)).TransferAsync(new DatabaseTransferContext(
             CreateProfile(source.ConnectionString),
             CreateProfile(target.ConnectionString),
             sourceContext,
@@ -2207,7 +2325,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions());
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), new(TimeProvider.System));
         var transfer = new DatabaseTransferContext(
             CreateProfile(source.ConnectionString),
             CreateProfile(target.ConnectionString),
@@ -2288,7 +2406,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         {
             MaximumRecordsPerCollection = 1,
             MaximumTotalRecords = 9
-        });
+        }, new(TimeProvider.System));
 
         var exception = await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(
             new DatabaseTransferContext(
@@ -2339,7 +2457,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         {
             MaximumRecordsPerCollection = 2,
             MaximumTotalRecords = 12
-        });
+        }, new(TimeProvider.System));
 
         var result = await handler.TransferAsync(new DatabaseTransferContext(
             CreateProfile(source.ConnectionString),

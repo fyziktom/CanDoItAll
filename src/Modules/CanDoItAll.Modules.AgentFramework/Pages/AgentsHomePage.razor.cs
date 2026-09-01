@@ -87,6 +87,10 @@ public partial class AgentsHomePage
     private ProviderUsageSnapshot usage = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isUsageLoading;
     private bool refreshUsageFromRoute;
+    private bool hasUsageLoaded;
+    private bool hasOverviewLoaded;
+    private bool isRefreshingShell;
+    private bool IsHistoryHost => selectedTab is AgentWorkspaceTabs.Providers or AgentWorkspaceTabs.RequestHistory;
     private string? usageLoadError;
     private IReadOnlyDictionary<string, string?> overviewConsumerAvatarImageUrls =
         new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -103,7 +107,8 @@ public partial class AgentsHomePage
             activeRunCount,
             failedRunCount,
             selectedContextAgent,
-            selectedContextTeam);
+            selectedContextTeam,
+            includeSummaryFacts: hasOverviewLoaded);
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
         => AgentChatNavigationIdentity.CreateForLocation(
@@ -165,6 +170,7 @@ public partial class AgentsHomePage
         new(AgentWorkspaceTabs.Agents, "Agents", ResolveSummaryValue(technicalAgentCount)),
         new(AgentWorkspaceTabs.SimpleChats, "Simple Chats"),
         new(AgentWorkspaceTabs.Providers, "Providers", ResolveSummaryValue(providerCount)),
+        new(AgentWorkspaceTabs.RequestHistory, "Request history"),
         new(AgentWorkspaceTabs.Voice, "Voice"),
         new(AgentWorkspaceTabs.FloatingChat, "Floating chat"),
         new(AgentWorkspaceTabs.Chat, "Chat"),
@@ -211,7 +217,7 @@ public partial class AgentsHomePage
             ResolveOverviewValue(overview.Totals.ProviderCount),
             "cloud",
             "accent",
-            "Workspace-owned providers executed through AgentFramework.",
+                "Provider profiles executed through AgentFramework.",
             "agents-overview-metric-providers"),
         new(
             "Capabilities",
@@ -339,18 +345,23 @@ public partial class AgentsHomePage
             return;
         }
 
-        if (!refreshUsageFromRoute)
+        if (!isLoaded || IsHistoryHost || isRefreshingShell ||
+            (!refreshUsageFromRoute && (hasOverviewLoaded || hasOverviewLoadError)))
         {
             return;
         }
 
         refreshUsageFromRoute = false;
+        if (!hasOverviewLoaded) {
+            await RefreshShellAsync();
+            return;
+        }
         await LoadUsageSelectionAsync(usageSelection);
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task RefreshShellAsync()
-    {
+    private async Task RefreshShellAsync() {
+        isRefreshingShell = true;
         try
         {
             hasOverviewLoadError = false;
@@ -365,20 +376,24 @@ public partial class AgentsHomePage
         }
         finally
         {
+            isRefreshingShell = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task LoadDashboardAsync()
     {
-        var overviewTask = WorkspaceService.GetAgentOverviewAsync();
-        var usageTask = UsageQueryService.QueryAsync(usageSelection).AsTask();
+        var loadUsage = !IsHistoryHost;
+        var overviewTask = loadUsage ? WorkspaceService.GetAgentOverviewAsync() : Task.FromResult(overview);
+        var usageTask = loadUsage ? UsageQueryService.QueryAsync(usageSelection).AsTask() : Task.FromResult(usage);
         var hrAgentTask = TryResolveHrAgentAsync();
         var boundResourceCountTask = LoadBoundResourceCountAsync();
         await Task.WhenAll(overviewTask, usageTask, hrAgentTask, boundResourceCountTask);
 
         overview = await overviewTask;
+        hasOverviewLoaded |= loadUsage;
         usage = await usageTask;
+        hasUsageLoaded |= loadUsage;
         usageLoadError = ResolveUsageSourceError(usage);
         var hrAgentResolution = await hrAgentTask;
         hrAgent = hrAgentResolution.Agent;
@@ -551,12 +566,8 @@ public partial class AgentsHomePage
         effectiveRequestedTeamId = requestedTeamId;
         selectedTab = routeState.Tab;
         simpleChatRouteState = routeState.SimpleChat;
-        if (isLoaded &&
-            !isUsageLoading &&
-            usage.Selection != routeState.UsageSelection)
-        {
-            refreshUsageFromRoute = true;
-        }
+        refreshUsageFromRoute = !IsHistoryHost && isLoaded && !isUsageLoading &&
+            (!hasUsageLoaded || usage.Selection != routeState.UsageSelection);
 
         usageSelection = routeState.UsageSelection;
         if (!string.Equals(previousTab, selectedTab, StringComparison.Ordinal) ||
@@ -666,7 +677,7 @@ public partial class AgentsHomePage
 
     private string ResolveSummaryValue(int value)
     {
-        return isLoaded ? value.ToString() : "...";
+        return hasOverviewLoaded ? value.ToString() : IsHistoryHost ? "—" : "...";
     }
 
     private string ResolveOverviewValue(int value)
@@ -732,6 +743,7 @@ public partial class AgentsHomePage
         try
         {
             usage = await UsageQueryService.QueryAsync(selection);
+            hasUsageLoaded = true;
             usageLoadError = ResolveUsageSourceError(usage);
         }
         catch (Exception exception)

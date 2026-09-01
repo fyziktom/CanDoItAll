@@ -1,0 +1,652 @@
+name: ${E2E_COMPOSE_PROJECT_NAME:-candoitall-shared-providers-e2e}
+
+x-bounded-logging: &bounded-logging
+  driver: local
+  options:
+    max-size: "1m"
+    max-file: "2"
+
+x-app-environment: &app-environment
+  ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_HTTP_PORTS: "8080"
+  E2E_LOG_CONTINUITY_MARKER: ${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}
+  Api__Authorization__Enabled: "true"
+  Api__Authorization__SigningKeyFile: /run/secrets/api-signing-key
+  ControlPlane__LogsRootPath: /data/logs
+  ControlPlane__RootPath: /data/control-plane
+  ControlPlane__RuntimeTemporaryRootPath: /tmp/candoitall
+  ControlPlane__StateRootPath: /data/state
+  Database__PasswordFile: /run/secrets/db-password
+  Database__Provider: PostgreSql
+  DataProtection__KeyProtection__Provider: UnprotectedDevelopment
+  DevelopmentManager__TuningModeEnabled: "false"
+  FileTools__DesktopLaunch__Enabled: "false"
+  RuntimeHost__Profile: LinuxHeadless
+  SecretVault__AllowInsecureDevelopmentProviders: "true"
+  SecretVault__Provider: DataProtectionFile
+  SecretVault__UsageProfile: Headless
+  SecretVault__VaultPath: /data/secrets
+  Storage__WorkspaceRoot: /data/workspace
+  WebHost__HttpsRedirectionEnabled: "false"
+  WebHost__LocalOperatorUi__TrustedAddresses__0: ${E2E_LOCAL_INGRESS_GATEWAY:-10.245.0.1}
+  Workflows__ExampleSeed__Enabled: "false"
+  Workflows__ExampleSeed__SeedSampleWorkspaceFiles: "false"
+  XDG_CONFIG_HOME: /data/config
+  XDG_DATA_HOME: /data
+  XDG_STATE_HOME: /data/state
+
+x-app-base: &app-base
+  image: ${E2E_APP_IMAGE:?E2E_APP_IMAGE is required}
+  user: "${E2E_APP_UID:-1654}:${E2E_APP_GID:-1654}"
+  entrypoint:
+    - /bin/sh
+    - -ec
+  command:
+    - |
+      printf 'CANDOITALL_E2E_LOG_START %s\n' '${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}'
+      exec dotnet CanDoItAll.Web.dll
+  environment:
+    <<: *app-environment
+  healthcheck:
+    test:
+      - CMD
+      - /usr/local/bin/busybox
+      - wget
+      - --spider
+      - --quiet
+      - http://127.0.0.1:8080/health
+    start_period: 5m
+    interval: 10s
+    timeout: 5s
+    retries: 18
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  mem_limit: 2g
+  cpus: 2.0
+  pids_limit: 512
+  stop_grace_period: 30s
+  restart: "no"
+  logging: *bounded-logging
+
+x-e2e-tool-environment: &e2e-tool-environment
+  ASPNETCORE_ENVIRONMENT: Development
+  SHARED_PROVIDERS_E2E_ROOT: /e2e
+  SHARED_PROVIDERS_E2E_CENTRAL_URI: http://central:8080
+  SHARED_PROVIDERS_E2E_CLIENT_B_URI: http://client-b:8080
+
+x-e2e-tool-base: &e2e-tool-base
+  image: mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION:-10.0.10}
+  profiles:
+    - orchestrator
+  working_dir: /runner
+  entrypoint:
+    - dotnet
+    - /runner/CanDoItAll.SharedProviders.E2E.dll
+  user: "${E2E_APP_UID:-1654}:${E2E_APP_GID:-1654}"
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  mem_limit: 1g
+  cpus: 1.0
+  pids_limit: 256
+  stop_grace_period: 20s
+  logging: *bounded-logging
+
+services:
+  artifact-permissions:
+    image: busybox:${BUSYBOX_VERSION:-1.37.0-musl}
+    user: "0:0"
+    entrypoint:
+      - /bin/sh
+      - -eu
+      - -c
+    command:
+      - |
+        test -f /e2e/.shared-providers-e2e-root
+        test "$$(cat /e2e/.shared-providers-e2e-root)" = "CanDoItAll.SharedProviders.E2E/v1"
+        for directory in \
+          /e2e/central/data \
+          /e2e/client-a/data \
+          /e2e/client-b/data \
+          /e2e/tool-state \
+          /e2e/tool-state/handoff \
+          /e2e/tool-state/scenario-results \
+          /e2e/tool-state/logs \
+          /e2e/logs; do
+          test -d "$$directory"
+          chown -R ${E2E_APP_UID:-1654}:${E2E_APP_GID:-1654} "$$directory"
+          chmod 0750 "$$directory"
+        done
+        chown -R ${E2E_APP_UID:-1654}:${E2E_APP_GID:-1654} /e2e/tool-state/credentials
+        chmod 0700 /e2e/tool-state/credentials
+        test -d /e2e/host-only-captures
+        chown -R ${E2E_APP_UID:-1654}:${E2E_APP_GID:-1654} /e2e/host-only-captures
+        find /e2e/host-only-captures -type d -exec chmod 0700 {} \;
+        find /e2e/host-only-captures -type f -exec chmod 0600 {} \;
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}
+        target: /e2e
+        bind:
+          create_host_path: false
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    network_mode: none
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+    logging: *bounded-logging
+
+  db:
+    image: postgres:${POSTGRES_IMAGE_TAG:-16-alpine}
+    environment:
+      E2E_LOG_CONTINUITY_MARKER: ${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}
+      POSTGRES_DB: candoitall_e2e_admin
+      POSTGRES_USER: candoitall_e2e_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-admin-password
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        printf 'CANDOITALL_E2E_LOG_START %s\n' '${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}'
+        exec docker-entrypoint.sh postgres
+    secrets:
+      - db-admin-password
+      - db-central-password
+      - db-client-a-password
+      - db-client-b-password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: ./tools/SharedProviders/postgres/init-e2e-databases.sh
+        target: /docker-entrypoint-initdb.d/10-shared-providers-e2e.sh
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - central-db
+      - client-a-db
+      - client-b-db
+    ports:
+      - "127.0.0.1:${E2E_POSTGRES_PORT:-55432}:5432"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U candoitall_e2e_admin -d candoitall_e2e_admin
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 18
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    stop_grace_period: 60s
+    restart: "no"
+    logging: *bounded-logging
+
+  deterministic-upstream:
+    image: ${E2E_UPSTREAM_IMAGE:?E2E_UPSTREAM_IMAGE is required}
+    user: "${E2E_APP_UID:-1654}:${E2E_APP_GID:-1654}"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      E2E_LOG_CONTINUITY_MARKER: ${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}
+      Fixture__Authentication__DataTokenFile: /run/secrets/upstream-data-token
+      Fixture__Authentication__ControlTokenFile: /run/secrets/upstream-control-token
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        printf 'CANDOITALL_E2E_LOG_START %s\n' '${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}'
+        exec dotnet CanDoItAll.SharedProviders.TestUpstream.dll
+    secrets:
+      - upstream-data-token
+      - upstream-control-token
+    networks:
+      - upstream-data
+      - upstream-control
+    ports:
+      - "127.0.0.1:${E2E_UPSTREAM_PORT:-5213}:8080"
+    healthcheck:
+      test:
+        - CMD
+        - /usr/local/bin/busybox
+        - wget
+        - --spider
+        - --quiet
+        - http://127.0.0.1:8080/health
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 18
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    restart: "no"
+    logging: *bounded-logging
+
+  deterministic-personal-upstream:
+    image: ${E2E_UPSTREAM_IMAGE:?E2E_UPSTREAM_IMAGE is required}
+    user: "${E2E_APP_UID:-1654}:${E2E_APP_GID:-1654}"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      E2E_LOG_CONTINUITY_MARKER: ${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}
+      Fixture__Authentication__DataTokenFile: /run/secrets/personal-upstream-data-token
+      Fixture__Authentication__ControlTokenFile: /run/secrets/personal-upstream-control-token
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        printf 'CANDOITALL_E2E_LOG_START %s\n' '${E2E_RUN_MARKER:?E2E_RUN_MARKER is required}'
+        exec dotnet CanDoItAll.SharedProviders.TestUpstream.dll
+    secrets:
+      - personal-upstream-data-token
+      - personal-upstream-control-token
+    networks:
+      - client-a-personal
+      - personal-control
+    ports:
+      - "127.0.0.1:${E2E_PERSONAL_UPSTREAM_PORT:-5214}:8080"
+    healthcheck:
+      test:
+        - CMD
+        - /usr/local/bin/busybox
+        - wget
+        - --spider
+        - --quiet
+        - http://127.0.0.1:8080/health
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 18
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    restart: "no"
+    logging: *bounded-logging
+
+  central:
+    <<: *app-base
+    environment:
+      <<: *app-environment
+      CANDOITALL_HOST_BINDING_ID: shared-providers-e2e-central
+      Api__Authorization__Issuer: CanDoItAll.SharedProviders.E2E.Central
+      Api__Authorization__Audience: CanDoItAll.SharedProviders.E2E.Central
+      Database__ConnectionString: Host=db;Port=5432;Database=candoitall_e2e_central;Username=candoitall_e2e_central;SSL Mode=Disable;GSS Encryption Mode=Disable
+    secrets:
+      - source: db-central-password
+        target: db-password
+      - source: api-central-signing-key
+        target: api-signing-key
+    depends_on:
+      artifact-permissions:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      deterministic-upstream:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${E2E_CENTRAL_PORT:-5210}:8080"
+    networks:
+      - local-ingress
+      - app-mesh
+      - central-db
+      - upstream-data
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/central/data
+        target: /data
+        bind:
+          create_host_path: false
+
+  client-a:
+    <<: *app-base
+    environment:
+      <<: *app-environment
+      CANDOITALL_HOST_BINDING_ID: shared-providers-e2e-client-a
+      Api__Authorization__Issuer: CanDoItAll.SharedProviders.E2E.ClientA
+      Api__Authorization__Audience: CanDoItAll.SharedProviders.E2E.ClientA
+      Database__ConnectionString: Host=db;Port=5432;Database=candoitall_e2e_client_a;Username=candoitall_e2e_client_a;SSL Mode=Disable;GSS Encryption Mode=Disable
+    secrets:
+      - source: db-client-a-password
+        target: db-password
+      - source: api-client-a-signing-key
+        target: api-signing-key
+    depends_on:
+      artifact-permissions:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      central:
+        condition: service_healthy
+      deterministic-personal-upstream:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${E2E_CLIENT_A_PORT:-5211}:8080"
+    networks:
+      - local-ingress
+      - app-mesh
+      - client-a-db
+      - client-a-personal
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/client-a/data
+        target: /data
+        bind:
+          create_host_path: false
+
+  client-b:
+    <<: *app-base
+    environment:
+      <<: *app-environment
+      CANDOITALL_HOST_BINDING_ID: shared-providers-e2e-client-b
+      Api__Authorization__Issuer: CanDoItAll.SharedProviders.E2E.ClientB
+      Api__Authorization__Audience: CanDoItAll.SharedProviders.E2E.ClientB
+      Database__ConnectionString: Host=db;Port=5432;Database=candoitall_e2e_client_b;Username=candoitall_e2e_client_b;SSL Mode=Disable;GSS Encryption Mode=Disable
+    secrets:
+      - source: db-client-b-password
+        target: db-password
+      - source: api-client-b-signing-key
+        target: api-signing-key
+    depends_on:
+      artifact-permissions:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      central:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${E2E_CLIENT_B_PORT:-5212}:8080"
+    networks:
+      - local-ingress
+      - app-mesh
+      - client-b-db
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/client-b/data
+        target: /data
+        bind:
+          create_host_path: false
+
+  e2e-central:
+    <<: *e2e-tool-base
+    environment:
+      <<: *e2e-tool-environment
+      SHARED_PROVIDERS_E2E_INSTANCE_ROOT: /instance
+      SHARED_PROVIDERS_E2E_DATABASE_CONNECTION_STRING_FILE: /run/secrets/db-connection-string
+      SHARED_PROVIDERS_E2E_API_SIGNING_KEY_FILE: /run/secrets/api-signing-key
+      SHARED_PROVIDERS_E2E_UPSTREAM_TOKEN_FILE: /run/secrets/upstream-data-token
+      SHARED_PROVIDERS_E2E_UPSTREAM_URI: http://deterministic-upstream:8080/v1
+      SHARED_PROVIDERS_E2E_COMFYUI_URI: http://deterministic-upstream:8080
+      SHARED_PROVIDERS_E2E_HOST_BINDING_ID: shared-providers-e2e-central
+    secrets:
+      - source: db-central-connection-string
+        target: db-connection-string
+      - source: api-central-signing-key
+        target: api-signing-key
+      - source: upstream-data-token
+        target: upstream-data-token
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-state
+        target: /e2e
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/central/data
+        target: /instance
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
+        target: /runner
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      artifact-permissions:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      deterministic-upstream:
+        condition: service_healthy
+    networks:
+      - central-db
+
+  e2e-client-a:
+    <<: *e2e-tool-base
+    environment:
+      <<: *e2e-tool-environment
+      SHARED_PROVIDERS_E2E_INSTANCE_ROOT: /instance
+      SHARED_PROVIDERS_E2E_DATABASE_CONNECTION_STRING_FILE: /run/secrets/db-connection-string
+      SHARED_PROVIDERS_E2E_API_SIGNING_KEY_FILE: /run/secrets/api-signing-key
+      SHARED_PROVIDERS_E2E_UPSTREAM_TOKEN_FILE: /run/secrets/personal-upstream-data-token
+      SHARED_PROVIDERS_E2E_UPSTREAM_URI: http://deterministic-personal-upstream:8080/v1
+      SHARED_PROVIDERS_E2E_COMFYUI_URI: http://deterministic-personal-upstream:8080
+      SHARED_PROVIDERS_E2E_HOST_BINDING_ID: shared-providers-e2e-client-a
+    secrets:
+      - source: db-client-a-connection-string
+        target: db-connection-string
+      - source: api-client-a-signing-key
+        target: api-signing-key
+      - source: personal-upstream-data-token
+        target: personal-upstream-data-token
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-state
+        target: /e2e
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/client-a/data
+        target: /instance
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
+        target: /runner
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      artifact-permissions:
+        condition: service_completed_successfully
+      central:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      deterministic-personal-upstream:
+        condition: service_healthy
+    networks:
+      - app-mesh
+      - client-a-db
+
+  e2e-client-b:
+    <<: *e2e-tool-base
+    environment:
+      <<: *e2e-tool-environment
+      SHARED_PROVIDERS_E2E_INSTANCE_ROOT: /instance
+      SHARED_PROVIDERS_E2E_DATABASE_CONNECTION_STRING_FILE: /run/secrets/db-connection-string
+      SHARED_PROVIDERS_E2E_API_SIGNING_KEY_FILE: /run/secrets/api-signing-key
+      SHARED_PROVIDERS_E2E_HOST_BINDING_ID: shared-providers-e2e-client-b
+    secrets:
+      - source: db-client-b-connection-string
+        target: db-connection-string
+      - source: api-client-b-signing-key
+        target: api-signing-key
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-state
+        target: /e2e
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/client-b/data
+        target: /instance
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
+        target: /runner
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      artifact-permissions:
+        condition: service_completed_successfully
+      central:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - app-mesh
+      - client-b-db
+
+  e2e-runner:
+    <<: *e2e-tool-base
+    environment:
+      SHARED_PROVIDERS_E2E_ROOT: /e2e
+      SHARED_PROVIDERS_E2E_CENTRAL_URI: http://central:8080
+      SHARED_PROVIDERS_E2E_CLIENT_A_URI: http://client-a:8080
+      SHARED_PROVIDERS_E2E_CLIENT_B_URI: http://client-b:8080
+      SHARED_PROVIDERS_E2E_UPSTREAM_CONTROL_URI: http://deterministic-upstream:8080
+      SHARED_PROVIDERS_E2E_PERSONAL_UPSTREAM_CONTROL_URI: http://deterministic-personal-upstream:8080
+      SHARED_PROVIDERS_E2E_CENTRAL_DATABASE_CONNECTION_STRING_FILE: /run/secrets/central-db-connection-string
+      SHARED_PROVIDERS_E2E_CLIENT_A_DATABASE_CONNECTION_STRING_FILE: /run/secrets/client-a-db-connection-string
+      SHARED_PROVIDERS_E2E_CLIENT_B_DATABASE_CONNECTION_STRING_FILE: /run/secrets/client-b-db-connection-string
+      SHARED_PROVIDERS_E2E_UPSTREAM_CONTROL_TOKEN_FILE: /run/secrets/upstream-control-token
+      SHARED_PROVIDERS_E2E_PERSONAL_UPSTREAM_CONTROL_TOKEN_FILE: /run/secrets/personal-upstream-control-token
+    secrets:
+      - source: db-central-connection-string
+        target: central-db-connection-string
+      - source: db-client-a-connection-string
+        target: client-a-db-connection-string
+      - source: db-client-b-connection-string
+        target: client-b-db-connection-string
+      - source: upstream-control-token
+        target: upstream-control-token
+      - source: personal-upstream-control-token
+        target: personal-upstream-control-token
+    volumes:
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-state
+        target: /e2e
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
+        target: /runner
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      central:
+        condition: service_healthy
+      client-a:
+        condition: service_healthy
+      client-b:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      deterministic-upstream:
+        condition: service_healthy
+      deterministic-personal-upstream:
+        condition: service_healthy
+    networks:
+      - app-mesh
+      - central-db
+      - client-a-db
+      - client-b-db
+      - upstream-control
+      - personal-control
+
+secrets:
+  db-admin-password:
+    file: ${E2E_DB_ADMIN_PASSWORD_FILE:?E2E_DB_ADMIN_PASSWORD_FILE is required}
+  db-central-password:
+    file: ${E2E_DB_CENTRAL_PASSWORD_FILE:?E2E_DB_CENTRAL_PASSWORD_FILE is required}
+  db-client-a-password:
+    file: ${E2E_DB_CLIENT_A_PASSWORD_FILE:?E2E_DB_CLIENT_A_PASSWORD_FILE is required}
+  db-client-b-password:
+    file: ${E2E_DB_CLIENT_B_PASSWORD_FILE:?E2E_DB_CLIENT_B_PASSWORD_FILE is required}
+  db-central-connection-string:
+    file: ${E2E_DB_CENTRAL_CONNECTION_STRING_FILE:?E2E_DB_CENTRAL_CONNECTION_STRING_FILE is required}
+  db-client-a-connection-string:
+    file: ${E2E_DB_CLIENT_A_CONNECTION_STRING_FILE:?E2E_DB_CLIENT_A_CONNECTION_STRING_FILE is required}
+  db-client-b-connection-string:
+    file: ${E2E_DB_CLIENT_B_CONNECTION_STRING_FILE:?E2E_DB_CLIENT_B_CONNECTION_STRING_FILE is required}
+  api-central-signing-key:
+    file: ${E2E_API_CENTRAL_SIGNING_KEY_FILE:?E2E_API_CENTRAL_SIGNING_KEY_FILE is required}
+  api-client-a-signing-key:
+    file: ${E2E_API_CLIENT_A_SIGNING_KEY_FILE:?E2E_API_CLIENT_A_SIGNING_KEY_FILE is required}
+  api-client-b-signing-key:
+    file: ${E2E_API_CLIENT_B_SIGNING_KEY_FILE:?E2E_API_CLIENT_B_SIGNING_KEY_FILE is required}
+  upstream-data-token:
+    file: ${E2E_UPSTREAM_DATA_TOKEN_FILE:?E2E_UPSTREAM_DATA_TOKEN_FILE is required}
+  upstream-control-token:
+    file: ${E2E_UPSTREAM_CONTROL_TOKEN_FILE:?E2E_UPSTREAM_CONTROL_TOKEN_FILE is required}
+  personal-upstream-data-token:
+    file: ${E2E_PERSONAL_UPSTREAM_DATA_TOKEN_FILE:?E2E_PERSONAL_UPSTREAM_DATA_TOKEN_FILE is required}
+  personal-upstream-control-token:
+    file: ${E2E_PERSONAL_UPSTREAM_CONTROL_TOKEN_FILE:?E2E_PERSONAL_UPSTREAM_CONTROL_TOKEN_FILE is required}
+
+volumes:
+  postgres-data:
+
+networks:
+  local-ingress:
+    ipam:
+      config:
+        - subnet: ${E2E_LOCAL_INGRESS_SUBNET:-10.245.0.0/24}
+          gateway: ${E2E_LOCAL_INGRESS_GATEWAY:-10.245.0.1}
+  app-mesh:
+    internal: true
+  central-db:
+    internal: true
+  client-a-db:
+    internal: true
+  client-b-db:
+    internal: true
+  upstream-data:
+    internal: true
+  upstream-control:
+    internal: true
+  client-a-personal:
+    internal: true
+  personal-control:
+    internal: true

@@ -1,0 +1,103 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.AgentFramework.ProviderManagement
+@using CanDoItAll.SharedProviders.Abstractions
+
+<FormSection Title="Share this provider"
+             Description="Publish this local provider through the instance's sanitized catalog and OpenAI-compatible relay.">
+    @if (State.Publication is { } publication && State.Eligibility is { } eligibility)
+    {
+        <Stack GapScale="LayoutGap.Medium">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Small"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="info" Text="Local" />
+                    <StatusBadge Tone="@(publication.IsPublished ? "success" : "neutral")"
+                                 Text="@(publication.IsPublished ? "Published" : "Not published")"
+                                 data-testid="shared-provider-publication-status" />
+                    <StatusBadge Tone="@(eligibility.IsEligible ? "success" : "warning")"
+                                 Text="@(eligibility.IsEligible ? "Eligible" : "Ineligible")"
+                                 data-testid="shared-provider-eligibility-status" />
+                </Cluster>
+                @if (publication.IsPublished)
+                {
+                    <Button Text="Unpublish"
+                            ButtonStyle="ButtonStyle.Danger"
+                            Size="ButtonSize.Small"
+                            Disabled="@IsBusy"
+                            Click="Unpublish"
+                            data-testid="shared-provider-unpublish" />
+                }
+                else
+                {
+                    <Button Text="Publish provider"
+                            Icon="public"
+                            Size="ButtonSize.Small"
+                            Disabled="@(IsBusy || !eligibility.IsEligible)"
+                            Click="Publish"
+                            data-testid="shared-provider-publish" />
+                }
+            </Split>
+
+            <Alert AlertStyle="@(eligibility.IsEligible ? AlertStyle.Info : AlertStyle.Warning)"
+                   Variant="Variant.Outlined"
+                   data-testid="shared-provider-eligibility-reason">
+                @eligibility.SanitizedReason
+            </Alert>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Public identity</p>
+                    <p class="break-all font-mono text-xs" data-testid="shared-provider-public-id">@publication.PublicId.Value.ToString("D")</p>
+                </SurfaceCard>
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Discovery routes</p>
+                    <p class="font-mono text-xs">@SharedProviderRoutes.Catalog</p>
+                    <p class="font-mono text-xs">@SharedProviderRoutes.Models</p>
+                </SurfaceCard>
+            </Grid>
+
+            @if (eligibility.Models.Count > 0)
+            {
+                <SurfaceCard Soft="true">
+                    <Stack GapScale="LayoutGap.Small">
+                        <p class="cda-eyebrow">Published capability preview</p>
+                        @foreach (var model in eligibility.Models)
+                        {
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Small"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <strong>@model.UpstreamModelId</strong>
+                                <Cluster Gap="LayoutGap.Tiny">
+                                    @foreach (var capability in model.Capabilities)
+                                    {
+                                        <StatusBadge Tone="neutral" Text="@capability.ToString()" />
+                                    }
+                                </Cluster>
+                            </Split>
+                        }
+                    </Stack>
+                </SurfaceCard>
+            }
+
+            <p class="cda-body-muted">The public catalog contains only the public publication ID, display/model metadata, capabilities, and health. Provider endpoints, secret IDs, secret names, and secret values stay private.</p>
+        </Stack>
+    }
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired]
+    public required SharedProviderProfileSharingSnapshot State { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback Publish { get; set; }
+
+    [Parameter]
+    public EventCallback Unpublish { get; set; }
+}

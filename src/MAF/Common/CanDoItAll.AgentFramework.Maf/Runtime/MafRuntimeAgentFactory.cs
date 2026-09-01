@@ -200,7 +200,11 @@ internal sealed class MafRuntimeAgentFactory
                 finalizerCapture?.Policy,
                 runtimeOptions.FinalizerMode,
                 MafRuntimeSessionBuilder.ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
-            chatOptions.AllowMultipleToolCalls = MafFinalizerDriver.ShouldAllowMultipleToolCalls(
+            chatOptions.AllowMultipleToolCalls = MafFinalizerDriver.ResolveAllowMultipleToolCalls(
+                capabilityState.Tools.Count > 0,
+                ProviderFeatureService
+                    .ResolveFeatureMatrixForModel(effectiveProvider, model)
+                    .SupportsParallelFunctionTools,
                 runtimeOptions.FinalizerMode,
                 capabilityState.HasApprovalTools);
 

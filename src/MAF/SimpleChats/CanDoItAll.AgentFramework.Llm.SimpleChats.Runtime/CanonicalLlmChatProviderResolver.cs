@@ -86,14 +86,21 @@ public sealed class CanonicalLlmChatProviderResolver(
                         resolved.ThinkingEffortCapability.Status,
                         resolved.ThinkingEffortCapability.ControlMode,
                         [.. resolved.ThinkingEffortCapability.AllowedEfforts],
-                        resolved.ProviderDefaultThinkingEffort)));
+                        resolved.ProviderDefaultThinkingEffort)) {
+                    DisplayName = provider.GetModelDisplayName(model),
+                    IsSuggested = provider.IsSourceManaged
+                        ? provider.SuggestedModels.Contains(model, StringComparer.Ordinal)
+                        : provider.Kind != ProviderKind.OpenAi || OpenAiModelSuggestions.IsMainModel(model)
+                });
             }
 
             options.Add(new LlmChatProviderOption(
                 provider.Id,
                 provider.Name,
                 provider.Kind,
-                models));
+                models) {
+                IsSourceManaged = provider.IsSourceManaged
+            });
         }
 
         return Result<IReadOnlyList<LlmChatProviderOption>>.Success(options);
@@ -195,7 +202,7 @@ public sealed class CanonicalLlmChatProviderResolver(
         => provider.IsEnabled && provider.Purpose == ProviderProfilePurpose.Chat;
 
     private static IReadOnlyList<string> ListModels(ProviderProfile provider)
-        => provider.SuggestedModels
+        => (provider.ModelSelectionConstraint?.AllowedModels ?? provider.SuggestedModels)
             .Prepend(provider.DefaultModel)
             .Where(model => !string.IsNullOrWhiteSpace(model))
             .Select(model => model.Trim())

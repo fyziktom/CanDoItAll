@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
@@ -47,6 +48,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
     private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
     private readonly DurableFileWriter durableFileWriter;
     private readonly string? managedRoot;
+    private readonly FileProviderHistoryJournal? historyJournal;
 
     public FileSandboxWorkspaceJsonStore(
         FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics = null)
@@ -62,9 +64,11 @@ internal sealed class FileSandboxWorkspaceJsonStore
         FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics,
         IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         DurableFileWriter? durableFileWriter,
-        string? managedRoot = null)
+        string? managedRoot = null,
+        FileProviderHistoryJournal? historyJournal = null)
     {
         this.readDiagnostics = readDiagnostics;
+        this.historyJournal = historyJournal;
         this.physicalPathPolicyFactory = physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
         this.durableFileWriter = durableFileWriter ?? new DurableFileWriter(physicalPathPolicyFactory);
         this.managedRoot = string.IsNullOrWhiteSpace(managedRoot)
@@ -195,7 +199,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
                 return false;
             }
 
-            DeleteDirectory(directoryPath);
+            await DeleteDirectoryAsync(directoryPath, cancellationToken);
             return true;
         }
 
@@ -245,7 +249,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
                 return false;
             }
 
-            DeleteDirectory(directoryPath);
+            await DeleteDirectoryAsync(directoryPath, cancellationToken);
             return true;
         }
 
@@ -294,16 +298,26 @@ internal sealed class FileSandboxWorkspaceJsonStore
             }
         }
 
-        await WriteJsonAtomicallyAsync(fullPath, serialized, cancellationToken);
+        await WriteObservedJsonAsync(fullPath, payload, serialized, cancellationToken);
         return true;
     }
 
     public async Task WriteJsonAtomicallyAsync<T>(string fullPath, T payload, CancellationToken cancellationToken)
     {
-        await WriteJsonAtomicallyAsync(
+        await WriteObservedJsonAsync(
             fullPath,
+            payload,
             JsonSerializer.Serialize(payload, SerializerOptions),
             cancellationToken);
+    }
+
+    private async Task WriteObservedJsonAsync<T>(string fullPath, T payload, string serialized, CancellationToken cancellationToken) {
+        var prepared = historyJournal is not null && payload is ProviderUsageObservation observation
+            ? await historyJournal.PrepareWriteAsync(fullPath, observation, serialized, cancellationToken) : [];
+        await WriteJsonAtomicallyAsync(fullPath, serialized, cancellationToken);
+        if (historyJournal is not null) {
+            await historyJournal.CommitAsync(prepared, cancellationToken);
+        }
     }
 
     private FileStream? TryOpenSharedReadStream(string fullPath)
@@ -388,8 +402,17 @@ internal sealed class FileSandboxWorkspaceJsonStore
     private void EnsureSafeDirectory(string directoryPath)
         => physicalPathPolicyFactory.Create(ResolveManagedRoot(directoryPath)).EnsureSafePath(directoryPath);
 
-    public void DeleteDirectory(string directoryPath)
-    {
+    public async Task DeleteDirectoryAsync(string directoryPath, CancellationToken cancellationToken) {
+        EnsureSafeDirectory(directoryPath);
+        if (historyJournal is not null) {
+            var enumeration = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
+            foreach (var path in Directory.EnumerateFiles(directoryPath, "*.json", enumeration)) {
+                if (historyJournal.IsUsagePath(path)) {
+                    await DeleteFileAsync(path, cancellationToken);
+                }
+            }
+        }
+        cancellationToken.ThrowIfCancellationRequested();
         EnsureSafeDirectory(directoryPath);
         Directory.Delete(directoryPath, recursive: true);
     }
@@ -398,10 +421,14 @@ internal sealed class FileSandboxWorkspaceJsonStore
     {
         string directory = Path.GetDirectoryName(fullPath)
             ?? throw new InvalidOperationException("Workspace JSON path does not have a parent directory.");
+        var prepared = historyJournal is null ? [] : await historyJournal.PrepareDeleteAsync(fullPath, cancellationToken);
         await durableFileWriter.DeleteAsync(
             ResolveManagedRoot(directory),
             fullPath,
             cancellationToken: cancellationToken);
+        if (historyJournal is not null) {
+            await historyJournal.CommitAsync(prepared, cancellationToken);
+        }
     }
 
     private string ResolveManagedRoot(string fallbackRoot)

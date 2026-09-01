@@ -381,6 +381,7 @@ public sealed class AgentDetailsDialogSettingsTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddStubProviderRuntimeAdministration();
 
         var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
         workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;

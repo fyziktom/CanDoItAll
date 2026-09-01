@@ -1,0 +1,192 @@
+@using CanDoItAll.Infrastructure.ControlPlane
+@using CanDoItAll.Modules.Workspace.ApiAccess
+@using CanDoItAll.SharedKernel
+@inject ApiTokenAdministrationService Administration
+@inject IClock Clock
+
+<Dialog IsOpen="true" Title="Issued API tokens" Size="ModalSize.Wide"
+        Subtitle="Search token metadata and revoke access. Bearer values are never stored here."
+        OnClose="OnClose" TestId="api-tokens-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <Alert AlertStyle="AlertStyle.Info">
+                Only tokens created after token tracking was introduced are listed.
+                Older tokens remain valid until expiry and cannot be recovered into this list.
+            </Alert>
+            <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Small">
+                <input @bind="search" @bind:event="oninput" class="cda-input min-w-0 flex-1" placeholder="Search name, subject, ID or scope"
+                       aria-label="Search issued tokens" @onkeydown="OnSearchKeyAsync" data-testid="api-tokens-search" />
+                <Button Text="Search" Icon="search" ButtonStyle="ButtonStyle.Light" Disabled="isBusy"
+                        Click="SearchAsync" data-testid="api-tokens-search-submit" />
+                <Button Icon="refresh" aria-label="Refresh tokens" title="Refresh tokens"
+                        ButtonStyle="ButtonStyle.Light" Disabled="isBusy" Click="LoadAsync" />
+            </Cluster>
+            @if (!string.IsNullOrEmpty(error)) {
+                <Alert AlertStyle="AlertStyle.Danger" data-testid="api-tokens-error">@error</Alert>
+            }
+            <DataGrid TItem="ApiTokenRecord" Data="result.Items" Loading="isBusy"
+                      EmptyText="No tokens match this search." Caption="Issued API tokens" data-testid="api-tokens-table">
+                <Columns>
+                    <DataGridColumn TItem="ApiTokenRecord" Title="Token">
+                        <Template Context="token">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <strong>@token.DisplayName</strong>
+                                <span>@token.Subject</span>
+                                <code class="text-xs" title="@token.Id">@token.Id.ToString("N")[..12]</code>
+                            </Stack>
+                        </Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="ApiTokenRecord" Title="Scopes">
+                        <Template Context="token">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                @foreach (var scope in token.Scopes) {
+                                    <code class="text-xs break-all">@scope</code>
+                                }
+                            </Stack>
+                        </Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="ApiTokenRecord" Title="Created / expires">
+                        <Template Context="token">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <span>@token.IssuedAtUtc.LocalDateTime.ToString("g")</span>
+                                <span>@token.ExpiresAtUtc.LocalDateTime.ToString("g")</span>
+                            </Stack>
+                        </Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="ApiTokenRecord" Title="Status">
+                        <Template Context="token">
+                            <StatusBadge Text="@token.GetStatus(Clock.GetUtcNow()).ToString()"
+                                         Tone="@(token.GetStatus(Clock.GetUtcNow()) == ApiTokenStatus.Active ? "success" : "neutral")" />
+                        </Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="ApiTokenRecord" Title="Actions">
+                        <Template Context="token">
+                            <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
+                                <Button Text="Revoke" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small"
+                                        Disabled="@(isBusy || token.GetStatus(Clock.GetUtcNow()) != ApiTokenStatus.Active)"
+                                        Click="@(() => Confirm(token, TokenAction.Revoke))" data-testid="api-token-revoke" />
+                                <Button Icon="delete" title="Delete token" aria-label="@($"Delete token {token.DisplayName}")"
+                                        ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Disabled="isBusy"
+                                        Click="@(() => Confirm(token, TokenAction.Delete))" data-testid="api-token-delete" />
+                            </Cluster>
+                        </Template>
+                    </DataGridColumn>
+                </Columns>
+            </DataGrid>
+            <Cluster JustifyContent="JustifyContent.SpaceBetween">
+                <span class="cda-body-muted" data-testid="api-tokens-page">@result.TotalCount token(s) · Page @(offset / PageSize + 1)</span>
+                <Cluster Gap="LayoutGap.Tiny">
+                    <Button Icon="chevron_left" aria-label="Previous token page" title="Previous page" ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(isBusy || offset == 0)" Click="PreviousAsync" />
+                    <Button Icon="chevron_right" aria-label="Next token page" title="Next page" ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(isBusy || offset + PageSize >= result.TotalCount)" Click="NextAsync" />
+                </Cluster>
+            </Cluster>
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="OnClose" />
+    </Footer>
+</Dialog>
+
+@if (selectedToken is not null) {
+    <Dialog IsOpen="true" Title="@(action == TokenAction.Revoke ? "Revoke this token?" : "Delete this token?")"
+            Subtitle="@selectedToken.DisplayName" Size="ModalSize.Compact"
+            OnClose="CancelConfirmation" TestId="api-token-confirmation">
+        <ChildContent>
+            <p>@(action == TokenAction.Revoke
+                ? "New API requests using this token will be rejected. The record remains for review."
+                : "The metadata record will be removed and this token will no longer be accepted. This cannot be undone.")</p>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="CancelConfirmation" Disabled="isBusy" />
+                <Button Text="@(action == TokenAction.Revoke ? "Revoke token" : "Delete token")" ButtonStyle="ButtonStyle.Danger"
+                        Click="ApplyActionAsync" Disabled="isBusy" data-testid="api-token-confirm" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private const int PageSize = 25;
+    private string search = string.Empty;
+    private string error = string.Empty;
+    private int offset;
+    private bool isBusy;
+    private ApiTokenPage result = new([], 0);
+    private ApiTokenRecord? selectedToken;
+    private TokenAction action;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync() {
+        isBusy = true;
+        error = string.Empty;
+        try {
+            result = await Administration.SearchAsync(new ApiTokenQuery(search, offset, PageSize));
+            if (offset > 0 && offset >= result.TotalCount) {
+                offset = Math.Max(0, (result.TotalCount - 1) / PageSize * PageSize);
+                result = await Administration.SearchAsync(new ApiTokenQuery(search, offset, PageSize));
+            }
+        } catch (Exception exception) {
+            result = new([], 0);
+            error = exception.Message;
+        } finally {
+            isBusy = false;
+        }
+    }
+
+    private Task SearchAsync() {
+        offset = 0;
+        return LoadAsync();
+    }
+
+    private Task OnSearchKeyAsync(KeyboardEventArgs args) => args.Key == "Enter" ? SearchAsync() : Task.CompletedTask;
+
+    private Task PreviousAsync() {
+        offset = Math.Max(0, offset - PageSize);
+        return LoadAsync();
+    }
+
+    private Task NextAsync() {
+        offset += PageSize;
+        return LoadAsync();
+    }
+
+    private void Confirm(ApiTokenRecord token, TokenAction requestedAction) {
+        selectedToken = token;
+        action = requestedAction;
+    }
+
+    private void CancelConfirmation() => selectedToken = null;
+
+    private async Task ApplyActionAsync() {
+        if (selectedToken is null) {
+            return;
+        }
+        isBusy = true;
+        try {
+            if (action == TokenAction.Revoke) {
+                await Administration.RevokeAsync(selectedToken.Id);
+            } else {
+                await Administration.DeleteAsync(selectedToken.Id);
+            }
+            selectedToken = null;
+            await LoadAsync();
+        } catch (Exception exception) {
+            selectedToken = null;
+            error = exception.Message;
+        } finally {
+            isBusy = false;
+        }
+    }
+
+    private enum TokenAction {
+        Revoke,
+        Delete
+    }
+}

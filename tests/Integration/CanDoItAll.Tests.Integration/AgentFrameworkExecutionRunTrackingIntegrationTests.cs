@@ -10,6 +10,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -458,6 +459,132 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                 detail.Run.ResultSummary,
                 StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SendMessageAsync_runtime_failure_persists_failed_log_and_activity_after_store_reopen(bool failDuringStartup) {
+        const string prompt = "Preserve this private prompt marker: startup-failure-prompt-sentinel.";
+        const string promptSentinel = "startup-failure-prompt-sentinel";
+        const string secretSentinel = "startup-failure-secret-sentinel";
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create(
+            $"integration-agentframework-durable-runtime-failure-{failDuringStartup}");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services => {
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
+                services.AddSingleton<FakeProgressAgentRuntime>();
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
+                    serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<FakeProgressAgentRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var activities = scope.ServiceProvider.GetRequiredService<AgentExecutionActivityCoordinator>();
+        var workspaceIdentity = scope.ServiceProvider.GetRequiredService<AgentExecutionActivityWorkspaceIdentity>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+        var originalFailure = new InvalidOperationException($"Runtime failure with api_key={secretSentinel}");
+        Exception expectedFailure = failDuringStartup
+            ? originalFailure
+            : new AgentRuntimeUsageException(
+                "The simulated provider boundary rejected the request.",
+                originalFailure,
+                [],
+                failureOrigin: AgentRuntimeFailureOrigin.Provider);
+        if (failDuringStartup) {
+            runtime.StartupFailure = expectedFailure;
+        } else {
+            runtime.Failure = expectedFailure;
+        }
+        runtime.AllowCompletion.TrySetResult(true);
+        var operationId = AgentExecutionOperationId.New();
+
+        var exception = await Assert.ThrowsAsync<AgentChatRunFailedException>(() =>
+            workspaceService.SendMessageAsync(
+                agent.Id,
+                session.Id,
+                prompt,
+                options: new AgentChatRunOptions(operationId)).WaitAsync(AsyncObservationTimeout));
+        var executionRunId = await runtime.ExecutionRunIdObserved.Task.WaitAsync(AsyncObservationTimeout);
+
+        Assert.Same(expectedFailure, exception.InnerException);
+        Assert.Same(originalFailure, failDuringStartup ? exception.InnerException : exception.InnerException?.InnerException);
+        Assert.Equal(agent.Id, exception.AgentId);
+        Assert.Equal(session.Id, exception.ChatSessionId);
+        Assert.Equal(executionRunId, exception.ExecutionRunId);
+        Assert.Equal(
+            failDuringStartup ? null : AgentProviderFailureCategory.ProviderError,
+            exception.FailureCategory);
+        Assert.Equal(!failDuringStartup, runtime.ProgressPersisted.Task.IsCompletedSuccessfully);
+
+        var persisted = Assert.IsType<ExecutionRunDetail>(
+            await executionRunStore.GetExecutionRunDetailAsync(executionRunId));
+        var persistedFailureLog = Assert.Single(persisted.ExecutionLog, entry => entry.Phase == "Failed");
+        var reopenedStore = new FileSandboxWorkspaceStore(
+            scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
+            ResolveWorkspaceScope(scope.ServiceProvider));
+        var reopened = Assert.IsType<ExecutionRunDetail>(
+            await reopenedStore.GetExecutionRunDetailAsync(executionRunId));
+        var failedLog = Assert.Single(reopened.ExecutionLog, entry => entry.Phase == "Failed");
+
+        Assert.Equal(ExecutionState.Failed, reopened.Run.State);
+        Assert.Equal(RunOutcome.Failed, reopened.Run.Outcome);
+        Assert.NotNull(reopened.Run.CompletedAtUtc);
+        Assert.Equal(operationId, reopened.Run.InitialActivityOperationId);
+        Assert.Equal(persistedFailureLog, failedLog);
+        Assert.Equal(executionRunId, failedLog.ExecutionRunId);
+        Assert.Equal(ExecutionState.Failed, failedLog.State);
+        Assert.Equal(!failDuringStartup, reopened.ExecutionLog.Any(entry => entry.Phase == "Implementation"));
+        Assert.DoesNotContain(reopened.ExecutionLog, entry => entry.Phase == "Completed");
+        var reopenedSession = Assert.IsType<ChatSessionRecord>(reopened.ChatSession);
+        var savedMessage = Assert.Single(reopenedSession.Messages);
+        Assert.Equal(ChatMessageRole.User, savedMessage.Role);
+        Assert.Equal(prompt, savedMessage.Content);
+        Assert.Equal(executionRunId, reopenedSession.LatestExecutionRunId);
+        Assert.Empty(reopened.ToolReceipts);
+        Assert.Empty(reopened.Artifacts);
+        Assert.Empty(reopened.Run.PendingApprovals);
+        Assert.NotEmpty(reopened.Metrics);
+        Assert.All(reopened.Metrics, metric => {
+            Assert.Equal(RunOutcome.Failed, metric.Outcome);
+            Assert.Equal(0, metric.OutputTokens);
+            Assert.Equal(0, metric.ToolCalls);
+        });
+
+        await using var reader = activities.OpenReader(
+            workspaceIdentity.CreateStreamId(operationId),
+            StreamSequence.Beginning);
+        using var readTimeout = new CancellationTokenSource(AsyncObservationTimeout);
+        var replay = Assert.IsType<SequencedStreamEvents<AgentExecutionActivity>>(
+            await reader.ReadAsync(readTimeout.Token));
+        var terminal = Assert.Single(replay.Items, item => item.Event.IsTerminal).Event;
+        Assert.Equal(AgentExecutionActivityPhase.Failed, terminal.Phase);
+        Assert.Equal(AgentExecutionActivityTerminalOutcome.Failed, terminal.TerminalOutcome);
+        Assert.Equal(AgentExecutionActivityFailureCodes.UnhandledExecutionFailure, terminal.ErrorCode);
+        Assert.Equal(agent.Id, terminal.AgentId);
+        Assert.Equal(session.Id, terminal.ChatSessionId);
+        Assert.Equal(executionRunId, terminal.ExecutionRunId);
+        Assert.DoesNotContain(replay.Items, item => item.Event.Phase == AgentExecutionActivityPhase.Completed);
+
+        var publicDiagnostics = reopened.ExecutionLog.Select(entry => entry.Message)
+            .Concat(replay.Items.Select(item => item.Event.Message))
+            .Append(exception.Message)
+            .Append(exception.SanitizedDisplayMessage)
+            .Append(reopened.Run.ResultSummary);
+        Assert.All(publicDiagnostics, message => {
+            Assert.DoesNotContain(secretSentinel, message, StringComparison.Ordinal);
+            Assert.DoesNotContain(promptSentinel, message, StringComparison.Ordinal);
+        });
     }
 
     [Fact]
@@ -2986,6 +3113,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
 
         public Exception? Failure { get; set; }
 
+        public Exception? StartupFailure { get; set; }
+
         public Task<ProviderHealthResult> TestProviderAsync(
             ProviderProfile provider,
             CancellationToken cancellationToken = default)
@@ -3029,6 +3158,9 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             }
 
             ExecutionRunIdObserved.TrySetResult(session.LatestExecutionRunId.Value);
+            if (StartupFailure is not null) {
+                throw StartupFailure;
+            }
             await progressCallback(ExecutionState.Running, "Implementation", "Applying the current implementation plan.");
             ProgressPersisted.TrySetResult(true);
             await AllowCompletion.Task.WaitAsync(cancellationToken);

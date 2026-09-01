@@ -106,6 +106,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IActivityStream, NullActivityStream>();
         services.AddSingleton<ISecretRedactor, SecretRedactor>();
         services.AddSingleton<IControlPlanePathResolver, ControlPlanePathResolver>();
+        services.AddSingleton<IApiTokenRegistry, FileApiTokenRegistry>();
         services.AddSingleton<IFileApplicationPreferenceService, FileApplicationPreferenceService>();
         services.AddSingleton<IControlPlaneSecretProtector, ControlPlaneSecretProtector>();
         services.AddSingleton<DatabaseProfileControlPlaneService>();

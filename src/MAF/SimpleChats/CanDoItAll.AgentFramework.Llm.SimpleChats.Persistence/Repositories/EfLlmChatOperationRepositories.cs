@@ -45,7 +45,7 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
         var inserted = await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "LlmChats_Operations"
                 ("Id", "ConversationId", "Kind", "RequestFingerprint", "ExpectedTranscriptRevision",
-                 "Status", "AttributionScopeKind", "AttributionScopeKey",
+                 "Status", "AttributionScopeKind", "AttributionScopeKey", "HistoryCaller",
                  "CancellationRequestedAtUtc", "CancellationGeneration", "TurnAdmittedAtUtc",
                  "ExecutionOwnerId", "ExecutionEpoch", "ClaimedAtUtc", "HeartbeatAtUtc",
                  "LeaseExpiresAtUtc", "DispatchPhase",
@@ -58,6 +58,7 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
                  {(int)operation.Status},
                  {(operation.AttributionScope == null ? null : (int?)operation.AttributionScope.Kind)},
                  {operation.AttributionScope?.Key ?? string.Empty},
+                 CAST({System.Text.Json.JsonSerializer.Serialize(operation.HistoryCaller)} AS jsonb),
                  {operation.CancellationRequestedAtUtc}, {operation.CancellationGeneration},
                  {operation.TurnAdmittedAtUtc}, {(operation.ExecutionOwnerId == null ? null : operation.ExecutionOwnerId.Value.Value)},
                  {operation.ExecutionEpoch}, {operation.ClaimedAtUtc}, {operation.HeartbeatAtUtc},
@@ -190,29 +191,5 @@ public sealed class EfLlmChatTurnStateRepository(AppDbContext dbContext) : ILlmC
                 cancellationToken)
             .ConfigureAwait(false);
         return new(true, hasActiveTurn, hasNonterminalOperation);
-    }
-}
-
-public sealed class EfLlmChatInvocationRecordRepository(AppDbContext dbContext)
-    : ILlmChatInvocationRecordRepository
-{
-    public Task AppendAsync(LlmChatInvocationRecord record, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(record);
-        dbContext.Add(LlmChatPersistenceMapper.ToRow(record));
-        return Task.CompletedTask;
-    }
-
-    public async Task<IReadOnlyList<LlmChatInvocationRecord>> ListAsync(
-        LlmChatOperationId operationId,
-        CancellationToken cancellationToken = default)
-    {
-        var rows = await dbContext.Set<LlmChatInvocationRecordRow>()
-            .AsNoTracking()
-            .Where(row => row.OperationId == operationId.Value)
-            .OrderBy(row => row.Ordinal)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return [.. rows.Select(LlmChatPersistenceMapper.ToDomain)];
     }
 }

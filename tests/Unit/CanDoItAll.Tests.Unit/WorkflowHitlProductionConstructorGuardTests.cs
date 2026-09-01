@@ -75,11 +75,13 @@ public sealed class WorkflowHitlProductionConstructorGuardTests
             ConstructorDependency.ResumeBoundaryFactory =>
                 () => _ = new PersistentWorkflowResumeBoundaryStore(
                     null!,
-                    dataProtectionProvider),
+                    dataProtectionProvider,
+                    new WorkflowHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System))),
             ConstructorDependency.ResumeBoundaryProtectionProvider =>
                 () => _ = new PersistentWorkflowResumeBoundaryStore(
                     dbContextFactory,
-                    null!),
+                    null!,
+                    new WorkflowHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System))),
             _ => throw new ArgumentOutOfRangeException(nameof(dependency), dependency, null)
         };
     }

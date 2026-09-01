@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.ProviderHistory;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 public sealed record ProviderTestChatMessage(
@@ -9,7 +12,11 @@ public sealed record ProviderTestChatRequest(
     string Model,
     string SystemPrompt,
     IReadOnlyList<ProviderTestChatMessage> Messages,
-    string Prompt);
+    string Prompt) {
+    [JsonIgnore]
+    public HistoryInvocationContext History { get; init; } =
+        HistoryInvocationContext.Create(currentTurn: new(Prompt, 0));
+}
 
 public sealed record ProviderTestChatResult(
     string Model,

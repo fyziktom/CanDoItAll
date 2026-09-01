@@ -94,9 +94,14 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
         }
         catch (Exception exception)
         {
-            if (exception is WorkflowUsageObservationException usageException)
+            var failureObservations = exception switch {
+                WorkflowUsageObservationException failure => failure.Observations,
+                WorkflowUsageCancellationException cancelled => cancelled.Observations,
+                _ => null
+            };
+            if (failureObservations is not null)
             {
-                usageObservations = usageException.Observations;
+                usageObservations = failureObservations;
                 usage = WorkflowUsageCompatibilityProjection.Project(
                     usageObservations,
                     fallbackProviderName: "workflow-provider",

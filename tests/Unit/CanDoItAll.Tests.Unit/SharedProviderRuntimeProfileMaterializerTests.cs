@@ -1,0 +1,636 @@
+using System.Text.Json;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.Modules.Workspace;
+using CanDoItAll.SharedProviders.Abstractions;
+
+namespace CanDoItAll.Tests.Unit;
+
+using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using AgentFrameworkProviderPurpose = CanDoItAll.AgentFramework.Models.ProviderProfilePurpose;
+using AgentFrameworkProviderTransport = CanDoItAll.AgentFramework.Models.ProviderTransportKind;
+using ProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using ProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+
+public sealed class SharedProviderRuntimeProfileMaterializerTests(Xunit.Abstractions.ITestOutputHelper output) {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(bool isPrivate) {
+        var price = new SharedProviderCatalogPrice(1.23m, 0m, 4.56m) {
+            CacheWritePerMillionTokensUsd = 0.35m,
+            LongContextThresholdTokens = 12345,
+            LongContextInputPerMillionTokensUsd = 2.46m,
+            LongContextCachedInputPerMillionTokensUsd = 0m,
+            LongContextCacheWritePerMillionTokensUsd = 0.70m,
+            LongContextOutputPerMillionTokensUsd = 9.12m
+        };
+        var graph = CreateGraph(isPrivateProvider: isPrivate, price: price);
+        var profile = new CanDoItAll.Modules.AgentFramework.SharedProviderProfileMapper().Map(Materialize(graph));
+        var mappedPrice = Assert.Single(profile.ModelPrices);
+
+        Assert.Equal(isPrivate, profile.IsPrivateProvider);
+        Assert.Equal(price, SharedProviderPriceMapper.ToCatalog(mappedPrice));
+        Assert.Equal(profile.DefaultModel, mappedPrice.Model);
+        Assert.Equal("Remote model 1", profile.GetModelDisplayName(profile.DefaultModel));
+        var service = new CanDoItAll.AgentFramework.Core.ProviderProfileService();
+        Assert.Same(profile, service.NormalizeImportedProfile(profile));
+        Assert.Equal(isPrivate, service.CreateEditor(profile).IsPrivateProvider);
+        Assert.Single(service.CreateEditor(profile).ModelPrices);
+
+        var unpriced = new CanDoItAll.Modules.AgentFramework.SharedProviderProfileMapper()
+            .Map(Materialize(CreateGraph(isPrivateProvider: isPrivate)));
+        Assert.Empty(service.CreateEditor(unpriced).ModelPrices);
+        Assert.Equal(isPrivate, service.CreateEditor(unpriced).IsPrivateProvider);
+    }
+
+    [Fact]
+    public void Legacy_snapshot_requires_resynchronization_instead_of_guessing_source_metadata() {
+        var graph = CreateGraph();
+        graph.Import.RemoteCatalogSnapshotJson = graph.Import.RemoteCatalogSnapshotJson.Replace(
+            "\"schemaVersion\":\"1.1\"", "\"schemaVersion\":\"1.0\"", StringComparison.Ordinal);
+
+        Assert.False(SharedProviderPublicationSnapshotReader.TryRead(graph.Import, out _));
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SnapshotInvalid, Materialize(graph).Availability);
+    }
+
+    private const string ImportedSchemaVersion = "1.0";
+    private const string SensitiveStatusMarker = "central-token-value-must-not-escape";
+    private static readonly Guid SourceId =
+        Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    private static readonly Guid SecretId =
+        Guid.Parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    private static readonly Guid ProfileId =
+        Guid.Parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+    private static readonly Guid ImportId =
+        Guid.Parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
+    private static readonly SharedProviderSourceInstanceId SourceInstanceId =
+        new(Guid.Parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"));
+    private static readonly SharedProviderPublicationId PublicationId =
+        new(Guid.Parse("ffffffff-ffff-4fff-8fff-ffffffffffff"));
+
+    [Fact]
+    public void Materialize_ResponsesChat_MapsCanonicalEffectiveProfileWithoutSecretValue()
+    {
+        var graph = CreateGraph();
+        graph.Profile.Name = "Locally renamed alias";
+
+        var result = Materialize(graph);
+
+        var profile = AssertAvailable(result);
+        Assert.Equal("Locally renamed alias", profile.Name);
+        Assert.Equal(AgentFrameworkProviderKind.OpenAi, profile.Kind);
+        Assert.Equal(
+            "https://central.example.test/reverse-proxy/api/shared-providers/openai/v1",
+            profile.BaseUri.AbsoluteUri);
+        Assert.Equal(SecretId, profile.SourceTokenSecretReferenceId);
+        Assert.Equal(
+            SharedProviderSourceNetworkPolicy.PublicOnly,
+            profile.NetworkPolicy);
+        Assert.Equal(SourceId, profile.SourceId);
+        Assert.Equal(SourceInstanceId, profile.SourceInstanceId);
+        Assert.Equal(ImportId, profile.ImportId);
+        Assert.Equal(PublicationId, profile.PublicationId);
+        Assert.Equal(AgentFrameworkProviderTransport.Responses, profile.Transport);
+        Assert.Equal(AgentFrameworkProviderPurpose.Chat, profile.Purpose);
+        Assert.True(profile.IsEnabled);
+        Assert.True(profile.SupportsStreaming);
+        Assert.True(profile.SupportsTools);
+        Assert.True(profile.SupportsParallelTools);
+        Assert.True(profile.SupportsStructuredOutput);
+        Assert.True(profile.SupportsVision);
+        Assert.False(profile.SupportsBase64Images);
+        Assert.True(profile.PreferFrameworkManagedChatHistory);
+        Assert.False(profile.SupportsBackgroundResponses);
+        Assert.Equal(
+            SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
+            profile.ConnectorPluginKey);
+        Assert.Contains("shared", profile.Tags);
+        Assert.Contains($"source:{SourceId:D}", profile.Tags);
+        Assert.Contains($"publication:{PublicationId}", profile.Tags);
+        Assert.DoesNotContain(
+            SensitiveStatusMarker,
+            JsonSerializer.Serialize(result),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Materialize_ChatCompletions_MapsHistoryModeAndPrivateNetworkPolicy()
+    {
+        var graph = CreateGraph(
+            sourceBaseUri: "http://10.20.30.40/client/",
+            allowPrivateNetwork: true,
+            modelCapabilities:
+            [
+                [
+                    SharedProviderCapability.ChatCompletions,
+                    SharedProviderCapability.Streaming,
+                    SharedProviderCapability.FunctionTools
+                ]
+            ]);
+
+        var profile = AssertAvailable(Materialize(graph));
+
+        Assert.Equal(AgentFrameworkProviderTransport.ChatCompletions, profile.Transport);
+        Assert.Equal(
+            "http://10.20.30.40/client/api/shared-providers/openai/v1",
+            profile.BaseUri.AbsoluteUri);
+        Assert.Equal(
+            SharedProviderSourceNetworkPolicy.AllowPrivateNetwork,
+            profile.NetworkPolicy);
+        Assert.True(profile.PreferFrameworkManagedChatHistory);
+        Assert.False(profile.SupportsBackgroundResponses);
+        Assert.True(profile.SupportsStreaming);
+        Assert.True(profile.SupportsTools);
+        Assert.False(profile.SupportsParallelTools);
+    }
+
+    [Fact]
+    public void Materialize_ImageGeneration_MapsPurposeAndImageCapabilities()
+    {
+        var graph = CreateGraph(
+            purpose: SharedProviderPurpose.ImageGeneration,
+            modelCapabilities:
+            [
+                [
+                    SharedProviderCapability.ImageGenerations,
+                    SharedProviderCapability.Base64Json
+                ]
+            ]);
+
+        var profile = AssertAvailable(Materialize(graph));
+
+        Assert.Equal(AgentFrameworkProviderKind.OpenAi, profile.Kind);
+        Assert.Equal(AgentFrameworkProviderTransport.Responses, profile.Transport);
+        Assert.Equal(AgentFrameworkProviderPurpose.ImageGeneration, profile.Purpose);
+        Assert.True(profile.SupportsBase64Images);
+        Assert.False(profile.SupportsStreaming);
+        Assert.False(profile.SupportsTools);
+        Assert.False(profile.SupportsStructuredOutput);
+        Assert.False(profile.SupportsVision);
+        Assert.False(profile.SupportsBackgroundResponses);
+        Assert.Contains("image-generation", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_MultipleModels_PreservesCatalogAndUsesSafeCapabilityIntersection()
+    {
+        var graph = CreateGraph(
+            modelCapabilities:
+            [
+                [
+                    SharedProviderCapability.Responses,
+                    SharedProviderCapability.Streaming,
+                    SharedProviderCapability.FunctionTools,
+                    SharedProviderCapability.StructuredOutput,
+                    SharedProviderCapability.VisionInput
+                ],
+                [SharedProviderCapability.Responses]
+            ]);
+
+        var profile = AssertAvailable(Materialize(graph));
+
+        Assert.Equal(2, profile.Models.Count);
+        Assert.Equal(
+            graph.Import.RemoteDefaultModelId,
+            profile.DefaultModelId);
+        Assert.All(profile.Models, model =>
+            Assert.Contains(SharedProviderCapability.Responses, model.Capabilities));
+        Assert.Contains(
+            SharedProviderCapability.VisionInput,
+            profile.Models.Single(model =>
+                model.Id == profile.DefaultModelId).Capabilities);
+        Assert.False(profile.SupportsStreaming);
+        Assert.False(profile.SupportsTools);
+        Assert.False(profile.SupportsStructuredOutput);
+        Assert.False(profile.SupportsVision);
+    }
+
+    [Fact]
+    public void Materialize_DegradedPublication_RemainsAvailableWithValidatedProjection()
+    {
+        var graph = CreateGraph(health: SharedProviderHealthState.Degraded);
+
+        var result = Materialize(graph);
+
+        var profile = AssertAvailable(result);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.Available, result.Availability);
+        Assert.Contains("available", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_LocalProfileDisabled_RetainsAliasAndDisabledIntent()
+    {
+        var graph = CreateGraph();
+        graph.Profile.Name = "My disabled shared alias";
+        graph.Profile.IsEnabled = false;
+
+        var result = Materialize(graph);
+
+        var profile = AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.LocalProfileDisabled);
+        Assert.Equal("My disabled shared alias", profile.Name);
+        Assert.False(profile.IsEnabled);
+        Assert.Contains("local-profile-disabled", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_SourceDisabledRetainsProjection_ButNeverSynchronizedDoesNot()
+    {
+        var graph = CreateGraph();
+        graph.Source.IsEnabled = false;
+
+        var disabled = Materialize(graph);
+
+        AssertUnavailableWithProjection(
+            disabled,
+            SharedProviderRuntimeProfileAvailability.SourceDisabled);
+
+        graph.Source.IsEnabled = true;
+        graph.Source.Status = SharedProviderSourceStatus.NeverSynchronized;
+        graph.Source.RemoteInstanceId = null;
+        var neverSynchronized = Materialize(graph);
+        AssertUnavailableWithoutProjection(
+            neverSynchronized,
+            SharedProviderRuntimeProfileAvailability.SourceNeverSynchronized);
+    }
+
+    [Fact]
+    public void Materialize_SourceOffline_RetainsLastValidatedProjection()
+    {
+        var graph = CreateGraph();
+        graph.Source.Status = SharedProviderSourceStatus.SourceOffline;
+
+        var result = Materialize(graph);
+
+        var profile = AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.SourceOffline);
+        Assert.Contains("source-offline", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_AuthorizationFailed_RetainsLastValidatedProjection()
+    {
+        var graph = CreateGraph();
+        graph.Source.Status = SharedProviderSourceStatus.AuthorizationFailed;
+
+        var result = Materialize(graph);
+
+        var profile = AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.AuthorizationFailed);
+        Assert.Contains("authorization-failed", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_SourceIdentityMismatch_RetainsOnlyPreviouslyValidatedProjection()
+    {
+        var graph = CreateGraph();
+        graph.Source.Status = SharedProviderSourceStatus.SourceIdentityMismatch;
+
+        var result = Materialize(graph);
+
+        var profile = AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.SourceIdentityMismatch);
+        Assert.Equal(SourceInstanceId, profile.SourceInstanceId);
+        Assert.Contains("source-identity-mismatch", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_IncompatibleContract_RetainsLastValidatedProjection()
+    {
+        var graph = CreateGraph();
+        graph.Source.Status = SharedProviderSourceStatus.IncompatibleContract;
+
+        var result = Materialize(graph);
+
+        AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.IncompatibleContract);
+    }
+
+    [Fact]
+    public void Materialize_RetiredImport_RetainsProjectionButCannotInvoke()
+    {
+        var graph = CreateGraph();
+        graph.Import.SelectionState = SharedProviderSelectionState.Retired;
+
+        var result = Materialize(graph);
+
+        var profile = AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.Retired);
+        Assert.Contains("retired", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_UnpublishedImport_RetainsProjectionButCannotInvoke()
+    {
+        var graph = CreateGraph();
+        graph.Import.AvailabilityState = SharedProviderAvailabilityState.Unpublished;
+
+        var result = Materialize(graph);
+
+        AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.Unpublished);
+    }
+
+    [Fact]
+    public void Materialize_MissingImport_RetainsProjectionButCannotInvoke()
+    {
+        var graph = CreateGraph();
+        graph.Import.AvailabilityState = SharedProviderAvailabilityState.Missing;
+
+        var result = Materialize(graph);
+
+        AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.Missing);
+    }
+
+    [Fact]
+    public void Materialize_RemoteUnavailableHealth_RetainsProjectionButCannotInvoke()
+    {
+        var graph = CreateGraph(health: SharedProviderHealthState.Unavailable);
+
+        var result = Materialize(graph);
+
+        var profile = AssertUnavailableWithProjection(
+            result,
+            SharedProviderRuntimeProfileAvailability.PublicationUnavailable);
+        Assert.Contains("publication-unavailable", profile.Tags);
+    }
+
+    [Fact]
+    public void Materialize_MissingOrMismatchedRelationship_ProducesNoProjection()
+    {
+        var graph = CreateGraph();
+
+        AssertUnavailableWithoutProjection(
+            Materializer.Materialize(null, graph.Import, graph.Source),
+            SharedProviderRuntimeProfileAvailability.ProviderProfileMissing);
+        AssertUnavailableWithoutProjection(
+            Materializer.Materialize(graph.Profile, null, graph.Source),
+            SharedProviderRuntimeProfileAvailability.ImportMissing);
+        AssertUnavailableWithoutProjection(
+            Materializer.Materialize(graph.Profile, graph.Import, null),
+            SharedProviderRuntimeProfileAvailability.SourceMissing);
+
+        graph.Import.ProviderProfileId = Guid.NewGuid();
+        AssertUnavailableWithoutProjection(
+            Materialize(graph),
+            SharedProviderRuntimeProfileAvailability.RelationshipMismatch);
+    }
+
+    [Fact]
+    public void Materialize_TamperedSnapshotOrDuplicatedImportFields_ProducesNoProjection()
+    {
+        var malformed = CreateGraph();
+        malformed.Import.RemoteCatalogSnapshotJson = "{}";
+
+        AssertUnavailableWithoutProjection(
+            Materialize(malformed),
+            SharedProviderRuntimeProfileAvailability.SnapshotInvalid);
+
+        var mismatchedRevision = CreateGraph();
+        mismatchedRevision.Import.RemoteRevision = new SharedProviderPublicRevision(
+            $"{SharedProviderPublicRevision.Prefix}{new string('a', SharedProviderPublicRevision.HashLength)}");
+        AssertUnavailableWithoutProjection(
+            Materialize(mismatchedRevision),
+            SharedProviderRuntimeProfileAvailability.SnapshotInvalid);
+
+        var mismatchedPurpose = CreateGraph();
+        mismatchedPurpose.Import.RemotePurpose = SharedProviderPurpose.ImageGeneration;
+        AssertUnavailableWithoutProjection(
+            Materialize(mismatchedPurpose),
+            SharedProviderRuntimeProfileAvailability.SnapshotInvalid);
+    }
+
+    [Fact]
+    public void Materialize_ForgedDerivedProfileCaches_ProducesNoProjection()
+    {
+        Action<ProviderProfile>[] mutations =
+        [
+            profile => profile.BaseUrl = "https://attacker.example.test/v1",
+            profile => profile.ApiKeySecretId = Guid.NewGuid(),
+            profile => profile.DefaultModel = "forged-model",
+            profile => profile.SupportsStreaming = false,
+            profile => profile.SupportsToolCalling = false,
+            profile => profile.SupportsStructuredOutput = false,
+            profile => profile.SupportsVision = false
+        ];
+
+        foreach (var mutate in mutations)
+        {
+            var graph = CreateGraph();
+            mutate(graph.Profile);
+
+            AssertUnavailableWithoutProjection(
+                Materialize(graph),
+                SharedProviderRuntimeProfileAvailability.ProfileCacheIntegrityMismatch);
+        }
+    }
+
+    [Fact]
+    public void Validate_retains_canonical_shape_for_operationally_disabled_graphs() {
+        var graph = CreateGraph();
+        graph.Source.IsEnabled = false;
+        var (availability, shape) = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SourceDisabled, availability);
+        Assert.NotNull(shape);
+        Assert.Same(graph.Profile, shape.Profile);
+        Assert.Same(graph.Import, shape.Import);
+        Assert.Same(graph.Source, shape.Source);
+        Assert.Equal(graph.Import.RemoteRevision, shape.Publication.Revision);
+        Assert.Equal(AgentFrameworkProviderTransport.Responses, shape.Transport);
+        Assert.Equal(AgentFrameworkProviderPurpose.Chat, shape.Purpose);
+
+        graph.Source.IsEnabled = true;
+        graph.Import.SelectionState = SharedProviderSelectionState.Retired;
+        var retired = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.Retired, retired.Availability);
+        Assert.NotNull(retired.Shape);
+    }
+
+    [Fact]
+    public void Validate_rejects_missing_and_malformed_graphs_without_effective_profiles() {
+        var graph = CreateGraph();
+        var missingProfile = Materializer.Validate(null, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.ProviderProfileMissing, missingProfile.Availability);
+        Assert.Null(missingProfile.Shape);
+        var missingImport = Materializer.Validate(graph.Profile, null, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.ImportMissing, missingImport.Availability);
+        Assert.Null(missingImport.Shape);
+        var missingSource = Materializer.Validate(graph.Profile, graph.Import, null);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SourceMissing, missingSource.Availability);
+        Assert.Null(missingSource.Shape);
+
+        graph.Import.RemoteCatalogSnapshotJson = "{}";
+        var malformed = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SnapshotInvalid, malformed.Availability);
+        Assert.Null(malformed.Shape);
+    }
+
+    [Fact]
+    public void Validate_avoids_effective_model_copy_allocations() {
+        var capabilities = Enumerable.Range(0, 64)
+            .Select(_ => (IReadOnlyList<SharedProviderCapability>)new[] {
+                SharedProviderCapability.Responses,
+                SharedProviderCapability.Streaming
+            }).ToArray();
+        var graph = CreateGraph(modelCapabilities: capabilities);
+        Action validate = () => Assert.NotNull(Materializer.Validate(graph.Profile, graph.Import, graph.Source).Shape);
+        Action materialize = () => Assert.NotNull(Materializer.Materialize(graph.Profile, graph.Import, graph.Source).Profile);
+        for (var index = 0; index < 3; index++) {
+            validate();
+            materialize();
+        }
+        var validationBytes = MeasureAllocatedBytes(validate);
+        var materializationBytes = MeasureAllocatedBytes(materialize);
+        output.WriteLine($"Eight 64-model operations: validation={validationBytes} bytes; full materialization={materializationBytes} bytes.");
+        Assert.True(validationBytes < materializationBytes,
+            $"Validation allocated {validationBytes} bytes; full materialization allocated {materializationBytes} bytes.");
+    }
+
+    private static long MeasureAllocatedBytes(Action action) {
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var index = 0; index < 8; index++) {
+            action();
+        }
+        return GC.GetAllocatedBytesForCurrentThread() - before;
+    }
+
+    private static SharedProviderRuntimeProfileMaterializer Materializer { get; } = new();
+
+    private static SharedProviderRuntimeProfileMaterializationResult Materialize(TestGraph graph) {
+        var validation = Materializer.Validate(graph.Profile, graph.Import, graph.Source);
+        var result = Materializer.Materialize(graph.Profile, graph.Import, graph.Source);
+        Assert.Equal(result.Availability, validation.Availability);
+        Assert.Equal(result.Profile is not null, validation.Shape is not null);
+        return result;
+    }
+
+    private static SharedProviderEffectiveRuntimeProfile AssertAvailable(
+        SharedProviderRuntimeProfileMaterializationResult result)
+    {
+        Assert.True(result.IsAvailable);
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.Available, result.Availability);
+        return Assert.IsType<SharedProviderEffectiveRuntimeProfile>(result.Profile);
+    }
+
+    private static SharedProviderEffectiveRuntimeProfile AssertUnavailableWithProjection(
+        SharedProviderRuntimeProfileMaterializationResult result,
+        SharedProviderRuntimeProfileAvailability availability)
+    {
+        Assert.False(result.IsAvailable);
+        Assert.Equal(availability, result.Availability);
+        return Assert.IsType<SharedProviderEffectiveRuntimeProfile>(result.Profile);
+    }
+
+    private static void AssertUnavailableWithoutProjection(
+        SharedProviderRuntimeProfileMaterializationResult result,
+        SharedProviderRuntimeProfileAvailability availability)
+    {
+        Assert.False(result.IsAvailable);
+        Assert.Equal(availability, result.Availability);
+        Assert.Null(result.Profile);
+    }
+
+    private static TestGraph CreateGraph(
+        SharedProviderPurpose purpose = SharedProviderPurpose.Chat,
+        SharedProviderHealthState health = SharedProviderHealthState.Available,
+        string sourceBaseUri = "https://central.example.test/reverse-proxy/",
+        bool allowPrivateNetwork = false,
+        IReadOnlyList<IReadOnlyList<SharedProviderCapability>>? modelCapabilities = null,
+        bool isPrivateProvider = false,
+        SharedProviderCatalogPrice? price = null)
+    {
+        modelCapabilities ??=
+        [
+            [
+                SharedProviderCapability.Responses,
+                SharedProviderCapability.Streaming,
+                SharedProviderCapability.FunctionTools,
+                SharedProviderCapability.ParallelFunctionTools,
+                SharedProviderCapability.StructuredOutput,
+                SharedProviderCapability.VisionInput
+            ]
+        ];
+        var models = modelCapabilities
+            .Select((capabilities, index) => new SharedProviderCatalogModel(
+                SharedProviderRoutingModelIdCodec.Create(
+                    PublicationId,
+                    $"central-model-{index + 1}"),
+                $"Remote model {index + 1}",
+                Array.AsReadOnly(capabilities.ToArray())) { Price = price })
+            .ToArray();
+        var publication = new SharedProviderCatalogPublication(
+            PublicationId,
+            new SharedProviderPublicRevision(
+                $"{SharedProviderPublicRevision.Prefix}{new string('0', SharedProviderPublicRevision.HashLength)}"),
+            "Remote publication name",
+            purpose,
+            SharedProviderTransport.OpenAiCompatible,
+            models[0].Id,
+            Array.AsReadOnly(models),
+            new SharedProviderCatalogHealth(health)) { IsPrivateProvider = isPrivateProvider };
+        publication = publication with
+        {
+            Revision = SharedProviderCanonicalRevision.ComputePublication(publication)
+        };
+
+        var source = SharedProviderSourceTransitions.Create(
+            "Central source",
+            sourceBaseUri,
+            SecretId,
+            allowPrivateNetwork,
+            isEnabled: true,
+            new DateTimeOffset(2026, 8, 25, 12, 0, 0, TimeSpan.Zero));
+        source.Id = SourceId;
+        source.Status = SharedProviderSourceStatus.Available;
+        source.RemoteInstanceId = SourceInstanceId;
+        source.LastStatusMessage = SensitiveStatusMarker;
+
+        var defaultCapabilities = publication.Models[0].Capabilities;
+        var profile = new ProviderProfile
+        {
+            Id = ProfileId,
+            Name = "Local shared alias",
+            ProviderKind = ProviderKind.OpenAi,
+            ConnectorPluginKey =
+                SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
+            ConfigSchemaVersion = ImportedSchemaVersion,
+            BaseUrl = SharedProviderRoutes.ResolveOpenAiBase(
+                new Uri(source.BaseUri)).AbsoluteUri,
+            ApiKeySecretId = SecretId,
+            DefaultModel = publication.DefaultModelId.Value,
+            TimeoutSeconds = 45,
+            IsEnabled = true,
+            SupportsStreaming = defaultCapabilities.Contains(
+                SharedProviderCapability.Streaming),
+            SupportsToolCalling = defaultCapabilities.Contains(
+                SharedProviderCapability.FunctionTools),
+            SupportsStructuredOutput = defaultCapabilities.Contains(
+                SharedProviderCapability.StructuredOutput),
+            SupportsVision = defaultCapabilities.Contains(
+                SharedProviderCapability.VisionInput),
+            ExtraSettingsJson = "{}",
+            LastHealthStatus = SensitiveStatusMarker
+        };
+        var import = SharedProviderImportTransitions.Create(
+            source.Id,
+            profile.Id,
+            SharedProviderRemotePublicationState.Create(publication),
+            new DateTimeOffset(2026, 8, 25, 12, 1, 0, TimeSpan.Zero));
+        import.Id = ImportId;
+        return new TestGraph(profile, import, source);
+    }
+
+    private sealed record TestGraph(
+        ProviderProfile Profile,
+        SharedProviderImport Import,
+        SharedProviderSource Source);
+}

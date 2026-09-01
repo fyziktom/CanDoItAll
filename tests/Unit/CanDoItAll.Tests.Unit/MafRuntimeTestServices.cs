@@ -27,10 +27,13 @@ internal static class MafRuntimeTestServices
             new ManagedCodeMarkItDownDocumentMarkdownConverter(),
             TestWorkspaceServices.PhysicalPathPolicyFactory,
             new ExternalTargetPathRegistryFactory()));
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder, RecordingProviderHistory>();
+        services.AddSingleton(TimeProvider.System);
         services.AddMafRuntimeArchitectureServices();
         services.AddSingleton<IMafProviderAgentFactory>(serviceProvider => new MafProviderAgentFactory(
             serviceProvider.GetRequiredService<IMafProviderCredentialService>(),
-            serviceProvider.GetRequiredService<IMafProviderStreamingDispatchGate>()));
+            serviceProvider.GetRequiredService<IMafProviderStreamingDispatchGate>(),
+            serviceProvider.GetRequiredService<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder>()));
         return services;
     }
 

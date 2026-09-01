@@ -18,6 +18,8 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
     public static IServiceCollection AddLlmChatsPersistence(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter>();
         services.TryAddSingleton<ILlmChatRuntimeLeaseFactory, DatabaseProfileLlmChatRuntimeLeaseFactory>();
         services.AddScoped<ILlmChatDefinitionRepository, EfLlmChatDefinitionRepository>();
         services.AddScoped<ILlmChatDefinitionReadStore, EfLlmChatDefinitionReadStore>();
@@ -27,6 +29,10 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.AddScoped<ILlmChatOperationReadStore, EfLlmChatOperationReadStore>();
         services.AddScoped<ILlmChatProjectStructureReportStore, EfLlmChatProjectStructureReportStore>();
         services.AddScoped<ILlmChatTurnStateRepository, EfLlmChatTurnStateRepository>();
+        services.AddSingleton<LlmChatHistoryProjection>();
+        services.AddSingleton<LlmChatHistorySource>();
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<LlmChatHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistorySourceMaintenance>(provider => provider.GetRequiredService<LlmChatHistorySource>());
         services.AddScoped<ILlmChatInvocationRecordRepository, EfLlmChatInvocationRecordRepository>();
         services.AddScoped<ILlmChatOperationEventRepository, EfLlmChatOperationEventRepository>();
         services.AddScoped<ILlmChatCommitFence, DatabaseProfileLlmChatCommitFence>();

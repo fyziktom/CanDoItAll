@@ -53,6 +53,22 @@ scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`,
 Workflow HITL response submission and operation-status reads require the exact
 `api.workflows.respond` scope; the broad `api` scope does not authorize this boundary.
 
+## Shared providers and history
+
+The five [shared-provider operations](shared-providers.md#http-surface) expose a
+versioned catalog and a bounded OpenAI-compatible inference subset. With authorization
+enabled, catalog/model reads accept `api.shared-providers.catalog.read` or the existing
+`api` umbrella; inference accepts `api.shared-providers.invoke` or `api`.
+The operation schema documents the supported properties, nested shapes and limits.
+Source/import/publication administration remains an in-process application/UI boundary.
+
+Request history metadata, content and management use separate exact authorities:
+`api.provider-history.read`, `api.provider-history.content.read` and
+`api.provider-history.manage`. These are not general history HTTP routes.
+[Request history](provider-request-history.md) describes caller identity, canonical
+ownership, Light/Detailed privacy and retention. Opaque correlation references do not
+grant access.
+
 ## Current Route Families
 
 The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs); Project Structure is registered from [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs).

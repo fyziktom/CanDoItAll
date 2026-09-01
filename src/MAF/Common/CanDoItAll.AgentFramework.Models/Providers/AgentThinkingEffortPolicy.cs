@@ -10,7 +10,8 @@ public enum AgentThinkingEffortSupportStatus
 public enum AgentThinkingEffortCapabilitySource
 {
     Defined,
-    Discovered
+    Discovered,
+    Configured
 }
 
 public enum AgentThinkingEffortControlMode
@@ -27,7 +28,10 @@ public sealed record ProviderModelThinkingEffortCapability(
     IReadOnlyList<AgentReasoningEffortLevel> AllowedEfforts,
     string ModelFamily = "",
     string Summary = "",
-    AgentThinkingEffortControlMode ControlMode = AgentThinkingEffortControlMode.Unspecified);
+    AgentThinkingEffortControlMode ControlMode = AgentThinkingEffortControlMode.Unspecified) {
+    public AgentReasoningEffortLevel? SourceDefaultEffort { get; init; }
+    public bool OmitTemperature { get; init; }
+}
 
 public static class AgentThinkingEffortPolicy
 {
@@ -62,6 +66,17 @@ public static class AgentThinkingEffortPolicy
         ArgumentNullException.ThrowIfNull(provider);
 
         var normalizedModel = NormalizeModel(model);
+        if (provider.IsSourceManaged) {
+            var published = provider.ModelThinkingEffortCapabilities.FirstOrDefault(item =>
+                string.Equals(item.Model, normalizedModel, StringComparison.Ordinal));
+            if (published is not null) {
+                return NormalizeCapability(published);
+            }
+            return CreateUnknownCapability(
+                normalizedModel,
+                AgentThinkingEffortCapabilitySource.Defined,
+                $"The imported catalog has no thinking capabilities for '{provider.GetModelDisplayName(normalizedModel)}'. Refresh the shared provider to load the source's current settings.");
+        }
         if (string.IsNullOrWhiteSpace(normalizedModel))
         {
             return CreateUnknownCapability(
@@ -84,6 +99,11 @@ public static class AgentThinkingEffortPolicy
                 normalizedModel,
                 AgentThinkingEffortCapabilitySource.Defined,
                 $"Transport '{provider.Transport}' cannot apply configurable thinking effort.");
+        }
+
+        if (ProviderModelThinkingConfiguration.Find(provider.ConfigurationJson, normalizedModel) is { } configured) {
+            ProviderModelThinkingConfiguration.ValidateForProvider(provider.ConfigurationJson, provider.Kind, provider.Transport, provider.Purpose);
+            return configured.ToCapability();
         }
 
         var storedCapability = provider.ModelThinkingEffortCapabilities.FirstOrDefault(item =>
@@ -273,7 +293,7 @@ public static class AgentThinkingEffortPolicy
             provider.Name,
             model,
             ResolveCapability(provider, model),
-            provider.ConfigurationJson,
+            provider.IsSourceManaged ? null : provider.ConfigurationJson,
             agentConfigurationJson,
             includeLegacyOllamaThink: provider.Kind == ProviderKind.Ollama);
     }
@@ -285,10 +305,12 @@ public static class AgentThinkingEffortPolicy
         string? providerConfigurationJson,
         string? agentConfigurationJson)
     {
+        ProviderModelThinkingConfiguration.ValidateForProvider(providerConfigurationJson, providerKind, providerTransport, ProviderProfilePurpose.Chat);
         return ResolveEffectiveEffort(
             providerKind.ToString(),
             model,
-            ResolveDefinedCapability(providerKind, providerTransport, model),
+            ProviderModelThinkingConfiguration.Find(providerConfigurationJson, model)?.ToCapability() ??
+                ResolveDefinedCapability(providerKind, providerTransport, model),
             providerConfigurationJson,
             agentConfigurationJson,
             includeLegacyOllamaThink: providerKind == ProviderKind.Ollama);
@@ -306,9 +328,9 @@ public static class AgentThinkingEffortPolicy
             return null;
         }
 
-        var providerDefault = ReadConfiguredEffort(
+        var providerDefault = provider.IsSourceManaged ? capability.SourceDefaultEffort : ProviderModelThinkingConfiguration.ReadDefault(
             provider.ConfigurationJson,
-            "provider",
+            model,
             includeLegacyOllamaThink: provider.Kind == ProviderKind.Ollama);
         if (providerDefault is null)
         {
@@ -476,9 +498,9 @@ public static class AgentThinkingEffortPolicy
             return null;
         }
 
-        var providerDefault = ReadConfiguredEffort(
+        var providerDefault = ProviderModelThinkingConfiguration.ReadDefault(
             providerConfigurationJson,
-            "provider",
+            model,
             includeLegacyOllamaThink);
         if (providerDefault is null)
         {

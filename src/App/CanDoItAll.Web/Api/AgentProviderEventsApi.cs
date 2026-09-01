@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api.Streaming;
 using Microsoft.Extensions.Options;
@@ -35,7 +36,7 @@ internal static class AgentProviderEventsApi
         Guid providerId,
         ProviderChatCompletionApiRequest request,
         HttpContext context,
-        IAgentFrameworkWorkspaceService workspaceService,
+        IProviderRuntimeAdministrationService providerAdministration,
         IProviderRuntimeProfileSource providerSource,
         IOptions<ApiAccessOptions> apiOptions,
         ILogger<ProviderChatCompletionApiRequest> logger)
@@ -68,9 +69,9 @@ internal static class AgentProviderEventsApi
         Task<ProviderTestChatResult> completion;
         try
         {
-            completion = workspaceService.RunProviderTestChatAsync(
+            completion = providerAdministration.RunProviderTestChatAsync(
                 providerId,
-                request.ToProviderRequest(),
+                ProviderHistoryRequestContext.WithCaller(request.ToProviderRequest(), context),
                 commandLifetime.Token);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)

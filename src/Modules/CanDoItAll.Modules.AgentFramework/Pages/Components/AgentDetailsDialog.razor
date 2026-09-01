@@ -108,6 +108,9 @@ else
                                                          Disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
                                                          TestId="agents-catalog-thinking-effort"
                                                          SupportTestId="agents-catalog-thinking-effort-support" />
+                            @if (SelectedRuntimeProvider is { IsSourceManaged: true } sharedProvider) {
+                                <SharedProviderRefreshButton @key="sharedProvider.Id" ProviderId="sharedProvider.Id" Refreshed="RefreshRuntimeProvidersAsync" />
+                            }
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                 <div>

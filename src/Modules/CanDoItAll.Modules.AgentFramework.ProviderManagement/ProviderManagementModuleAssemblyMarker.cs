@@ -1,0 +1,3 @@
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
+
+public static class ProviderManagementModuleAssemblyMarker;

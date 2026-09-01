@@ -1,0 +1,43 @@
+<Dialog IsOpen="true" Title="Linked request content"
+        Subtitle="Canonical run, conversation or turn details. Summaries and conversation context are labeled separately from per-request payloads."
+        Size="ModalSize.Wide" DenseChrome="true" OnClose="OnClose" TestId="history-content-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+            <StatusBadge Text="@($"Content: {Content.State}")" data-testid="history-content-state" />
+            @if (Content.ExpiresAtUtc is { } expiry) {
+                <p>Content expires @ProviderHistoryPresentation.Time(expiry)</p>
+            }
+            @foreach (var section in Sections) {
+                <FormSection Title="@section.Title" Description="@($"{section.Content.CapturedBytes:N0} of {section.Content.OriginalBytes:N0} bytes · {section.Content.Flags}")">
+                    <TextArea Value="@section.Content.Text" ReadOnly="true" Size="@(section.Content.Text.Length <= 512 ? TextAreaSize.Compact : TextAreaSize.Extended)"
+                              aria-label="@section.Title" data-testid="history-content-text" />
+                </FormSection>
+            }
+            @if (!Sections.Any()) {
+                <EmptyState Title="Content unavailable" Description="The canonical owner has no retained readable content for this request." />
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Button Text="Close content" ButtonStyle="ButtonStyle.Light" Click="OnClose" data-testid="history-content-close" />
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public HistoryDetail Content { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private IEnumerable<HistoryContentSection> Sections {
+        get {
+            if (Content.Input is { } input) {
+                yield return new("Current input", input);
+            }
+            if (Content.Response is { } response) {
+                yield return new("Response", response);
+            }
+            foreach (var section in Content.Sections) {
+                yield return section;
+            }
+        }
+    }
+}

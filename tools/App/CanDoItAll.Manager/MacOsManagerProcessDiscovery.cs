@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 
@@ -17,7 +18,8 @@ internal sealed record MacProcessNativeIdentity(
     int ParentProcessId,
     uint UserId,
     long StartSeconds,
-    int StartMicroseconds)
+    int StartMicroseconds,
+    string ExecutablePath)
 {
     public string StartIdentity => $"macos-kernel-start:{StartSeconds}:{StartMicroseconds}";
 }
@@ -50,6 +52,7 @@ internal sealed class LibProcMacProcessIdentityReader : IMacProcessIdentityReade
     private const int UserIdOffset = 20;
     private const int StartSecondsOffset = 120;
     private const int StartMicrosecondsOffset = 128;
+    private const int ProcPidPathSize = 4096;
 
     public MacProcessIdentityReadResult Read(int processId)
     {
@@ -76,7 +79,33 @@ internal sealed class LibProcMacProcessIdentityReader : IMacProcessIdentityReade
             };
         }
 
-        return bytesRead >= ProcBsdInfoSize && TryParseBuffer(processId, buffer, out var identity)
+        if (bytesRead < ProcBsdInfoSize)
+        {
+            return MacProcessIdentityReadResult.Unavailable(
+                ManagerProcessDiscoveryStatus.Incomplete,
+                "macos-kernel-process-evidence-incomplete");
+        }
+
+        var pathBuffer = new byte[ProcPidPathSize];
+        var pathLength = NativeMethods.ProcPidPath(processId, pathBuffer, (uint)pathBuffer.Length);
+        if (pathLength <= 0)
+        {
+            return Marshal.GetLastPInvokeError() switch
+            {
+                3 => MacProcessIdentityReadResult.Unavailable(
+                    ManagerProcessDiscoveryStatus.Exited,
+                    "macos-kernel-process-exited"),
+                1 or 13 => MacProcessIdentityReadResult.Unavailable(
+                    ManagerProcessDiscoveryStatus.PermissionDenied,
+                    "macos-kernel-process-permission-denied"),
+                _ => MacProcessIdentityReadResult.Unavailable(
+                    ManagerProcessDiscoveryStatus.Incomplete,
+                    "macos-kernel-process-path-query-failed")
+            };
+        }
+
+        var executablePath = Encoding.UTF8.GetString(pathBuffer.AsSpan(0, pathLength)).TrimEnd('\0');
+        return TryParseBuffer(processId, buffer, executablePath, out var identity)
             ? MacProcessIdentityReadResult.Available(identity!)
             : MacProcessIdentityReadResult.Unavailable(
                 ManagerProcessDiscoveryStatus.Incomplete,
@@ -86,6 +115,7 @@ internal sealed class LibProcMacProcessIdentityReader : IMacProcessIdentityReade
     internal static bool TryParseBuffer(
         int expectedProcessId,
         ReadOnlySpan<byte> buffer,
+        string executablePath,
         out MacProcessNativeIdentity? identity)
     {
         identity = null;
@@ -99,7 +129,8 @@ internal sealed class LibProcMacProcessIdentityReader : IMacProcessIdentityReade
         var userId = BinaryPrimitives.ReadUInt32LittleEndian(buffer[UserIdOffset..]);
         var startSeconds = checked((long)BinaryPrimitives.ReadUInt64LittleEndian(buffer[StartSecondsOffset..]));
         var startMicroseconds = checked((int)BinaryPrimitives.ReadUInt64LittleEndian(buffer[StartMicrosecondsOffset..]));
-        if (processId != expectedProcessId || startSeconds <= 0 || startMicroseconds is < 0 or >= 1_000_000)
+        if (processId != expectedProcessId || startSeconds <= 0 || startMicroseconds is < 0 or >= 1_000_000 ||
+            !Path.IsPathRooted(executablePath))
         {
             return false;
         }
@@ -109,7 +140,8 @@ internal sealed class LibProcMacProcessIdentityReader : IMacProcessIdentityReade
             parentProcessId,
             userId,
             startSeconds,
-            startMicroseconds);
+            startMicroseconds,
+            Path.GetFullPath(executablePath));
         return true;
     }
 
@@ -122,6 +154,12 @@ internal sealed class LibProcMacProcessIdentityReader : IMacProcessIdentityReade
             ulong argument,
             byte[] buffer,
             int bufferSize);
+
+        [DllImport("/usr/lib/libproc.dylib", EntryPoint = "proc_pidpath", SetLastError = true)]
+        internal static extern int ProcPidPath(
+            int processId,
+            byte[] buffer,
+            uint bufferSize);
     }
 }
 
@@ -147,7 +185,7 @@ internal sealed class B01MacProcessCommandRunner(IWorkspaceProcessHost processHo
                     "-p",
                     processId.ToString(CultureInfo.InvariantCulture),
                     "-o",
-                    "pid=,ppid=,uid=,lstart=,comm=,args="
+                    "pid=,ppid=,uid=,lstart=,args="
                 ],
                 "/",
                 environment,
@@ -170,7 +208,7 @@ internal sealed partial class MacOsManagerProcessDiscovery(
     private const int MaximumOutputLength = 64 * 1024;
 
     [GeneratedRegex(
-        @"^\s*(?<pid>\d+)\s+(?<ppid>\d+)\s+(?<uid>\d+)\s+(?<start>[A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(?<exe>\S+)\s+(?<args>.+)$",
+        @"^\s*(?<pid>\d+)\s+(?<ppid>\d+)\s+(?<uid>\d+)\s+(?<start>[A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(?<args>.+)$",
         RegexOptions.CultureInvariant)]
     private static partial Regex ProcessLineRegex();
 
@@ -226,7 +264,7 @@ internal sealed partial class MacOsManagerProcessDiscovery(
                 "macos-process-output-too-large");
         }
 
-        if (!TryParse(processId, result.Stdout, out var evidence) ||
+        if (!TryParse(processId, result.Stdout, identityResult.Identity.ExecutablePath, out var evidence) ||
             evidence!.ParentProcessId != identityResult.Identity.ParentProcessId ||
             !string.Equals(
                 evidence.OwnerIdentity,
@@ -245,6 +283,7 @@ internal sealed partial class MacOsManagerProcessDiscovery(
     internal static bool TryParse(
         int expectedProcessId,
         string output,
+        string executablePath,
         out ManagerProcessEvidence? evidence)
     {
         evidence = null;
@@ -263,13 +302,12 @@ internal sealed partial class MacOsManagerProcessDiscovery(
                 match.Groups["start"].Value,
                 "ddd MMM d HH:mm:ss yyyy",
                 CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeLocal,
+                DateTimeStyles.AssumeLocal | DateTimeStyles.AllowInnerWhite,
                 out var startedAt))
         {
             return false;
         }
 
-        var executablePath = match.Groups["exe"].Value;
         var arguments = match.Groups["args"].Value;
         var uid = match.Groups["uid"].Value;
         if (!Path.IsPathRooted(executablePath) || string.IsNullOrWhiteSpace(arguments))

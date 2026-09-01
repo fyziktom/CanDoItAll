@@ -39,15 +39,31 @@ public sealed class CrossPlatformCiWorkflowTests
             "(Category=UnixPortabilityCore)&(RequiresHostDocker=true)",
             workflow,
             StringComparison.Ordinal);
-        Assert.Contains("test_enforce_portability_baseline.py", workflow, StringComparison.Ordinal);
+        string portabilityToolsPath = Path.Combine(repositoryRoot, "tools", "Validation", "Portability");
+        Assert.True(File.Exists(Path.Combine(portabilityToolsPath, "scan_portability.py")));
+        Assert.True(File.Exists(Path.Combine(portabilityToolsPath, "platform-sensitive-patterns.txt")));
+        Assert.True(File.Exists(Path.Combine(portabilityToolsPath, "portability-risk-baseline.json")));
         Assert.Contains(
-            "python ./codex/bundles/Unix-portability/scripts/enforce_portability_baseline.py",
+            "python ./tools/Validation/Portability/test_enforce_portability_baseline.py",
             workflow,
             StringComparison.Ordinal);
         Assert.Contains(
-            "--baseline ./codex/bundles/Unix-portability/shared/portability-risk-baseline.json",
+            "python ./tools/Validation/Portability/test_scan_artifacts_for_secrets.py",
             workflow,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "python ./tools/Validation/Portability/scan_portability.py",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "python ./tools/Validation/Portability/enforce_portability_baseline.py",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "--baseline ./tools/Validation/Portability/portability-risk-baseline.json",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("codex/bundles", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("--write-baseline", workflow, StringComparison.Ordinal);
         Assert.Contains("Test-CorePortabilityHeadless.ps1", workflow, StringComparison.Ordinal);
         Assert.Contains("UnixPortabilityBrowserSmoke", File.ReadAllText(Path.Combine(
@@ -88,8 +104,14 @@ public sealed class CrossPlatformCiWorkflowTests
             "App",
             "CanDoItAll.Web",
             "Dockerfile"));
-        Assert.Contains("COPY --from=components . /CanDoItAll.Components", dockerfile, StringComparison.Ordinal);
-        Assert.Contains("COPY --from=filetools . /CanDoItAll.FileTools", dockerfile, StringComparison.Ordinal);
+        Assert.Contains(
+            "COPY --from=components --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.Components",
+            dockerfile,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "COPY --from=filetools --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.FileTools",
+            dockerfile,
+            StringComparison.Ordinal);
         Assert.DoesNotContain("UseLocalCanDoItAllLibraries=false", dockerfile, StringComparison.Ordinal);
     }
 

@@ -132,8 +132,14 @@ public sealed class SecretService(
     ISecretVault vault,
     ISecretProtector protector,
     IClock clock,
-    IActivityStream activityStream)
+    IActivityStream activityStream,
+    IEnumerable<ISecretDeletionReferencePolicy> deletionReferencePolicies)
 {
+    private readonly IReadOnlyList<ISecretDeletionReferencePolicy>
+        referencePolicies = deletionReferencePolicies?.ToArray()
+            ?? throw new ArgumentNullException(
+                nameof(deletionReferencePolicies));
+
     public async Task<IReadOnlyList<SecretListItem>> ListAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -332,10 +338,34 @@ public sealed class SecretService(
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext,
+            SecretMutationScopeKeys.ForSecretRecord(id),
+            cancellationToken);
         var entity = await dbContext.Set<SecretRecord>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (entity is null)
         {
             return;
+        }
+
+        var blockingReferences = new List<SecretDeletionReference>();
+        foreach (var policy in referencePolicies)
+        {
+            var reference = await policy.FindReferenceAsync(
+                dbContext,
+                entity.Id,
+                cancellationToken);
+            if (reference is not null)
+            {
+                blockingReferences.Add(reference);
+            }
+        }
+
+        if (blockingReferences.Count > 0)
+        {
+            throw new SecretDeletionBlockedException(
+                entity.Id,
+                Array.AsReadOnly(blockingReferences.ToArray()));
         }
 
         var vaultKey = SecretVaultRecordReference.TryParse(entity.EncryptedPayload, out var parsedVaultKey)
@@ -344,6 +374,7 @@ public sealed class SecretService(
 
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
         if (!string.IsNullOrWhiteSpace(vaultKey))
         {
             await vault.DeleteAsync(vaultKey, cancellationToken);

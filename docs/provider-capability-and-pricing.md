@@ -93,6 +93,22 @@ Private/local provider defaults are estimates for comparative planning. They can
 
 OpenAI uses `OPENAI_API_KEY` or the runtime secret store. Managed local profiles may be seeded even when their external service or model is not installed; health checks make that state explicit.
 
+## Shared provider and history evidence
+
+A shared provider advertises only its published model/capability subset, including
+thinking support and allowed efforts. Synchronization preserves publication identity,
+routing IDs and upstream availability. Imported defaults and overrides must stay within
+that subset; a missing or invalid upstream target fails explicitly.
+
+Each invocation freezes its tariff and provenance. Later profile/catalog changes do not
+rewrite [historical request evidence](provider-request-history.md). Missing usage is
+unavailable or partial, not zero; missing price is unpriced, while an explicit zero tariff
+is free. Cached and reasoning token categories are recorded only when observed.
+History represents application-visible attempts, not every physical SDK retry.
+
+See [shared providers](shared-providers.md) for publication, synchronization, network
+policy, stateless Responses and failure handling.
+
 ## Security And Operations
 
 - Store credentials in environment variables or the runtime secret store, never tracked JSON.

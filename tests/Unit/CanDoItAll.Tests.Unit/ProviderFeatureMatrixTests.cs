@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -28,6 +29,81 @@ public sealed class ProviderFeatureMatrixTests
         Assert.True(matrix.SupportsResponseFormatJsonSchema);
         Assert.True(matrix.SupportsToolApprovalRequests);
         Assert.True(matrix.SupportsApprovalRequiredAIFunction);
+
+        var constrained = service.ResolveFeatureMatrix(provider with
+        {
+            FeatureConstraints = new ProviderFeatureConstraints(
+                AllowsStructuredOutput: false,
+                AllowsVision: false,
+                AllowsNativeTools: false,
+                AllowsHostedMcp: false,
+                AllowsServiceManagedHistory: false,
+                AllowsCompaction: false,
+                AllowsParallelFunctionTools: false)
+        });
+
+        Assert.False(constrained.SupportsStructuredOutput);
+        Assert.False(constrained.SupportsResponseFormatJsonSchema);
+        Assert.False(constrained.SupportsRunAsyncTypedOutput);
+        Assert.False(constrained.SupportsVision);
+        Assert.False(constrained.SupportsNativeCodeInterpreter);
+        Assert.False(constrained.SupportsNativeFileSearch);
+        Assert.False(constrained.SupportsNativeWebSearch);
+        Assert.False(constrained.SupportsHostedMcpServer);
+        Assert.False(constrained.SupportsHostedTools);
+        Assert.False(constrained.SupportsHostedMcp);
+        Assert.False(constrained.SupportsServiceManagedHistory);
+        Assert.False(constrained.SupportsCompaction);
+        Assert.True(constrained.SupportsFunctionTools);
+        Assert.True(constrained.SupportsLocalMcpBridge);
+        Assert.False(constrained.SupportsParallelFunctionTools);
+    }
+
+    [Fact]
+    public void AudioCapabilityPolicyRejectsSourceProfilesAndPreservesPersonalProfiles()
+    {
+        var personal = CreateProvider(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: false,
+            preferFrameworkManagedHistory: true);
+        var sourceManaged = personal with
+        {
+            Id = Guid.Parse("c45b659d-3054-465a-ad48-91049c458902"),
+            CredentialBinding = new ProviderCredentialBinding(
+                Guid.Parse("9f247304-1c4f-4404-a1d9-18d2488f2b05"),
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.Parse("b647c53c-4dc0-4055-b46d-19c44fd9ed5d"))
+        };
+
+        Assert.True(ProviderAudioCapabilityPolicy.IsAvailable(personal));
+        Assert.False(ProviderAudioCapabilityPolicy.IsAvailable(sourceManaged));
+        ProviderAudioCapabilityPolicy.EnsureAvailable(
+            personal,
+            AgentProviderOperationKind.TranscribeSpeech);
+        var exception = Assert.Throws<ProviderAudioCapabilityException>(() =>
+            ProviderAudioCapabilityPolicy.EnsureAvailable(
+                sourceManaged,
+                AgentProviderOperationKind.SynthesizeSpeech));
+        Assert.Equal(sourceManaged.Id, exception.ProviderProfileId);
+        Assert.Equal(AgentProviderOperationKind.SynthesizeSpeech, exception.Operation);
+        Assert.Equal(ProviderAudioCapabilityException.PublicMessage, exception.Message);
+
+        var eligibleVoiceProviders = new[] { personal, sourceManaged }
+            .Where(AgentVoiceSettingsPanel.IsOpenAiVoiceProvider)
+            .ToArray();
+        Assert.Equal(personal, Assert.Single(eligibleVoiceProviders));
+        Assert.Equal(
+            personal.Id.ToString("D"),
+            AgentVoiceSettingsPanel.ResolveVoiceProviderIdText(
+                currentProviderId: null,
+                eligibleVoiceProviders));
+        Assert.Equal(
+            string.Empty,
+            AgentVoiceSettingsPanel.ResolveVoiceProviderIdText(
+                sourceManaged.Id,
+                eligibleVoiceProviders));
     }
 
     [Fact]
@@ -234,51 +310,45 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
-    public void Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata()
+    public void Persisted_provider_registry_uses_feature_matrix_and_transport_metadata()
     {
         var source = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Providers",
-            "WorkspaceBackedAgentProviderProfileRegistry.cs");
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "Administration",
+            "DatabaseProviderProfileRegistry.cs");
         var metadataSource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Providers",
-            "AgentFrameworkProviderMetadata.cs");
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "RuntimeProjection",
+            "ProviderMetadata.cs");
         var mapperSource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Providers",
-            "WorkspaceAgentProviderProfileMapper.cs");
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "RuntimeProjection",
+            "PersistedProviderProfileMapper.cs");
 
         Assert.DoesNotContain("SupportsStructuredOutput = model.Transport == ProviderTransportKind.Responses", source, StringComparison.Ordinal);
         Assert.Contains("capabilityProfile.Transport", source, StringComparison.Ordinal);
         Assert.Contains("ResolveFeatureMatrix", source, StringComparison.Ordinal);
         Assert.Contains("entity.SupportsVision = featureMatrix.SupportsVision;", source, StringComparison.Ordinal);
         Assert.Contains("ResolveTransport", mapperSource, StringComparison.Ordinal);
-        Assert.Contains("providerTransport", metadataSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderTransportKind transport", metadataSource, StringComparison.Ordinal);
         Assert.Contains("supportsVision", metadataSource, StringComparison.Ordinal);
-        Assert.Contains("ComfyUiProviderAdapter.PluginKey", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiProviderAdministrationConnector.PluginKey", mapperSource, StringComparison.Ordinal);
         Assert.Contains("ProviderProfilePurpose.ImageGeneration", mapperSource, StringComparison.Ordinal);
         Assert.Contains("AgentFrameworkProviderKind.ComfyUi", metadataSource, StringComparison.Ordinal);
-        Assert.Contains("ResolveWorkspaceProviderSuggestedModels", mapperSource, StringComparison.Ordinal);
-        Assert.Contains("ManagedSeedProviderFallbacks.OpenAiSuggestedModels", mapperSource, StringComparison.Ordinal);
-        Assert.Contains("provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderModelCatalogPolicy.Resolve", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderMetadata.ReadSuggestedModels(provider)", mapperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ManagedSeedProviderFallbacks.OpenAiSuggestedModels", mapperSource, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Provider_settings_ui_has_explicit_plugin_mapping_and_comfyui_typed_fields()
+    public void Provider_settings_ui_is_authoritative_in_agent_framework_and_workspace_only_selects_default()
     {
-        var workspaceModelsSource = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workspace",
-            "Models",
-            "WorkspaceModels.cs");
         var settingsPageSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -294,42 +364,32 @@ public sealed class ProviderFeatureMatrixTests
         var providerPanelSource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.Workspace",
+            "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "Components",
-            "ProviderManagementPanel.razor.cs");
+            "AgentProviderProfilesPanel.razor.cs");
         var providerPanelMarkup = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.Workspace",
+            "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "Components",
-            "ProviderManagementPanel.razor");
+            "AgentProviderProfilesPanel.razor");
         var providerExecutionSource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.Workspace",
-            "Providers",
-            "ProviderExecution.cs");
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "Administration",
+            "ProviderAdministrationConnectors.cs");
 
-        Assert.Contains("TryResolveAgentFrameworkProviderKind", workspaceModelsSource, StringComparison.Ordinal);
-        Assert.Contains("TryResolveAgentFrameworkProviderKind", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("TryResolveAgentFrameworkProviderKind", providerPanelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", workspaceModelsSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", settingsPageSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", providerPanelSource, StringComparison.Ordinal);
-        Assert.Contains("No AgentFramework provider kind mapping exists for connector plugin", workspaceModelsSource, StringComparison.Ordinal);
-        Assert.Contains("No provider pricing kind is registered for connector plugin", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("No provider pricing kind is registered for connector plugin", providerPanelSource, StringComparison.Ordinal);
-        Assert.Contains("Unknown provider plugin", settingsPageMarkup, StringComparison.Ordinal);
-        Assert.Contains("Unknown provider plugin", providerPanelMarkup, StringComparison.Ordinal);
-        Assert.Contains("Pricing controls are unavailable", settingsPageMarkup, StringComparison.Ordinal);
-        Assert.Contains("Pricing controls are unavailable", providerPanelMarkup, StringComparison.Ordinal);
-
-        Assert.Contains("ComfyUiProviderAdapter.PluginKey", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("ComfyUiProviderAdapter.PluginKey", providerPanelSource, StringComparison.Ordinal);
-        Assert.Contains("http://127.0.0.1:8188", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("http://127.0.0.1:8188", providerPanelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderAdministrationService", settingsPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("providerModel", settingsPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Provider editor", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.Contains("IWorkspaceProviderCatalog", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.Contains("/agents?tab=providers", settingsPageSource, StringComparison.Ordinal);
+        Assert.Contains("IProviderRuntimeAdministrationService", providerPanelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAgentFrameworkWorkspaceService", providerPanelSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderModelPricingEditor", providerPanelMarkup, StringComparison.Ordinal);
         Assert.Contains("ComfyUiWorkflowTemplateJson", providerExecutionSource, StringComparison.Ordinal);
         Assert.Contains("ConnectorConfigFieldType.Json", providerExecutionSource, StringComparison.Ordinal);
         Assert.Contains("ComfyUiWorkflowTemplatePath", providerExecutionSource, StringComparison.Ordinal);
@@ -344,21 +404,21 @@ public sealed class ProviderFeatureMatrixTests
         var registrySource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Providers",
-            "WorkspaceBackedAgentProviderProfileRegistry.cs");
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "Administration",
+            "DatabaseProviderProfileRegistry.cs");
         var mapperSource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Providers",
-            "WorkspaceAgentProviderProfileMapper.cs");
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "RuntimeProjection",
+            "PersistedProviderProfileMapper.cs");
         var metadataSource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Providers",
-            "AgentFrameworkProviderMetadata.cs");
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "RuntimeProjection",
+            "ProviderMetadata.cs");
         var workflowRendererSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -373,13 +433,27 @@ public sealed class ProviderFeatureMatrixTests
             "Pages",
             "Components",
             "ProviderProfileTreeNodeBuilder.cs");
+        var voiceSettingsSource = ReadRepositoryFile(
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "AgentVoiceSettingsPanel.razor");
+        var openAiDriverSource = ReadRepositoryFile(
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Providers",
+            "Drivers",
+            "OpenAiProviderDriver.cs");
 
         Assert.Contains("ResolveMappedProviderKind", mapperSource, StringComparison.Ordinal);
         Assert.Contains("No AgentFramework provider kind mapping exists for connector plugin", mapperSource, StringComparison.Ordinal);
         Assert.Contains("No AgentFramework provider transport mapping exists for connector plugin", mapperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", mapperSource, StringComparison.Ordinal);
         Assert.Contains("providerProfileService.CreateProfile", registrySource, StringComparison.Ordinal);
-        Assert.Contains("AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdapter.PluginKey", metadataSource, StringComparison.Ordinal);
+        Assert.Contains("AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdministrationConnector.PluginKey", metadataSource, StringComparison.Ordinal);
         Assert.Contains("No workspace connector plugin mapping exists for provider kind", metadataSource, StringComparison.Ordinal);
 
         Assert.Contains("option.Purpose == ProviderProfilePurpose.ImageGeneration", workflowRendererSource, StringComparison.Ordinal);
@@ -387,6 +461,8 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("not an available image-generation provider", workflowRendererSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProviderProfilePurpose.Chat", workflowRendererSource, StringComparison.Ordinal);
         Assert.Contains("ProviderKind.ComfyUi => \"image\"", treeNodeBuilderSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderAudioCapabilityPolicy.IsAvailable(provider)", voiceSettingsSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderAudioCapabilityPolicy.EnsureAvailable", openAiDriverSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -401,10 +477,10 @@ public sealed class ProviderFeatureMatrixTests
         var providerPanelMarkup = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.Workspace",
+            "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "Components",
-            "ProviderManagementPanel.razor");
+            "AgentProviderProfilesPanel.razor");
         var providerDispatchModels = ReadRepositoryFile(
             "src",
             "MAF",

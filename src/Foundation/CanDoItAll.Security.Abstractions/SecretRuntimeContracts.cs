@@ -9,6 +9,7 @@ public static class SecretRuntimePurposes
     public const string PluginConnectionSecret = "plugin-connection-secret";
     public const string PluginWorkflowExecutorSecret = "plugin-workflow-executor-secret";
     public const string PluginSettingsValidation = "plugin-settings-validation";
+    public const string SharedProviderSourceToken = "shared-provider-source-token";
 }
 
 public static class SecretRuntimeConsumerTypes
@@ -21,6 +22,7 @@ public static class SecretRuntimeConsumerTypes
     public const string Plugin = "plugin";
     public const string PluginConnection = "plugin-connection";
     public const string PluginWorkflowExecutor = "plugin-workflow-executor";
+    public const string SharedProviderSource = "shared-provider-source";
 }
 
 public static class SecretRuntimeConsumerIds
@@ -42,6 +44,9 @@ public static class SecretRuntimeConsumerIds
 
     public static string PluginConnection(string pluginId, string connectionId)
         => $"{RequireSegment(pluginId, nameof(pluginId))}/{RequireSegment(connectionId, nameof(connectionId))}";
+
+    public static string SharedProviderSource(Guid sourceId)
+        => RequireGuid(sourceId, nameof(sourceId)).ToString("D");
 
     private static Guid RequireGuid(Guid value, string parameterName)
         => value == Guid.Empty
