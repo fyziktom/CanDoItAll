@@ -16,6 +16,10 @@ authoritative.
 - [Agent runtime tool surface](agent-runtime-tool-surface.md)
 - [PostgreSQL runtime canonicality](postgresql-runtime-canonicality.md)
 
+## Product and UX
+
+- [Product, domain, and UX reconstruction](ui/README.md)
+
 ## Development And Operations
 
 - [Installing instances on Windows, Linux, and macOS](operations/installing-instances.md)
