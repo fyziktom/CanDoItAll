@@ -18,7 +18,7 @@ authoritative.
 
 ## Product and UX
 
-- [Product, domain, and UX reconstruction](ui/README.md)
+- [Product, domain, and UX reconstruction](design/README.md)
 
 ## Development And Operations
 
