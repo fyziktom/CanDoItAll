@@ -103,6 +103,11 @@ public partial class MainLayout
 
     private string? ActiveProjectTitle => Workbench.GetActiveTab()?.ProjectName;
 
+    private string? ActiveProjectContextText =>
+        CurrentRouteBase.StartsWith("projects/", StringComparison.OrdinalIgnoreCase)
+            ? ActiveProjectTitle
+            : null;
+
     private string? ActivePhaseTitle => Workbench.GetActiveTab()?.PhaseName;
 
     private AppShellMode ShellMode => IsFocusWorkbenchRoute ? AppShellMode.FocusWorkbench : AppShellMode.StandardPage;

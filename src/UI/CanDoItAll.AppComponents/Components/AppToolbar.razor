@@ -6,6 +6,11 @@
 <div class="@CssClassBuilder.Join("app-toolbar", Class)" role="banner">
     <nav class="app-toolbar__crumbs" aria-label="Breadcrumb">
         <span class="app-toolbar__crumb">@PageText</span>
+        @if (!string.IsNullOrWhiteSpace(ContextText))
+        {
+            <span aria-hidden="true">&gt;</span>
+            <span class="app-toolbar__crumb app-toolbar__crumb--tab">@ContextText</span>
+        }
         @if (!string.IsNullOrWhiteSpace(ToolbarState.TabText))
         {
             <span aria-hidden="true">&gt;</span>
@@ -46,6 +51,10 @@
     /// <summary>The current page's side-nav label, e.g. "Agents". Supplied by the shell (<c>MainLayout</c>), not the page.</summary>
     [Parameter, EditorRequired]
     public string PageText { get; set; } = string.Empty;
+
+    /// <summary>The current project's name, shown as the breadcrumb segment between <see cref="PageText"/> and the per-page tab text. Supplied by the shell (<c>MainLayout</c>), empty outside project-scoped routes.</summary>
+    [Parameter]
+    public string? ContextText { get; set; }
 
     /// <summary>Extra CSS class merged onto the root element, e.g. the shell's breakout modifier for standard (padded) shell mode.</summary>
     [Parameter]

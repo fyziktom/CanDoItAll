@@ -1,7 +1,12 @@
 @page "/processes/live"
 @page "/projects/{ProjectId:guid}/processes/live"
+@using CanDoItAll.AppComponents
 
 <PageTitle>Live Processes</PageTitle>
+@if (ProjectId.HasValue)
+{
+    <AppToolbarTabText Text="Live Processes" />
+}
 
 <LiveProcessesDashboard ProjectId="@ProjectId"
                         ProcessIdQuery="@ProcessIdQuery"

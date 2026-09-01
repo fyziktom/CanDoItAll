@@ -45,6 +45,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @implements IAsyncDisposable
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
+<AppToolbarTabText Text="Structure" />
 
 <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
                                           ProjectName="@(surface?.ProjectName ?? "Requested project")"

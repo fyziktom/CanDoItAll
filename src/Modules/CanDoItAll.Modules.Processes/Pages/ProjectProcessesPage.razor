@@ -1,6 +1,8 @@
 @page "/projects/{ProjectId:guid}/processes"
+@using CanDoItAll.AppComponents
 
 <PageTitle>Project Processes</PageTitle>
+<AppToolbarTabText Text="Processes" />
 
 <ProcessWorkspaceShell ProjectId="@ProjectId"
                        ProcessIdQuery="@ProcessIdQuery"

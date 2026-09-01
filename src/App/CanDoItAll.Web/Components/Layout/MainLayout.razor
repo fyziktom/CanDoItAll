@@ -38,8 +38,6 @@
           OpenedProjects="OpenedProjectTabs"
           OpenedSessions="OpenedPromptTabs"
           ActiveTabId="@Workbench.ActiveTabId"
-          ProjectContextTitle="@ActiveProjectTitle"
-          PhaseContextTitle="@ActivePhaseTitle"
           SelectWorkspace="HandleSelectWorkspaceAsync"
           Navigate="HandleNavigateAsync"
           OpenWorkbenchItem="HandleOpenWorkbenchItemAsync"
@@ -238,7 +236,7 @@
     </TopBar>
     <Body>
         <Notification Position="NotificationPosition.BottomCenter" />
-        <AppToolbar PageText="@ActiveNavigation.Title" />
+        <AppToolbar PageText="@ActiveNavigation.Title" ContextText="@ActiveProjectContextText" />
         @if (ToolbarState.StatsContent is not null && ToolbarState.StatsVisible)
         {
             <div class="app-stats-row">

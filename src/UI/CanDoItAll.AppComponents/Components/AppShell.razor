@@ -45,18 +45,6 @@
                     }
                 </div>
 
-                @if (IsNavigationExpanded && !string.IsNullOrWhiteSpace(ProjectContextTitle))
-                {
-                    <div class="app-shell-card-info app-shell-expanded-context">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Class="text-sky-300 tracking-[0.28em]" Value="Project Context" />
-                        <p class="mt-2 text-sm font-semibold">@ProjectContextTitle</p>
-                        @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
-                        {
-                            <p class="mt-1 text-xs text-chrome-300">@PhaseContextTitle</p>
-                        }
-                    </div>
-                }
-
                 <nav class="@ResolveNavigationClass()" aria-label="Primary navigation">
                     @foreach (var item in StandardNavigationItems)
                     {
@@ -475,12 +463,6 @@
 
     [Parameter]
     public string? ActiveTabId { get; set; }
-
-    [Parameter]
-    public string? ProjectContextTitle { get; set; }
-
-    [Parameter]
-    public string? PhaseContextTitle { get; set; }
 
     [Parameter]
     public EventCallback<string> SelectWorkspace { get; set; }
