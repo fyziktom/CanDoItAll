@@ -452,7 +452,8 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         var source = CreateSource();
         var complete = false;
         try {
-            for (var pass = 0; pass < 60 && !complete; pass++) {
+            var maximumPasses = ids.Count + 4;
+            for (var pass = 0; pass < maximumPasses && !complete; pass++) {
                 if (pass == 3) {
                     source.Dispose();
                     source = CreateSource();
