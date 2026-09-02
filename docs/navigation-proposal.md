@@ -34,38 +34,38 @@ selection, tab, filter, or detail state is URL-addressable.
 | Area | Canonical routes | Navigation model |
 |---|---|---|
 | Dashboard | ✅ `/` | `/dashboard` redirects to `/`. |
-| Projects | ✅ `/projects` | Portfolio/list. Selecting a project enters its project route family. |
-| Processes | ✅ `/processes` | Definitions and operations; details use stable paths below. |
+| Projects | ✅ [`/projects`](http://localhost:5032/projects) | Portfolio/list. Selecting a project enters its project route family. |
+| Processes | ✅ [`/processes`](http://localhost:5032/processes) | Definitions and operations; details use stable paths below. |
 | Live processes | `/processes/runs` | A filtered run list, not a separate state hidden behind an unaddressable tab. |
-| Agents | ✅ `/agents` | Agent overview/catalog; peer areas have named subroutes. |
+| Agents | ✅ [`/agents`](http://localhost:5032/agents) | Agent overview/catalog; peer areas have named subroutes. |
 | Workflows | `/workflows` | First-class top-level work area, rather than an implicit sub-area of Agents. |
 | Collaboration | `/collaboration/inbox` | Inbox, threads, and escalations are explicit peer views. |
-| CRM/HR | ✅ `/crm-hr` | Module overview; directory, CRM, workforce, recruiting, agents and assignments are peer routes. |
-| Resources | ✅ `/resources` | Registry root; browse is a peer route. |
+| CRM/HR | ✅ [`/crm-hr`](http://localhost:5032/crm-hr) | Module overview; directory, CRM, workforce, recruiting, agents and assignments are peer routes. |
+| Resources | ✅ [`/resources`](http://localhost:5032/resources) | Registry root; browse is a peer route. |
 | Prompt gallery | `/prompts` | List and prompt detail routes. |
-| Scheduler | ✅ `/scheduler` | Calendar root; schedules and history are peer routes. |
-| Test Lab | ✅ `/test-lab` | Plan list/root; a plan has a durable detail route. |
-| Plugins | ✅ `/plugins` | Catalog root; a plugin has a durable detail route. |
-| Memory | ✅ `/memory` | Provider list/root; a provider has a durable detail route. |
-| Settings | ✅ `/settings` | Configuration sections have their own paths and remain owned by Settings. |
+| Scheduler | ✅ [`/scheduler`](http://localhost:5032/scheduler) | Calendar root; schedules and history are peer routes. |
+| Test Lab | ✅ [`/test-lab`](http://localhost:5032/test-lab) | Plan list/root; a plan has a durable detail route. |
+| Plugins | ✅ [`/plugins`](http://localhost:5032/plugins) | Catalog root; a plugin has a durable detail route. |
+| Memory | ✅ [`/memory`](http://localhost:5032/memory) | Provider list/root; a provider has a durable detail route. |
+| Settings | ✅ [`/settings`](http://localhost:5032/settings) | Configuration sections have their own paths and remain owned by Settings. |
 
-The existing `/prompt-gallery`, `/agents/workflows`, `/processes/live`, and
-`/dashboard` routes should remain redirects during migration.
+The existing [`/prompt-gallery`](http://localhost:5032/prompt-gallery), [`/agents/workflows`](http://localhost:5032/agents/workflows), [`/processes/live`](http://localhost:5032/processes/live), and
+[`/dashboard`](http://localhost:5032/dashboard) routes should remain redirects during migration.
 
 ## Project family
 
-`/projects` is the only many-project portfolio route. Once an individual project is
+[`/projects`](http://localhost:5032/projects) is the only many-project portfolio route. Once an individual project is
 opened, every page below has one unambiguous `projectId` context and uses the same
 project-level `<SecondaryTabs>`.
 
 | Canonical route | Tab label | Responsibility |
 |---|---|---|
 | `/projects/{projectId}` | Details | Project identity, status, people, summary and high-level actions. |
-| ✅ `/projects/{projectId}/structure` | Structure | Project tree, nodes, dependencies and structure editing. |
+| ✅ [`/projects/{projectId}/structure`](http://localhost:5032/projects/{projectId}/structure) | Structure | Project tree, nodes, dependencies and structure editing. |
 | `/projects/{projectId}/gantt` | Gantt | Timeline, tasks and planning. |
 | `/projects/{projectId}/files` | Files | All project files; no separate portfolio/dialog file homes. |
 | `/projects/{projectId}/management` | Management | Calendar, activity, reporting, risks and management controls. |
-| ✅ `/projects/{projectId}/processes` | Processes | Processes in this project context. |
+| ✅ [`/projects/{projectId}/processes`](http://localhost:5032/projects/{projectId}/processes) | Processes | Processes in this project context. |
 
 Project-object details may be nested only when their identity is meaningful primarily
 inside the project, for example `/projects/{projectId}/structure/nodes/{nodeId}`. A task
@@ -79,7 +79,7 @@ filtered card in a live dashboard.
 
 | Canonical route | Tab or page purpose |
 |---|---|
-| ✅ `/processes` | Definitions list. |
+| ✅ [`/processes`](http://localhost:5032/processes) | Definitions list. |
 | `/processes/{processId}` | Definition overview. |
 | `/processes/{processId}/design` | Definition/editor, steps and graph. |
 | `/processes/{processId}/roles` | Roles and assignments. |
@@ -111,7 +111,7 @@ provider configuration, chats, capabilities, governance and diagnostics named ro
 
 | Canonical route | Purpose |
 |---|---|
-| ✅ `/agents` | Agent catalog/list. |
+| ✅ [`/agents`](http://localhost:5032/agents) | Agent catalog/list. |
 | `/agents/{agentId}` | Agent overview. |
 | `/agents/{agentId}/configuration` | Identity, model/provider and editable settings. |
 | `/agents/{agentId}/capabilities` | Skills, MCP servers and allowed capabilities. |
@@ -159,19 +159,19 @@ and query-only selection where they are substantial records.
 
 | Canonical route | Purpose |
 |---|---|
-| ✅ `/crm-hr` | Module overview. |
-| ✅ `/crm-hr/directory` | Party directory. |
+| ✅ [`/crm-hr`](http://localhost:5032/crm-hr) | Module overview. |
+| ✅ [`/crm-hr/directory`](http://localhost:5032/crm-hr/directory) | Party directory. |
 | `/crm-hr/directory/{partyId}` | Party detail; contacts, relationships, notes and assignments as its tabs. |
 | `/crm-hr/accounts` | CRM account list (replaces the ambiguous `/crm-hr/crm`). |
 | `/crm-hr/accounts/{partyId}` | Account detail. |
 | `/crm-hr/opportunities/{opportunityId}` | Opportunity detail. |
-| ✅ `/crm-hr/workforce` | Workforce list. |
+| ✅ [`/crm-hr/workforce`](http://localhost:5032/crm-hr/workforce) | Workforce list. |
 | `/crm-hr/workforce/{partyId}` | Workforce profile/detail. |
-| ✅ `/crm-hr/recruiting` | Applications list. |
+| ✅ [`/crm-hr/recruiting`](http://localhost:5032/crm-hr/recruiting) | Applications list. |
 | `/crm-hr/recruiting/{applicationId}` | Application detail. |
-| ✅ `/crm-hr/agents` | Business-facing agent list. |
+| ✅ [`/crm-hr/agents`](http://localhost:5032/crm-hr/agents) | Business-facing agent list. |
 | `/crm-hr/agents/{partyId}` | Business-facing agent detail. |
-| ✅ `/crm-hr/assignments` | Staffing and project assignment list. |
+| ✅ [`/crm-hr/assignments`](http://localhost:5032/crm-hr/assignments) | Staffing and project assignment list. |
 | `/crm-hr/assignments/{assignmentId}` | Assignment detail. |
 | `/crm-hr/staffing-requests/{requestId}` | Staffing request detail. |
 
@@ -183,12 +183,12 @@ have independent identity and related subviews.
 
 | Area | Canonical routes | Notes |
 |---|---|---|
-| Resources | ✅ `/resources`, `/resources/browse`, `/resources/{resourceId}` | Registry and browse are peer routes; a resource detail is a page. Storage-object promotion remains a dialog. |
+| Resources | ✅ [`/resources`](http://localhost:5032/resources), `/resources/browse`, `/resources/{resourceId}` | Registry and browse are peer routes; a resource detail is a page. Storage-object promotion remains a dialog. |
 | Prompts | `/prompts`, `/prompts/{promptId}` | Prompt content, versions and metadata are detail tabs. A picker remains a dialog. |
-| Scheduler | ✅ `/scheduler`, `/scheduler/schedules`, `/scheduler/history`, `/scheduler/schedules/{scheduleId}` | Calendar, schedules and history become route-addressable tabs. Edit may be inline on the schedule page. |
-| Test Lab | ✅ `/test-lab`, `/test-lab/plans/{planId}` | Plan detail tabs: overview, cases, evidence and runs. |
-| Plugins | ✅ `/plugins`, `/plugins/{pluginId}` | Plugin detail tabs: info, executors, settings, connections, logs and grants. Package installation remains a dialog. |
-| Memory | ✅ `/memory`, `/memory/providers/{providerId}` | Provider configuration and operations become a durable detail page. |
+| Scheduler | ✅ [`/scheduler`](http://localhost:5032/scheduler), `/scheduler/schedules`, `/scheduler/history`, `/scheduler/schedules/{scheduleId}` | Calendar, schedules and history become route-addressable tabs. Edit may be inline on the schedule page. |
+| Test Lab | ✅ [`/test-lab`](http://localhost:5032/test-lab), `/test-lab/plans/{planId}` | Plan detail tabs: overview, cases, evidence and runs. |
+| Plugins | ✅ [`/plugins`](http://localhost:5032/plugins), `/plugins/{pluginId}` | Plugin detail tabs: info, executors, settings, connections, logs and grants. Package installation remains a dialog. |
+| Memory | ✅ [`/memory`](http://localhost:5032/memory), `/memory/providers/{providerId}` | Provider configuration and operations become a durable detail page. |
 | Settings | `/settings/workspace`, `/settings/data-sources`, `/settings/storage`, `/settings/files`, `/settings/secrets` | Each existing settings tab has a path. Provider settings belong at `/agents/providers`, linked explicitly rather than masquerading as a Settings tab. |
 
 ## Dialog decision guide
