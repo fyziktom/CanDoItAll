@@ -79,11 +79,11 @@ New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
 $record = [ordered]@{
     checkedAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
     repository = $repo
-    head = (Invoke-Git @("rev-parse", $Head))[0]
+    head = @(Invoke-Git @("rev-parse", $Head))[0]
     originalRef = $originalRef
-    originalHead = (Invoke-Git @("rev-parse", $originalRef))[0]
+    originalHead = @(Invoke-Git @("rev-parse", $originalRef))[0]
     forbiddenRef = $forbiddenRef
-    forbiddenHead = (Invoke-Git @("rev-parse", $forbiddenRef))[0]
+    forbiddenHead = @(Invoke-Git @("rev-parse", $forbiddenRef))[0]
     forbiddenUniqueCommitCount = $forbiddenCommits.Count
     forbiddenUniqueCommits = $forbiddenCommits
     forbiddenHeadIsAncestor = $forbiddenHeadIsAncestor

@@ -1,6 +1,6 @@
 # SB06 — Adapt CanDoItAll To Components Main
 
-**Status:** Blocked until SB05  
+**Status:** Completed locally — 32 focused tests pass; source graph builds; legacy references and v2 violations are zero
 **Outcome:** Current application consumes the merged Components contract with minimal fixes  
 **Proof tier:** Behavioral
 

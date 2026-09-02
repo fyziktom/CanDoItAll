@@ -1,6 +1,6 @@
 # CanDoItAll UI Refactoring Integration Bundle
 
-**Bundle status:** Ready for execution  
+**Bundle status:** In progress — implementation and validation complete; final local signing/closure pending
 **Prepared:** 2026-09-01  
 **Primary implementation branch:** `fyziktom/CanDoItAll:ui-refactoring`  
 **Forbidden branch:** `fyziktom/CanDoItAll:ui-refactoring-v2`  

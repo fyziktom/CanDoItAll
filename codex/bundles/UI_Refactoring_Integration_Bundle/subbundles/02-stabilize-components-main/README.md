@@ -1,6 +1,6 @@
 # SB02 — Stabilize Components Main
 
-**Status:** Blocked until SB01 passes  
+**Status:** Completed locally — 409 tests pass; deterministic source/package assets and sandbox proof recorded
 **Outcome:** Green Components integration branch with deterministic source-consumer assets  
 **Proof tier:** Governed
 

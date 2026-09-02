@@ -1,6 +1,6 @@
 # SB01 — Freeze Scope And Guard V2
 
-**Status:** Ready  
+**Status:** Completed — 2026-09-02
 **Outcome:** A reproducible baseline and a mechanical prohibition against v2 contamination  
 **Proof tier:** Governed
 
@@ -69,3 +69,12 @@ successfully.
 - development branch movement before SB05,
 - unexpected `ux-refactoring*` branches,
 - dirty worktree ownership ambiguity.
+
+## Execution result
+
+Passed on CanDoItAll `77dcdc4c05ec0bc0f338744852a773f27c161a48`. All three worktrees
+were clean at entry. Remote tips match the recorded baselines. FileTools was refreshed
+over HTTPS without changing its configured SSH remote after SSH authentication failed.
+The guard accepted the integration HEAD and rejected the forbidden branch identity.
+Its single-result SHA indexing bug was repaired and full 40-character SHA evidence was
+verified. See `../../proof/SB01/manifest.md` and the root execution report.

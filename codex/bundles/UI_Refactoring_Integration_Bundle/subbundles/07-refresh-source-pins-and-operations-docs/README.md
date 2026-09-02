@@ -1,6 +1,6 @@
 # SB07 — Refresh Source Pins And Operations Docs
 
-**Status:** Blocked until final candidate Components and FileTools commits exist  
+**Status:** Completed locally — exact signed pins, both asset guards, three CI tests, documentation and Docker policy pass
 **Outcome:** Clean CI/Docker source mode is reproducible and Podman docs are current  
 **Proof tier:** Standard + Behavioral
 

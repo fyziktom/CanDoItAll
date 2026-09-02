@@ -1,6 +1,6 @@
 # SB04 — Validate FileTools Independence
 
-**Status:** Blocked until SB03 selects `V`  
+**Status:** Completed locally — 485 tests, format, nine packages, dependency audit and standalone Playwright proof pass
 **Outcome:** FileTools remains Components-independent and all nine packages/sandbox pass  
 **Proof tier:** Behavioral + Governed
 

@@ -1,6 +1,6 @@
 # SB08 — Cross-Repository Build, Test, Browser, And Container Proof
 
-**Status:** Blocked until SB02-SB07  
+**Status:** Completed locally — source/package/browser/container proof passes; one original timing failure passed unchanged on retry and remains disclosed
 **Outcome:** End-to-end evidence for source mode and package fallback  
 **Proof tier:** Governed
 

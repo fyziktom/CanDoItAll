@@ -1,6 +1,6 @@
 # SB05 — Merge Development Into UI Refactoring
 
-**Status:** Blocked until SB01; ideally execute after SB02/SB04 branches are known  
+**Status:** Completed locally — existing user merge verified; SDK/docs reconciled; isolated source build passed
 **Outcome:** Current development is merged into the original UI branch with auditable decisions  
 **Proof tier:** Governed
 

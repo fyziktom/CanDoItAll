@@ -1,6 +1,6 @@
 # SB09 — Merge Closure To Development And Main
 
-**Status:** Blocked until SB08  
+**Status:** In progress — SB08 closed; final refresh, local commits and owner handoff underway
 **Outcome:** Owner-ready merge sequence and final governed report  
 **Proof tier:** Governed
 
