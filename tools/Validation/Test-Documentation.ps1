@@ -35,7 +35,8 @@ function Test-MaintainedMarkdownPath {
         return $false
     }
 
-    return $normalized -eq "README.md" -or
+    return $normalized -eq "AGENTS.md" -or
+        $normalized -eq "README.md" -or
         $normalized -eq "CONTRIBUTING.md" -or
         $normalized -eq "SECURITY.md" -or
         $normalized -eq ".github/copilot-instructions.md" -or
@@ -76,6 +77,7 @@ $requiredFiles = @(
     ".gitignore",
     ".env.example",
     ".github\workflows\ci.yml",
+    "AGENTS.md",
     "README.md",
     "LICENSE",
     "CONTRIBUTING.md",
