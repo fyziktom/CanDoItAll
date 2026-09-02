@@ -45,7 +45,7 @@
                     }
                 </div>
 
-                <nav class="@ResolveNavigationClass()" aria-label="Primary navigation">
+                <nav class="@ResolveNavigationClass()" @ref="navigationElement" aria-label="Primary navigation">
                     @foreach (var item in StandardNavigationItems)
                     {
                         var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
@@ -409,6 +409,7 @@
     private AppShellNavigationMode navigationMode;
     private bool hasInitializedNavigationMode;
     private ElementReference sidebarElement;
+    private ElementReference navigationElement;
     private DotNetObjectReference<AppShell>? navigationObserverReference;
     private readonly string navigationObserverId = $"app-shell-navigation-{Guid.NewGuid():N}";
     private int? measuredNavigationRowCapacity;
@@ -572,6 +573,7 @@
                 "CanDoItAll.appShellNavigation.observe",
                 navigationObserverId,
                 sidebarElement,
+                navigationElement,
                 navigationObserverReference);
         }
         catch (Exception)
