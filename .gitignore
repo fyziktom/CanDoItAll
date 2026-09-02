@@ -29,7 +29,7 @@ proof/
 *.nupkg
 *.snupkg
 *.binlog
-output.css
+src/App/CanDoItAll.Web/wwwroot/css/output.css
 
 # Runtime template artifacts are maintained source inputs.
 !Templates/Processes/processes/**/artifacts/

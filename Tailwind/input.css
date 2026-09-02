@@ -3,7 +3,16 @@
 @import "../../CanDoItAll.Components/Tailwind/fonts.css"
 @import "../../CanDoItAll.Components/Tailwind/theme.css"
 
-@source "../src";
+@source "../src/App/**/*.css";
+@source "../src/App/**/*.razor";
+@source "../src/App/**/*.html";
+@source "../src/Modules/**/*.css";
+@source "../src/Modules/**/*.razor";
+@source "../src/Modules/**/*.html";
+@source "../src/UI/**/*.css";
+@source "../src/UI/**/*.razor";
+@source "../src/UI/**/*.html";
+
 @source not "../src/App/CanDoItAll.Web/wwwroot/css/output.css";
 
 @import "./surfaces/admin.css";
