@@ -28,6 +28,13 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("path: CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_COMPONENTS_COMMIT", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_FILETOOLS_COMMIT", workflow, StringComparison.Ordinal);
+        Assert.Contains("CANDOITALL_COMPONENTS_COMMIT: c3e6aa03a878994c0ba8aed6af017d0be75f3796", workflow, StringComparison.Ordinal);
+        Assert.Contains("CANDOITALL_FILETOOLS_COMMIT: 498b36825bd5a5222429972af120b04becf4b3f6", workflow, StringComparison.Ordinal);
+        Assert.Equal(2, workflow.Split("- name: Verify committed BaseLib source assets", StringSplitOptions.None).Length - 1);
+        Assert.Contains("src/CanDoItAll.Components.BaseLib/wwwroot/css/material-symbols.css", workflow, StringComparison.Ordinal);
+        Assert.Contains("src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css", workflow, StringComparison.Ordinal);
+        Assert.Contains("git -C ../CanDoItAll.Components ls-files --error-unmatch -- $asset", workflow, StringComparison.Ordinal);
+        Assert.Contains("(Get-Item -LiteralPath $assetPath).Length -eq 0", workflow, StringComparison.Ordinal);
         Assert.Contains("ikalnytskyi/action-setup-postgres@v8", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_TESTS_POSTGRES_CONNECTION", workflow, StringComparison.Ordinal);
         Assert.Contains("postgres-version: \"16\"", workflow, StringComparison.Ordinal);

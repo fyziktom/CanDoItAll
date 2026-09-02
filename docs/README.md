@@ -25,6 +25,7 @@ authoritative.
 - [Testing](testing.md)
 - [Secure configuration](secure-configuration.md)
 - [Container operations](operations/containers.md)
+- [Podman on macOS source development](operations/podman-macos-development.md)
 - [Development PostgreSQL backup and restore](operations/backup-and-restore.md)
 - [Process agent operator runbook](process-agent-operator-runbook.md)
 
