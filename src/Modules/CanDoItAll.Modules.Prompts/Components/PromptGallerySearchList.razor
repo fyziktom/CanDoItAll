@@ -5,20 +5,21 @@
 <Stack GapScale="LayoutGap.Medium"
        Class="prompt-gallery-search-list"
        data-testid="prompt-gallery-search-list">
-    <FilterBar ResultText="@ResultText">
-        <Grid Gap="LayoutGap.Small"
-              AlignItems="AlignItems.Center"
-              ColumnTemplate="@FilterColumnTemplate"
-              Class="min-w-0 flex-1"
-              data-testid="prompt-gallery-filter-rail">
+    <div
+        class="flex flex-wrap flex-row items-stretch gap-2"
+        data-testid="prompt-gallery-filter-rail">
             <TextInput Value="@searchText"
-                     ValueChanged="HandleSearchChangedAsync"
+                       ValueChanged="HandleSearchChangedAsync"
+                       Density="FormDensity.Comfortable"
                      Placeholder="Search names, prompt text, or tags"
-                     Immediate="true"
+                       Immediate="true"
+                       Class="flex-none w-64"
                      aria-label="Search prompt gallery"
                      data-testid="prompt-gallery-search" />
             <SelectInput TValue="PromptGalleryItemKind?"
                          Value="@kind"
+                         Density="FormDensity.Comfortable"
+                         Class="flex-none w-24"
                          ValueChanged="HandleKindChangedAsync"
                          ValueExpression="@(() => kind)"
                          aria-label="Prompt kind"
@@ -30,7 +31,9 @@
                 }
             </SelectInput>
             <SelectInput TValue="PromptArtifactStatus?"
+                         Density="FormDensity.Comfortable"
                          Value="@status"
+                         Class="flex-none w-32"
                          ValueChanged="HandleStatusChangedAsync"
                          ValueExpression="@(() => status)"
                          aria-label="Prompt status"
@@ -41,55 +44,61 @@
                     <option value="@option">@option</option>
                 }
             </SelectInput>
-            <TagEditor Value="@tagFilters"
-                       ValueChanged="HandleTagsChangedAsync"
-                       Suggestions="@availableTags"
-                       Placeholder="Filter by tags"
-                       MaxTags="20"
-                       TestId="prompt-gallery-tag-filter"
-                       InputTestId="prompt-gallery-tag-filter-input" />
             @if (!Compact)
             {
                 <TextInput Value="@providerFilter"
+                           Density="FormDensity.Comfortable"
                          ValueChanged="HandleProviderFilterChangedAsync"
+                           Class="flex-none w-32"
                          Placeholder="Any provider"
                          Immediate="true"
                          aria-label="Filter by supported provider" />
                 <TextInput Value="@modelFilter"
                          ValueChanged="HandleModelFilterChangedAsync"
+                           Class="flex-none w-32"
                          Placeholder="Any model"
+                           Density="FormDensity.Comfortable"
                          Immediate="true"
                          aria-label="Filter by supported model" />
             }
-            <label class="prompt-gallery-search-list__choice">
-                <CheckBox TValue="bool"
-                          Value="@favoritesOnly"
-                          ValueChanged="HandleFavoritesOnlyChangedAsync"
-                          aria-label="Show favorite prompt items only"
-                          data-testid="prompt-gallery-favorites-filter" />
-                <span>Favorites</span>
-            </label>
+            <CheckboxOption TValue="bool"
+                            Text="Favorites"
+                            Class="flex-none w-32"
+                            Density="FormDensity.Comfortable"
+                      Value="@favoritesOnly"
+                      ValueChanged="HandleFavoritesOnlyChangedAsync"
+                      aria-label="Show favorite prompt items only"
+                      data-testid="prompt-gallery-favorites-filter" />
             @if (!Compact)
             {
-                <label class="prompt-gallery-search-list__choice">
-                    <CheckBox TValue="bool"
+                    <CheckboxOption TValue="bool"
+                                    Class="flex-none w-50"
+                                    Text="Include archived items"
+                                    Density="FormDensity.Comfortable"
                               Value="@includeArchived"
                               ValueChanged="HandleIncludeArchivedChangedAsync"
                               aria-label="Include archived prompt items" />
-                    <span>Include archived items</span>
-                </label>
             }
+            <TagEditor Value="@tagFilters"
+                       ValueChanged="HandleTagsChangedAsync"
+                       Class="flex-none w-48"
+                       Suggestions="@availableTags"
+                       Placeholder="Filter by tags"
+                       MaxTags="20"
+                       TestId="prompt-gallery-tag-filter"
+                       InputTestId="prompt-gallery-tag-filter-input" />
             <Button Text=""
                     Icon="filter_alt_off"
+                    Density="ButtonDensity.Comfortable"
+                    Class="flex-none"
                     Tone="ButtonTone.Default"
-                    Variant="Variant.Text"
+                    Variant="Variant.Outlined"
                     Size="ButtonSize.Small"
                     Click="ClearFiltersAsync"
                     aria-label="Clear prompt gallery filters"
                     title="Clear filters"
                     data-testid="prompt-gallery-clear-filters" />
-        </Grid>
-    </FilterBar>
+        </div>
 
     @if (ShowActualChatModelFilter && HasActualChatModel)
     {
