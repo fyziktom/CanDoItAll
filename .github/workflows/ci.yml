@@ -22,8 +22,8 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_COMPONENTS_COMMIT: 8372c1d55f21b349f8e859470b02eeb4421e96ca
-  CANDOITALL_FILETOOLS_COMMIT: c95dd07208a6d48724443317cdc6cfe67a13020a
+  CANDOITALL_COMPONENTS_COMMIT: c3e6aa03a878994c0ba8aed6af017d0be75f3796
+  CANDOITALL_FILETOOLS_COMMIT: 498b36825bd5a5222429972af120b04becf4b3f6
 
 jobs:
   stable:
@@ -69,6 +69,23 @@ jobs:
           repository: fyziktom/CanDoItAll.FileTools
           ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
           path: CanDoItAll.FileTools
+
+      - name: Verify committed BaseLib source assets
+        shell: pwsh
+        run: |
+          foreach ($asset in @(
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/material-symbols.css',
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css'
+          )) {
+            $assetPath = Join-Path ../CanDoItAll.Components $asset
+            if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf) -or (Get-Item -LiteralPath $assetPath).Length -eq 0) {
+              throw "Required Components source asset is missing or empty: $asset"
+            }
+            git -C ../CanDoItAll.Components ls-files --error-unmatch -- $asset
+            if ($LASTEXITCODE -ne 0) {
+              throw "Required Components source asset is not committed: $asset"
+            }
+          }
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -269,6 +286,23 @@ jobs:
           repository: fyziktom/CanDoItAll.FileTools
           ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
           path: CanDoItAll.FileTools
+
+      - name: Verify committed BaseLib source assets
+        shell: pwsh
+        run: |
+          foreach ($asset in @(
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/material-symbols.css',
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css'
+          )) {
+            $assetPath = Join-Path ../CanDoItAll.Components $asset
+            if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf) -or (Get-Item -LiteralPath $assetPath).Length -eq 0) {
+              throw "Required Components source asset is missing or empty: $asset"
+            }
+            git -C ../CanDoItAll.Components ls-files --error-unmatch -- $asset
+            if ($LASTEXITCODE -ne 0) {
+              throw "Required Components source asset is not committed: $asset"
+            }
+          }
 
       - name: Create disposable Compose database secret
         shell: pwsh

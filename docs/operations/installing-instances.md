@@ -174,6 +174,10 @@ same-user access is not acceptable.
 
 ## macOS
 
+For direct source development with PostgreSQL in Podman, use the
+[Podman development guide](podman-macos-development.md). It is separate from the
+headless installation procedure below and retains its unverified macOS execution status.
+
 Use RID `osx-arm64` on Apple silicon and `osx-x64` on Intel. Interactive runs use the
 Application Support, Logs, and temporary roots in the default-root table. A system
 LaunchDaemon must instead use a dedicated service account and explicit owned roots below
@@ -209,7 +213,7 @@ launchd, validation, restart, and rollback procedure.
 ## Development Compose Stack
 
 The repository Compose model always runs the Linux Web image, even when Docker Desktop is
-hosted on Windows or macOS. It uses package-mode restore and owns `app-data` and `db-data`
+hosted on Windows or macOS. It uses sibling source-context restore and owns `app-data` and `db-data`
 named volumes. Application state is under `/data`; PostgreSQL state is under
 `/var/lib/postgresql/data` in the database volume.
 

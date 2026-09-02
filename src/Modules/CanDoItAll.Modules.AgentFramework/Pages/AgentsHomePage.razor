@@ -318,7 +318,7 @@
                                             title="@team.Name"
                                             @onclick="@(() => OpenAgentsForTeamAsync(team.TeamId))"
                                             data-testid="agents-overview-team-shortcut">
-                                        <span class="material-icons text-2xl" aria-hidden="true">@team.Icon</span>
+                                        <Icon Name="@team.Icon" Class="text-2xl" />
                                         <span class="agents-overview-team-shortcut__name">@team.Name</span>
                                         <span class="agents-overview-team-shortcut__count">@($"{team.AgentCount} agent(s)")</span>
                                     </button>

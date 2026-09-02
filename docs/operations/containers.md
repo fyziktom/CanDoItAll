@@ -148,6 +148,10 @@ Read current files through the running container or the named volume. See
 
 ## Workstation Web Host
 
+For a native macOS host with PostgreSQL in Podman, follow
+[Podman source development](podman-macos-development.md). Sibling source dependencies
+remain required; the database-only workflow does not imply package mode.
+
 ### Blank provider setup
 
 For a new manual-setup client set `AgentFramework__Providers__SeedDefaults=false`.

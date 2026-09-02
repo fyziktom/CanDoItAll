@@ -22,7 +22,7 @@
                         title="@option.Label"
                         @onclick="@(() => SelectIcon(option.Icon))"
                         data-testid="material-icon-picker-option">
-                    <span class="material-icons text-2xl" aria-hidden="true">@option.Icon</span>
+                    <Icon Name="@option.Icon" Class="text-2xl" />
                     <span class="max-w-full truncate text-xs font-semibold">@option.Label</span>
                 </button>
             }
