@@ -18,7 +18,8 @@ public sealed class AgentFileHistorySource(
     IDatabaseProfileRuntimeAccessor profiles,
     IWorkspacePathResolver paths,
     AgentHistoryPublicationStore publications,
-    ILogger<AgentFileHistorySource> logger) : IProviderHistorySource, IHistorySourceMaintenance, IDisposable {
+    ILogger<AgentFileHistorySource> logger,
+    TimeProvider? clock = null) : IProviderHistorySource, IHistorySourceMaintenance, IDisposable {
     private HistoryPartition? activePartition;
     private string? activeRoot;
     private FileHistoryReadyQueue? queue;
@@ -52,7 +53,7 @@ public sealed class AgentFileHistorySource(
             if (activeScope != scope) {
                 backfill?.Dispose();
                 activeScope = scope;
-                backfill = new(root, scope, partition);
+                backfill = new(root, scope, partition, clock);
             }
             var progress = await TrackAsync(MaintenanceStage.Backfill, () => backfill!.ProcessAsync(maximumItems, cancellationToken));
             ready ??= scope;
@@ -86,7 +87,7 @@ public sealed class AgentFileHistorySource(
     private async Task DrainAsync(string root, WorkspaceScopeDescriptor scope, HistoryMaintenanceContext context,
         int maximumItems, CancellationToken cancellationToken) {
         var partition = context.Partition;
-        var journal = new FileProviderHistoryJournal(root, scope);
+        var journal = new FileProviderHistoryJournal(root, scope, clock);
         var batch = await TrackAsync(MaintenanceStage.ReadJournal, () => journal.ReadBatchAsync(partition, maximumItems, cancellationToken));
         if (batch.Count > 0) {
             await TrackAsync(MaintenanceStage.Publish,

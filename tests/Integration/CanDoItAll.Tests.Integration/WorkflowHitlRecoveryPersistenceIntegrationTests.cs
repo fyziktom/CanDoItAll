@@ -528,27 +528,11 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
                 MaximumAttempts: 3));
         Assert.Equal(WorkflowExternalResponseOperationClaimOutcome.Claimed, claimed.Outcome);
 
-        await using var lockConnection = new NpgsqlConnection(fixture.ConnectionString);
-        await lockConnection.OpenAsync();
-        await using var lockTransaction = await lockConnection.BeginTransactionAsync();
-        await using (var lockCommand = lockConnection.CreateCommand())
-        {
-            lockCommand.Transaction = lockTransaction;
-            lockCommand.CommandText =
-                """
-                SELECT "Id"
-                FROM "AgentFramework_WorkflowExternalResponseOperations"
-                WHERE "Id" = @operationId
-                FOR UPDATE
-                """;
-            lockCommand.Parameters.AddWithValue("operationId", created.Operation.Id.Value);
-            Assert.Equal(created.Operation.Id.Value, await lockCommand.ExecuteScalarAsync());
-        }
-
+        var renewalBarrier = new LeaseRenewalCommitBarrier();
         var interceptor = new OperationReplayCommandInterceptor(seeded.Request.Id.Value);
         var racingStore = fixture.CreateOperationStore(interceptor);
         var renewedLeaseExpiry = TestTime.AddMinutes(2);
-        var renewalTask = racingStore.TryRenewLeaseAsync(
+        var renewalTask = fixture.CreateOperationStore(renewalBarrier).TryRenewLeaseAsync(
             new WorkflowExternalResponseOperationLeaseRenewalRequest(
                 claimed.Operation!.Id,
                 claimed.Operation.ConcurrencyVersion,
@@ -557,26 +541,30 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
                 TestTime.AddSeconds(2),
                 renewedLeaseExpiry));
         Task<WorkflowExternalResponseOperationCreateResult>? replayTask = null;
-        string replayReadCommand;
-        try
-        {
-            await WaitForBlockedDatabaseCommandAsync(fixture.ConnectionString);
+        OperationRead replayRead;
+        try {
+            var renewalProcessId = await renewalBarrier.Saved.Task.WaitAsync(TimeSpan.FromSeconds(10));
             replayTask = racingStore.CreateOrReplayAsync(createRequest with
             {
                 OperationId = WorkflowExternalResponseOperationId.New(),
                 AcceptedAtUtc = TestTime.AddSeconds(3)
             });
-            replayReadCommand = await interceptor.OperationReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        }
-        finally
-        {
-            await lockTransaction.RollbackAsync();
+            replayRead = await interceptor.OperationReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await WaitForBlockedDatabaseCommandAsync(
+                fixture.ConnectionString, replayRead.ProcessId, renewalProcessId);
+            Assert.False(replayTask.IsCompleted);
+        } finally {
+            renewalBarrier.AllowCommit.TrySetResult();
+            await renewalTask;
+            if (replayTask is not null) {
+                await replayTask;
+            }
         }
 
         var renewed = await renewalTask;
         var replayed = await replayTask;
 
-        Assert.Contains("FOR UPDATE", replayReadCommand, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("FOR UPDATE", replayRead.CommandText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WorkflowExternalResponseOperationMutationOutcome.Updated, renewed.Outcome);
         Assert.Equal(WorkflowExternalResponseOperationCreateOutcome.Replayed, replayed.Outcome);
         Assert.Equal(renewedLeaseExpiry, replayed.Operation!.Lease!.ExpiresAtUtc);
@@ -1422,31 +1410,25 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.Equal(expectedLink?.BackendRequestPortId.Value, checkpoint.BackendRequestPortId);
     }
 
-    private static async Task WaitForBlockedDatabaseCommandAsync(string connectionString)
-    {
+    private static async Task WaitForBlockedDatabaseCommandAsync(
+        string connectionString, int blockedProcessId, int blockingProcessId) {
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT EXISTS (
-                SELECT 1
-                FROM pg_stat_activity
-                WHERE datname = current_database()
-                  AND pid <> pg_backend_pid()
-                  AND wait_event_type = 'Lock')
+            SELECT @blockingProcessId = ANY(pg_blocking_pids(@blockedProcessId))
             """;
-        for (var attempt = 0; attempt < 100; attempt++)
-        {
-            if (await command.ExecuteScalarAsync() is true)
-            {
+        command.Parameters.AddWithValue("blockedProcessId", blockedProcessId);
+        command.Parameters.AddWithValue("blockingProcessId", blockingProcessId);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (true) {
+            if (await command.ExecuteScalarAsync(timeout.Token) is true) {
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMilliseconds(25));
+            await Task.Delay(TimeSpan.FromMilliseconds(25), timeout.Token);
         }
-
-        throw new TimeoutException("The PostgreSQL mutation did not reach the operation-row lock barrier.");
     }
 
     private static WorkflowExternalRequestBoundaryRecord CreateBoundary(
@@ -1493,7 +1475,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             => new(Factory, keyDirectory.CreateProvider());
 
         public PersistentWorkflowExternalResponseOperationStore CreateOperationStore(
-            DbCommandInterceptor interceptor)
+            IInterceptor interceptor)
             => new(Factory.WithInterceptor(interceptor), keyDirectory.CreateProvider());
 
         public string ConnectionString => database.ConnectionString;
@@ -1523,9 +1505,26 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             => Task.FromResult(CreateDbContext());
     }
 
-    private sealed class OperationReplayCommandInterceptor(Guid requestId) : DbCommandInterceptor
-    {
-        public TaskCompletionSource<string> OperationReadStarted { get; } =
+    private sealed class LeaseRenewalCommitBarrier : SaveChangesInterceptor {
+        public TaskCompletionSource<int> Saved { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource AllowCommit { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override async ValueTask<int> SavedChangesAsync(
+            SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) {
+            var connection = (NpgsqlConnection)eventData.Context!.Database.GetDbConnection();
+            Saved.TrySetResult(connection.ProcessID);
+            await AllowCommit.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            return result;
+        }
+    }
+
+    private sealed record OperationRead(string CommandText, int ProcessId);
+
+    private sealed class OperationReplayCommandInterceptor(Guid requestId) : DbCommandInterceptor {
+        public TaskCompletionSource<OperationRead> OperationReadStarted { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
@@ -1540,7 +1539,8 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
                 command.Parameters.Cast<DbParameter>().Any(parameter =>
                     parameter.Value is Guid value && value == requestId))
             {
-                OperationReadStarted.TrySetResult(command.CommandText);
+                OperationReadStarted.TrySetResult(new(
+                    command.CommandText, ((NpgsqlConnection)command.Connection!).ProcessID));
             }
 
             return ValueTask.FromResult(result);

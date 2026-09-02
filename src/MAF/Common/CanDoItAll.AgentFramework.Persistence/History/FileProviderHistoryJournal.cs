@@ -10,8 +10,9 @@ public sealed class FileProviderHistoryJournal {
     private readonly FileHistoryJournalStorage storage;
     private readonly Action<FileHistoryCommitStage>? boundary;
 
-    public FileProviderHistoryJournal(string workspaceRoot, WorkspaceScopeDescriptor? scope = null)
-        : this(new FileSandboxWorkspaceStorageLayout(workspaceRoot, scope), null) {
+    public FileProviderHistoryJournal(string workspaceRoot, WorkspaceScopeDescriptor? scope = null,
+        TimeProvider? clock = null)
+        : this(new FileSandboxWorkspaceStorageLayout(workspaceRoot, scope), null, clock) {
     }
 
     internal FileProviderHistoryJournal(FileSandboxWorkspaceStorageLayout layout, Action<FileHistoryCommitStage>? boundary,
