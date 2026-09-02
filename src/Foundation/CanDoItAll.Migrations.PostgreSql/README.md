@@ -55,6 +55,30 @@ The LLM Chats schema is an append-only migration chain:
 The model snapshot and database-transfer contract must represent the same final shape. Never remove or
 rename an applied migration to make a pending-model check pass.
 
+## Shared providers and request history
+
+The branch adds seven migrations after the development baseline
+`20260822013043_AddWorkflowNativeCheckpointRequestUniqueness`:
+
+- `20260824224847_AddSharedProviderPersistence`: service identity, publications, sources and imports.
+- `20260828153731_AddProviderInvocationPriceEvidence`: frozen provider invocation price evidence.
+- `20260828164039_AddProviderRequestHistory`: request history persistence.
+- `20260828175631_AddProviderHistoryCallerAttribution`: caller attribution.
+- `20260828195043_AddProviderHistoryCanonicalEvidence`: canonical ownership/evidence.
+- `20260828205045_AddProviderHistoryLocatorsAndChatCaller`: source locators and chat caller evidence.
+- `20260830104752_AddProviderHistoryExternalReference`: opaque external references.
+
+The premerge repairs add no EF model change. The logical input capture deadline is an
+in-memory invocation contract and uses existing detail expiry columns. Do not modify
+these applied migrations or manufacture a repair migration merely for an export.
+
+Validate both development-to-final upgrade (existing canonical data) and reviewed-head
+preservation (populated sharing/history, supported history transfer and explicit
+rejection of unsafe generic AI-provider transfer), using isolated PostgreSQL
+databases. Generate pending-model evidence and idempotent SQL into ignored
+`artifacts/providers-shared-premerge/schema`; do not apply it to a live profile as part
+of review. See [request history](../../../docs/provider-request-history.md).
+
 ## Migration Validation
 
 The focused integration tests require the repository's PostgreSQL test service:

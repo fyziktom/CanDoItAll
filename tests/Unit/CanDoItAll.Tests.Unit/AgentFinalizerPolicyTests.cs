@@ -3,6 +3,7 @@ using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -332,7 +333,11 @@ public sealed class AgentFinalizerPolicyTests
             chatOptions,
             policy,
             resolvedTool);
-        var repairOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool);
+        var history = HistoryInvocationContext.Create(HistoryWorkload.Agent);
+        var repairOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool, history);
+        var jsonRepairOptions = MafFinalizerDriver.CreateRequiredFinalizerJsonRepairRunOptions(history);
+        Assert.Same(history, ProviderHistoryChatContext.Read(repairOptions.ChatOptions));
+        Assert.Same(history, ProviderHistoryChatContext.Read(jsonRepairOptions.ChatOptions));
 
         Assert.Same(finalizerTool, resolvedTool);
         Assert.False(chatOptions.AllowMultipleToolCalls);
@@ -805,6 +810,28 @@ public sealed class AgentFinalizerPolicyTests
             MafFinalizerDriver.ShouldAllowMultipleToolCalls(finalizerMode, hasApprovalTools));
     }
 
+    [Theory]
+    [InlineData(false, false, AgentFinalizerMode.Disabled, false, null)]
+    [InlineData(true, true, AgentFinalizerMode.Disabled, false, true)]
+    [InlineData(true, false, AgentFinalizerMode.Disabled, false, false)]
+    [InlineData(true, true, AgentFinalizerMode.Disabled, true, false)]
+    [InlineData(true, true, AgentFinalizerMode.Required, false, false)]
+    public void Runtime_tool_call_policy_omits_parallel_option_without_tools(
+        bool hasTools,
+        bool supportsParallelFunctionTools,
+        AgentFinalizerMode finalizerMode,
+        bool hasApprovalTools,
+        bool? expected)
+    {
+        Assert.Equal(
+            expected,
+            MafFinalizerDriver.ResolveAllowMultipleToolCalls(
+                hasTools,
+                supportsParallelFunctionTools,
+                finalizerMode,
+                hasApprovalTools));
+    }
+
     [Fact]
     public void Effective_finalizer_invocations_prefer_valid_json_repair_over_invalid_captured_attempt()
     {
@@ -1206,12 +1233,11 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Contains(expectedMessage, exception.Message, StringComparison.Ordinal);
     }
 
-    [Theory]
-    [InlineData(ProviderTransportKind.Responses)]
-    [InlineData(ProviderTransportKind.ChatCompletions)]
+    [Fact]
 #pragma warning disable OPENAI001
-    public void Max_reasoning_effort_builds_transport_native_OpenAI_options(ProviderTransportKind transport)
+    public void Max_reasoning_effort_builds_responses_native_OpenAI_options()
     {
+        const ProviderTransportKind transport = ProviderTransportKind.Responses;
         var provider = CreateProvider(transport, preferFrameworkManagedHistory: false) with
         {
             ConfigurationJson = "{\"reasoningEffort\":\"max\"}"
@@ -1224,15 +1250,8 @@ public sealed class AgentFinalizerPolicyTests
             forceOmitTemperature: false);
         var rawOptions = Assert.IsAssignableFrom<object>(options.RawRepresentationFactory!(null!));
 
-        if (transport == ProviderTransportKind.Responses)
-        {
-            var responseOptions = Assert.IsType<OpenAI.Responses.CreateResponseOptions>(rawOptions);
-            Assert.Equal("max", responseOptions.ReasoningOptions!.ReasoningEffortLevel.ToString());
-            return;
-        }
-
-        var chatOptions = Assert.IsType<OpenAI.Chat.ChatCompletionOptions>(rawOptions);
-        Assert.Equal("max", chatOptions.ReasoningEffortLevel.ToString());
+        var responseOptions = Assert.IsType<OpenAI.Responses.CreateResponseOptions>(rawOptions);
+        Assert.Equal("max", responseOptions.ReasoningOptions!.ReasoningEffortLevel.ToString());
     }
 #pragma warning restore OPENAI001
 

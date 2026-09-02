@@ -83,8 +83,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
         using var workspace = new TemporaryDirectory();
         var descriptor = CreateMcpDescriptor(
             workspace.Path,
-            [mode],
-            timeout: TimeSpan.FromMilliseconds(400));
+            [mode]);
         var setup = new McpSetupTestService(CreateMcpFactory(workspace.Path));
 
         var previousSecret = Environment.GetEnvironmentVariable(SecretSourceName);

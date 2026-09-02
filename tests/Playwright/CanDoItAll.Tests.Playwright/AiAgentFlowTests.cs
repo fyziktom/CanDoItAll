@@ -1,5 +1,5 @@
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
@@ -99,11 +99,11 @@ public sealed class AiAgentFlowTests
                 ["DevelopmentManager:TuningModeEnabled"] = "false"
             });
         await using var scope = serviceProvider.CreateAsyncScope();
-        var workspaceService = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
-        var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        var providerAdministration = scope.ServiceProvider.GetRequiredService<IProviderAdministrationService>();
+        var providerSave = await providerAdministration.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = providerName,
-            ConnectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
+            ConnectorPluginKey = ProviderConnectorKeys.OllamaRemote,
             ConfigSchemaVersion = "1.0",
             Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {

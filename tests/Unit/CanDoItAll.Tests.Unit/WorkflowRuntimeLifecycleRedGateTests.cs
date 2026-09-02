@@ -17,7 +17,7 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
         var timeProvider = new FixedTimeProvider(FixedUtcNow);
         var store = new ControllableWorkflowRunStore();
         var backend = new ControllableWorkflowBackend(timeProvider, waitForRelease: true);
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [backend],
             store,
             new WorkflowActiveRunRegistry(),
@@ -48,7 +48,11 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
         var backend = new ControllableWorkflowBackend(
             new FixedTimeProvider(FixedUtcNow),
             waitForRelease: false);
-        var manager = new WorkflowRuntimeManager([backend], store);
+        var composition = WorkflowExternalResponseTestCompositionFactory.CreateLegacyCompatibility(
+            [backend],
+            store,
+            new FixedTimeProvider(FixedUtcNow));
+        var manager = composition.Manager;
         var definition = CreateDefinition();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -70,7 +74,11 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
         var backend = new ControllableWorkflowBackend(
             new FixedTimeProvider(FixedUtcNow),
             waitForRelease: false);
-        var manager = new WorkflowRuntimeManager([backend], store);
+        var composition = WorkflowExternalResponseTestCompositionFactory.CreateLegacyCompatibility(
+            [backend],
+            store,
+            new FixedTimeProvider(FixedUtcNow));
+        var manager = composition.Manager;
         var definition = CreateDefinition();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -105,7 +113,7 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
                         timeProvider.GetUtcNow()),
                     cancellationToken);
             });
-        var manager = new WorkflowRuntimeManager([backend], store);
+        var manager = WorkflowRuntimeManager.CreateInMemory([backend], store);
         var definition = CreateDefinition();
 
         _ = await Record.ExceptionAsync(() =>
@@ -127,7 +135,7 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
         var backend = new ControllableWorkflowBackend(
             new FixedTimeProvider(FixedUtcNow),
             waitForRelease: true);
-        var manager = new WorkflowRuntimeManager([backend], store);
+        var manager = WorkflowRuntimeManager.CreateInMemory([backend], store);
         var definition = CreateDefinition();
 
         var startTask = manager.StartAsync(definition, CreateStartRequest(definition));
@@ -174,7 +182,7 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
             new FixedTimeProvider(FixedUtcNow),
             waitForRelease: true,
             ignoreCancellationForRace: true);
-        var manager = new WorkflowRuntimeManager([backend], store);
+        var manager = WorkflowRuntimeManager.CreateInMemory([backend], store);
         var definition = CreateDefinition();
 
         var startTask = manager.StartAsync(definition, CreateStartRequest(definition));
@@ -208,7 +216,7 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
             waitForRelease: true,
             ignoreCancellationForRace: true,
             supportsActiveCancellation: false);
-        var manager = new WorkflowRuntimeManager([backend], store);
+        var manager = WorkflowRuntimeManager.CreateInMemory([backend], store);
         var definition = CreateDefinition();
 
         var startTask = manager.StartAsync(
@@ -232,7 +240,7 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
     public async Task NonActiveCancellationDoesNotFabricateCancelledState()
     {
         var store = new ControllableWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager([], store);
+        var manager = WorkflowRuntimeManager.CreateInMemory([], store);
         var run = CreateRun(WorkflowRunState.Running, WorkflowRuntimeBackendKind.DurableTask);
         await store.SaveRunAsync(run);
 
@@ -266,7 +274,11 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
         var backend = new ControllableWorkflowBackend(
             new FixedTimeProvider(FixedUtcNow),
             waitForRelease: false);
-        var manager = new WorkflowRuntimeManager([backend], store);
+        var composition = WorkflowExternalResponseTestCompositionFactory.CreateLegacyCompatibility(
+            [backend],
+            store,
+            new FixedTimeProvider(FixedUtcNow));
+        var manager = composition.Manager;
         var waitingRun = CreateRun(WorkflowRunState.WaitingForInput, WorkflowRuntimeBackendKind.InProcess);
         var request = new WorkflowExternalRequestRecord(
             WorkflowExternalRequestId.New(),
@@ -281,13 +293,13 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
         await store.SaveRunAsync(waitingRun);
         await store.SaveExternalRequestAsync(request);
 
-        var result = await manager.SubmitExternalResponseAsync(request.Id, "{\"answer\":\"yes\"}");
+        var result = await composition.Responses.SubmitAsync(request, "{\"answer\":\"yes\"}");
         var persistedRun = await manager.GetRunAsync(waitingRun.RunId);
         var persistedRequest = await store.GetExternalRequestAsync(request.Id);
         var pending = await store.ListPendingExternalRequestsAsync(waitingRun.RunId);
         var events = await manager.ListEventsAsync(waitingRun.RunId);
 
-        Assert.Equal(WorkflowExternalResponseOutcome.UnsupportedResume, result.Outcome);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.LegacyNonResumable, result.Outcome);
         Assert.NotNull(persistedRun);
         Assert.Equal(WorkflowRunState.WaitingForInput, persistedRun.State);
         Assert.NotNull(persistedRequest);
@@ -300,55 +312,157 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
     public async Task ResumeCapableBackendAcceptsExternalResponseExactlyOnce()
     {
         var timeProvider = new FixedTimeProvider(FixedUtcNow);
-        var store = new ControllableWorkflowRunStore();
+        var store = new RedactedControllableWorkflowRunStore();
         var backend = new ResumeCapableWorkflowBackend(timeProvider);
-        var manager = new WorkflowRuntimeManager(
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(timeProvider);
+        var composition = WorkflowExternalResponseTestCompositionFactory.CreateCompatibility(
             [backend],
             store,
-            new WorkflowActiveRunRegistry(),
-            timeProvider);
-        var waitingRun = CreateRun(WorkflowRunState.WaitingForInput, WorkflowRuntimeBackendKind.InProcess);
-        var request = new WorkflowExternalRequestRecord(
-            WorkflowExternalRequestId.New(),
-            waitingRun.RunId,
-            WorkflowExternalRequestKind.HumanInput,
-            new WorkflowNodeId("work"),
-            "answer-required",
-            "{\"question\":\"Continue?\"}",
-            string.Empty,
-            FixedUtcNow,
-            RespondedAtUtc: null);
+            checkpointStore,
+            timeProvider,
+            eventSink: null,
+            usageStore: null);
+        var manager = composition.Manager;
+        var waitingRun = CreateRun(
+            WorkflowRunState.WaitingForInput,
+            WorkflowRuntimeBackendKind.InProcess) with
+        {
+            Origin = CreateAuthorizedOrigin("lifecycle-resume")
+        };
+        var request = await WorkflowHitlTestCheckpointFactory.AddCheckpointAsync(
+            checkpointStore,
+            waitingRun,
+            CreateNativeRequest(waitingRun),
+            "{}");
         await store.SaveRunAsync(waitingRun);
         await store.SaveExternalRequestAsync(request);
 
-        var first = await manager.SubmitExternalResponseAsync(request.Id, "{\"answer\":\"yes\"}");
-        var second = await manager.SubmitExternalResponseAsync(request.Id, "{\"answer\":\"again\"}");
+        var first = await composition.Responses.SubmitAsync(request, "{\"answer\":\"yes\"}");
+        var replay = await composition.Responses.SubmitAsync(request, "{\"answer\":\"yes\"}");
+        var changedResponse = await composition.Responses.SubmitAsync(request, "{\"answer\":\"again\"}");
         var persistedRun = await manager.GetRunAsync(waitingRun.RunId);
         var persistedRequest = await store.GetExternalRequestAsync(request.Id);
 
-        Assert.Equal(WorkflowExternalResponseOutcome.Accepted, first.Outcome);
-        Assert.Equal(WorkflowExternalResponseOutcome.AlreadyResponded, second.Outcome);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.Completed, first.Outcome);
+        Assert.Equal("{\"answer\":\"yes\"}", first.Operation?.ResponsePayload.Json);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.Completed, replay.Outcome);
+        Assert.True(replay.Replayed);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.IdempotencyConflict, changedResponse.Outcome);
         Assert.Equal(1, backend.ResumeInvocationCount);
         Assert.NotNull(persistedRun);
         Assert.Equal(WorkflowRunState.Completed, persistedRun.State);
         Assert.Equal(FixedUtcNow, persistedRun.TerminalAtUtc);
         Assert.NotNull(persistedRequest);
         Assert.Equal(FixedUtcNow, persistedRequest.RespondedAtUtc);
+        Assert.Equal(string.Empty, persistedRequest.ResponseJson);
     }
 
     [Fact]
-    public void ExternalResponseContractRequiresTypedOutcomeAndResumeCapableBackendPort()
+    public async Task NativeCompatibilityWithoutRedactedAcceptanceCapabilityFailsBeforeRuntimeComposition()
     {
-        var responseMethod = typeof(IWorkflowRuntimeManager).GetMethod(
-            nameof(IWorkflowRuntimeManager.SubmitExternalResponseAsync));
-        var responseResultType = Assert.Single(responseMethod!.ReturnType.GetGenericArguments());
-        var resumeCapabilityType = typeof(IWorkflowExecutionBackend).Assembly.GetType(
-            "CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowExternalResponseBackend");
+        var timeProvider = new FixedTimeProvider(FixedUtcNow);
+        var store = new ControllableWorkflowRunStore();
+        var backend = new ResumeCapableWorkflowBackend(timeProvider);
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(timeProvider);
 
-        Assert.Equal("WorkflowExternalResponseResult", responseResultType.Name);
-        Assert.NotNull(resumeCapabilityType);
-        Assert.NotNull(resumeCapabilityType.GetMethod("ResumeAsync"));
+        var exception = Assert.Throws<ArgumentException>(() =>
+            WorkflowExternalResponseTestCompositionFactory.CreateCompatibility(
+                [backend],
+                store,
+                checkpointStore,
+                timeProvider,
+                eventSink: null,
+                usageStore: null));
+
+        Assert.Equal("runStore", exception.ParamName);
+        Assert.Contains("metadata-only", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, backend.ResumeInvocationCount);
+        Assert.Empty(await store.ListRunsAsync());
     }
+
+    private static WorkflowExternalRequestRecord CreateNativeRequest(WorkflowRunSnapshot run)
+    {
+        var requestId = WorkflowExternalRequestId.New();
+        var continuation = new WorkflowExternalRequestContinuation(
+            new WorkflowBackendExternalRequestLink(
+                requestId,
+                new WorkflowBackendRequestId("native-request-1"),
+                new WorkflowBackendRequestPortId("human-input")),
+            new WorkflowBackendCheckpointLink(
+                new WorkflowBackendSessionId(run.BackendRunId),
+                new WorkflowBackendCheckpointId("checkpoint-1")),
+            new WorkflowCompilerContractVersion(1),
+            WorkflowTopologyFingerprint.Create("lifecycle-red-gate"),
+            WorkflowBackendCheckpointPayloadHash.Compute("{}"));
+        return new WorkflowExternalRequestRecord(
+            requestId,
+            run.RunId,
+            WorkflowExternalRequestKind.HumanInput,
+            new WorkflowNodeId("work"),
+            "answer-required",
+            "{\"question\":\"Continue?\"}",
+            string.Empty,
+            FixedUtcNow,
+            RespondedAtUtc: null)
+        {
+            State = WorkflowExternalRequestState.Pending,
+            ResponseContract = new WorkflowExternalResponseContract(
+                WorkflowExternalRequestKind.HumanInput,
+                "test.human-input",
+                1,
+                "{\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\"}},\"required\":[\"answer\"],\"additionalProperties\":false}",
+                4_096),
+            Continuation = continuation,
+            AuthorizationPolicy = new WorkflowExternalRequestAuthorizationPolicySnapshot(
+                (run.Origin as WorkflowLaunchOrigin.Api)!.Actor,
+                ExecutorId: null,
+                WorkflowExecutorCapabilityFlags.None,
+                WorkflowExecutorApprovalRequirement.NotRequired,
+                IntendedApproverSubjectId: string.Empty)
+            {
+                AuthorizationScope = run.Origin.AuthorizationScope,
+                AuthorizationPolicyFingerprint = run.Origin.AuthorizationPolicyFingerprint,
+                ResponseAuthorizationLifetimeSeconds = WorkflowExternalResponseAuthorizationPolicy.ResponseLifetimeSeconds
+            }
+        };
+    }
+
+    [Fact]
+    public void ExternalResponseContractRequiresGovernedServiceAndResumeCapableBackendPort()
+    {
+        Assert.Null(typeof(IWorkflowRuntimeManager).GetMethod("SubmitExternalResponseAsync"));
+        Assert.Null(typeof(IWorkflowRuntimeManager).GetMethod("RespondToExternalRequestAsync"));
+        var responseMethod = typeof(IWorkflowExternalResponseService).GetMethod(
+            nameof(IWorkflowExternalResponseService.SubmitAsync));
+        var responseResultType = Assert.Single(responseMethod!.ReturnType.GetGenericArguments());
+        var resumeCapabilityType = typeof(IWorkflowExternalResponseBackend);
+        var typedResumeMethod = resumeCapabilityType.GetMethod(
+            nameof(IWorkflowExternalResponseBackend.ResumeAsync),
+            [typeof(WorkflowBackendResumeRequest), typeof(CancellationToken)]);
+        var compatibilityResumeMethod = resumeCapabilityType.GetMethod(
+            nameof(IWorkflowExternalResponseBackend.ResumeAsync),
+            [
+                typeof(WorkflowRunSnapshot),
+                typeof(WorkflowExternalRequestRecord),
+                typeof(string),
+                typeof(CancellationToken)
+            ]);
+
+        Assert.Equal("WorkflowExternalResponseServiceResult", responseResultType.Name);
+        Assert.NotNull(typedResumeMethod);
+        Assert.Equal(typeof(Task<WorkflowBackendStartResult>), typedResumeMethod.ReturnType);
+        Assert.NotNull(compatibilityResumeMethod);
+        Assert.Equal(typeof(Task<WorkflowBackendStartResult>), compatibilityResumeMethod.ReturnType);
+    }
+
+    private static WorkflowLaunchOrigin.Api CreateAuthorizedOrigin(string correlationId)
+        => new(
+            new WorkflowLaunchActor(WorkflowLaunchActorKind.User, "lifecycle-launcher"),
+            new WorkflowLaunchCorrelationId(correlationId))
+        {
+            AuthorizationScope = WorkspaceScopeDescriptor.Organization("unit-tests"),
+            AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+        };
 
     [Fact]
     public void RuntimeManagerUsesInjectedTimeProviderForLifecycleTimestamps()
@@ -607,7 +721,7 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
         }
     }
 
-    private sealed class ControllableWorkflowRunStore : IWorkflowRunStore
+    private class ControllableWorkflowRunStore : IWorkflowRunStore
     {
         private readonly InMemoryWorkflowRunStore inner = new();
         private int eventSaveCount;
@@ -664,6 +778,16 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
                 requestId,
                 responseJson,
                 respondedAtUtc,
+                cancellationToken);
+
+        protected Task<WorkflowExternalResponseAcceptanceResult> ForwardRedactedExternalResponseAcceptanceAsync(
+            WorkflowExternalRequestId requestId,
+            DateTimeOffset respondedAtUtc,
+            CancellationToken cancellationToken)
+            => ((IWorkflowRedactedExternalResponseAcceptanceStore)inner)
+                .TryAcceptRedactedExternalResponseAsync(
+                    requestId,
+                    respondedAtUtc,
                 cancellationToken);
 
         public Task SaveRunAsync(
@@ -762,5 +886,20 @@ public sealed class WorkflowRuntimeLifecycleRedGateTests
             DateTimeOffset resumedAtUtc,
             CancellationToken cancellationToken = default)
             => inner.MarkCheckpointResumedAsync(checkpointId, resumedAtUtc, cancellationToken);
+    }
+
+    private sealed class RedactedControllableWorkflowRunStore :
+        ControllableWorkflowRunStore,
+        IWorkflowRedactedExternalResponseAcceptanceStore
+    {
+        Task<WorkflowExternalResponseAcceptanceResult>
+            IWorkflowRedactedExternalResponseAcceptanceStore.TryAcceptRedactedExternalResponseAsync(
+                WorkflowExternalRequestId requestId,
+                DateTimeOffset respondedAtUtc,
+                CancellationToken cancellationToken)
+            => ForwardRedactedExternalResponseAcceptanceAsync(
+                requestId,
+                respondedAtUtc,
+                cancellationToken);
     }
 }

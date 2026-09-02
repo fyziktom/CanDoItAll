@@ -1,4 +1,4 @@
-﻿@page "/projects/{ProjectId:guid}/structure"
+@page "/projects/{ProjectId:guid}/structure"
 @* codex-capsule
 kind: page
 name: ProjectStructurePage
@@ -11,8 +11,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.Providers
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
+@using CanDoItAll.Conversations.Shell
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.Modules.Security
@@ -37,11 +39,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator
 @inject WorkspaceService WorkspaceService
 @inject SecretService SecretService
-@inject ProviderExecutionService ProviderExecutionService
+@inject IProviderRuntimeProfileSource ProviderRuntimeProfileSource
+@inject IProviderPromptExecutionService ProviderPromptExecutionService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectStructurePage> Logger
-@inject IFloatingAgentChatCoordinator FloatingAgentChatCoordinator
+@inject IConversationShellCoordinator ConversationShellCoordinator
 @implements IAsyncDisposable
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
@@ -120,7 +123,7 @@ else
                                                        ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
                                                        FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
-                                                       AgentWindowVisible="@FloatingAgentChatCoordinator.Snapshot().IsCatalogVisible"
+                                                       AgentWindowVisible="@ConversationShellCoordinator.Snapshot().IsCatalogVisible"
                                                        GanttViewVisible="@IsGanttViewVisible"
                                                        ActiveTool="@canvasToolMode"
                                                        CanUseDependencyTool="@(selectedNode is not null)"
@@ -1516,6 +1519,7 @@ else
         }
 
         var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson));
+        uiState.WindowStates = ResolveEditableUiState().WindowStates;
         if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
             surface.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) &&
             uiState.SelectedNodeIds.Count <= 1 &&
@@ -2650,8 +2654,8 @@ else
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await PersistCurrentViewStateAsync();
         await InvokeAsync(StateHasChanged);
+        await PersistCurrentViewStateAsync();
     }
 
     private bool TryPatchSurfaceNodePositions(IReadOnlyCollection<CanvasWorkbenchNodePositionChange> positions)

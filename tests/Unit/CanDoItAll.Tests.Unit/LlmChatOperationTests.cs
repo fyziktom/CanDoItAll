@@ -10,6 +10,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Reflection;
+using CanDoItAll.AgentFramework.ProviderHistory;
 
 namespace CanDoItAll.Tests.Unit.LlmChats;
 
@@ -20,8 +21,10 @@ public sealed class LlmChatOperationIdempotencyTests
     {
         var harness = await LlmChatOperationHarness.CreateAsync();
         var operationId = LlmChatOperationId.New();
-        var command = harness.CreateSendCommand(operationId, "hello");
+        var caller = new HistoryCaller(HistoryAuthenticationKind.ManagedCredential, new(Guid.NewGuid()), "issuer", "client");
+        var command = harness.CreateSendCommand(operationId, "hello") with { HistoryCaller = caller };
         var first = await harness.SendAndDispatchAsync(command);
+        Assert.Equal(caller, first.Value!.Operation.HistoryCaller);
         var invocationCount = (await harness.Invocations.ListAsync(operationId)).Count;
         harness.ExecutorRegistration.Dispose();
 
@@ -814,6 +817,40 @@ public sealed class LlmChatOperationTransitionRegressionTests
 
 public sealed class LlmChatInvocationAuditTests
 {
+    [Fact]
+    public async Task Audited_buffered_call_declares_owner_and_preserves_exact_attempt_evidence() {
+        HistoryInvocationContext? seen = null;
+        var attemptId = ProviderAttemptId.New();
+        var harness = LlmChatInvocationAuditHarness.Create(null, request => {
+            seen = request.History;
+            var now = DateTimeOffset.UtcNow;
+            var start = new HistoryAttemptStart(HistoryEntryId.New(),
+                new(Guid.NewGuid(), Guid.NewGuid(), "fixture"), new(0, 0),
+                request.History.RequestId, attemptId, now,
+                new(new(request.Provider.Id), request.Provider.Name, request.Provider.Kind.ToString(),
+                    new(request.Model), new(request.Model)), HistoryOperation.CompleteChat,
+                request.History.Workload, request.History.Caller, new(new(), 0));
+            request.History.Attempts.Add(start);
+            request.History.Attempts.Complete(start, new(HistoryOutcome.Succeeded, now.AddSeconds(1),
+                new(HistoryUsageState.Complete, 7, 3), new(HistoryPriceState.Unpriced)));
+            return new LlmInvocationResult("answer", request.Model, new LlmUsage(700, 300, 0));
+        });
+        var caller = new HistoryCaller(HistoryAuthenticationKind.ManagedCredential, new(Guid.NewGuid()), "issuer", "client");
+        await harness.InvokeAsync(caller);
+        Assert.NotNull(seen);
+        Assert.Equal(caller, seen.Caller);
+        Assert.Equal(HistoryWorkload.SimpleChat, seen.Workload);
+        Assert.Equal(harness.OperationId.Value.ToString("N"), seen.Owner!.OwnerId.Value);
+        Assert.Null(seen.CurrentTurn);
+        var invocation = Assert.Single(await harness.Invocations.ListAsync(harness.OperationId));
+        var attempt = Assert.Single(invocation.HistoryAttempts);
+        Assert.Equal(attemptId, attempt.AttemptId);
+        Assert.Equal(caller, attempt.Caller);
+        Assert.Equal(7, attempt.Usage.InputTokens);
+        Assert.Equal(700, invocation.Usage.InputTokens);
+    }
+
+
     [Fact]
     public async Task Streaming_audit_records_each_actual_attempt_with_its_own_usage_and_ordinal()
     {

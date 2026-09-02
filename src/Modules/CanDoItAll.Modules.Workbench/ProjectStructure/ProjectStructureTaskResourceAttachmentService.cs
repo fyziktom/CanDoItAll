@@ -5,11 +5,13 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed record ProjectStructureTaskResourceAttachRequest(
     [property: JsonRequired] ProjectStructureTaskResourceSelection Resource,
-    [property: JsonRequired] ProjectTaskExecutionSnapshot CurrentExecution);
+    [property: JsonRequired] ProjectTaskExecutionSnapshot CurrentExecution,
+    ProjectStructureWorkflowInputSettings? WorkflowInputSettings = null);
 
 public sealed record ProjectStructureTaskResourceAttachResult(
     ProjectStructureTaskResourceSelection Resource,
-    ProjectStructureTaskEstimateRefreshResult Pricing);
+    ProjectStructureTaskEstimateRefreshResult Pricing,
+    string? CreatedNodeId = null);
 
 public sealed class ProjectStructureTaskResourceAttachmentService(
     ProjectStructureTaskResourceService resourceService,
@@ -41,6 +43,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
             request.Resource,
             request.CurrentExecution,
             request.CurrentExecution,
+            request.WorkflowInputSettings,
             agent,
             cancellationToken);
     }
@@ -69,6 +72,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
             resource,
             previousExecution,
             expectedCurrentExecution,
+            workflowInputSettings: null,
             agent,
             cancellationToken);
     }
@@ -79,6 +83,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         ProjectStructureTaskResourceSelection resource,
         ProjectTaskExecutionSnapshot previousExecution,
         ProjectTaskExecutionSnapshot expectedCurrentExecution,
+        ProjectStructureWorkflowInputSettings? workflowInputSettings,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken)
     {
@@ -92,16 +97,11 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         }
 
         ArgumentNullException.ThrowIfNull(agent);
-        ProjectStructureTaskResourceSelectionPolicy.Validate(resource);
-        if (resource.Kind is not (
-                ProjectStructureTaskResourceKind.Workflow or
-                ProjectStructureTaskResourceKind.Process))
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "TaskAttachedResourceKindInvalid",
-                "Only a workflow or process can be attached through the typed task-resource path.");
-        }
+        ProjectStructureTaskResourceSelectionPolicy.ValidateDefinitionAttachment(resource);
+        var normalizedWorkflowInputSettings =
+            ProjectStructureTaskResourceSelectionPolicy.ValidateAndNormalizeWorkflowInputSettings(
+            resource,
+            workflowInputSettings);
 
         var pricingPlan = await pricingCommitService.PrepareAfterTransitionAsync(
             projectId,
@@ -117,12 +117,17 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
                 projectId,
                 taskNodeId,
                 resource,
+                normalizedWorkflowInputSettings,
                 agent,
                 cancellationToken);
+            ValidateAttachmentReceipt(resource, attachment);
             var pricing = await pricingCommitService.CommitAsync(
                 pricingPlan,
                 cancellationToken);
-            return new ProjectStructureTaskResourceAttachResult(resource, pricing);
+            return new ProjectStructureTaskResourceAttachResult(
+                resource,
+                pricing,
+                attachment.CreatedNodeId);
         }
         catch (OperationCanceledException cancellationFailure)
             when (cancellationToken.IsCancellationRequested)
@@ -215,6 +220,29 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
                 400,
                 "TaskExecutionSnapshotRequired",
                 "The current task execution snapshot is required.");
+        }
+    }
+
+    internal static void ValidateAttachmentReceipt(
+        ProjectStructureTaskResourceSelection resource,
+        ProjectStructureTaskResourceAttachment attachment)
+    {
+        if (attachment.Kind != resource.Kind)
+        {
+            throw new InvalidOperationException(
+                $"The task resource attachment receipt kind '{attachment.Kind}' does not match requested kind '{resource.Kind}'.");
+        }
+
+        switch (resource.Kind)
+        {
+            case ProjectStructureTaskResourceKind.Workflow when
+                string.IsNullOrWhiteSpace(attachment.CreatedNodeId):
+                throw new InvalidOperationException(
+                    "The workflow attachment did not return its created project-structure node id.");
+            case ProjectStructureTaskResourceKind.Process when
+                string.IsNullOrWhiteSpace(attachment.LinkTargetNodeId):
+                throw new InvalidOperationException(
+                    "The process attachment did not return its linked process-definition node id.");
         }
     }
 

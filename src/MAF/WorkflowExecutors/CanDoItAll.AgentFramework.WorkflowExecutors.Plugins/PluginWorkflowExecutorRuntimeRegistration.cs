@@ -21,7 +21,7 @@ public static class PluginWorkflowExecutorRuntimeRegistration
 
     public static IReadOnlyList<Type> DiscoverWorkflowExecutorTypes(Assembly assembly)
         => assembly.DefinedTypes
-            .Where(type => type is { IsClass: true, IsAbstract: false } && !type.ContainsGenericParameters)
+            .Where(type => type is { IsVisible: true, IsClass: true, IsAbstract: false } && !type.ContainsGenericParameters)
             .Select(type => type.AsType())
             .Where(typeof(IWorkflowExecutor).IsAssignableFrom)
             .OrderBy(type => type.FullName, StringComparer.Ordinal)

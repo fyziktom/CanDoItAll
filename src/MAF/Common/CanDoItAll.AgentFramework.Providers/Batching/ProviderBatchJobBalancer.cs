@@ -10,7 +10,10 @@ public sealed record ProviderBatchItemDispatchContext<TPayload>(
     ProviderBatchDispatchPlan Plan,
     ProviderBatchDispatchAssignment Assignment,
     ProviderBatchInput<TPayload> Input,
-    ProviderRuntimeDispatchContext<TPayload> RuntimeContext);
+    ProviderRuntimeDispatchContext<TPayload> RuntimeContext) {
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext History { get; init; } =
+        ProviderBatchHistoryContext.Create(Plan.JobId, Input.InputId);
+}
 
 public interface IProviderBatchJobBalancer
 {
@@ -264,6 +267,7 @@ public sealed class ProviderBatchJobBalancer : IProviderBatchJobBalancer
     {
         var attempt = 0;
         Exception? lastException = null;
+        var history = ProviderBatchHistoryContext.Create(request.JobId, input.InputId);
 
         while (attempt < policy.MaxAttempts)
         {
@@ -296,7 +300,7 @@ public sealed class ProviderBatchJobBalancer : IProviderBatchJobBalancer
                             plan,
                             assignment,
                             input,
-                            runtimeContext);
+                            runtimeContext) { History = history };
                         return dispatchAsync(context, token);
                     },
                     cancellationToken).ConfigureAwait(false);
@@ -332,6 +336,10 @@ public sealed class ProviderBatchJobBalancer : IProviderBatchJobBalancer
                         exception.Message),
                     CancellationToken.None).ConfigureAwait(false);
 
+                if (!ProviderBatchRetryPolicy.CanRetry(exception))
+                {
+                    break;
+                }
                 if (attempt < policy.MaxAttempts)
                 {
                     continue;
@@ -346,7 +354,7 @@ public sealed class ProviderBatchJobBalancer : IProviderBatchJobBalancer
             await failFastCancellation.CancelAsync().ConfigureAwait(false);
         }
 
-        return ProviderBatchJobItemResult<TResult>.Failed(boxedInput, assignment, policy.MaxAttempts, errorCode, errorMessage);
+        return ProviderBatchJobItemResult<TResult>.Failed(boxedInput, assignment, attempt, errorCode, errorMessage);
     }
 
     private async Task<ProviderBatchJobItemResult<TResult>> RecordCancelledAsync<TResult>(

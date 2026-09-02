@@ -12,6 +12,8 @@ The architecture documentation is intentionally small:
 - [Modules](modules.md) maps product modules to their responsibilities and entry points.
 - [LLM Chats boundary and integration ownership](llm-chats-boundary-and-handoffs.md) defines asynchronous
   execution, SSE ownership, delivered UI adapters, forbidden coupling, and remaining context/deployment handoffs.
+- [Conversation components boundary](conversation-components-boundary.md) defines the backend-neutral
+  presentation owner shared by agent, ordinary-chat, and floating conversation surfaces.
 - [Process outcome authority with MAF 1.15](process-maf-1.15-outcome-authority.md)
   records the finalizer, managed-artifact, and branch-aware preflight boundary.
 - [Provider model-parameter negotiation](provider-model-parameter-negotiation.md)

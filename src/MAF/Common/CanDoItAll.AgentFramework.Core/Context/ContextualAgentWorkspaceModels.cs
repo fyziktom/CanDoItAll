@@ -25,6 +25,13 @@ public sealed record ContextualAgentAccessSummary(
     ContextualAgentAccessLevel AccessLevel,
     string ScopeLabel)
 {
+    private const ContextualAgentAccessLevel MutationAccessLevels =
+        ContextualAgentAccessLevel.Write |
+        ContextualAgentAccessLevel.TaskWrite |
+        ContextualAgentAccessLevel.NonTaskStructureWrite |
+        ContextualAgentAccessLevel.ProjectCreate |
+        ContextualAgentAccessLevel.SubprojectCreate;
+
     public bool CanRead => AccessLevel.HasFlag(ContextualAgentAccessLevel.Read);
 
     public bool CanWrite => AccessLevel.HasFlag(ContextualAgentAccessLevel.Write);
@@ -36,6 +43,8 @@ public sealed record ContextualAgentAccessSummary(
     public bool CanCreateProjects => AccessLevel.HasFlag(ContextualAgentAccessLevel.ProjectCreate);
 
     public bool CanCreateSubprojects => AccessLevel.HasFlag(ContextualAgentAccessLevel.SubprojectCreate);
+
+    public bool CanMutate => (AccessLevel & MutationAccessLevels) != ContextualAgentAccessLevel.None;
 }
 
 public sealed record ContextualAgentWorkspaceRefreshRequest(

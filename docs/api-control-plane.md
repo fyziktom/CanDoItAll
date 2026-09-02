@@ -39,10 +39,35 @@ Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettin
 
 The Project Structure API is mapped separately from `Api:Enabled`, but it applies the same authorization switch. The development default of open access is not suitable for a remotely reachable deployment. Keep signing keys and bearer tokens out of tracked files and logs.
 
+When authorization is enabled on an interactive host profile, an anonymous Blazor
+circuit receives narrowly scoped local-operator access for in-process FileTools and
+Simple Chats only when both the original and effective connection addresses are
+loopback. This circuit identity is not installed in `HttpContext.User` and never
+authenticates HTTP API or authorized-file routes; those boundaries still require a
+valid bearer token.
+
 When authorization is enabled, `/api/access/tokens` requires the privileged
 `api.tokens.issue` scope. Memory-provider routes accept the existing umbrella `api`
 scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`, and
 `api.memory-providers.query` scopes for their respective operations.
+Workflow HITL response submission and operation-status reads require the exact
+`api.workflows.respond` scope; the broad `api` scope does not authorize this boundary.
+
+## Shared providers and history
+
+The five [shared-provider operations](shared-providers.md#http-surface) expose a
+versioned catalog and a bounded OpenAI-compatible inference subset. With authorization
+enabled, catalog/model reads accept `api.shared-providers.catalog.read` or the existing
+`api` umbrella; inference accepts `api.shared-providers.invoke` or `api`.
+The operation schema documents the supported properties, nested shapes and limits.
+Source/import/publication administration remains an in-process application/UI boundary.
+
+Request history metadata, content and management use separate exact authorities:
+`api.provider-history.read`, `api.provider-history.content.read` and
+`api.provider-history.manage`. These are not general history HTTP routes.
+[Request history](provider-request-history.md) describes caller identity, canonical
+ownership, Light/Detailed privacy and retention. Opaque correlation references do not
+grant access.
 
 ## Current Route Families
 
@@ -67,6 +92,52 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/runtime` | Host capability and bounded operation-readiness snapshots. | [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs) |
 
 Use OpenAPI for exact methods and schemas. Do not copy a complete generated endpoint inventory into maintained documentation.
+
+## Workflow Human-In-The-Loop Responses
+
+Read the current request from `GET /api/workflows/runs/{runId}/pending-requests` or the
+run-detail projection before submitting a response. Each pending item includes its identity,
+kind, node, version, state, a bounded/redacted `prompt`, and a `responseContract`. The
+contract contains schema identity/version, maximum response bytes, and a parsed `schema`
+when its validated schema is within the public projection bound; `schemaAvailable` is false
+when the schema is deliberately omitted. Clients must not derive presentation from artifact
+file-name conventions. The allowlist never returns the request's prior-node `context`, raw
+`RequestJson`, authorization policy, executor arguments, or checkpoint material.
+
+Submit a response to the existing command route with one `Idempotency-Key` header and a
+typed JSON body:
+
+```json
+{
+  "expectedRequestVersion": 3,
+  "response": {
+    "approved": true,
+    "message": "Reviewed and approved."
+  }
+}
+```
+
+The route is `POST /api/workflows/external-requests/{requestId}/response`. The `response`
+member is a JSON value, not a JSON string containing encoded JSON. The server rejects
+unknown body members, ambiguous duplicate properties, invalid or over-limit JSON, and
+missing, repeated, empty, or over-limit idempotency keys before workflow mutation.
+
+Read a previously accepted attempt at
+`GET /api/workflows/external-response-operations/{operationId}`. Both routes apply the
+same authenticated actor, current database profile, persisted workspace scope, and
+response-capability checks. They return allowlisted status projections; raw request and
+response JSON, event payloads, checkpoint references and hashes, artifact storage paths,
+protected keys, leases, and internal authorization material are never part of the HTTP
+contract. A disabled global API-authentication switch does not manufacture an anonymous
+workflow-response actor: anonymous submission still receives `401` from the application
+boundary.
+
+Completed, waiting-again, and denied outcomes return `200`; active resumption returns
+`202`. Invalid input returns `400`, authentication and authorization failures return
+`401`/`403`, missing resources return `404`, stale or conflicting attempts return `409`,
+cancelled or superseded attempts return `410`, incompatible durable state returns `422`,
+retryable infrastructure failures return `503`, and unclassified terminal failures use a
+redacted `500`. The workflow response boundary never uses `502`.
 
 ## Process Contract
 

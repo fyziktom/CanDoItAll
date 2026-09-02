@@ -4,12 +4,35 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.Pages;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class SettingsPageDataSourcesTests
 {
+    [Fact]
+    public async Task Legacy_provider_settings_url_redirects_to_authoritative_agents_tab()
+    {
+        await using var harness = await CreateUnlockedHarnessAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        var router = harness.Context.Render<Router>(parameters => parameters
+            .Add(router => router.AppAssembly, typeof(SettingsPage).Assembly)
+            .Add(router => router.Found, routeData => builder =>
+            {
+                builder.OpenComponent<RouteView>(0);
+                builder.AddAttribute(1, nameof(RouteView.RouteData), routeData);
+                builder.CloseComponent();
+            }));
+        navigation.NavigateTo("http://localhost/settings?tab=providers");
+
+        router.WaitForAssertion(() => Assert.EndsWith(
+                "/agents?tab=providers",
+                navigation.Uri,
+                StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Settings_page_renders_data_sources_tab_with_saved_profiles_and_editor_actions()
     {

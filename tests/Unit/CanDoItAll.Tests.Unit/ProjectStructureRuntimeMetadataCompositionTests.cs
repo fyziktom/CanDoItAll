@@ -58,6 +58,44 @@ public sealed class ProjectStructureRuntimeMetadataCompositionTests
         Assert.Equal("--port 8000", metadata.Arguments);
     }
 
+    [Fact]
+    public void Delivery_block_create_composer_preserves_typed_root_authority()
+    {
+        Assert.True(ProjectStructureCanvasCatalog.TryResolveCreateDefinition(
+            "add-block-delivery",
+            out var definition));
+        var request = new CanvasWorkbenchCreateActionRequest(
+            definition.ActionId,
+            "parent",
+            10,
+            20,
+            "parent",
+            "Delivery",
+            "Release",
+            "Deliver the product",
+            "child",
+            "project-block",
+            definition.ObjectSubtype,
+            null,
+            [
+                Input("outputRoot", @"C:\products\app"),
+                Input("targetRoot", @"C:\products\target"),
+                Input("repositoryRoot", @"C:\repositories\product")
+            ]);
+
+        var prepared = ProjectStructureCreateRequestComposer.Compose(
+            definition,
+            request,
+            "parent",
+            (10, 20));
+        var metadata = ProjectObjectMetadataSerializer.Parse(prepared.Request.MetadataJson).ProjectBlock;
+
+        Assert.NotNull(metadata);
+        Assert.Equal(@"C:\products\app", metadata!.OutputRoot);
+        Assert.Equal(@"C:\products\target", metadata.TargetRoot);
+        Assert.Equal(@"C:\repositories\product", metadata.RepositoryRoot);
+    }
+
     private static CanvasWorkbenchInputValue Input(string key, string value)
         => new()
         {

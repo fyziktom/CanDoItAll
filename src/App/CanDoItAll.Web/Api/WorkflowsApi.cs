@@ -18,8 +18,10 @@ internal static class WorkflowsApi
             .DisableAntiforgery();
 
         workflows.MapWorkflowRunControlApi();
+        workflows.MapWorkflowRunReadApi();
         workflows.MapWorkflowRunIdempotencyApi();
         workflows.MapWorkflowStableIdentityApi();
+        workflows.MapWorkflowExternalResponseApi();
 
         workflows.MapGet("/contract", () => Results.Ok(new WorkflowApiContractResponse(
             [
@@ -66,6 +68,7 @@ internal static class WorkflowsApi
                 "GET /api/workflows/runs/{runId}/checkpoints",
                 "GET /api/workflows/runs/{runId}/pending-requests",
                 "POST /api/workflows/external-requests/{requestId}/response",
+                "GET /api/workflows/external-response-operations/{operationId}",
                 "GET /api/workflows/analytics"
             ],
             "Workflow control remains HTTP/API-driven. Executor catalogs expose tool side-effect contracts; agent skill, tool, and MCP capability setup is validated through /api/agents/capabilities.")))
@@ -261,116 +264,6 @@ internal static class WorkflowsApi
         })
         .WithName("RunWorkflowTest");
 
-        workflows.MapGet("/runs", async (
-                [AsParameters] WorkflowRunListApiQuery query,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            Results.Ok(FilterRuns(
-                await runStore.ListRunsAsync(
-                    query.WorkflowId.HasValue ? new WorkflowId(query.WorkflowId.Value) : null,
-                    cancellationToken),
-                query)))
-            .WithName("ListWorkflowRuns");
-
-        workflows.MapGet("/runs/page", async (
-                [AsParameters] WorkflowRunListApiQuery query,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await runStore.ListRunPageAsync(
-                new WorkflowRunPageRequest(
-                    query.WorkflowId.HasValue ? new WorkflowId(query.WorkflowId.Value) : null,
-                    query.State,
-                    query.Backend,
-                    query.Search ?? string.Empty,
-                    query.PageIndex.GetValueOrDefault(),
-                    query.PageSize ?? query.Take ?? 50),
-                cancellationToken)))
-            .WithName("ListWorkflowRunPage");
-
-        workflows.MapGet("/runs/{runId:guid}", async (
-                Guid runId,
-                IWorkflowRuntimeManager runtimeManager,
-                CancellationToken cancellationToken) =>
-        {
-            var run = await runtimeManager.GetRunAsync(new WorkflowRunId(runId), cancellationToken);
-            return run is null
-                ? ApiEndpointResults.NotFound("Workflow run was not found.", "workflows.run-not-found")
-                : Results.Ok(run);
-        })
-        .WithName("GetWorkflowRun");
-
-        workflows.MapGet("/runs/{runId:guid}/detail", async (
-                Guid runId,
-                IWorkflowRuntimeManager runtimeManager,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            await GetRunDetailResultAsync(
-                new WorkflowRunId(runId),
-                runtimeManager,
-                runStore,
-                cancellationToken))
-            .WithName("GetWorkflowRunDetail")
-            .Produces<WorkflowRunDetailApiResponse>(StatusCodes.Status200OK)
-            .ProducesApiErrors(
-                StatusCodes.Status401Unauthorized,
-                StatusCodes.Status403Forbidden,
-                StatusCodes.Status404NotFound);
-
-        workflows.MapGet("/runs/{runId:guid}/events", async (
-                Guid runId,
-                IWorkflowRuntimeManager runtimeManager,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await runtimeManager.ListEventsAsync(new WorkflowRunId(runId), cancellationToken)))
-            .WithName("ListWorkflowRunEvents");
-
-        workflows.MapGet("/runs/{runId:guid}/events/page", async (
-                Guid runId,
-                [AsParameters] WorkflowEventListApiQuery query,
-                IWorkflowRuntimeManager runtimeManager,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await runtimeManager.ListEventPageAsync(
-                new WorkflowEventPageRequest(
-                    new WorkflowRunId(runId),
-                    query.PageIndex.GetValueOrDefault(),
-                    query.PageSize.GetValueOrDefault(50)),
-                cancellationToken)))
-            .WithName("ListWorkflowRunEventPage");
-
-        workflows.MapGet("/runs/{runId:guid}/artifacts", async (
-                Guid runId,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await runStore.ListArtifactsAsync(new WorkflowRunId(runId), cancellationToken)))
-            .WithName("ListWorkflowRunArtifacts");
-
-        workflows.MapGet("/runs/{runId:guid}/artifacts/{artifactId:guid}/content", async (
-                Guid runId,
-                Guid artifactId,
-                IWorkflowRunStore runStore,
-                IWorkflowArtifactContentStore artifactContentStore,
-                CancellationToken cancellationToken) =>
-            await GetArtifactContentResultAsync(
-                new WorkflowRunId(runId),
-                new WorkflowArtifactId(artifactId),
-                runStore,
-                artifactContentStore,
-                cancellationToken))
-            .WithName("GetWorkflowRunArtifactContent");
-
-        workflows.MapGet("/runs/{runId:guid}/checkpoints", async (
-                Guid runId,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await runStore.ListCheckpointsAsync(new WorkflowRunId(runId), cancellationToken)))
-            .WithName("ListWorkflowRunCheckpoints");
-
-        workflows.MapGet("/runs/{runId:guid}/pending-requests", async (
-                Guid runId,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await runStore.ListPendingExternalRequestsAsync(new WorkflowRunId(runId), cancellationToken)))
-            .WithName("ListWorkflowRunPendingRequests");
-
         workflows.MapGet("/analytics", async (
                 [AsParameters] WorkflowAnalyticsApiQuery query,
                 IWorkflowAnalyticsQueryService analyticsQueryService,
@@ -445,17 +338,6 @@ internal static class WorkflowsApi
                 cancellationToken)))
             .WithName("CancelWorkflowRun");
 
-        workflows.MapPost("/external-requests/{requestId:guid}/response", async (
-                Guid requestId,
-                WorkflowExternalRequestResponseApiRequest request,
-                IWorkflowRuntimeManager runtimeManager,
-                CancellationToken cancellationToken) =>
-            MapExternalResponseResult(await runtimeManager.SubmitExternalResponseAsync(
-                new WorkflowExternalRequestId(requestId),
-                request.ResponseJson,
-                cancellationToken)))
-            .WithName("RespondToWorkflowExternalRequest");
-
         return workflows;
     }
 
@@ -517,7 +399,9 @@ internal static class WorkflowsApi
                     WorkflowLaunchMode.Production,
                     new WorkflowLaunchOrigin.Api(
                         ResolveApiActor(httpContext.User),
-                        new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)),
+                        new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)) {
+                        HistoryCaller = ProviderHistoryRequestContext.Caller(httpContext)
+                    },
                     request.InputJson ?? "{}",
                     WorkflowLaunchCompletionPolicy.WaitForStopped,
                     ResolveLaunchIdempotency(httpContext, idempotencyKey))
@@ -525,19 +409,14 @@ internal static class WorkflowsApi
                     RequestedBackend = request.RequestedBackend
                 },
                 cancellationToken);
-            var detail = await BuildRunDetailAsync(
+            var detail = await WorkflowRunReadEndpoints.BuildRunDetailAsync(
                 launchResult.Run,
                 runtimeManager,
                 runStore,
                 cancellationToken);
-            var keyHash = launchResult.ResolvedRequest.Idempotency is
-                WorkflowLaunchIdempotency.CallerSupplied keyed
-                    ? WorkflowLaunchIdempotencyRequestFactory.CreateKeyHash(keyed.Key)
-                    : null;
             return Results.Ok(WorkflowRunStartApiResponse.From(
                 detail,
-                launchResult.IdempotencyDisposition,
-                keyHash));
+                launchResult.IdempotencyDisposition));
         }
         catch (WorkflowLaunchValidationException exception)
         {
@@ -626,27 +505,6 @@ internal static class WorkflowsApi
                 title: "Unknown workflow cancellation outcome.")
         };
 
-    private static IResult MapExternalResponseResult(WorkflowExternalResponseResult result)
-        => result.Outcome switch
-        {
-            WorkflowExternalResponseOutcome.Accepted => Results.Ok(result),
-            WorkflowExternalResponseOutcome.RequestNotFound or WorkflowExternalResponseOutcome.RunNotFound =>
-                Results.Json(result, statusCode: StatusCodes.Status404NotFound),
-            WorkflowExternalResponseOutcome.AlreadyResponded or
-                WorkflowExternalResponseOutcome.RunNotWaiting or
-                WorkflowExternalResponseOutcome.TransitionRejected =>
-                Results.Json(result, statusCode: StatusCodes.Status409Conflict),
-            WorkflowExternalResponseOutcome.UnsupportedResume =>
-                Results.Json(result, statusCode: StatusCodes.Status422UnprocessableEntity),
-            WorkflowExternalResponseOutcome.BackendUnavailable =>
-                Results.Json(result, statusCode: StatusCodes.Status503ServiceUnavailable),
-            WorkflowExternalResponseOutcome.ResumeFailed =>
-                Results.Json(result, statusCode: StatusCodes.Status502BadGateway),
-            _ => Results.Problem(
-                statusCode: StatusCodes.Status500InternalServerError,
-                title: "Unknown workflow external-response outcome.")
-        };
-
     private static async Task<IResult> GetDefinitionResultAsync(
         Guid workflowId,
         Guid? versionId,
@@ -660,104 +518,6 @@ internal static class WorkflowsApi
         return detail is null
             ? ApiEndpointResults.NotFound("Workflow definition was not found.", "workflows.definition-not-found")
             : Results.Ok(detail);
-    }
-
-    private static async Task<IResult> GetRunDetailResultAsync(
-        WorkflowRunId runId,
-        IWorkflowRuntimeManager runtimeManager,
-        IWorkflowRunStore runStore,
-        CancellationToken cancellationToken)
-    {
-        var run = await runtimeManager.GetRunAsync(runId, cancellationToken);
-        return run is null
-            ? ApiEndpointResults.NotFound("Workflow run was not found.", "workflows.run-not-found")
-            : Results.Ok(await BuildRunDetailAsync(run, runtimeManager, runStore, cancellationToken));
-    }
-
-    private static async Task<IResult> GetArtifactContentResultAsync(
-        WorkflowRunId runId,
-        WorkflowArtifactId artifactId,
-        IWorkflowRunStore runStore,
-        IWorkflowArtifactContentStore artifactContentStore,
-        CancellationToken cancellationToken)
-    {
-        var artifacts = await runStore.ListArtifactsAsync(runId, cancellationToken);
-        var artifact = artifacts.SingleOrDefault(item => item.Id == artifactId);
-        if (artifact is null)
-        {
-            return ApiEndpointResults.NotFound("Workflow artifact was not found for this run.", "workflows.artifact-not-found");
-        }
-
-        var content = await artifactContentStore.ReadContentAsync(artifact, cancellationToken);
-        if (content is null)
-        {
-            return ApiEndpointResults.NotFound("Workflow artifact content was not found for this artifact.", "workflows.artifact-content-not-found");
-        }
-
-        return Results.Text(content.Content, artifact.ContentType);
-    }
-
-    private static async Task<WorkflowRunDetailApiResponse> BuildRunDetailAsync(
-        WorkflowRunSnapshot run,
-        IWorkflowRuntimeManager runtimeManager,
-        IWorkflowRunStore runStore,
-        CancellationToken cancellationToken)
-    {
-        return new WorkflowRunDetailApiResponse(
-            run,
-            await runtimeManager.ListEventsAsync(run.RunId, cancellationToken),
-            await runStore.ListArtifactsAsync(run.RunId, cancellationToken),
-            await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken),
-            await runStore.ListCheckpointsAsync(run.RunId, cancellationToken));
-    }
-
-    private static IReadOnlyList<WorkflowRunSnapshot> FilterRuns(
-        IReadOnlyList<WorkflowRunSnapshot> runs,
-        WorkflowRunListApiQuery query)
-    {
-        var filtered = runs.AsEnumerable();
-        if (query.State.HasValue)
-        {
-            filtered = filtered.Where(item => item.State == query.State.Value);
-        }
-
-        if (query.Backend.HasValue)
-        {
-            filtered = filtered.Where(item => item.Backend == query.Backend.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.Search))
-        {
-            filtered = filtered.Where(item => Contains(item.Summary, query.Search) ||
-                                             Contains(item.BackendRunId, query.Search) ||
-                                             Contains(item.RunId.ToString(), query.Search));
-        }
-
-        return filtered
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .Take(NormalizeTake(query.Take))
-            .ToArray();
-    }
-
-    private static IReadOnlyDictionary<string, int> CountBy<T>(
-        IEnumerable<T> values,
-        Func<T, string> keySelector)
-    {
-        return values
-            .GroupBy(keySelector, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static bool Contains(string value, string? search)
-    {
-        return !string.IsNullOrWhiteSpace(search) &&
-               value.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static int NormalizeTake(int? take)
-    {
-        return Math.Clamp(take.GetValueOrDefault(50), 1, 500);
     }
 
     private static int NormalizeAnalyticsRecentTake(int? take)
@@ -816,35 +576,9 @@ internal static class WorkflowsApi
     }
 }
 
-internal sealed record WorkflowExternalRequestResponseApiRequest(string ResponseJson);
-
 internal sealed record WorkflowApiContractResponse(
     IReadOnlyList<string> Endpoints,
     string BoundarySummary);
-
-internal sealed class WorkflowRunListApiQuery
-{
-    public Guid? WorkflowId { get; set; }
-
-    public WorkflowRunState? State { get; set; }
-
-    public WorkflowRuntimeBackendKind? Backend { get; set; }
-
-    public string? Search { get; set; }
-
-    public int? Take { get; set; }
-
-    public int? PageIndex { get; set; }
-
-    public int? PageSize { get; set; }
-}
-
-internal sealed class WorkflowEventListApiQuery
-{
-    public int? PageIndex { get; set; }
-
-    public int? PageSize { get; set; }
-}
 
 internal sealed class WorkflowAnalyticsApiQuery
 {
@@ -869,37 +603,4 @@ internal sealed class WorkflowRunStartApiRequest
     public string? InputJson { get; set; }
 
     public WorkflowRuntimeBackendKind? RequestedBackend { get; set; }
-}
-
-internal sealed record WorkflowRunDetailApiResponse(
-    WorkflowRunSnapshot Run,
-    IReadOnlyList<WorkflowEventRecord> Events,
-    IReadOnlyList<WorkflowArtifactRecord> Artifacts,
-    IReadOnlyList<WorkflowExternalRequestRecord> PendingExternalRequests,
-    IReadOnlyList<WorkflowCheckpointRecord> Checkpoints);
-
-internal sealed record WorkflowRunStartApiResponse(
-    WorkflowRunSnapshot Run,
-    IReadOnlyList<WorkflowEventRecord> Events,
-    IReadOnlyList<WorkflowArtifactRecord> Artifacts,
-    IReadOnlyList<WorkflowExternalRequestRecord> PendingExternalRequests,
-    IReadOnlyList<WorkflowCheckpointRecord> Checkpoints,
-    WorkflowLaunchIdempotencyDisposition IdempotencyDisposition,
-    string? IdempotencyKeyHash,
-    bool Created,
-    bool Replayed)
-{
-    public static WorkflowRunStartApiResponse From(
-        WorkflowRunDetailApiResponse detail,
-        WorkflowLaunchIdempotencyDisposition disposition,
-        string? idempotencyKeyHash) => new(
-            detail.Run,
-            detail.Events,
-            detail.Artifacts,
-            detail.PendingExternalRequests,
-            detail.Checkpoints,
-            disposition,
-            idempotencyKeyHash,
-            Created: disposition is not WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun,
-            Replayed: disposition is WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun);
 }

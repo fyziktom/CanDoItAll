@@ -100,7 +100,8 @@ public sealed class SecretRuntimeAuthorizationTests
             vault,
             protector,
             new TestClock(new DateTimeOffset(2026, 5, 13, 12, 0, 0, TimeSpan.Zero)),
-            new NullActivityStream());
+            new NullActivityStream(),
+            []);
         var saveResult = await secretService.SaveAsync(new SecretEditorModel
         {
             Name = "Plugin API",

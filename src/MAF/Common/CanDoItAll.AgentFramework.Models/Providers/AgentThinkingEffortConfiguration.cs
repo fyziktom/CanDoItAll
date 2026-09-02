@@ -19,7 +19,7 @@ public static class AgentThinkingEffortConfiguration
             includeLegacyOllamaThink: true);
     }
 
-    internal static AgentReasoningEffortLevel? Read(
+    public static AgentReasoningEffortLevel? Read(
         string? configurationJson,
         string configurationOwner,
         bool includeLegacyOllamaThink)

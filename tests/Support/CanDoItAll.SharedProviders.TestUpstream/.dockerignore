@@ -1,0 +1,15 @@
+**/bin
+**/obj
+.git
+.gitignore
+*.user
+*.suo
+TestResults
+artifacts
+.artifacts
+.env
+.env.*
+**/*.key
+**/*.pem
+**/*.pfx
+**/*.p12

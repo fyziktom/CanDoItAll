@@ -148,8 +148,8 @@ public sealed partial class PartyDirectoryService
                 ProjectName = project == null ? "Unknown project" : project.Name
             };
 
-        var totalCountTask = assignments.CountAsync(cancellationToken);
-        var itemsTask = assignments
+        var totalCount = await assignments.CountAsync(cancellationToken);
+        var projectedItems = await assignments
             .OrderBy(item => item.ProjectName)
             .ThenBy(item => item.Assignment.AssignmentKind)
             .ThenBy(item => item.Assignment.Id)
@@ -169,9 +169,8 @@ public sealed partial class PartyDirectoryService
                 item.Assignment.Notes
             })
             .ToListAsync(cancellationToken);
-        await Task.WhenAll(totalCountTask, itemsTask);
 
-        var items = (await itemsTask)
+        var items = projectedItems
             .Select(item => new PartyProjectAssignmentItemModel(
                 item.Id,
                 item.ProjectId,
@@ -193,7 +192,7 @@ public sealed partial class PartyDirectoryService
             items,
             query.PageIndex,
             query.PageSize,
-            await totalCountTask);
+            totalCount);
     }
 
     private async Task UpsertPartySearchDocumentAsync(Guid partyId, CancellationToken cancellationToken)

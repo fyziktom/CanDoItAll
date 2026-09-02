@@ -117,15 +117,37 @@ public sealed class AgentProviderModelParameterPolicyTests
         var effort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
             ProviderKind.OpenAi,
             transport,
-            OpenAiModelIds.Gpt56Sol,
+            OpenAiModelIds.Gpt54Mini,
             "{\"reasoningEffort\":\"medium\"}",
             string.Empty);
 
         Assert.True(AgentProviderModelParameterPolicy.CanApplyReasoningEffort(
             ProviderKind.OpenAi,
             transport,
-            OpenAiModelIds.Gpt56Sol));
+            OpenAiModelIds.Gpt54Mini));
         Assert.Equal(AgentReasoningEffortLevel.Medium, effort);
+    }
+
+    [Theory]
+    [InlineData(OpenAiModelIds.Gpt56Sol)]
+    [InlineData(OpenAiModelIds.Gpt56Terra)]
+    [InlineData(OpenAiModelIds.Gpt56Luna)]
+    [InlineData(OpenAiModelIds.Gpt56)]
+    public void Openai_gpt56_models_require_responses_transport_for_reasoning_effort(string model)
+    {
+        var responsesCapability = AgentThinkingEffortPolicy.ResolveDefinedCapability(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            model);
+        var chatCapability = AgentThinkingEffortPolicy.ResolveDefinedCapability(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.ChatCompletions,
+            model);
+
+        Assert.Equal(AgentThinkingEffortSupportStatus.Supported, responsesCapability.Status);
+        Assert.Contains(AgentReasoningEffortLevel.Medium, responsesCapability.AllowedEfforts);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Unsupported, chatCapability.Status);
+        Assert.Contains("Responses transport", chatCapability.Summary, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -230,7 +252,8 @@ public sealed class AgentProviderModelParameterPolicyTests
                 AgentReasoningEffortLevel.High,
                 AgentReasoningEffortLevel.ExtraHigh,
                 AgentReasoningEffortLevel.Max
-            ]);
+            ],
+            responsesOnly: true);
         AssertRegistryGroup(
             ["gpt-5.5", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.4", "gpt-5.2"],
             [
@@ -584,7 +607,7 @@ public sealed class AgentProviderModelParameterPolicyTests
     [Fact]
     public void Override_support_query_uses_the_same_provider_model_capability_as_save_and_ui()
     {
-        var supportedProvider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Sol);
+        var supportedProvider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Sol, ProviderTransportKind.Responses);
         var unsupportedProvider = CreateProvider(ProviderKind.OpenAi, "gpt-4.1");
         var ollamaProvider = CreateProvider(ProviderKind.Ollama, "qwen3.5:2b");
 
@@ -809,7 +832,7 @@ public sealed class AgentProviderModelParameterPolicyTests
         Assert.Contains("must be between", exception.Message);
     }
 
-    private static ProviderProfile CreateProvider(ProviderKind kind, string defaultModel)
+    private static ProviderProfile CreateProvider(ProviderKind kind, string defaultModel, ProviderTransportKind transport = ProviderTransportKind.ChatCompletions)
     {
         return new ProviderProfile(
             Guid.NewGuid(),
@@ -818,7 +841,7 @@ public sealed class AgentProviderModelParameterPolicyTests
             "http://provider.test",
             string.Empty,
             defaultModel,
-            ProviderTransportKind.ChatCompletions,
+            transport,
             IsEnabled: true,
             SupportsStreaming: false,
             SupportsTools: false,

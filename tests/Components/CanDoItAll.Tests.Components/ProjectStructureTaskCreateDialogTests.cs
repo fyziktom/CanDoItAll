@@ -72,21 +72,29 @@ public sealed class ProjectStructureTaskCreateDialogTests
         Assert.Equal(
             new ProjectStructureTaskResourceSelection(ProjectStructureTaskResourceKind.Person, joeId),
             result.Assignee);
+        Assert.Null(result.ResourceToAttach);
         Assert.Contains(result.CreateRequest.InputValues!, value => value.Key == "workItemKind" && value.Value == "task");
         Assert.Contains(result.CreateRequest.InputValues!, value => value.Key == "dueUtc" && value.Value.StartsWith("2026-07-16T12:00", StringComparison.Ordinal));
         Assert.DoesNotContain(result.CreateRequest.InputValues!, value => value.Key == "assigneeRef");
     }
 
     [Fact]
-    public async Task Mixed_assignment_edit_keeps_direct_assignee_read_only_while_task_fields_remain_editable()
+    public async Task Mixed_assignment_edit_keeps_direct_assignee_and_stages_selected_workflow_attachment()
     {
         using var context = CreateContext();
         var host = context.Render<DialogHost>();
         var primaryPersonId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var replacementAgentId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var workflowId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var workflowVersionId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var processId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
         var primaryAssignee = new ProjectStructureTaskResourceSelection(
             ProjectStructureTaskResourceKind.Person,
             primaryPersonId);
+        var workflow = new ProjectStructureTaskResourceSelection(
+            ProjectStructureTaskResourceKind.Workflow,
+            workflowId,
+            workflowVersionId);
         var resultTask = OpenDialog(
             context,
             [
@@ -99,23 +107,40 @@ public sealed class ProjectStructureTaskCreateDialogTests
                     ProjectStructureTaskResourceKind.Agent,
                     replacementAgentId,
                     "Delivery agent",
-                    "AI agent")
+                    "AI agent"),
+                CreateResource(
+                    ProjectStructureTaskResourceKind.Workflow,
+                    workflowId,
+                    "Delivery workflow",
+                    "Workflow",
+                    workflowVersionId),
+                CreateResource(
+                    ProjectStructureTaskResourceKind.Process,
+                    processId,
+                    "Delivery process",
+                    "Process")
             ],
             isEditMode: true,
             initialAssignee: primaryAssignee,
             canChangeDirectAssignee: false);
 
         host.WaitForElement("[data-testid='project-structure-task-edit-assignee-readonly']");
-        Assert.Empty(host.FindAll("[data-testid='project-structure-task-create-assignee-picker-shell']"));
-        Assert.Empty(host.FindAll("[data-testid='project-structure-task-create-assignee-clear']"));
+        Assert.NotEmpty(host.FindAll("[data-testid='project-structure-task-create-assignee-picker-shell']"));
+        Assert.Empty(host.FindAll($"[data-testid='project-structure-task-create-assignee-person-{primaryPersonId:N}']"));
+        Assert.Empty(host.FindAll($"[data-testid='project-structure-task-create-assignee-agent-{replacementAgentId:N}']"));
+        Assert.NotEmpty(host.FindAll($"[data-testid='project-structure-task-create-assignee-workflow-{workflowId:N}']"));
+        Assert.NotEmpty(host.FindAll($"[data-testid='project-structure-task-create-assignee-process-{processId:N}']"));
 
         host.Find("[data-testid='project-structure-task-create-title']").Input("Updated CRM handoff");
+        host.Find($"[data-testid='project-structure-task-create-assignee-workflow-{workflowId:N}']").Click();
+        Assert.NotEmpty(host.FindAll("[data-testid='project-structure-task-create-assignee-clear']"));
         host.Find("[data-testid='project-structure-task-create-submit']").Click();
 
         var result = Assert.IsType<ProjectStructureTaskDialogResult>(
             await resultTask.WaitAsync(TimeSpan.FromSeconds(2)));
         Assert.Equal("Updated CRM handoff", result.CreateRequest.Title);
         Assert.Equal(primaryAssignee, result.Assignee);
+        Assert.Equal(workflow, result.ResourceToAttach);
     }
 
     private static BunitContext CreateContext()
@@ -129,7 +154,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
 
     private static Task<object?> OpenDialog(
         BunitContext context,
-        IReadOnlyList<ProjectStructureTaskResourceOption> assignees,
+        IReadOnlyList<ProjectStructureTaskResourceOption> resources,
         bool isEditMode = false,
         ProjectStructureTaskResourceSelection? initialAssignee = null,
         bool canChangeDirectAssignee = true)
@@ -160,7 +185,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
             {
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = request,
-                [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assignees,
+                [nameof(ProjectStructureTaskCreateDialog.ResourceOptions)] = resources,
                 [nameof(ProjectStructureTaskCreateDialog.IsEditMode)] = isEditMode,
                 [nameof(ProjectStructureTaskCreateDialog.InitialAssignee)] = initialAssignee,
                 [nameof(ProjectStructureTaskCreateDialog.CanChangeDirectAssignee)] = canChangeDirectAssignee
@@ -175,8 +200,9 @@ public sealed class ProjectStructureTaskCreateDialogTests
         ProjectStructureTaskResourceKind kind,
         Guid id,
         string name,
-        string typeLabel)
-        => new(kind, id, null, name, typeLabel, string.Empty, false, false);
+        string typeLabel,
+        Guid? versionId = null)
+        => new(kind, id, versionId, name, typeLabel, string.Empty, false, false);
 
     private sealed class StaticCurrencyFormatter(string currencyCode) : ICurrencyFormatter
     {

@@ -249,6 +249,7 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "prompt_tokens") : 0,
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "completion_tokens") : 0)
         {
+            ObservedUsage = ProviderObservedUsage.ChatCompletions(usage),
             CachedInputTokens = ProviderDriverProtocol.ReadChatCompletionsCachedTokens(usage)
         };
     }

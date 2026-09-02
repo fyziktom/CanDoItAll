@@ -35,10 +35,29 @@ public sealed class MafWorkflowEventNormalizerTests
     }
 
     [Fact]
+    public void Normalizer_does_not_project_unresolved_executor_id_in_public_message()
+    {
+        const string unresolvedExecutorId = "internal-request-port-id";
+        var normalizer = new MafWorkflowEventNormalizer();
+        var bindings = MafWorkflowEventBindingIndex.FromDefinition(CreateDefinition());
+
+        var record = normalizer.Normalize(
+            WorkflowRunId.New(),
+            new ExecutorInvokedEvent(unresolvedExecutorId, new object()),
+            bindings,
+            DateTimeOffset.UtcNow);
+        var payload = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(record.PayloadJson, JsonOptions)!;
+
+        Assert.Equal("MAF executor emitted ExecutorInvokedEvent.", record.Message);
+        Assert.DoesNotContain(unresolvedExecutorId, record.Message, StringComparison.Ordinal);
+        Assert.Equal(unresolvedExecutorId, payload.Reference);
+    }
+
+    [Fact]
     public async Task Runtime_events_include_executor_identity_and_redacted_output_payload()
     {
         var executor = new EchoWorkflowExecutor();
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(
@@ -78,7 +97,7 @@ public sealed class MafWorkflowEventNormalizerTests
     [Fact]
     public async Task Runtime_compilation_failure_event_carries_typed_redacted_diagnostic_payload()
     {
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new FailingWorkflowCompiler("Workflow compile failed token=raw-token-value."),
@@ -231,5 +250,12 @@ public sealed class MafWorkflowEventNormalizerTests
             => new(
                 null,
                 WorkflowCompilationResult.Failed(WorkflowValidationResult.Success, errorMessage));
+
+        public MafWorkflowBuildResult Compile(
+            WorkflowDefinition definition,
+            IReadOnlyList<LlmCallComponent> components,
+            WorkflowPreviewSimulationPlan? previewSimulationPlan,
+            WorkflowExecutorInvocationContext invocationContext)
+            => Compile(definition, components, previewSimulationPlan);
     }
 }

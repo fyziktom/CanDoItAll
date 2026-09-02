@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using ProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
@@ -110,7 +111,8 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         var cut = RenderRuntimeTab(context, editor, [provider]);
 
         ChangeSelectToLabel(cut, ThinkingEffortTestId, "High");
-        ChangeSelectToLabel(cut, ModelChoiceTestId, UnknownModel);
+        cut.Find($"[data-testid='{ModelOverrideTestId}']").Change(true);
+        cut.Find($"[data-testid='{ModelInputTestId}']").Input(UnknownModel);
 
         Assert.Equal(UnknownModel, editor.Model);
         Assert.Equal(AgentReasoningEffortLevel.High, editor.ThinkingEffortOverride);
@@ -197,6 +199,8 @@ public sealed class AgentDetailsDialogThinkingEffortTests
             DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
         workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
         context.Services.AddSingleton(workspaceService);
+        context.Services.AddSingleton(
+            DispatchProxy.Create<IProviderRuntimeAdministrationService, RecordingWorkspaceServiceProxy>());
         context.Services.AddSingleton(
             (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
         context.Services.AddSingleton(

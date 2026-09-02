@@ -35,6 +35,8 @@ authoritative.
 - [CRM/HR API](crm-hr-api.md)
 - [OAuth email plugins](oauth-email-plugins.md)
 - [Provider capability and pricing](provider-capability-and-pricing.md)
+- [Shared providers](shared-providers.md)
+- [Provider request history](provider-request-history.md)
 - [Memory providers](memory-providers/README.md)
 - [Shared UI component boundary](ui-shared-components/README.md)
 - [UI support scope](ui-support-scope.md)

@@ -65,6 +65,34 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
         Assert.True(authority.MutationAllowed);
     }
 
+    [Theory]
+    [InlineData(true, false, false, false)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, false, false, true)]
+    public async Task Project_structure_narrow_mutation_configuration_grants_mutation_authority(
+        bool canWriteNonTaskStructure,
+        bool canWriteTasks,
+        bool canCreateProjects,
+        bool canCreateSubprojects)
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings
+        {
+            CanRead = true,
+            CanWrite = false,
+            CanWriteNonTaskStructure = canWriteNonTaskStructure,
+            CanWriteTasks = canWriteTasks,
+            CanCreateProjects = canCreateProjects,
+            CanCreateSubprojects = canCreateSubprojects,
+            AllowAllProjects = true
+        });
+        var resolver = CreateResolver(agent);
+
+        var authority = await resolver.ResolveAsync(CreateRequest(agent.Id));
+
+        Assert.True(authority.MutationAllowed);
+    }
+
     [Fact]
     public async Task Agent_without_project_grant_is_denied()
     {
@@ -306,6 +334,33 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
             Assert.Equal(expectedScope, authority.WorkspaceScope);
             Assert.True(authority.ReadAllowed);
             Assert.True(authority.MutationAllowed);
+        }
+    }
+
+    [Fact]
+    public async Task Process_sources_keep_global_surfaces_read_only_and_sandboxed()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings());
+        IAgentExecutionSourceAuthorityProvider[] providers =
+        [
+            new ProcessesExecutionAuthorityProvider(),
+            new LiveProcessesExecutionAuthorityProvider()
+        ];
+
+        foreach (var provider in providers)
+        {
+            var resolver = CreateResolverWithProviders([provider], agent);
+            var authority = await resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
+                agent.Id,
+                new AgentChatContextSourceKind(provider.SourceKind),
+                new AgentChatContextSourceId("surface:global"),
+                ObservedWorkspaceScope: null,
+                new DatabaseProfileGeneration(1),
+                UiAccessHint: null));
+
+            Assert.Equal(WorkspaceScopeDescriptor.Sandbox, authority.WorkspaceScope);
+            Assert.True(authority.ReadAllowed);
+            Assert.False(authority.MutationAllowed);
         }
     }
 

@@ -92,6 +92,8 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapCrmHrApi();
         group.MapLlmChatsApi();
         group.MapLlmChatOperationsApi();
+        endpoints.MapSharedProviderCatalogApi();
+        endpoints.MapSharedProviderInferenceApi();
 
         return endpoints;
     }

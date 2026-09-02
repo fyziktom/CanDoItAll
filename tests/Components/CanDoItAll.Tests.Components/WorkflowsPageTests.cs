@@ -299,7 +299,7 @@ public sealed class WorkflowsPageTests
         var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").Click());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
         cut.WaitForAssertion(() =>
         {
@@ -307,15 +307,15 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain(surface.Nodes, node => node.Id == "work");
         });
 
-        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForElement("[data-testid='workflows-catalog']");
         cut.WaitForAssertion(() => Assert.Contains(
             cut.FindAll("[data-testid='workflows-catalog-item']"),
             item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal)));
-        cut.FindAll("[data-testid='workflows-catalog-item']")
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflows-catalog-item']")
             .First(item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal))
-            .Click();
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+            .Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").Click());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
 
         cut.WaitForAssertion(() =>
@@ -384,7 +384,21 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_ignores_late_history_page_and_run_selection_results()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
+        var runtimeManager = new RacingWorkflowRuntimeManager();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IWorkflowRunStore>();
+            services.RemoveAll<IWorkflowArtifactStore>();
+            services.RemoveAll<IWorkflowExternalRequestStore>();
+            services.RemoveAll<IWorkflowCheckpointStore>();
+            services.RemoveAll<IWorkflowRuntimeManager>();
+            services.AddSingleton<IWorkflowRunStore>(runStore);
+            services.AddSingleton<IWorkflowArtifactStore>(runStore);
+            services.AddSingleton<IWorkflowExternalRequestStore>(runStore);
+            services.AddSingleton<IWorkflowCheckpointStore>(runStore);
+            services.AddSingleton<IWorkflowRuntimeManager>(runtimeManager);
+        });
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var firstDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
@@ -393,16 +407,16 @@ public sealed class WorkflowsPageTests
         var firstRun = CreateRun(firstDefinition, "first-definition-run", now.AddMinutes(-2));
         var secondRun = CreateRun(secondDefinition, "second-definition-run", now.AddMinutes(-1));
         var newestSecondRun = CreateRun(secondDefinition, "newest-second-run", now);
-        var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
         await runStore.SaveRunAsync(firstRun);
         await runStore.SaveRunAsync(secondRun);
         await runStore.SaveRunAsync(newestSecondRun);
-        var runtimeManager = new RacingWorkflowRuntimeManager(firstRun, secondRun, newestSecondRun);
+        runtimeManager.AddRuns(firstRun, secondRun, newestSecondRun);
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.Render<WorkflowsPage>();
-        cut.Instance.RunStore = runStore;
-        cut.Instance.RuntimeManager = runtimeManager;
+        cut.WaitForAssertion(
+            () => Assert.Empty(cut.FindAll("[data-testid='workflows-loading']")),
+            TimeSpan.FromSeconds(10));
         await cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
 
         runStore.DelayRunPages(firstDefinition.Id, secondDefinition.Id);
@@ -922,6 +936,53 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_hides_executor_instructions_and_preserves_other_node_instructions()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var component = CreateWorkflowComponent("Instruction visibility call");
+        var definition = CreateInstructionVisibilityDefinition(component.Id);
+
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(editor => editor.Definition, definition)
+            .Add(editor => editor.Components, [component])
+            .Add(editor => editor.ProviderOptions, []));
+
+        SelectWorkflowCanvasNode(cut, "HTTP request");
+        await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-node");
+        cut.WaitForAssertion(() =>
+            Assert.Empty(cut.FindAll("[data-testid='workflow-canvas-node-instructions']")));
+
+        cut.Find("[data-testid='workflow-canvas-open-selected-node-details']").Click();
+        var executorDetails = cut.WaitForElement("[data-testid='workflow-canvas-node-details-modal']");
+        Assert.Null(executorDetails.QuerySelector("[data-testid='workflow-canvas-node-modal-instructions']"));
+        cut.Find("[data-testid='workflow-canvas-node-modal-close']").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Empty(cut.FindAll("[data-testid='workflow-canvas-node-details-modal']")));
+
+        SelectWorkflowCanvasNode(cut, "Ask for hobby");
+        var humanInstructions = cut.WaitForElement("[data-testid='workflow-canvas-node-instructions']");
+        Assert.False(humanInstructions.HasAttribute("readonly"));
+        cut.Find("[data-testid='workflow-canvas-open-selected-node-details']").Click();
+        var humanDetails = cut.WaitForElement("[data-testid='workflow-canvas-node-details-modal']");
+        Assert.False(humanDetails
+            .QuerySelector("[data-testid='workflow-canvas-node-modal-instructions']")!
+            .HasAttribute("readonly"));
+        cut.Find("[data-testid='workflow-canvas-node-modal-close']").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Empty(cut.FindAll("[data-testid='workflow-canvas-node-details-modal']")));
+
+        SelectWorkflowCanvasNode(cut, "Summarize hobby");
+        Assert.True(cut
+            .WaitForElement("[data-testid='workflow-canvas-node-instructions']")
+            .HasAttribute("readonly"));
+        cut.Find("[data-testid='workflow-canvas-open-selected-node-details']").Click();
+        var llmDetails = cut.WaitForElement("[data-testid='workflow-canvas-node-details-modal']");
+        Assert.True(llmDetails
+            .QuerySelector("[data-testid='workflow-canvas-node-modal-instructions']")!
+            .HasAttribute("readonly"));
+    }
+
+    [Fact]
     public async Task Workflow_canvas_places_llm_component_validates_runs_and_saves_definition()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
@@ -1149,7 +1210,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.ProviderOptions, []));
 
         cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").Click());
 
         cut.WaitForElement("[data-testid='workflow-canvas-preview-input-dialog']");
         cut.WaitForAssertion(() =>
@@ -1158,9 +1219,11 @@ public sealed class WorkflowsPageTests
             Assert.Contains(projectId.ToString("D"), cut.Find("[data-testid='workflow-canvas-preview-project-id']").GetAttribute("value"));
         });
 
-        cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
-        cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
-        cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node"));
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
@@ -2166,6 +2229,16 @@ public sealed class WorkflowsPageTests
             button.Click();
         });
 
+    private static void SelectWorkflowCanvasNode(IRenderedComponent<IComponent> cut, string nodeName)
+    {
+        cut.WaitForAssertion(() => Assert.Contains(
+            cut.FindAll("[data-testid='workflow-canvas-select-node']"),
+            item => item.TextContent.Contains(nodeName, StringComparison.Ordinal)));
+        cut.FindAll("[data-testid='workflow-canvas-select-node']")
+            .Single(item => item.TextContent.Contains(nodeName, StringComparison.Ordinal))
+            .Click();
+    }
+
     private static void ClickTabButton(IRenderedComponent<IComponent> cut, string text)
     {
         var button = cut.FindAll("button")
@@ -2482,6 +2555,86 @@ public sealed class WorkflowsPageTests
                     CreateWorkflowEdge("executor-a-to-llm-b", firstExecutor, secondLlm),
                     CreateWorkflowEdge("llm-b-to-executor-b", secondLlm, secondExecutor),
                     CreateWorkflowEdge("executor-b-to-end", secondExecutor, end)
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            now,
+            now);
+    }
+
+    private static WorkflowDefinition CreateInstructionVisibilityDefinition(WorkflowComponentId componentId)
+    {
+        var start = new WorkflowNodeId("start");
+        var llm = new WorkflowNodeId("summarize-hobby");
+        var executor = new WorkflowNodeId("http-request");
+        var humanInput = new WorkflowNodeId("ask-for-hobby");
+        var end = new WorkflowNodeId("end");
+        var now = DateTimeOffset.UtcNow;
+
+        return new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "Instruction visibility workflow",
+            "Workflow used to verify node-kind-specific instruction editing.",
+            WorkflowLifecycleStatus.Draft,
+            new WorkflowGraph(
+                start,
+                [
+                    CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    new WorkflowNode(
+                        llm,
+                        WorkflowNodeKind.LlmCall,
+                        "Summarize hobby",
+                        [],
+                        new WorkflowNodeSettings(
+                            componentId,
+                            AgentId: null,
+                            SubworkflowId: null,
+                            ExternalRequestKind: null,
+                            Instructions: "Summarize the current hobby payload.",
+                            InputShape: WorkflowValueShape.Text,
+                            ResultShape: WorkflowValueShape.Text)),
+                    new WorkflowNode(
+                        executor,
+                        WorkflowNodeKind.Executor,
+                        "HTTP request",
+                        [],
+                        new WorkflowNodeSettings(
+                            ComponentId: null,
+                            AgentId: null,
+                            SubworkflowId: null,
+                            ExternalRequestKind: null,
+                            Instructions: "This stored text is ignored by the HTTP executor.",
+                            InputShape: WorkflowValueShape.Text,
+                            ResultShape: WorkflowValueShape.Text)
+                        {
+                            ExecutorId = WorkflowExecutorIds.HttpFetch,
+                            ExecutorSettingsJson = "{\"url\":\"https://example.test\"}"
+                        }),
+                    new WorkflowNode(
+                        humanInput,
+                        WorkflowNodeKind.HumanInput,
+                        "Ask for hobby",
+                        [],
+                        new WorkflowNodeSettings(
+                            ComponentId: null,
+                            AgentId: null,
+                            SubworkflowId: null,
+                            ExternalRequestKind: WorkflowExternalRequestKind.HumanInput,
+                            Instructions: "Ask the person for their main hobby.",
+                            InputShape: WorkflowValueShape.Text,
+                            ResultShape: WorkflowValueShape.Text)),
+                    CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    CreateWorkflowEdge("start-to-llm", start, llm),
+                    CreateWorkflowEdge("llm-to-http", llm, executor),
+                    CreateWorkflowEdge("http-to-human", executor, humanInput),
+                    CreateWorkflowEdge("human-to-end", humanInput, end)
                 ]),
             new WorkflowRuntimePolicy(
                 WorkflowRuntimeBackendKind.InProcess,
@@ -2864,8 +3017,16 @@ public sealed class WorkflowsPageTests
 
     private sealed class RacingWorkflowRuntimeManager(params WorkflowRunSnapshot[] runs) : IWorkflowRuntimeManager
     {
-        private readonly IReadOnlyDictionary<WorkflowRunId, WorkflowRunSnapshot> runsById = runs.ToDictionary(run => run.RunId);
+        private readonly Dictionary<WorkflowRunId, WorkflowRunSnapshot> runsById = runs.ToDictionary(run => run.RunId);
         private readonly Dictionary<WorkflowRunId, PendingRunRequest> pendingRuns = [];
+
+        public void AddRuns(params WorkflowRunSnapshot[] addedRuns)
+        {
+            foreach (var run in addedRuns)
+            {
+                runsById.Add(run.RunId, run);
+            }
+        }
 
         public void DelayRuns(params WorkflowRunId[] runIds)
         {
@@ -2929,18 +3090,6 @@ public sealed class WorkflowsPageTests
 
         public Task<WorkflowRunCancellationResult> RequestCancellationAsync(
             WorkflowRunId runId,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

@@ -17,6 +17,17 @@ public static class AgentProviderModelParameterPolicy
     private const int MinMaxOutputTokens = 1;
     private const int OpenAiMaxOutputTokens = 128_000;
 
+    public static bool ShouldOmitTemperature(ProviderProfile provider, string model, bool forceOmitTemperature = false) {
+        ArgumentNullException.ThrowIfNull(provider);
+        if (forceOmitTemperature) {
+            return true;
+        }
+        return provider.IsSourceManaged
+            ? provider.ModelThinkingEffortCapabilities.Any(capability =>
+                string.Equals(capability.Model, model, StringComparison.Ordinal) && capability.OmitTemperature)
+            : ShouldOmitTemperature(provider.Kind, model);
+    }
+
     public static bool ShouldOmitTemperature(
         ProviderKind providerKind,
         string model,

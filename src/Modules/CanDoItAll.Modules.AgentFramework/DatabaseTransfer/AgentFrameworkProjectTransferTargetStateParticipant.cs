@@ -15,7 +15,8 @@ internal sealed class AgentFrameworkProjectTransferTargetStateParticipant
         typeof(WorkflowLaunchIdempotencyRecordEntity),
         typeof(WorkflowRunRecordEntity),
         typeof(WorkflowUsageObservationRecordEntity),
-        typeof(AgentProjectStructureAccessRevocationRecord)
+        typeof(AgentProjectStructureAccessRevocationRecord),
+        typeof(AgentHistoryLocator)
     ];
 
     public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
@@ -61,6 +62,13 @@ internal sealed class AgentFrameworkProjectTransferTargetStateParticipant
                 .AnyAsync(cancellationToken))
         {
             residues.Add(new("project access revocation recoveries"));
+        }
+
+        if (await dbContext.Set<AgentHistoryLocator>()
+                .AsNoTracking()
+                .AnyAsync(item => item.ProjectId.HasValue, cancellationToken))
+        {
+            residues.Add(new("project-linked canonical agent history"));
         }
 
         return residues;

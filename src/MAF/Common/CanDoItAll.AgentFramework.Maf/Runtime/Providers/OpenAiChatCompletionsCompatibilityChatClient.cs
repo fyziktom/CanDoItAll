@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
@@ -18,7 +19,7 @@ internal sealed class OpenAiChatCompletionsCompatibilityChatClient(
         CancellationToken cancellationToken = default)
     {
         return base.GetResponseAsync(
-            messages,
+            NormalizeToolHistory(messages),
             NormalizeOptions(options),
             cancellationToken);
     }
@@ -29,16 +30,48 @@ internal sealed class OpenAiChatCompletionsCompatibilityChatClient(
         CancellationToken cancellationToken = default)
     {
         return base.GetStreamingResponseAsync(
-            messages,
+            NormalizeToolHistory(messages),
             NormalizeOptions(options),
             cancellationToken);
     }
 
+    internal static IReadOnlyList<Microsoft.Extensions.AI.ChatMessage> NormalizeToolHistory(
+        IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages) {
+        var normalized = new List<Microsoft.Extensions.AI.ChatMessage>();
+        var pendingCalls = new HashSet<string>(StringComparer.Ordinal);
+        var callMessageIndex = 0;
+        foreach (var message in messages) {
+            if (pendingCalls.Count > 0 &&
+                message.GetAgentRequestMessageSourceType() == AgentRequestMessageSourceType.AIContextProvider) {
+                normalized.Insert(callMessageIndex++, message);
+                continue;
+            }
+
+            if (message.Role == ChatRole.Assistant) {
+                foreach (var call in message.Contents.OfType<FunctionCallContent>().Where(call => !call.InformationalOnly)) {
+                    if (pendingCalls.Count == 0) {
+                        callMessageIndex = normalized.Count;
+                    }
+                    pendingCalls.Add(call.CallId);
+                }
+            } else if (message.Role == ChatRole.Tool) {
+                foreach (var result in message.Contents.OfType<FunctionResultContent>()) {
+                    pendingCalls.Remove(result.CallId);
+                }
+            }
+            normalized.Add(message);
+        }
+        return normalized;
+    }
+
     private ChatOptions? NormalizeOptions(ChatOptions? options)
     {
-        var effectiveModel = string.IsNullOrWhiteSpace(options?.ModelId)
+        var selectedModel = string.IsNullOrWhiteSpace(options?.ModelId)
             ? model
             : options.ModelId.Trim();
+        var effectiveModel = provider.IsSourceManaged
+            ? provider.ModelCatalog.Single(item => string.Equals(item.Id, selectedModel, StringComparison.Ordinal)).DisplayName
+            : selectedModel;
         var functionToolCount = options?.Tools?.Count(static tool => tool is AIFunctionDeclaration) ?? 0;
         var requiresExplicitNone = OpenAiRequestCompatibilityPolicy.RequiresExplicitReasoningNone(
             provider.Kind,

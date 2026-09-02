@@ -5,6 +5,8 @@ using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;
 
+using CanDoItAll.Infrastructure.ControlPlane;
+
 namespace CanDoItAll.Modules.Workspace.ApiAccess;
 
 public sealed class ApiAccessOptions
@@ -158,7 +160,8 @@ public interface IApiTokenService
 
 public sealed class ApiTokenService(
     IOptions<ApiAccessOptions> options,
-    IClock clock) : IApiTokenService
+    IClock clock,
+    IApiTokenRegistry registry) : IApiTokenService
 {
     private static readonly JsonSerializerOptions JwtJsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -202,6 +205,7 @@ public sealed class ApiTokenService(
         var issuedAt = clock.GetUtcNow();
         var lifetimeMinutes = ResolveLifetimeMinutes(request.LifetimeMinutes, value.Authorization);
         var expiresAt = issuedAt.AddMinutes(lifetimeMinutes);
+        var tokenId = Guid.NewGuid();
 
         var header = new Dictionary<string, object?>
         {
@@ -217,7 +221,8 @@ public sealed class ApiTokenService(
             ["iat"] = ToUnixTimeSeconds(issuedAt),
             ["nbf"] = ToUnixTimeSeconds(issuedAt),
             ["exp"] = ToUnixTimeSeconds(expiresAt),
-            ["jti"] = Guid.NewGuid().ToString("N"),
+            [ApiManagedTokenClaims.TokenId] = tokenId.ToString("N"),
+            [ApiManagedTokenClaims.Version] = ApiManagedTokenClaims.CurrentVersion,
             ["scope"] = string.Join(' ', scopes),
             ["scopes"] = scopes
         };
@@ -226,6 +231,8 @@ public sealed class ApiTokenService(
         var encodedPayload = Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(payload, JwtJsonOptions));
         var unsignedToken = $"{encodedHeader}.{encodedPayload}";
         var signature = Sign(unsignedToken, value.Authorization.SigningKey);
+
+        registry.Register(new ApiTokenRecord(tokenId, subject, displayName, issuedAt, expiresAt, scopes));
 
         return new ApiTokenIssueResult(
             $"{unsignedToken}.{signature}",
@@ -282,7 +289,10 @@ public sealed class ApiTokenService(
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return scopes.Count == 0 ? [ApiAccessScopeNames.Api] : scopes;
+        if (scopes.Count == 0) {
+            throw new InvalidOperationException("Select at least one API scope.");
+        }
+        return scopes;
     }
 
     private static long ToUnixTimeSeconds(DateTimeOffset value)

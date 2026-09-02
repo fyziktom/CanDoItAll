@@ -74,8 +74,9 @@ public sealed class AgentRuntimePortContractTests
         var projectText = File.ReadAllText(Path.Combine(
             projectRoot, "CanDoItAll.AgentFramework.Runtime.Abstractions.csproj"));
         Assert.DoesNotContain("PackageReference", projectText, StringComparison.Ordinal);
-        Assert.Equal(1, projectText.Split("<ProjectReference", StringSplitOptions.None).Length - 1);
+        Assert.Equal(2, projectText.Split("<ProjectReference", StringSplitOptions.None).Length - 1);
         Assert.Contains("CanDoItAll.AgentFramework.Models.csproj", projectText, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj", projectText, StringComparison.Ordinal);
     }
 
     [Fact]

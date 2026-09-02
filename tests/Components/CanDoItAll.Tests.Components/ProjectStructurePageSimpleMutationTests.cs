@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Conversations.Shell;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -16,6 +17,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,6 +27,34 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructurePageSimpleMutationTests
 {
+    [Fact]
+    public async Task Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var shell = harness.Context.Services.GetRequiredService<IConversationShellCoordinator>();
+        var projectId = await CreateProjectAsync(projectsService, "Project agents catalogue");
+        var cut = harness.Context.Render<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        WaitForCanvasWorkbench(cut);
+
+        Assert.False(shell.Snapshot().IsCatalogVisible);
+        await cut.Find("[data-testid='project-structure-agents-toggle']")
+            .ClickAsync(new MouseEventArgs());
+
+        Assert.True(shell.Snapshot().IsCatalogVisible);
+        Assert.Equal(ConversationCatalogKindFilter.Agents, shell.Snapshot().KindFilter);
+        await cut.InvokeAsync(shell.HideCatalog);
+
+        await cut.Find("[data-testid='project-structure-agents-toggle']")
+            .ClickAsync(new MouseEventArgs());
+
+        Assert.True(shell.Snapshot().IsCatalogVisible);
+        await cut.Find("[data-testid='project-structure-agents-toggle']")
+            .ClickAsync(new MouseEventArgs());
+        Assert.False(shell.Snapshot().IsCatalogVisible);
+    }
+
     [Fact]
     public async Task Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state()
     {
@@ -301,8 +331,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var agentWorkspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var secretService = harness.Context.Services.GetRequiredService<SecretService>();
 
-        var providerId = await SaveImageProviderAsync(agentWorkspaceService);
+        var providerId = await SaveImageProviderAsync(secretService, agentWorkspaceService);
 
         var projectId = await CreateProjectAsync(projectsService, "Generated image asset");
         var parentNodeId = $"project:{projectId}";
@@ -402,12 +433,12 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
-            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(new CanDoItAll.Modules.Workspace.ProviderProfile
+            dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>().Add(new CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile
             {
                 Id = providerId,
                 Name = "OpenAI image generation",
-                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
-                ConnectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                ProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind.OpenAi,
+                ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
                 ConfigSchemaVersion = "1.0",
                 BaseUrl = "https://api.openai.com/v1",
                 DefaultModel = "gpt-image-1-mini",
@@ -419,7 +450,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 SupportsVision = false,
                 ExtraSettingsJson = JsonSerializer.Serialize(new
                 {
-                    connectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                    connectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
                     configSchemaVersion = "1.0",
                     timeoutSeconds = 45,
                     providerTransport = ProviderTransportKind.Responses.ToString(),
@@ -487,7 +518,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var agentWorkspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var providerId = await SaveImageProviderAsync(agentWorkspaceService, "Failing image provider");
+        var secretService = harness.Context.Services.GetRequiredService<SecretService>();
+        var providerId = await SaveImageProviderAsync(secretService, agentWorkspaceService, "Failing image provider");
 
         var projectId = await CreateProjectAsync(projectsService, "Generated image failure");
         var parentNodeId = $"project:{projectId}";
@@ -2330,15 +2362,26 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 }
             }.ToJson());
 
-    private static Task<Guid> SaveImageProviderAsync(
+    private static async Task<Guid> SaveImageProviderAsync(
+        SecretService secretService,
         IAgentFrameworkWorkspaceService agentWorkspaceService,
         string name = "Component image provider")
-        => agentWorkspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+    {
+        var secretResult = await secretService.SaveAsync(new SecretEditorModel
+        {
+            Name = $"{name} key",
+            Kind = SecretKind.ApiKey,
+            SecretValue = "component-image-provider-key",
+            Scope = "workspace"
+        });
+        Assert.True(secretResult.IsSuccess);
+
+        return await agentWorkspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = name,
             Kind = ProviderKind.OpenAi,
             BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable = $"secret:{Guid.NewGuid():D}",
+            ApiKeyEnvironmentVariable = $"secret:{secretResult.Value:D}",
             DefaultModel = "gpt-image-1-mini",
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.ImageGeneration,
@@ -2347,6 +2390,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             SupportsTools = false,
             SuggestedModels = ["gpt-image-1-mini"]
         });
+    }
 
     private static async Task<string> InvokeCreateActionAsync(
         IRenderedComponent<ProjectStructurePage> cut,

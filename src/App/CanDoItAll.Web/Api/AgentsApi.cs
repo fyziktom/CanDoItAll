@@ -1,6 +1,8 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CanDoItAll.Web.Api;
@@ -217,9 +219,9 @@ internal static class AgentsApi
     private static void MapProviderEndpoints(RouteGroupBuilder agents)
     {
         agents.MapGet("/providers", async (
-                IAgentFrameworkWorkspaceService workspaceService,
+                IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListProvidersAsync(cancellationToken)))
+            Results.Ok(await providerAdministration.ListProvidersAsync(cancellationToken)))
             .WithName("ListAgentProviders")
             .Produces<ProviderProfile[]>(StatusCodes.Status200OK)
             .ProducesApiErrors(
@@ -228,20 +230,20 @@ internal static class AgentsApi
 
         agents.MapGet("/providers/{providerId:guid}/editor", async (
                 Guid providerId,
-                IAgentFrameworkWorkspaceService workspaceService,
+                IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.GetProviderEditorAsync(providerId, cancellationToken)))
+            Results.Ok(await providerAdministration.GetProviderEditorAsync(providerId, cancellationToken)))
             .WithName("GetAgentProviderEditor");
 
         agents.MapPost("/providers", async (
                 ProviderProfileEditorModel request,
                 HttpContext context,
-                IAgentFrameworkWorkspaceService workspaceService,
+                IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
             await SaveProviderResultAsync(
                 request,
                 context,
-                workspaceService,
+                providerAdministration,
                 cancellationToken))
             .WithName("SaveAgentProvider")
             .Produces<Guid>(StatusCodes.Status200OK)
@@ -251,35 +253,54 @@ internal static class AgentsApi
 
         agents.MapDelete("/providers/{providerId:guid}", async (
                 Guid providerId,
-                IAgentFrameworkWorkspaceService workspaceService,
+                IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
         {
-            await workspaceService.DeleteProviderAsync(providerId, cancellationToken);
+            await providerAdministration.DeleteProviderAsync(providerId, cancellationToken);
             return Results.Ok(new ApiAck(true));
         })
         .WithName("DeleteAgentProvider");
 
         agents.MapPost("/providers/{providerId:guid}/test", async (
                 Guid providerId,
-                IAgentFrameworkWorkspaceService workspaceService,
+                IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.TestProviderAsync(providerId, cancellationToken)))
+            Results.Ok(await providerAdministration.TestProviderAsync(providerId, cancellationToken)))
             .WithName("TestAgentProvider");
 
         agents.MapPost("/providers/{providerId:guid}/test-chat", async (
                 Guid providerId,
                 ProviderTestChatRequest request,
-                IAgentFrameworkWorkspaceService workspaceService,
+                HttpContext context,
+                IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.RunProviderTestChatAsync(providerId, request, cancellationToken)))
-            .WithName("RunAgentProviderTestChat");
+        {
+            try
+            {
+                return Results.Ok(await providerAdministration.RunProviderTestChatAsync(
+                    providerId,
+                    ProviderHistoryRequestContext.WithCaller(request, context),
+                    cancellationToken));
+            }
+            catch (ProviderRuntimeProfileUnavailableException)
+            {
+                return ApiEndpointResults.AgentFailure(
+                    context,
+                    StatusCodes.Status503ServiceUnavailable,
+                    "The provider runtime profile is unavailable.",
+                    LlmChatErrorCodes.ProviderUnavailable);
+            }
+        })
+        .WithName("RunAgentProviderTestChat")
+        .Produces<ProviderTestChatResult>(StatusCodes.Status200OK)
+        .ProducesApiErrors(StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/providers/{providerId:guid}/ollama-modelfile", async (
                 Guid providerId,
                 ProviderModelMaintenanceEditorRequest request,
-                IAgentFrameworkWorkspaceService workspaceService,
+                IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken)))
+            Results.Ok(await providerAdministration.CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken)))
             .WithName("CreateAgentProviderModelMaintenance");
     }
 
@@ -449,7 +470,7 @@ internal static class AgentsApi
                         agentId,
                         request.ChatSessionId,
                         request.Prompt,
-                        new AgentChatRunOptions(operationId),
+                        new AgentChatRunOptions(operationId) { Context = ProviderHistoryRequestContext.ForExecution(null, context) },
                         cancellationToken,
                         request.AttachmentPaths);
                     return Results.Ok(AgentApiResponseMapper.ToChatRunResult(result));
@@ -846,7 +867,9 @@ internal static class AgentsApi
             request.InitialActivityOperationId);
         try
         {
-            var result = await workspaceService.ExecuteRunAsync(request, cancellationToken);
+            var result = await workspaceService.ExecuteRunAsync(request with {
+                Context = ProviderHistoryRequestContext.ForExecution(request.Context, context)
+            }, cancellationToken);
             return Results.Ok(AgentApiResponseMapper.ToExecutionRunResult(result));
         }
         catch (AgentJsonSchemaOutputContractException exception)
@@ -902,13 +925,13 @@ internal static class AgentsApi
     private static async Task<IResult> SaveProviderResultAsync(
         ProviderProfileEditorModel request,
         HttpContext context,
-        IAgentFrameworkWorkspaceService workspaceService,
+        IProviderRuntimeAdministrationService providerAdministration,
         CancellationToken cancellationToken)
     {
         try
         {
             return Results.Ok(
-                await workspaceService.SaveProviderAsync(
+                await providerAdministration.SaveProviderAsync(
                     request,
                     cancellationToken));
         }

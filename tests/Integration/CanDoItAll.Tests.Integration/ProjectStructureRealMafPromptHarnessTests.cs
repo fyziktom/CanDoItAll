@@ -22,6 +22,7 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 public sealed class ProjectStructureRealMafPromptHarnessTests
 {
     private const string UnauthorizedSentinelAssetTitle = "Authority-negative sentinel asset";
+    private static readonly TimeSpan RealMafExecutionRequestTimeout = TimeSpan.FromMinutes(2);
 
     private static readonly byte[] BaselineAssetBytes = Encoding.UTF8.GetBytes(
         "# Acceptance baseline\n\nThis content hash must remain exact.\n");
@@ -42,7 +43,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 services.AddSingleton<ScriptedProjectStructureChatClient>();
                 services.Replace(
                     ServiceDescriptor.Singleton<IMafProviderAgentFactory, ScriptedProjectStructureMafProviderAgentFactory>());
-            });
+            },
+            RealMafExecutionRequestTimeout);
         var project = await CreateProjectAsync(host.Client);
         var parentNode = await CreateParentNodeAsync(host.Client, project.Id);
         var baselineAsset = await CreateBaselineAssetAsync(host.Client, project.Id, parentNode.Id);
@@ -255,7 +257,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 services.AddSingleton<ScriptedProjectStructureChatClient>();
                 services.Replace(
                     ServiceDescriptor.Singleton<IMafProviderAgentFactory, ScriptedProjectStructureMafProviderAgentFactory>());
-            });
+            },
+            RealMafExecutionRequestTimeout);
         var project = await CreateProjectAsync(host.Client);
         var fixture = await CreateCopyFixtureAsync(host.App.Services, project.Id);
         var canonicalGraphBefore = await CaptureAcceptanceGraphAsync(host.App.Services, project.Id);
@@ -477,7 +480,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 services.AddSingleton<ScriptedReadOnlyProjectStructureChatClient>();
                 services.Replace(
                     ServiceDescriptor.Singleton<IMafProviderAgentFactory, ScriptedReadOnlyProjectStructureMafProviderAgentFactory>());
-            });
+            },
+            RealMafExecutionRequestTimeout);
         var project = await CreateProjectAsync(host.Client);
         await CreateParentNodeAsync(host.Client, project.Id);
         var graphBefore = await ReadCanonicalGraphAsync(host.App.Services, project.Id);

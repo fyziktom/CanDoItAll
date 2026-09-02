@@ -231,6 +231,22 @@ internal static class MafRuntimeResponseAssembler
                 .Append(depth)
                 .Append('=')
                 .Append(current.GetType().FullName ?? current.GetType().Name);
+            if (current is ProviderFailureBoundaryException
+                {
+                    DiagnosticFailureType: { Length: > 0 } diagnosticFailureType
+                } boundary)
+            {
+                builder
+                    .Append("; RootFailureType=")
+                    .Append(diagnosticFailureType);
+                if (boundary.DiagnosticStatusCode is { } diagnosticStatusCode)
+                {
+                    builder
+                        .Append("; HttpStatus=")
+                        .Append(diagnosticStatusCode);
+                }
+            }
+
             if (current is HttpRequestException { StatusCode: { } statusCode })
             {
                 builder

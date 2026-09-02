@@ -163,11 +163,12 @@ public sealed class LlmChatDurableStreamEventTests
             MaximumChunkBytes = 64,
             MaximumCoalescingDelay = TimeSpan.FromMilliseconds(25)
         };
+        var signal = new LlmChatOperationEventSignal(TimeProvider.System);
         var journal = new LlmChatOperationEventJournal(
             operations,
             eventRepository,
             new InlineLlmChatUnitOfWork(),
-            new NoopLlmChatOperationEventSignal(),
+            signal,
             operationScope,
             options,
             TimeProvider.System);
@@ -187,7 +188,7 @@ public sealed class LlmChatDurableStreamEventTests
         var consumeTask = pipeline.ConsumeAsync(operationId, PausedUpdates(waiting, release, now));
 
         await waiting.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await Task.Delay(TimeSpan.FromMilliseconds(200));
+        await journal.WaitAsync(operationId, 0, TimeSpan.FromSeconds(5));
         var page = await journal.ListAfterAsync(operationId, 0, 10);
         Assert.NotNull(page);
         var delta = Assert.Single(page.Events.OfType<LlmChatOperationTextDeltaEvent>());

@@ -350,16 +350,5 @@ public sealed class WorkflowCallerLaunchMigrationTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
     }
 }

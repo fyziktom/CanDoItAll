@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -16,21 +17,29 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
     private readonly IWorkflowCatalogService catalog;
     private readonly IWorkflowLaunchService launchService;
     private readonly IWorkflowRuntimeManager runtimeManager;
+    private readonly IWorkflowExternalResponseService externalResponseService;
+    private readonly IWorkflowExternalResponseActorContextFactory actorContextFactory;
     private readonly WorkflowAgentRuntimeAuthorizationService authorizationService;
 
     public WorkflowAgentRuntimeToolProvider(
         IWorkflowCatalogService catalog,
         IWorkflowLaunchService launchService,
         IWorkflowRuntimeManager runtimeManager,
+        IWorkflowExternalResponseService externalResponseService,
+        IWorkflowExternalResponseActorContextFactory actorContextFactory,
         WorkflowAgentRuntimeAuthorizationService authorizationService)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(launchService);
         ArgumentNullException.ThrowIfNull(runtimeManager);
+        ArgumentNullException.ThrowIfNull(externalResponseService);
+        ArgumentNullException.ThrowIfNull(actorContextFactory);
         ArgumentNullException.ThrowIfNull(authorizationService);
         this.catalog = catalog;
         this.launchService = launchService;
         this.runtimeManager = runtimeManager;
+        this.externalResponseService = externalResponseService;
+        this.actorContextFactory = actorContextFactory;
         this.authorizationService = authorizationService;
     }
 
@@ -115,7 +124,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
                         AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
-                        authorizedToken => SubmitExternalResponseAsync(request, authorizedToken),
+                        authorizedToken => SubmitResponseAsync(context, request, authorizedToken),
                         token),
                 AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
                 "Submits one response to a pending workflow external request. Unsupported backend resume remains explicit and does not fabricate completion."));
@@ -273,22 +282,29 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             result.Message);
     }
 
-    private async Task<WorkflowAgentExternalResponseResult> SubmitExternalResponseAsync(
+    private async Task<WorkflowAgentExternalResponseResult> SubmitResponseAsync(
+        AgentRuntimeToolProviderContext context,
         WorkflowAgentExternalResponseInput request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var result = await runtimeManager.SubmitExternalResponseAsync(
-            new WorkflowExternalRequestId(request.ExternalRequestId),
-            request.ResponseJson,
+        var actorContext = await actorContextFactory.CreateAgentAsync(context, cancellationToken);
+        var result = await externalResponseService.SubmitAsync(
+            new WorkflowExternalResponseCommand(
+                actorContext,
+                new WorkflowExternalRequestId(request.ExternalRequestId),
+                new WorkflowExternalRequestVersion(request.ExpectedRequestVersion),
+                request.Response,
+                new WorkflowExternalResponseIdempotencyKey(request.IdempotencyKey),
+                new WorkflowLaunchCorrelationId(ResolveCorrelationId(context))),
             cancellationToken);
         return new WorkflowAgentExternalResponseResult(
             result.Outcome,
-            result.Succeeded,
+            IsAcceptedOutcome(result.Outcome),
             result.Run is null ? null : MapRun(result.Run),
             result.Request?.Id.Value,
             result.Request?.RespondedAtUtc,
-            result.Message);
+            result.SafeMessage);
     }
 
     private static WorkflowLaunchOrigin.AgentRuntimeInvocation CreateOrigin(
@@ -306,13 +322,26 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         }
 
         var correlationId = ResolveCorrelationId(context);
+        var governance = context.Governance
+            ?? throw new InvalidOperationException(
+                "Workflow launch requires admitted agent governance.");
+        if (governance.AgentId != context.Agent.Id)
+        {
+            throw new InvalidOperationException(
+                "Workflow launch governance does not match the current agent.");
+        }
+
         return new WorkflowLaunchOrigin.AgentRuntimeInvocation(
             new WorkflowLaunchActor(
                 WorkflowLaunchActorKind.Agent,
                 context.Agent.Id.ToString("D")),
             new WorkflowLaunchSessionId(context.RuntimeSessionKey),
             context.Purpose.ToString(),
-            new WorkflowLaunchCorrelationId(correlationId));
+            new WorkflowLaunchCorrelationId(correlationId))
+        {
+            AuthorizationScope = governance.WorkspaceScope,
+            AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+        };
     }
 
     private static WorkflowLaunchIdempotency ResolveIdempotency(
@@ -348,6 +377,12 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
 
         return context.RuntimeSessionKey;
     }
+
+    private static bool IsAcceptedOutcome(WorkflowExternalResponseServiceOutcome outcome)
+        => outcome is WorkflowExternalResponseServiceOutcome.Completed or
+            WorkflowExternalResponseServiceOutcome.WaitingAgain or
+            WorkflowExternalResponseServiceOutcome.Denied or
+            WorkflowExternalResponseServiceOutcome.Resuming;
 
     private static AgentRuntimeToolMetadata CreateMetadata(
         string toolName,
@@ -477,21 +512,36 @@ public sealed record WorkflowAgentRunInput
 public sealed record WorkflowAgentExternalResponseInput
 {
     [JsonConstructor]
-    public WorkflowAgentExternalResponseInput(Guid externalRequestId, string responseJson)
+    public WorkflowAgentExternalResponseInput(
+        Guid externalRequestId,
+        long expectedRequestVersion,
+        JsonElement response,
+        string idempotencyKey)
     {
         if (externalRequestId == Guid.Empty)
         {
             throw new ArgumentException("Workflow external request id cannot be empty.", nameof(externalRequestId));
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
+        _ = new WorkflowExternalRequestVersion(expectedRequestVersion);
+        if (response.ValueKind == JsonValueKind.Undefined)
+        {
+            throw new ArgumentException("Workflow external response JSON is required.", nameof(response));
+        }
+
         ExternalRequestId = externalRequestId;
-        ResponseJson = responseJson.Trim();
+        ExpectedRequestVersion = expectedRequestVersion;
+        Response = response.Clone();
+        IdempotencyKey = new WorkflowExternalResponseIdempotencyKey(idempotencyKey).Value;
     }
 
     public Guid ExternalRequestId { get; }
 
-    public string ResponseJson { get; }
+    public long ExpectedRequestVersion { get; }
+
+    public JsonElement Response { get; }
+
+    public string IdempotencyKey { get; }
 }
 
 public sealed record WorkflowAgentDefinitionDescriptor(
@@ -548,7 +598,7 @@ public sealed record WorkflowAgentCancellationResult(
     string Message);
 
 public sealed record WorkflowAgentExternalResponseResult(
-    WorkflowExternalResponseOutcome Outcome,
+    WorkflowExternalResponseServiceOutcome Outcome,
     bool Succeeded,
     WorkflowAgentRunDescriptor? Run,
     Guid? ExternalRequestId,

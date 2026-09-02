@@ -1,0 +1,231 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+
+<FormSection Title="Model thinking" Description="@(SourceManaged ? "Read-only capabilities and defaults from the shared instance. Refresh to load its latest settings." : "Automatic settings use provider discovery, then built-in model definitions. Administrator overrides take precedence and survive discovery.")">
+    <Stack GapScale="LayoutGap.Medium">
+        <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Small">
+            <TextBox @bind-Value="search" Placeholder="Search models" aria-label="Search thinking models" data-testid="provider-thinking-search" />
+            @if (SourceManaged && Provider is not null) {
+                <SharedProviderRefreshButton ProviderId="Provider.Id" Refreshed="Refreshed" />
+            }
+        </Cluster>
+        @if (configurationError is not null) {
+            <Alert AlertStyle="AlertStyle.Danger">@configurationError</Alert>
+        }
+        <DataGrid TItem="ThinkingRow" Data="@FilteredRows" AllowPaging="true" PageSize="10"
+                  Caption="Provider model thinking capabilities" data-testid="provider-thinking-table">
+            <Columns>
+                <DataGridColumn TItem="ThinkingRow" Title="Model" Property="@nameof(ThinkingRow.Name)" />
+                <DataGridColumn TItem="ThinkingRow" Title="Options from" Property="@nameof(ThinkingRow.Origin)" />
+                <DataGridColumn TItem="ThinkingRow" Title="Support" Property="@nameof(ThinkingRow.Support)" />
+                <DataGridColumn TItem="ThinkingRow" Title="Allowed thinking" Property="@nameof(ThinkingRow.Efforts)" />
+                <DataGridColumn TItem="ThinkingRow" Title="Default" Property="@nameof(ThinkingRow.Default)" />
+                @if (!SourceManaged) {
+                    <DataGridColumn TItem="ThinkingRow" Title="Actions">
+                        <Template Context="row">
+                            <Button Text="Edit" Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                                    Click="@(() => Edit(row))" aria-label="@($"Edit thinking for {row.Name}")" />
+                        </Template>
+                    </DataGridColumn>
+                }
+            </Columns>
+        </DataGrid>
+    </Stack>
+</FormSection>
+
+@if (editing is not null) {
+    <Dialog IsOpen="true" Title="Model thinking settings" Subtitle="@editing.Name" Size="ModalSize.Medium"
+            OnClose="Close" TestId="provider-thinking-dialog">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <label class="cda-inline-option">
+                    <CheckBox TValue="bool" Value="automatic" ValueChanged="SetAutomatic" data-testid="thinking-automatic" />
+                    Automatic (provider discovery / built-in defaults)
+                </label>
+                <Alert AlertStyle="AlertStyle.Info" data-testid="thinking-automatic-summary">@automaticSummary</Alert>
+                @if (!automatic) {
+                    <label class="cda-inline-option">
+                        <CheckBox TValue="bool" @bind-Value="supported" data-testid="thinking-supported" />
+                        Supports configurable thinking
+                    </label>
+                    @if (supported) {
+                        <FormField Text="Control type">
+                            <DropDown TValue="AgentThinkingEffortControlMode" Data="@ControlModes" Value="controlMode"
+                                      ValueChanged="SetControlMode" data-testid="thinking-control-mode" />
+                        </FormField>
+                        <FormField Text="Allowed efforts">
+                            <Grid Columns="3" Gap="LayoutGap.Small">
+                                @foreach (var effort in AvailableEfforts) {
+                                    <label class="cda-inline-option">
+                                        <CheckBox TValue="bool" Value="@allowed.Contains(effort)"
+                                                  ValueChanged="@(value => SetEffort(effort, value))"
+                                                  Disabled="@(controlMode == AgentThinkingEffortControlMode.BooleanToggle)"
+                                                  data-testid="@($"thinking-allow-{effort}")" />
+                                        @EffortLabel(effort, controlMode)
+                                    </label>
+                                }
+                            </Grid>
+                        </FormField>
+                        <FormField Text="Default effort for this model">
+                            <DropDown TValue="AgentReasoningEffortLevel?" Data="@DefaultChoices" AllowClear="true" Placeholder="Provider-wide / upstream default"
+                                      TextProperty="@nameof(DefaultChoice.Label)" ValueProperty="@nameof(DefaultChoice.Effort)"
+                                      @bind-Value="defaultEffort" data-testid="thinking-model-default" />
+                        </FormField>
+                    }
+                    <Alert AlertStyle="AlertStyle.Warning">Configure only controls accepted by this model and transport. These settings do not add thinking support to a model.</Alert>
+                }
+                @if (editError is not null) {
+                    <Alert AlertStyle="AlertStyle.Danger" data-testid="thinking-edit-error">@editError</Alert>
+                }
+                <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                    <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Close" />
+                    <Button Text="Apply to provider draft" Click="Apply" data-testid="thinking-apply" />
+                </Cluster>
+            </Stack>
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    private static readonly IComparer<string> ModelNameComparer = Comparer<string>.Create((left, right) =>
+        System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(left, right,
+            System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.NumericOrdering));
+    [Parameter, EditorRequired] public ProviderProfileEditorModel Model { get; set; } = default!;
+    [Parameter] public ProviderProfile? Provider { get; set; }
+    [Parameter] public EventCallback Refreshed { get; set; }
+
+    private bool SourceManaged => Provider?.IsSourceManaged == true;
+    private List<ThinkingRow> rows = [];
+    private ThinkingRow? editing;
+    private string search = string.Empty;
+    private string? configurationError;
+    private string? editError;
+    private string automaticSummary = string.Empty;
+    private bool automatic;
+    private bool supported;
+    private AgentThinkingEffortControlMode controlMode;
+    private readonly HashSet<AgentReasoningEffortLevel> allowed = [];
+    private AgentReasoningEffortLevel? defaultEffort;
+
+    private IEnumerable<ThinkingRow> FilteredRows => rows.Where(row => row.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<AgentThinkingEffortControlMode> ControlModes => Model.Kind == ProviderKind.Ollama
+        ? [AgentThinkingEffortControlMode.EffortLevels, AgentThinkingEffortControlMode.BooleanToggle]
+        : [AgentThinkingEffortControlMode.EffortLevels];
+    private IEnumerable<AgentReasoningEffortLevel> AvailableEfforts => controlMode == AgentThinkingEffortControlMode.BooleanToggle
+        ? [AgentReasoningEffortLevel.None, AgentReasoningEffortLevel.Medium]
+        : Enum.GetValues<AgentReasoningEffortLevel>();
+    private IEnumerable<DefaultChoice> DefaultChoices => allowed.Order().Select(effort => new DefaultChoice(effort, EffortLabel(effort, controlMode)));
+
+    protected override void OnParametersSet() => RebuildRows();
+
+    private ProviderProfile DraftProvider => SourceManaged ? Provider! : new ProviderProfile(
+        Model.Id ?? Guid.Empty, Model.Name, Model.Kind, Model.BaseUrl, string.Empty, Model.DefaultModel,
+        Model.Transport, Model.IsEnabled, Model.SupportsStreaming, Model.SupportsTools,
+        Model.PreferFrameworkManagedChatHistory, Model.SupportsBackgroundResponses, Model.ConfigurationJson,
+        Model.Notes, string.Empty, null, Model.SuggestedModels, Model.Purpose) {
+        ModelThinkingEffortCapabilities = Model.ModelThinkingEffortCapabilities ?? []
+    };
+
+    private void RebuildRows() {
+        rows = [];
+        configurationError = null;
+        try {
+            var provider = DraftProvider;
+            var models = SourceManaged ? provider.ModelCatalog.Select(item => item.Id) : Model.SuggestedModels;
+            foreach (var model in models.Append(provider.DefaultModel).Where(name => !string.IsNullOrWhiteSpace(name))
+                         .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(provider.GetModelDisplayName, ModelNameComparer)) {
+                var capability = AgentThinkingEffortPolicy.ResolveCapability(provider, model);
+                string defaultLabel;
+                try {
+                    var effort = AgentThinkingEffortPolicy.ResolveProviderDefault(provider, model);
+                    defaultLabel = effort is { } value ? EffortLabel(value, capability.ControlMode) : "Upstream default";
+                } catch (InvalidOperationException exception) {
+                    defaultLabel = $"Invalid default: {exception.Message}";
+                }
+                rows.Add(new(model, provider.GetModelDisplayName(model), capability,
+                    SourceManaged ? "Shared source" : capability.Source switch {
+                        AgentThinkingEffortCapabilitySource.Configured => "Administrator override",
+                        AgentThinkingEffortCapabilitySource.Discovered => "Provider discovery",
+                        _ => capability.Status == AgentThinkingEffortSupportStatus.Unknown ? "Not defined" : "Built-in definition"
+                    }, capability.Status.ToString(),
+                    capability.AllowedEfforts.Count > 0 ? string.Join(", ", capability.AllowedEfforts.Select(value => EffortLabel(value, capability.ControlMode))) : "—",
+                    defaultLabel));
+            }
+        } catch (InvalidOperationException exception) {
+            configurationError = exception.Message;
+        }
+    }
+
+    private void Edit(ThinkingRow row) {
+        if (SourceManaged) {
+            return;
+        }
+        editing = row;
+        editError = null;
+        var configured = ProviderModelThinkingConfiguration.Find(Model.ConfigurationJson, row.Id);
+        var automaticProvider = DraftProvider with {
+            ConfigurationJson = ProviderModelThinkingConfiguration.Write(Model.ConfigurationJson, row.Id, null)
+        };
+        var definition = AgentThinkingEffortPolicy.ResolveCapability(automaticProvider, row.Id);
+        automaticSummary = $"Automatic: {definition.Source}; {definition.Summary} " +
+            string.Join(", ", definition.AllowedEfforts.Select(effort => EffortLabel(effort, definition.ControlMode)));
+        automatic = configured is null;
+        supported = row.Capability.Status == AgentThinkingEffortSupportStatus.Supported;
+        controlMode = row.Capability.ControlMode == AgentThinkingEffortControlMode.BooleanToggle
+            ? AgentThinkingEffortControlMode.BooleanToggle : AgentThinkingEffortControlMode.EffortLevels;
+        allowed.Clear();
+        allowed.UnionWith(row.Capability.AllowedEfforts);
+        defaultEffort = configured?.DefaultEffort;
+    }
+
+    private void SetAutomatic(bool value) => automatic = value;
+
+    private void SetControlMode(AgentThinkingEffortControlMode value) {
+        controlMode = value;
+        if (value == AgentThinkingEffortControlMode.BooleanToggle) {
+            allowed.Clear();
+            allowed.UnionWith([AgentReasoningEffortLevel.None, AgentReasoningEffortLevel.Medium]);
+            defaultEffort = null;
+        }
+    }
+
+    private void SetEffort(AgentReasoningEffortLevel effort, bool value) {
+        if (value) {
+            allowed.Add(effort);
+        } else {
+            allowed.Remove(effort);
+            if (defaultEffort == effort) {
+                defaultEffort = null;
+            }
+        }
+    }
+
+    private void Apply() {
+        if (editing is null || SourceManaged) {
+            return;
+        }
+        try {
+            var value = automatic ? null : new ProviderModelThinkingOverride(editing.Id,
+                supported ? AgentThinkingEffortSupportStatus.Supported : AgentThinkingEffortSupportStatus.Unsupported,
+                supported ? controlMode : AgentThinkingEffortControlMode.Unspecified,
+                supported ? allowed.Order().ToArray() : [], supported ? defaultEffort : null);
+            var configuration = ProviderModelThinkingConfiguration.Write(Model.ConfigurationJson, editing.Id, value);
+            ProviderModelThinkingConfiguration.ValidateForProvider(configuration, Model.Kind, Model.Transport, Model.Purpose);
+            Model.ConfigurationJson = configuration;
+            Close();
+            RebuildRows();
+        } catch (InvalidOperationException exception) {
+            editError = exception.Message;
+        }
+    }
+
+    private void Close() => editing = null;
+    private static string EffortLabel(AgentReasoningEffortLevel effort, AgentThinkingEffortControlMode mode) =>
+        mode == AgentThinkingEffortControlMode.BooleanToggle
+            ? effort == AgentReasoningEffortLevel.None ? "Disabled" : "Enabled"
+            : effort == AgentReasoningEffortLevel.ExtraHigh ? "Extra high" : effort.ToString();
+
+    private sealed record ThinkingRow(string Id, string Name, ProviderModelThinkingEffortCapability Capability,
+        string Origin, string Support, string Efforts, string Default);
+    private sealed record DefaultChoice(AgentReasoningEffortLevel Effort, string Label);
+}

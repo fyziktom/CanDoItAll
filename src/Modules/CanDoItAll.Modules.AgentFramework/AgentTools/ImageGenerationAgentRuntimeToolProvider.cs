@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -7,25 +8,29 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolProvider
 {
     private const int ProviderOrder = 950;
+    private const string UnsupportedImageOptionErrorCode = "ImageOptionUnsupported";
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
     private readonly IAgentImageGenerationService imageGenerationService;
     private readonly IWorkspacePathResolutionService workspacePaths;
+    private readonly ILogger<ImageGenerationAgentRuntimeToolProvider>? logger;
     private readonly ImageGenerationToolBuilder toolBuilder;
 
     public ImageGenerationAgentRuntimeToolProvider(
         IProviderRuntimeProfileSource providerSource,
         IWorkspacePathResolutionService workspacePaths,
         IAgentImageGenerationService imageGenerationService,
-        IServiceProvider services)
+        IServiceProvider services,
+        ILogger<ImageGenerationAgentRuntimeToolProvider>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(providerSource);
         ArgumentNullException.ThrowIfNull(workspacePaths);
@@ -34,6 +39,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
         this.imageGenerationService = imageGenerationService;
         this.workspacePaths = workspacePaths;
+        this.logger = logger;
 
         toolBuilder = new ImageGenerationToolBuilder(
             this,
@@ -103,6 +109,44 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             ImageGenerationCreateInput request,
             CancellationToken cancellationToken)
         {
+            try
+            {
+                return await ImageGenerationCreateCoreAsync(
+                        agent,
+                        runtimeProvider,
+                        access,
+                        request,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                var diagnosticFailureType = exception is
+                    ProviderFailureBoundaryException boundaryException
+                        ? boundaryException.DiagnosticFailureType
+                        : null;
+                owner.logger?.LogError(
+                    "Image-generation tool failed for agent {AgentId}. RequestedProviderProfileId={ProviderProfileId} FailureType={FailureType} DiagnosticFailureType={DiagnosticFailureType}",
+                    agent.Id,
+                    request.ProviderProfileId,
+                    exception.GetType().FullName,
+                    diagnosticFailureType ?? "Unavailable");
+                throw;
+            }
+        }
+
+        private async Task<ImageGenerationCreateResult> ImageGenerationCreateCoreAsync(
+            AgentDefinition agent,
+            ProviderProfile runtimeProvider,
+            AgentImageGenerationAccessSettings access,
+            ImageGenerationCreateInput request,
+            CancellationToken cancellationToken)
+        {
             var normalizedAccess = AgentImageGenerationAccessMetadata.Normalize(access);
             if (!normalizedAccess.CanGenerateImages)
             {
@@ -147,7 +191,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 Success: true,
                 ProviderProfileId: provider.Id,
                 ProviderName: provider.Name,
-                Model: generated.Model,
+                Model: provider.IsSourceManaged ? provider.GetModelDisplayName(model) : generated.Model,
                 Operation: sourceImages.Count == 0 ? "generation" : "edit",
                 OutputWorkspacePath: outputPath.RelativePath,
                 ContentType: contentType,
@@ -287,6 +331,17 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 throw new InvalidOperationException($"Image-generation provider '{provider.Name}' does not define a default model.");
             }
 
+            if (provider.IsSourceManaged && provider.ModelSelectionConstraint?.Allows(model) != true) {
+                var matches = provider.ModelCatalog
+                    .Where(item => string.Equals(item.DisplayName, model, StringComparison.Ordinal))
+                    .Take(2)
+                    .ToArray();
+                if (matches.Length != 1) {
+                    throw new ProviderModelSelectionException(provider.Id, model);
+                }
+                model = matches[0].Id;
+            }
+            ProviderModelSelectionPolicy.EnsureAllowed(provider, model);
             return model;
         }
 
@@ -323,7 +378,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 return value;
             }
 
-            throw new InvalidOperationException($"Unsupported {label} '{value}'. Allowed values: {string.Join(", ", allowedValues.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
+            throw new ImageGenerationToolException(
+                UnsupportedImageOptionErrorCode,
+                $"Unsupported {label}. Allowed values: {string.Join(", ", allowedValues.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}. Choose a supported value or omit this option to use the provider default, then retry.",
+                canRetryWithCorrectedInput: true);
         }
 
         private static void ValidateRequest(ImageGenerationCreateInput request)
@@ -680,8 +738,11 @@ public sealed record ImageGenerationCreateInput(
     string OutputWorkspacePath,
     Guid? ProviderProfileId = null,
     string? Model = null,
+    [property: Description("Image size: auto, 1024x1024, 1024x1536, or 1536x1024. Omit to use the provider default. Other dimensions are unsupported; describe desired composition in the prompt.")]
     string? Size = null,
+    [property: Description("Image quality: auto, low, medium, or high. Omit to use the provider default.")]
     string? Quality = null,
+    [property: Description("Image output format: png, jpeg, or webp. Omit to use the provider default.")]
     string? OutputFormat = null,
     IReadOnlyList<string>? SourceWorkspacePaths = null,
     IReadOnlyList<ImageGenerationProjectAssetSource>? SourceProjectAssets = null,

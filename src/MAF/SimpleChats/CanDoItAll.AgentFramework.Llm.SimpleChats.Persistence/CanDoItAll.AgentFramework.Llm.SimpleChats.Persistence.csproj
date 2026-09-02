@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Llm.SimpleChats.Core\CanDoItAll.AgentFramework.Llm.SimpleChats.Core.csproj" />
+    <ProjectReference Include="..\..\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Persistence\CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />

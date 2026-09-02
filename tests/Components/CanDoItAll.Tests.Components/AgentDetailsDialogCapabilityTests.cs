@@ -113,6 +113,7 @@ public sealed class AgentDetailsDialogCapabilityTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
         context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
         context.Services.AddSingleton(new AgentAvatarGenerationService(

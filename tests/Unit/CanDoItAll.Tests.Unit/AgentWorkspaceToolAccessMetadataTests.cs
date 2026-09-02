@@ -1,7 +1,9 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -158,6 +160,66 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         Assert.True(access.CanWrite("external-target/C/repositories/products/Calculator/src/Program.cs"));
         Assert.True(access.CanRead("external-target/C/repositories/products/Inventory/README.md"));
         Assert.False(access.CanWrite("external-target/C/repositories/products/Inventory/README.md"));
+    }
+
+    [Fact]
+    public void Effective_external_target_access_uses_only_invocation_aliases_when_authoritative()
+    {
+        var configured = new AgentWorkspaceToolAccessSettings
+        {
+            AllowedExternalTargetAliases =
+            [
+                "external-target/C/repositories/configured"
+            ]
+        };
+
+        var access = EffectiveExternalTargetAccessResolver.Resolve(
+            configured,
+            ["external-target/C/repositories/run-write"],
+            ["external-target/C/repositories/run-read"],
+            invocationScopeIsAuthoritative: true);
+
+        Assert.Equal(["external-target/C/repositories/run-write"], access.WritableAliases);
+        Assert.Equal(["external-target/C/repositories/run-read"], access.ReadOnlyAliases);
+        Assert.False(access.CanRead("external-target/C/repositories/configured/README.md"));
+    }
+
+    [Fact]
+    public void Governed_process_external_target_binding_scope_canonicalizes_to_invocation_identity()
+    {
+        var physicalProductRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"candoitall-governed-product-{Guid.NewGuid():N}");
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var configuredRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+        Assert.True(configuredRegistry.TryCreateAlias(physicalProductRoot, out var configuredAlias));
+        var configurationJson = AgentWorkspaceToolAccessMetadata.Write(
+            "{}",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                AllowedExternalTargetAliases = [configuredAlias]
+            },
+            configuredRegistry);
+        var invocationRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+        Assert.True(invocationRegistry.TryCreateAlias(physicalProductRoot, out var invocationAlias));
+        Assert.NotEqual(configuredAlias, invocationAlias);
+        var metadataJson = ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+            JsonSerializer.Serialize(new Dictionary<string, string[]>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = [invocationAlias]
+            }),
+            invocationRegistry.ExportBindings([invocationAlias]));
+        var run = CreateGovernedProcessExecutionRun(metadataJson);
+
+        using var auditScope = WorkspaceExecutionAuditContext.BeginScope(run);
+        var bindings = ExternalTargetRootBindingScope.Resolve(CreateAgent(configurationJson));
+        var runtimeRegistry = new ExternalTargetPathRegistryFactory(dataProtectionProvider).Create(bindings);
+
+        Assert.Single(bindings);
+        Assert.True(runtimeRegistry.TryCreateAlias(physicalProductRoot, out var canonicalAlias));
+        Assert.Equal(invocationAlias, canonicalAlias);
     }
 
     [Fact]
@@ -339,6 +401,50 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             metadataJson,
             StringComparison.OrdinalIgnoreCase);
         Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey, out _));
+    }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_reuses_invocation_root_binding_for_physical_product_path()
+    {
+        var physicalProductRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"candoitall-product-{Guid.NewGuid():N}");
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var preparationRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+        var expectedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            physicalProductRoot,
+            preparationRegistry)!;
+        var metadataJson = ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+            JsonSerializer.Serialize(new Dictionary<string, string[]>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = [expectedAlias]
+            }),
+            preparationRegistry.ExportBindings([expectedAlias]));
+        var runtimeRegistry = new ExternalTargetPathRegistryFactory(dataProtectionProvider).Create(
+            ExecutionInvocationMetadata.ResolveExternalTargetRootBindings(
+                metadataJson,
+                configuredBindings: []));
+
+        var groundedMetadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            metadataJson,
+            $"Repair the application under \"{physicalProductRoot}\".",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            },
+            runtimeRegistry);
+
+        using var document = JsonDocument.Parse(groundedMetadataJson);
+        var aliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        var bindings = ExecutionInvocationMetadata.ResolveExternalTargetRootBindings(groundedMetadataJson);
+
+        Assert.Equal(expectedAlias, Assert.Single(aliases));
+        Assert.Single(bindings);
     }
 
     [Fact]
@@ -643,5 +749,64 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             string.Empty,
             null,
             []);
+    }
+
+    private static ExecutionRunRecord CreateGovernedProcessExecutionRun(string metadataJson)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            null,
+            "Governed process external target binding test",
+            "process-step",
+            "implement-product-change",
+            string.Empty,
+            string.Empty,
+            "process-runtime",
+            "system",
+            metadataJson,
+            string.Empty,
+            string.Empty,
+            "test-provider",
+            "test-model",
+            ExecutionState.Idle,
+            null,
+            now,
+            now,
+            null,
+            null,
+            string.Empty,
+            null,
+            [],
+            ProcessRunId: Guid.NewGuid().ToString("D"),
+            ProcessStepId: Guid.NewGuid().ToString("D"));
+    }
+
+    private static AgentDefinition CreateAgent(string configurationJson)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new AgentDefinition(
+            Guid.NewGuid(),
+            "External target test agent",
+            "Test agent",
+            string.Empty,
+            string.Empty,
+            AgentLifecycleStatus.Active,
+            null,
+            "test-model",
+            AgentWorkloadKind.Programming,
+            AgentChatHistoryMode.FrameworkManaged,
+            0,
+            false,
+            false,
+            configurationJson,
+            false,
+            string.Empty,
+            AgentPermissionsPolicy.Default,
+            [],
+            [],
+            now,
+            now);
     }
 }

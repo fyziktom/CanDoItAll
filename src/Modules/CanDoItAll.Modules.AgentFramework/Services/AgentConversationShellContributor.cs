@@ -30,6 +30,7 @@ public sealed class AgentConversationShellContributor(
     private readonly CancellationTokenSource lifetime = new();
     private readonly HashSet<Guid> busyAgentIds = [];
     private IReadOnlyList<AgentDefinition> agents = [];
+    private IReadOnlyDictionary<Guid, ProviderProfile> providersById = new Dictionary<Guid, ProviderProfile>();
     private AgentChatContextSnapshot? currentContext;
     private Task initializationTask = Task.CompletedTask;
     private string failureMessage = string.Empty;
@@ -195,11 +196,12 @@ public sealed class AgentConversationShellContributor(
     {
         var referenceData = await referenceDataProvider.GetAsync(
             new AgentReferenceDataRequest(
-                AgentReferenceDataSections.Agents,
+                AgentReferenceDataSections.Agents | AgentReferenceDataSections.Providers,
                 IncludeAgentTemplates: false,
                 ActiveAgentsOnly: true),
             cancellationToken);
         agents = referenceData.Agents;
+        providersById = referenceData.ProviderById;
         failureMessage = string.Empty;
     }
 
@@ -222,6 +224,9 @@ public sealed class AgentConversationShellContributor(
                 isBusy,
                 ParticipantActionStyle.Light)
         };
+        var provider = agent.ProviderProfileId is { } providerId
+            ? providersById.GetValueOrDefault(providerId)
+            : null;
         var presentation = AgentParticipantPresentationMapper.MapCompactItem(
             agent,
             isSelected: false,
@@ -229,7 +234,8 @@ public sealed class AgentConversationShellContributor(
             $"floating-agent-chat-agent-list-item-{agent.Id:N}",
             $"floating-agent-chat-agent-list-select-{agent.Id:N}",
             actions,
-            ParticipantKey(agent.Id));
+            ParticipantKey(agent.Id),
+            provider);
         return new(SourceIdentifier, Kind, presentation);
     }
 

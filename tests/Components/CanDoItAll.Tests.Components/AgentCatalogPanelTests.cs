@@ -336,6 +336,7 @@ public sealed class AgentCatalogPanelTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(
             workspaceService ??
             DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnusedWorkspaceServiceProxy>());

@@ -1,38 +1,31 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Conversations.Shell;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
-public partial class ProjectStructurePage
-{
-    protected override void OnInitialized()
-    {
-        FloatingAgentChatCoordinator.Changed += HandleFloatingAgentChatChanged;
+public partial class ProjectStructurePage {
+    protected override void OnInitialized() {
+        ConversationShellCoordinator.Changed += HandleConversationShellChanged;
     }
 
-    private Task ToggleAgentWindowAsync()
-    {
-        if (FloatingAgentChatCoordinator.Snapshot().IsCatalogVisible)
-        {
-            FloatingAgentChatCoordinator.HideCatalog();
-        }
-        else
-        {
-            FloatingAgentChatCoordinator.ShowCatalog();
+    private Task ToggleAgentWindowAsync() {
+        if (ConversationShellCoordinator.Snapshot().IsCatalogVisible) {
+            ConversationShellCoordinator.HideCatalog();
+        } else {
+            ConversationShellCoordinator.ShowCatalog(ConversationCatalogKindFilter.Agents);
         }
 
         return Task.CompletedTask;
     }
 
-    private async Task HandleAgentExecutionCompletedAsync(AgentChatExecutionCompleted notification)
-    {
+    private async Task HandleAgentExecutionCompletedAsync(AgentChatExecutionCompleted notification) {
         if (!string.Equals(
                 notification.Source.Kind.Value,
                 ProjectStructureAgentChatContextBuilder.SourceKind,
                 StringComparison.Ordinal) ||
             !Guid.TryParse(notification.Source.Id.Value, out var sourceProjectId) ||
-            sourceProjectId != ProjectId)
-        {
+            sourceProjectId != ProjectId) {
             return;
         }
 
@@ -40,9 +33,9 @@ public partial class ProjectStructurePage
         await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleFloatingAgentChatChanged(object? sender, EventArgs eventArgs)
+    private void HandleConversationShellChanged(object? sender, EventArgs eventArgs)
         => _ = InvokeAsync(StateHasChanged);
 
     private void DisposeAgentWindowState()
-        => FloatingAgentChatCoordinator.Changed -= HandleFloatingAgentChatChanged;
+        => ConversationShellCoordinator.Changed -= HandleConversationShellChanged;
 }

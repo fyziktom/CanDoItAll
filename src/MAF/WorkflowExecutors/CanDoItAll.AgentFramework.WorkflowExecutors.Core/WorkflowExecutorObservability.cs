@@ -1,5 +1,5 @@
+using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Models;
 
@@ -33,24 +33,25 @@ public sealed class NullWorkflowExecutorExecutionObserver : IWorkflowExecutorExe
 
 public sealed class WorkflowExecutorExecutionAuditScope : IDisposable
 {
-    private static readonly AsyncLocal<WorkflowRunId?> CurrentRun = new();
-    private readonly WorkflowRunId? previousRunId;
+    private static readonly AsyncLocal<ExecutionContext?> Current = new();
+    private readonly ExecutionContext? previous;
 
-    private WorkflowExecutorExecutionAuditScope(WorkflowRunId runId)
-    {
-        previousRunId = CurrentRun.Value;
-        CurrentRun.Value = runId;
+    private WorkflowExecutorExecutionAuditScope(WorkflowRunId runId, WorkflowLaunchOrigin? origin) {
+        previous = Current.Value;
+        Current.Value = new(runId, origin);
     }
 
-    public static WorkflowRunId? CurrentRunId => CurrentRun.Value;
+    public static WorkflowRunId? CurrentRunId => Current.Value?.RunId;
+    public static WorkflowLaunchOrigin? CurrentOrigin => Current.Value?.Origin;
 
-    public static WorkflowExecutorExecutionAuditScope Push(WorkflowRunId runId)
-        => new(runId);
+    public static WorkflowExecutorExecutionAuditScope Push(WorkflowRunId runId, WorkflowLaunchOrigin? origin = null)
+        => new(runId, origin);
 
-    public void Dispose()
-    {
-        CurrentRun.Value = previousRunId;
+    public void Dispose() {
+        Current.Value = previous;
     }
+
+    private sealed record ExecutionContext(WorkflowRunId RunId, WorkflowLaunchOrigin? Origin);
 }
 
 public static class WorkflowExecutorPayloadPolicy
@@ -81,7 +82,6 @@ public static class WorkflowExecutorPayloadPolicy
 
 public static class WorkflowExecutorRedaction
 {
-    private static readonly JsonSerializerOptions RedactedJsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly Regex SensitiveLineValueRegex = new(
         "(\"?(?:auth|authorization|connection[\\s._-]*strings?|cookies?|headers?|private[\\s._-]*keys?|subscription[\\s._-]*keys?|[A-Za-z0-9._-]*signatures?)\"?\\s*[:=]\\s*)(\"[^\"]*\"|'[^']*'|[^\\r\\n]+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -161,9 +161,15 @@ public static class WorkflowExecutorRedaction
 
         try
         {
-            var node = JsonNode.Parse(json);
-            node = RedactNode(node);
-            var redactedJson = node?.ToJsonString(RedactedJsonOptions) ?? "{}";
+            using var document = JsonDocument.Parse(json);
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream))
+            {
+                WriteRedactedJson(writer, document.RootElement);
+                writer.Flush();
+            }
+
+            var redactedJson = Encoding.UTF8.GetString(stream.ToArray());
             return Truncate(redactedJson, maxCharacters);
         }
         catch (JsonException)
@@ -215,47 +221,46 @@ public static class WorkflowExecutorRedaction
             SanitizeException(exception.InnerException));
     }
 
-    private static JsonNode? RedactNode(JsonNode? node)
+    private static void WriteRedactedJson(Utf8JsonWriter writer, JsonElement element)
     {
-        if (node is JsonObject jsonObject)
+        if (element.ValueKind == JsonValueKind.Object)
         {
-            foreach (var propertyName in jsonObject.Select(property => property.Key).ToArray())
+            writer.WriteStartObject();
+            foreach (var property in element.EnumerateObject())
             {
-                if (IsSensitivePropertyName(propertyName))
+                writer.WritePropertyName(property.Name);
+                if (IsSensitivePropertyName(property.Name))
                 {
-                    jsonObject[propertyName] = "[REDACTED]";
+                    writer.WriteStringValue("[REDACTED]");
                     continue;
                 }
 
-                var child = jsonObject[propertyName];
-                var redactedChild = RedactNode(child);
-                if (!ReferenceEquals(child, redactedChild))
-                {
-                    jsonObject[propertyName] = redactedChild;
-                }
+                WriteRedactedJson(writer, property.Value);
             }
 
-            return jsonObject;
+            writer.WriteEndObject();
+            return;
         }
 
-        if (node is JsonArray jsonArray)
+        if (element.ValueKind == JsonValueKind.Array)
         {
-            for (var index = 0; index < jsonArray.Count; index++)
+            writer.WriteStartArray();
+            foreach (var item in element.EnumerateArray())
             {
-                var child = jsonArray[index];
-                var redactedChild = RedactNode(child);
-                if (!ReferenceEquals(child, redactedChild))
-                {
-                    jsonArray[index] = redactedChild;
-                }
+                WriteRedactedJson(writer, item);
             }
 
-            return jsonArray;
+            writer.WriteEndArray();
+            return;
         }
 
-        return node is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var value)
-            ? JsonValue.Create(RedactText(value))
-            : node;
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            writer.WriteStringValue(RedactText(element.GetString()));
+            return;
+        }
+
+        element.WriteTo(writer);
     }
 
     public static bool IsSensitivePropertyName(string propertyName)

@@ -86,6 +86,13 @@ public interface IAgentExecutionPreparationService
         SandboxWorkspaceCatalogSnapshot catalogSnapshot);
 }
 
+public sealed class ProviderRuntimeProfileUnavailableException(
+    Guid providerId) : InvalidOperationException(
+    $"Provider runtime profile '{providerId:D}' is unavailable.")
+{
+    public Guid ProviderId { get; } = providerId;
+}
+
 public sealed class AgentExecutionPreparationService(
     ISandboxWorkspaceCatalogStore store,
     IProviderRuntimeProfileSnapshotSource providerSnapshotSource,
@@ -357,6 +364,11 @@ public sealed class AgentExecutionPreparationService(
         var provider = ManagedSeedProviderFallbacks.Apply(
             agent,
             lease.Profile);
+        if (!provider.IsEnabled)
+        {
+            throw new ProviderRuntimeProfileUnavailableException(provider.Id);
+        }
+
         var fingerprint = ReferenceEquals(provider, lease.Profile)
             ? lease.ConfigurationFingerprint
             : ProviderConfigurationFingerprintFactory.Create(provider);

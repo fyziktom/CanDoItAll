@@ -1,8 +1,0 @@
-profile,os_runner,architecture,core_target,runtime_target,secret_profile,desktop_terminal,database,support_state
-windows-interactive,windows-latest / real Windows,x64 first,Required regression,Required,DPAPI or approved configured provider,Optional/interactive,PostgreSQL integration,Target after R4
-windows-headless,windows-latest / service host,x64 first,Required,Runtime features disable-able,DPAPI machine/user scope decision,Disabled,PostgreSQL integration,Target after C4
-linux-headless,ubuntu-latest / Ubuntu 24.04 LTS x64,x64,Primary required,Required direct execution,Explicit headless secure provider,Disabled,PostgreSQL integration,Target after C4/R4
-linux-interactive,real Ubuntu desktop/session,x64,Required provider characterization,Optional desktop/terminal,Secret Service,Capability-tested,PostgreSQL integration,Bounded claim after evidence
-macos-interactive-arm64,macos-latest / real Apple Silicon,arm64,Required,Required direct execution; desktop optional,Keychain,Capability-tested,PostgreSQL integration or documented CI fixture,Target after C4/R4
-macos-headless-arm64,macos-latest / launchd profile,arm64,Required,Runtime features disable-able/direct,Explicit headless secure provider,Disabled,PostgreSQL integration or documented CI fixture,Target after C4
-macos-x64-publish,publish gate; real Intel runtime when available,x64,Publish required,Support only after actual runtime evidence,Same profile rules,Not claimed from publish alone,Not claimed from publish alone,Artifact claim only until runtime proof

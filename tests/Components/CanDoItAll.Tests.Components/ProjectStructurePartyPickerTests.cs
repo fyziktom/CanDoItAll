@@ -175,7 +175,7 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.Contains("Meeting Owner", meetingMetadata.RelatedPartySummary);
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, workItemNode.Id);
-        cut.Dispose();
+        await harness.Context.DisposeComponentsAsync();
         cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
@@ -286,7 +286,7 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.Equal("Canonical Participant", participantMetadata.LinkedPartyDisplayName);
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, meetingNode.Id);
-        cut.Dispose();
+        await harness.Context.DisposeComponentsAsync();
         cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>

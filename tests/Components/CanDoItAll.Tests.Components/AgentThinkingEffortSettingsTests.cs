@@ -11,6 +11,27 @@ public sealed class AgentThinkingEffortSettingsTests
     private const string SupportTestId = "agents-catalog-thinking-effort-support";
 
     [Fact]
+    public void SharedThinkingEffort_UsesPublishedCapabilitiesForOpaqueModelId() {
+        using var context = new BunitContext();
+        const string route = "opaque-published-model";
+        var capability = AgentThinkingEffortPolicy.ResolveDefinedCapability(
+            ProviderKind.OpenAi, ProviderTransportKind.Responses, "gpt-5.6-sol") with { Model = route };
+        var provider = CreateProvider(ProviderKind.OpenAi, route, capabilities: [capability]) with {
+            CredentialBinding = new ProviderCredentialBinding(Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new ProviderModelDisplayMetadata(route, "gpt-5.6-sol")]
+        };
+        var cut = context.Render<AgentThinkingEffortSettings>(parameters => parameters
+            .Add(component => component.Provider, provider));
+
+        Assert.False(cut.Find($"[data-testid='{SelectorTestId}']").HasAttribute("disabled"));
+        Assert.Equal(["Provider default", "None (disable thinking)", "Low", "Medium", "High", "Extra high", "Max"],
+            ReadOptionLabels(cut));
+        Assert.Equal(AgentReasoningEffortLevel.High, AgentThinkingEffortPolicy.ResolveEffectiveEffort(
+            provider, route, AgentThinkingEffortPolicy.WriteAgentOverride("{}", AgentReasoningEffortLevel.High)));
+    }
+
+    [Fact]
     public void Supported_model_lists_allowed_efforts_and_configured_provider_default()
     {
         using var context = new BunitContext();

@@ -802,6 +802,10 @@ public sealed record WorkflowHttpExecutorSettings
 
     public string UrlJsonPath { get; init; } = string.Empty;
 
+    public IReadOnlyDictionary<string, string> QueryParameters { get; init; } = new Dictionary<string, string>();
+
+    public string QueryParametersJsonPath { get; init; } = string.Empty;
+
     public IReadOnlyDictionary<string, string> Headers { get; init; } = new Dictionary<string, string>();
 
     public WorkflowHttpSecretHeaderBinding SecretHeader { get; init; } = new();

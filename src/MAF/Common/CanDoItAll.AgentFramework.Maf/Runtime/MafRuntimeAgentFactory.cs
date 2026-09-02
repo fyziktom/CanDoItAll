@@ -200,7 +200,11 @@ internal sealed class MafRuntimeAgentFactory
                 finalizerCapture?.Policy,
                 runtimeOptions.FinalizerMode,
                 MafRuntimeSessionBuilder.ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
-            chatOptions.AllowMultipleToolCalls = MafFinalizerDriver.ShouldAllowMultipleToolCalls(
+            chatOptions.AllowMultipleToolCalls = MafFinalizerDriver.ResolveAllowMultipleToolCalls(
+                capabilityState.Tools.Count > 0,
+                ProviderFeatureService
+                    .ResolveFeatureMatrixForModel(effectiveProvider, model)
+                    .SupportsParallelFunctionTools,
                 runtimeOptions.FinalizerMode,
                 capabilityState.HasApprovalTools);
 
@@ -507,7 +511,8 @@ internal sealed class MafRuntimeAgentFactory
             var externalTargetAccess = EffectiveExternalTargetAccessResolver.Resolve(
                 configuredWorkspaceAccess,
                 auditScope?.AllowedExternalTargetAliases,
-                auditScope?.ReadOnlyExternalTargetAliases);
+                auditScope?.ReadOnlyExternalTargetAliases,
+                auditScope?.InvocationExternalTargetScopeIsAuthoritative == true);
             var scriptSideEffectManifestJson = MafScriptPolicyInspectionService.TryGetStringArgument(
                 invocationArguments,
                 GovernedScriptSideEffectManifest.ArgumentName) ?? string.Empty;

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
@@ -163,7 +164,7 @@ public sealed partial class AppSmokeTests
         await DismissStartupModalIfPresentAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).WaitForAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).ClickAsync();
-        await page.GetByTestId("provider-plugin-select").SelectOptionAsync(OllamaProviderAdapter.PluginKey);
+        await page.GetByTestId("provider-plugin-select").SelectOptionAsync(ProviderConnectorKeys.Ollama);
         await page.GetByTestId("provider-name-input").FillAsync("Playwright Ollama");
         await page.GetByTestId("provider-base-url-input").FillAsync("http://127.0.0.1:11434");
         await page.GetByTestId("provider-default-model-input").FillAsync("llama3.1");
@@ -1444,7 +1445,7 @@ public sealed partial class AppSmokeTests
         await SetFieldByLabelAsync(page, "Profile name", "OpenAI API");
         await SetFieldByLabelAsync(page, "Connector plugin", "OpenAI provider");
         await SetFieldByLabelAsync(page, "Base URL", "https://api.openai.com/v1");
-        await SetFieldByLabelAsync(page, "Default model", OpenAiProviderAdapter.DefaultModel);
+        await SetFieldByLabelAsync(page, "Default model", ProviderConnectorDefaults.OpenAiModel);
         await SetFieldByLabelAsync(page, "API key secret", "OpenAI API key");
         await page.GetByRole(AriaRole.Button, new() { Name = "Save provider", Exact = true }).ClickAsync();
         await page.WaitForSelectorAsync("text=OpenAI API");
@@ -1463,6 +1464,7 @@ public sealed partial class AppSmokeTests
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
             typeof(WorkspaceService).Assembly,
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly,
             typeof(SecretService).Assembly
         ]);
 
@@ -1479,7 +1481,7 @@ public sealed partial class AppSmokeTests
                 Name = "OpenAI API",
                 ProviderKind = ProviderKind.OpenAi,
                 BaseUrl = "https://api.openai.com/v1",
-                DefaultModel = OpenAiProviderAdapter.DefaultModel,
+                DefaultModel = ProviderConnectorDefaults.OpenAiModel,
                 TimeoutSeconds = 45,
                 IsEnabled = true,
                 SupportsStreaming = true,

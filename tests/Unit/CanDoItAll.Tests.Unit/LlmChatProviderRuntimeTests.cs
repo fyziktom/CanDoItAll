@@ -87,6 +87,45 @@ public sealed class LlmInvocationPortCompositionTests
 public sealed class LlmChatProviderResolutionTests
 {
     [Fact]
+    public async Task SharedThinkingEffort_Unsuggested_published_model_remains_valid_for_saved_simple_chat() {
+        var provider = ProviderRuntimeTestData.CreateProvider("Shared provider") with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            SuggestedModels = ["model-fast"],
+            ModelSelectionConstraint = new(["model-fast", "model-deep"]),
+            ModelCatalog = [new("model-fast", "Fast"), new("model-deep", "Deep")],
+            ModelThinkingEffortCapabilities = [
+                new("model-fast", AgentThinkingEffortSupportStatus.Unsupported, AgentThinkingEffortCapabilitySource.Defined, []),
+                new("model-deep", AgentThinkingEffortSupportStatus.Supported, AgentThinkingEffortCapabilitySource.Defined,
+                    [AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.High],
+                    ControlMode: AgentThinkingEffortControlMode.EffortLevels)]
+        };
+        var resolver = ProviderRuntimeTestData.CreateResolver(provider);
+        var options = await resolver.ListOptionsAsync();
+        Assert.True(options.IsSuccess);
+        var option = Assert.Single(options.Value!);
+        Assert.False(option.Models.Single(model => model.Model == "model-deep").IsSuggested);
+        Assert.Equal([AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.High],
+            option.Models.Single(model => model.Model == "model-deep").ThinkingEffort.AllowedEfforts);
+        Assert.True((await resolver.ResolveAsync(provider.Id, "model-deep", AgentReasoningEffortLevel.High)).IsSuccess);
+    }
+    [Fact]
+    public async Task Shared_options_preserve_model_labels_and_source_ownership() {
+        var provider = ProviderRuntimeTestData.CreateProvider("Shared provider") with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new("model-fast", "Readable fast model"), new("model-deep", "Readable deep model")]
+        };
+        var result = await ProviderRuntimeTestData.CreateResolver(provider).ListOptionsAsync();
+
+        Assert.True(result.IsSuccess);
+        var option = Assert.Single(result.Value!);
+        Assert.True(option.IsSourceManaged);
+        Assert.Equal("Readable fast model", option.Models.Single(model => model.Model == "model-fast").DisplayName);
+        Assert.Equal("Readable deep model", option.Models.Single(model => model.Model == "model-deep").DisplayName);
+    }
+
+    [Fact]
     public async Task Options_project_distinct_effort_sets_for_models_without_sensitive_profile_fields()
     {
         var provider = ProviderRuntimeTestData.CreateProvider("Renamed provider");
@@ -229,6 +268,26 @@ public sealed class LlmChatRuntimeFenceTests
         var result = lease.EnsureCurrent();
         Assert.True(result.IsFailure);
         Assert.Equal(LlmChatErrorCodes.RuntimeProfileChanged, Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public async Task Lease_self_cancels_when_runtime_state_advances_before_notification()
+    {
+        var initial = ProviderRuntimeTestData.RuntimeIdentity;
+        var state = new MutableDatabaseRuntimeState(initial);
+        var factory = new DatabaseProfileLlmChatRuntimeLeaseFactory(
+            ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(initial),
+            state,
+            new TestDatabaseSwitchNotificationService());
+        await using var lease = await factory.AcquireAsync();
+
+        state.Change(initial with { Generation = initial.Generation + 1 });
+
+        var result = lease.EnsureCurrent();
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(LlmChatErrorCodes.RuntimeProfileChanged, Assert.Single(result.Errors).Code);
+        Assert.True(lease.CancellationToken.IsCancellationRequested);
     }
 
     [Fact]

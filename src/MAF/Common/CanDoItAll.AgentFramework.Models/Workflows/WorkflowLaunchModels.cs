@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.ProviderHistory;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -212,6 +213,12 @@ public abstract record WorkflowLaunchOrigin
     public WorkflowLaunchOriginKind Kind { get; }
 
     public WorkflowLaunchCorrelationId CorrelationId { get; }
+
+    public WorkspaceScopeDescriptor? AuthorizationScope { get; init; }
+
+    public string AuthorizationPolicyFingerprint { get; init; } = string.Empty;
+
+    public HistoryCaller? HistoryCaller { get; init; }
 
     public sealed record Api : WorkflowLaunchOrigin
     {

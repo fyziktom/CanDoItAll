@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -7,10 +8,13 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.Agents.AI;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -226,6 +230,10 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         Assert.Equal("runtime-session-42", origin.RuntimeSessionId.Value);
         Assert.Equal("process-correlation-9", origin.CorrelationId.Value);
         Assert.Equal(AgentRuntimeToolProviderPurpose.GovernedProcessAutomation.ToString(), origin.Purpose);
+        Assert.Equal(harness.Context.Governance?.WorkspaceScope, origin.AuthorizationScope);
+        Assert.Equal(
+            WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
+            origin.AuthorizationPolicyFingerprint);
         Assert.IsType<WorkflowDefinitionSelection.LatestActive>(launchService.Intents[2].Selection);
         Assert.Equal(WorkflowAgentDefinitionSelectionMode.ExactSavedVersion, exactResult.SelectionMode);
         Assert.Equal(WorkflowLaunchIdempotencyDisposition.EnforcedNewRun, exactResult.IdempotencyDisposition);
@@ -252,14 +260,22 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             CancellationResult = new WorkflowRunCancellationResult(
                 WorkflowRunCancellationOutcome.BackendNotCancellable,
                 run,
-                "Backend cannot cancel."),
-            ExternalResponseResult = new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.UnsupportedResume,
+                "Backend cannot cancel.")
+        };
+        var externalResponses = new RecordingWorkflowExternalResponseService
+        {
+            Result = new WorkflowExternalResponseServiceResult(
+                WorkflowExternalResponseServiceOutcome.RetryableFailure,
+                Operation: null,
                 run,
                 externalRequest,
-                "Resume is unsupported.")
+                NextRequest: null,
+                Replayed: false,
+                "Resume is temporarily unavailable.")
         };
-        var harness = CreateHarness(runtimeManager: runtime);
+        var harness = CreateHarness(
+            runtimeManager: runtime,
+            externalResponseService: externalResponses);
         var statusTool = await GetToolAsync(
             harness.Provider,
             harness.Context,
@@ -281,17 +297,27 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             new WorkflowAgentRunInput(run.RunId.Value));
         var response = await InvokeAsync<WorkflowAgentExternalResponseResult>(
             responseTool,
-            new WorkflowAgentExternalResponseInput(externalRequestId.Value, "{\"answer\":\"yes\"}"));
+            new WorkflowAgentExternalResponseInput(
+                externalRequestId.Value,
+                WorkflowExternalRequestVersion.Initial.Value,
+                JsonSerializer.SerializeToElement(new { answer = "yes" }),
+                "agent-response-42"));
 
         Assert.True(status.Found);
         Assert.Equal(WorkflowRunState.WaitingForInput, status.Run?.State);
         Assert.Equal(WorkflowRunCancellationOutcome.BackendNotCancellable, cancellation.Outcome);
         Assert.False(cancellation.Succeeded);
-        Assert.Equal(WorkflowExternalResponseOutcome.UnsupportedResume, response.Outcome);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.RetryableFailure, response.Outcome);
         Assert.False(response.Succeeded);
         Assert.Equal(WorkflowRunState.WaitingForInput, response.Run?.State);
-        Assert.Equal(externalRequestId.Value, runtime.LastExternalRequestId?.Value);
-        Assert.Equal("{\"answer\":\"yes\"}", runtime.LastResponseJson);
+        Assert.Equal(externalRequestId, externalResponses.Command?.RequestId);
+        Assert.Equal(WorkflowExternalRequestVersion.Initial, externalResponses.Command?.ExpectedRequestVersion);
+        Assert.Equal("yes", externalResponses.Command?.Response.GetProperty("answer").GetString());
+        Assert.Equal("agent-response-42", externalResponses.Command?.IdempotencyKey.Value);
+        Assert.Equal(
+            WorkflowExternalResponseTrustedChannel.AgentTool,
+            Assert.IsType<WorkflowExternalResponseActorContext.Authenticated>(
+                externalResponses.Command?.ActorContext).Channel);
 
         runtime.Run = null;
         var missing = await InvokeAsync<WorkflowAgentRunStatusResult>(
@@ -327,6 +353,49 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             descriptor => descriptor.ServiceType == typeof(IAgentRuntimeToolProvider) &&
                           descriptor.ImplementationType == typeof(WorkflowAgentRuntimeToolProvider) &&
                           descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IWorkflowExternalRequestAuthorizer) &&
+                          descriptor.ImplementationType == typeof(WorkflowExternalRequestAuthorizer) &&
+                          descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IWorkflowExternalResponseActorContextFactory) &&
+                          descriptor.ImplementationType == typeof(WorkflowExternalResponseActorContextFactory) &&
+                          descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.DoesNotContain(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IWorkflowExternalResponsePageActorContextProvider));
+
+        services.AddAgentFrameworkUi();
+
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IWorkflowExternalResponsePageActorContextProvider) &&
+                          descriptor.ImplementationType == typeof(WorkflowExternalResponsePageActorContextProvider) &&
+                          descriptor.Lifetime == ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void WebCompositionAddsAgentFrameworkUiAfterRuntimeModules()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "App",
+            "CanDoItAll.Web",
+            "Program.cs"));
+        var runtimeModulesIndex = source.IndexOf(
+            "builder.Services.AddCanDoItAllRuntimeModules(",
+            StringComparison.Ordinal);
+        var agentFrameworkUiIndex = source.IndexOf(
+            "builder.Services.AddAgentFrameworkUi();",
+            StringComparison.Ordinal);
+
+        Assert.True(runtimeModulesIndex >= 0, "Web composition must register runtime modules.");
+        Assert.True(
+            agentFrameworkUiIndex > runtimeModulesIndex,
+            "AgentFramework UI services must be registered after runtime modules.");
     }
 
     [Fact]
@@ -476,9 +545,28 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     [Fact]
     public void ToolInputsRejectEmptyOrContradictoryIdentifiers()
     {
+        var response = JsonSerializer.SerializeToElement(new { answer = "yes" });
         Assert.Throws<ArgumentException>(() => new WorkflowAgentRunInput(Guid.Empty));
-        Assert.Throws<ArgumentException>(() => new WorkflowAgentExternalResponseInput(Guid.Empty, "{}"));
-        Assert.Throws<ArgumentException>(() => new WorkflowAgentExternalResponseInput(Guid.NewGuid(), " "));
+        Assert.Throws<ArgumentException>(() => new WorkflowAgentExternalResponseInput(
+            Guid.Empty,
+            1,
+            response,
+            "response-1"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new WorkflowAgentExternalResponseInput(
+            Guid.NewGuid(),
+            0,
+            response,
+            "response-1"));
+        Assert.Throws<ArgumentException>(() => new WorkflowAgentExternalResponseInput(
+            Guid.NewGuid(),
+            1,
+            default,
+            "response-1"));
+        Assert.Throws<ArgumentException>(() => new WorkflowAgentExternalResponseInput(
+            Guid.NewGuid(),
+            1,
+            response,
+            " "));
         Assert.Throws<ArgumentException>(() => new WorkflowAgentStartInput(
             Guid.Empty,
             WorkflowAgentDefinitionSelectionMode.LatestActive));
@@ -495,11 +583,148 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             idempotencyKey: " "));
     }
 
+    [Fact]
+    public void ExternalResponseToolInputExposesOnlyRequestVersionPayloadAndIdempotency()
+    {
+        var properties = typeof(WorkflowAgentExternalResponseInput)
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .ToDictionary(property => property.Name, property => property.PropertyType, StringComparer.Ordinal);
+
+        Assert.Equal(4, properties.Count);
+        Assert.Equal(typeof(Guid), properties[nameof(WorkflowAgentExternalResponseInput.ExternalRequestId)]);
+        Assert.Equal(typeof(long), properties[nameof(WorkflowAgentExternalResponseInput.ExpectedRequestVersion)]);
+        Assert.Equal(typeof(JsonElement), properties[nameof(WorkflowAgentExternalResponseInput.Response)]);
+        Assert.Equal(typeof(string), properties[nameof(WorkflowAgentExternalResponseInput.IdempotencyKey)]);
+        Assert.DoesNotContain(
+            properties.Keys,
+            name => name.Contains("Actor", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Scope", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Action", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Profile", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Capability", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ActorContextFactoryUsesGovernanceAndRechecksActiveAgentCapability()
+    {
+        var harness = CreateHarness();
+        var governance = Assert.IsType<AgentExecutionGovernanceSnapshot>(harness.Context.Governance);
+        var workspaceService = (IAgentFrameworkWorkspaceService)(object)harness.Workspace;
+        var factory = new WorkflowExternalResponseActorContextFactory(
+            new FixedDatabaseProfileRuntimeAccessor(governance.DatabaseProfileId),
+            new FixedAgentExecutionProfileGenerationSource(governance.DatabaseProfileGeneration),
+            new WorkflowAgentRuntimeAuthorizationService(workspaceService),
+            TimeProvider.System);
+
+        var actorContext = Assert.IsType<WorkflowExternalResponseActorContext.Authenticated>(
+            await factory.CreateAgentAsync(harness.Context));
+        var localOperator = Assert.IsType<WorkflowExternalResponseActorContext.Authenticated>(
+            factory.CreateLocalOperator());
+
+        Assert.Equal(WorkflowLaunchActorKind.Agent, actorContext.Actor.Kind);
+        Assert.Equal(harness.Context.Agent.Id.ToString("D"), actorContext.Actor.SubjectId);
+        Assert.Equal(WorkflowExternalResponseTrustedChannel.AgentTool, actorContext.Channel);
+        Assert.Equal(
+            WorkflowExternalResponseCallerCapabilities.SubmitHumanInput,
+            actorContext.Access.Capabilities);
+        var grantedScope = Assert.Single(actorContext.Access.GrantedScopes);
+        Assert.Equal(governance.WorkspaceScope.Kind, grantedScope.Kind);
+        Assert.Equal(governance.WorkspaceScope.Key, grantedScope.Key);
+        Assert.Equal(
+            WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
+            actorContext.Access.PolicyFingerprint);
+        Assert.Equal(WorkflowLaunchActorKind.User, localOperator.Actor.Kind);
+        Assert.Equal(WorkflowExternalResponseTrustedChannel.LocalOperator, localOperator.Channel);
+        Assert.Equal(
+            WorkflowExternalResponseCallerCapabilities.SubmitHumanInput |
+            WorkflowExternalResponseCallerCapabilities.SubmitApprovalDecision,
+            localOperator.Access.Capabilities);
+        Assert.Equal(governance.DatabaseProfileId, localOperator.Access.DatabaseProfileId);
+
+        harness.Workspace.Capabilities = [];
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            factory.CreateAgentAsync(harness.Context));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            factory.CreateAgentAsync(harness.Context with { Governance = null }));
+    }
+
+    [Fact]
+    public async Task PageActorProviderUsesAuthenticatedSubjectOrExplicitLocalMode()
+    {
+        var harness = CreateHarness();
+        var governance = Assert.IsType<AgentExecutionGovernanceSnapshot>(harness.Context.Governance);
+        var profileAccessor = new FixedDatabaseProfileRuntimeAccessor(governance.DatabaseProfileId);
+        var generationSource = new FixedAgentExecutionProfileGenerationSource(
+            governance.DatabaseProfileGeneration);
+        var actorFactory = new WorkflowExternalResponseActorContextFactory(
+            profileAccessor,
+            generationSource,
+            new WorkflowAgentRuntimeAuthorizationService(
+                (IAgentFrameworkWorkspaceService)(object)harness.Workspace),
+            TimeProvider.System);
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+            [
+                new Claim("sub", "authenticated-user-42"),
+                new Claim("iat", DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeSeconds().ToString())
+            ],
+            authenticationType: "test"));
+        var authenticatedProvider = new WorkflowExternalResponsePageActorContextProvider(
+            new FixedAuthenticationStateProvider(principal),
+            Options.Create(new ApiAccessOptions
+            {
+                Authorization = new ApiAuthorizationOptions { Enabled = true }
+            }),
+            actorFactory,
+            profileAccessor,
+            generationSource,
+            TimeProvider.System);
+        var localProvider = new WorkflowExternalResponsePageActorContextProvider(
+            new FixedAuthenticationStateProvider(new ClaimsPrincipal()),
+            Options.Create(new ApiAccessOptions
+            {
+                Authorization = new ApiAuthorizationOptions { Enabled = false }
+            }),
+            actorFactory,
+            profileAccessor,
+            generationSource,
+            TimeProvider.System);
+
+        var authenticated = Assert.IsType<WorkflowExternalResponseActorContext.Authenticated>(
+            await authenticatedProvider.GetCurrentAsync());
+        var local = Assert.IsType<WorkflowExternalResponseActorContext.Authenticated>(
+            await localProvider.GetCurrentAsync());
+
+        Assert.Equal("authenticated-user-42", authenticated.Actor.SubjectId);
+        Assert.Equal(WorkflowExternalResponseTrustedChannel.Api, authenticated.Channel);
+        Assert.Equal(WorkflowLaunchActorKind.User, authenticated.Actor.Kind);
+        Assert.Equal(WorkflowExternalResponseTrustedChannel.LocalOperator, local.Channel);
+        Assert.NotEqual(authenticated.Actor.SubjectId, local.Actor.SubjectId);
+    }
+
+    [Theory]
+    [InlineData("src/App/CanDoItAll.Web/Api/WorkflowExternalResponseEndpoints.cs")]
+    [InlineData("src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/WorkflowAgentRuntimeToolProvider.cs")]
+    [InlineData("src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs")]
+    public void ExternalResponseCallerUsesCommonFacadeWithoutRawManagerBypass(string relativePath)
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Contains("IWorkflowExternalResponseService", source, StringComparison.Ordinal);
+        Assert.Contains("WorkflowExternalResponseCommand", source, StringComparison.Ordinal);
+        Assert.Contains(".SubmitAsync(", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("RespondToExternalRequestAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("SubmitExternalResponseAsync", source, StringComparison.Ordinal);
+    }
+
     private static RuntimeHarness CreateHarness(
         IEnumerable<string>? capabilityKeys = null,
         RecordingWorkflowCatalog? catalog = null,
         RecordingWorkflowLaunchService? launchService = null,
         RecordingWorkflowRuntimeManager? runtimeManager = null,
+        RecordingWorkflowExternalResponseService? externalResponseService = null,
         AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat,
         string runtimeSessionKey = "runtime-session-1",
         AgentRuntimeContextIntent? contextIntent = null)
@@ -537,7 +762,12 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             catalog ?? new RecordingWorkflowCatalog(),
             launchService ?? new RecordingWorkflowLaunchService(),
             runtimeManager ?? new RecordingWorkflowRuntimeManager(),
+            externalResponseService ??= new RecordingWorkflowExternalResponseService(),
+            new RecordingWorkflowExternalResponseActorContextFactory(),
             new WorkflowAgentRuntimeAuthorizationService(workspaceService));
+        var profileId = Guid.NewGuid();
+        var generation = new DatabaseProfileGeneration(1);
+        var scope = WorkspaceScopeDescriptor.Organization(profileId.ToString("N"));
         var context = new AgentRuntimeToolProviderContext(
             agent,
             CreateChatProvider(),
@@ -546,8 +776,37 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             purpose,
             runtimeSessionKey,
             contextIntent ?? AgentRuntimeContextIntent.Empty,
-            Tags: new Dictionary<string, string>());
-        return new RuntimeHarness(provider, context, workspace);
+            Tags: new Dictionary<string, string>())
+        {
+            Governance = new AgentExecutionGovernanceSnapshot(
+                AgentExecutionAuthorityId.Create(),
+                agent.Id,
+                profileId,
+                generation,
+                scope,
+                readAllowed: true,
+                mutationAllowed: true,
+                "workflow-agent-test-v1",
+                "workflow-agent-governance-test",
+                allowedCapabilityKeys: capabilities.Select(item => item.Key).ToArray())
+        };
+        return new RuntimeHarness(provider, context, workspace, externalResponseService);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        throw new DirectoryNotFoundException(
+            "Could not locate CanDoItAll.slnx from the test output directory.");
     }
 
     private static async Task<AITool> GetToolAsync(
@@ -711,7 +970,8 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     private sealed record RuntimeHarness(
         WorkflowAgentRuntimeToolProvider Provider,
         AgentRuntimeToolProviderContext Context,
-        AuthorizationWorkspaceProxy Workspace);
+        AuthorizationWorkspaceProxy Workspace,
+        RecordingWorkflowExternalResponseService ExternalResponses);
 
     private class AuthorizationWorkspaceProxy : DispatchProxy
     {
@@ -731,6 +991,34 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
                     $"Workspace service member '{targetMethod?.Name}' was not expected in this runtime-provider test.")
             };
         }
+    }
+
+    private sealed class FixedDatabaseProfileRuntimeAccessor(Guid profileId) :
+        CanDoItAll.Infrastructure.ControlPlane.IDatabaseProfileRuntimeAccessor
+    {
+        private readonly CanDoItAll.Infrastructure.ControlPlane.ResolvedDatabaseProfile profile = new(
+            new CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileRecord
+            {
+                Id = profileId,
+                DisplayName = "Workflow agent test",
+                ProviderKind = CanDoItAll.Infrastructure.ControlPlane.DatabaseProviderKind.InMemory,
+                SourceKind = CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileSourceKind.InMemory
+            },
+            CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileResolutionSource.ExplicitOverride,
+            "test");
+
+        public CanDoItAll.Infrastructure.ControlPlane.ResolvedDatabaseProfile ResolveCurrentProfile()
+            => profile;
+
+        public CanDoItAll.Infrastructure.ControlPlane.ResolvedDatabaseProfile ResolveProfile(Guid requestedProfileId)
+            => profile;
+    }
+
+    private sealed class FixedAuthenticationStateProvider(ClaimsPrincipal principal) :
+        AuthenticationStateProvider
+    {
+        public override Task<AuthenticationState> GetAuthenticationStateAsync()
+            => Task.FromResult(new AuthenticationState(principal));
     }
 
     private sealed class RecordingWorkflowLaunchService : IWorkflowLaunchService
@@ -796,16 +1084,6 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             Run: null,
             "Run was not found.");
 
-        public WorkflowExternalResponseResult ExternalResponseResult { get; set; } = new(
-            WorkflowExternalResponseOutcome.RequestNotFound,
-            Run: null,
-            Request: null,
-            "Request was not found.");
-
-        public WorkflowExternalRequestId? LastExternalRequestId { get; private set; }
-
-        public string LastResponseJson { get; private set; } = string.Empty;
-
         public Task<WorkflowRunSnapshot?> GetRunAsync(
             WorkflowRunId runId,
             CancellationToken cancellationToken = default)
@@ -823,16 +1101,6 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             WorkflowRunId runId,
             CancellationToken cancellationToken = default)
             => Task.FromResult(CancellationResult);
-
-        public Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-        {
-            LastExternalRequestId = requestId;
-            LastResponseJson = responseJson;
-            return Task.FromResult(ExternalResponseResult);
-        }
 
         public Task<WorkflowRunSnapshot> StartAsync(
             WorkflowDefinition definition,
@@ -860,11 +1128,65 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
+    }
+
+    private sealed class RecordingWorkflowExternalResponseService : IWorkflowExternalResponseService
+    {
+        public WorkflowExternalResponseCommand? Command { get; private set; }
+
+        public WorkflowExternalResponseServiceResult Result { get; set; } = new(
+            WorkflowExternalResponseServiceOutcome.RequestNotFound,
+            Operation: null,
+            Run: null,
+            Request: null,
+            NextRequest: null,
+            Replayed: false,
+            "Request was not found.");
+
+        public Task<WorkflowExternalResponseServiceResult> SubmitAsync(
+            WorkflowExternalResponseCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            Command = command;
+            return Task.FromResult(Result);
+        }
+
+        public Task<WorkflowExternalResponseServiceResult> GetStatusAsync(
+            WorkflowExternalResponseStatusQuery query,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingWorkflowExternalResponseActorContextFactory :
+        IWorkflowExternalResponseActorContextFactory
+    {
+        public WorkflowExternalResponseActorContext CreateLocalOperator()
+            => throw new NotSupportedException();
+
+        public Task<WorkflowExternalResponseActorContext> CreateAgentAsync(
+            AgentRuntimeToolProviderContext context,
+            CancellationToken cancellationToken = default)
+        {
+            var governance = context.Governance
+                ?? throw new InvalidOperationException("Test agent governance is required.");
+            var profileScope = WorkspaceScopeDescriptor.Organization(
+                governance.DatabaseProfileId.ToString("N"));
+            WorkflowExternalResponseActorContext actorContext =
+                new WorkflowExternalResponseActorContext.Authenticated(
+                    new WorkflowLaunchActor(
+                        WorkflowLaunchActorKind.Agent,
+                        context.Agent.Id.ToString("D")),
+                    WorkflowExternalResponseTrustedChannel.AgentTool,
+                    new WorkflowExternalResponseCallerAccess(
+                        governance.DatabaseProfileId,
+                        governance.DatabaseProfileGeneration,
+                        profileScope,
+                        [governance.WorkspaceScope],
+                        WorkflowExternalResponseCallerCapabilities.SubmitHumanInput,
+                        WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
+                        DateTimeOffset.UtcNow));
+            return Task.FromResult(actorContext);
+        }
     }
 
     private sealed class RecordingWorkflowCatalog : IWorkflowCatalogService

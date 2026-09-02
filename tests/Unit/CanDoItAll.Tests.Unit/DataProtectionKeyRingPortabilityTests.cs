@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Xml.Linq;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
@@ -289,10 +290,5 @@ public sealed class DataProtectionKeyRingPortabilityTests
         => Path.Combine(Path.GetTempPath(), "candoitall-a04-key-ring-tests", Guid.NewGuid().ToString("N"));
 
     private static void DeleteIfExists(string path)
-    {
-        if (Directory.Exists(path))
-        {
-            Directory.Delete(path, recursive: true);
-        }
-    }
+        => TestFileSystem.DeleteDirectoryWithRetry(path);
 }

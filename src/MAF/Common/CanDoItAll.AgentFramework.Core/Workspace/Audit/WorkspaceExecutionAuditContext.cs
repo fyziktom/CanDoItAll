@@ -47,7 +47,11 @@ public static class WorkspaceExecutionAuditContext
             contextWorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
             ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run),
             ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run),
-            executionWorkspaceScope);
+            executionWorkspaceScope)
+        {
+            InvocationExternalTargetScopeIsAuthoritative =
+                ExecutionInvocationMetadata.IsTrustedGovernedProcessRun(run)
+        };
         return new Scope(previous);
     }
 
@@ -80,7 +84,10 @@ public static class WorkspaceExecutionAuditContext
         WorkspaceScopeDescriptor? ContextWorkspaceScope,
         ProjectStructureAgentIdentityDescriptor? ProjectStructureLaunchAgent,
         ProjectStructureProcessNodeContextDescriptor? ProjectStructureProcessNodeContext,
-        WorkspaceScopeDescriptor? ExecutionWorkspaceScope = null);
+        WorkspaceScopeDescriptor? ExecutionWorkspaceScope = null)
+    {
+        public bool InvocationExternalTargetScopeIsAuthoritative { get; init; }
+    }
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

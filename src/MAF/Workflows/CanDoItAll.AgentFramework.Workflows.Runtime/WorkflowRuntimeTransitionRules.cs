@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
@@ -6,38 +5,6 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal static class WorkflowRuntimeTransitionRules
 {
-    public static void ValidateExternalResponse(
-        WorkflowExternalRequestRecord request,
-        string responseJson)
-    {
-        if (request.Kind is not (WorkflowExternalRequestKind.Approval or WorkflowExternalRequestKind.ToolApproval))
-        {
-            return;
-        }
-
-        WorkflowExternalApprovalResponse? response;
-        try
-        {
-            response = JsonSerializer.Deserialize<WorkflowExternalApprovalResponse>(
-                responseJson,
-                WorkflowExternalRequestJson.Options);
-        }
-        catch (JsonException exception)
-        {
-            throw new ArgumentException(
-                "Workflow approval response JSON must be an object with an approved boolean property.",
-                nameof(responseJson),
-                exception);
-        }
-
-        if (response?.Approved is null)
-        {
-            throw new ArgumentException(
-                "Workflow approval response JSON must be an object with an approved boolean property.",
-                nameof(responseJson));
-        }
-    }
-
     public static bool TryFindUsageObservationException(
         Exception exception,
         out WorkflowUsageObservationException? usageException)
@@ -97,6 +64,4 @@ internal static class WorkflowRuntimeTransitionRules
             ? events.LastOrDefault(workflowEvent => workflowEvent.Kind == eventKind.Value)
             : null;
     }
-
-    private sealed record WorkflowExternalApprovalResponse(bool? Approved, string? Message);
 }

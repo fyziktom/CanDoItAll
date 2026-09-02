@@ -7,6 +7,19 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentFrameworkModuleChatContextBuilderTests
 {
     [Fact]
+    public void Request_history_context_has_no_invented_summary_or_inherited_agent_selection() {
+        var view = AgentFrameworkAgentsChatContextBuilder.ResolveView(
+            CanDoItAll.Modules.AgentFramework.Pages.AgentWorkspaceTabs.RequestHistory);
+        var surface = AgentFrameworkAgentsChatContextBuilder.Build(view, Guid.NewGuid(), Guid.NewGuid(),
+            0, 0, 0, 0, 0, 0, includeSummaryFacts: false);
+        Assert.Equal("request-history", surface.Position.View);
+        Assert.Equal("request-history", surface.Source.Id.Value);
+        Assert.Empty(surface.Position.Facts);
+        Assert.Null(surface.Position.PrimarySelection);
+        Assert.Empty(surface.Position.SelectedEntities);
+    }
+
+    [Fact]
     public void Agents_builder_exposes_only_selections_relevant_to_the_active_view()
     {
         var agentId = Guid.NewGuid();

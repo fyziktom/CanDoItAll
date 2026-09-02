@@ -44,6 +44,14 @@ public sealed class ProviderProfileService : IProviderProfileService
         var normalizedBaseUrl = NormalizeEditorBaseUrl(model.BaseUrl);
         var normalizedConfigurationJson =
             NormalizeEditorConfigurationJson(model.ConfigurationJson);
+        try {
+            ProviderModelThinkingConfiguration.ValidateForProvider(normalizedConfigurationJson, model.Kind, model.Transport, model.Purpose);
+            if (current is not null && current.Kind != model.Kind && ProviderModelThinkingConfiguration.Read(normalizedConfigurationJson).Count > 0) {
+                throw new InvalidOperationException("Clear model thinking overrides before changing provider kind.");
+            }
+        } catch (InvalidOperationException exception) {
+            throw new ProviderProfileValidationException(exception.Message);
+        }
         var providerIdentityChanged = current is not null &&
                                       (current.Kind != model.Kind ||
                                        !string.Equals(
@@ -58,14 +66,14 @@ public sealed class ProviderProfileService : IProviderProfileService
                 .Where(item => item.Source != AgentThinkingEffortCapabilitySource.Discovered);
         }
 
-        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
-            model.Kind,
-            model.DefaultModel,
-            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
-        if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var validationMessage))
+        var configuredPrices = ProviderPricingDefaults.FromEditorModels(model.ModelPrices);
+        if (!ProviderPricingDefaults.TryValidateModelPrices(configuredPrices, out var validationMessage))
         {
             throw new ProviderProfileValidationException(validationMessage);
         }
+        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(model.Kind, model.DefaultModel, configuredPrices);
+        var isPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider);
+        normalizedConfigurationJson = ProviderPricingMetadata.Write(normalizedConfigurationJson, isPrivateProvider, modelPrices);
 
         var profile = new ProviderProfile(
             Id: model.Id ?? Guid.NewGuid(),
@@ -87,7 +95,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             LastCheckedAtUtc: current?.LastCheckedAtUtc,
             SuggestedModels: NormalizeSuggestedModels(model.SuggestedModels))
         {
-            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider),
+            IsPrivateProvider = isPrivateProvider,
             ModelPrices = modelPrices,
             Tags = NormalizeTags(model.Tags),
             ModelThinkingEffortCapabilities = NormalizeEditorThinkingEffortCapabilities(
@@ -113,6 +121,9 @@ public sealed class ProviderProfileService : IProviderProfileService
         bool allowLegacyKindMigration)
     {
         ArgumentNullException.ThrowIfNull(provider);
+        if (provider.IsSourceManaged) {
+            return provider;
+        }
 
         var normalizedKind = provider.Kind;
         var normalizedTransport = provider.Transport;
@@ -258,6 +269,7 @@ public sealed class ProviderProfileService : IProviderProfileService
     {
         var normalizedProvider = NormalizeImportedProfile(provider);
         var supportsOpenAiFamily = normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
+        var supportsOllamaStructuredOutput = normalizedProvider.Kind == ProviderKind.Ollama;
         var supportsResponsesNativeTools = normalizedProvider.SupportsTools
             && normalizedProvider.Transport == ProviderTransportKind.Responses
             && supportsOpenAiFamily;
@@ -265,13 +277,32 @@ public sealed class ProviderProfileService : IProviderProfileService
             && normalizedProvider.Transport == ProviderTransportKind.Responses
             && !normalizedProvider.PreferFrameworkManagedChatHistory;
         var supportsFunctionTools = normalizedProvider.SupportsTools;
-        var supportsResponseFormatJsonSchema = supportsOpenAiFamily &&
+        var supportsParallelFunctionTools = supportsFunctionTools;
+        var supportsResponseFormatJsonSchema = supportsOllamaStructuredOutput ||
+                                               supportsOpenAiFamily &&
                                                normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
         var supportsStructuredOutput = supportsResponseFormatJsonSchema;
         var supportsToolApprovalRequests = supportsOpenAiFamily &&
                                            normalizedProvider.SupportsTools &&
                                            normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
         var supportsVision = supportsOpenAiFamily || SupportsConfiguredVision(normalizedProvider, requireSelectedModelMatch);
+        var supportsHostedMcpServer = supportsResponsesNativeTools;
+        var supportsCompaction = supportsOpenAiFamily;
+        if (normalizedProvider.FeatureConstraints is { } constraints)
+        {
+            supportsResponseFormatJsonSchema &=
+                constraints.AllowsStructuredOutput;
+            supportsStructuredOutput &= constraints.AllowsStructuredOutput;
+            supportsVision &= constraints.AllowsVision;
+            supportsResponsesNativeTools &= constraints.AllowsNativeTools;
+            supportsHostedMcpServer = supportsResponsesNativeTools &&
+                constraints.AllowsHostedMcp;
+            supportsServiceManagedHistory &=
+                constraints.AllowsServiceManagedHistory;
+            supportsCompaction &= constraints.AllowsCompaction;
+            supportsParallelFunctionTools &=
+                constraints.AllowsParallelFunctionTools;
+        }
 
         return new ProviderFeatureMatrix(
             Kind: normalizedProvider.Kind,
@@ -286,11 +317,11 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsNativeCodeInterpreter: supportsResponsesNativeTools,
             SupportsNativeFileSearch: supportsResponsesNativeTools,
             SupportsNativeWebSearch: supportsResponsesNativeTools,
-            SupportsHostedMcpServer: supportsResponsesNativeTools,
+            SupportsHostedMcpServer: supportsHostedMcpServer,
             SupportsLocalMcpBridge: normalizedProvider.SupportsTools,
             SupportsServiceManagedHistory: supportsServiceManagedHistory,
             SupportsVision: supportsVision,
-            SupportsCompaction: supportsOpenAiFamily,
+            SupportsCompaction: supportsCompaction,
             GitHubCopilotRecommendation: GitHubCopilotRecommendation,
             SupportsFunctionTools: supportsFunctionTools,
             SupportsRunAsyncTypedOutput: supportsStructuredOutput,
@@ -298,9 +329,10 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsToolApprovalRequests: supportsToolApprovalRequests,
             SupportsApprovalRequiredAIFunction: supportsToolApprovalRequests,
             SupportsHostedTools: supportsResponsesNativeTools,
-            SupportsHostedMcp: supportsResponsesNativeTools,
+            SupportsHostedMcp: supportsHostedMcpServer,
             SupportsLocalMcp: normalizedProvider.SupportsTools,
-            SupportsImageGeneration: normalizedProvider.Purpose == ProviderProfilePurpose.ImageGeneration);
+            SupportsImageGeneration: normalizedProvider.Purpose == ProviderProfilePurpose.ImageGeneration,
+            SupportsParallelFunctionTools: supportsParallelFunctionTools);
     }
 
     private static bool SupportsConfiguredVision(

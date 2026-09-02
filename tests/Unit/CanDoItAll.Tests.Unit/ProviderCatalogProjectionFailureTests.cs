@@ -3,14 +3,16 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-using WorkspaceProviderProfile =
-    CanDoItAll.Modules.Workspace.ProviderProfile;
+using PersistedProviderProfile =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
 using AgentFrameworkProviderKind =
@@ -46,8 +48,7 @@ public sealed class ProviderCatalogProjectionFailureTests
 
         var provider = Assert.Single(providers);
         Assert.Equal(
-            WorkspaceAgentProviderProfileMapper
-                .RuntimeFallbackOllamaProviderId,
+            ProviderProfileWellKnownIds.RuntimeFallbackOllama,
             provider.Id);
         Assert.DoesNotContain(
             providers,
@@ -62,43 +63,51 @@ public sealed class ProviderCatalogProjectionFailureTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
-            typeof(WorkspaceModuleAssemblyMarker).Assembly
+            typeof(WorkspaceModuleAssemblyMarker).Assembly,
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
         var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
                 $"provider-catalog-projection-{Guid.NewGuid():N}")
             .Options;
         var dbContextFactory = new TestDbContextFactory(options);
-        var providerRegistry = new ProviderRegistry(
-            [new ScenarioHarnessProviderAdapter()]);
+        var providerRegistry = new ProviderAdministrationConnectorCatalog(
+            [new ScenarioHarnessProviderAdministrationConnector()]);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
-        var providerMapper = new WorkspaceAgentProviderProfileMapper(
+        var providerMapper = new ProviderProfileMapper(
             providerRegistry,
             providerProfileService);
         var observer = new RecordingCommitObserver();
         var logger = new RecordingLogger<
-            WorkspaceBackedAgentProviderProfileRegistry>();
+            DatabaseProviderProfileRegistry>();
         var blockedWorkspaceRoot = Path.GetTempFileName();
         var providerId = Guid.NewGuid();
 
         try
         {
             var registry =
-                new WorkspaceBackedAgentProviderProfileRegistry(
+                new DatabaseProviderProfileRegistry(
                     dbContextFactory,
                     new FileSandboxWorkspaceStore(blockedWorkspaceRoot),
                     providerRegistry,
                     providerProfileService,
                     providerMapper,
+                    new DatabaseProviderRuntimeProfileSnapshotLoader(
+                        dbContextFactory,
+                        providerMapper,
+                        new SharedProviderProfileMapper(),
+                        new SharedProviderRuntimeProfileMaterializer(),
+                        Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
+                    [],
                     [observer],
                     logger);
             var model = new AgentFrameworkProviderProfileEditorModel
             {
                 Id = providerId,
                 Name = "Canonical scenario provider",
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
-                DefaultModel = ScenarioHarnessProviderAdapter.DefaultModel,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
+                DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
                 Transport = ProviderTransportKind.Responses,
                 IsEnabled = true,
                 SupportsStreaming = true,
@@ -118,7 +127,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 await dbContextFactory.CreateDbContextAsync())
             {
                 var committedProvider = await dbContext
-                    .Set<WorkspaceProviderProfile>()
+                    .Set<PersistedProviderProfile>()
                     .AsNoTracking()
                     .SingleAsync(item => item.Id == providerId);
                 Assert.NotEqual(
@@ -146,7 +155,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 await dbContextFactory.CreateDbContextAsync())
             {
                 Assert.False(
-                    await dbContext.Set<WorkspaceProviderProfile>()
+                    await dbContext.Set<PersistedProviderProfile>()
                         .AnyAsync(item => item.Id == providerId));
             }
 
@@ -168,7 +177,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Azure deployment provider",
                 Kind = AgentFrameworkProviderKind.AzureOpenAi,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "reasoning-deployment",
                 Transport = ProviderTransportKind.ChatCompletions,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -222,7 +231,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     public async Task Provider_save_round_trips_ollama_suggested_models_through_database_mapping()
     {
         var registry = CreateRegistry(
-            new OllamaProviderAdapter(new UnexpectedHttpClientFactory()));
+            new OllamaProviderAdministrationConnector(new UnexpectedHttpClientFactory()));
         var providerId = await registry.SaveProviderAsync(
             new AgentFrameworkProviderProfileEditorModel
             {
@@ -272,7 +281,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Local model provider",
                 Kind = AgentFrameworkProviderKind.Ollama,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "qwen3.5:2b",
                 Transport = ProviderTransportKind.ChatCompletions,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -322,9 +331,11 @@ public sealed class ProviderCatalogProjectionFailureTests
     [Fact]
     public async Task Provider_save_drops_discovered_capabilities_when_provider_identity_changes()
     {
-        var registry = CreateRegistry(
-            new ScenarioHarnessProviderAdapter(),
-            new OpenAiProviderAdapter(
+        var secretRecordId = Guid.NewGuid();
+        var registry = await CreateRegistryWithSecretsAsync(
+            [secretRecordId],
+            new ScenarioHarnessProviderAdministrationConnector(),
+            new OpenAiProviderAdministrationConnector(
                 new UnexpectedHttpClientFactory()));
         var discoveredCapability = AgentThinkingEffortPolicy.CreateDiscoveredCapability(
             "qwen3.5:2b",
@@ -335,7 +346,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Changing provider identity",
                 Kind = AgentFrameworkProviderKind.Ollama,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "qwen3.5:2b",
                 Transport = ProviderTransportKind.ChatCompletions,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -348,7 +359,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         editor.Kind = AgentFrameworkProviderKind.AzureOpenAi;
         editor.BaseUrl = "https://example.openai.azure.com";
         editor.ApiKeyEnvironmentVariable =
-            $"secret:{Guid.NewGuid():D}";
+            $"secret:{secretRecordId:D}";
         editor.DefaultModel = "reasoning-deployment";
         editor.Transport = ProviderTransportKind.Responses;
 
@@ -378,7 +389,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Stored provider",
                 Kind = AgentFrameworkProviderKind.AzureOpenAi,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "reasoning-deployment",
                 Transport = ProviderTransportKind.Responses,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -408,7 +419,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     public async Task Provider_save_rejects_non_http_url_for_real_connector_without_database_mutation()
     {
         var registry = CreateRegistry(
-            new OpenAiProviderAdapter(
+            new OpenAiProviderAdministrationConnector(
                 new UnexpectedHttpClientFactory()));
         var editor = new AgentFrameworkProviderProfileEditorModel
         {
@@ -440,8 +451,11 @@ public sealed class ProviderCatalogProjectionFailureTests
     [Fact]
     public async Task Provider_save_requires_explicit_secret_binding_for_real_connector()
     {
-        var registry = CreateRegistry(
-            new OpenAiProviderAdapter(
+        var secretRecordId = Guid.NewGuid();
+        var replacementSecretRecordId = Guid.NewGuid();
+        var registry = await CreateRegistryWithSecretsAsync(
+            [secretRecordId, replacementSecretRecordId],
+            new OpenAiProviderAdministrationConnector(
                 new UnexpectedHttpClientFactory()));
         var editor = new AgentFrameworkProviderProfileEditorModel
         {
@@ -470,7 +484,6 @@ public sealed class ProviderCatalogProjectionFailureTests
                 editor.Name,
                 StringComparison.Ordinal));
 
-        var secretRecordId = Guid.NewGuid();
         editor.ApiKeyEnvironmentVariable = $"secret:{secretRecordId:D}";
         var providerId = await registry.SaveProviderAsync(editor);
         var provider = Assert.IsType<
@@ -481,7 +494,6 @@ public sealed class ProviderCatalogProjectionFailureTests
             $"secret:{secretRecordId:D}",
             provider.ApiKeyEnvironmentVariable);
 
-        var replacementSecretRecordId = Guid.NewGuid();
         var replacementEditor = await registry.GetProviderEditorAsync(providerId);
         Assert.DoesNotContain(
             ProviderProfileMetadataPropertyNames.SecretRecordId,
@@ -528,10 +540,11 @@ public sealed class ProviderCatalogProjectionFailureTests
     [Fact]
     public async Task Provider_save_accepts_metadata_only_secret_and_projects_one_editor_source()
     {
-        var registry = CreateRegistry(
-            new OpenAiProviderAdapter(
-                new UnexpectedHttpClientFactory()));
         var secretRecordId = Guid.NewGuid();
+        var registry = await CreateRegistryWithSecretsAsync(
+            [secretRecordId],
+            new OpenAiProviderAdministrationConnector(
+                new UnexpectedHttpClientFactory()));
         var editor = new AgentFrameworkProviderProfileEditorModel
         {
             Name = "Metadata-bound OpenAI provider",
@@ -560,16 +573,18 @@ public sealed class ProviderCatalogProjectionFailureTests
     [Fact]
     public async Task Optional_connector_secret_can_be_explicitly_unbound()
     {
-        var registry = CreateScenarioRegistry();
         var secretRecordId = Guid.NewGuid();
+        var registry = await CreateRegistryWithSecretsAsync(
+            [secretRecordId],
+            new ScenarioHarnessProviderAdministrationConnector());
         var providerId = await registry.SaveProviderAsync(
             new AgentFrameworkProviderProfileEditorModel
             {
                 Name = "Optional scenario secret",
                 Kind = AgentFrameworkProviderKind.OpenAi,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 ApiKeyEnvironmentVariable = $"secret:{secretRecordId:D}",
-                DefaultModel = ScenarioHarnessProviderAdapter.DefaultModel,
+                DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
                 Transport = ProviderTransportKind.Responses,
                 Purpose = ProviderProfilePurpose.Chat,
                 ConfigurationJson = "{}"
@@ -592,38 +607,46 @@ public sealed class ProviderCatalogProjectionFailureTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
-            typeof(WorkspaceModuleAssemblyMarker).Assembly
+            typeof(WorkspaceModuleAssemblyMarker).Assembly,
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
         var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
                 $"provider-catalog-stale-projection-{Guid.NewGuid():N}")
             .Options;
         var dbContextFactory = new TestDbContextFactory(options);
-        var providerRegistry = new ProviderRegistry(
-            [new ScenarioHarnessProviderAdapter()]);
+        var providerRegistry = new ProviderAdministrationConnectorCatalog(
+            [new ScenarioHarnessProviderAdministrationConnector()]);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
-        var providerMapper = new WorkspaceAgentProviderProfileMapper(
+        var providerMapper = new ProviderProfileMapper(
             providerRegistry,
             providerProfileService);
         var store = new FailingCatalogProjectionStore();
         var registry =
-            new WorkspaceBackedAgentProviderProfileRegistry(
+            new DatabaseProviderProfileRegistry(
                 dbContextFactory,
                 store,
                 providerRegistry,
                 providerProfileService,
                 providerMapper,
+                new DatabaseProviderRuntimeProfileSnapshotLoader(
+                    dbContextFactory,
+                    providerMapper,
+                    new SharedProviderProfileMapper(),
+                    new SharedProviderRuntimeProfileMaterializer(),
+                    Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
+                [],
                 [new RecordingCommitObserver()],
                 new RecordingLogger<
-                    WorkspaceBackedAgentProviderProfileRegistry>());
+                    DatabaseProviderProfileRegistry>());
         var providerId = Guid.NewGuid();
         var model = new AgentFrameworkProviderProfileEditorModel
         {
             Id = providerId,
             Name = "Stale projected provider",
-            BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
-            DefaultModel = ScenarioHarnessProviderAdapter.DefaultModel,
+            BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
+            DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
             Transport = ProviderTransportKind.Responses,
             IsEnabled = true,
             SupportsStreaming = true,
@@ -644,7 +667,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             await dbContextFactory.CreateDbContextAsync())
         {
             Assert.False(
-                await dbContext.Set<WorkspaceProviderProfile>()
+                await dbContext.Set<PersistedProviderProfile>()
                     .AnyAsync(item => item.Id == providerId));
         }
 
@@ -654,37 +677,75 @@ public sealed class ProviderCatalogProjectionFailureTests
             providerId);
     }
 
-    private static WorkspaceBackedAgentProviderProfileRegistry
+    private static DatabaseProviderProfileRegistry
         CreateScenarioRegistry()
     {
-        return CreateRegistry(new ScenarioHarnessProviderAdapter());
+        return CreateRegistry(new ScenarioHarnessProviderAdministrationConnector());
     }
 
-    private static WorkspaceBackedAgentProviderProfileRegistry CreateRegistry(
-        params IProviderAdapter[] providerAdapters)
+    private static DatabaseProviderProfileRegistry CreateRegistry(
+        params IProviderAdministrationConnector[] providerAdapters)
+    {
+        return CreateRegistryFixture(providerAdapters).Registry;
+    }
+
+    private static async Task<DatabaseProviderProfileRegistry>
+        CreateRegistryWithSecretsAsync(
+        IReadOnlyCollection<Guid> secretRecordIds,
+        params IProviderAdministrationConnector[] providerAdapters)
+    {
+        var fixture = CreateRegistryFixture(providerAdapters);
+        await using var dbContext =
+            await fixture.DbContextFactory.CreateDbContextAsync();
+        dbContext.Set<SecretRecord>().AddRange(
+            secretRecordIds.Select(secretRecordId => new SecretRecord
+            {
+                Id = secretRecordId,
+                Name = $"Test secret {secretRecordId:D}",
+                EncryptedPayload = "test-only",
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            }));
+        await dbContext.SaveChangesAsync();
+        return fixture.Registry;
+    }
+
+    private static RegistryFixture CreateRegistryFixture(
+        params IProviderAdministrationConnector[] providerAdapters)
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
-            typeof(WorkspaceModuleAssemblyMarker).Assembly
+            typeof(WorkspaceModuleAssemblyMarker).Assembly,
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
         var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
                 $"provider-thinking-capability-{Guid.NewGuid():N}")
             .Options;
-        var providerRegistry = new ProviderRegistry(providerAdapters);
+        var providerRegistry = new ProviderAdministrationConnectorCatalog(providerAdapters);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
-        return new WorkspaceBackedAgentProviderProfileRegistry(
-            new TestDbContextFactory(options),
+        var dbContextFactory = new TestDbContextFactory(options);
+        var providerMapper = new ProviderProfileMapper(
+            providerRegistry,
+            providerProfileService);
+        var registry = new DatabaseProviderProfileRegistry(
+            dbContextFactory,
             new FailingCatalogProjectionStore(),
             providerRegistry,
             providerProfileService,
-            new WorkspaceAgentProviderProfileMapper(
-                providerRegistry,
-                providerProfileService),
+            providerMapper,
+            new DatabaseProviderRuntimeProfileSnapshotLoader(
+                dbContextFactory,
+                providerMapper,
+                new SharedProviderProfileMapper(),
+                new SharedProviderRuntimeProfileMaterializer(),
+                Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
+            [],
             [new RecordingCommitObserver()],
             new RecordingLogger<
-                WorkspaceBackedAgentProviderProfileRegistry>());
+                DatabaseProviderProfileRegistry>());
+        return new RegistryFixture(registry, dbContextFactory);
     }
 
     private sealed class UnexpectedHttpClientFactory : IHttpClientFactory
@@ -734,7 +795,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     }
 
     private sealed class RecordingCommitObserver :
-        IWorkspaceProviderProfileCommitObserver
+        IProviderProfileCommitObserver
     {
         public Guid? SavedProviderId { get; private set; }
 
@@ -789,9 +850,13 @@ public sealed class ProviderCatalogProjectionFailureTests
     }
 
     private sealed record ProjectionFailureFixture(
-        WorkspaceBackedAgentProviderProfileRegistry Registry,
+        DatabaseProviderProfileRegistry Registry,
         FailingCatalogProjectionStore Store,
         Guid ProviderId);
+
+    private sealed record RegistryFixture(
+        DatabaseProviderProfileRegistry Registry,
+        TestDbContextFactory DbContextFactory);
 
     private sealed class FailingCatalogProjectionStore :
         ISandboxWorkspaceStore

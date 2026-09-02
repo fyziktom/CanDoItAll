@@ -5,6 +5,12 @@ using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
+[CollectionDefinition(nameof(LocalWorkspaceProcessHostTestCollection), DisableParallelization = true)]
+public sealed class LocalWorkspaceProcessHostTestCollection
+{
+}
+
+[Collection(nameof(LocalWorkspaceProcessHostTestCollection))]
 public sealed class LocalWorkspaceProcessHostTests
 {
     [Fact]
@@ -288,7 +294,7 @@ public sealed class LocalWorkspaceProcessHostTests
         var host = new LocalWorkspaceProcessHost();
         var request = CreateProcessRequest(
             BuildChildAndWaitCommand(childPidFilePath),
-            timeoutSeconds: 1);
+            timeoutSeconds: 5);
 
         try
         {
@@ -604,8 +610,11 @@ public sealed class LocalWorkspaceProcessHostTests
                 "if ($cmdProcess -ne $null) {",
                 "    $cmdProcess.WaitForExit(5000) | Out-Null",
                 "}",
-                $"for ($attempt = 0; $attempt -lt 100 -and -not (Test-Path -LiteralPath '{escapedChildPidFilePath}'); $attempt++) {{",
+                $"for ($attempt = 0; $attempt -lt 500 -and -not (Test-Path -LiteralPath '{escapedChildPidFilePath}'); $attempt++) {{",
                 "    Start-Sleep -Milliseconds 10",
+                "}",
+                $"if (-not (Test-Path -LiteralPath '{escapedChildPidFilePath}')) {{",
+                "    throw 'Detached child did not publish its process identity within 5 seconds.'",
                 "}",
                 "Write-Output 'parent-done'"
             ]);

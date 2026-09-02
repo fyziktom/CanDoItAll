@@ -8,8 +8,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using WorkspaceProviderKind = CanDoItAll.Modules.Workspace.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using PersistedProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
@@ -1256,6 +1256,41 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             await ReadManagedOpenAiImageProviderModelAsync(dbContextFactory));
     }
 
+    [Fact]
+    public async Task Organization_workspace_upgrades_managed_local_ollama_structured_output_capability()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var provider = await dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>()
+                .SingleAsync(item => item.Name == "Local Ollama");
+            provider.SupportsStructuredOutput = false;
+            await dbContext.SaveChangesAsync();
+        }
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var provider = await dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>()
+                .SingleAsync(item => item.Name == "Local Ollama");
+            Assert.True(provider.SupportsStructuredOutput);
+        }
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var provider = await dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>()
+                .SingleAsync(item => item.Name == "Local Ollama");
+            Assert.True(provider.SupportsStructuredOutput);
+        }
+    }
+
     [Theory]
     [InlineData(OpenAiModelIds.GptImage1Mini, OpenAiModelIds.GptImage2)]
     [InlineData("GPT-IMAGE-1-MINI", "GPT-IMAGE-1-MINI")]
@@ -1793,7 +1828,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace_write_spreadsheet", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
-        Assert.DoesNotContain("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
 
         var qaObserver = Assert.Single(
             await workspaceService.ListAgentsAsync(includeTemplates: false),
@@ -2453,7 +2488,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_image", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategist.Instructions, StringComparison.Ordinal);
-        Assert.DoesNotContain("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("go-to-market", marketingSpecialist.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("campaign-brief.md", marketingSpecialist.Instructions, StringComparison.Ordinal);
     }
@@ -3032,7 +3067,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         string model)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+        var provider = await dbContext.Set<PersistedProviderProfile>()
             .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
         provider.DefaultModel = model;
         await dbContext.SaveChangesAsync();
@@ -3043,11 +3078,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             IDbContextFactory<AppDbContext> dbContextFactory)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+        var provider = await dbContext.Set<PersistedProviderProfile>()
             .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
-        provider.ProviderKind = WorkspaceProviderKind.OllamaRemote;
+        provider.ProviderKind = PersistedProviderKind.OllamaRemote;
         provider.ConnectorPluginKey =
-            CanDoItAll.Modules.Workspace.OllamaRemoteProviderAdapter.PluginKey;
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OllamaRemote;
         provider.ConfigSchemaVersion = "customer-v7";
         provider.BaseUrl = "https://customer.example.test/image-api";
         provider.ApiKeySecretId = Guid.Parse("9EFFD604-8A0C-497C-AD48-7FB9BB405EDD");
@@ -3070,7 +3105,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         IDbContextFactory<AppDbContext> dbContextFactory)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        return await dbContext.Set<WorkspaceProviderProfile>()
+        return await dbContext.Set<PersistedProviderProfile>()
             .Where(item => item.Id == ManagedOpenAiImageProviderId)
             .Select(item => item.DefaultModel)
             .SingleAsync();
@@ -3081,14 +3116,14 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             IDbContextFactory<AppDbContext> dbContextFactory)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+        var provider = await dbContext.Set<PersistedProviderProfile>()
             .AsNoTracking()
             .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
         return CaptureManagedOpenAiImageProviderState(provider);
     }
 
     private static ManagedOpenAiImageProviderState CaptureManagedOpenAiImageProviderState(
-        WorkspaceProviderProfile provider)
+        PersistedProviderProfile provider)
     {
         return new ManagedOpenAiImageProviderState(
             provider.Id,
@@ -3136,7 +3171,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     private sealed record ManagedOpenAiImageProviderState(
         Guid Id,
         string Name,
-        WorkspaceProviderKind? ProviderKind,
+        PersistedProviderKind? ProviderKind,
         string ConnectorPluginKey,
         string ConfigSchemaVersion,
         string BaseUrl,

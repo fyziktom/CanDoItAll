@@ -264,9 +264,12 @@ public static class EffectiveExternalTargetAccessResolver
     public static EffectiveExternalTargetAccessScope Resolve(
         AgentWorkspaceToolAccessSettings? configuredAccess,
         IReadOnlyList<string>? runWritableAliases = null,
-        IReadOnlyList<string>? runReadOnlyAliases = null)
+        IReadOnlyList<string>? runReadOnlyAliases = null,
+        bool invocationScopeIsAuthoritative = false)
     {
-        var configuredWritableAliases = NormalizeAliases(configuredAccess?.AllowedExternalTargetAliases);
+        var configuredWritableAliases = invocationScopeIsAuthoritative
+            ? []
+            : NormalizeAliases(configuredAccess?.AllowedExternalTargetAliases);
         var invocationWritableAliases = NormalizeAliases(runWritableAliases);
         var invocationReadOnlyAliases = NormalizeAliases(runReadOnlyAliases);
         var writableAliases = configuredWritableAliases

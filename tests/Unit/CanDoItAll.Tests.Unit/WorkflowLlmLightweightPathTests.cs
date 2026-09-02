@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.Workflows.Runtime;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
@@ -96,7 +97,7 @@ public sealed class WorkflowLlmLightweightPathTests
         // Reflection member order is unspecified for records that mix explicit (validated) and
         // compiler-synthesized positional properties, so this compares the property set, not its order.
         Assert.Equal(
-            new[] { "Provider", "Model", "Messages", "Attachments", "ResponseFormat", "Settings", "Timeout", "CorrelationId" }.OrderBy(name => name, StringComparer.Ordinal),
+            new[] { "Provider", "Model", "Messages", "Attachments", "ResponseFormat", "Settings", "Timeout", "CorrelationId", "History" }.OrderBy(name => name, StringComparer.Ordinal),
             propertyNames.OrderBy(name => name, StringComparer.Ordinal));
         Assert.DoesNotContain(propertyNames, name =>
             name.Contains("Scope", StringComparison.OrdinalIgnoreCase) ||
@@ -124,6 +125,23 @@ public sealed class WorkflowLlmLightweightPathTests
         Assert.Equal(4, observation.CachedInputTokens);
         Assert.Equal(12, observation.OutputTokens);
         Assert.Equal(52, observation.TotalTokens);
+    }
+
+    [Fact]
+    public async Task InvokerPreservesAnUnsetComponentTemperature()
+    {
+        var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
+            Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(1, 1))));
+        var provider = CreateProviderProfile();
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var component = CreateComponent(temperature: null);
+        var node = CreateNode(component.Id);
+        var definition = CreateDefinition(node);
+
+        await invoker.ExecuteAsync(definition, node, component, new WorkflowNodeInput("{}"));
+
+        Assert.NotNull(port.LastRequest);
+        Assert.Null(port.LastRequest!.Settings?.Temperature);
     }
 
     [Fact]
@@ -246,6 +264,60 @@ public sealed class WorkflowLlmLightweightPathTests
         Assert.Empty(port.LastRequest.Attachments);
     }
 
+    [Theory]
+    [InlineData(HistoryOutcome.Succeeded)]
+    [InlineData(HistoryOutcome.Failed)]
+    [InlineData(HistoryOutcome.Cancelled)]
+    public async Task Actual_invoker_hands_off_exact_attempts_without_changing_cancellation(HistoryOutcome outcome) {
+        var provider = CreateProviderProfile();
+        var recorder = new RecordingProviderHistory();
+        var run = WorkflowRunId.New();
+        var caller = new HistoryCaller(HistoryAuthenticationKind.ManagedCredential, CredentialId: new(Guid.NewGuid()));
+        var origin = new WorkflowLaunchOrigin.Api(new(WorkflowLaunchActorKind.User, "operator"), new("history-test")) {
+            HistoryCaller = caller
+        };
+        using var scope = WorkflowExecutorExecutionAuditScope.Push(run, origin);
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        var port = new RecordingLlmInvocationPort(async (request, _) => {
+            Assert.Equal(run.Value.ToString("N"), request.History.Owner!.OwnerId.Value);
+            Assert.Equal(caller, request.History.Caller);
+            var start = await recorder.BeginAsync(new(new(new(provider.Id), provider.Name, provider.Kind.ToString(),
+                new(request.Model), new(request.Model)), HistoryOperation.CompleteChat, request.History), default);
+            request.History.Attempts.Complete(start, new(outcome, start.StartedAtUtc.AddSeconds(1),
+                new(HistoryUsageState.Complete, 7, 3), new(HistoryPriceState.Unpriced)));
+            if (outcome == HistoryOutcome.Cancelled) {
+                throw new OperationCanceledException(cancelled.Token);
+            }
+            if (outcome == HistoryOutcome.Failed) {
+                throw new InvalidOperationException("transport");
+            }
+            return new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(700, 300));
+        });
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var component = CreateComponent();
+        var node = CreateNode(component.Id);
+        Task<WorkflowNodeExecutionResult> Invoke() => invoker.ExecuteAsync(
+            CreateDefinition(node), node, component, new WorkflowNodeInput("{}")).AsTask();
+        WorkflowUsageObservation observation;
+        if (outcome == HistoryOutcome.Succeeded) {
+            observation = Assert.Single((await Invoke()).UsageObservations);
+            Assert.Equal(700, observation.InputTokens);
+        } else if (outcome == HistoryOutcome.Cancelled) {
+            var exception = await Assert.ThrowsAsync<WorkflowUsageCancellationException>(Invoke);
+            Assert.Equal(cancelled.Token, exception.CancellationToken);
+            observation = Assert.Single(exception.Observations);
+        } else {
+            observation = Assert.Single((await Assert.ThrowsAsync<WorkflowUsageObservationException>(Invoke)).Observations);
+        }
+        var evidence = Assert.IsType<HistoryCanonicalInvocation>(observation.HistoryEvidence);
+        var attempt = Assert.Single(evidence.Attempts);
+        Assert.Equal(outcome, attempt.Outcome);
+        Assert.Equal(7, attempt.Usage.InputTokens);
+        Assert.Equal(observation.Id.Value.ToString("N"), port.LastRequest!.History.Owner!.EvidenceId.Value);
+        Assert.Equal(recorder.Starts.Single().AttemptId, attempt.AttemptId);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -282,7 +354,9 @@ public sealed class WorkflowLlmLightweightPathTests
             LastCheckedAtUtc: null,
             SuggestedModels: ["gpt-lightweight-path"]);
 
-    private static LlmCallComponent CreateComponent(string responseFormatJsonSchema = "")
+    private static LlmCallComponent CreateComponent(
+        string responseFormatJsonSchema = "",
+        double? temperature = 0.2)
         => new(
             WorkflowComponentId.New(),
             "Lightweight path component",
@@ -290,7 +364,7 @@ public sealed class WorkflowLlmLightweightPathTests
             "gpt-lightweight-path",
             WorkflowModality.Text,
             new WorkflowModelSettings(
-                Temperature: 0.2,
+                Temperature: temperature,
                 MaxOutputTokens: 200,
                 RequireJsonOutput: true,
                 ResponseFormatJsonSchema: responseFormatJsonSchema),

@@ -13,6 +13,7 @@ internal static class MafChatClientAgentOptionsFactory
         {
             ChatOptions = chatOptions,
             UseProvidedChatClientAsIs = false,
+            AllowConcurrentInvocation = false,
             DisableApprovalNotRequiredFunctionBypassing = true,
             DisableApprovalResponseBinding = false
         };

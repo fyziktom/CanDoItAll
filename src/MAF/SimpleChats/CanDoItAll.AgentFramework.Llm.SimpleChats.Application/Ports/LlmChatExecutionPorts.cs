@@ -148,6 +148,7 @@ public sealed record LlmChatOperationExecutionContext(
     LlmChatRuntimeIdentity RuntimeIdentity)
 {
     public LlmChatExecutionLeaseIdentity? ExecutionLease { get; init; }
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; init; }
 }
 
 public sealed record LlmChatExecutionLeaseObservation(

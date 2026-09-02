@@ -6,35 +6,78 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
 {
     private static readonly WorkflowRunState[] RunningState = [WorkflowRunState.Running];
-    private static readonly WorkflowRunState[] WaitingState = [WorkflowRunState.WaitingForInput];
-
     private readonly IReadOnlyDictionary<WorkflowRuntimeBackendKind, IWorkflowExecutionBackend> backends;
     private readonly IWorkflowRunStore store;
     private readonly IWorkflowActiveRunRegistry activeRuns;
     private readonly TimeProvider timeProvider;
     private readonly IWorkflowEventSink eventSink;
     private readonly IWorkflowUsageObservationStore? usageStore;
+    private readonly IWorkflowExternalRequestBoundaryStore requestBoundaryStore;
+    private readonly IWorkflowResumeBoundaryStore resumeBoundaryStore;
 
-    public WorkflowRuntimeManager(
+    public static WorkflowRuntimeManager CreateInMemory(
         IEnumerable<IWorkflowExecutionBackend> backends,
         IWorkflowRunStore store,
         IWorkflowEventSink? eventSink = null,
         IWorkflowUsageObservationStore? usageStore = null)
-        : this(
+        => WorkflowInMemoryRuntimeFactory.Create(
             backends,
             store,
-            new WorkflowActiveRunRegistry(),
-            TimeProvider.System,
             eventSink,
-            usageStore)
-    {
-    }
+            usageStore);
+
+    public static WorkflowRuntimeManager CreateInMemory(
+        IEnumerable<IWorkflowExecutionBackend> backends,
+        InMemoryWorkflowRunStore store,
+        InMemoryWorkflowBackendCheckpointPayloadStore checkpointPayloadStore,
+        IWorkflowEventSink? eventSink = null,
+        InMemoryWorkflowUsageObservationStore? usageStore = null)
+        => WorkflowInMemoryRuntimeFactory.Create(
+            backends,
+            store,
+            checkpointPayloadStore,
+            eventSink,
+            usageStore);
+
+    public static WorkflowRuntimeManager CreateInMemory(
+        IEnumerable<IWorkflowExecutionBackend> backends,
+        IWorkflowRunStore store,
+        IWorkflowActiveRunRegistry activeRuns,
+        TimeProvider timeProvider,
+        IWorkflowEventSink? eventSink = null,
+        IWorkflowUsageObservationStore? usageStore = null)
+        => WorkflowInMemoryRuntimeFactory.Create(
+            backends,
+            store,
+            activeRuns,
+            timeProvider,
+            eventSink,
+            usageStore);
+
+    public static WorkflowRuntimeManager CreateInMemory(
+        IEnumerable<IWorkflowExecutionBackend> backends,
+        InMemoryWorkflowRunStore store,
+        InMemoryWorkflowBackendCheckpointPayloadStore checkpointPayloadStore,
+        IWorkflowActiveRunRegistry activeRuns,
+        TimeProvider timeProvider,
+        IWorkflowEventSink? eventSink = null,
+        InMemoryWorkflowUsageObservationStore? usageStore = null)
+        => WorkflowInMemoryRuntimeFactory.Create(
+            backends,
+            store,
+            checkpointPayloadStore,
+            activeRuns,
+            timeProvider,
+            eventSink,
+            usageStore);
 
     public WorkflowRuntimeManager(
         IEnumerable<IWorkflowExecutionBackend> backends,
         IWorkflowRunStore store,
         IWorkflowActiveRunRegistry activeRuns,
         TimeProvider timeProvider,
+        IWorkflowExternalRequestBoundaryStore requestBoundaryStore,
+        IWorkflowResumeBoundaryStore resumeBoundaryStore,
         IWorkflowEventSink? eventSink = null,
         IWorkflowUsageObservationStore? usageStore = null)
     {
@@ -42,11 +85,15 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(activeRuns);
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(requestBoundaryStore);
+        ArgumentNullException.ThrowIfNull(resumeBoundaryStore);
 
         this.backends = backends.ToDictionary(item => item.Descriptor.Kind);
         this.store = store;
         this.activeRuns = activeRuns;
         this.timeProvider = timeProvider;
+        this.requestBoundaryStore = requestBoundaryStore;
+        this.resumeBoundaryStore = resumeBoundaryStore;
         this.eventSink = eventSink ?? new NullWorkflowEventSink();
         this.usageStore = usageStore;
     }
@@ -149,8 +196,11 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
                     RunningState,
                     CancellationToken.None);
             }
-            catch (OperationCanceledException) when (activeRun.IsCancellationRequested)
+            catch (OperationCanceledException exception) when (activeRun.IsCancellationRequested)
             {
+                if (WorkflowRuntimeTransitionRules.TryFindUsageObservationException(exception, out var usageException)) {
+                    await AppendUsageObservationsAsync(running, usageException!.Observations, CancellationToken.None);
+                }
                 return await FinalizeCancellationAsync(running, CancellationToken.None);
             }
             catch (Exception exception) when (WorkflowRuntimeTransitionRules.TryFindUsageObservationException(exception, out var usageException))
@@ -235,16 +285,96 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         }
 
         var signal = activeRuns.TrySignalCancellation(runId);
-        return signal switch
+        if (signal == WorkflowActiveRunCancellationSignal.Signalled)
         {
-            WorkflowActiveRunCancellationSignal.Signalled => new WorkflowRunCancellationResult(
+            return new WorkflowRunCancellationResult(
                 WorkflowRunCancellationOutcome.CancellationRequested,
                 run,
-                $"Cancellation was requested for workflow run '{runId}'."),
-            WorkflowActiveRunCancellationSignal.NotSupported => new WorkflowRunCancellationResult(
+                $"Cancellation was requested for workflow run '{runId}'.");
+        }
+
+        if (signal == WorkflowActiveRunCancellationSignal.NotSupported)
+        {
+            return new WorkflowRunCancellationResult(
                 WorkflowRunCancellationOutcome.BackendNotCancellable,
                 run,
-                $"Workflow runtime backend '{run.Backend}' does not support active cancellation."),
+                $"Workflow runtime backend '{run.Backend}' does not support active cancellation.");
+        }
+
+        if (run.State == WorkflowRunState.WaitingForInput)
+        {
+            var pendingRequests = await store.ListPendingExternalRequestsAsync(runId, cancellationToken);
+            var pending = pendingRequests
+                .OrderBy(request => request.CreatedAtUtc)
+                .ThenBy(request => request.Id.Value)
+                .FirstOrDefault();
+            if (pending is not null)
+            {
+                var boundary = await requestBoundaryStore.ReadAsync(pending.Id, cancellationToken);
+                if (boundary.Succeeded && boundary.Boundary is not null)
+                {
+                    var cancellation = await resumeBoundaryStore.TryCancelAsync(
+                        new WorkflowResumeBoundaryCancellationRequest(
+                            runId,
+                            pending.Id,
+                            boundary.Boundary.RequestVersion,
+                            timeProvider.GetUtcNow(),
+                            "Workflow run was cancelled while waiting for external input."),
+                        cancellationToken);
+                    return cancellation.Outcome switch
+                    {
+                        WorkflowResumeBoundaryCancellationOutcome.Cancelled => new WorkflowRunCancellationResult(
+                            WorkflowRunCancellationOutcome.CancellationRequested,
+                            cancellation.Run,
+                            $"Workflow run '{runId}' was cancelled while waiting for external input."),
+                        WorkflowResumeBoundaryCancellationOutcome.AlreadyTerminal => new WorkflowRunCancellationResult(
+                            WorkflowRunCancellationOutcome.AlreadyTerminal,
+                            cancellation.Run,
+                            $"Workflow run '{runId}' is already terminal."),
+                        WorkflowResumeBoundaryCancellationOutcome.ActiveResume => new WorkflowRunCancellationResult(
+                            WorkflowRunCancellationOutcome.NotActive,
+                            cancellation.Run ?? run,
+                            $"Workflow run '{runId}' is being resumed by another durable lease owner."),
+                        _ => new WorkflowRunCancellationResult(
+                            WorkflowRunCancellationOutcome.TransitionRejected,
+                            cancellation.Run ?? run,
+                            $"Workflow waiting-run cancellation was rejected: {cancellation.Outcome}.")
+                    };
+                }
+
+                var hasOnlyExplicitLegacyRequests =
+                    boundary.Outcome == WorkflowExternalRequestBoundaryReadOutcome.LegacyNonResumable &&
+                    pendingRequests.All(IsExplicitLegacyRequest);
+                if (!hasOnlyExplicitLegacyRequests)
+                {
+                    return new WorkflowRunCancellationResult(
+                        WorkflowRunCancellationOutcome.TransitionRejected,
+                        run,
+                        $"Workflow run '{runId}' has a native external request whose durable response boundary is unavailable.");
+                }
+
+                var now = timeProvider.GetUtcNow();
+                foreach (var legacyRequest in pendingRequests)
+                {
+                    await store.SaveExternalRequestAsync(
+                        legacyRequest with
+                        {
+                            State = WorkflowExternalRequestState.Cancelled,
+                            RespondedAtUtc = now
+                        },
+                        cancellationToken);
+                }
+            }
+
+            var cancelled = await FinalizeCancellationAsync(run, cancellationToken);
+            return new WorkflowRunCancellationResult(
+                WorkflowRunCancellationOutcome.CancellationRequested,
+                cancelled,
+                $"Workflow run '{runId}' was cancelled while waiting for external input.");
+        }
+
+        return signal switch
+        {
             _ => new WorkflowRunCancellationResult(
                 WorkflowRunCancellationOutcome.NotActive,
                 run,
@@ -252,189 +382,10 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         };
     }
 
-    public async Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
-        WorkflowExternalRequestId requestId,
-        string responseJson,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await SubmitExternalResponseAsync(requestId, responseJson, cancellationToken);
-        return result.Outcome switch
-        {
-            WorkflowExternalResponseOutcome.Accepted or
-            WorkflowExternalResponseOutcome.UnsupportedResume => result.Run
-                ?? throw new InvalidOperationException(result.Message),
-            WorkflowExternalResponseOutcome.RequestNotFound => throw new KeyNotFoundException(result.Message),
-            WorkflowExternalResponseOutcome.RunNotFound => throw new KeyNotFoundException(result.Message),
-            WorkflowExternalResponseOutcome.AlreadyResponded => throw new InvalidOperationException(result.Message),
-            WorkflowExternalResponseOutcome.RunNotWaiting => throw new InvalidOperationException(result.Message),
-            WorkflowExternalResponseOutcome.BackendUnavailable => throw new InvalidOperationException(result.Message),
-            WorkflowExternalResponseOutcome.ResumeFailed => throw new InvalidOperationException(result.Message),
-            _ => throw new InvalidOperationException(result.Message)
-        };
-    }
-
-    public async Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
-        WorkflowExternalRequestId requestId,
-        string responseJson,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
-        var request = await store.GetExternalRequestAsync(requestId, cancellationToken);
-        if (request is null)
-        {
-            return new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.RequestNotFound,
-                Run: null,
-                Request: null,
-                $"Workflow external request '{requestId}' was not found.");
-        }
-
-        if (request.RespondedAtUtc.HasValue)
-        {
-            return new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.AlreadyResponded,
-                Run: null,
-                request,
-                $"Workflow external request '{requestId}' has already been answered.");
-        }
-
-        var run = await store.GetRunAsync(request.RunId, cancellationToken);
-        if (run is null)
-        {
-            return new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.RunNotFound,
-                Run: null,
-                request,
-                $"Workflow run '{request.RunId}' was not found.");
-        }
-
-        if (run.State != WorkflowRunState.WaitingForInput)
-        {
-            return new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.RunNotWaiting,
-                run,
-                request,
-                $"Workflow run '{run.RunId}' is not waiting for external input.");
-        }
-
-        WorkflowRuntimeTransitionRules.ValidateExternalResponse(request, responseJson);
-        if (!backends.TryGetValue(run.Backend, out var backend))
-        {
-            return new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.BackendUnavailable,
-                run,
-                request,
-                $"Workflow runtime backend '{run.Backend}' is not registered.");
-        }
-
-        if (!backend.Descriptor.SupportsExternalResponseResume || backend is not IWorkflowExternalResponseBackend resumeBackend)
-        {
-            return new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.UnsupportedResume,
-                run,
-                request,
-                $"Workflow runtime backend '{run.Backend}' cannot resume external requests; the run remains waiting.");
-        }
-
-        if (!activeRuns.TryRegister(
-                run.RunId,
-                backend.Descriptor.SupportsActiveCancellation,
-                cancellationToken,
-                out var activeRun))
-        {
-            return new WorkflowExternalResponseResult(
-                WorkflowExternalResponseOutcome.TransitionRejected,
-                run,
-                request,
-                $"Workflow run '{run.RunId}' is already active.");
-        }
-
-        using (activeRun)
-        {
-            var accepted = await store.TryAcceptExternalResponseAsync(
-                requestId,
-                responseJson,
-                timeProvider.GetUtcNow(),
-                cancellationToken);
-            if (accepted.Outcome != WorkflowExternalResponseAcceptanceOutcome.Accepted)
-            {
-                return new WorkflowExternalResponseResult(
-                    accepted.Outcome == WorkflowExternalResponseAcceptanceOutcome.NotFound
-                        ? WorkflowExternalResponseOutcome.RequestNotFound
-                        : WorkflowExternalResponseOutcome.AlreadyResponded,
-                    run,
-                    accepted.Request,
-                    accepted.Outcome == WorkflowExternalResponseAcceptanceOutcome.NotFound
-                        ? $"Workflow external request '{requestId}' was not found."
-                        : $"Workflow external request '{requestId}' has already been answered.");
-            }
-
-            var progressObserver = new StoreBackedWorkflowNodeExecutionProgressObserver(
-                run,
-                store,
-                usageStore,
-                eventSink);
-            try
-            {
-                WorkflowBackendStartResult result;
-                using (WorkflowNodeExecutionProgressScope.Push(progressObserver))
-                {
-                    result = await resumeBackend.ResumeAsync(
-                        run,
-                        accepted.Request!,
-                        responseJson,
-                        activeRun.Token);
-                }
-
-                var persisted = !activeRun.TryClaimCompletion()
-                    ? await FinalizeCancellationAsync(run, CancellationToken.None)
-                    : await PersistBackendResultAsync(
-                        result,
-                        run,
-                        WaitingState,
-                        CancellationToken.None);
-                return new WorkflowExternalResponseResult(
-                    WorkflowExternalResponseOutcome.Accepted,
-                    persisted,
-                    accepted.Request,
-                    "Workflow external response was accepted exactly once.");
-            }
-            catch (OperationCanceledException) when (activeRun.IsCancellationRequested)
-            {
-                var cancelled = await FinalizeCancellationAsync(run, CancellationToken.None);
-                return new WorkflowExternalResponseResult(
-                    WorkflowExternalResponseOutcome.Accepted,
-                    cancelled,
-                    accepted.Request,
-                    "Workflow external response was accepted and resumed execution was cancelled.");
-            }
-            catch (Exception exception) when (WorkflowRuntimeTransitionRules.TryFindUsageObservationException(exception, out var usageException))
-            {
-                var failed = await PersistFailureUsageAndFinalizeAsync(
-                    run,
-                    exception,
-                    usageException!,
-                    CancellationToken.None);
-                return new WorkflowExternalResponseResult(
-                    WorkflowExternalResponseOutcome.ResumeFailed,
-                    failed,
-                    accepted.Request,
-                    "Workflow external response was accepted, but backend resume failed.");
-            }
-            catch (Exception exception)
-            {
-                var failed = await FinalizeFailureAsync(
-                    run,
-                    WorkflowRuntimeTransitionRules.CreateSafeFailureSummary(exception),
-                    CancellationToken.None);
-                return new WorkflowExternalResponseResult(
-                    WorkflowExternalResponseOutcome.ResumeFailed,
-                    failed,
-                    accepted.Request,
-                    "Workflow external response was accepted, but backend resume failed.");
-            }
-        }
-    }
+    private static bool IsExplicitLegacyRequest(WorkflowExternalRequestRecord request)
+        => request.State == WorkflowExternalRequestState.LegacyNonResumable &&
+           request.ResponseContract is null &&
+           request.Continuation is null;
 
     private void ValidateBackendPolicy(
         WorkflowDefinition definition,
@@ -501,6 +452,16 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         foreach (var request in result.ExternalRequests)
         {
             await store.SaveExternalRequestAsync(request, cancellationToken);
+            if (WorkflowExternalRequestBoundaryRecord.TryCreate(request, out var boundary) &&
+                boundary is not null)
+            {
+                var savedBoundary = await requestBoundaryStore.UpsertAsync(boundary, cancellationToken);
+                if (!savedBoundary.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        $"Workflow external request '{request.Id}' native boundary was not persisted: {savedBoundary.Outcome}.");
+                }
+            }
         }
 
         foreach (var checkpoint in result.Checkpoints)

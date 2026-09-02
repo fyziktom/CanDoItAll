@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -5,11 +6,14 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Providers;
 
-public sealed class OllamaProviderDriver(HttpClient httpClient) :
+public sealed class OllamaProviderDriver(
+    HttpClient httpClient,
+    IProviderInferenceRelayTransport? inferenceRelayTransport = null) :
     IProviderHealthDriver,
     IProviderModelCatalogDriver,
     IProviderChatCompletionDriver,
     IProviderStreamingChatCompletionDriver,
+    IProviderInferenceRelayDriver,
     IProviderModelMaintenanceDriver
 {
     private const string NumPredictSnakePropertyName = "num_predict";
@@ -129,7 +133,57 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             request.Model,
             ReadMessageText(message),
             ProviderDriverJson.ReadInt(document.RootElement, "prompt_eval_count"),
-            ProviderDriverJson.ReadInt(document.RootElement, "eval_count"));
+            ProviderDriverJson.ReadInt(document.RootElement, "eval_count")) {
+            ObservedUsage = ProviderObservedUsage.Ollama(document.RootElement)
+        };
+    }
+
+    public Task<ProviderInferenceRelayTransportResponse> RelayAsync(
+        ProviderInferenceRelayRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.Operation != ProviderInferenceRelayOperation.ChatCompletions)
+        {
+            throw new InvalidOperationException("Ollama supports only chat-completions relay requests.");
+        }
+
+        ProviderModelSelectionPolicy.EnsureAllowed(request.Provider, request.Model);
+        var transport = inferenceRelayTransport ??
+            throw new InvalidOperationException("The provider inference relay transport is unavailable.");
+        var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            BuildInferenceRelayEndpoint(request.Provider))
+        {
+            Content = new ReadOnlyMemoryContent(request.PayloadUtf8)
+        };
+        httpRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
+        {
+            CharSet = "utf-8"
+        };
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(
+            request.Stream ? "text/event-stream" : "application/json"));
+        if (request.Credential is not null)
+        {
+            request.Credential.UseValue(value =>
+            {
+                httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", value);
+                return true;
+            });
+        }
+
+        return SendInferenceRelayAsync(transport, httpRequest, cancellationToken);
+    }
+
+    private static async Task<ProviderInferenceRelayTransportResponse> SendInferenceRelayAsync(
+        IProviderInferenceRelayTransport transport,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        using (request)
+        {
+            return await transport.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public ProviderChatStreamingMode ResolveStreamingMode(ProviderChatCompletionRequest request)
@@ -211,6 +265,22 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
         return $"{provider.BaseUrl.Trim().TrimEnd('/')}/{relativePath.TrimStart('/')}";
     }
 
+    private static string BuildInferenceRelayEndpoint(ProviderProfile provider)
+    {
+        var baseUrl = provider.BaseUrl.Trim().TrimEnd('/');
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+        {
+            throw new InvalidOperationException("The Ollama relay base URL is invalid.");
+        }
+
+        if (!baseUri.AbsolutePath.TrimEnd('/').EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+        {
+            baseUrl = $"{baseUrl}/v1";
+        }
+
+        return $"{baseUrl}/chat/completions";
+    }
+
     private static Dictionary<string, object?> BuildChatPayload(
         ProviderChatCompletionRequest request,
         bool stream)
@@ -227,9 +297,9 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             payload["options"] = options;
         }
 
-        if (request.ResponseFormat is { RequireJson: true })
+        if (request.ResponseFormat is { RequireJson: true } responseFormat)
         {
-            payload["format"] = "json";
+            payload["format"] = ResolveResponseFormat(responseFormat);
         }
 
         var thinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
@@ -248,6 +318,17 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             thinkingCapability,
             thinkingEffort.Value);
         return payload;
+    }
+
+    private static object ResolveResponseFormat(ProviderChatResponseFormat responseFormat)
+    {
+        if (string.IsNullOrWhiteSpace(responseFormat.SchemaJson))
+        {
+            return "json";
+        }
+
+        using var document = JsonDocument.Parse(responseFormat.SchemaJson);
+        return document.RootElement.Clone();
     }
 
     private async Task<ProviderModelDescriptor> CreateModelDescriptorAsync(

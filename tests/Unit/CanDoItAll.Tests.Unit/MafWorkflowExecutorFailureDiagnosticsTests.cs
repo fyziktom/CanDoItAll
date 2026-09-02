@@ -3,6 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
@@ -17,7 +18,7 @@ public sealed class MafWorkflowExecutorFailureDiagnosticsTests
     public async Task Executor_failure_surfaces_root_cause_in_summary_events_and_diagnostic_payload()
     {
         var executor = new ThrowingWorkflowExecutor();
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(
@@ -59,6 +60,39 @@ public sealed class MafWorkflowExecutorFailureDiagnosticsTests
         Assert.Equal(new WorkflowExecutorId("test.throw"), diagnostic.ExecutorId);
         Assert.Contains(RootCauseMessage, diagnostic.Message, StringComparison.Ordinal);
         Assert.False(string.IsNullOrWhiteSpace(diagnostic.RedactedTechnicalDetail));
+
+        var sourceProviderId = Guid.Parse(
+            "f75f6257-cd0d-4a71-9a30-c30557c8ece2");
+        var sourceFailure = new MafProviderTransportException(
+            sourceProviderId,
+            "shared-routing-model",
+            new ProviderFailureBoundaryException(
+                sourceProviderId,
+                ProviderFailureOperation.RuntimeRequest));
+        var sourceDiagnostic = WorkflowExecutorFailureDiagnosticMapper
+            .FromExecutionFailure(
+                definition,
+                definition.Graph.Nodes.Single(node =>
+                    node.Id == new WorkflowNodeId("work-a")),
+                executor.Descriptor,
+                sourceFailure,
+                WorkflowExecutorExecutionPolicy.Default);
+        var serializedSourceDiagnostic = JsonSerializer.Serialize(
+            sourceDiagnostic,
+            JsonOptions);
+
+        Assert.Contains(
+            ProviderFailureDisclosurePolicy.SanitizedRuntimeFailureMessage,
+            sourceDiagnostic.RedactedTechnicalDetail,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            sourceProviderId.ToString("D"),
+            serializedSourceDiagnostic,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            "10.23.45.67:43123",
+            serializedSourceDiagnostic,
+            StringComparison.Ordinal);
     }
 
     [Fact]

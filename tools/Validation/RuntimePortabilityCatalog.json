@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "2026-08-12.1",
+  "catalogVersion": "2026-08-19.1",
   "traitFilter": "Category=UnixRuntimePortability",
   "scopes": [
     {
@@ -8,7 +8,7 @@
       "projectPath": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
       "assemblyPath": "tests/Unit/CanDoItAll.Tests.Unit/bin/{configuration}/net10.0/CanDoItAll.Tests.Unit.dll",
       "trxFileName": "runtime-portability-unit.trx",
-      "expectedCaseCount": 422,
+      "expectedCaseCount": 429,
       "expectedClasses": [
         "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkHostingServiceCollectionTests",
         "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests",
@@ -32,13 +32,13 @@
       "trxFileName": "runtime-portability-integration.trx",
       "expectedCaseCount": 45,
       "expectedClasses": [
-        "CanDoItAll.Tests.Integration.CapsuleCatalogServiceIntegrationTests",
-        "CanDoItAll.Tests.Integration.ExecutionFoundationPortabilityIntegrationTests",
-        "CanDoItAll.Tests.Integration.ManagerProcessDiscoveryIntegrationTests",
-        "CanDoItAll.Tests.Integration.McpExternalToolPortabilityIntegrationTests",
-        "CanDoItAll.Tests.Integration.PluginDesktopPortabilityIntegrationTests",
-        "CanDoItAll.Tests.Integration.ProcessCapabilityPortabilityIntegrationTests",
-        "CanDoItAll.Tests.Integration.WatchSupervisorServiceIntegrationTests"
+        "CanDoItAll.Tests.Integration.AgentFramework.CapsuleCatalogServiceIntegrationTests",
+        "CanDoItAll.Tests.Integration.AgentFramework.McpExternalToolPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.External.PluginDesktopPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.Processes.ManagerProcessDiscoveryIntegrationTests",
+        "CanDoItAll.Tests.Integration.Processes.ProcessCapabilityPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.Runtime.ExecutionFoundationPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.Runtime.WatchSupervisorServiceIntegrationTests"
       ],
       "expectedFullyQualifiedNames": []
     },
@@ -49,10 +49,10 @@
       "trxFileName": "runtime-portability-browser.trx",
       "expectedCaseCount": 1,
       "expectedClasses": [
-        "CanDoItAll.Tests.Playwright.AppSmokeTests"
+        "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests"
       ],
       "expectedFullyQualifiedNames": [
-        "CanDoItAll.Tests.Playwright.AppSmokeTests.Runtime_node_actions_show_direct_optional_and_dependency_missing_states"
+        "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.Runtime_node_actions_show_direct_optional_and_dependency_missing_states"
       ]
     }
   ]

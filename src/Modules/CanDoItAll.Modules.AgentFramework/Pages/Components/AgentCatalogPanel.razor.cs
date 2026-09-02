@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
+
 public partial class AgentCatalogPanel
 {
     private const string AllAgentsTreeNodeId = "agents:all";
@@ -40,6 +42,9 @@ public partial class AgentCatalogPanel
 
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
 
     [Inject]
     public IAgentFrameworkOrganizationCatalogRepairService OrganizationCatalogRepairService { get; set; } = default!;
@@ -226,7 +231,7 @@ public partial class AgentCatalogPanel
                 ? WorkspaceService.ListAgentsAsync(includeTemplates: false)
                 : Task.FromResult(InitialAgents);
             var providersTask = InitialProviders is null
-                ? WorkspaceService.ListProvidersAsync()
+            ? ProviderRuntimeAdministrationService.ListProvidersAsync()
                 : Task.FromResult(InitialProviders);
             var teamsTask = InitialTeams is null
                 ? WorkspaceService.ListAgentTeamsAsync()
@@ -574,7 +579,7 @@ public partial class AgentCatalogPanel
     private async Task ReloadCatalogAsync()
     {
         var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        var providersTask = WorkspaceService.ListProvidersAsync();
+        var providersTask = ProviderRuntimeAdministrationService.ListProvidersAsync();
         var teamsTask = WorkspaceService.ListAgentTeamsAsync();
         agents = (await agentsTask).ToList();
         privateProviderById = BuildPrivateProviderMap(await providersTask);

@@ -1,0 +1,72 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.AgentFramework.ProviderManagement
+@using CanDoItAll.Modules.Security
+@using CanDoItAll.SharedProviders.Abstractions
+
+<div class="shared-provider-management" data-testid="shared-provider-management">
+    @if (isLoading)
+    {
+        <EmptyState Eyebrow="Loading"
+                    Title="Loading sharing state"
+                    Description="Reading provider sharing state." />
+    }
+    else
+    {
+        @if (!ProviderProfileId.HasValue)
+        {
+            <EmptyState Eyebrow="No provider selected"
+                        Title="Select or create a provider to publish it"
+                        Description="Use Shared provider connections in the provider toolbar to connect another instance." />
+        }
+        else if (profileState is null)
+        {
+            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
+                Sharing state is unavailable. Refresh the provider editor and try again.
+            </Alert>
+        }
+        else if (profileState.Ownership == SharedProviderProfileOwnership.Local)
+        {
+            <SharedProviderLocalPublicationContent State="profileState"
+                                                   IsBusy="isBusy"
+                                                   Publish="PublishAsync"
+                                                   Unpublish="OpenUnpublishConfirmation" />
+        }
+        else if (profileState.Ownership == SharedProviderProfileOwnership.Imported)
+        {
+            <SharedProviderImportedProfileContent Import="profileState.Import!"
+                                                  IsBusy="isBusy"
+                                                  Save="SaveImportedProfileAsync"
+                                                  Retire="OpenRetireConfirmation" />
+        }
+        else
+        {
+            <EmptyState Eyebrow="Runtime provider"
+                        Title="This provider is not persisted"
+                        Description="Seeded runtime-only providers cannot be published. Create a saved provider profile first." />
+        }
+
+
+    }
+</div>
+
+<Dialog IsOpen="@confirmationDialogOpen"
+        Title="@confirmationTitle"
+        Eyebrow="Confirm change"
+        Subtitle="@confirmationMessage"
+        Size="ModalSize.Compact"
+        OnClose="CloseConfirmationDialog"
+        TestId="shared-provider-confirmation-dialog">
+    <Footer>
+        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+            <Button Text="Cancel"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="CloseConfirmationDialog" />
+            <Button Text="@confirmationActionText"
+                    ButtonStyle="ButtonStyle.Danger"
+                    Disabled="@isBusy"
+                    IsBusy="@isBusy"
+                    Click="ConfirmDestructiveActionAsync"
+                    data-testid="shared-provider-confirmation-apply" />
+        </Cluster>
+    </Footer>
+</Dialog>

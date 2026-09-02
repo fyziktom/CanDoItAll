@@ -54,6 +54,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
     private readonly ProcessSubprocessContractResolver subprocessContractResolver;
     private readonly ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator;
     private readonly ProcessExecutionMetadataComposer executionMetadataComposer;
+    private readonly ILogger<AgentFrameworkProcessStepExecutor> logger;
 
     public AgentFrameworkProcessStepExecutor(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
@@ -67,7 +68,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         ProcessStepCompletionCoordinator completionCoordinator,
         ProcessSubprocessContractResolver subprocessContractResolver,
         ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator,
-        ProcessExecutionMetadataComposer executionMetadataComposer)
+        ProcessExecutionMetadataComposer executionMetadataComposer,
+        ILogger<AgentFrameworkProcessStepExecutor> logger)
     {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
@@ -84,6 +86,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         this.parentArtifactContextHydrator = parentArtifactContextHydrator;
         this.executionMetadataComposer = executionMetadataComposer ??
             throw new ArgumentNullException(nameof(executionMetadataComposer));
+        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
@@ -253,6 +256,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         }
 
         IAgentFrameworkWorkspaceService? workspaceService = null;
+        var executionStage = ProcessAgentExecutionStage.RuntimeToolPreflight;
         try
         {
             var runtimeToolPreflight = await runtimeToolPreflightService
@@ -294,11 +298,13 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     issue));
             }
 
+            executionStage = ProcessAgentExecutionStage.ExecutionMetadataComposition;
             workspaceService ??= workspaceFactory.GetOrganizationWorkspaceService();
             var metadataJson = executionMetadataComposer.ComposeClaimedExecution(
                 assignment,
                 request.DispatchClaimIdentity,
                 dispatchHostCapabilityEvidence);
+            executionStage = ProcessAgentExecutionStage.ParentArtifactContextHydration;
             var parentArtifactContext = parentArtifactContextHydrator.Hydrate(assignment);
             if (parentArtifactContext.Issue is { } parentArtifactContextIssue)
             {
@@ -315,16 +321,19 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             var subprocessContract = subprocessContractResolver.TryResolve(assignment, out var resolvedSubprocessContract)
                 ? resolvedSubprocessContract
                 : null;
+            executionStage = ProcessAgentExecutionStage.ProcessStepPromptComposition;
+            var processStepPrompt = ProcessStepContractPromptBuilder.Build(
+                executionPrompt,
+                promptStepContract,
+                assignment.LaunchVariables,
+                assignment.StepKey,
+                subprocessContract);
+            executionStage = ProcessAgentExecutionStage.AgentExecution;
             var result = await workspaceService
                 .ExecuteRunAsync(
                     new ExecutionRunRequest(
                         agentId,
-                        ProcessStepContractPromptBuilder.Build(
-                            executionPrompt,
-                            promptStepContract,
-                            assignment.LaunchVariables,
-                            assignment.StepKey,
-                            subprocessContract),
+                        processStepPrompt,
                         AgentExecutionOperationId.New(),
                         Context: new ExecutionInvocationContext(
                             SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
@@ -343,6 +352,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                         StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult),
                     cancellationToken)
                 .ConfigureAwait(false);
+            executionStage = ProcessAgentExecutionStage.AgentOutputValidation;
 
             if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                     assignment,
@@ -399,10 +409,12 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 return CompleteWithDispatchHostEvidence(subprocessResult);
             }
 
+            executionStage = ProcessAgentExecutionStage.ExecutionDetailLoading;
             var executionDetail = await workspaceService
                 .GetExecutionRunDetailAsync(result.ExecutionRunId, cancellationToken)
                 .ConfigureAwait(false);
 
+            executionStage = ProcessAgentExecutionStage.OutcomeMaterialization;
             var materialization = completionCoordinator.Materialize(
                 assignment,
                 validation.Output,
@@ -434,6 +446,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 return CompleteWithDispatchHostEvidence(materializedBridgeResult);
             }
 
+            executionStage = ProcessAgentExecutionStage.CompletionReceiptLoading;
             var completionToolReceipts = await completionCoordinator.LoadCompletionToolReceiptsAsync(
                     workspaceService,
                     assignment,
@@ -442,6 +455,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     cancellationToken)
                 .ConfigureAwait(false);
 
+            executionStage = ProcessAgentExecutionStage.Completion;
             return CompleteWithDispatchHostEvidence(completionCoordinator.Complete(
                 assignment,
                 materialization,
@@ -513,10 +527,19 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 });
             }
 
+            var evidenceHash = ComputeHash(exception.GetType().FullName + ":" + exception.Message);
+            logger.LogError(
+                "Process agent execution failed before an adapter result could be created. RunId={RunId} StepInstanceId={StepInstanceId} StepKey={StepKey} ExecutionStage={ExecutionStage} ExceptionType={ExceptionType} EvidenceHash={EvidenceHash}.",
+                assignment.RunId,
+                assignment.StepInstanceId,
+                assignment.StepKey,
+                executionStage,
+                exception.GetType().FullName,
+                evidenceHash);
             return CompleteWithDispatchHostEvidence(Failed(
                 "process.adapter.agent_execution_failed",
-                $"Agent execution failed for step '{assignment.StepKey}'. Review the restricted execution log using the recorded evidence hash if more detail is required.",
-                ComputeHash(exception.GetType().FullName + ":" + exception.Message)));
+                $"Agent execution failed for step '{assignment.StepKey}'. Host diagnostics record the failure stage and exception type under the evidence hash.",
+                evidenceHash));
         }
 
         async ValueTask<IReadOnlyList<CapabilityCatalogItem>> ResolveAttachedCapabilityCatalogAsync(

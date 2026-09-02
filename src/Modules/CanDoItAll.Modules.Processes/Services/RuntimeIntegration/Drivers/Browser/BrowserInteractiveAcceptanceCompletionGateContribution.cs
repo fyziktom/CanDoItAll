@@ -45,14 +45,12 @@ internal sealed class BrowserInteractiveAcceptanceCompletionGateContribution : I
 
         var currentReceipts = context.ToolReceipts
             .Where(receipt => receipt.ExecutionRunId == context.CurrentExecutionRunId.Value)
-            .OrderBy(receipt => receipt.CompletedAtUtc)
-            .ThenBy(receipt => receipt.Id)
             .ToArray();
-        var interactionReceiptIndex = Array.FindIndex(
-            currentReceipts,
-            receipt => InteractionToolNames.Contains(receipt.ToolName) &&
-                       IsSuccessfulReceipt(receipt.ExitSummary));
-        if (interactionReceiptIndex < 0)
+        var interactionReceipts = currentReceipts
+            .Where(receipt => InteractionToolNames.Contains(receipt.ToolName) &&
+                              IsSuccessfulReceipt(receipt.ExitSummary))
+            .ToArray();
+        if (interactionReceipts.Length == 0)
         {
             return CreateIssue(
                 context.Assignment,
@@ -62,9 +60,10 @@ internal sealed class BrowserInteractiveAcceptanceCompletionGateContribution : I
         }
 
         var postInteractionStateReceipts = currentReceipts
-            .Skip(interactionReceiptIndex + 1)
             .Where(receipt => StateEvidenceToolNames.Contains(receipt.ToolName) &&
-                              IsSuccessfulReceipt(receipt.ExitSummary))
+                              IsSuccessfulReceipt(receipt.ExitSummary) &&
+                              interactionReceipts.Any(interaction =>
+                                  receipt.StartedAtUtc >= interaction.CompletedAtUtc))
             .ToArray();
         if (postInteractionStateReceipts.Length == 0)
         {

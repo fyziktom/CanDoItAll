@@ -173,7 +173,7 @@ public sealed class WorkflowLaunchIdempotencyPersistenceIntegrationTests
         Assert.Equal(reservedRunId, takeover.ReservedRunId);
 
         var backend = new RejectingWorkflowBackend();
-        var runtime = new WorkflowRuntimeManager([backend], runStore);
+        var runtime = WorkflowRuntimeManager.CreateInMemory([backend], runStore);
         var recovered = await runtime.StartAsync(
             definition,
             new WorkflowRunStartRequest(

@@ -7,6 +7,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
+using CanonicalProviderRuntimeProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfile;
+using CanonicalProviderRuntimeProfileSnapshotService = CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfileSnapshotService;
+using IProviderRuntimeProfileSnapshotLoader = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeProfileSnapshotLoader;
+using AgentFrameworkProviderRuntimeSnapshotCommitObserver = CanDoItAll.Modules.AgentFramework.ProviderManagement.AgentFrameworkProviderRuntimeSnapshotCommitObserver;
+
 public sealed class ProviderRuntimeProfileSnapshotServiceTests
 {
     private static readonly Guid ProfileA =

@@ -1,0 +1,42 @@
+<EditForm EditContext="Context" OnValidSubmit="Save">
+    <Stack Class="agent-provider-editor-form min-h-full" GapScale="LayoutGap.XXLarge" AlignItems="AlignItems.Stretch">
+        @ChildContent
+    <StickyActionFooter StatusLabel="Provider profiles">
+        <SecondaryActions>
+            <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="Clear" />
+            @if (HasSavedProvider && CanManage) {
+                <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@IsBusy" Click="Health" />
+            }
+        </SecondaryActions>
+        <PrimaryActions>
+            @if (CanManage) {
+                <Button Text="Save provider"
+                        Type="submit"
+                        Disabled="@IsBusy"
+                        IsBusy="@IsBusy"
+                        data-testid="providers-save" />
+            }
+        </PrimaryActions>
+        <DangerActions>
+            @if (HasSavedProvider && CanManage) {
+                <Button Text="Delete"
+                        ButtonStyle="ButtonStyle.Danger"
+                        Disabled="@IsBusy"
+                        Click="Delete" />
+            }
+        </DangerActions>
+    </StickyActionFooter>
+    </Stack>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public EditContext Context { get; set; } = default!;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool HasSavedProvider { get; set; }
+    [Parameter] public bool CanManage { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback Save { get; set; }
+    [Parameter] public EventCallback Clear { get; set; }
+    [Parameter] public EventCallback Health { get; set; }
+    [Parameter] public EventCallback Delete { get; set; }
+}

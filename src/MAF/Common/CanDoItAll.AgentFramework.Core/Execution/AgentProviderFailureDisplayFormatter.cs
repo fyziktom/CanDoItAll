@@ -1,5 +1,6 @@
 using System.Net;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Core;
@@ -90,6 +91,18 @@ public static class AgentProviderFailureDisplayFormatter
                 AgentProviderFailureCategory.ProviderConfiguration,
                 $"Provider profile '{provider.Name}' is not ready for agent execution. Verify its credential, endpoint, transport, and runtime settings, then retry.",
                 "Provider configuration validation failed.");
+        }
+
+        var statusCode = FindHttpStatusCode(exception);
+        if (ProviderFailureDisclosurePolicy.RequiresSanitization(provider) &&
+            statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) {
+            var guidance = statusCode == HttpStatusCode.Unauthorized
+                ? "The shared source rejected authentication. Its access token may be missing, expired, revoked, or invalid. Create a replacement token on the shared instance and update the connection's API token secret in Providers > Shared provider connections, then retry."
+                : "The shared source denied access. Check the token's shared-provider permissions and the source's access policy in Providers > Shared provider connections, then retry.";
+            return new AgentProviderFailureDisplay(
+                AgentProviderFailureCategory.ProviderConfiguration,
+                $"Provider '{provider.Name}' could not use its shared source. {guidance} Provider detail: HTTP {(int)statusCode.Value} {statusCode.Value}.",
+                $"HTTP {(int)statusCode.Value} {statusCode.Value}.");
         }
 
         var messages = CollectMessages(exception);
@@ -305,6 +318,10 @@ public static class AgentProviderFailureDisplayFormatter
             if (current is HttpRequestException { StatusCode: { } statusCode })
             {
                 return statusCode;
+            }
+
+            if (current is ProviderFailureBoundaryException { DiagnosticStatusCode: >= 100 and <= 599 } boundary) {
+                return (HttpStatusCode)boundary.DiagnosticStatusCode.Value;
             }
 
             if (current is AggregateException aggregateException)

@@ -33,7 +33,8 @@ public sealed class LlmChatOperationExecutor(
             claim.Operation.Id,
             runtimeIdentity)
         {
-            ExecutionLease = lease
+            ExecutionLease = lease,
+            HistoryCaller = claim.Operation.HistoryCaller
         });
         var remainingDuration = claim.Operation.StartedAtUtc + options.MaximumOperationDuration -
             timeProvider.GetUtcNow();
@@ -72,6 +73,7 @@ public sealed class LlmChatOperationExecutor(
                     break;
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 var now = timeProvider.GetUtcNow();
                 var observation = await heartbeatStore.RenewAndObserveAsync(
                     lease,
