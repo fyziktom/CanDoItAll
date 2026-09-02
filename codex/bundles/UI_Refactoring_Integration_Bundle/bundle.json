@@ -1,0 +1,28 @@
+{
+  "name": "CanDoItAll UI Refactoring Integration Bundle",
+  "version": 1,
+  "preparedAt": "2026-09-01",
+  "language": "English execution docs; Czech owner summary",
+  "repositories": [
+    "fyziktom/CanDoItAll",
+    "fyziktom/CanDoItAll.Components",
+    "fyziktom/CanDoItAll.FileTools"
+  ],
+  "primaryBranch": "ui-refactoring",
+  "forbiddenBranches": [
+    "ui-refactoring-v2"
+  ],
+  "subbundles": [
+    "01-freeze-scope-and-guard-v2",
+    "02-stabilize-components-main",
+    "03-normalize-package-versions",
+    "04-validate-filetools-independence",
+    "05-merge-development-into-ui-refactoring",
+    "06-adapt-candoitall-to-components-main",
+    "07-refresh-source-pins-and-operations-docs",
+    "08-cross-repo-build-test-browser-proof",
+    "09-merge-closure-development-main"
+  ],
+  "recommendedVersionCandidate": "0.3.0",
+  "remoteWritesRequireExplicitAuthorization": true
+}

@@ -1,0 +1,28 @@
+{
+  "preparedAt": "2026-09-01",
+  "repositories": {
+    "CanDoItAll": {
+      "development": "7e2a3005cd3aa202badef72fdf4ee310800958aa",
+      "main": "fec027a59bd48cc1e08c407f465f0f1a0ae1029c",
+      "ui-refactoring": "a2903c400cc35e6d1d2f233c51e73feb256ce2aa",
+      "ui-refactoring-v2": "7b7d3639a41eb90147d58f53db1bf19de55b2df5",
+      "mergeBaseDevelopmentOriginalUi": "0242945dd877e31bf2e073c743a342cdcb8a4b8c"
+    },
+    "CanDoItAll.Components": {
+      "main": "38c3072fc4fe18c6f6b1e770f4242a3445d80ada",
+      "preMergeParent": "f7d558c3094609f8f12b68c44f09a1a39492c93d"
+    },
+    "CanDoItAll.FileTools": {
+      "main": "cc398d4e47696188d15c177c62faf42e937b4f7e",
+      "development": "c95dd07208a6d48724443317cdc6cfe67a13020a"
+    }
+  },
+  "recommendedVersionCandidate": "0.3.0",
+  "notes": [
+    "Refresh all tips before execution.",
+    "CanDoItAll.Components/main CI was failing at discovery.",
+    "CanDoItAll/development CI was green at discovery.",
+    "CanDoItAll.FileTools/main CI was green at discovery.",
+    "ui-refactoring-v2 is forbidden."
+  ]
+}
