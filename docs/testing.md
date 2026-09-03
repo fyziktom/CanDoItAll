@@ -65,6 +65,13 @@ Do not run an unfiltered test project or the stable aggregate merely because a b
 phase completed. The bundle proof must record the production projects built, the exact
 filter, expected and actual discovery counts, and the filtered result.
 
+Component tests that dispose rendered components while reusing a `BunitContext` must use
+`DisposeRenderedComponentsAsync()` from `BunitContextLifecycleExtensions`. In bUnit 2.7.2,
+calling `DisposeComponentsAsync()` outside a busy renderer dispatcher can clear the root
+list before the queued disposal reads it, leaving old components and their scoped
+registrations alive. The helper dispatches the entire operation; its regression test
+holds the renderer busy to verify that disposal still releases the rendered components.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
