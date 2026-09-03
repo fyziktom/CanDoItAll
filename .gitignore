@@ -5,6 +5,7 @@
 *.suo
 *.user
 *.userosscache
+.idea/
 
 # Build and package output
 [Bb]in/

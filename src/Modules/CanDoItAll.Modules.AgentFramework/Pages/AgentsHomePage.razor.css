@@ -188,7 +188,7 @@
     color: rgb(3 105 161);
 }
 
-.agents-overview-team-shortcut .material-icons {
+.agents-overview-team-shortcut ::deep .cda-material-icon {
     flex: 0 0 auto;
     font-size: 1.25rem;
     line-height: 1;

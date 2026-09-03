@@ -50,6 +50,7 @@ public sealed class ProviderAdministrationLayoutTests {
         Assert.Equal(0, overviewReads);
         cut.FindAll("[data-testid='agents-shell-tabs'] button").Single(button => button.TextContent.Trim() == "Overview").Click();
         cut.WaitForElement("[data-testid='agents-overview-dashboard']");
+        cut.WaitForDashboardLoaded();
         cut.WaitForAssertion(() => {
             Assert.Equal(1, usage.Reads);
             Assert.Equal(1, overviewReads);

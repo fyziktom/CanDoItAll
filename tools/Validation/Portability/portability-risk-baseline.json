@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-01T21:36:09.997266+00:00",
+  "generated_utc": "2026-09-02T12:07:05.443445+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14245,
+  "allowance_count": 14247,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -88,12 +88,6 @@
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
-      "source_fingerprint": "1de3b0dcca3e80e80b3af9e032d1d3d1fb035b1864ada974e47d7451f0863358",
-      "count": 1
-    },
-    {
-      "path": ".github/workflows/ci.yml",
-      "category": "external-tool",
       "source_fingerprint": "2200a17aeead26a1d4bc5a54c2072051d10f5aa15a6fe7167c361dbbfd2d68d7",
       "count": 2
     },
@@ -111,9 +105,15 @@
     },
     {
       "path": ".github/workflows/ci.yml",
+      "category": "external-tool",
+      "source_fingerprint": "e58fe2b85f0309ae9608657a70f5b581fe7a4671284cada602407b2060fd7acc",
+      "count": 1
+    },
+    {
+      "path": ".github/workflows/ci.yml",
       "category": "shell-elevation",
       "source_fingerprint": "169474ed3ed740281cc4bb3d19b54beeaaef4f70b989caddbbb49e292d447a78",
-      "count": 17
+      "count": 19
     },
     {
       "path": ".github/workflows/ci.yml",
@@ -130,7 +130,7 @@
     {
       "path": "Directory.Build.props",
       "category": "external-tool",
-      "source_fingerprint": "5a6544232b89d2eac5d76758280c1f51481af90a17b210881438a5b144438ed8",
+      "source_fingerprint": "e0b512eb0235b2cff2a00a286d9adfc4abe1972282f6f5861bb42aceaf8fb9a1",
       "count": 1
     },
     {
@@ -30796,13 +30796,13 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/History/FileProviderHistoryJournal.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "d7484348b22e53a0dcd6eda4627494bc195b36df765b867f1babd4efd5fc9fd1",
+      "source_fingerprint": "5378bc4f68a8d3ee1f65dc2ec30f143010f290a338d200293808bdf4348f6304",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/History/FileProviderHistoryJournal.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "dd47f6a4dc7538d0ee68d1da06083bd400e6f151e08645799bdf4a44c36bf760",
+      "source_fingerprint": "7c24bddf7559d20dd6947dcde32e1a2c16ba6745a1bad3bf42f7000e40909216",
       "count": 1
     },
     {

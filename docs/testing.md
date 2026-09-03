@@ -111,16 +111,23 @@ Run this after changing maintained Markdown, repository metadata, public paths, 
 
 ## Portability Static Gate
 
-This gate is mandatory before closing any change under `.github`, `src`, `Templates`,
-or `tools`, or any protected root build/configuration file. The baseline fingerprints
-reviewed portability-sensitive source. A legitimate source edit can therefore produce
-both an `ADDED` finding and a `STALE` allowance even when the resulting code remains
-portable.
+This gate is mandatory before closing a CI/test repair, any change under `.github`,
+`src`, `Templates`, or `tools`, or any protected root build/configuration file. Include
+supporting production edits, shared test fixtures, and changes brought in by a merge
+when assessing the final change. Running only affected tests or leaving the full .NET
+suite to CI does not waive this static gate.
+
+The baseline fingerprints reviewed portability-sensitive source. A legitimate source
+edit can therefore produce both an `ADDED` finding and a `STALE` allowance even when the
+resulting code remains portable, including dependency version updates, constructor
+signature changes, or additional shell steps.
 
 Run the same tooling used by CI from the repository root:
 
 ```powershell
-$portabilityScan = Join-Path ([System.IO.Path]::GetTempPath()) "candoitall-portability-scan.json"
+$portabilityScan = Join-Path ([System.IO.Path]::GetTempPath()) (
+    "candoitall-portability-{0}.json" -f [guid]::NewGuid().ToString("N")
+)
 
 python ./tools/Validation/Portability/test_enforce_portability_baseline.py
 python ./tools/Validation/Portability/test_scan_artifacts_for_secrets.py
@@ -128,10 +135,16 @@ python ./tools/Validation/Portability/scan_portability.py --repo-root . --output
 python ./tools/Validation/Portability/enforce_portability_baseline.py --scan $portabilityScan --baseline ./tools/Validation/Portability/portability-risk-baseline.json
 ```
 
+The scan must cover the complete proposed source and must not be truncated. Check
+`git status --short`: if new protected files are untracked, repeat the scan without
+`--tracked-only` to include them before reviewing or refreshing the baseline. Do not use
+a scan limited to changed files or an old CI artifact as the refresh input.
+
 If enforcement reports a delta, inspect every finding. Repair new platform assumptions,
-hard-coded machine paths, shell coupling, or other genuine portability defects. When
-the source is intentionally platform-specific or a previously reviewed finding merely
-moved or disappeared, refresh the baseline in the same change only after that review:
+hard-coded machine paths, shell coupling, or other genuine portability defects, then
+regenerate the scan after any source edit. When the remaining findings are intentional,
+including reviewed fingerprint/count changes or removed findings, refresh the baseline
+in the same change only after that review:
 
 ```powershell
 python ./tools/Validation/Portability/enforce_portability_baseline.py --scan $portabilityScan --baseline ./tools/Validation/Portability/portability-risk-baseline.json --write-baseline

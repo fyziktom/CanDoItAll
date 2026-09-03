@@ -426,7 +426,7 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
     }
 
     [Fact]
-    public async Task File_source_checkpoints_large_manifest_within_host_deadline_and_resumes_after_restart() {
+    public async Task File_source_checkpoints_large_manifest_in_bounded_passes_and_resumes_after_restart() {
         await using var history = await HistoryPersistenceTestDatabase.CreateAsync();
         var profile = Guid.NewGuid();
         await using var scenario = UsageProjectionScenario.Create(WorkspaceScopeDescriptor.Organization(profile.ToString("N")));
@@ -448,26 +448,31 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         var runner = new HistorySourceMaintenanceRunner(history.Factory, TimeProvider.System);
         AgentFileHistorySource CreateSource() => new(history.Factory, new FixedHistoryProfile(profile),
             new HistoryWorkspacePaths(scenario.WorkspaceRoot), new(history.Factory),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance,
+            new SingleRecordBudgetClock());
         var source = CreateSource();
         var complete = false;
+        var projectedCount = 0;
         try {
             var maximumPasses = ids.Count + 4;
             for (var pass = 0; pass < maximumPasses && !complete; pass++) {
                 if (pass == 3) {
+                    Assert.InRange(projectedCount, 1, ids.Count - 1);
                     source.Dispose();
                     source = CreateSource();
                 }
-                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-                Assert.True(await runner.ProcessAsync(source, context, 100, deadline.Token));
-                Assert.False(deadline.IsCancellationRequested);
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                Assert.True(await runner.ProcessAsync(source, context, 100, timeout.Token));
                 await using var db = history.Factory.CreateDbContext();
                 var checkpoint = await db.Set<HistoryCheckpointRow>().SingleAsync(row =>
                     row.PartitionId == history.Partition.StorageLineageId && row.SourceKind == source.Kind);
                 Assert.Null(checkpoint.FailureCode);
+                var currentCount = await db.Set<HistoryEntryRow>().CountAsync();
+                Assert.InRange(currentCount - projectedCount, 0, 1);
+                projectedCount = currentCount;
                 complete = checkpoint.Coverage == HistoryCoverageState.Current;
             }
-            Assert.True(complete, "A retained manifest must converge under the actual two-second source deadline.");
+            Assert.True(complete, "A retained manifest must converge while each pass exhausts its work budget after one record.");
             await using var final = history.Factory.CreateDbContext();
             Assert.Equal(ids.Order(), (await final.Set<HistoryEntryRow>().Select(row => row.Id).ToListAsync()).Order());
             Assert.Equal(100, await final.Set<AgentHistoryLocator>().CountAsync());

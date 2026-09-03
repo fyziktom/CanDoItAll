@@ -26,6 +26,7 @@ public sealed class AgentsHomePageTests
 
         navigation.NavigateTo("/agents?tab=scenarios");
         var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
 
         cut.WaitForElement(
             "[data-testid='agents-overview-dashboard']",
@@ -55,6 +56,7 @@ public sealed class AgentsHomePageTests
 
         navigation.NavigateTo("/agents");
         var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
         var tabsRow = cut.WaitForElement(
             "[data-testid='agents-shell-tabs']",
             TimeSpan.FromSeconds(10));
@@ -88,6 +90,7 @@ public sealed class AgentsHomePageTests
 
         navigation.NavigateTo("/agents");
         var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
         var openButton = cut.WaitForElement(
             "[data-testid='agents-hr-agent-open-header']",
             TimeSpan.FromSeconds(10));
@@ -137,6 +140,7 @@ public sealed class AgentsHomePageTests
         navigation.NavigateTo("/agents");
 
         var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
         cut.WaitForElement("[data-testid='agents-shell-tabs']", TimeSpan.FromSeconds(10));
         var tabs = cut.FindAll("[data-testid='agents-shell-tabs'] button")
             .Select(tab => tab.TextContent.Trim())
@@ -175,6 +179,7 @@ public sealed class AgentsHomePageTests
         navigation.NavigateTo("/agents");
         var dialogHost = harness.Context.Render<DialogHost>();
         var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
 
         var scope = cut.WaitForElement("[data-testid='agents-overview-usage-scope']", TimeSpan.FromSeconds(10));
         var scopeTabs = cut.FindComponents<SecondaryTabs>()
@@ -210,6 +215,7 @@ public sealed class AgentsHomePageTests
         navigation.NavigateTo("/agents?tab=simple-chats&simpleChatView=definitions");
 
         var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
 
         cut.WaitForElement("[data-testid='llm-chat-definition-catalog']", TimeSpan.FromSeconds(10));
         var definitionsTab = cut.Find("[data-testid='llm-chats-tab-definitions']");

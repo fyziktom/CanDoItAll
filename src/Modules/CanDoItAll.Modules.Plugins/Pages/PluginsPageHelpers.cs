@@ -251,7 +251,7 @@ internal static class PluginsPageHelpers
             }
 
             builder.OpenElement(4, "span");
-            builder.AddAttribute(5, "class", $"material-icons inline-flex items-center justify-center text-[var(--cda-text-muted)] {cssClass}");
+            builder.AddAttribute(5, "class", $"cda-material-icon material-symbols-rounded inline-flex items-center justify-center text-[var(--cda-text-muted)] {cssClass}");
             builder.AddAttribute(6, "aria-hidden", "true");
             builder.AddContent(7, string.IsNullOrWhiteSpace(resolvedIcon.Value) ? UiIconDescriptor.Default.Value : resolvedIcon.Value);
             builder.CloseElement();

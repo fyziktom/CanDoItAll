@@ -1951,6 +1951,7 @@ public sealed class WorkflowsPageTests
 
         navigation.NavigateTo("/agents");
         var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
 
         cut.WaitForElement("[data-testid='agents-shell-open-workflows']");
         cut.WaitForAssertion(() =>
