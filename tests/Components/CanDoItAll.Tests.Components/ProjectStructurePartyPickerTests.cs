@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -175,7 +176,8 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.Contains("Meeting Owner", meetingMetadata.RelatedPartySummary);
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, workItemNode.Id);
-        await harness.Context.DisposeComponentsAsync();
+        await harness.Context.DisposeRenderedComponentsAsync();
+        Assert.Null(harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>().Capture());
         cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
@@ -286,7 +288,8 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.Equal("Canonical Participant", participantMetadata.LinkedPartyDisplayName);
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, meetingNode.Id);
-        await harness.Context.DisposeComponentsAsync();
+        await harness.Context.DisposeRenderedComponentsAsync();
+        Assert.Null(harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>().Capture());
         cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
