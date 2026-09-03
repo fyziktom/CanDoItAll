@@ -1,0 +1,47 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Workflows;
+using Microsoft.Extensions.AI;
+
+var calls = 0;
+var function = AIFunctionFactory.Create(
+    (Guid projectId, AssetRequest request) => {
+        calls++;
+        return request.SourceWorkspacePath;
+    },
+    "project_structure_asset_create",
+    "Create an asset using projectId and the nested request object.");
+
+Console.WriteLine($"MAF={typeof(AIAgent).Assembly.GetName().Version}");
+Console.WriteLine($"Workflows={typeof(Workflow).Assembly.GetName().Version}");
+Console.WriteLine($"MEAI={typeof(AIFunction).Assembly.GetName().Version}");
+Console.WriteLine($"Required={function.JsonSchema.GetProperty("required").GetRawText()}");
+Console.WriteLine($"RequestRequired={function.JsonSchema.GetProperty("properties").GetProperty("request").GetProperty("required").GetRawText()}");
+
+using var malformedJson = JsonDocument.Parse("""{"project_id":"00000000-0000-0000-0000-000000000001","parentNodeKey":"custom:main","source_value":"docs/architecture.md"}""");
+var malformed = malformedJson.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value.Clone());
+try {
+    await function.InvokeAsync(new AIFunctionArguments(malformed));
+    Console.WriteLine("Malformed=unexpected-success");
+} catch (Exception exception) {
+    Console.WriteLine($"MalformedException={exception.GetType().FullName}");
+    Console.WriteLine($"MalformedMessage={exception.Message}");
+}
+Console.WriteLine($"CallsAfterMalformed={calls}");
+
+using var validJson = JsonDocument.Parse("""{"projectId":"00000000-0000-0000-0000-000000000001","request":{"objectType":"File","title":"Architecture","parentNodeKey":"custom:main","sourceWorkspacePath":"docs/architecture.md"}}""");
+var valid = validJson.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value.Clone());
+Console.WriteLine($"ValidResult={await function.InvokeAsync(new AIFunctionArguments(valid))}");
+Console.WriteLine($"CallsAfterValid={calls}");
+
+public sealed record AssetRequest(
+    AssetObjectType ObjectType,
+    string Title,
+    [property: JsonRequired] string ParentNodeKey,
+    string? SourceWorkspacePath);
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum AssetObjectType {
+    File
+}

@@ -1,0 +1,78 @@
+using System.Net;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using CanDoItAll.Modules.Workbench;
+using Microsoft.Extensions.AI;
+using OllamaSharp;
+using OpenAI;
+using System.ClientModel;
+using System.ClientModel.Primitives;
+
+var outputRoot = Path.GetFullPath(args[0]);
+int invocations = 0;
+var function = AIFunctionFactory.Create(
+    (Guid projectId, ProjectStructureAgentAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => {
+        invocations++;
+        return request.SourceWorkspacePath ?? "no-source";
+    },
+    "project_structure_asset_create",
+    "Characterization of the unchanged production signature with a non-mutating delegate.");
+await File.WriteAllTextAsync(Path.Combine(outputRoot, "canonical-tool-schema.json"), function.JsonSchema.GetRawText());
+var wrapper = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(outputRoot, "framework-session.json")));
+using var payload = JsonDocument.Parse(wrapper.RootElement.GetProperty("payloadJson").GetString()!);
+var call = payload.RootElement.GetProperty("stateBag").GetProperty("InMemoryChatHistoryProvider").GetProperty("messages")
+    .EnumerateArray().SelectMany(message => message.GetProperty("contents").EnumerateArray())
+    .Single(content => content.GetProperty("$type").GetString() == "functionCall" && content.GetProperty("name").GetString() == function.Name);
+var arguments = call.GetProperty("arguments").EnumerateObject().ToDictionary(property => property.Name, property => (object?)property.Value.Clone());
+try {
+    await function.InvokeAsync(new AIFunctionArguments(arguments));
+    Console.WriteLine("Malformed recorded call unexpectedly reached delegate.");
+} catch (Exception exception) {
+    Console.WriteLine($"Recorded call: {exception.GetType().Name}: {exception.Message}");
+}
+Console.WriteLine($"Delegate invocations after recorded input: {invocations}");
+using var validDocument = JsonDocument.Parse("""{"projectId":"99d218dc-701a-4fac-9305-2e040f1fb3a7","request":{"objectType":"File","title":"Architecture Overview","subtitle":"Tetris3 System Design","notes":"","media":null,"parentNodeKey":"custom:2703c1e17feb42ebb6782bf532387099","objectSubtype":"markdown","sourceWorkspacePath":"docs/architecture/architecture_overview.md"}}""");
+var validArguments = validDocument.RootElement.EnumerateObject().ToDictionary(property => property.Name, property => (object?)property.Value.Clone());
+Console.WriteLine($"Corrected input result: {await function.InvokeAsync(new AIFunctionArguments(validArguments))}; delegate invocations: {invocations}");
+var openAiHandler = new CaptureHandler();
+using var openAiHttp = new HttpClient(openAiHandler);
+var sdk = new OpenAIClient(new ApiKeyCredential("diagnostic-placeholder"), new OpenAIClientOptions {
+    Endpoint = new Uri("http://localhost:11434/v1"),
+    Transport = new HttpClientPipelineTransport(openAiHttp)
+});
+using IChatClient openAiClient = sdk.GetChatClient("probe").AsIChatClient();
+await openAiClient.GetResponseAsync([new ChatMessage(ChatRole.User, "Schema capture only")], new ChatOptions { Tools = [function] });
+using var openAiRequest = JsonDocument.Parse(openAiHandler.Body!);
+var openAiSchema = openAiRequest.RootElement.GetProperty("tools")[0].GetProperty("function").GetProperty("parameters");
+await File.WriteAllTextAsync(Path.Combine(outputRoot, "openai-tool-schema.json"), openAiSchema.GetRawText());
+Console.WriteLine($"OpenAI route: {openAiHandler.Path}; required: {openAiSchema.GetProperty("required").GetRawText()}");
+Console.WriteLine($"OpenAI nested request properties: {openAiSchema.GetProperty("properties").GetProperty("request").GetProperty("properties").EnumerateObject().Count()}");
+var handler = new CaptureHandler();
+using var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:11434") };
+using IChatClient client = new OllamaApiClient(http, "probe", jsonSerializerContext: null);
+await client.GetResponseAsync([new ChatMessage(ChatRole.User, "Schema capture only")], new ChatOptions { Tools = [function] });
+using var native = JsonDocument.Parse(handler.Body!);
+var nativeSchema = native.RootElement.GetProperty("tools")[0].GetProperty("function").GetProperty("parameters");
+await File.WriteAllTextAsync(Path.Combine(outputRoot, "native-tool-schema.json"), nativeSchema.GetRawText());
+Console.WriteLine($"Native route: {handler.Path}");
+Console.WriteLine($"Canonical required: {function.JsonSchema.GetProperty("required").GetRawText()}");
+Console.WriteLine($"Native required: {nativeSchema.GetProperty("required").GetRawText()}");
+Console.WriteLine($"Canonical request schema: {function.JsonSchema.GetProperty("properties").GetProperty("request").GetRawText()}");
+Console.WriteLine($"Native request schema: {nativeSchema.GetProperty("properties").GetProperty("request").GetRawText()}");
+var classifier = Assembly.Load("CanDoItAll.AgentFramework.Maf").GetType("CanDoItAll.AgentFramework.Maf.MafRuntimeToolInvocationResultClassifier", true)!;
+Console.WriteLine($"Classifier for SDK generic error: {classifier.GetMethod("IsSuccessful")!.Invoke(null, ["Error: Function failed."])}");
+
+sealed class CaptureHandler : HttpMessageHandler {
+    public string? Body { get; private set; }
+    public string? Path { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
+        Body = await request.Content!.ReadAsStringAsync(cancellationToken);
+        Path = request.RequestUri!.AbsolutePath;
+        return new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new StringContent(Path.EndsWith("chat/completions", StringComparison.Ordinal) ? """{"id":"probe","object":"chat.completion","created":0,"model":"probe","choices":[{"index":0,"message":{"role":"assistant","content":"done"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}""" : """{"model":"probe","created_at":"2026-09-03T00:00:00Z","message":{"role":"assistant","content":"done"},"done":true,"done_reason":"stop"}""", Encoding.UTF8, "application/json")
+        };
+    }
+}
+

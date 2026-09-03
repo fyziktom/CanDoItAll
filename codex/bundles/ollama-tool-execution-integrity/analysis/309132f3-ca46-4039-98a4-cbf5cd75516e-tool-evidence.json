@@ -1,0 +1,98 @@
+{
+  "runId": "309132f3-ca46-4039-98a4-cbf5cd75516e",
+  "model": "gemma4-12b-256k",
+  "adapterPackageVersion": "1.18.0+4ce2804db02285a04d532a665611c8e1ab825a59",
+  "calls": [
+    {
+      "$type": "functionCall",
+      "name": "workspace_write_file",
+      "arguments": {
+        "content": "[omitted: generated Markdown content]",
+        "path": "architecture_overview.md"
+      },
+      "informationalOnly": true,
+      "callId": "478734ed"
+    },
+    {
+      "$type": "functionCall",
+      "name": "project_structure_asset_create",
+      "arguments": {
+        "parents": "custom:2703c1e17feb42ebb6782bf532387099",
+        "project_id": "99d218dc-701a-4fac-9305-2e040f1fb3a7",
+        "request": "{\"title\":\"Architecture Overview\",\"subtitle\":\"Tetris3 System Design\",\"notes\":\"Proposed architecture for the Blazor WASM PWA game, covering engine, UI, and input handling.\",\"objectType\":\"File\",\"sourceWorkspacePath\":\"architecture_overview.md\"}"
+      },
+      "informationalOnly": true,
+      "callId": "d603d013"
+    }
+  ],
+  "results": [
+    {
+      "$type": "functionResult",
+      "result": {
+        "succeeded": true,
+        "message": "Created 'architecture_overview.md' with 2680 characters.",
+        "receipt": {
+          "operation": "workspace_write_file",
+          "mutatesWorkspace": true,
+          "boundary": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+          "outcome": "Succeeded",
+          "message": "Created 'architecture_overview.md' with 2680 characters.",
+          "receiptRelativePath": "artifacts/scopes/project/99d218dc-701a-4fac-9305-2e040f1fb3a7/tool-receipts/20260903/160002266-workspace-write-file-architecture-overview-md-ecf2c6cf896b.json",
+          "targetPaths": [
+            "architecture_overview.md"
+          ],
+          "artifactReferences": [
+            {
+              "zone": "generated-output",
+              "relativePath": "architecture_overview.md",
+              "displayName": "architecture_overview.md",
+              "contentType": "text/markdown",
+              "summary": "workspace_write_file target"
+            },
+            {
+              "zone": "tool-receipt",
+              "relativePath": "artifacts/scopes/project/99d218dc-701a-4fac-9305-2e040f1fb3a7/tool-receipts/20260903/160002266-workspace-write-file-architecture-overview-md-ecf2c6cf896b.json",
+              "displayName": "160002266-workspace-write-file-architecture-overview-md-ecf2c6cf896b.json",
+              "contentType": "application/json",
+              "summary": "workspace_write_file receipt"
+            }
+          ],
+          "startedAtUtc": "2026-09-03T12:00:02.2517224-04:00",
+          "completedAtUtc": "2026-09-03T12:00:02.2665991-04:00",
+          "executionRunId": "309132f3-ca46-4039-98a4-cbf5cd75516e",
+          "declaredSideEffectMode": "Unspecified"
+        },
+        "path": "architecture_overview.md",
+        "pathKind": "file",
+        "pathExistedBefore": false,
+        "createdNewPath": true,
+        "overwroteExistingPath": false,
+        "characterCount": 2680
+      },
+      "callId": "478734ed"
+    },
+    {
+      "$type": "functionResult",
+      "result": "Error: Function failed.",
+      "callId": "d603d013"
+    }
+  ],
+  "receipts": [
+    {
+      "id": "7b81d378-2981-ab54-bcc7-7432652fbf68",
+      "toolName": "workspace_write_file",
+      "toolFamily": "workspace-file",
+      "exitSummary": "Succeeded: Created 'architecture_overview.md' with 2680 characters.",
+      "startedAtUtc": "2026-09-03T12:00:02.2517224-04:00",
+      "completedAtUtc": "2026-09-03T12:00:02.2665991-04:00"
+    },
+    {
+      "id": "c6585a7c-26b1-da4c-01cb-719e2f8600f2",
+      "toolName": "project_structure_asset_create",
+      "toolFamily": "runtime-provider",
+      "exitSummary": "Failed: Tool invocation failed.",
+      "startedAtUtc": "2026-09-03T12:00:08.3565814-04:00",
+      "completedAtUtc": "2026-09-03T12:00:08.3567097-04:00"
+    }
+  ]
+}

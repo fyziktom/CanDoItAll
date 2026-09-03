@@ -1,0 +1,164 @@
+{
+  "runId": "894e1404-3019-4221-8be6-7769c0f472ae",
+  "model": "gemma4-12b-256k",
+  "adapterPackageVersion": "1.18.0+4ce2804db02285a04d532a665611c8e1ab825a59",
+  "calls": [
+    {
+      "$type": "functionCall",
+      "name": "workspace_create_directory",
+      "arguments": {
+        "path": "docs/architecture"
+      },
+      "informationalOnly": true,
+      "callId": "0f957f7b"
+    },
+    {
+      "$type": "functionCall",
+      "name": "workspace_write_file",
+      "arguments": {
+        "content": "[omitted: generated Markdown content]",
+        "path": "docs/architecture/architecture_overview.md"
+      },
+      "informationalOnly": true,
+      "callId": "9b2d4cec"
+    },
+    {
+      "$type": "functionCall",
+      "name": "project_structure_asset_create",
+      "arguments": {
+        "note": "Architecture overview for the Tetris3 game, covering engine, UI, and input handling.",
+        "parentNodeKey": "custom:2703c1e17feb42ebb6782bf532387099",
+        "property": "{ \"title\": \"Architecture Overview\", \"subtitle\": \"Tetris3 System Design\" }",
+        "project_id": "99d218dc-701a-4fac-9305-2e040f1fb3a7",
+        "source_type": "file",
+        "source_type_detail": "file_path",
+        "source_value": "docs/architecture/architecture_overview.md"
+      },
+      "informationalOnly": true,
+      "callId": "7b953e33"
+    }
+  ],
+  "results": [
+    {
+      "$type": "functionResult",
+      "result": {
+        "succeeded": true,
+        "message": "Created directory 'docs/architecture'.",
+        "receipt": {
+          "operation": "workspace_create_directory",
+          "mutatesWorkspace": true,
+          "boundary": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+          "outcome": "Succeeded",
+          "message": "Created directory 'docs/architecture'.",
+          "receiptRelativePath": "artifacts/scopes/project/99d218dc-701a-4fac-9305-2e040f1fb3a7/tool-receipts/20260903/160552217-workspace-create-directory-architecture-cd48acef3a6d.json",
+          "targetPaths": [
+            "docs/architecture"
+          ],
+          "artifactReferences": [
+            {
+              "zone": "generated-output",
+              "relativePath": "docs/architecture",
+              "displayName": "architecture",
+              "contentType": "application/octet-stream",
+              "summary": "workspace_create_directory target"
+            },
+            {
+              "zone": "tool-receipt",
+              "relativePath": "artifacts/scopes/project/99d218dc-701a-4fac-9305-2e040f1fb3a7/tool-receipts/20260903/160552217-workspace-create-directory-architecture-cd48acef3a6d.json",
+              "displayName": "160552217-workspace-create-directory-architecture-cd48acef3a6d.json",
+              "contentType": "application/json",
+              "summary": "workspace_create_directory receipt"
+            }
+          ],
+          "startedAtUtc": "2026-09-03T12:05:52.2122439-04:00",
+          "completedAtUtc": "2026-09-03T12:05:52.2178626-04:00",
+          "executionRunId": "894e1404-3019-4221-8be6-7769c0f472ae",
+          "declaredSideEffectMode": "Unspecified"
+        },
+        "path": "docs/architecture",
+        "pathKind": "directory",
+        "pathExistedBefore": false,
+        "createdNewPath": true,
+        "overwroteExistingPath": false,
+        "characterCount": 0
+      },
+      "callId": "0f957f7b"
+    },
+    {
+      "$type": "functionResult",
+      "result": {
+        "succeeded": true,
+        "message": "Created 'docs/architecture/architecture_overview.md' with 1638 characters.",
+        "receipt": {
+          "operation": "workspace_write_file",
+          "mutatesWorkspace": true,
+          "boundary": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+          "outcome": "Succeeded",
+          "message": "Created 'docs/architecture/architecture_overview.md' with 1638 characters.",
+          "receiptRelativePath": "artifacts/scopes/project/99d218dc-701a-4fac-9305-2e040f1fb3a7/tool-receipts/20260903/160604231-workspace-write-file-architecture-overview-md-3150324bd594.json",
+          "targetPaths": [
+            "docs/architecture/architecture_overview.md"
+          ],
+          "artifactReferences": [
+            {
+              "zone": "generated-output",
+              "relativePath": "docs/architecture/architecture_overview.md",
+              "displayName": "architecture_overview.md",
+              "contentType": "text/markdown",
+              "summary": "workspace_write_file target"
+            },
+            {
+              "zone": "tool-receipt",
+              "relativePath": "artifacts/scopes/project/99d218dc-701a-4fac-9305-2e040f1fb3a7/tool-receipts/20260903/160604231-workspace-write-file-architecture-overview-md-3150324bd594.json",
+              "displayName": "160604231-workspace-write-file-architecture-overview-md-3150324bd594.json",
+              "contentType": "application/json",
+              "summary": "workspace_write_file receipt"
+            }
+          ],
+          "startedAtUtc": "2026-09-03T12:06:04.2260547-04:00",
+          "completedAtUtc": "2026-09-03T12:06:04.2316069-04:00",
+          "executionRunId": "894e1404-3019-4221-8be6-7769c0f472ae",
+          "declaredSideEffectMode": "Unspecified"
+        },
+        "path": "docs/architecture/architecture_overview.md",
+        "pathKind": "file",
+        "pathExistedBefore": false,
+        "createdNewPath": true,
+        "overwroteExistingPath": false,
+        "characterCount": 1638
+      },
+      "callId": "9b2d4cec"
+    },
+    {
+      "$type": "functionResult",
+      "result": "Error: Function failed.",
+      "callId": "7b953e33"
+    }
+  ],
+  "receipts": [
+    {
+      "id": "ac693e78-39bb-6ddf-e6f9-357f4562fd78",
+      "toolName": "project_structure_asset_create",
+      "toolFamily": "runtime-provider",
+      "exitSummary": "Failed: Tool invocation failed.",
+      "startedAtUtc": "2026-09-03T12:06:10.1322099-04:00",
+      "completedAtUtc": "2026-09-03T12:06:10.132299-04:00"
+    },
+    {
+      "id": "b4937fa6-4c1b-0357-8a6a-4d1d2d534f8f",
+      "toolName": "workspace_create_directory",
+      "toolFamily": "workspace-file",
+      "exitSummary": "Succeeded: Created directory 'docs/architecture'.",
+      "startedAtUtc": "2026-09-03T12:05:52.2122439-04:00",
+      "completedAtUtc": "2026-09-03T12:05:52.2178626-04:00"
+    },
+    {
+      "id": "e59135cb-0df3-7a52-9ade-19f098bf7b73",
+      "toolName": "workspace_write_file",
+      "toolFamily": "workspace-file",
+      "exitSummary": "Succeeded: Created 'docs/architecture/architecture_overview.md' with 1638 characters.",
+      "startedAtUtc": "2026-09-03T12:06:04.2260547-04:00",
+      "completedAtUtc": "2026-09-03T12:06:04.2316069-04:00"
+    }
+  ]
+}

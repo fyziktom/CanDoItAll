@@ -1,0 +1,8 @@
+{
+  "sourceCommit": "40c55418e8a5acd870c5ddc1175035d6da1153a6",
+  "probeProgramSha256": "316F481C4F784CFB37E46AE796642B5B554609D7B8C8627609D32C686295EBD9",
+  "probeProjectSha256": "91E1B6CD370EB896A42446D4FBF6A68C5BFF7AF4ADDD354CD85BE1701E6E27F5",
+  "resolvedAssetsSha256": "770F46AB595FB6529DCE3D1A2534AA4D40D911ED9FF04F8231FE7A77A06B048F",
+  "command": "dotnet run --project <ignored-probe>/Probe.csproj --configuration Release",
+  "scope": "Isolated no-side-effect binder/schema probe. No CanDoItAll source, database, provider, agent or project mutation."
+}

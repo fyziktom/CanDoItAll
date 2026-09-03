@@ -1,0 +1,146 @@
+[
+  {
+    "Project": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj",
+    "References": [
+      "..\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+      "..\\CanDoItAll.AgentFramework.Runtime.Abstractions\\CanDoItAll.AgentFramework.Runtime.Abstractions.csproj",
+      "..\\CanDoItAll.AgentFramework.Core\\CanDoItAll.AgentFramework.Core.csproj",
+      "..\\..\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Core\\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj",
+      "..\\CanDoItAll.AgentFramework.Providers\\CanDoItAll.AgentFramework.Providers.csproj",
+      "..\\..\\Tools\\CanDoItAll.AgentFramework.Tooling\\CanDoItAll.AgentFramework.Tooling.csproj",
+      "..\\..\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions\\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+      "..\\..\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Access\\CanDoItAll.AgentFramework.Capabilities.Access.csproj",
+      "..\\..\\Mcp\\CanDoItAll.AgentFramework.Mcp.Abstractions\\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj",
+      "..\\..\\Mcp\\CanDoItAll.AgentFramework.Mcp\\CanDoItAll.AgentFramework.Mcp.csproj",
+      "..\\..\\Skills\\CanDoItAll.AgentFramework.Skills.Abstractions\\CanDoItAll.AgentFramework.Skills.Abstractions.csproj",
+      "..\\..\\Skills\\CanDoItAll.AgentFramework.Skills\\CanDoItAll.AgentFramework.Skills.csproj",
+      "..\\..\\Tools\\CanDoItAll.AgentFramework.Tools.Abstractions\\CanDoItAll.AgentFramework.Tools.Abstractions.csproj",
+      "..\\..\\Tools\\CanDoItAll.AgentFramework.Tools\\CanDoItAll.AgentFramework.Tools.csproj",
+      "..\\..\\Tools\\CanDoItAll.Tools.Documents\\CanDoItAll.Tools.Documents.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.Security.Abstractions\\CanDoItAll.Security.Abstractions.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.SharedKernel\\CanDoItAll.SharedKernel.csproj",
+      "..\\..\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj"
+    ],
+    "Packages": [
+      "Microsoft.Agents.AI",
+      "Microsoft.Agents.AI.A2A",
+      "Microsoft.Agents.AI.OpenAI",
+      "Microsoft.Agents.AI.Workflows",
+      "Microsoft.Extensions.AI",
+      "Microsoft.Extensions.AI.OpenAI",
+      "ModelContextProtocol",
+      "OllamaSharp",
+      "OpenAI",
+      "OpenTelemetry.Api"
+    ]
+  },
+  {
+    "Project": "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+    "References": [
+      "..\\..\\..\\Memory\\CanDoItAll.Memory.SourceGateway.Abstractions\\CanDoItAll.Memory.SourceGateway.Abstractions.csproj",
+      "..\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+      "..\\CanDoItAll.AgentFramework.Providers\\CanDoItAll.AgentFramework.Providers.csproj",
+      "..\\CanDoItAll.AgentFramework.Runtime.Abstractions\\CanDoItAll.AgentFramework.Runtime.Abstractions.csproj",
+      "..\\CanDoItAll.AgentFramework.Usage\\CanDoItAll.AgentFramework.Usage.csproj",
+      "..\\..\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Core\\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj",
+      "..\\..\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions\\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.Git\\CanDoItAll.Git.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.SharedKernel\\CanDoItAll.SharedKernel.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.Infrastructure.Abstractions\\CanDoItAll.Infrastructure.Abstractions.csproj",
+      "..\\..\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj"
+    ],
+    "Packages": [
+      "Microsoft.Extensions.Logging.Abstractions",
+      "OpenTelemetry.Api"
+    ]
+  },
+  {
+    "Project": "src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj",
+    "References": [
+      "..\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+      "..\\CanDoItAll.AgentFramework.ProviderPipelines\\CanDoItAll.AgentFramework.ProviderPipelines.csproj",
+      "..\\..\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj"
+    ],
+    "Packages": []
+  },
+  {
+    "Project": "src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/CanDoItAll.AgentFramework.Runtime.Abstractions.csproj",
+    "References": [
+      "..\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+      "..\\..\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj"
+    ],
+    "Packages": []
+  },
+  {
+    "Project": "src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj",
+    "References": [
+      "..\\..\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions\\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+      "..\\..\\..\\Memory\\CanDoItAll.Memory.Abstractions\\CanDoItAll.Memory.Abstractions.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.SharedKernel\\CanDoItAll.SharedKernel.csproj",
+      "..\\..\\..\\Foundation\\CanDoItAll.Infrastructure.Abstractions\\CanDoItAll.Infrastructure.Abstractions.csproj",
+      "..\\..\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj"
+    ],
+    "Packages": []
+  },
+  {
+    "Project": "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+    "References": [
+      "..\\..\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\CanDoItAll.AgentFramework.Core.csproj",
+      "..\\..\\MAF\\Common\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+      "..\\..\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj",
+      "..\\..\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Core\\CanDoItAll.AgentFramework.Workflows.Core.csproj",
+      "..\\..\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Abstractions\\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj",
+      "..\\..\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Runtime\\CanDoItAll.AgentFramework.Workflows.Runtime.csproj",
+      "..\\..\\MAF\\Tools\\CanDoItAll.AgentFramework.Tooling\\CanDoItAll.AgentFramework.Tooling.csproj",
+      "..\\..\\MAF\\Tools\\CanDoItAll.Tools.Documents\\CanDoItAll.Tools.Documents.csproj",
+      "..\\..\\MAF\\Common\\CanDoItAll.AgentFramework.Components\\CanDoItAll.AgentFramework.Components.csproj",
+      "..\\..\\Foundation\\CanDoItAll.SharedKernel\\CanDoItAll.SharedKernel.csproj",
+      "..\\..\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj",
+      "..\\..\\Integration\\CanDoItAll.FileTools.Integration.Abstractions\\CanDoItAll.FileTools.Integration.Abstractions.csproj",
+      "..\\..\\UI\\CanDoItAll.AppComponents\\CanDoItAll.AppComponents.csproj",
+      "..\\..\\UI\\CanDoItAll.Conversations.Shell\\CanDoItAll.Conversations.Shell.csproj",
+      "..\\..\\Memory\\CanDoItAll.Memory.Abstractions\\CanDoItAll.Memory.Abstractions.csproj",
+      "..\\..\\Memory\\CanDoItAll.Memory.Application\\CanDoItAll.Memory.Application.csproj",
+      "..\\CanDoItAll.Modules.Prompts\\CanDoItAll.Modules.Prompts.csproj",
+      "..\\CanDoItAll.Modules.Projects\\CanDoItAll.Modules.Projects.csproj",
+      "..\\CanDoItAll.Modules.Resources\\CanDoItAll.Modules.Resources.csproj",
+      "..\\CanDoItAll.Modules.Security\\CanDoItAll.Modules.Security.csproj",
+      "..\\CanDoItAll.Modules.TestLab\\CanDoItAll.Modules.TestLab.csproj",
+      "..\\CanDoItAll.Modules.Workspace\\CanDoItAll.Modules.Workspace.csproj",
+      "..\\..\\Processes\\CanDoItAll.Processes.Abstractions\\CanDoItAll.Processes.Abstractions.csproj",
+      "..\\..\\Processes\\CanDoItAll.Processes.Application\\CanDoItAll.Processes.Application.csproj",
+      "..\\..\\Processes\\CanDoItAll.Processes.Persistence\\CanDoItAll.Processes.Persistence.csproj",
+      "..\\..\\Processes\\CanDoItAll.Processes.Projections\\CanDoItAll.Processes.Projections.csproj"
+    ],
+    "Packages": [
+      "Microsoft.AspNetCore.Components.Web",
+      "Microsoft.Extensions.Http",
+      "CanDoItAll.Components.BaseLib",
+      "CanDoItAll.Components.CanvasLib",
+      "CanDoItAll.Components.Charts",
+      "CanDoItAll.Components.Gantt",
+      "CanDoItAll.Components.Mermaid",
+      "CanDoItAll.FileTools.Desktop",
+      "CanDoItAll.FileTools.FileBrowser.Components",
+      "CanDoItAll.FileTools.FileBrowser.Core",
+      "CanDoItAll.FileTools.FileInteraction.Components",
+      "CanDoItAll.FileTools.FileInteraction.Core",
+      "CanDoItAll.FileTools.FileInteraction.Markdown",
+      "CanDoItAll.FileTools.FileInteraction.Spreadsheet"
+    ]
+  },
+  {
+    "Project": "src/Integration/CanDoItAll.SharedProviders.Http/CanDoItAll.SharedProviders.Http.csproj",
+    "References": [
+      "..\\CanDoItAll.SharedProviders.Abstractions\\CanDoItAll.SharedProviders.Abstractions.csproj",
+      "..\\..\\MAF\\Common\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+      "..\\..\\MAF\\Common\\CanDoItAll.AgentFramework.Providers\\CanDoItAll.AgentFramework.Providers.csproj"
+    ],
+    "Packages": [
+      "Microsoft.Extensions.DependencyInjection.Abstractions",
+      "Microsoft.Extensions.Http",
+      "Microsoft.Extensions.Logging.Abstractions"
+    ]
+  }
+]

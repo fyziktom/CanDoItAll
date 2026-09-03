@@ -1,0 +1,652 @@
+{
+  "snapshotId": "snap-20260903162319-aa914253",
+  "createdUtc": "2026-09-03T16:23:19.6154735+00:00",
+  "scope": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+    "scopeProjectNames": [
+      "CanDoItAll.AgentFramework.Llm.ProviderRuntime",
+      "CanDoItAll.AgentFramework.Maf",
+      "CanDoItAll.AgentFramework.Providers",
+      "CanDoItAll.AgentFramework.Runtime.Abstractions",
+      "CanDoItAll.Modules.Workbench",
+      "CanDoItAll.SharedProviders.Http"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": true,
+    "includePersistence": false,
+    "includeRisks": true,
+    "includeXmlDocs": true,
+    "includeMermaidExports": false
+  },
+  "solution": {
+    "name": "CanDoItAll",
+    "path": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+    "projectCount": 6,
+    "documentCount": 420
+  },
+  "diagnostics": [
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+        "line": 82,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+        "line": 136,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+        "line": 197,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0002",
+      "severity": "Warning",
+      "message": "Service type could not be resolved for AddScoped.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+        "line": 82,
+        "column": 9
+      }
+    }
+  ],
+  "findingsCount": 425,
+  "relevantFindings": [
+    {
+      "findingId": "finding-file-size-doc-src-integration-candoitall-sharedprov-a8cadd896d20",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayRequestPolicy.cs has 1387 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-integration-candoitall-sharedproviders-http-sha-f4c6d1226841"
+      ],
+      "source": {
+        "path": "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayRequestPolicy.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-maf-common-candoitall-agentframew-083b896dcc1e",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Execution/MafStreamingTurnExecutor.cs has 1307 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-maf-common-candoitall-agentframework-maf-runtim-bff92cf2fd64"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Execution/MafStreamingTurnExecutor.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-maf-common-candoitall-agentframew-0abc801a74a5",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs has 898 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-maf-common-candoitall-agentframework-maf-runtim-45118a007334"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-maf-common-candoitall-agentframew-ccd8675877d5",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs has 568 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-maf-common-candoitall-agentframework-maf-runtim-c8d556287ae9"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-maf-common-candoitall-agentframew-778696f436f8",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderAgentFactory.cs has 768 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-maf-common-candoitall-agentframework-maf-runtim-9f957a9d9604"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderAgentFactory.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-modules-candoitall-modules-workbe-0b1c0c6aa17f",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs has 3619 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-modules-candoitall-modules-workbench-agenttools-b3ed7fc28771"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs"
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-maf-c-9dc231958cb9",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.Maf.MafProviderAgentFactory exposes 24 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-maf-candoitall-agent-67cc0a9fe809"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderAgentFactory.cs",
+        "line": 204,
+        "column": 1,
+        "endLine": 659,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-maf-c-76c1a4ad704b",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory exposes 25 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-maf-candoitall-agent-0bf86e51afd5"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs",
+        "line": 15,
+        "column": 1,
+        "endLine": 898,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-maf-c-79074b8fc404",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.Maf.MafRuntimeToolInvocationResultClassifier exposes 21 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-maf-candoitall-agent-7c8948240be8"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 568,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-maf-c-f0b8f997ff64",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.Maf.MafStreamingTurnExecutor exposes 20 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-maf-candoitall-agent-eeb4fa0bef33"
+      ],
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Execution/MafStreamingTurnExecutor.cs",
+        "line": 22,
+        "column": 1,
+        "endLine": 1307,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-workbench-ca-7b17c771da63",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider exposes 18 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-workbench-candoitall-module-670bf734357d"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 16,
+        "column": 1,
+        "endLine": 3439,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-workbench-ca-95b7ecda628d",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureAccessState exposes 16 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-workbench-candoitall-module-5ed1f603500d"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 3349,
+        "column": 5,
+        "endLine": 3422,
+        "endColumn": 6
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-workbench-ca-02a86913daac",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureToolBuilder exposes 127 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-workbench-candoitall-module-06271ebce0c9"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 213,
+        "column": 5,
+        "endLine": 3347,
+        "endColumn": 6
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-sharedproviders-http-c16d7a6509c9",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.SharedProviders.Http.SharedProviderRelayRequestPolicy exposes 69 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-sharedproviders-http-candoitall-sha-3ac94ba0a2ec"
+      ],
+      "source": {
+        "path": "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayRequestPolicy.cs",
+        "line": 9,
+        "column": 1,
+        "endLine": 1387,
+        "endColumn": 2
+      }
+    }
+  ],
+  "projectReferences": [
+    {
+      "edgeId": "dep-projectreference-proj-candoitall-agentframework-llm-dbee9120dc4a",
+      "kind": "ProjectReference",
+      "fromId": "proj-candoitall-agentframework-llm-providerruntime",
+      "toId": "proj-candoitall-agentframework-providers",
+      "weight": 1
+    },
+    {
+      "edgeId": "dep-projectreference-proj-candoitall-agentframework-maf-2e34cdfa2daf",
+      "kind": "ProjectReference",
+      "fromId": "proj-candoitall-agentframework-maf",
+      "toId": "proj-candoitall-agentframework-providers",
+      "weight": 1
+    },
+    {
+      "edgeId": "dep-projectreference-proj-candoitall-agentframework-maf-95ab278896b1",
+      "kind": "ProjectReference",
+      "fromId": "proj-candoitall-agentframework-maf",
+      "toId": "proj-candoitall-agentframework-runtime-abstractions",
+      "weight": 1
+    },
+    {
+      "edgeId": "dep-projectreference-proj-candoitall-sharedproviders-ht-decd75118114",
+      "kind": "ProjectReference",
+      "fromId": "proj-candoitall-sharedproviders-http",
+      "toId": "proj-candoitall-agentframework-providers",
+      "weight": 1
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodes": [
+        "CanDoItAll.Modules.Workbench.CanvasAdapters",
+        "CanDoItAll.Modules.Workbench.ProjectStructure",
+        "CanDoItAll.Modules.Workbench"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodes": [
+        "CanDoItAll.Modules.Workbench.ProjectPackageService",
+        "CanDoItAll.Modules.Workbench.ProjectPackageStorageImporter"
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "CanDoItAll.AgentFramework.Maf.IMafProviderAgentFactory",
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderAgentFactory.cs",
+        "line": 26,
+        "column": 1,
+        "endLine": 34,
+        "endColumn": 2
+      },
+      "memberCount": 1,
+      "constructors": []
+    },
+    {
+      "name": "CanDoItAll.AgentFramework.Maf.MafProviderAgentFactory",
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderAgentFactory.cs",
+        "line": 204,
+        "column": 1,
+        "endLine": 659,
+        "endColumn": 2
+      },
+      "memberCount": 24,
+      "constructors": [
+        {
+          "parameterCount": 6,
+          "parameters": [
+            "CanDoItAll.AgentFramework.Maf.IMafProviderCredentialService",
+            "CanDoItAll.AgentFramework.Maf.IMafProviderStreamingDispatchGate",
+            "CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder",
+            "Microsoft.Extensions.Logging.ILoggerFactory?",
+            "CanDoItAll.AgentFramework.Providers.IProviderHttpClientSelector?",
+            "System.TimeProvider?"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory",
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs",
+        "line": 15,
+        "column": 1,
+        "endLine": 898,
+        "endColumn": 2
+      },
+      "memberCount": 25,
+      "constructors": [
+        {
+          "parameterCount": 8,
+          "parameters": [
+            "string",
+            "CanDoItAll.AgentFramework.Models.WorkspaceScopeDescriptor",
+            "CanDoItAll.AgentFramework.Maf.IMafProviderCredentialService",
+            "CanDoItAll.AgentFramework.Maf.IMafProviderAgentFactory",
+            "CanDoItAll.AgentFramework.Maf.IRuntimeCapabilityComposer",
+            "CanDoItAll.Infrastructure.FileSystem.IPhysicalFileSystemPathPolicyFactory",
+            "Microsoft.Extensions.Logging.ILoggerFactory?",
+            "CanDoItAll.AgentFramework.Core.AgentToolInvocationPolicyPipeline?"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.AgentFramework.Maf.MafRuntimeToolInvocationResultClassifier",
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 568,
+        "endColumn": 2
+      },
+      "memberCount": 21,
+      "constructors": []
+    },
+    {
+      "name": "CanDoItAll.AgentFramework.Maf.MafStreamingTurnExecutor",
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Execution/MafStreamingTurnExecutor.cs",
+        "line": 22,
+        "column": 1,
+        "endLine": 1307,
+        "endColumn": 2
+      },
+      "memberCount": 20,
+      "constructors": [
+        {
+          "parameterCount": 7,
+          "parameters": [
+            "string",
+            "CanDoItAll.AgentFramework.Models.WorkspaceScopeDescriptor",
+            "CanDoItAll.AgentFramework.Maf.IMafProviderAgentFactory",
+            "CanDoItAll.AgentFramework.Maf.IMafApprovalContinuationDriver",
+            "CanDoItAll.AgentFramework.Maf.IMafRuntimeSessionPersistenceDriver",
+            "CanDoItAll.Infrastructure.FileSystem.IPhysicalFileSystemPathPolicyFactory",
+            "System.Collections.Generic.IReadOnlyList<CanDoItAll.AgentFramework.Core.Execution.IAgentExecutionOutcomeRecoveryPolicy>?"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.AgentFramework.Maf.MafStreamingTurnExecutor.WorkspaceRecoveryArtifactReader",
+      "source": {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Execution/MafStreamingTurnExecutor.cs",
+        "line": 1235,
+        "column": 5,
+        "endLine": 1248,
+        "endColumn": 6
+      },
+      "memberCount": 2,
+      "constructors": [
+        {
+          "parameterCount": 3,
+          "parameters": [
+            "string",
+            "CanDoItAll.AgentFramework.Models.WorkspaceScopeDescriptor",
+            "CanDoItAll.Infrastructure.FileSystem.IPhysicalFileSystemPathPolicyFactory"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 16,
+        "column": 1,
+        "endLine": 3439,
+        "endColumn": 2
+      },
+      "memberCount": 18,
+      "constructors": [
+        {
+          "parameterCount": 17,
+          "parameters": [
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureLeaseService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAnalyticsService",
+            "CanDoItAll.Modules.Workbench.ProjectPlanAnalyticsQueryService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentAuthorizationService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureTaskCreationService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureTaskDetailsService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureTaskResourceAttachmentService",
+            "CanDoItAll.Modules.Workspace.ProjectManagementKnowledgeService",
+            "CanDoItAll.AgentFramework.Core.IAgentImageAnalysisService",
+            "CanDoItAll.AgentFramework.Core.IWorkspaceCommandExecutionService",
+            "CanDoItAll.AgentFramework.Core.IWorkspacePathResolutionService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentProjectCreationCoordinator",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentNodeCopyCoordinator",
+            "CanDoItAll.Infrastructure.Persistence.IDatabaseRuntimeState",
+            "CanDoItAll.Infrastructure.Storage.IExternalTargetPathRegistryFactory",
+            "System.TimeProvider"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureAccessState",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 3349,
+        "column": 5,
+        "endLine": 3422,
+        "endColumn": 6
+      },
+      "memberCount": 16,
+      "constructors": [
+        {
+          "parameterCount": 6,
+          "parameters": [
+            "CanDoItAll.AgentFramework.Models.AgentProjectStructureAccessSettings",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureScopedProcessAccess?",
+            "CanDoItAll.AgentFramework.Models.AgentRuntimeContextIntent",
+            "CanDoItAll.AgentFramework.Tooling.AgentRuntimeToolProviderPurpose",
+            "CanDoItAll.Modules.Workbench.ProjectStructure.ProjectStructureInvocationSnapshotReadContext",
+            "CanDoItAll.AgentFramework.Models.AgentExecutionGovernanceSnapshot?"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureResolvedScope",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 3433,
+        "column": 5,
+        "endLine": 3438,
+        "endColumn": 33
+      },
+      "memberCount": 6,
+      "constructors": [
+        {
+          "parameterCount": 5,
+          "parameters": [
+            "CanDoItAll.Modules.Workbench.ProjectStructureLeaseScopeKind",
+            "string",
+            "System.Guid?",
+            "string",
+            "string?"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureScopedProcessAccess",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 3424,
+        "column": 5,
+        "endLine": 3431,
+        "endColumn": 75
+      },
+      "memberCount": 8,
+      "constructors": [
+        {
+          "parameterCount": 7,
+          "parameters": [
+            "System.Guid",
+            "string",
+            "string",
+            "bool",
+            "bool",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentContext?",
+            "CanDoItAll.AgentFramework.Core.ProjectStructureProcessNodeContextDescriptor?"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureToolBuilder",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+        "line": 213,
+        "column": 5,
+        "endLine": 3347,
+        "endColumn": 6
+      },
+      "memberCount": 127,
+      "constructors": [
+        {
+          "parameterCount": 18,
+          "parameters": [
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureLeaseService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAnalyticsService",
+            "CanDoItAll.Modules.Workbench.ProjectPlanAnalyticsQueryService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentAuthorizationService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentProjectCreationCoordinator",
+            "CanDoItAll.Modules.Workbench.ProjectStructureAgentNodeCopyCoordinator",
+            "CanDoItAll.Modules.Workbench.ProjectStructureTaskCreationService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureTaskDetailsService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureTaskResourceAttachmentService",
+            "CanDoItAll.Modules.Workspace.ProjectManagementKnowledgeService",
+            "CanDoItAll.AgentFramework.Core.IAgentImageAnalysisService",
+            "CanDoItAll.AgentFramework.Core.IWorkspaceCommandExecutionService",
+            "CanDoItAll.AgentFramework.Core.IWorkspacePathResolutionService",
+            "string",
+            "CanDoItAll.Infrastructure.Persistence.IDatabaseRuntimeState",
+            "CanDoItAll.Infrastructure.Storage.IExternalTargetPathRegistryFactory",
+            "System.TimeProvider"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CanDoItAll.SharedProviders.Http.SharedProviderRelayRequestPolicy",
+      "source": {
+        "path": "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderRelayRequestPolicy.cs",
+        "line": 9,
+        "column": 1,
+        "endLine": 1387,
+        "endColumn": 2
+      },
+      "memberCount": 69,
+      "constructors": []
+    }
+  ]
+}

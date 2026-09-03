@@ -1,0 +1,42 @@
+{
+  "projectId": "99d218dc-701a-4fac-9305-2e040f1fb3a7",
+  "projectName": "Tetris3",
+  "nodes": [
+    {
+      "id": "custom:08442774cb45460f91b2940faacec433",
+      "parentId": "project:99d218dc-701a-4fac-9305-2e040f1fb3a7",
+      "title": "Customer request",
+      "objectType": "ProjectBlock",
+      "objectSubtype": "research"
+    },
+    {
+      "id": "custom:6bdbf38b9c3f4bb191018ee5cd4784ca",
+      "parentId": "custom:08442774cb45460f91b2940faacec433",
+      "title": "Example: Office365 Category Email Summary To Project",
+      "objectType": "WorkflowDefinition",
+      "objectSubtype": ""
+    },
+    {
+      "id": "custom:2703c1e17feb42ebb6782bf532387099",
+      "parentId": "project:99d218dc-701a-4fac-9305-2e040f1fb3a7",
+      "title": "Main",
+      "objectType": "ProjectBlock",
+      "objectSubtype": "architecture"
+    },
+    {
+      "id": "custom:ee4deab8192c4f368a226a9842246f53",
+      "parentId": "custom:6bdbf38b9c3f4bb191018ee5cd4784ca",
+      "title": "Office365 category email summary",
+      "objectType": "File",
+      "objectSubtype": "markdown"
+    },
+    {
+      "id": "project:99d218dc-701a-4fac-9305-2e040f1fb3a7",
+      "parentId": null,
+      "title": "Tetris3",
+      "objectType": "ProjectRoot",
+      "objectSubtype": ""
+    }
+  ],
+  "warnings": []
+}

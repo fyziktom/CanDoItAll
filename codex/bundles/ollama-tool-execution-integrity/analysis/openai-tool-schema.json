@@ -1,0 +1,150 @@
+{
+  "type": "object",
+  "required": [
+    "projectId",
+    "request"
+  ],
+  "properties": {
+    "projectId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "objectType": {
+          "type": "string",
+          "enum": [
+            "ProjectRoot",
+            "Phase",
+            "Milestone",
+            "ProjectBlock",
+            "Meeting",
+            "Recording",
+            "Transcript",
+            "Participant",
+            "WorkItem",
+            "Repository",
+            "File",
+            "ImageAsset",
+            "VideoAsset",
+            "Link",
+            "Connector",
+            "Script",
+            "Environment",
+            "Infrastructure",
+            "PromptFlow",
+            "PromptSession",
+            "PromptStep",
+            "ProcessDefinition",
+            "ProcessRun",
+            "WorkflowDefinition",
+            "WorkflowRun",
+            "ValidationRun",
+            "TestPlan",
+            "TestEvidence",
+            "Note",
+            "Decision",
+            "SecretReference"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "media": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "fileName": {
+              "type": "string"
+            },
+            "contentType": {
+              "type": "string"
+            },
+            "base64Data": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "fileName",
+            "contentType",
+            "base64Data"
+          ]
+        },
+        "parentNodeKey": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "objectSubtype": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "leaseToken": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sourceWorkspacePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sourceFileName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sourceContentType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sourceUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "objectType",
+        "title",
+        "subtitle",
+        "notes",
+        "media",
+        "parentNodeKey"
+      ]
+    },
+    "estimatedMinutes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "default": null
+    }
+  },
+  "additionalProperties": false
+}
