@@ -40,7 +40,7 @@ public sealed class ProviderAdministrationLayoutTests {
         cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='agents-hr-agent-open-header']").HasAttribute("disabled")), TimeSpan.FromSeconds(10));
         if (tab == AgentWorkspaceTabs.Providers) {
             cut.WaitForElement("[data-testid='providers-tree-provider']");
-            OpenProviderTab(cut, "History");
+            await cut.InvokeAsync(() => OpenProviderTab(cut, "History"));
         }
         cut.WaitForElement("[data-testid='history-search-form']");
         Assert.Empty(history.Queries);
@@ -68,7 +68,7 @@ public sealed class ProviderAdministrationLayoutTests {
         var model = Assert.IsType<ProviderProfileEditorModel>(context.Model);
         var originalName = model.Name;
         cut.Find("[data-testid='providers-name-input']").Change("Unsaved provider edit");
-        OpenProviderTab(cut, "History");
+        await cut.InvokeAsync(() => OpenProviderTab(cut, "History"));
         var form = cut.WaitForElement("[data-testid='history-search-form']");
         Assert.Single(cut.FindAll("form"));
         Assert.Empty(cut.FindAll("[data-testid='providers-save']"));
@@ -76,11 +76,11 @@ public sealed class ProviderAdministrationLayoutTests {
         Assert.Single(history.Queries);
         var service = harness.Context.Services.GetRequiredService<IProviderRuntimeAdministrationService>();
         Assert.Equal(originalName, (await service.GetProviderEditorAsync(model.Id!.Value)).Name);
-        OpenProviderTab(cut, "Connection");
+        await cut.InvokeAsync(() => OpenProviderTab(cut, "Connection"));
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
         Assert.Equal("Unsaved provider edit", model.Name);
         cut.Find("[data-testid='providers-new']").Click();
-        OpenProviderTab(cut, "History");
+        await cut.InvokeAsync(() => OpenProviderTab(cut, "History"));
         Assert.Contains("Save this provider first", cut.Markup);
         Assert.Empty(cut.FindAll("[data-testid='history-search-form']"));
         Assert.Single(history.Queries);

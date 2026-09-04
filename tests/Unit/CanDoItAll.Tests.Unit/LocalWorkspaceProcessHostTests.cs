@@ -327,8 +327,10 @@ public sealed class LocalWorkspaceProcessHostTests
         {
             var execution = host.ExecuteAsync(request, cancellation.Token);
             Assert.True(
-                SpinWait.SpinUntil(() => File.Exists(childPidFilePath), TimeSpan.FromSeconds(5)),
-                "Expected the child PID to be published before cancellation.");
+                SpinWait.SpinUntil(
+                    () => IsChildProcessIdPublished(childPidFilePath),
+                    TimeSpan.FromSeconds(5)),
+                "Expected the child PID to be fully published before cancellation.");
             cancellation.Cancel();
 
             var result = await execution.WaitAsync(TimeSpan.FromSeconds(10));
@@ -343,6 +345,18 @@ public sealed class LocalWorkspaceProcessHostTests
         {
             TryKillProcessFromFile(childPidFilePath);
             TryDeleteFile(childPidFilePath);
+        }
+
+        static bool IsChildProcessIdPublished(string path)
+        {
+            try
+            {
+                return int.TryParse(File.ReadAllText(path).Trim(), out _);
+            }
+            catch (IOException)
+            {
+                return false;
+            }
         }
     }
 
