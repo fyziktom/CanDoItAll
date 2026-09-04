@@ -19,8 +19,19 @@ public sealed record ProjectStructureAnalyticsWriteRequest(
     string RequestSummaryJson,
     string ResponseSummaryJson);
 
+public interface IProjectStructureAnalyticsService
+{
+    Task RecordAsync(
+        ProjectStructureAnalyticsWriteRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ProjectStructureAnalyticsResponse> QueryAsync(
+        ProjectStructureAnalyticsQueryRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class ProjectStructureAnalyticsService(
-    IDbContextFactory<AppDbContext> dbContextFactory)
+    IDbContextFactory<AppDbContext> dbContextFactory) : IProjectStructureAnalyticsService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 

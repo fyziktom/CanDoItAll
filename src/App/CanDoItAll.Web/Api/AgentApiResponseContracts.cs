@@ -158,7 +158,14 @@ internal sealed record AgentExecutionToolReceiptApiResponse(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset CompletedAtUtc,
     string RuntimeToolProviderName,
-    ToolExecutionSideEffectMode DeclaredSideEffectMode);
+    ToolExecutionSideEffectMode DeclaredSideEffectMode,
+    AgentToolInvocationOutcome InvocationOutcome,
+    AgentToolEffectState EffectState,
+    string FailureCode,
+    string FailureMessage,
+    bool CanRetryWithCorrectedInput,
+    string EffectSourceKind,
+    string EffectSourceId);
 
 internal sealed record AgentProviderUsageTotalsApiResponse(
     int ObservationCount,
@@ -390,7 +397,14 @@ internal static class AgentApiResponseMapper
             receipt.StartedAtUtc,
             receipt.CompletedAtUtc,
             receipt.RuntimeToolProviderName,
-            receipt.DeclaredSideEffectMode)).ToArray();
+            receipt.DeclaredSideEffectMode,
+            receipt.InvocationOutcome,
+            receipt.EffectState,
+            receipt.FailureCode,
+            receipt.FailureMessage,
+            receipt.CanRetryWithCorrectedInput,
+            receipt.EffectSourceKind,
+            receipt.EffectSourceId)).ToArray();
     }
 
     public static IReadOnlyList<AgentExecutionLogApiResponse> ToExecutionLog(

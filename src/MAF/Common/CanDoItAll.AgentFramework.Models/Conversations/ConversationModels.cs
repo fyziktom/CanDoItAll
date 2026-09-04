@@ -8,7 +8,11 @@ public sealed record ChatMessageRecord(
     ChatMessageRole Role,
     string Content,
     DateTimeOffset CreatedAtUtc,
-    int TokenEstimate);
+    int TokenEstimate)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentToolEvidenceOwnership? ToolEvidenceOwnership { get; init; }
+}
 
 public sealed record PendingToolApprovalRecord(
     string ApprovalId,
@@ -578,6 +582,20 @@ public sealed record ToolExecutionReceiptRecord(
     public string RuntimeToolProviderName { get; init; } = string.Empty;
 
     public ToolExecutionSideEffectMode DeclaredSideEffectMode { get; init; }
+
+    public AgentToolInvocationOutcome InvocationOutcome { get; init; }
+
+    public AgentToolEffectState EffectState { get; init; }
+
+    public string FailureCode { get; init; } = string.Empty;
+
+    public string FailureMessage { get; init; } = string.Empty;
+
+    public bool CanRetryWithCorrectedInput { get; init; }
+
+    public string EffectSourceKind { get; init; } = string.Empty;
+
+    public string EffectSourceId { get; init; } = string.Empty;
 }
 
 public sealed record ExecutionWorkflowCheckpointRecord(

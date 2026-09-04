@@ -13,11 +13,28 @@ public interface IAgentToolFailure
     bool CanRetryWithCorrectedInput { get; }
 }
 
+public interface IAgentToolFailureEffectEvidence : IAgentToolFailure
+{
+    AgentToolEffectState EffectState { get; }
+}
+
 public sealed record AgentToolFailureResult(
     bool Succeeded,
     string ErrorCode,
     string Message,
-    bool CanRetryWithCorrectedInput);
+    bool CanRetryWithCorrectedInput) : IAgentToolInvocationResultEvidence
+{
+    public AgentToolEffectState EffectState { get; init; } = AgentToolEffectState.Unknown;
+
+    AgentToolInvocationOutcome IAgentToolInvocationResultEvidence.Outcome =>
+        Succeeded
+            ? AgentToolInvocationOutcome.Succeeded
+            : AgentToolInvocationOutcome.Failed;
+
+    string IAgentToolInvocationResultEvidence.FailureCode => ErrorCode;
+
+    string IAgentToolInvocationResultEvidence.SafeMessage => Message;
+}
 
 public sealed class AgentToolInputValidationException : InvalidOperationException, IAgentToolFailure
 {

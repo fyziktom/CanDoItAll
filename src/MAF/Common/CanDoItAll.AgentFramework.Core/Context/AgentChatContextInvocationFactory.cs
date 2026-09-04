@@ -137,11 +137,26 @@ public static class AgentChatContextInvocationFactory
     }
 
     public static AgentChatExecutionCompleted? CreateCompletionNotification(
-        ExecutionRunRecord run)
+        ExecutionRunRecord run,
+        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null)
     {
         ArgumentNullException.ThrowIfNull(run);
-        if (run.State != ExecutionState.Completed ||
-            run.Outcome != RunOutcome.Succeeded ||
+        var hasMatchingCommittedEffect = toolInvocationTraces?.Any(trace =>
+            trace.Classification == ToolInvocationClassification.Mutation &&
+            trace.EffectState == AgentToolEffectState.Committed &&
+            string.Equals(
+                trace.EffectSourceKind,
+                run.SourceKind,
+                StringComparison.Ordinal) &&
+            string.Equals(
+                trace.EffectSourceId,
+                run.SourceId,
+                StringComparison.Ordinal)) == true;
+        var isSuccessfulCompletion =
+            run.State == ExecutionState.Completed &&
+            run.Outcome == RunOutcome.Succeeded;
+        if ((!isSuccessfulCompletion && !hasMatchingCommittedEffect) ||
+            run.State is not (ExecutionState.Completed or ExecutionState.Failed) ||
             !run.ChatSessionId.HasValue ||
             run.AgentId == Guid.Empty ||
             !string.Equals(run.RequestedBy, Requester, StringComparison.Ordinal) ||

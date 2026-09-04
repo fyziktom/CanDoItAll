@@ -143,6 +143,74 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public async Task Runtime_build_preserves_recorded_tool_traces_when_cleanup_fails_after_response()
+    {
+        var provider = CreateProviderProfile();
+        var recorder = new ToolInvocationTraceRecorder();
+        var sequence = recorder.Start(
+            "project_structure_asset_create",
+            ToolInvocationClassification.Mutation,
+            "project_structure_asset_create|projectId=project-id",
+            new AgentRuntimeToolOwnership(
+                "project-structure.runtime-tools",
+                "Project structure runtime tools",
+                "project_structure_asset_create"),
+            ToolInvocationPathArgumentSet.Empty);
+        recorder.Complete(
+            sequence,
+            succeeded: false,
+            failureMessage: "The request field is required.",
+            failureMessageSafeForPersistence: true,
+            outcome: AgentToolInvocationOutcome.Failed,
+            effectState: AgentToolEffectState.NotCommitted,
+            failureCode: "tool_argument_validation_failed",
+            canRetryWithCorrectedInput: true);
+        var usage = new ProviderUsageObservation(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            provider.Name,
+            provider.Kind,
+            "unit-model",
+            provider.Transport,
+            ProviderUsageSourcePhases.AgentRuntime,
+            ProviderUsageObservationStatus.Observed,
+            InputTokens: 1,
+            CachedInputTokens: 0,
+            OutputTokens: 2,
+            ReasoningTokens: 0,
+            TotalTokens: 3,
+            ToolCallCount: 1);
+        var runtimeBuild = new RuntimeBuildResult(
+            new DelayedStreamingAgent(TimeSpan.Zero),
+            provider,
+            "unit-model",
+            [new RecordingAsyncDisposable("cleanup", [], new IOException("cleanup failed"))],
+            [],
+            hasApprovalTools: false,
+            isTemperatureOmitted: false,
+            finalizerCapture: null,
+            toolInvocationTraceRecorder: recorder,
+            contextContributionTraceCollector: null);
+        var response = new AgentRuntimeResponse("done", 1, 2, 1, "session", null, [])
+        {
+            UsageObservations = [usage]
+        };
+
+        var exception = await Assert.ThrowsAsync<AgentRuntimeUsageException>(() =>
+            runtimeBuild.ExecuteWithLifetimeAsync(() => Task.FromResult(response)));
+
+        Assert.Equal(AgentRuntimeFailureOrigin.Runtime, exception.FailureOrigin);
+        Assert.Same(usage, Assert.Single(exception.UsageObservations));
+        var trace = Assert.Single(exception.ToolInvocationTraces);
+        Assert.Equal("project_structure_asset_create", trace.ToolName);
+        Assert.Equal(AgentToolInvocationOutcome.Failed, trace.Outcome);
+        Assert.Equal(AgentToolEffectState.NotCommitted, trace.EffectState);
+        Assert.Equal("tool_argument_validation_failed", trace.FailureCode);
+        Assert.True(trace.CanRetryWithCorrectedInput);
+        Assert.IsType<IOException>(exception.InnerException);
+    }
+
+    [Fact]
     public async Task Concurrent_runtime_build_disposal_callers_await_the_same_cleanup()
     {
         var provider = CreateProviderProfile();

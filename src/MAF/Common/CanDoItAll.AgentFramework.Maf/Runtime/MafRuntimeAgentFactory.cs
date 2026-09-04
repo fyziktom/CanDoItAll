@@ -595,12 +595,24 @@ internal sealed class MafRuntimeAgentFactory
                 classification,
                 policyDecision.Signature,
                 runtimeToolOwnership,
-                pathArguments);
+                pathArguments,
+                auditScope?.SourceKind ?? string.Empty,
+                auditScope?.SourceId ?? string.Empty,
+                MafToolInvocationCorrelationKey.Create(functionName, invocationArguments));
             var succeeded = false;
+            var outcome = AgentToolInvocationOutcome.Unknown;
+            var effectState = classification == ToolInvocationClassification.Read
+                ? AgentToolEffectState.None
+                : AgentToolEffectState.Unknown;
+            var failureCode = string.Empty;
+            var canRetryWithCorrectedInput = false;
             var failureMessage = string.Empty;
             var failureMessageSafeForPersistence = false;
             Guid? directReceiptExecutionRunId = null;
+            var effectSourceKind = auditScope?.SourceKind ?? string.Empty;
+            var effectSourceId = auditScope?.SourceId ?? string.Empty;
             using var runtimeToolOwnershipScope = AgentRuntimeToolOwnershipContext.BeginScope(runtimeToolOwnership);
+            using var effectScope = AgentToolInvocationEffectScope.Begin();
             try
             {
                 if (AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
@@ -611,6 +623,9 @@ internal sealed class MafRuntimeAgentFactory
                 {
                     failureMessage = policyDeniedResult;
                     failureMessageSafeForPersistence = true;
+                    failureCode = "ToolPolicyDenied";
+                    outcome = AgentToolInvocationOutcome.Failed;
+                    effectState = AgentToolEffectState.NotCommitted;
                     activity?.SetTag("agentframework.tool_policy_recoverable_denial", true);
                     activity?.SetStatus(ActivityStatusCode.Ok);
                     logger?.LogInformation(
@@ -627,12 +642,49 @@ internal sealed class MafRuntimeAgentFactory
                     policyDecision,
                     policyContext.HasEffectiveApprovalPath);
 
-                var result = await next(context, cancellationToken);
-                directReceiptExecutionRunId =
-                    MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                if (MafToolArgumentBindingFailureMapper.TryCreatePreInvocationFailure(
+                        context.Function as AIFunction,
+                        invocationArguments,
+                        out var argumentFailure))
+                {
+                    failureMessage = $"{argumentFailure.ErrorCode}: {argumentFailure.Message}";
+                    failureMessageSafeForPersistence = true;
+                    failureCode = argumentFailure.ErrorCode;
+                    canRetryWithCorrectedInput = argumentFailure.CanRetryWithCorrectedInput;
+                    outcome = AgentToolInvocationOutcome.Failed;
+                    effectState = argumentFailure.EffectState;
+                    activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
+                    logger?.LogInformation(
+                        "Returning sanitized pre-invocation argument failure for tool {ToolName} on agent {AgentId}.",
                         functionName,
-                        result);
-                succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(result);
+                        agentDefinition.Id);
+                    return argumentFailure;
+                }
+
+                var result = await next(context, cancellationToken);
+                var assessment = MafRuntimeToolInvocationResultClassifier.Assess(
+                    functionName,
+                    classification,
+                    result);
+                directReceiptExecutionRunId = assessment.DirectReceiptExecutionRunId;
+                succeeded = assessment.Succeeded;
+                outcome = assessment.Outcome;
+                effectState = assessment.EffectState;
+                failureCode = assessment.FailureCode;
+                canRetryWithCorrectedInput = assessment.CanRetryWithCorrectedInput;
+                ApplyCommittedEffectCapture(
+                    classification,
+                    effectScope,
+                    ref effectState,
+                    ref effectSourceKind,
+                    ref effectSourceId);
+                if (classification == ToolInvocationClassification.Mutation &&
+                    effectState == AgentToolEffectState.Committed)
+                {
+                    outcome = AgentToolInvocationOutcome.Succeeded;
+                    succeeded = true;
+                }
+
                 if (succeeded)
                 {
                     if (IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode))
@@ -646,7 +698,7 @@ internal sealed class MafRuntimeAgentFactory
                 }
                 else
                 {
-                    failureMessage = MafRuntimeToolInvocationResultClassifier.ResolveFailureMessage(result);
+                    failureMessage = assessment.FailureMessage;
                     failureMessageSafeForPersistence = true;
                     activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
                     if (isRequiredFinalizerTool)
@@ -670,6 +722,16 @@ internal sealed class MafRuntimeAgentFactory
             {
                 failureMessage = $"{toolFailure.ErrorCode}: {toolFailure.Message}";
                 failureMessageSafeForPersistence = true;
+                failureCode = toolFailure.ErrorCode;
+                canRetryWithCorrectedInput = toolFailure.CanRetryWithCorrectedInput;
+                outcome = AgentToolInvocationOutcome.Failed;
+                effectState = toolFailure.EffectState;
+                ApplyCommittedEffectCapture(
+                    classification,
+                    effectScope,
+                    ref effectState,
+                    ref effectSourceKind,
+                    ref effectSourceId);
                 activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
                 logger?.LogInformation(
                     "Returning sanitized tool failure {ErrorCode} for tool {ToolName} on governed run {ProcessRunId}, step {ProcessStepId}. CanRetryWithCorrectedInput={CanRetryWithCorrectedInput}",
@@ -682,11 +744,35 @@ internal sealed class MafRuntimeAgentFactory
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                outcome = AgentToolInvocationOutcome.Cancelled;
+                failureCode = "ToolInvocationCancelled";
+                ApplyCommittedEffectCapture(
+                    classification,
+                    effectScope,
+                    ref effectState,
+                    ref effectSourceKind,
+                    ref effectSourceId);
                 throw;
             }
+
             catch (Exception exception)
             {
+                logger?.LogError(
+                    "Unexpected tool invocation failure for {ToolName} on agent {AgentId}. ExceptionType={ExceptionType} InnerExceptionType={InnerExceptionType} StackTrace={StackTrace}",
+                    functionName,
+                    agentDefinition.Id,
+                    exception.GetType().FullName,
+                    exception.InnerException?.GetType().FullName ?? string.Empty,
+                    exception.StackTrace ?? string.Empty);
                 failureMessage = ToolInvocationTraceRecorder.UnexposedFailureMessage;
+                failureCode = "ToolInvocationFailed";
+                outcome = AgentToolInvocationOutcome.Failed;
+                ApplyCommittedEffectCapture(
+                    classification,
+                    effectScope,
+                    ref effectState,
+                    ref effectSourceKind,
+                    ref effectSourceId);
                 activity?.SetStatus(
                     ActivityStatusCode.Error,
                     ToolInvocationTraceRecorder.UnexposedFailureMessage);
@@ -699,13 +785,37 @@ internal sealed class MafRuntimeAgentFactory
                     succeeded,
                     failureMessage,
                     failureMessageSafeForPersistence,
-                    directReceiptExecutionRunId);
+                    directReceiptExecutionRunId,
+                    outcome,
+                    effectState,
+                    failureCode,
+                    canRetryWithCorrectedInput,
+                    effectSourceKind,
+                    effectSourceId);
             }
         });
         builder.UseOpenTelemetry(
             $"{AgentFrameworkTelemetry.SourceName}.Maf.{provider.Kind}",
             telemetry => telemetry.EnableSensitiveData = false);
         return builder.Build();
+    }
+
+    internal static void ApplyCommittedEffectCapture(
+        ToolInvocationClassification classification,
+        AgentToolInvocationEffectScope effectScope,
+        ref AgentToolEffectState effectState,
+        ref string effectSourceKind,
+        ref string effectSourceId)
+    {
+        if (classification != ToolInvocationClassification.Mutation ||
+            effectScope.CommittedEffect is not { } committedEffect)
+        {
+            return;
+        }
+
+        effectState = AgentToolEffectState.Committed;
+        effectSourceKind = committedEffect.SourceKind;
+        effectSourceId = committedEffect.SourceId;
     }
 
     private static IReadOnlyDictionary<string, AgentRuntimeToolOwnership> CreateRuntimeToolOwnershipByToolName(

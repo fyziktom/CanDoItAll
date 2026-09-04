@@ -151,11 +151,12 @@ public sealed class OllamaProviderDriver(
         ProviderModelSelectionPolicy.EnsureAllowed(request.Provider, request.Model);
         var transport = inferenceRelayTransport ??
             throw new InvalidOperationException("The provider inference relay transport is unavailable.");
+        var payload = OllamaInferenceRelayPayloadNormalizer.Normalize(request.PayloadUtf8);
         var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
             BuildInferenceRelayEndpoint(request.Provider))
         {
-            Content = new ReadOnlyMemoryContent(request.PayloadUtf8)
+            Content = new ReadOnlyMemoryContent(payload)
         };
         httpRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
         {

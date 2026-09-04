@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.Modules.Workbench;
 
 internal enum ProjectStructureAssetAgentFailureKind
@@ -41,6 +43,7 @@ internal static class ProjectStructureAssetAgentFailureBoundary
             statusCode,
             errorCode,
             safeMessage,
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 }

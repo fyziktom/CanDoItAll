@@ -23,6 +23,7 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
         Assert.Equal("InvalidMetadata", result.ErrorCode);
         Assert.Equal("metadataJson contains an incompatible value at '$.workflow'.", result.Message);
         Assert.True(result.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.Unknown, result.EffectState);
         Assert.DoesNotContain("Sensitive", result.Message, StringComparison.Ordinal);
         Assert.False(MafRuntimeToolInvocationResultClassifier.IsSuccessful(result));
     }

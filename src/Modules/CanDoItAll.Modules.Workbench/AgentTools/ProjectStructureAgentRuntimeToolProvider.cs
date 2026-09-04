@@ -10,6 +10,7 @@ using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -23,6 +24,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
     private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512}}""";
+    internal const string ProjectStructureAssetCreateToolDescription = """Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. Pass the top-level projectId and a nested request object. Inside request, provide the schema-required fields including objectType, title, and parentNodeKey. Put sourceWorkspacePath inside request when registering an existing workspace file; for example: {"projectId":"<guid>","request":{"objectType":"File","title":"Architecture overview","parentNodeKey":"<node-id>","sourceWorkspacePath":"docs/architecture/architecture_overview.md"}}. Use project:{projectId} as request.parentNodeKey for a top-level asset or an existing node id for a child asset. Use request.title, request.subtitle, and request.notes for descriptive evidence; notes are never asset content, and typed storage metadata is derived by the service and is not caller-controlled. Instead of request.sourceWorkspacePath, request may provide media base64 data or request.sourceUrl for a public http/https file that should be downloaded and stored as a managed asset.""";
 
     private static readonly IReadOnlyList<string> GovernedProcessDefaultStructureReadStatuses =
     [
@@ -37,7 +39,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     public ProjectStructureAgentRuntimeToolProvider(
         ProjectStructureAgentService agentService,
         ProjectStructureLeaseService leaseService,
-        ProjectStructureAnalyticsService analyticsService,
+        IProjectStructureAnalyticsService analyticsService,
         ProjectPlanAnalyticsQueryService planAnalyticsService,
         ProjectStructureAgentAuthorizationService authorizationService,
         ProjectStructureTaskCreationService taskCreationService,
@@ -51,7 +53,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator,
         IDatabaseRuntimeState databaseRuntimeState,
         IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<ProjectStructureAgentRuntimeToolProvider> logger)
     {
         ArgumentNullException.ThrowIfNull(agentService);
         ArgumentNullException.ThrowIfNull(leaseService);
@@ -70,6 +73,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ArgumentNullException.ThrowIfNull(databaseRuntimeState);
         ArgumentNullException.ThrowIfNull(externalTargetPathRegistryFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(logger);
 
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
         toolBuilder = new ProjectStructureToolBuilder(
@@ -90,7 +94,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             workspaceRoot,
             databaseRuntimeState,
             externalTargetPathRegistryFactory,
-            timeProvider);
+            timeProvider,
+            logger);
     }
 
     public int Order => ProviderOrder;
@@ -119,6 +124,18 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         }
 
         return ValueTask.FromResult(toolBuilder.CreateTools(context));
+    }
+
+    internal static AIFunction CreateProjectStructureAssetCreateTool(
+        Func<Guid, ProjectStructureAgentAssetCreateInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+
+        return AIFunctionFactory.Create(
+            (Guid projectId, ProjectStructureAgentAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) =>
+                handler(projectId, request, estimatedMinutes, cancellationToken),
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            ProjectStructureAssetCreateToolDescription);
     }
 
     internal static bool ShouldAttachForContext(AgentRuntimeContextIntent contextIntent)
@@ -213,7 +230,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     private sealed class ProjectStructureToolBuilder(
         ProjectStructureAgentService agentService,
         ProjectStructureLeaseService leaseService,
-        ProjectStructureAnalyticsService analyticsService,
+        IProjectStructureAnalyticsService analyticsService,
         ProjectPlanAnalyticsQueryService planAnalyticsService,
         ProjectStructureAgentAuthorizationService authorizationService,
         ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
@@ -228,11 +245,13 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         string workspaceRoot,
         IDatabaseRuntimeState databaseRuntimeState,
         IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger logger)
     {
         private readonly ProjectStructureAgentService agentService = agentService;
         private readonly ProjectStructureLeaseService leaseService = leaseService;
-        private readonly ProjectStructureAnalyticsService analyticsService = analyticsService;
+        private readonly IProjectStructureAnalyticsService analyticsService = analyticsService;
+        private readonly ProjectStructureAgentToolAnalyticsRecorder analyticsRecorder = new(analyticsService, logger);
         private readonly ProjectPlanAnalyticsQueryService planAnalyticsService = planAnalyticsService;
         private readonly ProjectStructureAgentAuthorizationService authorizationService = authorizationService;
         private readonly ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator = projectCreationCoordinator;
@@ -421,10 +440,15 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_approval_request",
                     "Records an approval-request node in the project structure so blocked work is written back into the graph."),
-                AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureAgentAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
-                    "project_structure_asset_create",
-                    "Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. An explicit parentNodeKey is required: use project:{projectId} for a top-level asset or an existing node id for a child asset. Use title, subtitle, and notes for descriptive evidence; notes are never asset content, and typed storage metadata is derived by the service and is not caller-controlled. Provide media base64 data, sourceWorkspacePath for a file inside the managed workspace, or sourceUrl for a public http/https file that should be downloaded and stored as a managed asset."),
+                CreateProjectStructureAssetCreateTool(
+                    (projectId, request, estimatedMinutes, cancellationToken) =>
+                        ProjectStructureAssetCreateAsync(
+                            agent,
+                            accessState,
+                            projectId,
+                            request,
+                            estimatedMinutes,
+                            cancellationToken)),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_get",
@@ -994,7 +1018,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     return new ProjectStructureReadToolData(
                         response.ProjectId,
                         response.ProjectName,
-                        nodes.Select(MapCompactNode).ToList(),
+                        nodes.Select(ProjectStructureAgentToolResponseProjection.MapCompactNode).ToList(),
                         response.Links,
                         warnings,
                         dispatch.Source);
@@ -2540,33 +2564,24 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         {
             var stopwatch = Stopwatch.StartNew();
             var context = BuildAgentContext(agent);
+            T response;
 
             try
             {
-                var response = await action(cancellationToken);
-                stopwatch.Stop();
-                await analyticsService.RecordAsync(
-                    new ProjectStructureAnalyticsWriteRequest(
-                        operationName,
-                        projectId ?? projectIdSelector?.Invoke(response),
-                        nodeId,
-                        scopeKind,
-                        scopeKey,
-                        context,
-                        true,
-                        stopwatch.ElapsedMilliseconds,
-                        ExtractWarnings(response),
-                        null,
-                        null,
-                        ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                        ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
-                    cancellationToken);
-                return response;
+                response = await action(cancellationToken);
+                var committedProjectId = projectId ?? projectIdSelector?.Invoke(response);
+                if (committedProjectId.HasValue &&
+                    (scopeKind.HasValue || projectIdSelector is not null))
+                {
+                    AgentToolInvocationEffectScope.RecordCommitted(
+                        ProjectStructureSourceKind,
+                        committedProjectId.Value.ToString("D"));
+                }
             }
             catch (ProjectStructureAgentException exception)
             {
                 stopwatch.Stop();
-                await analyticsService.RecordAsync(
+                await analyticsRecorder.RecordBestEffortAsync(
                     new ProjectStructureAnalyticsWriteRequest(
                         operationName,
                         projectId,
@@ -2580,19 +2595,17 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         exception.ErrorCode,
                         exception.Message,
                         ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                        ProjectStructureAnalyticsService.SerializeSummary(exception.Details)),
-                    cancellationToken);
+                        ProjectStructureAnalyticsService.SerializeSummary(exception.Details)));
                 throw;
             }
             catch (Exception exception)
                 when (SerializableMutationScope.IsConflict(exception))
             {
-                const string errorCode =
-                    "ProjectStructureConcurrentMutation";
+                const string errorCode = "ProjectStructureConcurrentMutation";
                 const string message =
                     "The project structure changed concurrently. Reload the authoritative project state and retry the mutation.";
                 stopwatch.Stop();
-                await analyticsService.RecordAsync(
+                await analyticsRecorder.RecordBestEffortAsync(
                     new ProjectStructureAnalyticsWriteRequest(
                         operationName,
                         projectId,
@@ -2605,14 +2618,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         [],
                         errorCode,
                         message,
-                        ProjectStructureAnalyticsService.SerializeSummary(
-                            requestSummary),
+                        ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
                         ProjectStructureAnalyticsService.SerializeSummary(
                             new
                             {
                                 FailureType = exception.GetType().Name
-                            })),
-                    cancellationToken);
+                            })));
                 throw ProjectStructureAgentException.CreateAgentVisible(
                     409,
                     errorCode,
@@ -2626,7 +2637,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             catch (Exception exception)
             {
                 stopwatch.Stop();
-                await analyticsService.RecordAsync(
+                await analyticsRecorder.RecordBestEffortAsync(
                     new ProjectStructureAnalyticsWriteRequest(
                         operationName,
                         projectId,
@@ -2638,12 +2649,33 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         stopwatch.ElapsedMilliseconds,
                         [],
                         "UnhandledError",
-                        exception.Message,
+                        "The project-structure operation failed.",
                         ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                        ProjectStructureAnalyticsService.SerializeSummary(new { exception.Message })),
-                    cancellationToken);
+                        ProjectStructureAnalyticsService.SerializeSummary(
+                            new
+                            {
+                                FailureType = exception.GetType().Name
+                            })));
                 throw;
             }
+
+            stopwatch.Stop();
+            await analyticsRecorder.RecordBestEffortAsync(
+                new ProjectStructureAnalyticsWriteRequest(
+                    operationName,
+                    projectId ?? projectIdSelector?.Invoke(response),
+                    nodeId,
+                    scopeKind,
+                    scopeKey,
+                    context,
+                    true,
+                    stopwatch.ElapsedMilliseconds,
+                    ProjectStructureAgentToolResponseProjection.ExtractWarnings(response),
+                    null,
+                    null,
+                    ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
+                    ProjectStructureAnalyticsService.SerializeResponseSummary(response)));
+            return response;
         }
 
         private static void EnsureAgentMetadataPayloadValid(string? metadataJson)
@@ -3300,50 +3332,6 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             return (ProjectManagementGuidanceCategory)(int)category;
         }
 
-        private static IReadOnlyList<string> ExtractWarnings<T>(T response)
-        {
-            return response switch
-            {
-                ProjectStructureReadToolData readResponse => readResponse.Warnings,
-                ProjectStructureChecklistResponse checklistResponse => checklistResponse.Warnings,
-                ProjectStructureDependencyResponse dependencyResponse => dependencyResponse.Warnings,
-                ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
-                OperationCount operationCount => operationCount.Warnings,
-                ProjectStructureImportResult importResult => importResult.Warnings,
-                ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
-                ProjectStructureProcessSubprocessLaunchResult subprocessLaunchResult => subprocessLaunchResult.Warnings,
-                ProjectStructureWorkflowNodeCreateResult workflowNodeCreateResult => workflowNodeCreateResult.Warnings,
-                ProjectStructureWorkflowAddOptionsResult workflowAddOptionsResult => workflowAddOptionsResult.Warnings,
-                ProjectStructureWorkflowNodeStartResult workflowNodeStartResult => workflowNodeStartResult.Warnings,
-                ProjectPlanSummary planSummary => planSummary.Warnings,
-                _ => []
-            };
-        }
-
-        private static ProjectStructureCompactNode MapCompactNode(ProjectStructureNodeSummary node)
-        {
-            return new ProjectStructureCompactNode(
-                node.Id,
-                node.ParentId,
-                node.ObjectType,
-                node.ObjectSubtype,
-                node.Title,
-                node.Subtitle,
-                node.Status,
-                node.Route,
-                node.EffectivePriority,
-                node.ProgressMode,
-                node.ProgressPercent,
-                node.Notes,
-                node.MetadataJson,
-                node.MediaOriginalFileName,
-                node.MediaRelativePath,
-                node.MediaContentType,
-                node.X,
-                node.Y,
-                node.DurationSeconds,
-                node.ActionCapabilities);
-        }
     }
 
     private sealed class ProjectStructureAccessState

@@ -281,7 +281,8 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
@@ -291,13 +292,14 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                     provider,
                     model,
                     allowBackgroundResponses)
-                .AsAIAgent(options: options),
+                .AsAIAgent(options: options, loggerFactory: loggerFactory),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             _ => throw new MafProviderConfigurationException(
                 provider,
                 model,
@@ -335,7 +337,8 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
@@ -345,13 +348,14 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                     provider,
                     model,
                     allowBackgroundResponses)
-                .AsAIAgent(options: options),
+                .AsAIAgent(options: options, loggerFactory: loggerFactory),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             _ => throw new MafProviderConfigurationException(
                 provider,
                 model,
@@ -389,7 +393,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 string.Empty),
             ResolveDefaultOllamaThinkingValue(provider, model, options.ChatOptions));
         return AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)
-            .AsAIAgent(options: options);
+            .AsAIAgent(options: options, loggerFactory: loggerFactory);
     }
 
     private static object? ResolveDefaultOllamaThinkingValue(

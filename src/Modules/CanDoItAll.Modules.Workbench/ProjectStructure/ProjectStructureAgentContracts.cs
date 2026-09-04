@@ -212,7 +212,20 @@ public sealed record ProjectStructureNodeSummary(
     double? X,
     double? Y,
     int? DurationSeconds = null,
-    ProjectStructureNodeActionCapabilities? ActionCapabilities = null);
+    ProjectStructureNodeActionCapabilities? ActionCapabilities = null) : IAgentToolInvocationResultEvidence
+{
+    AgentToolInvocationOutcome IAgentToolInvocationResultEvidence.Outcome =>
+        AgentToolInvocationOutcome.Succeeded;
+
+    AgentToolEffectState IAgentToolInvocationResultEvidence.EffectState =>
+        AgentToolEffectState.Committed;
+
+    string IAgentToolInvocationResultEvidence.FailureCode => string.Empty;
+
+    string IAgentToolInvocationResultEvidence.SafeMessage => string.Empty;
+
+    bool IAgentToolInvocationResultEvidence.CanRetryWithCorrectedInput => false;
+}
 
 public sealed record ProjectStructureLinkSummary(
     string SourceId,
@@ -657,9 +670,9 @@ public sealed record ProjectStructureAssetCreateInput(
 public sealed record ProjectStructureAgentAssetCreateInput(
     ProjectObjectType ObjectType,
     string Title,
-    string Subtitle,
-    string Notes,
-    ProjectObjectMediaPayload? Media,
+    string Subtitle = "",
+    string Notes = "",
+    ProjectObjectMediaPayload? Media = null,
     [property: JsonRequired] string? ParentNodeKey = null,
     string? ObjectSubtype = null,
     string? LeaseToken = null,
@@ -988,10 +1001,11 @@ public sealed record ProjectManagementGuidanceEntry(
 public sealed record ProjectManagementGuidanceResponse(
     IReadOnlyList<ProjectManagementGuidanceEntry> Entries);
 
-public class ProjectStructureAgentException : Exception, IAgentToolFailure
+public class ProjectStructureAgentException : Exception, IAgentToolFailureEffectEvidence
 {
     private readonly bool isSafeToExpose;
     private readonly bool canRetryWithCorrectedInput;
+    private readonly AgentToolEffectState effectState;
 
     public ProjectStructureAgentException(int statusCode, string errorCode, string message, object? details = null)
         : this(
@@ -1000,7 +1014,8 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
             message,
             details,
             isSafeToExpose: false,
-            canRetryWithCorrectedInput: false)
+            canRetryWithCorrectedInput: false,
+            effectState: AgentToolEffectState.Unknown)
     {
     }
 
@@ -1011,6 +1026,7 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
         object? details,
         bool isSafeToExpose,
         bool canRetryWithCorrectedInput,
+        AgentToolEffectState effectState = AgentToolEffectState.Unknown,
         Exception? innerException = null)
         : base(message, innerException)
     {
@@ -1019,6 +1035,7 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
         Details = details;
         this.isSafeToExpose = isSafeToExpose;
         this.canRetryWithCorrectedInput = canRetryWithCorrectedInput;
+        this.effectState = effectState;
     }
 
     public static ProjectStructureAgentException CreateAgentVisible(
@@ -1026,7 +1043,8 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
         string errorCode,
         string safeMessage,
         bool canRetryWithCorrectedInput,
-        object? diagnosticDetails = null)
+        object? diagnosticDetails = null,
+        AgentToolEffectState effectState = AgentToolEffectState.Unknown)
     {
         return new ProjectStructureAgentException(
             statusCode,
@@ -1034,7 +1052,8 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
             safeMessage,
             diagnosticDetails,
             isSafeToExpose: true,
-            canRetryWithCorrectedInput);
+            canRetryWithCorrectedInput,
+            effectState);
     }
 
     internal static ProjectStructureAgentException CreateMapped(
@@ -1044,7 +1063,8 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
         object? details,
         bool isSafeToExpose,
         bool canRetryWithCorrectedInput,
-        Exception innerException)
+        Exception innerException,
+        AgentToolEffectState effectState = AgentToolEffectState.Unknown)
     {
         return new ProjectStructureAgentException(
             statusCode,
@@ -1053,6 +1073,7 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
             details,
             isSafeToExpose,
             canRetryWithCorrectedInput,
+            effectState,
             innerException);
     }
 
@@ -1067,6 +1088,8 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
     public bool IsSafeToExpose => isSafeToExpose;
 
     public bool CanRetryWithCorrectedInput => canRetryWithCorrectedInput;
+
+    public AgentToolEffectState EffectState => effectState;
 }
 
 public sealed class ProjectStructureLeaseConflictException : ProjectStructureAgentException

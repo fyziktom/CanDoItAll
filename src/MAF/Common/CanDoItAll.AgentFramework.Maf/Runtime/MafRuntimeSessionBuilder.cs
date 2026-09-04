@@ -279,16 +279,26 @@ internal static class MafRuntimeSessionBuilder
             ];
         }
 
+        var canonicalToolEvidence = SelectCanonicalToolEvidence(
+            session,
+            agent,
+            runtimeOptions);
         if (ResolveRestoreEvaluation(agent, provider, model, session, runtimeOptions).ShouldRestore)
         {
-            return
-            [
-                CreateUserInputMessage(prompt, inputAttachments)
-            ];
+            return canonicalToolEvidence
+                .Select(message => new ChatMessage(ChatRole.System, message.Content))
+                .Append(CreateUserInputMessage(prompt, inputAttachments))
+                .ToArray();
         }
 
+        var selectedEvidenceIds = canonicalToolEvidence
+            .Select(message => message.Id)
+            .ToHashSet();
         var transcriptMessages = session.Messages
             .OrderBy(item => item.CreatedAtUtc)
+            .Where(message =>
+                !IsCanonicalToolEvidence(message) ||
+                selectedEvidenceIds.Contains(message.Id))
             .Select(message => new ChatMessage(MapRole(message.Role), message.Content))
             .ToList();
         if (transcriptMessages.Count == 0)
@@ -312,6 +322,84 @@ internal static class MafRuntimeSessionBuilder
         return transcriptMessages;
     }
 
+    private static IReadOnlyList<ChatMessageRecord> SelectCanonicalToolEvidence(
+        ChatSessionRecord session,
+        AgentDefinition agent,
+        AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        const int maximumMessages = 4;
+        const int maximumCharacters = 4_096;
+        var governance = runtimeOptions.Governance;
+        var contextIntent = runtimeOptions.ContextIntent;
+        if (session.AgentId != agent.Id ||
+            governance is null ||
+            contextIntent is null ||
+            governance.AgentId != agent.Id ||
+            !governance.ReadAllowed ||
+            !governance.MutationAllowed)
+        {
+            return [];
+        }
+
+        var selected = new List<ChatMessageRecord>(maximumMessages);
+        var characters = 0;
+        foreach (var message in session.Messages
+                     .Where(message => IsCanonicalToolEvidence(
+                         message,
+                         session,
+                         agent,
+                         governance,
+                         contextIntent))
+                     .OrderByDescending(message => message.CreatedAtUtc)
+                     .ThenByDescending(message => message.Id))
+        {
+            if (selected.Count >= maximumMessages ||
+                characters + message.Content.Length > maximumCharacters)
+            {
+                break;
+            }
+
+            selected.Add(message);
+            characters += message.Content.Length;
+        }
+
+        selected.Reverse();
+        return selected;
+    }
+
+    private static bool IsCanonicalToolEvidence(
+        ChatMessageRecord message,
+        ChatSessionRecord session,
+        AgentDefinition agent,
+        AgentExecutionGovernanceSnapshot governance,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        var ownership = message.ToolEvidenceOwnership;
+        return message.Role == ChatMessageRole.System &&
+               message.Content.StartsWith(
+                   AgentToolEvidenceMessage.Prefix,
+                   StringComparison.Ordinal) &&
+               ownership is not null &&
+               ownership.ChatSessionId == session.Id &&
+               ownership.AgentId == agent.Id &&
+               ownership.DatabaseProfileId == governance.DatabaseProfileId &&
+               ownership.DatabaseProfileGeneration == governance.DatabaseProfileGeneration.Value &&
+               ownership.WorkspaceScope == governance.WorkspaceScope &&
+               string.Equals(
+                   ownership.SourceKind,
+                   contextIntent.SourceKind,
+                   StringComparison.Ordinal) &&
+               string.Equals(
+                   ownership.SourceId,
+                   contextIntent.SourceId,
+                   StringComparison.Ordinal);
+    }
+
+    private static bool IsCanonicalToolEvidence(ChatMessageRecord message)
+        => message.Role == ChatMessageRole.System &&
+           message.Content.StartsWith(
+               AgentToolEvidenceMessage.Prefix,
+               StringComparison.Ordinal);
     public static ChatMessage CreateUserInputMessage(
         string prompt,
         IReadOnlyList<AgentRuntimeInputAttachment> attachments)

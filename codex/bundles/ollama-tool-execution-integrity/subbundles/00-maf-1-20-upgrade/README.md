@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready` — analysis and isolated probe complete; implementation has not started.
+- `Completed`
 
 ## Objective
 
@@ -43,7 +43,7 @@ Upgrade the coherent MAF dependency family from 1.18 to 1.20, characterize all a
 - Resolved dependency inventory proving no MAF 1.18, MEAI 10.8, unintended OpenAI 2.13+, or NU1605 downgrade remains.
 - Compiling agent, workflow, MCP, A2A, memory, scheduler and hosting consumers with no suppressed upgrade error.
 - Post-upgrade schema/binder/tool-result, workflow error/cancellation and provider serializer characterization.
-- A concise asset tool description/example that names projectId and request, and places parentNodeKey/sourceWorkspacePath inside request.
+- A concise asset tool description/example that names projectId and request, and places parentNodeKey and every content-source field, including sourceWorkspacePath, inside request.
 - A schema-description conformance test for representative model-visible tools, without changing their wire contracts.
 
 ## Dependency Impact
@@ -56,7 +56,7 @@ Upgrade the coherent MAF dependency family from 1.18 to 1.20, characterize all a
 - Proof tier: `Behavioral`.
 - Test project/filter/expected cases: V00 in bundle://plan/validation-plan.md.
 - Selection reason: package upgrades can compile while changing runtime message, schema, workflow, A2A or MCP behavior.
-- Expected cases: 5 new compatibility cases; 3 workflow mapper; 9 A2A; selected 4 MCP; current 10 project-structure round-trip cases. Re-list all filters and update the bundle before execution if intentional tests change counts.
+- Expected cases: 5 new compatibility cases; 3 workflow mapper; 9 A2A; selected 4 MCP; current 12 project-structure round-trip cases. Re-list all filters and update the bundle before execution if intentional tests change counts.
 - Invalidation keys: MAF/MEAI/A2A/OpenAI/MCP version, generated schema, AIFunction binder, FunctionResultContent, AgentSession, workflow RunStatus/events, streaming, cancellation.
 - Broad-gate decision: Required once at final frozen SB06 because root package versions and shared runtime contracts are named invalidation triggers. Do not run the full stable aggregate twice.
 - Critical foundation surfaces: agent tool loop and workflow/MCP/A2A integrations.

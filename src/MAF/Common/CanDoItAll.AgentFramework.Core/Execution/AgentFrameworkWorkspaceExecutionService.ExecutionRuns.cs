@@ -608,18 +608,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run,
                     runtimeResponse,
                     runtimeCancellationToken);
-                var completionState = runtimeResponse.PendingApprovals.Count > 0
-                    ? ExecutionState.WaitingOnTool
-                    : portableStructuredOutput is null ||
-                      portableStructuredOutput.ValidationStatus == AgentJsonSchemaOutputValidationStatus.Valid
-                        ? ExecutionState.Completed
-                        : ExecutionState.Failed;
-                var completionOutcome = completionState switch
-                {
-                    ExecutionState.Completed => RunOutcome.Succeeded,
-                    ExecutionState.Failed => RunOutcome.Failed,
-                    _ => (RunOutcome?)null
-                };
+                var toolCompletionAssessment = AgentToolCompletionAssessment.Create(
+                    runtimeResponse.ToolInvocationTraces,
+                    runtimeResponse.PendingApprovals.Count,
+                    portableStructuredOutput is null ||
+                    portableStructuredOutput.ValidationStatus ==
+                        AgentJsonSchemaOutputValidationStatus.Valid);
+                var completionState = toolCompletionAssessment.State;
+                var completionOutcome = toolCompletionAssessment.Outcome;
 
                 var assistantMessage = session is null
                     ? null
@@ -665,6 +661,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     completionOutcome,
                     DateTimeOffset.UtcNow);
                 updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
+                if (!string.IsNullOrWhiteSpace(toolCompletionAssessment.FailureSummary))
+                {
+                    updatedRun = updatedRun with
+                    {
+                        ResultSummary = toolCompletionAssessment.FailureSummary
+                    };
+                }
+
                 var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
@@ -685,9 +689,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
                         session with
                         {
-                            Messages = assistantMessage is null
-                                ? session.Messages
-                                : session.Messages.Append(assistantMessage).ToList()
+                            Messages = AgentToolEvidenceProjection.AppendToTranscript(
+                                session.Messages,
+                                AgentToolEvidenceProjection.CreateCanonicalMessage(
+                                    updatedRun,
+                                    runtimeResponse.ToolInvocationTraces,
+                                    updatedRun.UpdatedAtUtc,
+                                    runtimeExecutionOptions.Governance),
+                                assistantMessage)
                         },
                         updatedRun.UpdatedAtUtc,
                         updatedRun.Id);
@@ -753,7 +762,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     State = completionState,
                     StructuredOutput = portableStructuredOutput,
-                    ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
+                    ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(
+                        updatedRun,
+                        runtimeResponse.ToolInvocationTraces)
                 };
             }
         }
@@ -1458,18 +1469,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run,
                     runtimeResponse,
                     runtimeCancellationToken);
-                var completionState = runtimeResponse.PendingApprovals.Count > 0
-                    ? ExecutionState.WaitingOnTool
-                    : portableStructuredOutput is null ||
-                      portableStructuredOutput.ValidationStatus == AgentJsonSchemaOutputValidationStatus.Valid
-                        ? ExecutionState.Completed
-                        : ExecutionState.Failed;
-                var completionOutcome = completionState switch
-                {
-                    ExecutionState.Completed => RunOutcome.Succeeded,
-                    ExecutionState.Failed => RunOutcome.Failed,
-                    _ => (RunOutcome?)null
-                };
+                var toolCompletionAssessment = AgentToolCompletionAssessment.Create(
+                    runtimeResponse.ToolInvocationTraces,
+                    runtimeResponse.PendingApprovals.Count,
+                    portableStructuredOutput is null ||
+                    portableStructuredOutput.ValidationStatus ==
+                        AgentJsonSchemaOutputValidationStatus.Valid);
+                var completionState = toolCompletionAssessment.State;
+                var completionOutcome = toolCompletionAssessment.Outcome;
 
                 var assistantMessage = session is null
                     ? null
@@ -1515,6 +1522,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     completionOutcome,
                     DateTimeOffset.UtcNow);
                 updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
+                if (!string.IsNullOrWhiteSpace(toolCompletionAssessment.FailureSummary))
+                {
+                    updatedRun = updatedRun with
+                    {
+                        ResultSummary = toolCompletionAssessment.FailureSummary
+                    };
+                }
+
                 var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
@@ -1535,9 +1550,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
                         session with
                         {
-                            Messages = assistantMessage is null
-                                ? session.Messages
-                                : session.Messages.Append(assistantMessage).ToList()
+                            Messages = AgentToolEvidenceProjection.AppendToTranscript(
+                                session.Messages,
+                                AgentToolEvidenceProjection.CreateCanonicalMessage(
+                                    updatedRun,
+                                    runtimeResponse.ToolInvocationTraces,
+                                    updatedRun.UpdatedAtUtc,
+                                    runtimeExecutionOptions.Governance),
+                                assistantMessage)
                         },
                         updatedRun.UpdatedAtUtc,
                         updatedRun.Id);
@@ -1603,7 +1623,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     State = completionState,
                     StructuredOutput = portableStructuredOutput,
-                    ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
+                    ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(
+                        updatedRun,
+                        runtimeResponse.ToolInvocationTraces)
                 };
             }
         }

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -71,20 +72,77 @@ internal sealed class RuntimeBuildResult(
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        Exception? primaryFailure = null;
+        TResult completedResult = default!;
+        var actionCompleted = false;
         try
         {
-            return await action().ConfigureAwait(false);
+            Exception? primaryFailure = null;
+            try
+            {
+                completedResult = await action().ConfigureAwait(false);
+                actionCompleted = true;
+                return completedResult;
+            }
+            catch (Exception exception)
+            {
+                primaryFailure = exception;
+                throw;
+            }
+            finally
+            {
+                await CompleteDisposalAsync(primaryFailure).ConfigureAwait(false);
+            }
         }
-        catch (Exception exception)
+        catch (Exception exception) when (TryCreateTracePreservingFailure(
+            exception,
+            actionCompleted ? completedResult as AgentRuntimeResponse : null,
+            out var tracePreservingFailure))
         {
-            primaryFailure = exception;
-            throw;
+            throw tracePreservingFailure;
         }
-        finally
+    }
+
+    private bool TryCreateTracePreservingFailure(
+        Exception exception,
+        AgentRuntimeResponse? completedResponse,
+        out AgentRuntimeUsageException tracePreservingFailure)
+    {
+        var traces = SnapshotToolInvocationTraces();
+        if (traces.Count == 0 ||
+            exception is AgentRuntimeUsageException { ToolInvocationTraces.Count: > 0 })
         {
-            await CompleteDisposalAsync(primaryFailure).ConfigureAwait(false);
+            tracePreservingFailure = null!;
+            return false;
         }
+
+        if (exception is AgentRuntimeUsageException usageException)
+        {
+            tracePreservingFailure = new AgentRuntimeUsageException(
+                usageException.Message,
+                usageException,
+                usageException.UsageObservations,
+                traces,
+                usageException.EntryAgentRequestCompatibilityEvidence,
+                usageException.FailureOrigin,
+                usageException.ProviderFailureIdentity)
+            {
+                HistoryEvidence = usageException.HistoryEvidence
+            };
+            return true;
+        }
+
+        var failureOrigin = MafRuntimeFailureOriginClassifier.ResolveOutsideProviderBoundary(exception);
+        tracePreservingFailure = new AgentRuntimeUsageException(
+            completedResponse is null
+                ? "Agent runtime failed after recorded tool activity. Usage was captured when available."
+                : "Agent runtime cleanup failed after recorded tool activity. Usage and tool traces were preserved.",
+            exception,
+            completedResponse?.UsageObservations ?? [],
+            traces,
+            completedResponse?.EntryAgentRequestCompatibilityEvidence ?? EntryAgentRequestCompatibilityEvidence,
+            failureOrigin,
+            MafRuntimeFailureOriginClassifier.ResolveProviderFailureIdentity(exception, failureOrigin));
+        return true;
     }
 
     internal async ValueTask DisposeAsync(Exception? primaryFailure)
@@ -239,7 +297,10 @@ internal sealed class ToolInvocationTraceRecorder
         ToolInvocationClassification classification,
         string signature,
         AgentRuntimeToolOwnership? runtimeToolOwnership,
-        ToolInvocationPathArgumentSet pathArguments)
+        ToolInvocationPathArgumentSet pathArguments,
+        string effectSourceKind = "",
+        string effectSourceId = "",
+        string operationCorrelationKey = "")
     {
         lock (gate)
         {
@@ -256,7 +317,10 @@ internal sealed class ToolInvocationTraceRecorder
                 RuntimeToolProviderKey = runtimeToolOwnership?.ProviderKey ?? string.Empty,
                 RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty,
                 Signature = signature,
-                TargetPath = ResolveTargetPath(pathArguments)
+                TargetPath = ResolveTargetPath(pathArguments),
+                EffectSourceKind = effectSourceKind,
+                EffectSourceId = effectSourceId,
+                OperationCorrelationKey = operationCorrelationKey
             });
             return nextSequence;
         }
@@ -286,7 +350,13 @@ internal sealed class ToolInvocationTraceRecorder
         bool succeeded,
         string failureMessage,
         bool failureMessageSafeForPersistence,
-        Guid? directReceiptExecutionRunId = null)
+        Guid? directReceiptExecutionRunId = null,
+        AgentToolInvocationOutcome? outcome = null,
+        AgentToolEffectState? effectState = null,
+        string failureCode = "",
+        bool canRetryWithCorrectedInput = false,
+        string? effectSourceKind = null,
+        string? effectSourceId = null)
     {
         lock (gate)
         {
@@ -305,7 +375,15 @@ internal sealed class ToolInvocationTraceRecorder
                     : failureMessageSafeForPersistence
                         ? failureMessage
                         : UnexposedFailureMessage,
-                DirectReceiptExecutionRunId = directReceiptExecutionRunId
+                DirectReceiptExecutionRunId = directReceiptExecutionRunId,
+                Outcome = outcome ?? (succeeded
+                    ? AgentToolInvocationOutcome.Succeeded
+                    : AgentToolInvocationOutcome.Failed),
+                EffectState = effectState ?? AgentToolEffectState.Unknown,
+                FailureCode = succeeded ? string.Empty : failureCode,
+                CanRetryWithCorrectedInput = !succeeded && canRetryWithCorrectedInput,
+                EffectSourceKind = effectSourceKind ?? traces[index].EffectSourceKind,
+                EffectSourceId = effectSourceId ?? traces[index].EffectSourceId
             };
         }
     }

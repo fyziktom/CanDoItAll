@@ -1,25 +1,25 @@
 # C# Architecture Gate
 
-## Preparation verdict
+## Verdict
 
-Pass for design readiness; implementation gate Not started. This is a single-agent source/evidence review, not an independent second-agent audit.
+`Pass` for implemented architecture and dependency direction.
 
-Current direction already keeps the agent above provider endpoints. The incident is explained by argument binding plus weak application outcome/evidence handling. The selected design repairs those responsibilities in their existing owners and preserves the provider transport boundary.
+The agent remains above provider endpoints. Neutral outcome, effect, correlation, and scoped-evidence contracts live in AgentFramework Models/Core; Microsoft Agent Framework translation stays in the Maf adapter; Ollama wire compatibility stays in the Ollama provider driver; project-structure commit semantics stay in Workbench; persistence/API and notification consumers retain their existing owners.
 
-## Checks
+## Final checks
 
-- Current hotspots and baseline cycles are inventoried with bounded analytics evidence and actual csproj references.
-- Contracts, SDK translation, completion policy, scoped replay, storage and UI have explicit owners.
-- Planned new behavior has a production producer and consumer plus positive and adversarial proof.
-- No wrapper-only separation, empty extraction, new partial architecture, service bag or provider-specific business branch is accepted.
-- Full-solution cycle freedom is not claimed from a six-project snapshot.
-- Unrelated C# architecture findings and shared repository edits are out of scope.
-- Components MCP returned Transport closed; SB05 must requery before UI edits, using the existing surfaces.
+- No provider-specific branch entered completion, persistence, evidence projection, Workbench domain logic, or UI.
+- No new project reference or cyclic dependency was introduced; new types were added to existing owning projects.
+- `AgentToolCompletionAssessment` centralizes terminal truth for both execution branches.
+- `AgentToolEvidenceProjection` recomputes bounded trusted history under the current invocation scope rather than restoring provider-owned session claims.
+- Project-structure extraction separated response projection and analytics recording from the runtime tool provider without creating wrapper-only interfaces.
+- Durable commit is recorded only after the managed storage action; reviewed pre-commit failures are `NotCommitted`, unclassified failures remain `Unknown`, and later analytics failure cannot erase committed evidence.
+- UI changes use the existing notification and canvas composition; no markup/component redesign was needed.
+- Ollama JSON Schema normalization is confined to the provider relay payload adapter and preserves other OpenAI provider payloads.
+- Shared request-policy acceptance of empty assistant content is limited to messages that also contain tool calls; empty ordinary user/system messages remain invalid.
 
-## Execution closure requirements
+## Verification
 
-For each changed owner, record actual files/types, remaining responsibilities and constructor dependencies; inspect the changed type graph and builds. Verify the final diff against the boundary map and testability plan. Update this review with source and test evidence and identify any reopened downstream gate. Product architecture is not approved as implemented during preparation.
+Focused unit, integration, and component suites pass. Production and stable test-solution Release builds pass with zero warnings and errors. Governed SB01/SB03 manifests, semantic invariants, source assertions, adversarial tests, final hashes, live direct/shared evidence, and portability-static enforcement are recorded under `proof/`.
 
-## MAF 1.20 addendum
-
-SB00 is an architecture checkpoint because it changes root/shared dependency floors. It may adapt SDK-facing projects only. It must not push MAF/MEAI types into neutral Core, Models, Workbench domain services or UI, and it cannot waive SB01/SB02 because the 1.20 probe reproduces the same binding exception.
+The only broad-suite failure was an unrelated concurrent-search wall-clock threshold under the 48-minute integration load; the exact case passed immediately in isolation. Later relay changes were covered by focused policy/connector tests and both final solution builds, so the broad suite was not repeated.

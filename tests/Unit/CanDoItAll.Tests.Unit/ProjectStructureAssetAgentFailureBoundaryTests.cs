@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.Modules.Workbench;
 
@@ -40,6 +41,7 @@ public sealed class ProjectStructureAssetAgentFailureBoundaryTests
         Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var result));
         Assert.Equal(exception.SafeMessage, result.Message);
         Assert.True(result.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, result.EffectState);
     }
 
     [Fact]

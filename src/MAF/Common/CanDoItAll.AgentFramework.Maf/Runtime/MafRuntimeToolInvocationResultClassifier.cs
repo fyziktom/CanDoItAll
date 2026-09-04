@@ -4,8 +4,78 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
+internal sealed record MafToolInvocationResultAssessment(
+    AgentToolInvocationOutcome Outcome,
+    AgentToolEffectState EffectState,
+    string FailureCode,
+    string FailureMessage,
+    bool CanRetryWithCorrectedInput,
+    Guid? DirectReceiptExecutionRunId)
+{
+    public bool Succeeded => Outcome == AgentToolInvocationOutcome.Succeeded;
+}
+
 internal static class MafRuntimeToolInvocationResultClassifier
 {
+    public static MafToolInvocationResultAssessment Assess(
+        string toolName,
+        ToolInvocationClassification classification,
+        object? result)
+    {
+        var directReceiptExecutionRunId = ResolveDurableReceiptExecutionRunId(toolName, result);
+        if (result is IAgentToolInvocationResultEvidence evidence)
+        {
+            var effectState = classification == ToolInvocationClassification.Read
+                ? AgentToolEffectState.None
+                : evidence.EffectState;
+            return new MafToolInvocationResultAssessment(
+                evidence.Outcome,
+                effectState,
+                evidence.FailureCode,
+                evidence.SafeMessage,
+                evidence.CanRetryWithCorrectedInput,
+                directReceiptExecutionRunId);
+        }
+
+        if (TryResolveSuccess(result, [], out var succeeded))
+        {
+            var outcome = succeeded
+                ? AgentToolInvocationOutcome.Succeeded
+                : AgentToolInvocationOutcome.Failed;
+            var effectState = classification switch
+            {
+                ToolInvocationClassification.Read => AgentToolEffectState.None,
+                ToolInvocationClassification.Mutation when succeeded &&
+                    directReceiptExecutionRunId.HasValue => AgentToolEffectState.Committed,
+                ToolInvocationClassification.Mutation => AgentToolEffectState.Unknown,
+                _ => AgentToolEffectState.None
+            };
+            return new MafToolInvocationResultAssessment(
+                outcome,
+                effectState,
+                FailureCode: string.Empty,
+                FailureMessage: succeeded ? string.Empty : ResolveFailureMessage(result),
+                CanRetryWithCorrectedInput: false,
+                directReceiptExecutionRunId);
+        }
+
+        return classification == ToolInvocationClassification.Mutation
+            ? new MafToolInvocationResultAssessment(
+                AgentToolInvocationOutcome.Unknown,
+                AgentToolEffectState.Unknown,
+                FailureCode: "UnverifiedToolResult",
+                FailureMessage: "The mutation tool returned no trusted outcome evidence.",
+                CanRetryWithCorrectedInput: false,
+                directReceiptExecutionRunId)
+            : new MafToolInvocationResultAssessment(
+                AgentToolInvocationOutcome.Succeeded,
+                AgentToolEffectState.None,
+                FailureCode: string.Empty,
+                FailureMessage: string.Empty,
+                CanRetryWithCorrectedInput: false,
+                directReceiptExecutionRunId);
+    }
+
     private static readonly HashSet<string> TrustedWorkspaceReceiptToolNames =
         ToolContractCatalog.WorkspaceToolNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -32,9 +102,7 @@ internal static class MafRuntimeToolInvocationResultClassifier
 
     public static bool IsSuccessful(object? result)
     {
-        return TryResolveSuccess(result, [], out var succeeded)
-            ? succeeded
-            : true;
+        return TryResolveSuccess(result, [], out var succeeded) && succeeded;
     }
 
     public static string ResolveFailureMessage(object? result)

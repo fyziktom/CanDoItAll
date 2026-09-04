@@ -88,6 +88,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Scoped<IProjectNodeDetailsBridge, ProjectNodeDetailsBridge>());
         services.AddScoped<ProjectStructureLeaseService>();
         services.AddScoped<ProjectStructureAnalyticsService>();
+        services.AddScoped<IProjectStructureAnalyticsService>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureAnalyticsService>());
         services.AddSingleton<ProjectPlanSummaryCalculator>();
         services.AddScoped<ProjectPlanAnalyticsQueryService>();
         services.AddScoped<ProjectManagerSummaryScopeResolver>();

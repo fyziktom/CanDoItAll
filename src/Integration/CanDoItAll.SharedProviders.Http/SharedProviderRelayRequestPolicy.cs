@@ -221,6 +221,12 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             }
         }
 
+        var toolCallSequenceFailure = ValidateChatToolCallSequence(messages);
+        if (toolCallSequenceFailure is not null)
+        {
+            return toolCallSequenceFailure;
+        }
+
         if (root.TryGetProperty("stream_options", out var streamOptions))
         {
             var hasStreamingEnabled = root.TryGetProperty("stream", out var stream) &&
@@ -510,6 +516,54 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         return null;
     }
 
+    private static SharedProviderRelayRequestPolicyResult.Rejected? ValidateChatToolCallSequence(
+        JsonElement messages)
+    {
+        var pendingToolCallIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var message in messages.EnumerateArray())
+        {
+            var role = message.GetProperty("role").GetString();
+            if (string.Equals(role, "tool", StringComparison.Ordinal))
+            {
+                var toolCallId = message.GetProperty("tool_call_id").GetString()!;
+                if (!pendingToolCallIds.Remove(toolCallId))
+                {
+                    return Validation(
+                        "A chat tool result must reference one preceding unresolved tool call.",
+                        "messages");
+                }
+
+                continue;
+            }
+
+            if (pendingToolCallIds.Count > 0)
+            {
+                return Validation(
+                    "Every chat tool call must have a correlated tool result before the next message.",
+                    "messages");
+            }
+
+            if (!string.Equals(role, "assistant", StringComparison.Ordinal) ||
+                !message.TryGetProperty("tool_calls", out var toolCalls))
+            {
+                continue;
+            }
+
+            foreach (var toolCall in toolCalls.EnumerateArray())
+            {
+                var toolCallId = toolCall.GetProperty("id").GetString()!;
+                if (!pendingToolCallIds.Add(toolCallId))
+                {
+                    return Validation(
+                        "Chat tool-call ids must be unique within one assistant message.",
+                        "messages");
+                }
+            }
+        }
+
+        return null;
+    }
+
     private static SharedProviderRelayRequestPolicyResult.Rejected? ValidateChatMessage(
         JsonElement message,
         SharedProviderRelaySupportDescriptor support,
@@ -542,7 +596,12 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
 
         bool hasContent = message.TryGetProperty("content", out var content);
         bool hasToolCalls = message.TryGetProperty("tool_calls", out var toolCalls);
-        if (hasContent && content.ValueKind != JsonValueKind.Null)
+        bool hasContentlessToolCall = roleName == "assistant" &&
+            hasToolCalls &&
+            (!hasContent ||
+                content.ValueKind == JsonValueKind.Null ||
+                content.ValueKind == JsonValueKind.String && content.GetString() is "");
+        if (hasContent && content.ValueKind != JsonValueKind.Null && !hasContentlessToolCall)
         {
             var contentFailure = ValidateMessageContent(
                 content,
@@ -556,8 +615,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
             }
         }
 
-        bool permitsContentlessMessage = roleName == "assistant" && hasToolCalls;
-        if ((!hasContent || content.ValueKind == JsonValueKind.Null) && !permitsContentlessMessage)
+        if ((!hasContent || content.ValueKind == JsonValueKind.Null) && !hasContentlessToolCall)
         {
             return Validation("Chat message content is required for this role.", "messages");
         }

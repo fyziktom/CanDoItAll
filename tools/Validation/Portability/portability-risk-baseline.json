@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-02T12:07:05.443445+00:00",
+  "generated_utc": "2026-09-03T20:26:56.635334+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14247,
+  "allowance_count": 14252,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -16316,6 +16316,12 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentToolCompletionAssessment.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5c50ef257f3572f6cca498392dcd08f65df2c2c7478d8440f57ca711da1387cd",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentTurnContextLeaseRegistry.cs",
       "category": "case-policy",
       "source_fingerprint": "72a3604b87cdc929dc3d28c6e4d9044be82175e4bddb641dd99530bc8c923bb7",
@@ -28661,6 +28667,30 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationArgumentFormatter.cs",
       "category": "mcp",
       "source_fingerprint": "c7d6b0a5c6cd3b320f4a53fb7293aaa5743091092e66aea427debe47f8a5743d",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs",
+      "category": "case-policy",
+      "source_fingerprint": "1eb91584757769cafb9ed0ea9a1cf342b48b2fb831d668c42c2c3b72fb360e71",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs",
+      "category": "case-policy",
+      "source_fingerprint": "26083ba9faf05d85ce784ef7d01776c3b535bbd77aa07218b94003c214edbaf7",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs",
+      "category": "case-policy",
+      "source_fingerprint": "508db3b8af30e63706deaf5a9310609c11d133bcee0ba282d3b6f8f925c2b9cc",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6114b4baf882b3e4b288c5245d2ab400d27b71f9cce485eaecd4767048de76b6",
       "count": 1
     },
     {

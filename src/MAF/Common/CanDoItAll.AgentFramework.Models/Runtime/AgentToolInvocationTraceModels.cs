@@ -32,4 +32,18 @@ public sealed record AgentToolInvocationTrace(
     public string TargetPath { get; init; } = string.Empty;
 
     public Guid? DirectReceiptExecutionRunId { get; init; }
+
+    public CanDoItAll.AgentFramework.Models.AgentToolInvocationOutcome Outcome { get; init; }
+
+    public CanDoItAll.AgentFramework.Models.AgentToolEffectState EffectState { get; init; }
+
+    public string FailureCode { get; init; } = string.Empty;
+
+    public bool CanRetryWithCorrectedInput { get; init; }
+
+    public string EffectSourceKind { get; init; } = string.Empty;
+
+    public string EffectSourceId { get; init; } = string.Empty;
+
+    public string OperationCorrelationKey { get; init; } = string.Empty;
 }

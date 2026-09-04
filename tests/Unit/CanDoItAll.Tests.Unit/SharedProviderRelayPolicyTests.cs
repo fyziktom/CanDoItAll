@@ -66,9 +66,15 @@ public sealed class SharedProviderRelayPolicyTests
             $$$"""
             {"model":"{{{RoutingModelId.Value}}}","messages":[{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"weather","arguments":"{}"}}]}]}
             """);
+        var assistantEmptyContentToolCall = Accept(
+            SharedProviderRelayOperation.ChatCompletions,
+            $$$"""
+            {"model":"{{{RoutingModelId.Value}}}","messages":[{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"weather","arguments":"{}"}}]}]}
+            """);
 
         Assert.Contains("\"tool_calls\"", RewriteForUpstream(assistantToolCall));
         Assert.Contains("\"content\":null", RewriteForUpstream(assistantNullContentToolCall));
+        Assert.Contains("\"content\":\"\"", RewriteForUpstream(assistantEmptyContentToolCall));
         AssertValidationFailure(
             SharedProviderRelayOperation.ChatCompletions,
             $$"""{"model":"{{RoutingModelId.Value}}","messages":[{"role":"user"}]}""");

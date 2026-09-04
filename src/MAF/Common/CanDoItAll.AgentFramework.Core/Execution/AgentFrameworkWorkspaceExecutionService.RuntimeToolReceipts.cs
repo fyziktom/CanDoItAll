@@ -83,7 +83,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             CompletedAtUtc: trace.CompletedAtUtc ?? trace.StartedAtUtc)
         {
             RuntimeToolProviderKey = trace.RuntimeToolProviderKey.Trim(),
-            RuntimeToolProviderName = trace.RuntimeToolProviderName.Trim()
+            RuntimeToolProviderName = trace.RuntimeToolProviderName.Trim(),
+            DeclaredSideEffectMode = ResolveDeclaredSideEffectMode(trace),
+            InvocationOutcome = trace.Outcome,
+            EffectState = trace.EffectState,
+            FailureCode = trace.FailureCode,
+            FailureMessage = trace.FailureMessage,
+            CanRetryWithCorrectedInput = trace.CanRetryWithCorrectedInput,
+            EffectSourceKind = trace.EffectSourceKind,
+            EffectSourceId = trace.EffectSourceId
         };
     }
 
@@ -103,7 +111,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             WorkingDirectory: string.Empty,
             ExitSummary: ResolveTraceExitSummary(trace),
             StartedAtUtc: trace.StartedAtUtc,
-            CompletedAtUtc: trace.CompletedAtUtc ?? trace.StartedAtUtc);
+            CompletedAtUtc: trace.CompletedAtUtc ?? trace.StartedAtUtc)
+        {
+            DeclaredSideEffectMode = ResolveDeclaredSideEffectMode(trace),
+            InvocationOutcome = trace.Outcome,
+            EffectState = trace.EffectState,
+            FailureCode = trace.FailureCode,
+            FailureMessage = trace.FailureMessage,
+            CanRetryWithCorrectedInput = trace.CanRetryWithCorrectedInput,
+            EffectSourceKind = trace.EffectSourceKind,
+            EffectSourceId = trace.EffectSourceId
+        };
     }
 
     private static bool ShouldCreateRuntimeProviderToolReceipt(AgentToolInvocationTrace trace)
@@ -153,6 +171,39 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 : $"Failed: {trace.FailureMessage.Trim()}";
     }
 
+
+    private static ToolExecutionSideEffectMode ResolveDeclaredSideEffectMode(
+        AgentToolInvocationTrace trace)
+    {
+        if (trace.Classification == ToolInvocationClassification.Read)
+        {
+            return ToolExecutionSideEffectMode.NoMutation;
+        }
+
+        if (!ToolCapabilityRegistry.TryResolve(trace.ToolName, out var capability))
+        {
+            return ToolExecutionSideEffectMode.Unspecified;
+        }
+
+        return capability.SideEffectKind switch
+        {
+            ToolCapabilitySideEffectKind.None or
+            ToolCapabilitySideEffectKind.WorkspaceRead or
+            ToolCapabilitySideEffectKind.InternalDataRead =>
+                ToolExecutionSideEffectMode.NoMutation,
+            ToolCapabilitySideEffectKind.WorkspaceWrite or
+            ToolCapabilitySideEffectKind.RuntimeProofCapture or
+            ToolCapabilitySideEffectKind.DocumentConversion =>
+                ToolExecutionSideEffectMode.ManagedProcessArtifacts,
+            ToolCapabilitySideEffectKind.ExternalAction or
+            ToolCapabilitySideEffectKind.MediaGeneration =>
+                ToolExecutionSideEffectMode.ExternalArtifactDestination,
+            ToolCapabilitySideEffectKind.ProcessMutation or
+            ToolCapabilitySideEffectKind.ProjectStructureMutation =>
+                ToolExecutionSideEffectMode.ProductMutation,
+            _ => ToolExecutionSideEffectMode.Unspecified
+        };
+    }
     private static string ResolveRuntimeProviderReceiptRiskClass(ToolInvocationClassification classification)
     {
         return classification switch

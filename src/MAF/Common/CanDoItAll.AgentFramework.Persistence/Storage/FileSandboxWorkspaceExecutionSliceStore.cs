@@ -2698,7 +2698,17 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         {
             RequestSummary = NormalizeReceiptText(receipt.RequestSummary),
             WorkingDirectory = NormalizeReceiptText(receipt.WorkingDirectory),
-            ExitSummary = NormalizeReceiptText(receipt.ExitSummary)
+            ExitSummary = NormalizeReceiptText(receipt.ExitSummary),
+            InvocationOutcome = Enum.IsDefined(receipt.InvocationOutcome)
+                ? receipt.InvocationOutcome
+                : AgentToolInvocationOutcome.Unknown,
+            EffectState = Enum.IsDefined(receipt.EffectState)
+                ? receipt.EffectState
+                : AgentToolEffectState.Unknown,
+            FailureCode = NormalizeReceiptText(receipt.FailureCode),
+            FailureMessage = NormalizeReceiptText(receipt.FailureMessage),
+            EffectSourceKind = NormalizeReceiptText(receipt.EffectSourceKind),
+            EffectSourceId = NormalizeReceiptText(receipt.EffectSourceId)
         };
     }
 

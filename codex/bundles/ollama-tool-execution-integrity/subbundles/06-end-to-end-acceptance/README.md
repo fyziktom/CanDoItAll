@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready` — specification ready; implementation has not started. Prerequisites still gate entry.
+- `Completed`
 
 ## Objective
 
