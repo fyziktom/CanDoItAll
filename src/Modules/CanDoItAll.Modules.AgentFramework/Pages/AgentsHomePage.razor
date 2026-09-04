@@ -1,4 +1,4 @@
-@page "/agents"
+﻿@page "/agents"
 
 <PageTitle>Agents</PageTitle>
 
@@ -234,7 +234,7 @@
                                   Series="@ProviderUsageBarSeries"
                                   Options="@ProviderUsageBarChartOptions"
                                   Height="310"
-                                  class="agents-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
+                                  class="agents-overview-chart-card box-border h-full w-full min-w-0 max-w-full overflow-hidden"
                                   EmptyText="No provider usage has been recorded." />
                     </Stack>
 
@@ -246,7 +246,7 @@
                                   Series="@ProviderUsageDistributionSeries"
                                   Options="@ProviderUsageDistributionChartOptions"
                                   Height="310"
-                                  class="agents-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
+                                  class="agents-overview-chart-card box-border h-full w-full min-w-0 max-w-full overflow-hidden"
                                   EmptyText="Provider distribution is not available yet." />
                     </Stack>
 

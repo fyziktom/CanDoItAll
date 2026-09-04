@@ -36,16 +36,21 @@ jobs:
             os: windows-latest
             rid: win-x64
             profile: WindowsHeadless
+            postgres-create-strategy: WAL_LOG
           - name: ubuntu-x64
             os: ubuntu-24.04
             rid: linux-x64
             profile: LinuxHeadless
+            postgres-create-strategy: WAL_LOG
           - name: macos-arm64
             os: macos-15
             rid: osx-arm64
             profile: MacOsHeadless
+            postgres-create-strategy: FILE_COPY
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
+    env:
+      CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: ${{ matrix.postgres-create-strategy }}
     defaults:
       run:
         working-directory: CanDoItAll

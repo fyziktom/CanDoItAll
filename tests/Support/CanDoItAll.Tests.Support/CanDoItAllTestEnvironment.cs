@@ -134,6 +134,10 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
 
 public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 {
+    private const string CreateStrategyEnvironmentVariable = "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY";
+    private const string WalLogCreateStrategyValue = "WAL_LOG";
+    private const string FileCopyCreateStrategyValue = "FILE_COPY";
+
     private PostgresTestDatabaseLease(string databaseName, string connectionString, string adminConnectionString)
     {
         DatabaseName = databaseName;
@@ -158,6 +162,7 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
     public static PostgresTestDatabaseLease Create(string profileKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(profileKey);
+        PostgresTestDatabaseCreateStrategy createStrategy = ResolveCreateStrategy();
 
         var availability = PostgresTestAvailability.EnsureAvailableAsync(FindRepositoryRoot())
             .GetAwaiter()
@@ -170,7 +175,7 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
         var databaseName = CreateDatabaseName(profileKey);
         var connectionString = BuildDatabaseConnectionString(availability.ConnectionString, databaseName);
         var adminConnectionString = BuildAdminConnectionString(availability.ConnectionString);
-        CreateDatabase(adminConnectionString, databaseName);
+        CreateDatabase(adminConnectionString, databaseName, createStrategy);
         return new PostgresTestDatabaseLease(databaseName, connectionString, adminConnectionString);
     }
 
@@ -185,13 +190,34 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
     private string AdminConnectionString { get; }
 
-    private static void CreateDatabase(string adminConnectionString, string databaseName)
+    private static void CreateDatabase(
+        string adminConnectionString,
+        string databaseName,
+        PostgresTestDatabaseCreateStrategy createStrategy)
     {
         using var connection = new NpgsqlConnection(adminConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = $"""create database "{EscapeIdentifier(databaseName)}";""";
+        string strategy = createStrategy switch
+        {
+            PostgresTestDatabaseCreateStrategy.WalLog => WalLogCreateStrategyValue,
+            PostgresTestDatabaseCreateStrategy.FileCopy => FileCopyCreateStrategyValue,
+            _ => throw new ArgumentOutOfRangeException(nameof(createStrategy), createStrategy, null)
+        };
+        command.CommandText = $"""create database "{EscapeIdentifier(databaseName)}" strategy = {strategy};""";
         command.ExecuteNonQuery();
+    }
+
+    private static PostgresTestDatabaseCreateStrategy ResolveCreateStrategy()
+    {
+        string? configuredStrategy = Environment.GetEnvironmentVariable(CreateStrategyEnvironmentVariable);
+        return configuredStrategy?.Trim().ToUpperInvariant() switch
+        {
+            null or "" or WalLogCreateStrategyValue => PostgresTestDatabaseCreateStrategy.WalLog,
+            FileCopyCreateStrategyValue => PostgresTestDatabaseCreateStrategy.FileCopy,
+            _ => throw new InvalidOperationException(
+                $"{CreateStrategyEnvironmentVariable} must be {WalLogCreateStrategyValue} or {FileCopyCreateStrategyValue}.")
+        };
     }
 
     private static string BuildDatabaseConnectionString(string connectionString, string databaseName)
@@ -245,6 +271,12 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
     private static string EscapeIdentifier(string value)
         => value.Replace("\"", "\"\"", StringComparison.Ordinal);
+
+    private enum PostgresTestDatabaseCreateStrategy
+    {
+        WalLog,
+        FileCopy
+    }
 
     private static string FindRepositoryRoot()
     {

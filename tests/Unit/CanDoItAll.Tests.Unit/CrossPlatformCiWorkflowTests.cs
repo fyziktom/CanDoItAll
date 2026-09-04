@@ -37,6 +37,9 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("(Get-Item -LiteralPath $assetPath).Length -eq 0", workflow, StringComparison.Ordinal);
         Assert.Contains("ikalnytskyi/action-setup-postgres@v8", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_TESTS_POSTGRES_CONNECTION", workflow, StringComparison.Ordinal);
+        Assert.Contains("CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: ${{ matrix.postgres-create-strategy }}", workflow, StringComparison.Ordinal);
+        Assert.Equal(2, workflow.Split("postgres-create-strategy: WAL_LOG", StringSplitOptions.None).Length - 1);
+        Assert.Equal(1, workflow.Split("postgres-create-strategy: FILE_COPY", StringSplitOptions.None).Length - 1);
         Assert.Contains("postgres-version: \"16\"", workflow, StringComparison.Ordinal);
         Assert.Contains("Category=UnixPortabilityCore", workflow, StringComparison.Ordinal);
         Assert.Contains("Category!=UnixRuntimePortability", workflow, StringComparison.Ordinal);
