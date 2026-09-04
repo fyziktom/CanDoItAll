@@ -1,0 +1,26 @@
+{
+  "name": "CanDoItAll UI Component Seams Shared Architecture Bundle",
+  "referenceId": "CDA-UI-SEAMS-BASE-v1",
+  "version": 1,
+  "kind": "architecture-reference",
+  "preparedAt": "2026-09-04",
+  "language": "English reference docs; Czech owner summary; Czech supplied inputs preserved",
+  "repository": "fyziktom/CanDoItAll",
+  "observedBranch": "development",
+  "observedCommit": "6c02b644acae3f0d05c648d6b169c82acebefea8",
+  "observedCommitIsPin": false,
+  "executable": false,
+  "containsSubbundles": false,
+  "containsProductTestCommands": false,
+  "validationOwnedByChildBundles": true,
+  "temporaryBranchArtifact": true,
+  "mergeDisposition": "Migrate proven durable rules to maintained documentation or CanDoItAll.SharedInfo, then remove this bundle before merge closure.",
+  "sourceDependencyDecision": {
+    "components": "live sibling source",
+    "fileTools": "live sibling source",
+    "localNuGetSnapshotsInScope": false
+  },
+  "nextImplementationBundleIncluded": false,
+  "nextImplementationPreparationGate": "Wait for the independent development-branch test repair to complete, then refresh the baseline.",
+  "requiredChildBundleReference": "CDA-UI-SEAMS-BASE-v1"
+}
