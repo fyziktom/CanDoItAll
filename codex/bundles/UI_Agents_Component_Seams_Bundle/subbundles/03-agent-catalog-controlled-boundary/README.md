@@ -1,71 +1,51 @@
-# SB03 — Agent catalog controlled boundary
+# SB03 — Controlled catalog and host effects
 
-**Status:** Blocked by SB02  
-**Outcome:** `AgentCatalogPanel` is a controlled service-free view; page-owned typed
-intents replace child-owned load, dialogs, mutations, chat, and echo suppression.
+Status: **Not started**. Proof tier: **Behavioral**. Current authorization is documentation only.
 
-## Owned requirements
+## Objective and covered inputs
 
-R-022, R-024, R-031–R-033, R-040–R-042, R-045, related testability requirements.
+Make catalog rendering controlled and place catalog operations/host effects at explicit cohesive boundaries.
 
-## Prerequisites and reopen triggers
+R-022/R-024, R-031–R-033, R-040–R-042, R-050/R-052/R-053/R-058; F01/F05/F06/F07/F08; B04–B08/B29/B30. See [requirements](../../requirements/00-normalized-requirements.md), [behavior matrix](../../requirements/02-behavior-preservation-matrix.md) and [accepted revision](../../inputs/03-accepted-review-and-revision-request.md).
 
-Checkpoint A accepted. Reopen if catalog state/intent ownership duplicates or page URL
-behavior changes.
+## Prerequisites and exact source references
 
-## Work
+SB02 accepted; actual catalog call sites and host target/results characterized; chosen test map frozen.
 
-1. Add `AgentCatalogSnapshot`, `AgentCatalogViewState`, and prepared intent cases.
-2. Add `IAgentCatalogController`/implementation/DI for repair, load/reload, privacy
-   projection, update members, and delete team.
-3. Refactor `AgentCatalogPanel` to receive state and emit intents. Retain only search,
-   expanded tree nodes, and visual state locally.
-4. Remove all feature `[Inject]` dependencies and all dialog/chat/mutation/load logic from
-   the component.
-5. Make `AgentsHomePage` handle selection, agent/team details, team members/delete,
-   managed chat, notifications, controller reload, and result-driven state updates.
-6. Preserve deep-link requested-agent open exactly once, with suppression owned by page
-   transient/overlay state rather than child private fields.
-7. Rewrite catalog tests around state/intents and page composition. No reflection.
+src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor and .razor.cs; Pages/AgentsHomePage.razor and .razor.cs; same-module catalog operations/host coordination/DI; tests/Components/CanDoItAll.Tests.Components/AgentCatalogPanelTests.cs and AgentsHomePageTestExtensions.cs; actual existing team/member/detail dialog call sites.
 
-## C# Architecture Impact
+## Scope and deliverables
 
-Creates the first fully controlled feature component and page/controller host seam.
+Typed snapshot/selection/intents; external load/repair/team operation boundary; host-owned open/chat/result coordination; public tests; catalog-first extraction candidate assessment.
 
-## Boundary Ownership
+## Implementation steps for later authorized execution
 
-Page owns selection and host actions; controller owns data/mutations; component owns
-presentation-only state.
+1. Define select versus open/create/team/chat/repair intents and ownership; preserve local search/expansion and current initial-data/SkipCatalogRepair behavior.
+2. Move feature I/O out of catalog and move host effects into page/workspace coordination or a justified narrow adapter; avoid a god page.
+3. Preserve requested-ID open once, missing/changed requests, exact managed identities, context readiness and all team/member result/selection semantics.
+4. Replace private openedRequestedAgentId and saved-handler tests with real page/catalog/host interactions; test real catalog operations normally.
+5. Audit real card/list children and contract/assets graph. Produce a bounded catalog-only sandbox handoff with explicit host-intent simulation scope and owned blockers.
 
-## Dependency Direction
+## Dependency impact and do-not-do constraints
 
-Component -> state/intents only. Page -> controller/host. Controller -> feature services.
+Keep current project graph. No route change or sandbox/project implementation. Do not drag editor/team host dependencies into a catalog-only candidate by default.
 
-## Pattern Decision
+Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [pattern decisions](../../architecture/03-csharp-pattern-selection-records.md), [UI composition contract](../../architecture/10-ui-composition.md) and [recovery/invalidation rules](../../plan/01-dependencies-reopen-and-invalidation.md). Do not start later phases on incomplete required proof.
 
-PSR-03. Do not add a wrapper component.
+## Validation depth and acceptance
 
-## Testability Contract
+AgentsHomePageTests/AgentCatalogPanelTests plus named real catalog/host/context cases mapped to B04–B08. Preserve AgentSelectionCard behaviors included in historical class. Execute page request -> catalog readiness -> open -> result -> selection reconciliation. Counts derived from exact selected tests. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-Catalog component renders without feature DI. Controller tested directly. Requested-open
-and mutation-result behavior tested through public page/component APIs.
+- [ ] Catalog has no feature I/O, dialog or chat launch; local presentation state is allowed.
+- [ ] Selection/open/result/context and current confirmation policies are preserved through real host flows.
+- [ ] Real catalog operations are tested; candidate graph/handoff distinguishes catalog intents from full editor/team interaction.
 
-## Partial Class Policy
+## Proof and progression gate
 
-Modify existing files only; no additional partial.
+Behavior map, exact tests/transcripts, before/after ownership, constructor and registration evidence, requested-open result traces, UI decision and sandbox candidate inventory. Store execution artifacts under proof/SB03; follow [proof placement](../../proof/README.md). No execution result is pre-filled.
 
-## Architecture Proof Required
+Unlock SB04 with stable host target/result ownership. Candidate preparation may proceed independently of bookmarkability; separate implementation follows the handoff policy.
 
-- zero `[Inject]` properties on catalog component;
-- old dialog/chat/load/mutation calls absent;
-- direct controller tests;
-- one-for-one replacement of two private-shape tests;
-- Checkpoint B approval.
+## Reopen triggers
 
-## Non-goals
-
-No editor internals, team canonical route, provider panel, CSS redesign, or project move.
-
-## Progression gate
-
-Checkpoint B passes; catalog and page focused tests green; current URL behavior unchanged.
+Catalog public state/intent, host result semantics, repair/load triggers, selected-context mapping, or candidate type/child closure changes.

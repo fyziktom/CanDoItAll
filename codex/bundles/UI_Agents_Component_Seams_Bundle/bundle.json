@@ -1,23 +1,27 @@
 {
   "name": "CanDoItAll Agents UI Component Seams Bundle",
-  "referenceId": "CDA-UI-SEAMS-AGENTS-01-v1",
-  "version": 1,
+  "referenceId": "CDA-UI-SEAMS-AGENTS-01-v2",
+  "version": 2,
+  "supersedes": "CDA-UI-SEAMS-AGENTS-01-v1",
   "kind": "implementation",
   "preparedAt": "2026-09-04",
+  "revisedAt": "2026-09-04",
   "language": "English execution docs; Czech owner summary",
   "repository": "fyziktom/CanDoItAll",
   "primaryBranch": "components-decoupling",
-  "observedCommit": "c225bf2445835bf12fa5054bc15571d2ce23b4fe",
+  "observedCommit": "a249d77b175916d760e9f6c86633202a4ea3ae44",
   "observedCommitIsPin": false,
   "baseBranch": "development",
   "observedBaseCommit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
   "sharedArchitectureReference": {
-    "referenceId": "CDA-UI-SEAMS-BASE-v1",
+    "referenceId": "CDA-UI-SEAMS-BASE-v2",
     "path": "codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle",
-    "version": 1
+    "version": 2
   },
-  "recommendedExecutor": "Codex GPT-5.6 high or xhigh",
-  "proofProfile": "Behavioral implementation with governed final closure",
+  "preparationStatus": "revised-for-owner-review",
+  "executionStatus": "not-started",
+  "executionAuthorizedByCurrentRequest": false,
+  "proofProfile": "Standard baseline; Behavioral phases; Governed final closure",
   "remoteWritesRequireExplicitAuthorization": true,
   "sourceDependencyMode": {
     "components": "live sibling source",
@@ -32,13 +36,24 @@
     "06-rewrite-tests-and-remove-shape-coupling",
     "07-integration-architecture-and-browser-closure"
   ],
+  "sandboxRequiresProductionBookmarkability": false,
+  "readinessDimensions": [
+    "semantic-boundary",
+    "deterministic-rendering",
+    "interaction-scenarios",
+    "lightweight-project-graph",
+    "standalone-browser-sandbox",
+    "production-bookmarkability"
+  ],
   "outOfScope": [
-    "canonical routing implementation",
+    "new routing/history behavior",
     "physical UI project extraction",
-    "sandbox host",
-    "provider panel refactor",
+    "sandbox host implementation",
+    "provider workspace refactor",
     "Components or FileTools changes",
     "dotnet watch or Manager optimization",
-    "visual redesign"
-  ]
+    "visual redesign",
+    "unrelated module or test cleanup"
+  ],
+  "validationMethod": "manual semantic role validation, local links, JSON, input preservation and SHA-256 manifests"
 }

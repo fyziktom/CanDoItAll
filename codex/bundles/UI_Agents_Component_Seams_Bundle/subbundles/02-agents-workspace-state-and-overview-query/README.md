@@ -1,69 +1,51 @@
-# SB02 — Agents workspace state and overview query
+# SB02 — Workspace state and lazy read operations
 
-**Status:** Blocked by SB01  
-**Outcome:** `AgentsHomePage` owns typed semantic state and consumes one overview query;
-direct EF and multi-source dashboard orchestration leave Razor without URL change.
+Status: **Not started**. Proof tier: **Behavioral**. Current authorization is documentation only.
 
-## Owned requirements
+## Objective and covered inputs
 
-R-020–R-022, R-024, R-030, R-036, R-040–R-041, R-045, relevant proof requirements.
+Remove page persistence/aggregation while preserving current semantic state, lazy read regions and chat readiness.
 
-## Prerequisites and reopen triggers
+R-020–R-022, R-030, R-041, R-050–R-053; F06/F07/F08; B01–B04/B27/B29. See [requirements](../../requirements/00-normalized-requirements.md), [behavior matrix](../../requirements/02-behavior-preservation-matrix.md) and [accepted revision](../../inputs/03-accepted-review-and-revision-request.md).
 
-SB01 accepted. Reopen if route-state or overview contracts move later.
+## Prerequisites and exact source references
 
-## Work
+SB01 route/lazy-load/context foundation accepted; exact chosen methods/data cases frozen before source edits.
 
-1. Add `AgentWorkspaceSection`, `AgentsWorkspaceState`, `AgentDetailsRequest`, and pure
-   current-key mappings.
-2. Keep `AgentWorkspaceTabs` and `AgentWorkspaceRouteState` as current URL compatibility
-   surfaces. Preserve all recognized URL output exactly.
-3. Replace page string/scalar semantic ownership with the typed state. Keep loading and
-   dashboard data outside navigation state.
-4. Add `IAgentsOverviewQuery`, implementation, request/result types, and DI registration.
-5. Move overview/usage/HR-agent/avatar/bound-resource aggregation and direct EF access out
-   of `AgentsHomePage`.
-6. Preserve partial usage warning, missing HR agent, loading, and retry behavior.
-7. Add direct state/query tests and adapt page tests to a fake overview query.
-8. Do not introduce catalog/controller behavior yet beyond state fields needed by SB03.
+src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor and .razor.cs; Pages/AgentWorkspaceTabs.cs; Pages/AgentWorkspaceRouteState.cs; Services/AgentFrameworkUiServiceCollectionExtensions.cs; same-module workspace/query types; AgentsHomePageTests.cs and AgentsHomePageTestExtensions.cs; route/history-host and selected chat-context tests.
 
-## C# Architecture Impact
+## Scope and deliverables
 
-Moves one cohesive read workflow and establishes page-owned semantic state.
+Typed workspace state and current route mapping; cohesive overview/usage operations with explicit demand; normal DI composition; migrated page tests and real-operation coverage.
 
-## Boundary Ownership
+## Implementation steps for later authorized execution
 
-Page: route-significant state and presentation. Query: external read aggregation.
+1. Freeze B01–B04 oracles, including both Providers/RequestHistory theory cases and selected AgentFrameworkModuleChatContextBuilderTests methods.
+2. Introduce typed semantic state without adding URL behavior; preserve current route parameters, defaults and history replacement.
+3. Move EF bound-resource counts and aggregation into cohesive operations. Preserve skipped aggregates on history hosts and independent usage-selection triggers/errors.
+4. Move accessible selection/context readiness explicitly and retain other tab inputs; migrate page helper/tests in this phase.
+5. Run focused route/page/history/context/real-query tests and actual registration integration; review page complexity and dependency direction.
 
-## Dependency Direction
+## Dependency impact and do-not-do constraints
 
-Razor -> `IAgentsOverviewQuery`; implementation -> Workspace/usage/EF. No EF -> Razor.
+No new project references. Queries may depend on existing application/persistence through justified real boundaries; UI does not. Do not combine all reads into one eager aggregate.
 
-## Pattern Decision
+Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [pattern decisions](../../architecture/03-csharp-pattern-selection-records.md), [UI composition contract](../../architecture/10-ui-composition.md) and [recovery/invalidation rules](../../plan/01-dependencies-reopen-and-invalidation.md). Do not start later phases on incomplete required proof.
 
-PSR-01 and PSR-02. No metric-specific interfaces.
+## Validation depth and acceptance
 
-## Testability Contract
+Fresh production/unit/component builds as needed; route filter, AgentsHomePageTests, exact two history-host cases, selected Agents chat-context methods, and named new state/query/composition cases. Freeze names/counts first. Exercise Providers/RequestHistory -> Overview and selection -> context as dependent flows. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-State/query direct tests plus existing route/home behavior. Use exact discovery from
-SB01/SB02 proof.
+- [ ] Current URL codec behavior and both lazy-history host regressions pass.
+- [ ] Page has no direct EF/dashboard aggregation; query operations construct and execute under meaningful deterministic tests.
+- [ ] Context readiness and unaffected host panes retain correct inputs; test migration is complete for this seam.
 
-## Partial Class Policy
+## Proof and progression gate
 
-Modify existing `.razor.cs`; add no new page partial.
+Record actual method/data discovery, commands/results, before/after dependency and load-call evidence, normal query/DI construction, B-row outcomes and UI composition decision. Store execution artifacts under proof/SB02; follow [proof placement](../../proof/README.md). No execution result is pre-filled.
 
-## Architecture Proof Required
+Unlock SB03 after workspace ownership, lazy reads and context results are proven. No reliance on later SB06 test repair.
 
-- page no longer references EF/AiResourceBinding;
-- query direct tests and DI resolution;
-- URL round-trip unchanged;
-- before/after page dependencies;
-- Checkpoint A approval.
+## Reopen triggers
 
-## Non-goals
-
-No new routes, catalog rewrite, details editor rewrite, visual changes, broad gate.
-
-## Progression gate
-
-Checkpoint A passes and focused state/query/home/route tests are green.
+Route/context/state contract, query load timing, aggregation/error semantics, DI registrations or page helpers change.

@@ -1,110 +1,19 @@
 # State and intent contract
 
-## AgentWorkspaceSection
-
-Stable semantic values corresponding to current visible sections:
-
-```text
-Overview
-Agents
-SimpleChats
-Providers
-RequestHistory
-Voice
-FloatingChat
-Chat
-Capabilities
-Governance
-Diagnostics
-```
-
-Do not rely on enum numeric values. `AgentWorkspaceTabs` remains the current lower-case
-external key mapping.
-
-## AgentsWorkspaceState
-
-Required semantic fields:
-
-```text
-Section
-SelectedAgentId
-SelectedTeamId
-SimpleChat
-UsageSelection
-ActiveAgentDetails
-```
-
-The implementation may include an immutable navigation generation or a separate
-page-transient duplicate-suppression field, but it must not put private child echo state
-back into `AgentCatalogPanel`.
-
-Loading/error/dashboard snapshots are separate view data, not URL/navigation state.
-
-## AgentDetailsSection
-
-Stable explicit order matching current UI:
-
-```text
-Identity
-Runtime
-Memory
-Images
-ProjectStructureAccess
-WorkspaceTools
-Secrets
-ProcessAccess
-Capabilities
-Voice
-```
-
-A mapper owns conversion to/from the Tabs index. Tests use the enum, never raw indexes.
-
-## AgentDetailsRequest
-
-Represents:
-
-```text
-AgentId: null for create, durable ID for edit
-Section: initial/current stable editor section
-```
-
-The page owns the request and open-once/dismissal behavior. The dialog reports section
-changes. No URL key is added in this bundle.
-
-## AgentCatalogViewState
-
-Contains existing agent/team models, provider-privacy projection, selected IDs,
-loading/error state, and any stable accessibility summary needed by rendering. It must
-not duplicate the entire domain model into new DTO classes.
-
-## AgentCatalogIntent
-
-Required intent cases:
-
-```text
-SelectAgent(agentId)
-SelectTeam(teamId or null)
-OpenAgentDetails(agentId or null)
-OpenTeamDetails(teamId or null)
-OpenTeamMembers(teamId)
-DeleteTeam(teamId)
-OpenManagedChat(agentId)
-RetryLoad
-```
-
-Add a case only when it represents a user intent already present in the component.
-Intents carry IDs or stable values, not component references or RenderFragments.
-
-## State classification
-
-| State | Owner | Future URL eligibility |
+| State | Authority / lifetime | Boundary |
 |---|---|---|
-| top-level section | page/workspace | yes |
-| selected agent/team | page/workspace | yes, after routing bundle decision |
-| details target and section | page/workspace | yes |
-| usage selection / Simple Chat state | page/workspace | already represented in current query state |
-| catalog data/loading/error | page/controller view state | no direct URL |
-| catalog search/tree expansion | component-local | optional future filter only after explicit decision |
-| editor draft and validation | dialog-local | no |
-| capability draft filters | dialog-local | no |
-| busy/confirmation/hover/focus | component-local | no |
+| Workspace section, selected agent/team, Simple Chat and usage selection | Page/workspace coordination | Typed semantic state, current route mapping only where it already applies |
+| Requested route agent/team | Compatibility route input | Reconciled with catalog readiness; must not silently resolve to a different entity |
+| Open editor target | Host/workspace coordination | Existing target or create target with per-instance identity; distinct from selected catalog item |
+| Editor section | Explicit semantic section for this editor | Enum and callback mapped to current Tabs index |
+| Mutable draft/edit context, expected version, local validation | One editor instance/session | Supplied by load operation; copied as needed; retained across same-target section changes |
+| Local search/expansion/hover/scroll/busy/confirmation | Owning UI instance | Not automatically committed URL state |
+| Accessible chat context/readiness | Workspace projection from loaded catalog/selection | Preserve existing context access callback and AgentChatContextSurfaceProvider inputs |
+
+Typed catalog intents distinguish select, open, create, edit team/members, delete, repair/reload and chat. They contain meaningful IDs/payloads, not URLs, component instances or global service access. Avoid a generic command dispatcher when a small callback family is clearer.
+
+Load requests and results carry enough target/session identity to reject stale completions. Busy flags alone are not identity. Cancellation limits work where supported; stale-result suppression remains required even when an API cannot cancel.
+
+Retain current /agents query keys: tab, agentId, teamId, simpleChatView, definitionId, conversationId, usageScope. Existing mappings decide when NavigateTo uses replace; this child adds no outbound URL update for ordinary local selection/section changes.
+
+Use the [editor contract](09-editor-session-and-host-contract.md) for lifetime, reset, result and draft rules. Unknown/new bookmark policies remain in the [handoff](../plan/03-sandbox-and-navigation-handoff.md).

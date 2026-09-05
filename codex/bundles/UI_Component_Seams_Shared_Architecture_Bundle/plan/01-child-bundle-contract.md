@@ -1,128 +1,60 @@
-# Contract for implementation bundles referencing this base
+# Contract for implementation bundles
 
-## Mandatory reference
+## Authority and reference
 
-Every child bundle must include the exact block from
-`templates/child-bundle-reference-block.md`.
+Include [the v2 reference block](../templates/child-bundle-reference-block.md). Preserve
+raw input and distinguish proposed design from current authorization. A prepared execution
+prompt does not authorize implementation during a bundle-only task.
 
-## Required preparation content
+## Required preparation
 
-### 1. Outcome and scope
+1. Outcome, exact source/consumer scope, non-goals, current revision, and local dirty state.
+2. Complete component assessment, including descendants, triggered overlays, types,
+   transitive assemblies, composition, native/browser operations, and assets.
+3. Behavior/transition matrix with baseline evidence, mutation commit points, failure
+   handling, concurrency, request cancellation, and explicit unresolved defects.
+4. State and lifetime owners per instance; semantic location separate from draft/view data.
+5. Pattern decisions justified by responsibility, with no interface/filename/count quotas.
+6. Primary files and conditional dependency repairs. Assign cross-module/public contract
+   changes an owning work unit before touching them; do not hide them in a parent facade.
+7. Independently actionable phases with prerequisites, proof tier, test project and exact
+   selector/topic, expected named cases/discovery, invalidation keys, broad-gate decision,
+   progression and rollback.
+8. Per-phase UI composition: primary/supporting content, stats, list/editor arrangement,
+   textarea/dialog sizing, first viewport, intended scroll owner, and overlay inspection.
+9. Production wiring proof plus direct policy/workflow and real-component scenario proof.
+10. Explicit downstream extraction/sandbox opportunity and measurement baseline, independent
+    of production bookmarkability implementation.
 
-- user-visible and architectural outcome;
-- exact component/page cluster;
-- source files and projects;
-- explicit non-goals;
-- whether physical relocation, routing, redesign, or Manager work is excluded.
+## Scope decisions
 
-### 2. Current responsibility inventory
+Routine local naming, pure extraction, and justified host/policy decomposition are in-scope
+decisions when they preserve the owned behavior and project direction. Record them in the
+PSR without asking for approval again.
 
-For every primary component:
+New projects, physical relocation, new routes, sibling edits, other module ownership,
+changed public cross-module contracts, and observable behavior changes require a concrete
+dependency/consumer/validation plan and an explicit scope decision before implementation.
+A child can finish its limited scope honestly with named downstream extraction blockers;
+it cannot call a required but unproven scenario solved.
 
-- rendering responsibility;
-- semantic state owned;
-- local/draft/transient state;
-- injected dependencies;
-- direct persistence/runtime/host access;
-- dialogs/overlays opened;
-- navigation performed;
-- cross-module types used;
-- relevant tests and source-shape guards.
+## Closure record
 
-Use `templates/component-boundary-assessment-template.md`.
+Report each of:
+- responsibilities removed and responsibilities retained with reasons;
+- direct and transitive graph, public type ownership, and real production wiring;
+- semantic state, editor lifetime, and effect ownership;
+- behavior matrix coverage, test migrations, negative evidence, and discovery;
+- semantic-state readiness, deterministic rendering, scenario interactions, lightweight
+  graph, browser-sandbox proof, and actual bookmarkability independently;
+- exact missing dependency, owner and next checkpoint for each partial/deferred dimension;
+- source rollback point and data/external-effect limitations;
+- durable documentation candidates and shared-base compatibility.
 
-### 3. Target seam decisions
+## Reopen
 
-State which extraction choice is used and why:
-
-- pure policy/mapper/reducer;
-- existing application contract;
-- feature controller/facade;
-- new explicit I/O/host port;
-- child presentational component;
-- controlled state and typed callback/intent.
-
-Record rejected alternatives when wrapper/interface inflation is a risk.
-
-### 4. Ownership after implementation
-
-The bundle must state:
-
-- page/workspace-owned state;
-- component-local state;
-- controller-owned orchestration;
-- application/infrastructure-owned operations;
-- future physical destination;
-- remaining direct dependencies and justification.
-
-### 5. Test impact
-
-The child bundle owns its test selection. It must classify affected tests:
-
-```text
-keep
-rewrite
-remove
-temporary migration proof
-```
-
-It must explicitly search for implementation-shape tests in the touched area. It must not
-copy product test commands from this shared base because this base contains none.
-
-### 6. Acceptance criteria
-
-At minimum:
-
-- current behavior remains unless explicitly changed;
-- moved responsibility is absent from the original component;
-- state has one owner;
-- direct dependencies are reduced or made coherent;
-- no new `IServiceProvider` or direct EF access exists in Razor;
-- no new partial file is used as the final boundary;
-- no feature reference is added to `AppComponents`;
-- component can be rendered with explicit state and minimal fakeable dependencies;
-- source-shape tests are not added or preserved without durable justification;
-- route-ready, sandbox-ready, and project-extraction-ready decisions are recorded.
-
-## Implementation constraints
-
-- Keep files in place unless relocation is an explicit owned outcome.
-- Do not opportunistically refactor adjacent modules.
-- Do not create a generic base class for unrelated component lifecycles.
-- Do not create a facade that mirrors all old services.
-- Do not create new DTOs that merely copy stable existing models.
-- Do not implement URL routing in an in-place seam bundle unless the bundle explicitly
-  belongs to the later bookmarkability stage.
-- Preserve live sibling source development.
-- Comments added to source code must be in English.
-
-## Closure report
-
-The execution report must contain:
-
-```text
-Shared base reference:
-Baseline executed:
-Responsibilities removed:
-New boundaries:
-Remaining coupling:
-State owner:
-Test cleanup:
-Route-ready:
-Sandbox-ready:
-Project-extraction-ready:
-Shared-base deviation:
-Durable documentation candidate:
-```
-
-## Reopen triggers
-
-Reopen the child bundle when:
-
-- a later step discovers duplicate state ownership;
-- the new controller becomes a service bag or god object;
-- sandbox construction still requires the full production runtime;
-- physical extraction introduces a dependency cycle;
-- routing requires child components to know page query keys;
-- an obsolete source-shape test blocks valid simplification;
-- a dependency was hidden rather than removed.
+Reopen the earliest owner if state duplicates, an editor draft is reset by section changes,
+a facade hides dependencies, late effects modify a newer session, a public type prevents
+extraction, loading boundaries change, a scenario needs the production runtime, an
+implementation-shape test obstructs valid simplification, or later moves change the graph.
+Revalidate affected consumers; do not repeat broad gates for evidence-only changes.

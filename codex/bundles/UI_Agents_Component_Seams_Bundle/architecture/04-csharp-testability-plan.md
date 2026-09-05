@@ -1,71 +1,15 @@
-# C# testability plan
+# Testability and proof layers
 
-## State and pure mapping tests
+Use the [behavior matrix](../requirements/02-behavior-preservation-matrix.md) and [test inventory](../inventories/02-test-impact-and-classification.md). Every new responsibility needs a meaningful test at its boundary; no artificial test quota.
 
-Directly instantiate typed state/mapping types. Required durable cases:
+1. Pure state/policy tests cover typed section/selection/target transitions, identity protection, normalization and permission mapping.
+2. Real operation tests construct production use cases normally with deterministic external ports and exercise load, mutation, partial failure, conflict and refresh outcomes.
+3. Adapter/composition tests exercise actual registrations and real adapters against the repository's isolated fixture style. Validate operations, not only that DI can resolve an interface.
+4. Component tests render actual catalog/editor/page with typed inputs and fake external operations. Exercise real conditional children and nested dialogs for owned scenarios.
+5. Real-host browser proof verifies production composition, existing routes, dialog lifetime, selection/chat readiness and overlays.
 
-1. current recognized route state maps to `AgentsWorkspaceState` and back without URL
-   change;
-2. invalid/obsolete section input canonicalizes to Overview;
-3. `AgentDetailsSection` has a stable explicit order independent of enum numeric values.
+A fake editor controller proves the view contract, not the actual persistence adapter. A dependency metadata test proves only the types it inspects; closure also needs subtree/reference/asset evidence.
 
-Do not test private page fields.
+Replace reflection/uninitialized setup during SB02–SB05 alongside the seam it tests. SB06 checks the complete map and migrates the adjacent Workflows button case. Shared helpers, including AgentsHomePageTestExtensions, are in scope.
 
-## Overview query tests
-
-Instantiate `AgentsOverviewQuery` through the smallest available service fixture. Cover:
-
-1. successful aggregate with overview, usage, HR agent/avatar map, and bound count;
-2. missing managed HR agent becomes the existing warning/empty presentation rather than
-   a fabricated agent;
-3. usage partial-source errors remain visible while valid totals are retained.
-
-The component test supplies a fake `IAgentsOverviewQuery`; it does not construct EF.
-
-## Catalog controller and component tests
-
-Controller tests cover load/repair policy, privacy projection, member mutation/reload,
-and delete/reload.
-
-Component tests render `AgentCatalogPanel` with explicit state and capture intents. They
-must not register Workspace, provider, repair, dialog, notification, or chat services.
-
-Page composition tests cover requested-agent open-once behavior and result-driven catalog
-reload/selection changes.
-
-## Editor controller and component tests
-
-Controller tests cover core load, partial provider/secret errors, lazy projects, save
-normalization, delete, capability persistence, and verification using focused cases.
-Avoid duplicating every field-level UI test at controller level.
-
-All six existing details test classes render the real `AgentDetailsDialog` using:
-
-- `AgentEditorSession`;
-- `AgentDetailsSection`;
-- one shared fake `IAgentEditorController`/test harness;
-- real public callbacks/results.
-
-No test subclass, private reflection, or uninitialized production service remains.
-
-## Durable dependency guard
-
-Add a small reflection-based architecture test over public/component metadata, not source
-text, asserting forbidden injection absence:
-
-- `AgentsHomePage` does not inject `IDbContextFactory<>`;
-- `AgentCatalogPanel` has no `[Inject]` properties;
-- `AgentDetailsDialog` does not inject Workspace, provider administration, Projects,
-  Secrets, external-target registry, EF, or `IServiceProvider`.
-
-Do not assert the exact allowed dependency count or private field list.
-
-## Expected new focused unit discovery
-
-Plan 18 durable unit cases across workspace state, overview query, catalog controller,
-editor controller, and forbidden-dependency guards. SB01/SB02 must freeze exact method
-names and discovery before relying on this number. Existing route-state discovery remains
-10.
-
-The 46 primary component cases remain the behavior baseline; rewrites should preserve the
-count unless a documented behavior consolidation/addition is approved before changing it.
+Async safeguards need delayed success and failure after a newer target/reset/close, plus two concurrent editor instances. Persistence tests distinguish pre-commit failure, conflict, successful commit, failed refresh, and failed UI callback. Required scenario gaps block the owning phase rather than becoming an SB07 surprise.

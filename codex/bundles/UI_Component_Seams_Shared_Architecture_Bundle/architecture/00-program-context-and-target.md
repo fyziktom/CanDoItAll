@@ -1,113 +1,58 @@
-# Program context and target architecture
+# Program context and target
 
-## Problem being addressed
+## Objective
 
-Slow UI iteration is not only a tooling problem. Many feature Razor projects and
-components currently combine several concerns:
+Reduce UI iteration cost and architectural coupling while preserving the application.
+The desired outcome is a real feature UI cluster that can render and operate against
+small deterministic substitutes, then compile and run in a lightweight browser host.
 
-- rendering and presentation state;
-- data loading and persistence access;
-- application orchestration;
-- cross-module coordination;
-- dialog and notification hosting;
-- navigation state;
-- browser/native actions;
-- feature policy and transformation logic.
+Current coupling includes rendering, semantic location, drafts, orchestration, persistence,
+cross-module data, runtime operations, global dialogs, and static assets in the same graph.
+Moving methods to another file or replacing many injected services with one service bag
+does not establish the target boundary.
 
-This makes a component expensive to instantiate, difficult to isolate, difficult to move,
-and likely to pull a broad project graph into any future sandbox. Improving the
-development Manager before correcting these boundaries would optimize around the current
-coupling rather than remove it.
+## Target responsibilities
 
-## Program objective
+| Responsibility | Owner |
+|---|---|
+| Semantic feature location and accepted transitions | One workspace instance; route adapter maps current host location |
+| Draft and validation lifetime | One editor instance/session |
+| Rendering and simple interaction | Cohesive feature component |
+| Deterministic selection, normalization, presentation mapping | Pure policies near the owning feature |
+| Coherent use cases and orchestration | Feature application/workflow services |
+| Persistence, provider, browser/native, and host mechanisms | Outward adapters behind suitable contracts |
+| Assembly wiring and route discovery | Host/composition |
 
-Create stable logical seams before physical extraction.
+A route page can delegate effects without delegating semantic authority. Controllers may
+compose pure policies; they must not retain every responsibility of the former component.
 
-A component or coherent component cluster should converge toward:
+## Dependency direction
 
-```text
-route/page/workspace owner
-    owns semantic workspace state
-    receives host location state later
-    handles navigation-level intents
+Arrows mean depends on:
 
-feature component
-    renders typed state
-    owns only local presentation/draft state
-    emits typed callbacks or intents
+~~~mermaid
+flowchart TD
+    Production[Production host / composition] --> UI[Feature UI]
+    Production --> Adapters[Production adapters]
+    Sandbox[Small sandbox host] --> UI
+    Sandbox --> Fakes[Scenario fakes]
+    UI --> Contracts[Lightweight feature contracts]
+    Adapters --> Contracts
+    Fakes --> Contracts
+    Adapters --> Application[Application / infrastructure]
+    UI --> Shared[Selected reusable UI libraries]
+~~~
 
-pure policies and mappers
-    normalize, filter, map, reduce, and decide without DI
+These are responsibility boundaries, not a mandatory project per box. The eventual sandbox
+must reach the real feature UI without reaching production runtime composition. Assess
+transitive project references and public type ownership, not just direct references.
 
-feature UI controller/facade, only when needed
-    coordinates a coherent UI workflow across multiple services
+## Migration
 
-application and infrastructure adapters
-    perform persistence, runtime, file, provider, or host operations
-```
+First characterize, then extract one coherent seam in place. At a frozen checkpoint,
+schedule physical extraction and sandbox proof independently from production navigation
+binding. Measure both dependency closure and edit-to-visible-change behavior.
 
-## Two-stage architecture change
-
-### Stage A — logical separation in place
-
-- Keep source files in their current module/project.
-- Make ownership explicit.
-- Extract pure logic.
-- Replace hidden service location and direct persistence access.
-- Introduce controlled state and typed intents for route-significant interactions.
-- Remove duplicated responsibility from the original component.
-- Add only the tests required by the child bundle.
-
-### Stage B — physical extraction after proof
-
-- Classify the component as application-wide or feature-owned.
-- Move it into `AppComponents` or `CanDoItAll.Modules.<Feature>.UI`.
-- Narrow project references.
-- Create browser sandbox scenarios.
-- Point a small sandbox host at the new UI project.
-- Measure the resulting watch/build graph separately.
-
-Do not combine Stage A and Stage B by default. A child bundle may combine them only when
-the component is already logically isolated and the move is low-risk.
-
-## Target dependency direction
-
-```text
-shared product-neutral libraries
-    CanDoItAll.Components
-    CanDoItAll.FileTools
-            |
-            v
-application-wide UI
-    CanDoItAll.AppComponents
-            |
-            v
-feature UI
-    CanDoItAll.Modules.<Feature>.UI
-            |
-            v
-web host and feature composition
-    CanDoItAll.Web
-    CanDoItAll.Composition
-```
-
-Feature UI may depend on its own stable contracts/application abstractions. It must not
-reach into web-host composition, persistence implementations, or another feature's
-implementation project merely to render.
-
-## Success characteristics
-
-At program maturity:
-
-- significant UI state has one owner;
-- child components do not build parent URLs;
-- feature UI can be rendered from explicit scenario state;
-- a sandbox does not require full production DI;
-- `IServiceProvider` is absent from Razor components;
-- direct EF access is absent from Razor components;
-- large partial page classes shrink by responsibility;
-- module UI project references are narrow and intentional;
-- `AppComponents` remains feature-neutral;
-- architecture tests protect durable boundaries rather than source layout;
-- later routing work binds URL codecs to existing state instead of redesigning component
-  ownership again.
+Apply the pattern to a different UI archetype before generalizing. Preserve existing
+Conversations UI boundaries and other successful local designs instead of normalizing
+every feature into an Agents-shaped template.

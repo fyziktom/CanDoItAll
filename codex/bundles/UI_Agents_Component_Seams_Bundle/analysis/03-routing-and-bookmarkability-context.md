@@ -1,20 +1,9 @@
-# Routing and bookmarkability context
+# Bookmarkability context
 
-The supplied bookmarkability proposal ultimately moves major peer sections and durable
-agent details to canonical paths. This bundle does not implement that route model.
+The supplied ZIP proposes hybrid path/query navigation, routed dialogs, a route/state codec, compatibility handling, and phased migration. It does not settle a canonical path-only policy. URL shape, history push/replace behavior, dirty-draft navigation, Workbench identities/windows, and MAUI host behavior remain product/architecture decisions.
 
-It prepares the component layer by introducing URL-independent typed state:
+This child prepares typed section/target/intents and compatibility mappings while retaining current /agents routes, query keys, and history semantics. Search text, expansions, working drafts, busy state, and confirmation overlays do not become route state merely because they exist.
 
-- `AgentWorkspaceSection` for the current top-level workspace section;
-- `AgentsWorkspaceState` for selected agent/team, usage selection, Simple Chat state, and
-  active agent-details target;
-- `AgentDetailsSection` for the ten editor sections;
-- `AgentDetailsRequest` for create/edit target and initial section;
-- typed catalog intents rather than child-owned navigation or dialogs.
+BaseLib DialogService currently calls CloseAll on LocationChanged and copies parameters into DialogReference. Typed section callbacks cannot alone retain an editor across navigation. A later routing implementation needs an explicit host/session lifetime solution, such as declarative dialog ownership or a justified route-aware host adapter. Do not change global dialog behavior or require a sibling-library edit in this child.
 
-`AgentWorkspaceRouteState` remains the compatibility codec for current `/agents` query
-state. It maps to/from the typed workspace state without adding, removing, or reordering
-current query keys.
-
-The future routing bundle should therefore bind URLs to an existing state model rather
-than redesigning component APIs again.
+Record six readiness dimensions separately; semantic navigation preparation is not working bookmarkability. Physical UI extraction and a small dotnet-watch host do not depend on deciding or shipping production URLs.

@@ -1,26 +1,29 @@
 {
   "name": "CanDoItAll UI Component Seams Shared Architecture Bundle",
-  "referenceId": "CDA-UI-SEAMS-BASE-v1",
-  "version": 1,
+  "referenceId": "CDA-UI-SEAMS-BASE-v2",
+  "version": 2,
+  "supersedes": "CDA-UI-SEAMS-BASE-v1",
   "kind": "architecture-reference",
   "preparedAt": "2026-09-04",
-  "language": "English reference docs; Czech owner summary; Czech supplied inputs preserved",
+  "revisedAt": "2026-09-04",
   "repository": "fyziktom/CanDoItAll",
-  "observedBranch": "development",
-  "observedCommit": "6c02b644acae3f0d05c648d6b169c82acebefea8",
+  "observedBranch": "components-decoupling",
+  "observedCommit": "a249d77b175916d760e9f6c86633202a4ea3ae44",
   "observedCommitIsPin": false,
   "executable": false,
+  "executionAuthorizedByCurrentRequest": false,
   "containsSubbundles": false,
   "containsProductTestCommands": false,
   "validationOwnedByChildBundles": true,
   "temporaryBranchArtifact": true,
-  "mergeDisposition": "Migrate proven durable rules to maintained documentation or CanDoItAll.SharedInfo, then remove this bundle before merge closure.",
+  "mergeDisposition": "Migrate proven durable rules at an owned documentation checkpoint; remove only after active child consumers migrate.",
   "sourceDependencyDecision": {
     "components": "live sibling source",
     "fileTools": "live sibling source",
     "localNuGetSnapshotsInScope": false
   },
-  "nextImplementationBundleIncluded": false,
-  "nextImplementationPreparationGate": "Wait for the independent development-branch test repair to complete, then refresh the baseline.",
-  "requiredChildBundleReference": "CDA-UI-SEAMS-BASE-v1"
+  "firstChildReference": "CDA-UI-SEAMS-AGENTS-01-v2",
+  "requiredChildBundleReference": "CDA-UI-SEAMS-BASE-v2",
+  "sandboxRequiresProductionBookmarkability": false,
+  "validationMethod": "manual semantic review plus links, JSON, input preservation and complete checksum manifest"
 }

@@ -1,70 +1,51 @@
-# SB01 — Freeze baseline and characterize Agents seams
+# SB01 — Freeze baseline and characterize
 
-**Status:** Ready  
-**Outcome:** Current source, branch relation, dependencies, CodeAnalytics evidence, test
-classification, and exact discovery are frozen before implementation.
+Status: **Not started**. Proof tier: **Standard**. Current authorization is documentation only.
 
-## Owned requirements
+## Objective and covered inputs
 
-R-001–R-005, R-010–R-013, R-050–R-055 baseline portion.
+Freeze what exists, what is uncertain, and what must remain true before moving ownership.
 
-## Prerequisites and reopen triggers
+R-001–R-005, R-039, R-050–R-051, R-058–R-059; F01/F02/F03/F07/F08/F09; all B01–B30 for inventory, especially U row B12. See [requirements](../../requirements/00-normalized-requirements.md), [behavior matrix](../../requirements/02-behavior-preservation-matrix.md) and [accepted revision](../../inputs/03-accepted-review-and-revision-request.md).
 
-- target branch contains shared base v1;
-- fetch `components-decoupling` and `development`;
-- reopen if either head or target tests move after proof.
+## Prerequisites and exact source references
 
-## Work
+A later implementation request, current repository instructions/testing/CI read, known working tree and sibling source mode. No prior phase.
 
-1. Record current SHAs, dirty state, sibling roots/SHAs, SDK, and branch relation.
-2. Re-read current target source and tests; update inventories for material drift.
-3. Capture CodeAnalytics snapshot/findings/dependency cycle evidence when available.
-4. Build AgentFramework and run baseline discovery/execution:
-   - route filter expected 10;
-   - primary component filter expected 46.
-5. Locate and classify every private/source-shape assertion in target tests and the
-   adjacent Workflows navigation case.
-6. Freeze exact planned new seam test method names/case counts before SB02.
-7. Produce no product-code change.
+All primary paths in inventories/00-source-scope.md; tests/Components/CanDoItAll.Tests.Components/{AgentsHomePageTests,AgentsHomePageTestExtensions,AgentCatalogPanelTests,AgentDetailsDialog*Tests,ProviderAdministrationLayoutTests,WorkflowsPageTests}.cs; tests/Unit/CanDoItAll.Tests.Unit/{AgentFrameworkSimpleChatsRouteTests,AgentFrameworkModuleChatContextBuilderTests}.cs; descendants/type owners in inventories/04-rendered-subtree-and-contract-closure.md. Braces denote named families to enumerate, not shell paths.
 
-## C# Architecture Impact
+## Scope and deliverables
 
-Characterization only. It selects the accepted dependency/state baseline.
+Source/dirty-state/sibling observations; exact test discovery; B01–B30 behavior-to-test map with named missing scenarios; characterized save/reset/load/result semantics; subtree/type/reference/assets baseline; current browser/iteration baseline; recorded existing defects.
 
-## Boundary Ownership
+## Implementation steps for later authorized execution
 
-No ownership changes in this subbundle.
+1. Refresh direct callers, service constructors, child scenarios and evaluated references; distinguish snapshot coverage from complete graph.
+2. Discover historical primary/route/history-host/workflow anchors and selected chat-context/child cases. Map exact methods and data cases to B rows; add focused characterization tests for meaningful gaps before production edits.
+3. Characterize B12 core-load UI/save eligibility and B16/B18/B20 reset/commit/close ordering. Keep pre-existing defects separate; resolve any ambiguity needed before its owning source phase.
+4. Record representative normal/overlay host behavior and current watch measurement protocol/results from plan/03-sandbox-and-navigation-handoff.md. Revert isolated temporary timing edits.
+5. Record the baseline gates and exact expected tests for SB02; no implementation starts on missing or unexplained relevant baseline failures.
 
-## Dependency Direction
+## Dependency impact and do-not-do constraints
 
-Record current direction and cycle evidence; do not modify references.
+No retained production change, new projects, ownership moves or dependency updates. Characterization tests may be added in future execution; measure temporary edits only in an isolated reversible setup.
 
-## Pattern Decision
+Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [pattern decisions](../../architecture/03-csharp-pattern-selection-records.md), [UI composition contract](../../architecture/10-ui-composition.md) and [recovery/invalidation rules](../../plan/01-dependencies-reopen-and-invalidation.md). Do not start later phases on incomplete required proof.
 
-Confirm PSR-01 through PSR-06 still fit current source. Any mismatch repairs the bundle.
+## Validation depth and acceptance
 
-## Testability Contract
+Run baseline discovery/build/focused selectors from commands; expected historical anchors 46/10/2/1 are observations to reconcile, not mandatory future totals. Characterization success/failure traces and real-host baseline complement tests. No full stable suite is required merely to document the baseline. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-Baseline tests must be green. Unrelated failure blocks progression; do not “fix while
-here” without a separate owner decision.
+- [ ] Current behavior and required gaps are mapped by exact scenario/test names; baseline failures are resolved or explicitly scoped before dependent work.
+- [ ] No existing core-load defect is mislabeled as a new guarantee.
+- [ ] Subtree/type graph and watch/host baseline evidence are sufficient to select a bounded next step.
 
-## Partial Class Policy
+## Proof and progression gate
 
-Record existing framework Razor partials. Add none.
+Store SB01 source observations, discovery/transcripts, behavior oracles, unresolved defect register, dependency inventory and timing samples. Standard proof remains concise and reproducible; no fabricated passing runtime claims. Store execution artifacts under proof/SB01; follow [proof placement](../../proof/README.md). No execution result is pre-filled.
 
-## Architecture Proof Required
+Unlock SB02 only after its current route/lazy-load/context baseline is green and named. Unresolved unrelated defects do not authorize repairs; affected U behavior must be characterized before SB04.
 
-- refreshed source register;
-- exact discovery and pass/fail transcripts;
-- CodeAnalytics evidence or explicit gap;
-- completed component assessments;
-- approved progression decision.
+## Reopen triggers
 
-## Non-goals
-
-No production/test refactor, no broad stable gate, no browser proof.
-
-## Progression gate
-
-Proceed only when baseline is current, focused tests pass, and no material source drift
-invalidates target contracts.
+Source/sibling/test drift, omitted dependency/scenario, changed baseline assumption or measurement environment.

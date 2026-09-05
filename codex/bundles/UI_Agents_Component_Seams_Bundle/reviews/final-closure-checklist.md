@@ -1,45 +1,24 @@
-# Final closure checklist
+# Future implementation closure checklist
 
-## Scope
+Current status: **Not started**. All runtime checks remain pending.
 
-- [ ] diff contains only permitted production/test/bundle-proof paths;
-- [ ] no provider/workflow/voice/governance/Manager/sibling/redesign expansion;
-- [ ] no route/query/project-reference/AppComponents change outside prepared scope;
-- [ ] no remote write without authorization.
-
-## Behavior
-
-- [ ] current URL compatibility and 10 route cases pass;
-- [ ] 46 primary component behavior cases pass or approved discovery change is documented;
-- [ ] deep-link details opens exactly once;
-- [ ] agent/team/editor/capability/security/storage/avatar behavior remains;
-- [ ] real-host five-scenario smoke passes without console/Blazor errors.
-
-## Architecture
-
-- [ ] all architecture checkpoints pass;
-- [ ] three seams resolve and are directly testable;
-- [ ] no forbidden Razor dependency/service location/service bag/wrapper pyramid;
-- [ ] no new partial/project reference/cycle/fourth unapproved interface;
-- [ ] component/session/intents are ready for later sandbox/project extraction.
-
-## Test hygiene
-
-- [ ] no target private reflection or uninitialized concrete service;
-- [ ] adjacent Workflows private-method test rewritten;
-- [ ] no new source-shape tests or magic counts in product tests;
-- [ ] exact discovery recorded before execution.
-
-## Repository gates
-
-- [ ] focused production/Unit/Components gates pass;
-- [ ] stable aggregate passes;
-- [ ] portability-static final no-write enforcement passes;
-- [ ] CodeAnalytics evidence or explicit availability gap recorded;
-- [ ] execution report and requirement matrix complete.
-
-## Lifecycle
-
-- [ ] durable documentation candidates are listed for later pre-merge work;
-- [ ] no claim that this bundle alone improved dotnet-watch graph size;
-- [ ] next candidate bundles are identified without being implemented here.
+- [ ] SB01–SB06 accepted; source/sibling drift reconciled and affected proof reopened.
+- [ ] R requirements and B01–B30 behavior map complete, including exact preserved/replacement cases.
+- [ ] Current route/unknown-tab/history behavior, two lazy-history host cases, chat context/readiness and managed identities preserved.
+- [ ] Selection/open/requested-open, team/member results and existing confirmation policies preserved.
+- [ ] Ten editor sections and real child workflows retain behavior and independent reference errors.
+- [ ] Per-instance mutable draft/edit context, ExpectedUpdatedAtUtc, same-target sections, reset/create/save identity and stale/disposal rules proven.
+- [ ] Save/capability/delete semantics, exactly-one result, conflict and committed-write/failed-refresh outcomes proven.
+- [ ] New operations and real adapters construct and execute through actual production registration; no fake-only claim.
+- [ ] Required parent I/O and affected private/uninitialized test harness coupling removed.
+- [ ] No new partial/project reference, unrelated module change, sibling edit or product navigation redesign.
+- [ ] Public type owners, complete required subtree, evaluated graph and assets have current evidence and owned blockers.
+- [ ] Exact final focused discovery/build/tests pass; no missing/zero-match selectors.
+- [ ] Required stable aggregate passes on final relevant source.
+- [ ] Portability scan deltas reviewed and final enforcement passes without baseline write.
+- [ ] Real-host browser actions, overlays, scroll/actions/focus and console pass at large desktop viewport.
+- [ ] C# architecture/semantic-adequacy review has no blocking finding.
+- [ ] Governed manifest contains actual evidence paths/source identity and verified SHA-256.
+- [ ] Six readiness dimensions have explicit verdicts and limitations.
+- [ ] Current iteration baseline and concrete small extraction/sandbox follow-up are recorded independently of bookmarkability.
+- [ ] Existing defects and deferred product decisions are explicit, with no silent scope expansion.

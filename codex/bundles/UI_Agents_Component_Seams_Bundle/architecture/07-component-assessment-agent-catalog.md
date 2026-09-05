@@ -1,60 +1,13 @@
-# Component boundary assessment — AgentCatalogPanel
+# AgentCatalogPanel boundary assessment
 
-## Identity
+Feature-owned catalog; retain its entry point and existing presentation. This is the preferred first small extraction/sandbox candidate after its real graph is verified.
 
-- feature-owned Agents catalog component;
-- remains in current module and file location;
-- future destination: `CanDoItAll.Modules.AgentFramework.UI`, not `AppComponents`.
+Receive a typed snapshot/selection and emit meaningful typed intents. Keep immediate search and presentation expansion local unless a real caller needs control. External catalog loading/repair/team mutations belong to cohesive operations. Dialog/chat launch belongs to host coordination.
 
-## Rendering responsibility
+Distinguish selecting from opening. Preserve requested-agent open-once behavior through the real page and catalog-ready sequence, including rerenders, missing IDs and changed requests. Preserve exact managed identities and context access readiness. Do not replace identity checks with names or tags.
 
-Search, team/agent tree, selected-team heading, agent cards, action affordances, loading,
-empty, and error presentation.
+Team edit/member dialogs and agent details are host effects for a catalog-only sandbox: the sandbox may record those intents and show deterministic outcomes. That proves catalog interaction only. If it claims end-to-end team editing or details, it must include and exercise those actual dialogs and all their dependencies.
 
-## Current non-rendering responsibility to remove
+Proof covers B04–B08, typed inputs/events, real catalog operations, host result/selection reconciliation, and an evaluated proposed extraction closure. Select an existing leaf such as AgentSelectionCard as a narrower first candidate if the full catalog still pulls heavy dependencies; document why and retain a useful interaction scenario.
 
-- organization catalog repair;
-- agent/team/provider load and reload;
-- provider privacy mapping;
-- selected/requested reconciliation owned jointly with page;
-- direct agent/team dialogs;
-- team member/delete mutations;
-- managed chat launch;
-- notifications;
-- private open-echo suppression.
-
-## Target public contract
-
-```text
-AgentCatalogViewState State
-EventCallback<AgentCatalogIntent> IntentRequested
-```
-
-Existing separate callbacks/initial-data parameters may be removed after all production
-and test callers migrate. Do not retain both old and new state machines as a permanent
-compatibility layer.
-
-## Local state retained
-
-- search text;
-- expanded tree nodes;
-- purely visual/interaction state.
-
-## Target injected dependencies
-
-None.
-
-## Acceptance
-
-- component renders with an ordinary bUnit context plus BaseLib only;
-- card/team actions emit correct intents;
-- no DialogService, NotificationService, chat launcher, Workspace, provider, or repair
-  dependency;
-- requested-agent open-once behavior is proven at the page boundary;
-- no wrapper Razor component and no new partial file.
-
-## Readiness after bundle
-
-- route-ready: yes through page-owned selection/detail intents;
-- sandbox-ready: yes at component level with explicit state;
-- project-extraction-ready: yes logically, pending physical project split and CSS/assets.
+No automatic sandbox-ready verdict at SB03. Publish precise proven dimensions and a concrete follow-up graph/asset/measurement plan.

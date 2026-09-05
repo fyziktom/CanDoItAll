@@ -1,74 +1,17 @@
-# C# pattern selection records
+# Pattern selection records
 
-## PSR-01 — Typed workspace state
+These decisions specify responsibilities. Equivalent naming and minimal cohesive helper choices do not need owner approval; update the record and evidence. New project ownership, sibling/API changes, or product navigation changes require concrete scope treatment.
 
-**Decision:** introduce `AgentWorkspaceSection` and `AgentsWorkspaceState`; retain
-`AgentWorkspaceTabs` and `AgentWorkspaceRouteState` as compatibility mapping surfaces.
+| ID | Decision and reason | Alternatives rejected / constraint |
+|---|---|---|
+| PSR-01 | Typed workspace state with current route codec adapter; selection, active editor target and URL projection remain distinct | String keys inside child logic; storing all transient state in URL; routing migration now |
+| PSR-02 | Cohesive dashboard queries preserve separate Overview, usage-selection and history-host load regions | One eager aggregate for every host; interface per trivial metric; EF moved into another partial |
+| PSR-03 | Controlled catalog plus cohesive operations and focused host coordination | Catalog launches global dialogs/chat; page accumulates every operation; blanket prohibition on a justified host adapter |
+| PSR-04 | Typed editor section and per-instance session/draft with explicit identity and transitions | Public numeric tab index; DI circuit-scoped mutable session; test-only InitialSession by default |
+| PSR-05 | Editor use cases separate pure normalization from external work; introduce real minimal ports where constructor testability requires them | Exactly one giant controller, interface quotas, mirrored service bags, dictionary dispatch |
+| PSR-06 | Real components and children under deterministic I/O plus actual production operation/composition tests | Private reflection, uninitialized services, fake-only controller evidence, automatic readiness claims |
+| PSR-07 | Reuse lightweight owned contracts; use narrow UI projections for unsuitable implementation-owned read types where justified | Mandatory reuse of heavy DTOs; indiscriminate duplication or incidental cross-module relocation |
+| PSR-08 | Preserve current dialog hosting now; specify target/session lifetime and leave future route host solution explicit | Treat section callback as route retention; global CloseAll policy change or new overlay framework incidentally |
+| PSR-09 | Prepare smallest useful sandbox candidate and measured follow-up independent of production URLs | Routing as extraction prerequisite; splitting all UI into many projects before measuring benefit |
 
-**Reason:** the page needs one semantic state owner before later URL migration.
-
-**Rejected:** continue using string tab keys and scalar fields; place query knowledge in
-child components; implement new routes now.
-
-## PSR-02 — Aggregate overview query
-
-**Decision:** introduce `IAgentsOverviewQuery` with one implementation and one typed
-aggregate result reusing existing domain/read models.
-
-**Reason:** the page currently assembles one dashboard snapshot from Workspace, usage,
-managed-agent, avatar, and EF sources. This is one cohesive read workflow.
-
-**Rejected:** one interface per metric; moving the same private page methods into another
-partial; returning an untyped dictionary.
-
-## PSR-03 — Controlled AgentCatalogPanel
-
-**Decision:** keep the existing `AgentCatalogPanel` component but make it receive
-`AgentCatalogViewState` and emit `AgentCatalogIntent`. It has no feature-service
-injection. `AgentsHomePage` owns host intent handling; `IAgentCatalogController` owns
-catalog data/mutations.
-
-**Reason:** this removes duplicate state and hidden host actions without adding a wrapper
-component.
-
-**Rejected:** `AgentCatalogPanelContainer -> AgentCatalogPanelView`; keeping dialog/chat
-launch in the child; a controller that stores component instances or navigation state.
-
-## PSR-04 — Typed editor section and explicit session
-
-**Decision:** introduce stable `AgentDetailsSection`, an explicit ordered mapping to the
-current Tabs control, `AgentDetailsRequest`, and `AgentEditorSession`.
-
-**Reason:** numeric indexes are not durable identities and private field seeding blocks
-sandbox/tests.
-
-**Rejected:** exposing `selectedTabIndex`; creating ten wrapper editors immediately;
-changing the dialog into a routed page in this bundle.
-
-## PSR-05 — Cohesive editor controller
-
-**Decision:** introduce one `IAgentEditorController` and implementation for the editor's
-external load/save/delete/reference/capability workflows. The controller may use current
-Workspace, ProviderManagement, Projects, Security, and infrastructure services
-internally.
-
-**Reason:** the controller is the real component/sandbox substitution boundary. Creating
-separate ports for every existing service would add maintenance without changing the
-current project graph.
-
-**Rejected:** one UI interface per underlying service; a pass-through service bag; leaving
-save normalization and persistence in the Razor component.
-
-**Constraint:** a fourth production interface is not pre-approved. If the concrete
-controller cannot be tested without full web-host construction, stop and add a written
-PSR addendum describing the smallest real missing boundary before proceeding.
-
-## PSR-06 — Test harness through public seams
-
-**Decision:** render the real components using typed state/session and fake controllers;
-consolidate repeated details test setup into one shared test harness.
-
-**Reason:** protects behavior while permitting internal simplification.
-
-**Rejected:** private reflection, subclass field mutation, uninitialized concrete
-services, exact private method/file assertions, or a permanent test of dependency counts.
+Each implemented pattern record adds: real callers, dependency list, rejected simpler alternative, tests, lifetime, costs, and extraction implications. A proposed port must describe a user/application operation, not merely rename every method of one existing service. Keep normalization pure where possible and presentation formatting local.

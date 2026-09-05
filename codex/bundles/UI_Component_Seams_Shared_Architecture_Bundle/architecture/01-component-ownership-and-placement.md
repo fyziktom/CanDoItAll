@@ -1,103 +1,43 @@
 # Component ownership and placement
 
-## Placement model
+## Placement decisions
 
-| Location | Owns | Must not own |
+| Location | Owns | Excludes |
 |---|---|---|
-| `CanDoItAll.Components` | Product-neutral primitives and reusable browser UI behavior | CanDoItAll feature concepts or application services |
-| `CanDoItAll.FileTools` | Product-neutral file browser and file interaction capabilities | CanDoItAll module semantics |
-| `CanDoItAll.AppComponents` | CanDoItAll-wide shell, navigation, overlay, record, filter, tuning, and host-adapter UI | References to concrete feature modules or feature business rules |
-| Current feature module | Feature page/container/component behavior during in-place seam extraction | New hidden cross-module coupling |
-| Future `CanDoItAll.Modules.<Feature>.UI` | Feature-owned components, presentation state, intents, and narrow UI-facing contracts | Persistence implementations, web composition, unrelated feature implementations |
-| `CanDoItAll.Web` / composition | Route and host ownership, concrete registrations, assembly composition | Reusable feature rendering logic |
+| Components / FileTools | Product-neutral reusable capabilities | Application feature semantics |
+| AppComponents | Application-wide feature-neutral shell, navigation, overlays, and host adaptation | Concrete module implementations |
+| Cohesive application UI families | Shared semantic UI such as Conversations.Components and Conversations.Shell | Unrelated feature orchestration |
+| Feature UI | Feature components, state, presentation, and consumer-owned ports | Persistence, provider implementations, Web composition |
+| Feature contracts/application | Stable feature use-case contracts and behavior | Host-specific rendering |
+| Host/composition and adapters | Concrete registrations and production mechanisms | Reusable feature rendering logic |
 
-## Decision rules
+Reuse by multiple modules does not remove the original feature's ownership. Consumers
+may reference an intentional feature UI/contract boundary; arbitrary references between
+large module implementation assemblies are not an acceptable substitute.
 
-### Put a component in `CanDoItAll.Components` when
+## Public contract audit
 
-- it can be named without a CanDoItAll business noun;
-- it is useful to external consumers;
-- it requires only component-local browser or rendering capabilities;
-- its API can be explained without Projects, Agents, Processes, Workspace, CRM/HR, or
-  other feature concepts.
+Before selecting an existing model, record its declaring assembly, transitive graph,
+mutability, sensitive fields, and necessary UI semantics.
 
-### Put a component in `CanDoItAll.AppComponents` when
+Reuse a lightweight contract when it fits. Move a truly shared contract at its owning
+feature boundary when justified. Introduce a narrow projection when it removes a real
+assembly, mutability, security, or compatibility dependency. A projection is not forbidden
+merely because some fields resemble another model.
 
-- it is specific to the CanDoItAll application experience;
-- it is not owned by one feature;
-- it provides shell, navigation, overlay, record-browser, filter, tuning, or host-adapter
-  behavior;
-- adding it does not require an `AppComponents -> Modules.*` project reference.
+Do not create duplicate DTO families only for renaming. Do not retain an implementation
+assembly dependency merely to avoid a small justified projection.
 
-### Keep or later place a component in module UI when
+## In-place and later movement
 
-- its name or state contains a feature noun;
-- its behavior implements feature policy;
-- its contracts use feature-owned IDs, editor models, commands, or results;
-- reuse by other modules still means consuming the owning feature's UI surface;
-- moving it to `AppComponents` would require feature references or leak feature types into
-  the application-wide layer.
+Preserve current component placement during logical extraction unless a child explicitly
+owns relocation. New cohesive types and necessary local child seams are permitted.
+Inventory cross-module prerequisites before execution and assign them an owner; do not
+discover them only in final closure.
 
-## Reuse does not redefine ownership
+A new project or cross-module public contract change needs a dependency decision and
+affected-consumer plan. Routine local type names and justified host components are not
+permission gates. AppComponents -> concrete feature module remains a forbidden direction.
 
-A component used by two modules remains feature-owned when one module defines its
-semantics. Consumers should reference the owning module UI contract rather than moving the
-component downward merely to avoid a reference.
-
-Example:
-
-```text
-ProviderRequestHistoryPanel
-    remains AgentFramework-owned even if Workspace links to it
-
-PagedRecordBrowser
-    can remain AppComponents-owned because its behavior is feature-neutral
-
-AgentDetailsEditor
-    remains AgentFramework-owned even if opened from CRM/HR
-```
-
-## Current-phase rule: no physical relocation
-
-During logical seam extraction:
-
-- preserve namespace and physical location unless a child bundle explicitly says otherwise;
-- allow new top-level records, pure policies, controllers, or ports near the current
-  component;
-- avoid creating a new project merely to host an unproven boundary;
-- record the likely future destination in the component assessment;
-- prevent new dependencies that would make the future move harder.
-
-## Suggested future internal organization
-
-`AppComponents` may gradually organize by responsibility:
-
-```text
-Navigation/
-Shell/
-Overlays/
-Records/
-Filters/
-FileTools/
-Tuning/
-```
-
-A future module UI project may use:
-
-```text
-Components/
-Pages/
-Presentation/
-State/
-Intents/
-Scenarios/
-```
-
-Do not create folders solely for symmetry. Add them when multiple cohesive files need the
-boundary.
-
-## Hard dependency rule
-
-`CanDoItAll.AppComponents` must remain independent of concrete feature modules. A proposal
-that requires adding a reference from `AppComponents` to `CanDoItAll.Modules.*` is
-presumed wrong and requires architecture review.
+CSS, asset URLs, JS modules, source-generation/build behavior, and route assembly discovery
+are part of placement. Moving files without moving these responsibilities is incomplete.

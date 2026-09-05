@@ -1,104 +1,61 @@
 # Sandboxability and future project boundaries
 
-## Sandboxability is an architectural property
+## Independent readiness dimensions
 
-A browser sandbox is useful only when it can reference a small UI graph. Referencing a
-current large feature Razor project together with all of its runtime and persistence
-dependencies may provide visual examples but will not materially reduce watch/build cost.
+| Dimension | Proof needed |
+|---|---|
+| Semantic-state ready | State owners and transition table; no hidden second authority |
+| Deterministic rendering | Real component tree renders from explicit data/fakes without production runtime |
+| Scenario interactions | Named normal/error/retry/overlay/mutation scenarios execute with deterministic effects |
+| Lightweight compile graph | Evaluated references and contract type closure exclude unrelated runtime/persistence |
+| Browser sandbox proven | Small host exercises real UI, assets, focus and scroll behavior |
+| Bookmarkability implemented | Actual location/history/refresh/restore acceptance passes |
 
-The program therefore treats sandboxability as a readiness result of seam extraction.
+Use Proven, Partial, Deferred, or Blocked per dimension. List exact missing dependencies.
+A fake parent service, zero parent injections, or a preview route in a heavy project does
+not prove a small graph. A bundle may honestly finish its in-place scope with physical
+readiness partial if the blockers and next owned work are explicit.
 
-## Sandbox levels
+## Complete subtree inventory
 
-### Level 1 — isolated component harness
+Include every rendered child, conditional tab, nested picker/wizard, cascading service,
+external callback, browser/native operation, asset, and declaring assembly of exposed
+types. For each: scenario trigger, direct/transitive dependencies, production owner,
+scenario substitution, and extraction disposition.
 
-The component can render in a component test or minimal renderer with:
+Do not create a fake production application through dozens of incidental registrations.
+Reuse existing narrow ports; adapt only the smallest real missing capability. Scenario
+catalogs use real rendering and local deterministic data/failures, not fixture-specific
+production branches. Required scenarios cannot silently be replaced with stub children.
 
-- explicit state/parameters;
-- component-library services;
-- small fake feature ports;
-- no database;
-- no full production service collection;
-- no service locator.
+## Scenario coverage
 
-This level can be reached before physical project extraction.
+At least: loading; empty; realistic normal/large data; saved unavailable references;
+core and partial failures; retry; selected detail; non-default section; relevant open
+overlays; restricted/read-only state; overlapping requests; disposal where applicable.
+Each child names its own applicable scenarios instead of mechanically copying this list.
 
-### Level 2 — module browser catalog
+## Physical extraction
 
-A future module UI project exposes deterministic scenarios:
+Determine the actual target references before creating a project. Audit all public types,
+UI family dependencies, scoped CSS, static web assets, JS, Tailwind inputs, assembly route
+discovery, and scenario registration. Host/composition references implementations; feature
+UI must not pull them transitively through a convenience DTO.
 
-```text
-loading
-empty
-normal
-large-data
-validation-error
-operation-error
-selected-detail
-open-overlay
-restricted/read-only
-```
+Live Components/FileTools source mode remains. A lightweight UI need reference only the
+libraries it actually uses; not every component must depend on every shared UI package.
 
-The catalog supplies state and fake port behavior. Scenarios should be directly
-addressable so a developer can return to the same visual state.
+## Timing and measurement
 
-### Level 3 — integration host
+After the first proven cluster, queue a small extraction + sandbox child as the next
+delivery checkpoint. It need not wait for production URL binding, all editor sections,
+all Agents areas, or the rest of the application. Use a frozen compatible source checkpoint;
+coordinate overlapping moves with the current child rather than silently invalidating it.
 
-A small host composes several module UI projects and selected real adapters without
-starting the full application runtime. This is for integration surfaces, not a replacement
-for the production host.
+Record the existing loop before extraction: host/SDK/configuration, source/sibling revisions,
+evaluated graph and watch file set, readiness/startup, edit-to-visible-change for Razor,
+C#, scoped CSS, Tailwind and JS as applicable, and rude-edit restart behavior. Use repeatable
+scenarios and comparable observations, not an arbitrary promised speedup.
 
-## Live sibling decision
-
-The future sandbox continues to use live sibling source references for Components and
-FileTools. This bundle does not introduce package snapshots. The performance gain must
-come from excluding unrelated CanDoItAll feature/runtime projects, not from disconnecting
-the UI libraries the designer actively edits.
-
-## Sandbox-ready checklist
-
-A component is sandbox-ready when:
-
-1. Its required semantic state is explicit.
-2. Its route-significant state is controlled.
-3. Its I/O goes through small fakeable ports or an existing coherent application
-   abstraction.
-4. It does not require `IDbContextFactory<AppDbContext>`.
-5. It does not require `IServiceProvider`.
-6. It does not require production hosted services to render.
-7. It does not imperatively open a significant detail that the scenario cannot express.
-8. Loading, empty, normal, error, and relevant overlay states can be constructed.
-9. Static assets and CSS ownership are known.
-10. The component can be rendered without registering unrelated modules.
-
-## Project-extraction-ready checklist
-
-A component cluster is ready for `CanDoItAll.Modules.<Feature>.UI` when:
-
-- the future project references are known and narrow;
-- no inward reference to persistence or web composition is required;
-- cross-module feature dependencies are represented by stable contracts;
-- state and intent types can move with the UI;
-- controller implementations can remain outside if they require heavier dependencies;
-- component tests do not depend on internal types from the old monolithic project;
-- CSS/static assets have a clear destination;
-- moving the files will not change ownership or behavior.
-
-## AppComponents extraction readiness
-
-Move to `AppComponents` only when the component is application-wide and feature-neutral.
-A move that requires adding a module reference to `AppComponents` is not ready and is
-normally the wrong destination.
-
-## Scenario quality
-
-Do not build a sandbox by recreating the full production DI graph with mocks. A scenario
-must declare the state it intends to demonstrate. Fake behavior should be small,
-deterministic, and local to the feature catalog.
-
-## Timing
-
-Create the first browser sandbox after the first real lightweight module UI boundary
-exists. Before that point, use component-level scenarios/tests to validate the seam, but
-do not claim a large current module project is isolated merely because it has a preview
-route.
+Measure the same scenarios in the sandbox. Report remaining asset/build/host bottlenecks.
+Direct watch optimization and Manager adaptation remain separately owned later work.

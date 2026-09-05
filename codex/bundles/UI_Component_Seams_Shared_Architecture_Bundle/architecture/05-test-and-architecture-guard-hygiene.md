@@ -1,118 +1,59 @@
-# Test and architecture guard hygiene
+# Behavior and architecture guard hygiene
 
-## Scope of this document
+## Preservation before movement
 
-This shared base owns principles only. Every implementation bundle owns the exact tests
-and validation required by its source changes. No product test is permanently tied to
-this temporary bundle.
+Each risky responsibility has a behavior matrix row: baseline evidence, owner, invariant,
+positive and negative case, affected consumers, exact test topic, result, and rollback.
+Preserve meaningful assertions while changing the harness incrementally with the extraction.
 
-## Test value categories
+Classify observed behavior as:
+- Preserve: intended current observable behavior.
+- Isolation safeguard: boundary/lifetime protection needed to preserve behavior across the
+  newly controlled seam; no incidental product redesign.
+- Unresolved defect: record reproduction and effect; do not silently change it or assert
+  it as desired behavior. Resolve before moving the dependent responsibility.
 
-### Durable behavior test
+Existing counts are discovery baselines, not coverage budgets or permanent invariants.
+Tests may split, consolidate, move layers, or add meaningful cases with explicit mapping.
+Expected named cases or numeric discovery must be recorded before execution; zero or
+unexpected discovery is invalid proof.
 
-Protects a user-visible or application-semantic outcome:
+## Evidence layers
 
-- state transition;
-- load/save/delete behavior;
-- authorization result;
-- route-ready intent;
-- error handling;
-- stale async completion protection.
+| Layer | Proves |
+|---|---|
+| Pure policy/state tests | Deterministic decisions and transitions |
+| Real component + narrow fakes | Rendering and interaction through public seams |
+| Production workflow/adapter tests | Real load/mutation/failure semantics |
+| Real composition smoke | Production registrations and callers reach real operations |
+| Browser interactions + inspected screenshots | Host/lifecycle/focus/assets/layout behavior |
+| Dependency/type graph review | Durable direction and transitive isolation |
 
-Keep and improve these tests.
+None substitutes for the others where its claim is required. A fake that echoes desired
+results cannot prove production persistence or effect timing. Characterization should
+precede each risky change; do not defer all test repair until final cleanup.
 
-### Durable architecture boundary test
+## Durable and temporary guards
 
-Protects a dependency rule that should survive refactoring:
+Keep behavior tests and justified project/type dependency guards. Reflection over public
+component metadata can enforce injection categories, but inspect constructors, descendants,
+and public signature graphs too. A parent-only check cannot prove subtree isolation.
 
-- `AppComponents` has no feature-module reference;
-- module UI has no persistence or web-composition reference;
-- Razor components do not use `IServiceProvider`;
-- route-owned query keys are not constructed in child components.
+Remove incidental private-field/method reflection, uninitialized concrete services, exact
+partial counts, filename snapshots, and dependency-number quotas. Temporary migration
+checks may prove moved calls left the old class; label and retire them after closure.
 
-Prefer project/assembly graph inspection or a maintained analyzer over fragile source
-string matching where practical.
+ProjectStructurePageArchitectureTests' exact 22-partial assertion is a known example for
+the owning future child, not permission to change unrelated tests during Agents work.
 
-### Temporary migration proof
+## Validation cost and UI
 
-Shows that ownership actually moved during one extraction:
+Each child selects focused owning tests and downstream consumers, with invalidation keys.
+Run the stable aggregate only at a named composition/build/persistence checkpoint, not
+because a phase or proof tier is large. Portability-static remains mandatory for protected
+source changes, including reviewed baseline deltas and final no-write enforcement.
 
-- old component no longer calls a removed service;
-- old partial no longer contains a migrated policy;
-- new controller is used by the composition root.
-
-This may be useful during a child bundle but must have an explicit removal/review point.
-Do not let migration proof become a permanent snapshot of private implementation.
-
-### Incidental source-shape test
-
-Examples:
-
-- exact number of partial class files;
-- exact filename list;
-- exact private method name or source location;
-- exact order of implementation helpers;
-- string search asserting one particular internal syntax when several correct designs
-  exist.
-
-These tests should not be added. Existing examples in a touched area should be removed or
-replaced with behavior or durable boundary coverage.
-
-## Known current example
-
-`ProjectStructurePageArchitectureTests` currently counts files containing
-`partial class ProjectStructurePage` and asserts an exact value of `22`. This protects an
-accidental source layout and fails when a valid refactor reduces the count. The relevant
-implementation bundle should remove this assertion rather than update the magic number.
-
-The same review must be applied to adjacent source-string assertions: keep only those
-that protect a real dependency or migration invariant and rewrite them when a more robust
-boundary test is available.
-
-## Partial class policy
-
-- Do not add another partial file as the end-state solution to a large Razor/page class.
-- Existing partials may be touched during strangler extraction, but responsibility must
-  move into top-level types or coherent child components.
-- Generated code, platform-specific partial methods, and framework-required partials are
-  valid exceptions.
-- No test should freeze the current partial count.
-- A child bundle touching a large partial class must state which responsibility leaves the
-  partial and whether remaining partials become more cohesive.
-
-## No test inflation through architecture prose
-
-Do not translate every sentence in this shared base into a unit test. Architecture rules
-need enforcement only where:
-
-- regression is likely;
-- the invariant is durable;
-- the test can inspect a stable boundary;
-- the maintenance cost is lower than repeated review failure.
-
-Otherwise use child-bundle review and maintained architecture documentation.
-
-## Test cleanup rule for child bundles
-
-A child bundle must inventory tests affected by the old architecture and classify each as:
-
-```text
-keep
-rewrite
-remove
-temporary migration proof
-```
-
-Do not keep obsolete tests merely to avoid changing the test project. Do not replace a
-source-shape test with another magic count or filename snapshot.
-
-## Preferred proof after seam extraction
-
-- direct tests of pure policy/reducer units;
-- direct tests of feature controller workflows;
-- component tests using explicit state and fake ports;
-- project dependency checks after physical extraction;
-- browser proof only for behavior that requires a real host.
-
-The test should instantiate the new boundary directly. Full runtime construction is not
-acceptable as the only proof that an extracted unit is testable.
+Application proof uses the named large-desktop viewport. Preserve current composition;
+inspect normal and open-overlay states, first viewport, scroll ownership, focus, long labels,
+clipping, and constrained containers. Test interactions as well as taking screenshots.
+Reusable basic BaseLib changes have their own small/medium/large proof when explicitly owned.

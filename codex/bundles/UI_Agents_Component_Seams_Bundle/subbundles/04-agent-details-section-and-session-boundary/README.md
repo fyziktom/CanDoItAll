@@ -1,74 +1,52 @@
-# SB04 — Agent details section and session boundary
+# SB04 — Editor section, session and host lifetime
 
-**Status:** Blocked by SB03  
-**Outcome:** Agent details has a stable typed section and explicit editor session/load
-boundary; tests can render the real dialog without private state mutation.
+Status: **Not started**. Proof tier: **Behavioral**. Current authorization is documentation only.
 
-## Owned requirements
+## Objective and covered inputs
 
-R-023–R-024, R-034, partial R-035–R-036, R-043, R-052.
+Expose semantic section and explicit per-instance session ownership without losing current editor presentation or draft state.
 
-## Prerequisites and reopen triggers
+R-023–R-026/R-034/R-036/R-039/R-043/R-045/R-052/R-053; F02/F04/F05/F08; B09–B12/B16/B19–B28, with command details completed in SB05. See [requirements](../../requirements/00-normalized-requirements.md), [behavior matrix](../../requirements/02-behavior-preservation-matrix.md) and [accepted revision](../../inputs/03-accepted-review-and-revision-request.md).
 
-Checkpoint B accepted. Reopen if section ownership cannot be reported to the page or
-session duplicates stable existing models.
+## Prerequisites and exact source references
 
-## Work
+SB03 accepted; B12 baseline characterized, reset/target/close oracles recorded; subtree and exact section tests selected.
 
-1. Add `AgentDetailsSection` and explicit section-order mapper for the current ten labels.
-2. Add section parameter/callback and page-owned `AgentDetailsRequest`; default remains
-   Identity. Do not expose raw index as semantic API.
-3. Add `AgentEditorLoadRequest`, `AgentEditorSession`, and the
-   `IAgentEditorController` contract/implementation with initial load behavior.
-4. Add optional `InitialSession` so tests/scenarios bypass external load without
-   subclassing or private reflection.
-5. Move existing/new editor construction and initial agents/providers/capabilities/secrets
-   load behind the controller. Preserve provider/secret partial errors.
-6. Keep lazy project load and commands temporarily until SB05, but route all newly moved
-   load behavior through the controller.
-7. Create the shared details test harness and migrate representative section/load cases
-   first, including numeric-index removal.
+src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor and .razor.cs; host opening call sites in AgentsHomePage/catalog coordination; same-module session/section/load types; real child paths in subtree inventory; six AgentDetailsDialog*Tests families and shared harness.
 
-## C# Architecture Impact
+## Scope and deliverables
 
-Establishes the editor boundary without prematurely splitting ten section components.
+Typed section mapping; explicit existing/create target and instance/generation; normal production load seam; independent references; host transition/result contract; migrated public section/loading tests and real child scenarios.
 
-## Boundary Ownership
+## Implementation steps for later authorized execution
 
-Page owns details target/section outside the dialog; dialog owns current draft/rendering;
-controller owns initial external load.
+1. Implement the session/host contract with one mutable draft/edit context owner and preserved expected token. Do not retain sessions in circuit-scoped services.
+2. Map ten section identities to existing Tabs API/order; same-target section change must retain draft. Preserve Clear-to-blank and synchronize create target without conflating catalog selection.
+3. Load through the production operation seam, preserve provider/secret partial errors and explicit project loading. Treat characterized B12 behavior accurately.
+4. Inventory and render conditional children/nested dialogs with their real fakeable capabilities; record exact required same-module child edits for SB05 and external graph blockers.
+5. Migrate details harness/section tests progressively and prove delayed old success/failure, reset/new target/dispose, and two instance isolation.
 
-## Dependency Direction
+## Dependency impact and do-not-do constraints
 
-Dialog -> editor controller/session; controller -> existing application services.
+No global DialogService behavior change, routed overlay host, new URL or sibling API edit. InitialSession is optional only for justified real production composition with defined ownership/precedence.
 
-## Pattern Decision
+Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [pattern decisions](../../architecture/03-csharp-pattern-selection-records.md), [UI composition contract](../../architecture/10-ui-composition.md) and [recovery/invalidation rules](../../plan/01-dependencies-reopen-and-invalidation.md). Do not start later phases on incomplete required proof.
 
-PSR-04 and load portion of PSR-05.
+## Validation depth and acceptance
 
-## Testability Contract
+Named load/section/lifetime/component cases plus affected existing details settings/thinking/project/avatar tests. Required real descendants use deterministic services; do not suppress them to prove a section. Freeze exact tests/data/counts and run current catalog->editor host dependent flow. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-Real dialog rendered with session + fake controller. No test subclass/private fields for
-migrated cases.
+- [ ] All ten sections use stable semantic identity and preserve existing controls/labels.
+- [ ] Session/draft/edit context/reference ownership and create/reset transitions are explicit and tested.
+- [ ] No shared mutable editor service or default test-only session shortcut; pending results cannot replace a newer/disposed session.
+- [ ] Core-load behavior is characterized; partial/lazy reference semantics and real-child coverage are recorded.
 
-## Partial Class Policy
+## Proof and progression gate
 
-No new partial or per-section code-behind split.
+Session transition evidence, selected case discovery/transcripts, delayed success/failure tests, host/section/UI composition proof, child registration matrix and updated dependency audit. Store execution artifacts under proof/SB04; follow [proof placement](../../proof/README.md). No execution result is pre-filled.
 
-## Architecture Proof Required
+Unlock SB05 with session/section/load lifetime proven. Remaining command work is explicitly owned by SB05, not hidden as complete isolation.
 
-- stable section mapping tests;
-- initial session render proof;
-- partial failure proof;
-- first migrated tests have no reflection/uninitialized services;
-- no label/order change.
+## Reopen triggers
 
-## Non-goals
-
-No command migration yet beyond what is required for coherent compilation; no routed page,
-no section wrappers, no visual changes.
-
-## Progression gate
-
-Typed section/session is stable, representative tests use public seams, and load behavior
-matches baseline.
+Target/session identity, cloning, section mapping, load/partial failure, reset/close behavior, child services or host parameter propagation changes.

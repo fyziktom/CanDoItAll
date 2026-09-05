@@ -1,8 +1,10 @@
-# Source scope inventory
+# Source scope
 
-## Existing production files expected to change
+All paths below are repository-relative evidence and future scope, not edits authorized by the current documentation request.
 
-```text
+## Primary production files
+
+~~~text
 src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor
 src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs
 src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentWorkspaceTabs.cs
@@ -12,30 +14,22 @@ src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel
 src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor
 src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs
 src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs
-```
+~~~
 
-## New production files permitted
+Permit new same-module top-level contract families, state/normalization policies, cohesive operations, production adapters and focused host coordination. Preserve public entry-point behavior; adapt all direct callers/tests together. No new partial files or projects.
 
-New top-level types inside the existing AgentFramework module for:
+## Descendant closure
 
-- workspace section/state and mapping;
-- details section/request and order mapping;
-- overview query contract/result/implementation;
-- catalog snapshot/view state/intent/controller;
-- editor session/controller and focused pure mapping/normalization types.
+SB01/SB04 must inspect every rendered or interaction-only child listed in [subtree inventory](04-rendered-subtree-and-contract-closure.md) and discover omitted children. Necessary same-AgentFramework-module child seam edits are within the future behavioral scope once the exact file/scenario is recorded before editing. Existing cross-module children may be exercised through their current interfaces/fakes.
 
-Do not add new partials or projects. Prefer cohesive files grouped by responsibility; do
-not create one file/type for every one-line record when a small contract family is clearer.
+Cross-module or sibling production changes, ownership moves and public API changes are not silently included. If a required parent behavior cannot be preserved without one, document the concrete dependency blocker and scope decision before dependent edits; do not stub away the real scenario to claim closure.
 
-## Test files expected to change
+## Tests and direct callers
 
-See `inventories/02-test-impact-and-classification.md`.
+Use [test inventory](02-test-impact-and-classification.md), including AgentsHomePageTestExtensions and shared details/Memory/storage fixtures. Search all component callers and registrations at SB01; adapt only directly affected consumers. Add focused operation/composition tests inside existing test projects.
 
-## Explicitly forbidden production scope
+## Read-only dependency evidence
 
-- `src/UI/CanDoItAll.AppComponents/**`;
-- sibling Components/FileTools repositories;
-- AgentProviderProfilesPanel and other AgentFramework tabs except call-site adaptation;
-- other modules' production code;
-- root build graph, Directory.Build files, solution files, and package versions;
-- Manager, Tailwind, Docker, migrations, and routes outside current compatibility mapping.
+Inspect AgentFramework and UI project references, Directory.Build.targets, Web App.razor/static assets, Projects/ProjectModels.cs, Security/SecurityModels.cs, MAF model/core persistence contracts, existing Conversations.Components, Components dialogs/tabs, and FileTools abstractions.
+
+No production edits to AppComponents, other module internals, sibling repositories, root build/solution/package files, Templates, migrations, Docker, Manager, watch infrastructure, or unrelated AgentFramework panes. A separate owned bundle handles physical extraction and its project/assets changes.

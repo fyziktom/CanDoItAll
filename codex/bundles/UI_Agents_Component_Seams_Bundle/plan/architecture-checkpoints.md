@@ -1,48 +1,15 @@
 # Architecture checkpoints
 
-## Checkpoint A — after SB02
+| Phase | Review focus | Required decision/evidence |
+|---|---|---|
+| SB01 | Source, graph and behavior truth | Baseline refresh; complete required subtree/type inventory; P/S/U classification; exact scenario/test selection; measurement protocol |
+| SB02 | Workspace/query ownership | Lazy regions preserved; context readiness moved; no EF in page; real queries testable normally |
+| SB03 | Catalog/control/host boundary | Select/open/results distinct; no feature I/O in catalog; page does not absorb every effect; useful extraction candidate |
+| SB04 | Editor lifetime/UI | Per-instance draft/version, typed section, reset/target/stale rules; real children exercised; no circuit-scoped shared draft |
+| SB05 | Real operations and adapters | Pure rules separated; minimal real ports; commit/refresh/conflict semantics; public type and descendant edges explicit |
+| SB06 | Semantic coverage and test debt | Behavior map complete; no private test harness dependency; architecture tests guard actual direction rather than shapes |
+| SB07 | Production composition and handoff | Actual DI/adapter/browser/stable/portability proof; six readiness dimensions with owned blockers; measured baseline and independent follow-up |
 
-- one typed workspace-state owner exists;
-- current URL output is unchanged;
-- direct EF and multi-source overview orchestration left Razor;
-- `IAgentsOverviewQuery` is cohesive and directly testable;
-- no new route or partial was added.
+At every phase record relevant PSRs, UI composition decision, chosen source scope, simpler alternatives, direct callers/dependencies, testability, missing proof and reopening consequences. Zero injections or a smaller file is evidence only of the inspected surface, not architecture closure.
 
-Failure invalidates SB03–SB07.
-
-## Checkpoint B — after SB03
-
-- catalog component consumes state/emits intents;
-- catalog component has no feature DI and no dialogs/chat/mutations;
-- page owns selected IDs and detail/team/chat host actions;
-- controller owns catalog load/repair/mutations, not navigation;
-- no duplicate old/new catalog state machine remains.
-
-Failure invalidates SB04–SB07.
-
-## Checkpoint C — after SB05
-
-- stable details section/session is public;
-- dialog external I/O goes only through editor controller;
-- dialog has no forbidden direct dependencies;
-- controller owns save canonicalization and command workflows;
-- controller is not a forwarding service bag;
-- existing error/result semantics remain.
-
-Failure invalidates SB06–SB07.
-
-## Checkpoint D — after SB06
-
-- behavior tests use public seams;
-- target test files contain no private reflection/uninitialized service workaround;
-- direct controller/state tests exist;
-- durable dependency guard checks forbidden categories only;
-- no test freezes file/member/count/source syntax.
-
-Failure invalidates closure.
-
-## Final architecture gate
-
-Use `reviews/csharp-architecture-gate.md`. Closure is blocked by hidden dependencies,
-duplicate state ownership, controller/service-bag growth, new partial/project references,
-or sandbox construction requiring the full production runtime for the target components.
+A reference-model move, new physical project, sibling change or new navigation behavior leaves this child's approved implementation scope. Routine same-module pure helpers, real adapter ports and responsible naming choices do not need arbitrary interface-count approval.

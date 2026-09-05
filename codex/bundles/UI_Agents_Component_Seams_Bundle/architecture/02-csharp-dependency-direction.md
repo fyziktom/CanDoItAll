@@ -1,81 +1,13 @@
-# C# dependency direction
+# Dependency direction and placement
 
-## Current direction
+Target direction for future extraction: host -> feature UI + production adapters; UI -> lightweight contracts and selected UI libraries; adapters -> application/infrastructure; sandbox -> the same feature UI + fakes. UI contracts must not depend on adapters or host implementations.
 
-```mermaid
-graph TD
-    Home[AgentsHomePage Razor] --> Workspace[Workspace service]
-    Home --> Usage[Usage query]
-    Home --> Db[AppDbContext / EF]
-    Home --> Host[Navigation / dialogs / notifications / chat]
+This child retains the existing AgentFramework project. Enforce source/type boundaries now and report the remaining assembly graph separately. No new module reference, sibling change, package switch, or feature dependency in AppComponents is authorized by this plan.
 
-    Catalog[AgentCatalogPanel Razor] --> Workspace
-    Catalog --> ProviderAdmin[Provider runtime admin]
-    Catalog --> Repair[Catalog repair]
-    Catalog --> Host
+Audit every type crossing a proposed public seam, including nested properties, generic arguments, enums and callbacks. AgentDefinition/AgentEditorModel/ProviderProfile/CapabilityCatalogItem should be reused only after confirming the required model graph is suitable. AgentEditorModel remains mutable and cannot be shared accidentally between sessions.
 
-    Details[AgentDetailsDialog Razor] --> Workspace
-    Details --> ProviderAdmin
-    Details --> Projects[ProjectsService]
-    Details --> Secrets[SecretService]
-    Details --> Infra[External target registry]
-    Details --> Host
-```
+ProjectAccessListItem and SecretListItem are declared in Projects/Security implementation assemblies. A presentation-specific choice projection containing the required identity/label/permission metadata can be justified here at the adapter boundary; preserve all behavior and never copy secret values. A shared application contract relocation belongs to its owning module and needs separate concrete scope. Do not copy broad domain models merely to rename them.
 
-The Razor layer points directly into several application, cross-module, and
-infrastructure concerns.
+Record direct and evaluated transitive project references, package-to-sibling substitutions from Directory.Build.targets, static web assets, CSS isolation, JS and Templates. Existing Conversations.Components is a local example of smaller UI composition; AppComponents is optional when the selected cluster actually needs it, not a universal base project.
 
-## Target direction in the existing project
-
-```mermaid
-graph TD
-    Route[Current /agents route codec] --> Home[AgentsHomePage]
-    Home --> State[Typed workspace state and pure mappings]
-    Home --> OverviewPort[IAgentsOverviewQuery]
-    Home --> CatalogPort[IAgentCatalogController]
-    Home --> CatalogView[AgentCatalogPanel controlled view]
-    CatalogView --> Intent[AgentCatalogIntent]
-    Intent --> Home
-    Home --> Host[Navigation / dialogs / notifications / chat]
-
-    OverviewImpl[AgentsOverviewQuery] --> Workspace
-    OverviewImpl --> Usage
-    OverviewImpl --> Db[EF / CRM-HR binding model]
-    CatalogImpl[AgentCatalogController] --> Workspace
-    CatalogImpl --> ProviderAdmin
-    CatalogImpl --> Repair
-
-    Details[AgentDetailsDialog] --> EditorPort[IAgentEditorController]
-    Details --> EditorHost[Dialog / notification presentation]
-    EditorImpl[AgentEditorController] --> Workspace
-    EditorImpl --> ProviderAdmin
-    EditorImpl --> Projects
-    EditorImpl --> Secrets
-    EditorImpl --> Infra
-```
-
-Dependencies move outward from Razor through three cohesive workflow contracts. The
-implementation types remain in the current module for now.
-
-## Future physical direction
-
-After a later extraction bundle:
-
-```text
-CanDoItAll.Modules.AgentFramework.UI
-    -> AgentFramework UI contracts/read models
-    -> AppComponents
-    -> shared Components/FileTools
-
-CanDoItAll.Modules.AgentFramework (application/composition side)
-    -> implements overview/catalog/editor contracts
-    -> Workspace, ProviderManagement, Projects, Security, Infrastructure
-```
-
-This bundle must not add that project or change project references. It only makes the
-future split possible.
-
-## Cycle gate
-
-No project-reference change is expected. Any new project reference or cycle is a bundle
-repair trigger, not an implementation detail.
+Constructor-based tests must construct real new operations. If sealed Projects/Secrets/infrastructure dependencies force full-host setup, isolate the smallest genuine read/write capability or test the production adapter at the appropriate integration level. Moving an untestable dependency graph behind a single controller name is not sufficient.

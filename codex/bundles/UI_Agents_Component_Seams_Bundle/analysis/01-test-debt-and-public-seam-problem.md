@@ -1,64 +1,9 @@
-# Test debt and public-seam problem
+# Test debt and missing evidence
 
-## Valuable behavior already covered
+The historical primary filter discovers 46 cases and route filter 10. Several details tests seed private state/numeric tabs or instantiate uninitialized Projects/Secret services. Catalog tests reflect requested-open and saved-result internals. These tests obstruct safe internal refactoring even when their behavioral intent is valuable.
 
-The current tests protect important outcomes: route fallback, tab behavior, managed-agent
-identity checks, confirmations, selection semantics, save/delete behavior, capability
-workflows, project/workspace access normalization, storage selection, thinking effort,
-auto-approval, and avatar generation.
+Replace those harnesses progressively with the real production components, public typed inputs/events, and deterministic I/O fakes. Do not add an InitialSession parameter solely to satisfy tests when the production loader seam already supplies a session.
 
-These behavior assertions should remain.
+The original primary filter misses two existing lazy-history cases in ProviderAdministrationLayoutTests and the adjacent Agents-shell Workflows navigation case. It also cannot prove that real controllers construct normally, that reference failures retain their meaning, or that nested sections work.
 
-## Incidental implementation coupling to remove
-
-### AgentCatalogPanelTests
-
-- reads private `openedRequestedAgentId` through reflection;
-- invokes private `HandleAgentDialogSavedAsync` through reflection;
-- reads private `selectedAgentId` through reflection;
-- constructs broad service proxies only because the component owns data and host actions.
-
-Replace these cases with public assertions:
-
-- a card emits a typed `OpenAgentDetails` intent;
-- page-owned requested state opens one dialog and suppresses duplicate echo;
-- a public delete result causes controller reload and page-owned selection clear.
-
-### AgentDetailsDialog*Tests
-
-The six current test classes repeatedly:
-
-- derive `TestAgentDetailsDialog`;
-- reflect private fields such as `editorModel`, `providers`, `capabilities`, `isLoading`,
-  and `selectedTabIndex`;
-- register `ProjectsService` and `SecretService` through
-  `RuntimeHelpers.GetUninitializedObject`;
-- create broad DispatchProxy implementations for methods unrelated to the scenario.
-
-Replace this with:
-
-- explicit `AgentEditorSession` input;
-- typed `AgentDetailsSection` input;
-- a small fake `IAgentEditorController`;
-- a shared test harness that renders the real component, not a subclass;
-- direct tests of controller workflows and pure state policies.
-
-### WorkflowsPageTests adjacency
-
-One current case uses reflection to locate and invoke private
-`AgentsHomePage.OpenWorkflows`. Because this bundle touches the page contract, rewrite the
-case to click the public `agents-shell-open-workflows` action and assert the resulting
-navigation. Do not preserve private method names.
-
-## Test-count policy
-
-The current primary component slice discovers 46 behavior cases:
-
-- 6 `AgentsHomePageTests`;
-- 10 `AgentCatalogPanelTests`;
-- 30 cases across six `AgentDetailsDialog*Tests` classes.
-
-The count is an execution baseline only, not a permanent architecture assertion. Replace
-private-shape cases one-for-one where the user behavior remains relevant. Add direct unit
-coverage only for the new durable state/controller boundaries. Do not create tests merely
-to restate every architecture sentence.
+Maintain a behavior-to-test map including negative/failure/race/result cases. Exact test names and data cases are frozen before each phase's implementation; discover actual counts from that list. Historical totals and new-unit quotas must not become permanent architecture assertions. See [test inventory](../inventories/02-test-impact-and-classification.md).

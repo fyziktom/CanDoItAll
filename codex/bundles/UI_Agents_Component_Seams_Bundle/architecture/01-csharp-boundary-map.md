@@ -1,79 +1,29 @@
-# C# target boundary map
+# Target responsibility map
 
-## Page-owned state
+| Owner | Responsibility | Must not own |
+|---|---|---|
+| Agents route page | Current URL codec, host composition, binding semantic workspace state to UI | EF, broad aggregation, mutable editor data, serialized URLs inside children |
+| Workspace coordination | Authoritative selection, active semantic section/target, requested-open reconciliation, accessible chat context, dispatch of host intents | All editor normalization/persistence or every unrelated page feature |
+| Controlled catalog | Render catalog/selection and local ephemeral filtering/expansion; emit typed intents | Workspace/provider services, dialog/chat launch, duplicate authoritative selection |
+| Catalog operations | Cohesive load/repair/team mutation workflows and typed outcomes | Navigation, component references, circuit-wide UI state |
+| Editor component/instance | Per-instance session/draft/edit context, typed section control, UI orchestration and presentation | Direct feature/infrastructure I/O or shared mutable service session |
+| Editor operations and pure policies | Load/save/delete/capability/reference workflows; normalization and permission mapping | DialogService/NavigationManager, broad service bags, test-only session shortcuts |
+| Production adapters | Existing application services, persistence and infrastructure integration | UI callbacks, route encoding, hidden global editor state |
+| Existing technical children | Their owned interaction with an explicit, inventoried fakeable boundary | Unregistered surprise I/O behind a claimed isolated scenario |
 
-`AgentsHomePage` owns:
+~~~mermaid
+flowchart TD
+    Page["Agents page / host"] --> State["Workspace state and coordination"]
+    Page --> Catalog["Controlled catalog"]
+    Page --> Editor["Editor instance and session"]
+    State --> CatalogOps["Catalog / overview operations"]
+    Editor --> EditorOps["Editor operations"]
+    CatalogOps --> App["Existing application services via real boundaries"]
+    EditorOps --> App
+    Editor --> Children["Inventoried real children"]
+    Children --> Ports["Owned child capabilities / technical services"]
+~~~
 
-- `AgentsWorkspaceState`;
-- top-level `AgentWorkspaceSection`;
-- selected agent and team identity;
-- current Simple Chat state and usage selection;
-- active `AgentDetailsRequest` and route-request duplicate suppression;
-- catalog loading/error state returned by `IAgentCatalogController`;
-- decisions to navigate, open route-significant details, open team/editor dialogs, launch
-  managed chats, and present notifications.
+Arrows show collaboration, not new project references. Contract and implementation remain in the existing module during this child; later extraction moves only a proven cohesive cluster.
 
-## Component-local state
-
-`AgentCatalogPanel` owns only:
-
-- draft search text;
-- expanded tree-node IDs;
-- hover/focus and purely visual state.
-
-`AgentDetailsDialog` owns:
-
-- the mutable editor draft for the current open editor;
-- local busy/loading/error presentation derived from controller results;
-- confirmation and wizard presentation state;
-- draft filters within the Capabilities section;
-- a render adapter between `AgentDetailsSection` and the current Tabs index.
-
-It does not own the durable section identity outside the dialog; every section change is
-reported through the typed callback.
-
-## Controller/query ownership
-
-### IAgentsOverviewQuery
-
-One read workflow that returns a typed aggregate containing the existing overview and
-usage snapshots, managed HR-agent resolution, avatar lookup, bound-resource count, and
-partial-warning information. It owns database and multi-source orchestration. It has no
-navigation, dialogs, or notifications.
-
-### IAgentCatalogController
-
-One catalog workflow that:
-
-- optionally ensures organization catalog repair;
-- loads/reloads agents, teams, and provider privacy metadata;
-- updates team members;
-- deletes teams;
-- returns a typed snapshot after mutations.
-
-It does not open dialogs, navigate, launch chat, store RenderFragments, or own page
-selection.
-
-### IAgentEditorController
-
-One editor workflow that:
-
-- loads an existing/new editor session and supporting catalogs;
-- preserves separate provider/secret partial-failure information;
-- lazy-loads project access items;
-- refreshes providers/capabilities;
-- normalizes and saves the draft;
-- deletes an agent;
-- persists capability assignment for an existing agent;
-- verifies a capability and returns refreshed state.
-
-It does not present notifications, open dialogs, or own Tabs/rendering state.
-
-## Presentation contract
-
-`AgentCatalogPanel` receives one `AgentCatalogViewState` and emits one
-`EventCallback<AgentCatalogIntent>`. Do not add a wrapper Razor component around it.
-
-`AgentDetailsDialog` receives `AgentDetailsSection`, optional `AgentEditorSession`, and a
-controller through DI. It emits `SelectedSectionChanged` and the existing semantic
-save/delete completion result.
+The page owns semantic navigation but may delegate cohesive host effects to a small coordinator/adapter with a real responsibility. A wrapper or additional port is justified by that responsibility and tests, not forbidden or required by count. Keep catalog rendering and editor state separate; do not introduce a general-purpose UI framework.

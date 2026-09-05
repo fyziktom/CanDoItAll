@@ -1,25 +1,22 @@
-# Target type inventory
+# Candidate target contracts and type audit
 
-Names below are the prepared contract. Equivalent naming requires a pattern-decision
-addendum; responsibility may not change silently.
+Names illustrate cohesive roles, not required spellings or an interface quota. Keep public compatibility and document chosen ownership/production callers.
 
-| Type | Kind | Owner |
-|---|---|---|
-| `AgentWorkspaceSection` | enum | page semantic state |
-| `AgentsWorkspaceState` | immutable record | route-owning page/workspace |
-| `AgentDetailsSection` | enum | stable detail section identity |
-| `AgentDetailsRequest` | immutable record | page-owned detail target |
-| `AgentsOverviewViewState` | aggregate record reusing existing models | overview query result |
-| `IAgentsOverviewQuery` / `AgentsOverviewQuery` | read workflow seam | application/query layer |
-| `AgentCatalogSnapshot` | immutable data snapshot | catalog controller result |
-| `AgentCatalogViewState` | controlled component state | page presentation state |
-| `AgentCatalogIntent` hierarchy | typed user intents | catalog component output |
-| `IAgentCatalogController` / `AgentCatalogController` | catalog workflow seam | application/controller layer |
-| `AgentEditorSession` | existing editor + supporting reference state | editor boundary |
-| `AgentEditorLoadRequest` | load inputs | editor controller contract |
-| `AgentEditorSaveResult` | save outcome and refreshed state as needed | editor controller contract |
-| `IAgentEditorController` / `AgentEditorController` | editor workflow seam | application/controller layer |
+| Candidate family | Meaning / constraints |
+|---|---|
+| AgentWorkspaceSection / AgentsWorkspaceState | Typed semantic workspace section/selection/context, excluding mutable editor draft |
+| AgentDetailsSection | Stable section identity mapped explicitly to existing visual order |
+| AgentDetailsRequest / editor target identity | Existing/create target plus editor-instance distinction; separate from catalog selection |
+| Overview/usage view results and query operations | Preserve demand/load regions; never require history-host eager aggregation |
+| AgentCatalogSnapshot / view state / intents | Controlled catalog data and selected identities, typed actions; UI-local transient state remains local |
+| Catalog operations / host coordination | Real application workflows separate from dialog/chat presentation; test normal constructors |
+| AgentEditorSession / load request | One owned mutable draft/edit context/version and reference regions; explicit lifecycle/generation |
+| Editor command inputs/outcomes | Typed save/delete/capability outcomes, including commit versus refresh failure and returned identity/version |
+| Pure editor policies | Normalization, permission mapping and managed identity rules where non-trivial |
+| Narrow reference projections / ports | Only when a meaningful boundary or implementation-owned DTO dependency justifies it |
 
-Do not create duplicate copies of `AgentDefinition`, `AgentEditorModel`, `ProviderProfile`,
-`CapabilityCatalogItem`, `ProjectAccessListItem`, or `SecretListItem` merely to rename them
-for UI.
+Reuse AgentDefinition, AgentEditorModel, ProviderProfile and CapabilityCatalogItem where their complete type/assembly graph is suitable. Do not assume a type is lightweight because its name says model. Audit nested fields and protect sensitive metadata.
+
+ProjectAccessListItem and SecretListItem live in Projects/Security implementation assemblies. A narrow UI read projection can avoid importing that assembly into a future feature UI project; record required fields and round-trip meaning. Moving shared contracts across modules is separately owned work. Do not duplicate complete domain models just for stylistic symmetry.
+
+InitialSession is not a required production parameter. Use the production loading seam in tests/sandboxes by default. Do not expose private fields, numeric tab state, dictionaries, service bags or controllers that retain circuit-wide draft state.

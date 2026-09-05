@@ -1,15 +1,13 @@
-# Shared implementation prompt
+# Future implementation prompt
 
-Implement only the current subbundle of `CDA-UI-SEAMS-AGENTS-01-v1`.
+The current owner request is documentation only. Use this prompt only after a later implementation authorization.
 
-Read the shared base and all architecture decisions first. Preserve current visible and
-URL behavior. Move the owned responsibility fully out of the Razor component; do not add
-another partial, wrapper component, service bag, or forwarding interface. Reuse stable
-existing models inside the new aggregate/session contracts. Keep host presentation at the
-page/editor boundary and I/O inside the planned query/controllers.
+Read the shared CDA-UI-SEAMS-BASE-v2 bundle and this child's requirements, behavior matrix, subtree/type inventory, editor lifetime/UI composition contracts, phase plan and commands. Refresh repository engineering/testing/CI instructions before edits.
 
-Before editing, run the subbundle baseline discovery and capture failing-first evidence
-for each new durable seam. After editing, build the changed production project, list and
-run the exact focused tests, inspect the diff for out-of-scope changes, and update proof
-and the execution report. Stop on an unapproved fourth interface, URL change, project
-reference, or duplicate state owner.
+Execute SB01–SB07 sequentially. Preserve actual functionality, lazy reads, chat context, exact identities, mutations/version/result channels and real child workflows. Characterize ambiguous existing behavior before moving it. Test each seam in its own phase; SB06 is an audit.
+
+Choose cohesive operations, pure policies and the smallest real constructor-testable boundaries without interface quotas. Keep per-editor mutable state out of circuit-scoped services. Do not turn the page/controller into a new broad owner for every effect. Reuse suitable lightweight models; justify projections for implementation-owned types.
+
+Inventory all required descendants, technical capabilities, types and assets. Prove real production adapters/registration as well as fake-backed components. Record exact case names/data/expected discovery before source edits and actual results afterward.
+
+No routing/project/sandbox/sibling implementation is included. Prepare the small measured catalog extraction/sandbox handoff independently of production bookmarkability. Close only with current artifacts and qualified readiness.

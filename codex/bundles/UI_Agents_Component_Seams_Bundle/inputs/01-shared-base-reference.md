@@ -1,16 +1,9 @@
-# Shared-base reference
+# Shared architecture reference
 
-This bundle is the first executable child of:
+Required reference: **CDA-UI-SEAMS-BASE-v2**, version 2, [shared bundle](../../UI_Component_Seams_Shared_Architecture_Bundle/README.md).
 
-```text
-Reference ID: CDA-UI-SEAMS-BASE-v1
-Path: codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle
-Version: 1
-```
+Its reference role is non-executable. This child owns implementation-specific requirements, seven phase contracts, behavior preservation, test selection, proof, and readiness decisions. The current request authorizes only improving the plans.
 
-The shared base owns the program direction, placement rules, state/intent principles,
-controller decision rules, sandbox/project-extraction readiness, and test-hygiene policy.
-This bundle owns only the Agents cluster source scope, implementation sequence, tests,
-proof, and closure.
+Apply the shared ownership/state/I/O/subtree/type-dependency rules. Retain the existing module and project graph during this child, but inventory extraction blockers and prepare a sandbox follow-up independent of route design. Do not add interfaces simply to meet a count, move all logic to the route page, or treat injected-parent metadata as complete isolation evidence.
 
-No shared-base deviation was approved during preparation.
+The accepted revision supersedes conflicting historical v1 constraints, including mandatory canonical-path-first sequencing, controller quotas, unconditional reuse of implementation-owned DTOs, and automatic sandbox-ready closure.

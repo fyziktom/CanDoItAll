@@ -1,56 +1,21 @@
-# C# architecture gate
+# C# architecture gate for future implementation
 
-Complete independently at every checkpoint and at final closure.
+Current status: **Not executed**. Documentation preparation cannot pass runtime architecture closure.
 
-## State and ownership
+| Gate | Required evidence |
+|---|---|
+| Ownership | Typed semantic state; selection/open/session distinct; controlled catalog; editor per-instance draft; no god page/controller |
+| Dependency direction | No target-parent persistence/service locator; actual operations/adapters normally construct; full public type/child/reference graph recorded |
+| Minimal abstractions | Every interface/coordinator/projection has real responsibility/caller/test justification; no quotas, mirrored service bags or new partial files |
+| Behavior | B01–B30 map complete; preserved and safeguard cases distinguished; no unapproved existing-defect repair |
+| Lifetimes/results | Version token, same-target draft retention, create/reset/save identity, stale/disposed work, exactly-one completion and commit-versus-refresh outcomes |
+| Subtree/UI | Real required descendants/overlays, technical capabilities, UI assets and unchanged composition exercised |
+| Testability | Pure policies + real operations/adapters + public component tests + actual production registration/host; no private or uninitialized harness shortcuts |
+| Proof | Current source/sibling identities, exact discovery, focused/stable/portability/browser results and actual artifact hashes |
+| Handoff | Six explicit readiness verdicts and measured baseline; narrow next sandbox independent of URL implementation |
 
-- [ ] `AgentsHomePage` is the only route-significant Agents state owner.
-- [ ] `AgentCatalogPanel` owns only local presentation state.
-- [ ] `AgentDetailsSection` is stable and no semantic code/test relies on raw tab index.
-- [ ] No duplicate catalog/editor state machine remains in page, child, and controller.
+Block closure for missing required scenario, lost data/version/selection semantics, hidden runtime dependency, stale proof, unresolved regression or fake-only production claim. Do not block merely because a physical graph improvement is correctly deferred with an owned follow-up and all required current behavior passes.
 
-## Dependency direction
+Reviewer records verdict, concrete evidence paths, findings and affected reopen phase. Use [independent review prompt](../shared-prompts/independent-review.md).
 
-- [ ] no direct EF/persistence access exists in target Razor;
-- [ ] catalog component has no feature injections;
-- [ ] details dialog has no forbidden direct services;
-- [ ] controllers do not depend on Razor instances, navigation, RenderFragments, or dialog
-      presentation;
-- [ ] no `IServiceProvider` or service bag was introduced;
-- [ ] no new project reference/cycle or AppComponents feature dependency exists.
-
-## Pattern quality
-
-- [ ] overview query returns one cohesive aggregate and does not create metric interfaces;
-- [ ] catalog controller owns data/mutations, not navigation;
-- [ ] editor controller owns external editor workflow and is not pass-through mirroring;
-- [ ] no fourth production interface exists without approved addendum;
-- [ ] stable existing models are reused rather than copied into duplicate DTO families;
-- [ ] no wrapper component pyramid or generic lifecycle base exists.
-
-## Extraction proof
-
-- [ ] moved operations are absent from the old Razor component;
-- [ ] direct tests instantiate every new seam;
-- [ ] target components render with explicit state/session and minimal fakes;
-- [ ] old class responsibilities/dependencies measurably shrink;
-- [ ] no additional partial file was added.
-
-## Test hygiene
-
-- [ ] no target private reflection/private invocation/uninitialized concrete service;
-- [ ] no file/private member/partial/dependency-count source-shape test;
-- [ ] behavior and durable boundary tests remain meaningful;
-- [ ] temporary migration checks are kept in proof, not permanent product tests.
-
-## Decision
-
-```text
-Checkpoint:
-Reviewer:
-Source SHA:
-Decision: PASS | REOPEN
-Blocking findings:
-Required owner phase:
-Downstream proof invalidated:
-```
+Governed review must also verify the portable semantic invariant contract, changed-file before/after hashes, production producer/consumer/lifecycle evidence where applicable, anti-stub audit transcript, and final verifier artifact specified in proof/README.md. Negative proof must challenge a plausible shallow implementation; source-shape checks alone cannot pass the gate.

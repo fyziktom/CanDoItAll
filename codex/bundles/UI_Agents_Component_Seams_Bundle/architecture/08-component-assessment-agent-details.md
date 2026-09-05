@@ -1,71 +1,15 @@
-# Component boundary assessment — AgentDetailsDialog
+# AgentDetailsDialog boundary assessment
 
-## Identity
+Feature-owned technical agent editor, retained in its current module. It renders ten existing sections, owns per-instance draft/edit context and local presentation, and orchestrates typed use cases.
 
-- feature-owned technical-agent editor;
-- remains in current module and file location;
-- future destination: AgentFramework feature UI, not `AppComponents`.
+Remove direct Workspace/provider/Projects/Secrets/infrastructure I/O from the parent. Use cohesive operations, pure normalization, and minimal genuine ports where needed. Dialog/notification presentation may remain here or in a justified host adapter. A parent dependency guard must not claim to certify its real descendants.
 
-## Rendering responsibility
+Public inputs require meaningful target identity and semantic section/callback, plus preserved result behavior. Keep existing callers compatible. A separate InitialSession input is **not the default**: fake LoadAsync already supplies deterministic state through the production path. Add one only for an actual production composition use, with identity, copy, ownership, precedence and refresh rules.
 
-Ten editor sections, editor draft fields, section-specific validation/presentation,
-sticky actions, confirmation/wizard presentation, and result completion.
+Reference data has independent load/error policies: providers and secrets permit partial results; project choices load explicitly and retry independently. Core-load failure behavior is unresolved B12 until characterized. A record containing AgentEditorModel is not immutable.
 
-## Current external responsibilities to remove
+Inventory and exercise external-root/storage selection, provider refresh, avatar, capability wizard, memory and other conditional sections through their real descendants. Same-module child seam changes needed for owned scenarios can be planned here; cross-module/sibling changes remain separately scoped blockers.
 
-- load of agents/providers/capabilities/secrets/projects;
-- existing/new editor construction;
-- persistence and post-save refresh;
-- delete mutation;
-- capability persistence and verification;
-- external-root/save canonicalization requiring infrastructure services.
+Keep ordinary save open. Preserve whole-draft capability persistence for an existing agent, staged assignment for a new draft, expected-version conflict behavior, Clear-to-blank semantics, and exactly one delete completion channel. See [session contract](09-editor-session-and-host-contract.md).
 
-## Target public contract
-
-```text
-Guid? AgentId
-AgentDetailsSection SelectedSection
-EventCallback<AgentDetailsSection> SelectedSectionChanged
-AgentEditorSession? InitialSession
-EventCallback<AgentDetailsDialogResult> Saved
-```
-
-`InitialSession` is a legitimate scenario/test/sandbox seam. Production may omit it and
-use `IAgentEditorController.LoadAsync`.
-
-## Target injected dependencies
-
-- `IAgentEditorController`;
-- `DialogService`;
-- `NotificationService`;
-- cascading `DialogReference`.
-
-Child components may retain their own documented technical dependencies. The dialog
-itself must not inject Workspace, provider administration, Projects, Secrets,
-`IExternalTargetPathRegistryFactory`, EF, or `IServiceProvider`.
-
-## Error semantics
-
-Preserve current distinctions:
-
-- core agent/capability load failure prevents a valid editor session and is presented as
-  an editor load error;
-- provider and secret catalog failures remain partial errors with usable remaining data;
-- project access items remain lazy and independently retryable;
-- failed save/delete leaves the editor open and usable;
-- successful dialog deletion completes through the dialog result channel exactly once.
-
-## Rejected extraction
-
-- ten immediate section wrapper components;
-- a generic form-controller base;
-- one interface per reference-data source;
-- moving all pure UI toggles/formatters into the controller;
-- preserving numeric tab indexes in public/test contracts.
-
-## Readiness after bundle
-
-- route-ready: stable details section and page-owned target, URL deferred;
-- sandbox-ready: yes at component level using `InitialSession` and fake controller;
-- project-extraction-ready: partial, blocked by child-component and model project
-  dependencies to be inventoried in closure.
+Closure may prove deterministic rendering/interactions for listed scenarios while project graph, standalone browser sandbox and bookmarkability remain partial/deferred. Never write an unconditional route-ready or sandbox-ready verdict based on this parent contract alone.

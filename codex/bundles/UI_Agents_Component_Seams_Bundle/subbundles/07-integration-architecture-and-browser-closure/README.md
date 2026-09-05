@@ -1,73 +1,54 @@
-# SB07 — Integration, architecture, and browser closure
+# SB07 — Production integration and governed closure
 
-**Status:** Blocked by SB06  
-**Outcome:** The complete Agents seam is independently reviewed and proven in focused,
-broad, portability, and real-host contexts without expanding feature scope.
+Status: **Not started**. Proof tier: **Governed**. Current authorization is documentation only.
 
-## Owned requirements
+## Objective and covered inputs
 
-R-001–R-057 final closure.
+Prove the refactor works through actual production composition and hand off the smallest sandbox opportunity with honest limitations.
 
-## Prerequisites and reopen triggers
+R-001–R-059 final audit; all F01–F09; all B rows with representative real-host flows and six-dimensional readiness. See [requirements](../../requirements/00-normalized-requirements.md), [behavior matrix](../../requirements/02-behavior-preservation-matrix.md) and [accepted revision](../../inputs/03-accepted-review-and-revision-request.md).
 
-All earlier checkpoints accepted. Any failure routes back to the earliest owning
-subbundle; do not patch closure-only work around an invalid seam.
+## Prerequisites and exact source references
 
-## Work
+SB01–SB06 accepted; final source/sibling identities, current exact filters, isolated host/data prerequisites and proof locations recorded.
 
-1. Inspect final diff against refreshed baseline and verify only permitted paths.
-2. Run final production build, route tests, new seam unit tests, primary component tests,
-   rewritten Workflows case, and test-hygiene checks with exact discovery.
-3. Run DI/composition smoke and confirm all three seams resolve in Web/test composition.
-4. Run the broad stable gate once.
-5. Run portability-static, review/refresh any legitimate baseline delta, and finish with
-   no-write enforcement.
-6. Run the large-desktop real-host smoke and capture five named scenarios/screenshots.
-7. Run independent C# architecture review; record CodeAnalytics cycle/dependency evidence
-   when available.
-8. Complete requirement closure and execution report.
-9. Record durable documentation candidates for later pre-merge documentation/SharedInfo
-   work; do not convert this temporary bundle into maintained product documentation now.
+Final diff of scoped production/tests/DI; commands/00-validation-commands.md; plan/02-proof-and-validation-plan.md; plan/03-sandbox-and-navigation-handoff.md; reviews/csharp-architecture-gate.md; reviews/final-closure-checklist.md; proof/SB01–SB07 evidence.
 
-## C# Architecture Impact
+## Scope and deliverables
 
-Review only. No new feature abstraction is permitted in closure.
+Focused/stable/portability results; actual production adapter/DI and browser evidence; artifact-backed manifest and independent architecture review; behavior coverage closure; sandbox/navigation handoff with six readiness verdicts.
 
-## Boundary Ownership
+## Implementation steps for later authorized execution
 
-Confirm final ownership matches architecture docs and no hidden duplicate remains.
+1. Refresh source/dirty/sibling identities; invalidate stale phase proof by actual impact and close reopened gates.
+2. Run final focused and required stable gates, then current portability-static final enforcement without baseline write after reviewed deltas.
+3. Exercise the real-host scenarios in the proof plan at 1600x1000 or larger, including overlays and representative successful mutations on disposable records.
+4. Review actual dependencies/constructor/subtree/type/assets, UI composition and semantic adequacy. Verify proof manifests/artifact hashes; independent review must assess evidence rather than restate implementation claims.
+5. Publish six readiness dimensions, current timing baseline and concrete next catalog sandbox/extraction scope independent of routing; preserve open bookmarkability decisions.
 
-## Dependency Direction
+## Dependency impact and do-not-do constraints
 
-Confirm no new project reference/cycle and target Razor forbidden dependencies are absent.
+No feature expansion. Any source/test fix reopens its owning phase and invalidates affected final proof. No sandbox/project/routing/sibling implementation occurs here.
 
-## Pattern Decision
+Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [pattern decisions](../../architecture/03-csharp-pattern-selection-records.md), [UI composition contract](../../architecture/10-ui-composition.md) and [recovery/invalidation rules](../../plan/01-dependencies-reopen-and-invalidation.md). Do not start later phases on incomplete required proof.
 
-Approve PSR-01–PSR-06 or reopen the owning phase.
+## Validation depth and acceptance
 
-## Testability Contract
+Governed commands and actual transcripts for focused tests, module/solution builds, stable suite, portability no-write enforcement, production composition and browser flows. Check manifests and source identity. No screenshots-only or fake-only closure. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-All focused and broad evidence must be current and attributable to final source SHA.
+- [ ] Required functionality and data semantics are preserved with complete behavior map and no unresolved regression.
+- [ ] Actual production wiring, stable/portability gates and real-host UI/overlay interactions pass.
+- [ ] Artifact hashes/paths/discovery/source state are coherent and independent architecture review has no blocking finding.
+- [ ] Readiness and limitations are explicit; a measured sandbox follow-up is concrete without claiming an unbuilt host.
 
-## Partial Class Policy
+## Proof and progression gate
 
-No new target partial and no source-shape test.
+Create governed artifact-backed proof manifest per proof/README.md: requirement/B-row ownership, commands/expected/actual names and counts, exit codes, source/sibling state, actual artifact paths/SHA-256, browser evidence, architecture/semantic review, invalidation and handoff verdicts. Store execution artifacts under proof/SB07; follow [proof placement](../../proof/README.md). No execution result is pre-filled.
 
-## Architecture Proof Required
+Close future implementation only after all required gates and artifacts are real and green. Bundle revision completion is a separate documentation result and cannot mark this phase complete.
 
-- governed final evidence manifest;
-- completed `reviews/csharp-architecture-gate.md`;
-- exact command/discovery/results;
-- browser screenshots/console report;
-- readiness and residual-coupling assessment;
-- final no-deviation or approved-deviation record.
+## Reopen triggers
 
-## Non-goals
+Any failed/missing gate, unowned regression, source/asset/DI drift, invalid artifact, claimed readiness without evidence or incomplete required scenario.
 
-No opportunistic feature fixes, route/project/sandbox work, test-suite expansion, remote
-write, or documentation migration.
-
-## Closure gate
-
-Use `reviews/final-closure-checklist.md`; every blocking item must be resolved or the
-bundle remains open.
+Governed evidence additionally requires proof/SB07/manifest.md and a portable semantic-invariants contract, before/after changed-file hashes, production state producer/consumer/lifecycle evidence where applicable, anti-stub audit transcript and final verifier artifact. The detailed proof/README.md contract is mandatory; JSON alone or prose without underlying artifacts cannot close this phase.

@@ -1,56 +1,13 @@
-# Component boundary assessment — AgentsHomePage
+# AgentsHomePage boundary assessment
 
-## Identity
+Feature-owned route/host component; remains in AgentFramework. Its destination is feature UI host composition, not AppComponents.
 
-- current owner: `CanDoItAll.Modules.AgentFramework`
-- current location remains unchanged
-- future likely destination: route host/composition side plus a smaller Agents UI project
+Retain current route parameters, compatibility mapping, other tab composition, Workflows button and chat context surface. Remove direct EF and aggregate assembly into cohesive queries. Keep Providers/RequestHistory free of overview/usage/history reads until demanded. Usage-selection loading remains independent of full dashboard loading.
 
-## Rendering responsibility
+The page/workspace coordination owns semantic state and requested-open decisions. Catalog emits selection/open/chat/team intents; a focused coordinator may dispatch host effects without turning the page into a large imperative service. Editor draft/session does not belong in the workspace state record.
 
-Shell header, top-level section composition, overview dashboard, and agent-chat context
-surface.
+Preserve catalog initial data and SkipCatalogRepair behavior. Move accessible context readiness along with selection; copying only selected IDs loses the meaning used by AgentChatContextSurfaceProvider. Refreshes must reconcile against current semantic identity and cannot publish stale context.
 
-## Current semantic state
+Proof: B01–B08 and B27/B29, exact route/history-host tests, actual overview operation, page/catalog composition, and one public Workflows navigation test. Do not broaden the refactor to provider/voice/governance/Simple Chat implementation internals.
 
-String tab key; effective agent/team IDs; Simple Chat state; usage selection; selected
-agent/team context; HR agent; overview/usage snapshots; load/error/busy flags.
-
-## Direct dependencies to remove
-
-- `IDbContextFactory<AppDbContext>`;
-- direct bound-resource EF query;
-- direct multi-source dashboard aggregation from Workspace and usage services.
-
-## Dependencies justified after refactor
-
-- `NavigationManager` as route owner;
-- `DialogService` and `NotificationService` as top-level host presentation;
-- `IAgentChatLauncher` for global managed chat;
-- `AgentFrameworkCatalogWarmupService` for the explicit load-defaults action;
-- `IAgentsOverviewQuery` and `IAgentCatalogController` as cohesive feature seams.
-
-## Target state ownership
-
-The page owns `AgentsWorkspaceState` and active agent-details target. Child components do
-not construct URLs or suppress route echo privately.
-
-## Selected extraction choices
-
-- pure enum/state/route mapping;
-- aggregate overview query;
-- page-owned typed intent handling.
-
-## Acceptance
-
-- current route/query behavior unchanged;
-- no direct EF or `AiResourceBinding` query in Razor;
-- deep-link agent detail opens exactly once;
-- dashboard partial-error behavior and HR identity semantics preserved;
-- no new partial file.
-
-## Readiness after bundle
-
-- route-ready: yes for state binding, route implementation deferred;
-- sandbox-ready: page partially, using overview/catalog fakes; full shell still host-bound;
-- project-extraction-ready: partial, blocked by remaining tab/module composition.
+Readiness: semantic and host integration evidence can become proven here; the page retains many unrelated panes and is not the first lightweight sandbox target.

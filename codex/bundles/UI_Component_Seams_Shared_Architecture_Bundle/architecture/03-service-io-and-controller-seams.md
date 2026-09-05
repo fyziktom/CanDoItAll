@@ -1,126 +1,55 @@
 # Service, I/O, and controller seams
 
-## Goal
+## Choose by responsibility
 
-Reduce the number and breadth of responsibilities owned by Razor components without
-replacing visible coupling with empty layers.
+- Extract deterministic policy/mapping/normalization into ordinary top-level types.
+- Reuse an existing cohesive application contract where its type graph is suitable.
+- Add a workflow boundary for meaningful multi-service coordination.
+- Add an I/O/host port when substitution or dependency direction requires it.
+- Add a host/component boundary only when it owns real state, lifetime, composition, or
+  rendering responsibility.
 
-## Dependency categories
+There is no fixed number of interfaces or mandatory controller per component. Record
+the force, rejected simpler alternative, direct test seam, dependencies, and responsibility
+removed from the old owner. Equivalent naming is routine implementation judgment.
 
-### Technical component-local dependencies
+## Controller constraints
 
-These may remain directly injected when they are intrinsic to the component:
+Do not retain component instances, RenderFragments, NavigationManager, or dialog presentation
+inside application operations. Do not hide IServiceProvider or return a bag of old services.
+Keep state out of shared controller instances. Decompose independent policies/workflows when
+needed; measuring responsibility matters more than counting methods or files.
 
-- `IJSRuntime` for browser behavior owned by the component;
-- component-library dialog, tooltip, renderer, or focus services;
-- `NavigationManager` in the route-owning page;
-- logging when the component itself owns meaningful operational events.
+Testability of a component through a fake controller does not establish testability of the
+controller implementation. Audit its construction. Test pure rules directly and production
+adapters through appropriately scoped integration fixtures; add a narrow dependency port
+when that creates a real boundary rather than mocking an entire runtime.
 
-### Feature application dependencies
+## Loading boundaries
 
-A component may depend on one or a small number of coherent feature contracts. Prefer
-existing application interfaces when they already represent the required use case.
+Distinguish shell summary, overview, usage, catalog, selected detail, and lazy supporting
+data. Record triggers, keys, cached data validity, partial failures, retries, cancellation,
+and forbidden eager reads. One interface may expose more than one cohesive operation.
+An aggregate query must not force every region to reload together.
 
-### Infrastructure or composition dependencies
+## Mutation and failure boundaries
 
-These should not be owned directly by Razor components:
+Record validation, confirmation, authorization, expected version, persistence commit,
+post-commit refresh, notifications, and completion channels. Cancellation of a view does
+not prove a command did not commit. Represent known committed outcomes separately from
+refresh failures; an uncertain outcome must not cause an automatic duplicate write.
 
-- `IDbContextFactory<AppDbContext>`;
-- persistence implementations;
-- runtime composition services;
-- concrete external provider drivers;
-- `IServiceProvider`;
-- cross-module implementation services used only to assemble a UI snapshot.
+Preserve existing provider/secret partial loads and lazy catalog semantics, including
+unavailable saved selections. Empty due to failure must not silently erase permissions.
+Do not move backend policy or authorization into a UI controller as the only enforcement.
 
-## Extraction choices
+Classify baseline behavior as preserve, accepted isolation safeguard, or unresolved defect.
+Characterize unresolved behavior and obtain an explicit design decision before changing
+user-visible semantics; do not silently fix it or enshrine unsafe behavior as intended.
 
-### Choice A — pure extraction
+## Dependency checks
 
-Use a top-level function, static policy, mapper, reducer, builder, or immutable record
-when no I/O or substitution is required.
-
-Good candidates:
-
-- filtering;
-- selection normalization;
-- available-action policy;
-- state reduction;
-- display mapping;
-- stable tree construction;
-- dependency normalization;
-- URL-independent state canonicalization.
-
-Do not create an interface for pure deterministic logic by default.
-
-### Choice B — feature-scoped controller/facade
-
-Use one scoped controller/facade when a component coordinates several services into one
-cohesive UI workflow, for example:
-
-- loading an editor and its supporting catalogs;
-- saving/deleting and returning an outcome;
-- opening files through several host capabilities;
-- assembling a dashboard snapshot from several sources.
-
-The facade must expose a UI workflow result, not mirror every underlying service method.
-
-A useful facade reduces dependencies and moves orchestration ownership. A useless facade
-is a service bag with the same old dependencies hidden behind pass-through methods.
-
-### Choice C — explicit port
-
-Create an interface at a real boundary:
-
-- persistence or remote query/command;
-- browser/native host operation;
-- file or process launch;
-- provider/runtime operation;
-- navigation/history host;
-- capability that must be replaced by a sandbox fake.
-
-Place the contract in the layer that owns the need, and place the implementation outward.
-Do not duplicate an existing coherent application contract solely to rename it for UI.
-
-## Controller quality rules
-
-A feature controller/facade must:
-
-- own a coherent workflow rather than the whole page;
-- return typed results or state;
-- accept cancellation where work can overlap;
-- avoid retaining component instances or `RenderFragment`;
-- avoid depending on `NavigationManager` unless navigation is its explicit boundary;
-- avoid returning infrastructure entities when stable read models already exist;
-- avoid becoming the new god object;
-- permit direct unit testing without constructing the full web host.
-
-## Error and notification ownership
-
-Lower-level operations return typed failures or throw documented exceptions. The
-page/container decides how to present errors. Do not make a reusable view component
-depend on global notifications simply to display a local validation state.
-
-Dialog and notification services may remain in a top-level feature container during the
-transition. They should not be spread through nested views.
-
-## Async state safety
-
-For components with overlapping loads:
-
-- identify the state key or generation associated with each request;
-- cancel or ignore stale completion;
-- do not let a late response overwrite a newer selection;
-- keep loading state granular to the region being updated;
-- avoid performing route-significant initialization only in `OnAfterRenderAsync`.
-
-These rules prepare the component for later query-only navigation and direct deep links.
-
-## Evidence of real extraction
-
-A child bundle must show that:
-
-- the old component no longer owns the moved decision or operation;
-- direct dependencies decreased or became more coherent;
-- the extracted unit can be tested or substituted independently;
-- no duplicate state machine remains in both component and controller;
-- the new boundary is named after the owned responsibility, not the source file.
+Parent injections, descendants, triggered dialogs, controller constructors, public type
+assemblies, registrations, and assets all contribute to the boundary. Technical services
+such as JS/focus can remain where owned; direct EF and service location in target Razor
+are extraction targets. Every retained child operation must be named and scenario-tested.

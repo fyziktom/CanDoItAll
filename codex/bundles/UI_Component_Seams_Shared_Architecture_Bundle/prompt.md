@@ -1,47 +1,30 @@
-# Consumer instruction — reference only
+# Consumer instruction — architecture reference v2
 
-This bundle is not an implementation task. Do not modify product code merely because this
-bundle was opened.
+This reference is not an implementation task. The current owner authorized revision of
+the two bundles only. Do not infer implementation authority from opening an execution prompt.
 
-When preparing or executing a child bundle in the UI component seam program:
+When separately authorized to prepare or execute a child:
+1. Read repository instructions, this README, the applicable architecture documents, and
+   the child's current scope and status.
+2. Refresh source evidence; do not treat historical SHAs or a previous test-repair hold as
+   current state.
+3. Inventory the full rendered/triggered subtree and the declaring assemblies of public
+   parameter/result types. Include existing reusable UI families and asset setup.
+4. Classify semantic state, draft/session, view data, transient effects, and host history.
+   Assign ownership per instance and define parameter changes, disposal, and stale completion.
+5. Choose the smallest real boundary: pure function, existing contract, cohesive workflow,
+   adapter/port, or justified host component. Interface counts and type names are not gates.
+6. Preserve behavior using characterization and a transition/mutation matrix. Keep ambiguous
+   or defective baseline behavior explicit; do not silently fix or freeze it as an invariant.
+7. Keep routing, physical extraction, sandboxing, and redesign separately owned. Sandbox
+   extraction does not require implemented bookmarkability.
+8. Record expected named test cases or confirmed discovery, focused selectors, invalidation,
+   UI composition, and rollback before modifying the corresponding behavior.
+9. Demonstrate production wiring as well as scenario substitution.
+10. Report each readiness dimension independently; never promote a parent-only injection
+    check to proof of a lightweight graph.
 
-1. Read the root `AGENTS.md`, current repository instructions, and this bundle.
-2. Confirm the child bundle contains the reference ID `CDA-UI-SEAMS-BASE-v1`.
-3. Refresh `development` and record the current baseline. The commit recorded in this
-   bundle is evidence from preparation, not an execution pin.
-4. Read the applicable bookmarkability source material under
-   `inputs/bookmarkability/`, especially the state taxonomy and route-owner rules.
-5. Inventory the selected component cluster before proposing layers.
-6. Preserve physical component placement unless the child bundle explicitly owns a
-   project-extraction outcome.
-7. Prefer the smallest real seam:
-   - pure policy/mapper/reducer with no interface;
-   - one feature-scoped controller/facade for a coherent multi-service UI workflow;
-   - an interface only at a genuine I/O, host, navigation, or substitution boundary.
-8. Do not introduce:
-   - wrapper pyramids;
-   - interface-per-method abstractions;
-   - service-bag facades;
-   - a generic component lifecycle base;
-   - new partial files as the final architecture;
-   - direct EF or `IServiceProvider` access in Razor components;
-   - feature references from `CanDoItAll.AppComponents`;
-   - route construction inside child components;
-   - permanent tests that freeze source layout.
-9. Preserve existing user-visible behavior unless the child bundle explicitly changes it.
-10. Make route-significant state controlled by the page/workspace even if URL binding is
-    deferred.
-11. Make the component renderable with explicit state and minimal fakeable dependencies.
-12. Own validation and test cleanup in the child bundle. This shared base deliberately
-    contains no product test command contract.
-13. At closure, report:
-    - responsibilities removed from the Razor component;
-    - remaining direct dependencies and why they remain;
-    - state ownership after the change;
-    - tests removed, rewritten, or added;
-    - route-ready, sandbox-ready, and project-extraction-ready decisions;
-    - any proposed update to this shared base.
-
-Stop and repair the child bundle if it still requires guessing who owns state, which layer
-owns an operation, whether a new abstraction is real, or how the result can later be
-sandboxed.
+Repair an invalid design at its owning checkpoint. Routine in-scope naming, policy
+extraction, and cohesive contract refinement need a documented decision, not repeated
+permission. Scope expansion into a new project, other module ownership, sibling source,
+or observable behavior requires an explicit plan revision before dependent implementation.
