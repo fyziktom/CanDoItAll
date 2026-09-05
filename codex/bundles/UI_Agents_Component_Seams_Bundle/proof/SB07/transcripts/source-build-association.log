@@ -1,0 +1,6 @@
+SB07 INV-COMPOSITION source/build identity
+Started=2026-09-05T00:42:21.7492780-04:00
+WorkingDirectory=repo://
+Command=python codex/bundles/UI_Agents_Component_Seams_Bundle/proof/SB07/verify-proof.py source-association
+PASS source/build association: 40 source/test files; four identical module DLL copies.
+ExitCode=0

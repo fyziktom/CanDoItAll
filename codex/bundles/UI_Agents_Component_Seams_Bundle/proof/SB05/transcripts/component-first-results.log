@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:01:12.47]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True) [3 s]
+  Chybová zpráva:
+   Assert.Same() Failure: Values are not the same instance
+Expected: EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "_content/CanDoItAll.Components.BaseLib/assets/iden"···, ConfigurationJson = "{\"enableCompaction\":true,\"slidingWindowTurns\":"···, EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = 2026-04-10T00:00:00.0000000+00:00, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+Actual:   EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "", ConfigurationJson = "", EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = null, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 34
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 37
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:    82, Přeskočeno:     0, Celkem:    83, Doba trvání: 2 m 4 s - CanDoItAll.Tests.Components.dll (net10.0)

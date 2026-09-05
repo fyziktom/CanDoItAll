@@ -1,0 +1,11 @@
+{
+  "source": "repo://tests/Integration/CanDoItAll.Tests.Integration/LlmChatsApiIntegrationTests.cs:303",
+  "finding": "The auth test logs a freshly issued disposable-host token while proving query-string authentication is rejected. It is credential material and is removed, not classified as a synthetic constant.",
+  "path": "bundle://proof/SB07/transcripts/final-stable-results.log.gz",
+  "tokenSha256": "6799f6a5225a32731892217615c7795a54dc94e56f2b836cbc0501588efb845f",
+  "occurrences": 2,
+  "beforeTranscriptSha256": "b75245134a144d3f4ecb5ae312ba7036beb62a780241f6e93455a4631b699a9c",
+  "afterTranscriptSha256": "806695fe4141362702bd58190c1c25751fd8365f8aafbe37cd196a93b6d3e1ec",
+  "backupPolicy": "The local compressed backup now also masks the token. It retains original synthetic fixture display values, but is no longer byte-identical to the original credential-bearing output. Original hashes remain evidence of the redaction chain.",
+  "backupTokenOccurrencesRemoved": 2
+}

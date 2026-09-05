@@ -1,0 +1,22 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Existing_capability_toggle_saves_whole_unsaved_draft_new_agent_stages(existing: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Existing_capability_toggle_saves_whole_unsaved_draft_new_agent_stages(existing: True)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Real_capability_wizard_creates_and_assigns(existing: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Real_capability_wizard_creates_and_assigns(existing: True)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft(fail: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft(fail: True)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Avatar_generation_failure_retains_unrelated_draft
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Reset_rejects_pending_avatar_result
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Managed_delete_is_rejected_by_registered_command_and_preserves_catalog
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Registered_commands_reject_root_preparation_before_write
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Registered_commands_round_trip_settings_and_preserve_optimistic_version
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Real_save_refresh_retry_reuses_acknowledgement_without_another_write
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Real_save_callback_failure_keeps_current_version_and_does_not_replay
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Unknown_write_outcome_retains_draft_and_requires_catalog_check
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Editor_memory_binding_round_trips_real_child_settings
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: True)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits

@@ -1,0 +1,13 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:11.86]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection [11 s]
+  Chybová zpráva:
+   Assert.Empty() Failure: Collection was not empty
+Collection: [AgentEditorTarget { AgentId = , IsNew = True }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 90
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 91
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 11 s - CanDoItAll.Tests.Components.dll (net10.0)

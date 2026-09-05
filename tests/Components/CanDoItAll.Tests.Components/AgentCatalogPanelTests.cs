@@ -86,7 +86,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(hrAgent);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedAgent, hrAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -119,7 +119,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(curator);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -151,7 +151,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(curator);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -182,7 +182,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(schedulerAgent);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedAgent, schedulerAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -206,7 +206,7 @@ public sealed class AgentCatalogPanelTests
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
         using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(hrAgent));
 
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { hrAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -240,7 +240,7 @@ public sealed class AgentCatalogPanelTests
         AgentDefinition? selected = null;
         using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(first));
 
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { first, second })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -261,21 +261,16 @@ public sealed class AgentCatalogPanelTests
         var agent = CreateAgent(Guid.NewGuid(), "Selected agent", string.Empty);
         using var context = CreateCatalogTestContext(
             new RecordingAgentChatLauncher(agent));
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { agent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true));
 
         cut.Find("[data-testid='agents-catalog-card']").Click();
-        var openedRequestedAgentIdField = typeof(AgentCatalogPanel).GetField(
-            "openedRequestedAgentId",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new MissingFieldException(
-                typeof(AgentCatalogPanel).FullName,
-                "openedRequestedAgentId");
-
-        Assert.Equal(agent.Id, openedRequestedAgentIdField.GetValue(cut.Instance));
+        cut.Render(parameters => parameters.Add(component => component.RequestedAgentId, agent.Id));
+        Assert.Empty(context.Services.GetRequiredService<DialogService>().Dialogs);
+        Assert.Equal(agent.Id, cut.FindComponent<AgentCatalogPanel>().Instance.Selection.AgentId);
     }
 
     [Fact]
@@ -293,7 +288,7 @@ public sealed class AgentCatalogPanelTests
             new RecordingAgentChatLauncher(deleted),
             workspaceService);
 
-        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { deleted, survivor })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -305,26 +300,13 @@ public sealed class AgentCatalogPanelTests
         deletedCard.QuerySelector("[data-testid='agents-catalog-card']")!.Click();
         cut.WaitForAssertion(() => Assert.Same(deleted, selections.Last()));
 
-        var handler = typeof(AgentCatalogPanel).GetMethod(
-            "HandleAgentDialogSavedAsync",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new MissingMethodException(
-                typeof(AgentCatalogPanel).FullName,
-                "HandleAgentDialogSavedAsync");
-        var handlingTask = Assert.IsAssignableFrom<Task>(handler.Invoke(
-            cut.Instance,
-            [new AgentDetailsDialogResult(deleted.Id, Deleted: true)]));
+        deletedCard.QuerySelector("[data-testid='agents-catalog-card']")!.DoubleClick();
+        var dialogs = context.Services.GetRequiredService<DialogService>();
+        cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
+        await cut.InvokeAsync(() => dialogs.CloseAsync(new AgentDetailsDialogResult(deleted.Id, Deleted: true)));
 
-        await handlingTask;
-
-        Assert.Null(selections.Last());
-        var selectedAgentIdField = typeof(AgentCatalogPanel).GetField(
-            "selectedAgentId",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new MissingFieldException(
-                typeof(AgentCatalogPanel).FullName,
-                "selectedAgentId");
-        Assert.Null(selectedAgentIdField.GetValue(cut.Instance));
+        cut.WaitForAssertion(() => Assert.Null(selections.Last()));
+        Assert.Null(cut.FindComponent<AgentCatalogPanel>().Instance.Selection.AgentId);
         Assert.Contains(survivor.Name, cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain(deleted.Name, cut.Markup, StringComparison.Ordinal);
     }
@@ -336,6 +318,7 @@ public sealed class AgentCatalogPanelTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddAgentFrameworkUi();
         context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(
             workspaceService ??
@@ -345,7 +328,7 @@ public sealed class AgentCatalogPanelTests
         return context;
     }
 
-    private static AgentDefinition CreateAgent(Guid id, string name, string templateKey)
+    internal static AgentDefinition CreateAgent(Guid id, string name, string templateKey)
     {
         return new AgentDefinition(
             Id: id,

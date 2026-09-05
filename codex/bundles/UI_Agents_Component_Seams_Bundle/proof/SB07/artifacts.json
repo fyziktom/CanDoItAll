@@ -1,0 +1,1524 @@
+{
+  "createdUtc": "2026-09-05T05:19:34.019552+00:00",
+  "baseline": "68db2ee0e63a2ce6baa681e9722acc0a67877b21",
+  "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+  "gates": [
+    {
+      "expected": 130,
+      "passed": 130,
+      "failed": 0,
+      "skipped": 0,
+      "discovery": "bundle://proof/SB06/transcripts/component-browser-corrected-discovery.log",
+      "results": "bundle://proof/SB06/transcripts/component-browser-corrected-results.log"
+    },
+    {
+      "expected": 28,
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "discovery": "bundle://proof/SB06/transcripts/unit-discovery.log",
+      "results": "bundle://proof/SB06/transcripts/unit-results.log"
+    },
+    {
+      "expected": 9597,
+      "passed": 9597,
+      "failed": 0,
+      "skipped": 0,
+      "discovery": "bundle://proof/SB07/transcripts/final-stable-discovery.log",
+      "results": "bundle://proof/SB07/transcripts/final-stable-results.log.gz"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "bundle://proof/README.md",
+      "sha256": "36dacef2255904e6909bb079662df476656e60aec9dbb32804135a4ab61cbf1f",
+      "bytes": 4818,
+      "beforeSha256": "b6cd2a9007e65247d1595c650cfa0396a6609dc8b83dcc3fc5af0d87d4cf7704",
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/evaluated-agentframework-references.json",
+      "sha256": "4e177c3838cfeda00a0aa128798b4ec82682b33d28f7104d5c6cec7be03eda98",
+      "bytes": 56999,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/manifest.md",
+      "sha256": "8e07fa51f3b0935b1d89bbc723a72ed4ded9638c5d554c492fd1a6a117dbe1ce",
+      "bytes": 4357,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/screenshots/new-agent.png",
+      "sha256": "3621bb47cb2709fabf494a85681fb4f834ac865bf5886fe7d711e55f6501bf8e",
+      "bytes": 108476,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/screenshots/overview.png",
+      "sha256": "44fb6aad21904ed78f4898143f444bff1e2b7207bd5a3a9e1a85c2197f295284",
+      "bytes": 338703,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/characterization-discovery.log",
+      "sha256": "5a999932dfb8fe46dbf6b2338457184f50e06b281b1ddd91a6a6cac004ee4fc7",
+      "bytes": 24018,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/characterization-results.log",
+      "sha256": "a5b3c4db2e0d07ccaa90e7f3af0c339f2cf630942ae9ed0e7362294c30641db5",
+      "bytes": 415,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/component-baseline.log",
+      "sha256": "884953071fbd82e8f8369f6a2468129b41725fc67c7ceaf4d81151be5f0f3707",
+      "bytes": 415,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/component-discovery.log",
+      "sha256": "303c532a97c1c0ef2b36eb66dd8e2186c5243771d2a37b57cf7c1eab8d11d344",
+      "bytes": 30559,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/production-build.log",
+      "sha256": "de8d2f0bd19ef59258ac40f35576ceda1c8ff13b73b55a3fbd8adf1219e9d172",
+      "bytes": 19001,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/unit-baseline.log",
+      "sha256": "8caf04ef80767cd19bc223dbf071cebf581c33503049542dfee2bf1c58feb09a",
+      "bytes": 392,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/unit-discovery.log",
+      "sha256": "3a5943b5ef34ca68df5fad7204f0418c796b749a4c8a722fd297b2d5ad4468b8",
+      "bytes": 25773,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB01/transcripts/watch-file-list.log",
+      "sha256": "dce1d06d6c0300696a8288f099d4f377d3b4e900b39bb880874733947ef2bca3",
+      "bytes": 450725,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/manifest.md",
+      "sha256": "732c7bb8a77b511de5c845d6e86d3f95dfe4ba38db9068c4bcbc6ff8ed17be20",
+      "bytes": 3093,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/transcripts/component-build-after-import.log",
+      "sha256": "7566d92fb4ad34fc27b3162ef37d7add8a06c022e3672faf5e23daf44a164d7e",
+      "bytes": 23279,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/transcripts/component-build.log",
+      "sha256": "4814f0573af721bafa31c553621c9f3cb85ce07d505753451be79ef9ff63e930",
+      "bytes": 23672,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/transcripts/component-discovery.log",
+      "sha256": "3bbe80bcf2485f24130e412123ba7d19cb10bfca005fae54f0b8386f34276bb1",
+      "bytes": 2316,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/transcripts/component-results.log",
+      "sha256": "9d1bd028f81480a656c877782aaaa77ee5bb66fa85967c8467af7be305d5d24e",
+      "bytes": 415,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/transcripts/production-build.log",
+      "sha256": "d658d669e65655746be64f7f0204db2d723a98f4feb892944ee2275248ccadd3",
+      "bytes": 19001,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/transcripts/unit-discovery.log",
+      "sha256": "bf3708443a76d6d37f79223badef2c893f8fef49b3bd56269b0fa5404d7bb510",
+      "bytes": 27599,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB02/transcripts/unit-results.log",
+      "sha256": "ce3660b14f07a2462da08b97d59499384635a6133c232381c767ad833c33fa5e",
+      "bytes": 392,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB03/manifest.md",
+      "sha256": "1c217a85ca09c263377144081b500259d2a610966fde1ba2b6d0e0029000fd7c",
+      "bytes": 3933,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB03/transcripts/component-build.log",
+      "sha256": "d89e003b3d0ce37394e6196c111043834676c6d4b2f922ca67c869821b0892e3",
+      "bytes": 23279,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB03/transcripts/component-discovery.log",
+      "sha256": "a1db88a52e55bad2fd45545f69ed9ef63909b7fa8bc0ff6905ab4d059b735c29",
+      "bytes": 26556,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB03/transcripts/component-results.log",
+      "sha256": "96427a74614e6ea81a0bfc7f1c5a68c4dbaeed20527a61fcfff984be93adf19a",
+      "bytes": 415,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB03/transcripts/production-build-final.log",
+      "sha256": "ced20c990db8f29b6cd9d18fda1cdce7a5df33f65103a98ab6e9cb67031d66fe",
+      "bytes": 19001,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB03/transcripts/production-build.log",
+      "sha256": "92027889f1829bed2d9bc549cb1ef3567851d95995122b7dcd38c2327d2679e5",
+      "bytes": 19633,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/manifest.md",
+      "sha256": "2b69efaebb10b3f017e4d02ce4e8fe03d5ef05efce22f83895adcf81d3a69fcd",
+      "bytes": 5030,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/closure-corrected-results.log",
+      "sha256": "1d70720e48bc886f4edeedab4df7805a4c7248bb75e05eee163f61ec00fa1351",
+      "bytes": 419,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/closure-discovery.log",
+      "sha256": "51621238a003223e3e1b6eb8f6fcbd9697ccd47aaf40fde317376d084bedba97",
+      "bytes": 33288,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/closure-results.log",
+      "sha256": "94296817997734ad96a962e433caeb452e5cee48a13cb350d7bc3bb31f5c757d",
+      "bytes": 1412,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/component-build-contract-placement.log",
+      "sha256": "e328bbd031c411803bb24e4dc32b6b407bfd225c5b5a444fe1be44ae8f9827f7",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/component-build-oracle-fix.log",
+      "sha256": "564fcd4e9584521b9ca94008e316a761cc5a13f51d8b237e8802a547aecf94cb",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/component-build.log",
+      "sha256": "46e79e00f6e46fc5cdc745fbb9a77505f6d4dd8d6fb78908ea36a41869913c73",
+      "bytes": 23279,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/component-discovery.log",
+      "sha256": "ceaf01a9f2b149a7176750e35d2465a7c6e84278c644bc9b29943d18180906f4",
+      "bytes": 29962,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/component-first-results.log",
+      "sha256": "4fcaf48e3b354c11b45a7f7ad889cff821c5227937b8cfbccb0cc3d7d6d1cdb5",
+      "bytes": 3700,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/contract-placement-component-results.log",
+      "sha256": "7eade3151349a066e0f8740d0c54354a5d3554b910cde3dafbf6c6858aaa4f84",
+      "bytes": 419,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/contract-placement-discovery.log",
+      "sha256": "e0e400a9b136874dcbcd1145d69832a9cab0e3c7b1e4faa3f87ec39bf74b8eaf",
+      "bytes": 11434,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/contract-placement-unit-results.log",
+      "sha256": "5dc1c8c514753eb05ff87713adac1b7e29495064c3525a71c10ea4b42ce3dd04",
+      "bytes": 392,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/production-build-final.log",
+      "sha256": "0fd08ceede601a2ac9b0c88d05f9e654b0cf8e2be2b0fe1b0f90b2dc0268aa34",
+      "bytes": 19001,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/production-build-retry-fix.log",
+      "sha256": "f8f7587121291acc5af53d3023eb1b896ab07d8de37b94e2caf1cb0d355c7a50",
+      "bytes": 19001,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/production-build.log",
+      "sha256": "c6c79f9d1c9b7a3dd609a3fd28bf37bbc1ff29cdc0237a485a00395833b12d43",
+      "bytes": 20253,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/reset-behavior-first-results.log",
+      "sha256": "70008c8d63793521ef8d93247e6e34354ae712ff279564983e3bcc7a701c319b",
+      "bytes": 24560,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/retry-discovery.log",
+      "sha256": "ea9face4177166e13fe0c7c15100d8bf753b51e830404c9e47fcb16b74e5460b",
+      "bytes": 23628,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB04/transcripts/retry-reset-first-results.log",
+      "sha256": "0823a44afc2e00309ef869145e0491056c97d259d68aa2efcbdf9182fb6f9e16",
+      "bytes": 24838,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/architecture-audit.json",
+      "sha256": "fae4dc932eb80757697eda7d06fc9413f546f8b7cf248e90426baf53584da855",
+      "bytes": 29951,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/manifest.md",
+      "sha256": "219522b4192e7d46fda75540f5e5e7391a3797632f886f8ef2121bcfc2c499d3",
+      "bytes": 6589,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/child-first-build.log",
+      "sha256": "7286314b04e8eee9c4d68f576f2e5ad4fb8e7b5de81643b7a97210f40d873241",
+      "bytes": 2991,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/child-first-discovery.log",
+      "sha256": "ef0aad794623539e423093391c26a93c76f477523dd1b01cc3fd485ab0b6bfb2",
+      "bytes": 1596,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-closure-build.log",
+      "sha256": "3469df6e64897d7e5e272ddcf84a6e891803746e786a5af2db53c46855c1329f",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-closure-corrected-discovery.log",
+      "sha256": "794f6d49a40512a58810c3ee47e9ee7eda220aea78373dc8fe87650fe31223d8",
+      "bytes": 14709,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-closure-discovery.log",
+      "sha256": "794f6d49a40512a58810c3ee47e9ee7eda220aea78373dc8fe87650fe31223d8",
+      "bytes": 14709,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-closure-results.log",
+      "sha256": "7c931b61f7cf9e9ca7eda85f96ecfc09b7721e5ec06c5362ccbcf2a81e4e87f0",
+      "bytes": 2998,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-final-discovery.log",
+      "sha256": "87f41ed22ed0bd625cd93aeb191b86ae10a4a5e42a93a3eea9f6bf7adc1c6db0",
+      "bytes": 16447,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-first-build.log",
+      "sha256": "0711ca542fe697df5f5e64965ea61c1092d45aa5faf82ef07fa9fd34b8a1ea9e",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-first-discovery.log",
+      "sha256": "8a099b1d0eb45bdbdb30c3baa5e200f3dad1c3019584e90465c50b7d64c5fcd4",
+      "bytes": 12068,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/component-first-results.log",
+      "sha256": "d439e93cbb5b6af5aade44bed216e957b06a6ec2dc8af74fb37580276cbaa382",
+      "bytes": 2178,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/composition-expanded-build.log",
+      "sha256": "c9a35359846d338c1ffb2e528b44683e9c9cd7fcda351b45bb857750e0361c5a",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/composition-expanded-discovery.log",
+      "sha256": "4075a39006a472db29f107910b1a15cb5581c4b4d296f619f19c373251452cba",
+      "bytes": 3039,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/composition-expanded-results.log",
+      "sha256": "a6742e93035212ed8e03fdbb79a18952bf8c448d6e5f036ba9dd152d536386f3",
+      "bytes": 419,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/composition-first-build.log",
+      "sha256": "defb50acaddaeb8118a0e71a9819a1547487abad67ca4af092b58fc45c693465",
+      "bytes": 996,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/composition-first-discovery.log",
+      "sha256": "ef0aad794623539e423093391c26a93c76f477523dd1b01cc3fd485ab0b6bfb2",
+      "bytes": 1596,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/composition-first-results.log",
+      "sha256": "a095ae7dfcfbbc31c2a30f5fa914992e8b0fac384417b89ac7dce67c01bacfdf",
+      "bytes": 1471,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/draft-policy-unit-results.log",
+      "sha256": "f085febd71c7eaebe6e33a6de9bba8baa91a959b400384e6b77198e1797ee05f",
+      "bytes": 393,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/host-result-lifetime-build.log",
+      "sha256": "79f98fea3b7f95d45f1e986a56e2f8b75ee9ee0607b73f961fd204c9896dca4b",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/host-result-lifetime-results.log",
+      "sha256": "e9a75ecb2d4c4bda1a08d0201e81f6cc200721e025cc1422d69ced7f7c240dfe",
+      "bytes": 1427,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/host-result-settled-build.log",
+      "sha256": "4bc4f26940876a25f66ee980a4476e57d6739bed3ac371458aa59c72e6331136",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/host-result-settled-results.log",
+      "sha256": "147121f8e7deb81d59b10b71cd21748aefb1bbf7207298f9d021005e65696142",
+      "bytes": 1438,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/host-target-build.log",
+      "sha256": "294bee9acdc0f2ebf311802118512789a973fd31b1885012cc6cba5bd67a42d3",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/host-target-first-results.log",
+      "sha256": "54d933182b59fe32f27a9d0edd625710f6bf0996322be298af2af35f5cd92339",
+      "bytes": 2428,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/lifetime-behavior-first-results.log",
+      "sha256": "a46bcb3f537dd2ac55afdd7c52335c364e5176cd4e11683c48c7f2bfaa1d2843",
+      "bytes": 7293,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/lifetime-corrected-build.log",
+      "sha256": "b61a3ea7e8f740cdc18ba8ac50e2f04113d0ddadea464873602d9917a0b5a685",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/lifetime-first-build.log",
+      "sha256": "e5caa5a1b5dc8d98f2640a7ca2ab31415033a32b180217ebcf263ddc856a4ad6",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/lifetime-first-discovery.log",
+      "sha256": "d78aa16a152ef19fa5138c007df01a95ae1d6474c8cd8505594452b04dd82054",
+      "bytes": 854,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/lifetime-first-results.log",
+      "sha256": "440184338aec947cb41e48f32a13d22a5d3775176f27e17d0391b076adc15212",
+      "bytes": 8110,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/page-lifecycle-build.log",
+      "sha256": "e16c2e371b5727206fb7e72ad4a0c115ce0a87faef5ee58d0e8babb6adaa1cba",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/page-lifecycle-results.log",
+      "sha256": "5b716c9bcfde979dd8b1494d77dbfd820269e19be93ec1ae3e41c49942688fad",
+      "bytes": 415,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/production-closure-build.log",
+      "sha256": "ebb5bb7f8f2a6707f0b5f0b824ed2f95340bcdbe798c93aafde7cd810b35059c",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/production-first-build.log",
+      "sha256": "4e97683f886efd9548f99d06d0d3ff2a427490ebd92bf28bd90da786da0de0dd",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/target-echo-first-build.log",
+      "sha256": "f7f18f6b33996c48a3428b3dcfdee5ebcc17049ea86e926a15f5f0ea63799785",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/target-echo-first-results.log",
+      "sha256": "64cb507d88b6e0c7cd78efbe146c23176b5b1d5cefb6d6b2c19654cc8010956b",
+      "bytes": 1818,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/target-echo-settled-build.log",
+      "sha256": "a804c014f4331f8b98d9f83330fde048d0aa6ade81ddd7ff756211600cc85b46",
+      "bytes": 126,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB05/transcripts/target-echo-settled-results.log",
+      "sha256": "45be9df5d9a52c3715ac1df35a35dc44c231f5735e628ed10b72b533c35de7e2",
+      "bytes": 2124,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/coverage-map.md",
+      "sha256": "895fe034119d941338ee45719405273792a86dca0ad4688866a338527fe81c8d",
+      "bytes": 8771,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/manifest.md",
+      "sha256": "ce37cce9eb91160f8a350476c3b38a52a9785cda384e7e13fc2325812d01c884",
+      "bytes": 3151,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/catalog-refresh-first.log",
+      "sha256": "5e06a91ccab6bd87db2fcf969ea5219b3b6999d0bb8c394aece2c04319da281d",
+      "bytes": 4699,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-browser-corrected-build.log",
+      "sha256": "fb8f6723e845a18595d5bc4e709caad15d9a6fadad1c46d95740926b897b449f",
+      "bytes": 311,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-browser-corrected-discovery.log",
+      "sha256": "ae72cf9b72d610238576b86f30765e1b7b3ebcbdba881850dc6e56bfdcb59af7",
+      "bytes": 20834,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-browser-corrected-results.log",
+      "sha256": "0b7644474c3b1d4265fbf7b4fc46ce4134521652c7a63cc774bbf159c22ca2a2",
+      "bytes": 22086,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-build.log",
+      "sha256": "17e67c6511c40df75b4f2af6b114cf070740f3daec50164f1a210444ef6a660c",
+      "bytes": 373,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-discovery.log",
+      "sha256": "54f3aedd9f408836ac78c7438b45e11a13201e0fc0e0c4ba6d546e4aa37ca514",
+      "bytes": 20537,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-final-build.log",
+      "sha256": "656b26713eede37146979669bed880da278dbad2163f91c2e43b432f7f9e5efa",
+      "bytes": 351,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-final-discovery.log",
+      "sha256": "9567c7b29abab638d7d56cbbd775ccb4a171f3ee50672f4bf8a1cbe4555cf104",
+      "bytes": 20695,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-final-results.log",
+      "sha256": "e7cb8166c6937eff3c5861ae158a5be5db757e22ecaf695db121989f2d41b2f8",
+      "bytes": 27612,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-results.log",
+      "sha256": "4ef164f5d542d5c69401d186cb79591ea6527a39f4cff64003db1f8833c68eb9",
+      "bytes": 23473,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-settled-build.log",
+      "sha256": "c2ee234304cb6832b627a0bef95f0bceebfaad8508e0f7a6c5e88f6b49b5c6bc",
+      "bytes": 303,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-settled-discovery.log",
+      "sha256": "9567c7b29abab638d7d56cbbd775ccb4a171f3ee50672f4bf8a1cbe4555cf104",
+      "bytes": 20695,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/component-settled-results.log",
+      "sha256": "58e1dcbc81f867f475d91491397897c5f65b8c4d15426527fbb793e56a4394f2",
+      "bytes": 21895,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/page-save-echo-first.log",
+      "sha256": "80daaf77ec620a137590a4c913f8503df0960052e2b3e4224ca812a34f786231",
+      "bytes": 6677,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/unit-build.log",
+      "sha256": "eb8dcc50b0e84832a0377a3648a853921e6a99bfd779c1e3e1243fd84a80ce31",
+      "bytes": 260,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/unit-discovery.log",
+      "sha256": "0831fe255840476022ac7806162334b3ce8c8a0eaf36b83012743e44c107cd60",
+      "bytes": 5000,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB06/transcripts/unit-results.log",
+      "sha256": "96a031e1af30d839b99ddf8022fd87d306bf317154a68fbf8e42bf9fefefb95b",
+      "bytes": 5616,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/architecture-review.md",
+      "sha256": "3aec560b4b9807a71359012eed03755b24e21717b7bccc757872f92d3d81f6b8",
+      "bytes": 6862,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/artifact-review.md",
+      "sha256": "6fb1bd04bcca59a05cbf5c535b335eb4d24545e9c55fadfc028ad1e49dcd14f2",
+      "bytes": 2890,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/artifact-secret-scan-final.json",
+      "sha256": "2e086c76f78c0f91b9884ccbeb4daaa2eb32cfa75a528e7438a538bf3b142dd6",
+      "bytes": 2703,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/artifact-secret-scan-post-fixture.json",
+      "sha256": "86c9ecb96b95a829c64649a59b1ffa96ea679c3141416f5c5f123fd33ffa7ffe",
+      "bytes": 2814,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/artifact-secret-scan.json",
+      "sha256": "4b4ea91fee7cc9e0ba49f73b9716f2b61c3a73e0ed636e86a0c3109c086805b2",
+      "bytes": 6268,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/browser-final-actions.json",
+      "sha256": "d6a0a3daa7af15584a21425cc84dbc151acec1bb0b58f9a15fff82dfde6eb93d",
+      "bytes": 58225,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/browser-initial-actions.json",
+      "sha256": "5d08c1dfe687f0fe6545098fec0132f9f779fc9d4c5c46c8bfea9e8bc47b83a5",
+      "bytes": 33377,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/browser-report.md",
+      "sha256": "8ab73f58c687717c8b3ce0f7c23331ce65fec3e54fa66ebd6332e89f5311332c",
+      "bytes": 5360,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/changed-files.json",
+      "sha256": "09541626c454c7e056988912289d8a5241dc4671ec8623e65049385cfd3ac133",
+      "bytes": 21320,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/execution-requirements.md",
+      "sha256": "1ff4f57357a561f712babe1a824d64bb5e2059c61ab01ee0dd2f4e45141cc777",
+      "bytes": 6964,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/manifest.md",
+      "sha256": "1d6c1566e22d2382ccecce76c3a8fd8c3454c60e67276173b3b4f4c41a186caf",
+      "bytes": 10014,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/portability-browser-corrected-scan.json.gz",
+      "sha256": "e3c7440fe95ac63b0dee7666b12bcfcc309e2de0ecd914224d600adb41dab48f",
+      "bytes": 1835170,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/portability-review.md",
+      "sha256": "aa41ab7261c0349d90e475808770a6dbeb3033d543545eff9fa27cc72bfe220b",
+      "bytes": 2376,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/proof-redaction.json",
+      "sha256": "4efc56d1abbf1919dd6b3878204d3bfec6ae9f6fbf30dbfb83f2b2c4e35d5fed",
+      "bytes": 10811,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/redact-test-token.py",
+      "sha256": "c7b4037e8671da3530d5efa0c781787970cb7f14741f9e8d5f93f2cd3365554b",
+      "bytes": 2602,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/run-stable-gate.ps1",
+      "sha256": "e69e193a2aa2117aa54547b651ee5a901c39aa70f46a046084818d3b03ffa671",
+      "bytes": 2478,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/sandbox-navigation-handoff.md",
+      "sha256": "d3212659244c63cbf5defdc1381e0fc4b539205bc3215c8b3070b40d452b79d8",
+      "bytes": 5330,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/sanitize-proof.py",
+      "sha256": "74430c6c469a3af09ae98ddc98b5a0971de3b4076a73912a318828b9ce2288f0",
+      "bytes": 3706,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/avatar-overlay.png",
+      "sha256": "17069c0259730c577eaf76c589953d8638b5dcd83cde998d066f309cb000c62b",
+      "bytes": 174961,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/capability-overlay.png",
+      "sha256": "74c467c7942005283141af195de6b5cc3cd289feb8445beb2c2305c78f880d69",
+      "bytes": 159314,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/final-delete-confirmation.png",
+      "sha256": "541098d9c72aa0a673aa6945ff744410d5752595b96938687ae7a768589150c9",
+      "bytes": 140671,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/final-editor-scroll.png",
+      "sha256": "41026258c4946851f943d7c7526ce057c9f58e3af21b25d97cc19c0c2fa65e45",
+      "bytes": 150972,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/final-overview.png",
+      "sha256": "dd7e9582cc28312eee506522f152ea028a285417f6bbd1f179286dc09d479414",
+      "bytes": 249222,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/final-saved-editor.png",
+      "sha256": "312f650162e7222a5b1d92ff2acc009ced00c51960910df054cb5eef35caf44e",
+      "bytes": 118338,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/overview.png",
+      "sha256": "44fb6aad21904ed78f4898143f444bff1e2b7207bd5a3a9e1a85c2197f295284",
+      "bytes": 338703,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/saved-editor.png",
+      "sha256": "d7510defa515dd74c23a4b7e4863676f6d9e69a891e9f68c0dd00eeb552a4b7d",
+      "bytes": 107782,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/screenshots/storage-overlay.png",
+      "sha256": "37a410494e41cce870eceb34058b95100fffc9aa82684a963487870b6dd12343",
+      "bytes": 167007,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/semantic-invariants.md",
+      "sha256": "16d16e473c004331fcb400822af178b34a5c7e9303d0542be6d4845e511c5ba1",
+      "bytes": 7794,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/source-build-association.json",
+      "sha256": "25b27f4b473469ad3c1c78a8ec6d9ce9ba796f277e895a9b11cb8ee633a77aec",
+      "bytes": 11812,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/stable-theory-expansions.json",
+      "sha256": "c8e9c4314256a01cc6aa38774fe96b1e28073d6b9d0dd70eb57b416c0c55374f",
+      "bytes": 3378,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/test-token-redaction.json",
+      "sha256": "909cc36d7cd2b27404a55559467c34e46753b7ed2579458dfdebf2ad20aaf239",
+      "bytes": 996,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/anti-stub-audit.log",
+      "sha256": "75cf6b0ccc252c6aa549f9ea03417c0b320e87992bf33ca0f72c68e2c487673f",
+      "bytes": 1304,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/artifact-secret-scan-final.log",
+      "sha256": "26b8b12b8ea2d5a91d3fc977b224db2c98ecdff635639547d36e49ec744fe3f3",
+      "bytes": 676,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/artifact-secret-scan-post-fixture.log",
+      "sha256": "4ca764fb3082890278e02941382dca02940a5363ce0a460bb0eaabb176713328",
+      "bytes": 882,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/artifact-secret-scan.log",
+      "sha256": "15c05bbe2d1cc4f91db80f6a487cbf3a59a1532cdffdeb7acf4725a01c4d0140",
+      "bytes": 2346,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/browser-final-console.log",
+      "sha256": "336675d281b9ae8565ae4a46139a04ab2bb831307cec8f008d72476ff7d3e707",
+      "bytes": 84,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/documentation-validation.log",
+      "sha256": "5cda6c230d29cc1050114753a2c95223be0b3684d44911c25aae4eda3e307124",
+      "bytes": 451,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-solution-build.log",
+      "sha256": "bc18ef687b4013c067868a8578ceb929f405961d9706e6d3f867d15608da6c20",
+      "bytes": 24118,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-solution-restore.log",
+      "sha256": "eb7d991ce0a226328ccf5cd3b78a36bcfca6e8d48003e24edb37ac2b0ba04f7c",
+      "bytes": 337,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-build.log",
+      "sha256": "11310c55c7d16d1d5b5b0b302c44b2054b02bd191ef903bf790173cdefb4efdd",
+      "bytes": 24708,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-discovery.log",
+      "sha256": "5f36ad59ed300b7519ec870632ce8b56a3c35f40c9afd8ae63514e14d8ebb663",
+      "bytes": 1481141,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-expected-cases.txt",
+      "sha256": "2f927fee028d853f93311791a12eed6e5d265956a33b9b738b52e0cc2d98ae9f",
+      "bytes": 1479634,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-restore.log",
+      "sha256": "1c61d9ae82b9640176b2ad22f20328c76ce36aaf731cefca1c9856ee916d4d35",
+      "bytes": 364,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-results.log.gz",
+      "sha256": "03f4364bb69653ae496815a2418f14150782209329df489b05f984be41e87f81",
+      "bytes": 6537509,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/portability-baseline-diff.log",
+      "sha256": "e4d2472d9b77cb8782e0223242eeb7b4b0caed0dc0df8cc791be270714f462e5",
+      "bytes": 5716,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/portability-before-refresh.log",
+      "sha256": "d6687330208640f61facf99c9beb3c220fc84d28ebc050d0c8fe9ad6eb4b716b",
+      "bytes": 1926,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/portability-browser-corrected.log",
+      "sha256": "b36aecca34b1ad11ca171965976f026af1ad41ffdf50cff8085f6080224b0aef",
+      "bytes": 779,
+      "beforeSha256": null,
+      "association": "current-source",
+      "sourcePatchSha256": "fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5",
+      "purpose": "Current acceptance evidence"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/portability-current.log",
+      "sha256": "677b6c0bceda0c26b92a764a43cbb695cabce6d3ab4d85f95b3f96124c49842a",
+      "bytes": 2621,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/portability-enforcement.log",
+      "sha256": "1595e38e9e351d22d55e695050aad55bec72b5a6ee858b20a9fe3232f412b31c",
+      "bytes": 519,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/portability-final.log",
+      "sha256": "ac43d0705f87dc07a8d4041c563a2a8518edb5a5a005f4cae9569c7e82146384",
+      "bytes": 666,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/portability-initial.log",
+      "sha256": "cd43b455c1439cd20bd80812ff87040a31a36a315b0630997034c02500959d8b",
+      "bytes": 2875,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/proof-redaction.log",
+      "sha256": "f2649b671657c37f89b15271ba51f6eeda5b45f112362496ac7dae39c4ced9c2",
+      "bytes": 123,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/solution-build.log",
+      "sha256": "d621414c93f766cad837115a4f3f5c21a731345096caf70075e35e53ad4b5736",
+      "bytes": 24118,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/solution-restore.log",
+      "sha256": "dd80c64cc1fe5d80d9d11697f256c41e3a824effe4ee8cbc803d4d2b4b930b54",
+      "bytes": 625,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/source-build-association.log",
+      "sha256": "7367d71c8a90a2828aeeec1a9806b63bb55630ab651bb68c2b25c0c1be4e7d56",
+      "bytes": 322,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-build.log",
+      "sha256": "94eb52de08e052552c9c39e6d400dc5c6340ea848a4ef67134b9d45e0590723b",
+      "bytes": 25580,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-discovery.log",
+      "sha256": "2132bfefabef5b3b8dd41c797459c3554e2e34d1057f5e68c715ea4ad697ba8a",
+      "bytes": 1480996,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-expected-cases.txt",
+      "sha256": "23e32aee1aad2c43a9ba6806065d19d18ee47c191270a8f00e7ca7bf7f2c1172",
+      "bytes": 1479489,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-invalidated-processes.json",
+      "sha256": "b32fba7a2455e588f51a2c9e11de3cb3fc80da125592f3df7bf8dc9fdc84721e",
+      "bytes": 380,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-restore.log",
+      "sha256": "bdbce6d07a449c2868802f1c12a5da390f572229834bfe51ca53ef6807a0b8bc",
+      "bytes": 364,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-results.log",
+      "sha256": "a7c4143ac772ec1ec213c3afa4c4f6551a7374a9f46a673b016b69bf9e8b8b93",
+      "bytes": 692,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/test-token-redaction.log",
+      "sha256": "490e8ebbcd89482e610813254d81b3abf28c6e9c799398a33967af3046602769",
+      "bytes": 137,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    },
+    {
+      "path": "bundle://proof/SB07/verify-proof.py",
+      "sha256": "7f9ea5c7031adec78182c0879cb4f9cff95d9c298c5795ded8e5855de9b94f67",
+      "bytes": 20485,
+      "beforeSha256": null,
+      "association": "owning-phase-or-historical",
+      "sourcePatchSha256": null,
+      "purpose": "Owning-phase report, reviewed contract, or labeled historical attempt; consult its manifest/run label"
+    }
+  ],
+  "exclusions": [
+    "MANIFEST.sha256",
+    "proof/SB07/artifacts.json",
+    "proof/SB07/transcripts/final-verifier.log"
+  ],
+  "integrityOrder": "changed-files -> artifacts -> verifier log -> root MANIFEST; final read-only verify also checks root MANIFEST"
+}

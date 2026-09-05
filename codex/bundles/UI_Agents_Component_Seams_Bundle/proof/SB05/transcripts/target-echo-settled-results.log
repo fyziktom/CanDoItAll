@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:11.21]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Target_echo_after_first_save_retains_session_and_later_edits [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Target_echo_after_first_save_retains_session_and_later_edits [10 s]
+  Chybová zpráva:
+   Assert.Same() Failure: Values are not the same instance
+Expected: EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "", ConfigurationJson = "", EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = null, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+Actual:   EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "", ConfigurationJson = "{}", EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = 2026-09-05T02:39:21.2723857+00:00, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Target_echo_after_first_save_retains_session_and_later_edits() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 119
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Target_echo_after_first_save_retains_session_and_later_edits() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 122
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 10 s - CanDoItAll.Tests.Components.dll (net10.0)

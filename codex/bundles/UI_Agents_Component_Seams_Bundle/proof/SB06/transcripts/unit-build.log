@@ -1,0 +1,8 @@
+SB06 INV-STATE INV-WRITE; cwd C:\repositories\CanDoItAll; dotnet build owning Unit Release --no-restore /m:1; expected28
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:25.29
+ExitCode=0

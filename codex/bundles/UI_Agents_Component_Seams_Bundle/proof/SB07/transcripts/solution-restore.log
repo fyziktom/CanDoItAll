@@ -1,0 +1,10 @@
+SB07 INV-COMPOSITION INV-STATE INV-SESSION INV-WRITE
+WorkingDirectory=C:\repositories\CanDoItAll
+RunLabel=solution-restore
+Started=2026-09-04T23:31:14.7954252-04:00
+Command=dotnet restore CanDoItAll.slnx
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\tools\Seeding\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj (v 3,27 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\tools\SharedProviders\CanDoItAll.SharedProviders.E2E\CanDoItAll.SharedProviders.E2E.csproj (v 3,27 s).
+  126 z 128 projektů jsou v aktuálním stavu pro obnovení.
+ExitCode=0

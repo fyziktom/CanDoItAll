@@ -1,0 +1,54 @@
+SB03 reopened: INV-SESSION/INV-STATE, two Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target cases frozen before correction. Owning build then exact two-case discovery and run.
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:22.62
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: True)
+Vytváření sestavení bylo zahájeno 04.09.2026 23:19:52.
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.15]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.27]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.30]   Starting:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: False) [9 s]
+[xUnit.net 00:00:14.89]     CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: True) [FAIL]
+[xUnit.net 00:00:14.89]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:14.89]       Expected: 1e267ce2-bf18-ce52-9743-9b36b9314994
+[xUnit.net 00:00:14.89]       Actual:   ac1a5872-1467-4f62-912d-c0f80dad5f3a
+[xUnit.net 00:00:14.89]       Stack Trace:
+[xUnit.net 00:00:14.89]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs(183,0): at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(Boolean clearDuringRefresh)
+[xUnit.net 00:00:14.89]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs(185,0): at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(Boolean clearDuringRefresh)
+[xUnit.net 00:00:14.89]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:14.89]   Finished:    CanDoItAll.Tests.Components
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: True) [4 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 1e267ce2-bf18-ce52-9743-9b36b9314994
+Actual:   ac1a5872-1467-4f62-912d-c0f80dad5f3a
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(Boolean clearDuringRefresh) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs:line 183
+   at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(Boolean clearDuringRefresh) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs:line 185
+--- End of stack trace from previous location ---
+
+Testovací běh nebyl úspěšný.
+Celkový počet testů: 2
+     Úspěšné: 1
+     Neúspěšné: 1
+ Celkový čas: 15,3662 Sekundy
+     1>Projekt C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj v uzlu 1 (počet cílů: VSTest).
+     1>_VSTestConsole:
+         MSB4181: Úloha VSTestTask vrátila false, ale do protokolu se nezaznamenala chyba.
+     1>Sestavení projektu C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj (počet cílů: VSTest) bylo dokončeno: CHYBA.
+
+Sestavení SE NEZDAŘILO.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:15.96
+ExitCode=1

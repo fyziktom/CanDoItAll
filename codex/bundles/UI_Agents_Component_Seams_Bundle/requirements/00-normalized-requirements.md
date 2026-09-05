@@ -1,8 +1,10 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # Normalized requirements
 
 ## Baseline and authority
 
-- **R-001** — Apply shared CDA-UI-SEAMS-BASE-v2. Current authorization is bundle documentation only.
+- **R-001** — Apply shared CDA-UI-SEAMS-BASE-v2. Implementation is authorized by the later owner request recorded in inputs/04-implementation-authorization.md; original preparation authorization remains historical.
 - **R-002** — Refresh target/base source evidence before later implementation; recorded SHAs are observations, not pins. Do not discard or merge unrelated work.
 - **R-003** — Preserve live sibling source mode for Components/FileTools; record actual references and asset inputs.
 - **R-004** — Execute seven sequential phases with prerequisites, behavior gates, proof, and reopen rules.

@@ -1,8 +1,10 @@
-# Agents UI component seams — revised implementation plan
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
+# Agents UI component seams - implementation and proof
 
 Reference: **CDA-UI-SEAMS-AGENTS-01-v2**. Shared architecture: [CDA-UI-SEAMS-BASE-v2](../UI_Component_Seams_Shared_Architecture_Bundle/README.md).
 
-**Current authorization is documentation only. Implementation has not started.** This bundle describes future work after the owner reviews the revision. Instructions to execute below apply only to a later implementation request. Original inputs remain historical evidence; the [accepted revision](inputs/03-accepted-review-and-revision-request.md) supersedes conflicting v1 design choices.
+**Implementation and governed validation are complete, with explicit watch/sandbox follow-ups.** See [execution status](reviews/02-execution-status.md), [coverage](proof/SB06/coverage-map.md) and [governed proof](proof/SB07/manifest.md). Original preparation inputs remain historical evidence; the accepted revision controls the intended architecture.
 
 The goal is to make Agents UI boundaries explicit without losing existing behavior, and prepare a credible first small sandbox that improves developer iteration. Agents is the first application UI slice, not the architecture for every later module.
 
@@ -28,6 +30,6 @@ The goal is to make Agents UI boundaries explicit without losing existing behavi
 
 Keep this child in the existing AgentFramework project. Extracting projects, building a sandbox host, changing sibling libraries, and implementing new URL/history behavior belong to separately prepared work. Same-project seams may remove semantic coupling while leaving the evaluated build graph heavy; report that honestly.
 
-SB01 freezes current behavior and captures development-loop measurements. SB02–SB05 make incremental seams with tests in the same phase. SB06 audits coverage and remaining test coupling. SB07 proves integration and records six independent readiness dimensions. A catalog-first extraction candidate is assessed at SB03; its follow-up does not wait for production routing.
+SB01 freezes current behavior and captures development-loop measurements. SB02-SB05 make incremental seams with tests in the same phase. SB06 audits coverage and remaining test coupling. SB07 proves integration and records six independent readiness dimensions. A catalog-first extraction candidate is assessed at SB03; its follow-up does not wait for production routing.
 
-No current file is runtime proof. Closure requires actual artifacts described in [proof placement](proof/README.md).
+Actual phase evidence is delivered under proof/SB01 through proof/SB07. Preparation reviews are historical; final closure requires the current artifacts described in [proof placement](proof/README.md).

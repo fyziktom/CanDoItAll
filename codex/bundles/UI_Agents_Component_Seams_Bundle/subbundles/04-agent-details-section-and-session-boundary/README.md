@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # SB04 — Editor section, session and host lifetime
 
-Status: **Not started**. Proof tier: **Behavioral**. Current authorization is documentation only.
+Status: **Complete; owning and final integration gates passed**. Proof tier: **Behavioral**. Implementation authorized by inputs/04-implementation-authorization.md.
 
 ## Objective and covered inputs
 
@@ -18,7 +20,7 @@ src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialo
 
 Typed section mapping; explicit existing/create target and instance/generation; normal production load seam; independent references; host transition/result contract; migrated public section/loading tests and real child scenarios.
 
-## Implementation steps for later authorized execution
+## Execution steps
 
 1. Implement the session/host contract with one mutable draft/edit context owner and preserved expected token. Do not retain sessions in circuit-scoped services.
 2. Map ten section identities to existing Tabs API/order; same-target section change must retain draft. Preserve Clear-to-blank and synchronize create target without conflating catalog selection.
@@ -36,10 +38,10 @@ Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [patt
 
 Named load/section/lifetime/component cases plus affected existing details settings/thinking/project/avatar tests. Required real descendants use deterministic services; do not suppress them to prove a section. Freeze exact tests/data/counts and run current catalog->editor host dependent flow. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-- [ ] All ten sections use stable semantic identity and preserve existing controls/labels.
-- [ ] Session/draft/edit context/reference ownership and create/reset transitions are explicit and tested.
-- [ ] No shared mutable editor service or default test-only session shortcut; pending results cannot replace a newer/disposed session.
-- [ ] Core-load behavior is characterized; partial/lazy reference semantics and real-child coverage are recorded.
+- [x] All ten sections use stable semantic identity and preserve existing controls/labels.
+- [x] Session/draft/edit context/reference ownership and create/reset transitions are explicit and tested.
+- [x] No shared mutable editor service or default test-only session shortcut; pending results cannot replace a newer/disposed session.
+- [x] Core-load behavior is characterized; partial/lazy reference semantics and real-child coverage are recorded.
 
 ## Proof and progression gate
 
@@ -50,3 +52,5 @@ Unlock SB05 with session/section/load lifetime proven. Remaining command work is
 ## Reopen triggers
 
 Target/session identity, cloning, section mapping, load/partial failure, reset/close behavior, child services or host parameter propagation changes.
+
+Execution evidence: ../../proof/SB04/manifest.md and ../../reviews/02-execution-status.md. Final governed closure remains SB07; SB01 timing qualification is explicit.

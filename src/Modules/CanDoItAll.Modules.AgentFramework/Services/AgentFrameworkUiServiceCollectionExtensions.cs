@@ -10,6 +10,12 @@ public static class AgentFrameworkUiServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddCascadingAuthenticationState();
+        services.TryAddScoped<IAgentsWorkspaceQuery, AgentsWorkspaceQuery>();
+        services.TryAddScoped<IAgentCatalogOperations, AgentCatalogOperations>();
+        services.TryAddScoped<IAgentEditorReads, AgentEditorReads>();
+        services.TryAddScoped<IAgentEditorCommands, AgentEditorCommands>();
+        services.TryAddScoped<IAgentEditorAccessQuery, AgentEditorAccessQuery>();
+        services.TryAddScoped<IBoundAgentResourceQuery, BoundAgentResourceQuery>();
         services.TryAddScoped<
             IWorkflowExternalResponsePageActorContextProvider,
             WorkflowExternalResponsePageActorContextProvider>();

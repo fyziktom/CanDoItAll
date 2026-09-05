@@ -1,0 +1,225 @@
+{
+  "baseline": "68db2ee0e63a2ce6baa681e9722acc0a67877b21",
+  "buildStarted": "2026-09-04T23:57:13.1206512-04:00",
+  "files": [
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+      "sha256": "b82444695743c2006eb30197b400719c9a27bfde77725887ad8495ee09d4165f",
+      "modifiedUtc": "2026-09-05T01:00:44.677289+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+      "sha256": "f986a01ffac933e9b8c687047ab1356bc422f54777e0ab95fb126ff1f1c3ed83",
+      "modifiedUtc": "2026-09-05T00:50:54.962645+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsWorkspaceState.cs",
+      "sha256": "61fe4faf1cc6b0451c5e53c72235d5f7fd4272c708f6ec42155e112f04176512",
+      "modifiedUtc": "2026-09-05T01:56:21.945124+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
+      "sha256": "5199e8d1554abbc7aae15ed65339156864324a1886d80b6b307a2c377e697988",
+      "modifiedUtc": "2026-09-05T03:52:47.107451+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+      "sha256": "acdd0299c2111828185d5422cd20ce9d8721d25349bf57ece45cac0a341d442c",
+      "modifiedUtc": "2026-09-05T01:01:58.826186+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogState.cs",
+      "sha256": "546ca1029f615f1b707cebc9702a17e6ef0327399c89e010147d9254a2ddee2d",
+      "modifiedUtc": "2026-09-05T01:56:21.928133+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
+      "sha256": "cb6c4a904dd95d8ff6670cdc9ee16b4eaf6b59698c2366249c3c2a89fc580345",
+      "modifiedUtc": "2026-09-05T02:24:04.529530+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+      "sha256": "554b639e06591ab7e0ee65cf7708be5d8d75f8f382e96bde5436f4deaad6892a",
+      "modifiedUtc": "2026-09-05T02:41:07.002823+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentEditorSession.cs",
+      "sha256": "39d722636c283c535e96f770f36eb683a5cc39d27da6683d45665873f9298a82",
+      "modifiedUtc": "2026-09-05T02:11:15.782026+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCatalogOperations.cs",
+      "sha256": "71e1b6196967a43d526a6425111fb02225763d7121dc0dc2ef73d680de167752",
+      "modifiedUtc": "2026-09-05T01:56:21.930120+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorAccessQuery.cs",
+      "sha256": "6f4663c9fd1ad1b628db45231947f339773a2b8bbc7dd5c2e5cd1b9ebb2c049e",
+      "modifiedUtc": "2026-09-05T01:16:00.723033+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorCommands.cs",
+      "sha256": "32e21ec86d81da09803a4a3e2c2a88ed1c8fecd1405651ba78f38103ee58175b",
+      "modifiedUtc": "2026-09-05T02:08:07.469317+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs",
+      "sha256": "ee5c20e85d0d820cc94b0ebd92397bffca0cf6587f6614bd62478a8d8c497c50",
+      "modifiedUtc": "2026-09-05T02:08:07.468317+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorReads.cs",
+      "sha256": "32daccfdb00d5830f140a0891179ac78a15870d1c322af1e148c28c3452c676b",
+      "modifiedUtc": "2026-09-05T01:56:21.930120+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs",
+      "sha256": "5e4182710e83cb8fa8c78518b24a417d5cd97e9d99d409e271397c184ffbffe9",
+      "modifiedUtc": "2026-09-05T02:09:25.139733+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentWorkspaceSection.cs",
+      "sha256": "6a234b77ff87f1748f518001dd869a9078f25762615ae1c68be717b2b6b47c28",
+      "modifiedUtc": "2026-09-05T01:56:28.979382+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs",
+      "sha256": "19c14afa38f0a087c66d90eac4182ecdc2c89ff3c5881d62c80b685c25e08cf3",
+      "modifiedUtc": "2026-09-05T01:56:21.931126+00:00"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/BoundAgentResourceQuery.cs",
+      "sha256": "b2f0b4a63b620ba3e883a41e21e2173a993ccbdb41d5d54a04060da22c172f64",
+      "modifiedUtc": "2026-09-05T00:49:49.133383+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentCatalogBoundaryTests.cs",
+      "sha256": "1477c2a018f9d06c93950423aca284413a7df4a3ec355e33a75743e9e9d91f7f",
+      "modifiedUtc": "2026-09-05T03:50:50.194275+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentCatalogPanelTests.cs",
+      "sha256": "223ab7dff25030023d836c0eb1862aa52832e923f49d534e1be5234966ba446c",
+      "modifiedUtc": "2026-09-05T01:07:12.286223+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogAvatarGenerationTests.cs",
+      "sha256": "114f77f9a8cfe9262129804dec76cd79c86726c0e0ed2a082e5411fc8ad56614",
+      "modifiedUtc": "2026-09-05T02:24:04.528560+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogCapabilityTests.cs",
+      "sha256": "5642cd30fb4d7223a89e41cffce3430905b6e26c7c921536a7037a8f743ce7cf",
+      "modifiedUtc": "2026-09-05T01:22:11.252789+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogDeletionTests.cs",
+      "sha256": "ac9a8701b947d84243abd78b9de30bad81a58d7dd1baafd9fbd714f21b065e46",
+      "modifiedUtc": "2026-09-05T01:21:05.205045+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogProjectStructureAccessTests.cs",
+      "sha256": "702add8229b983388cc8e1c03155d48141b87a41f7d562414113858326d4cf62",
+      "modifiedUtc": "2026-09-05T01:22:11.251748+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogSettingsTests.cs",
+      "sha256": "31bf830f1165dd10ebc4a9ff6dd095be7088051a50e0b82542272d2ccedeafd0",
+      "modifiedUtc": "2026-09-05T01:22:11.248856+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogThinkingEffortTests.cs",
+      "sha256": "690642f37c5cb145530913f0c3db3c29784bb6659acee075d040acce3f80f7a7",
+      "modifiedUtc": "2026-09-05T01:22:11.250058+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorCapabilityCompositionTests.cs",
+      "sha256": "4b7df9265f98f606a10a5f207c9e53a45e1376e598235758b03471935ff6350e",
+      "modifiedUtc": "2026-09-05T02:30:43.312431+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorChildBoundaryTests.cs",
+      "sha256": "df1679d9e6fc2f93cd54e5ffdf785b80d77b88702fef2bb85bddcdcfc2b0ec4b",
+      "modifiedUtc": "2026-09-05T02:30:33.826001+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorCommandCompositionTests.cs",
+      "sha256": "70a1b6ad95732c154588bb701bf7964d3883fa0170be2a7480273a4ebcf5c716",
+      "modifiedUtc": "2026-09-05T02:30:33.827001+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorCommandLifetimeTests.cs",
+      "sha256": "e94ce00686316623246addd21d0dab5c3ab73868cf64ce193239bde261e77b0b",
+      "modifiedUtc": "2026-09-05T02:38:41.350610+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorLoadCharacterizationTests.cs",
+      "sha256": "078cd8544b9ba779413d4c248693395bf41cc3138825da8e2d21dadd0d5cfb57",
+      "modifiedUtc": "2026-09-05T02:18:41.071560+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorReadCompositionTests.cs",
+      "sha256": "764e6b8511755f31c28434dbe5fe2b83440108f5a5b14879628e9510bece1230",
+      "modifiedUtc": "2026-09-05T01:26:36.923039+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorReadFixture.cs",
+      "sha256": "9efc43bfd4f18162e46edb994ce64d408dc269e4b4946d52fe9c3b1d824b3bb2",
+      "modifiedUtc": "2026-09-05T02:25:42.804008+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorSessionTests.cs",
+      "sha256": "12771f102fcb3a8e2674832dbca2127c9ba2f236f045ec88f61d6fec7597a31d",
+      "modifiedUtc": "2026-09-05T02:47:34.752268+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorTargetEchoHost.cs",
+      "sha256": "0063ca34c6c3da4e622e692cea7cbd17e53fa5a95e4f507a5bd7aa8e8dc5486f",
+      "modifiedUtc": "2026-09-05T02:36:44.598050+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentsHomePageTests.cs",
+      "sha256": "ad125fb0406179d4946c6b70809e09f8de00e9cfd64eb0d890e9f57a3d651a58",
+      "modifiedUtc": "2026-09-05T03:26:07.665984+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentsWorkspaceQueryTests.cs",
+      "sha256": "5875ba831e2c7b377004d2c62b448e0d87c19730e2649795c037a712e3ea0f7d",
+      "modifiedUtc": "2026-09-05T00:52:26.539653+00:00"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/WorkflowsPageTests.cs",
+      "sha256": "131f7d64fd6a4661354dfaa953a00e0808cd4ea7c83148830cd90ba0dcffc4bf",
+      "modifiedUtc": "2026-09-05T03:12:09.343999+00:00"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentEditorDraftPolicyTests.cs",
+      "sha256": "6010dc4439865385996d597e338cc63eb620bab38f032c01cb4f4451b3365c6e",
+      "modifiedUtc": "2026-09-05T02:33:21.527230+00:00"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsWorkspaceStateTests.cs",
+      "sha256": "b6244f5e4bc6486c9fb05fa8d52b3c728f0ba249aaedd27d6bbd09f718e33c87",
+      "modifiedUtc": "2026-09-05T01:57:11.462736+00:00"
+    }
+  ],
+  "binaries": [
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+      "sha256": "b3068fca174875818e0d122b6aaefbfff4e22a7eb9541fefdff3d396e01d01d8"
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+      "sha256": "b3068fca174875818e0d122b6aaefbfff4e22a7eb9541fefdff3d396e01d01d8"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+      "sha256": "b3068fca174875818e0d122b6aaefbfff4e22a7eb9541fefdff3d396e01d01d8"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+      "sha256": "b3068fca174875818e0d122b6aaefbfff4e22a7eb9541fefdff3d396e01d01d8"
+    }
+  ],
+  "meaning": "All changed source/test bytes predate the final solution build. Module, browser host and both focused test output copies contain the identical module assembly. Final verifier rejects later source drift; binaries are local build outputs, not delivered artifacts."
+}

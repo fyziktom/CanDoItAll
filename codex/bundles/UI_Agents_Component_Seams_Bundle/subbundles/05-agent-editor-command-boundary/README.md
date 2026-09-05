@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # SB05 — Editor operations, adapters and child boundaries
 
-Status: **Not started**. Proof tier: **Behavioral**. Current authorization is documentation only.
+Status: **Complete; owning and final integration gates passed**. Proof tier: **Behavioral**. Implementation authorized by inputs/04-implementation-authorization.md.
 
 ## Objective and covered inputs
 
@@ -18,7 +20,7 @@ src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialo
 
 Pure normalization/permission policies; cohesive load/reference/save/delete/capability operations; meaningful ports/adapters with normal constructors; explicit committed-versus-refreshed outcomes; preserved version/session/results; fully tested owned descendants.
 
-## Implementation steps for later authorized execution
+## Execution steps
 
 1. Separate pure rules from I/O; audit public result type assemblies and use justified narrow UI projections where Projects/Security implementation DTOs would retain coupling.
 2. Implement operations with correct ExpectedUpdatedAtUtc and returned identity/version. Snapshot/freeze mutable inputs according to characterized UI behavior.
@@ -36,10 +38,10 @@ Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [patt
 
 Named pure policy, real operation, adapter/composition and public component cases for B10–B26/B29; selected descendants including memory/root/storage/provider/avatar/capability. Verify actual calls/results/versions, not only fake controller return values. Run fresh affected builds and exact discovery. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-- [ ] Parent direct feature/infrastructure I/O is removed without hiding it in a locator/partial.
-- [ ] Save/delete/capability/version/reset/partial failure semantics and all required descendant behaviors pass.
-- [ ] Real new operations/adapters construct normally, preserve production application boundaries and have meaningful tests.
-- [ ] Known external graph blockers are owned and readiness remains qualified.
+- [x] Parent direct feature/infrastructure I/O is removed without hiding it in a locator/partial.
+- [x] Save/delete/capability/version/reset/partial failure semantics and all required descendant behaviors pass.
+- [x] Real new operations/adapters construct normally, preserve production application boundaries and have meaningful tests.
+- [x] Known external graph blockers are owned and readiness remains qualified.
 
 ## Proof and progression gate
 
@@ -50,3 +52,5 @@ Unlock SB06 only after this phase's behavior gaps and test migrations are closed
 ## Reopen triggers
 
 Normalization, permissions, expected version, command/result channel, reference projection, child dependency, constructor or lifetime changes.
+
+Execution evidence: ../../proof/SB05/manifest.md and ../../reviews/02-execution-status.md. Final governed closure remains SB07; SB01 timing qualification is explicit.

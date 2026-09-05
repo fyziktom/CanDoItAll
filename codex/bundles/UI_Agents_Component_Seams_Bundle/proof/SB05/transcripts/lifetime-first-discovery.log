@@ -1,0 +1,7 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: True)
+    CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits

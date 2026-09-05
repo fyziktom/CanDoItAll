@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # Sequential phase plan
 
-All phases are **Not started**. The current request authorizes bundle revision only.
+The owner subsequently authorized implementation. SB01–SB07 are complete with final stable, browser, portability and integrity evidence. See [execution status](../reviews/02-execution-status.md). SB01 has an explicit warm watch timing qualification.
 
 ~~~mermaid
 flowchart TD

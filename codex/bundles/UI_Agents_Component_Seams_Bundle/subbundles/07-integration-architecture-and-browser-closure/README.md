@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # SB07 — Production integration and governed closure
 
-Status: **Not started**. Proof tier: **Governed**. Current authorization is documentation only.
+Status: **Complete with documented follow-ups**. Proof tier: **Governed**. Implementation authorized by inputs/04-implementation-authorization.md.
 
 ## Objective and covered inputs
 
@@ -18,7 +20,7 @@ Final diff of scoped production/tests/DI; commands/00-validation-commands.md; pl
 
 Focused/stable/portability results; actual production adapter/DI and browser evidence; artifact-backed manifest and independent architecture review; behavior coverage closure; sandbox/navigation handoff with six readiness verdicts.
 
-## Implementation steps for later authorized execution
+## Execution steps
 
 1. Refresh source/dirty/sibling identities; invalidate stale phase proof by actual impact and close reopened gates.
 2. Run final focused and required stable gates, then current portability-static final enforcement without baseline write after reviewed deltas.
@@ -36,19 +38,21 @@ Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [patt
 
 Governed commands and actual transcripts for focused tests, module/solution builds, stable suite, portability no-write enforcement, production composition and browser flows. Check manifests and source identity. No screenshots-only or fake-only closure. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-- [ ] Required functionality and data semantics are preserved with complete behavior map and no unresolved regression.
-- [ ] Actual production wiring, stable/portability gates and real-host UI/overlay interactions pass.
-- [ ] Artifact hashes/paths/discovery/source state are coherent and independent architecture review has no blocking finding.
-- [ ] Readiness and limitations are explicit; a measured sandbox follow-up is concrete without claiming an unbuilt host.
+- [x] Required functionality and data semantics are preserved with complete behavior map and no unresolved regression.
+- [x] Actual production wiring, stable/portability gates and real-host UI/overlay interactions pass.
+- [x] Artifact hashes/paths/discovery/source state are coherent and independent architecture review has no blocking finding.
+- [x] Readiness and limitations are explicit; a measured sandbox follow-up is concrete without claiming an unbuilt host.
 
 ## Proof and progression gate
 
 Create governed artifact-backed proof manifest per proof/README.md: requirement/B-row ownership, commands/expected/actual names and counts, exit codes, source/sibling state, actual artifact paths/SHA-256, browser evidence, architecture/semantic review, invalidation and handoff verdicts. Store execution artifacts under proof/SB07; follow [proof placement](../../proof/README.md). No execution result is pre-filled.
 
-Close future implementation only after all required gates and artifacts are real and green. Bundle revision completion is a separate documentation result and cannot mark this phase complete.
+Implementation closed after all required gates and artifact verification passed; the warm timing qualification and deferred physical sandbox/navigation work remain explicit. Bundle revision completion is a separate documentation result and cannot mark this phase complete.
 
 ## Reopen triggers
 
 Any failed/missing gate, unowned regression, source/asset/DI drift, invalid artifact, claimed readiness without evidence or incomplete required scenario.
 
 Governed evidence additionally requires proof/SB07/manifest.md and a portable semantic-invariants contract, before/after changed-file hashes, production state producer/consumer/lifecycle evidence where applicable, anti-stub audit transcript and final verifier artifact. The detailed proof/README.md contract is mandatory; JSON alone or prose without underlying artifacts cannot close this phase.
+
+Execution evidence: ../../proof/SB07/manifest.md and ../../reviews/02-execution-status.md. Final governed closure remains SB07; SB01 timing qualification is explicit.

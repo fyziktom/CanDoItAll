@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # SB06 — Coverage and test coupling audit
 
-Status: **Not started**. Proof tier: **Behavioral**. Current authorization is documentation only.
+Status: **Complete; owning and final integration gates passed**. Proof tier: **Behavioral**. Implementation authorized by inputs/04-implementation-authorization.md.
 
 ## Objective and covered inputs
 
@@ -18,7 +20,7 @@ tests/Components/CanDoItAll.Tests.Components/AgentsHomePageTests.cs; AgentsHomeP
 
 Complete old-behavior->new-test map; exact current selectors and expected named cases; public Workflows navigation test; durable direction/policy tests; clean affected harnesses.
 
-## Implementation steps for later authorized execution
+## Execution steps
 
 1. Audit B01–B30 and every retained/replaced historical behavior, including two history-host cases and selected chat context/descendant scenarios.
 2. Replace the Workflows OpenWorkflows reflection case with a click on agents-shell-open-workflows and assert current navigation.
@@ -36,9 +38,9 @@ Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [patt
 
 Current route/primary/history/workflow filters plus exact selected context/child/new seam/composition cases. Run temporary source/test hygiene checks over expanded actual scope; review hits semantically. No new-test quota and no one-for-one count requirement. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-- [ ] Every required matrix behavior has meaningful current test/host evidence or an explicit characterized existing-defect disposition.
-- [ ] Affected tests use public production seams and normally constructed fakes/adapters; no private shape or uninitialized service dependency remains.
-- [ ] Exact Workflows button case passes and discovery matches the recorded named set.
+- [x] Every required matrix behavior has meaningful current test/host evidence or an explicit characterized existing-defect disposition.
+- [x] Affected tests use public production seams and normally constructed fakes/adapters; no private shape or uninitialized service dependency remains.
+- [x] Exact Workflows button case passes and discovery matches the recorded named set.
 
 ## Proof and progression gate
 
@@ -49,3 +51,5 @@ Unlock SB07 only with complete focused coverage and no deferred seam/test repair
 ## Reopen triggers
 
 Any implementation contract/helper/test mapping changes or an omitted behavioral assertion is found.
+
+Execution evidence: ../../proof/SB06/manifest.md and ../../reviews/02-execution-status.md. Final governed closure remains SB07; SB01 timing qualification is explicit.

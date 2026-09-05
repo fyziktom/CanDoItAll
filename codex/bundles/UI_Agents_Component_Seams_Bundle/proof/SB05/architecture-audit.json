@@ -1,0 +1,808 @@
+{
+  "snapshotId": "snap-20260905025204-4cc89364",
+  "createdUtc": "2026-09-05T02:52:04.9252216+00:00",
+  "request": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+    "scopeProjectNames": [
+      "CanDoItAll.Modules.AgentFramework"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": true,
+    "includePersistence": false,
+    "includeRisks": true,
+    "includeXmlDocs": false,
+    "includeMermaidExports": false
+  },
+  "hasBlockingErrors": false,
+  "scopeLimit": "Single-project snapshot omits unselected project references. Evaluated project references and the real child/asset graph remain separate evidence.",
+  "types": [
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "kind": "Record",
+      "interfaces": [
+        "System.IEquatable<CanDoItAll.Modules.AgentFramework.AgentCatalogIntent>"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogState.cs",
+        "line": 17,
+        "column": 1,
+        "endLine": 28,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentCatalogOperations",
+      "kind": "Class",
+      "interfaces": [
+        "CanDoItAll.Modules.AgentFramework.IAgentCatalogOperations"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCatalogOperations.cs",
+        "line": 19,
+        "column": 1,
+        "endLine": 47,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentCatalogSelection",
+      "kind": "Record",
+      "interfaces": [
+        "System.IEquatable<CanDoItAll.Modules.AgentFramework.AgentCatalogSelection>"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogState.cs",
+        "line": 15,
+        "column": 1,
+        "endLine": 15,
+        "endColumn": 73
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentCatalogSnapshot",
+      "kind": "Record",
+      "interfaces": [
+        "System.IEquatable<CanDoItAll.Modules.AgentFramework.AgentCatalogSnapshot>"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogState.cs",
+        "line": 5,
+        "column": 1,
+        "endLine": 13,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentEditorAccessQuery",
+      "kind": "Class",
+      "interfaces": [
+        "CanDoItAll.Modules.AgentFramework.IAgentEditorAccessQuery"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorAccessQuery.cs",
+        "line": 11,
+        "column": 1,
+        "endLine": 17,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentEditorCommands",
+      "kind": "Class",
+      "interfaces": [
+        "CanDoItAll.Modules.AgentFramework.IAgentEditorCommands"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorCommands.cs",
+        "line": 28,
+        "column": 1,
+        "endLine": 79,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentEditorDraftPolicy",
+      "kind": "Class",
+      "interfaces": [],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs",
+        "line": 30,
+        "column": 1,
+        "endLine": 146,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentEditorReads",
+      "kind": "Class",
+      "interfaces": [
+        "CanDoItAll.Modules.AgentFramework.IAgentEditorReads"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorReads.cs",
+        "line": 27,
+        "column": 1,
+        "endLine": 69,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentEditorSession",
+      "kind": "Class",
+      "interfaces": [
+        "System.IDisposable"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentEditorSession.cs",
+        "line": 28,
+        "column": 1,
+        "endLine": 78,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentEditorSubmission",
+      "kind": "Class",
+      "interfaces": [],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 28,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentEditorTarget",
+      "kind": "Record",
+      "interfaces": [
+        "System.IEquatable<CanDoItAll.Modules.AgentFramework.AgentEditorTarget>"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentEditorSession.cs",
+        "line": 19,
+        "column": 1,
+        "endLine": 22,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSection",
+      "kind": "Enum",
+      "interfaces": [],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentWorkspaceSection.cs",
+        "line": 3,
+        "column": 1,
+        "endLine": 15,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.AgentsWorkspaceQuery",
+      "kind": "Class",
+      "interfaces": [
+        "CanDoItAll.Modules.AgentFramework.IAgentsWorkspaceQuery"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs",
+        "line": 26,
+        "column": 1,
+        "endLine": 77,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.BoundAgentResourceQuery",
+      "kind": "Class",
+      "interfaces": [
+        "CanDoItAll.Modules.AgentFramework.IBoundAgentResourceQuery"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/BoundAgentResourceQuery.cs",
+        "line": 11,
+        "column": 1,
+        "endLine": 18,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
+      "kind": "Class",
+      "interfaces": [],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+        "line": 12,
+        "column": 1,
+        "endLine": 850,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogPanel",
+      "kind": "Class",
+      "interfaces": [],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 242,
+        "endColumn": 2
+      }
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "kind": "Class",
+      "interfaces": [
+        "System.IDisposable"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+        "line": 15,
+        "column": 1,
+        "endLine": 1515,
+        "endColumn": 2
+      }
+    }
+  ],
+  "registrations": [],
+  "dependencies": [
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.OpenChat",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorCommands",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorCatalogRefresh",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorCommands",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSaveOutcome",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorCommands",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentEditorCommands",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorAccessQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentEditorAccessQuery",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorAccessQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSecret",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorAccessQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorProject",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.AgentsWorkspaceState",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorDraftPolicy",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSubmission",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
+      "to": "CanDoItAll.Modules.AgentFramework.Pages.AgentsWorkspaceState",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
+      "to": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage.OverviewMetricBadge",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentsWorkspaceQuery",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.OpenAgent",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorCatalogRefresh",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.Pages.Components.ExternalWorkspaceRootSelection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSubmission",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorTarget",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSecret",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog.CapabilityDialogAssignmentFilter",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentEditorCommands",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog.CapabilityDialogKindFilter",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSession",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorProject",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentEditorReads",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorPendingRefresh",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSubmission",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.AgentWorkspaceSections",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.IAgentCatalogOperations",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogSnapshot",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentsWorkspaceQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.IBoundAgentResourceQuery",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentsWorkspaceQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentsWorkspaceQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentsShellSnapshot",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentsWorkspaceQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentsWorkspaceQuery",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.DeleteTeam",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.OpenTeam",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorReads",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentEditorAccessQuery",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorReads",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorTarget",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorReads",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorReferenceResult<T>",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorReads",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorLoadResult",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorReads",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorProject",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorReads",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentEditorReads",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSectionPolicy",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorSession",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorSubmission",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorSession",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorTarget",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentEditorSession",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorMutationKind",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.EditMembers",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.IAgentsWorkspaceQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogPanel",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogPanel",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogSnapshot",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogPanel",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogSelection",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.BoundAgentResourceQuery",
+      "to": "CanDoItAll.Modules.AgentFramework.IBoundAgentResourceQuery",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.SelectAgent",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.SelectTeamMember",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.IAgentEditorReads",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentEditorTarget",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent.SelectTeam",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogIntent",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogOperations",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentFrameworkOrganizationCatalogRepairService",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogOperations",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogSnapshot",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogOperations",
+      "to": "CanDoItAll.Modules.AgentFramework.IAgentCatalogOperations",
+      "weight": 1
+    },
+    {
+      "from": "CanDoItAll.Modules.AgentFramework.AgentCatalogOperations",
+      "to": "CanDoItAll.Modules.AgentFramework.AgentCatalogLoadRequest",
+      "weight": 1
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "names": [
+        "CanDoItAll.Modules.AgentFramework.Hosting",
+        "CanDoItAll.Modules.AgentFramework"
+      ]
+    },
+    {
+      "level": "Type",
+      "names": [
+        "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+        "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "findingId": "finding-file-size-doc-src-modules-candoitall-modules-agentf-230f6d5fcaae",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs has 850 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-modules-candoitall-modules-agentframework-pages-5d429c0e30fe"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-src-modules-candoitall-modules-agentf-841fced75b39",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs has 1515 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-src-modules-candoitall-modules-agentframework-pages-2702f862f8a2"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs"
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-13e18bea1d41",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentEditorSection exposes 10 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-714fd0a9fa89"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentEditorSession.cs",
+        "line": 6,
+        "column": 1,
+        "endLine": 17,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-ade5f49e4025",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentEditorSession exposes 16 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-cf2e07558fd6"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentEditorSession.cs",
+        "line": 28,
+        "column": 1,
+        "endLine": 78,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-d894dbc2869a",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentWorkspaceSection exposes 11 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a0d97063c2d6"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentWorkspaceSection.cs",
+        "line": 3,
+        "column": 1,
+        "endLine": 15,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-1dc038aa4552",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage exposes 105 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-1deae2187fcc"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+        "line": 12,
+        "column": 1,
+        "endLine": 850,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-f39483c74715",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogPanel exposes 45 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-dd7c1b317612"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 242,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-35cc4b6fd476",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog exposes 161 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-3c8bccac92b2"
+      ],
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+        "line": 15,
+        "column": 1,
+        "endLine": 1515,
+        "endColumn": 2
+      }
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    }
+  ],
+  "limitations": [
+    "Scoped project references are incomplete by design.",
+    "Razor-generated AgentCatalogHost was not recovered as a type in this snapshot.",
+    "New TryAddScoped registrations were not recovered; actual source and registered reader/command/host integration tests prove composition."
+  ]
+}

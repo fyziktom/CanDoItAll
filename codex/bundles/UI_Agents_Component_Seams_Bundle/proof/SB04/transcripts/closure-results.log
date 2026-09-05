@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:01:25.71]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_invalidates_pending_project_result_and_allows_new_request [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_invalidates_pending_project_result_and_allows_new_request [2 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 1
+Actual:   2
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_invalidates_pending_project_result_and_allows_new_request() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 102
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_invalidates_pending_project_result_and_allows_new_request() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 105
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:    68, Přeskočeno:     0, Celkem:    69, Doba trvání: 1 m 33 s - CanDoItAll.Tests.Components.dll (net10.0)

@@ -1,8 +1,10 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # Independent architecture and preservation review
 
-Review the final relevant diff and actual evidence without treating implementation claims or documentation checkboxes as proof. Current bundle revision itself contains no implementation.
+Review the final relevant diff and actual evidence without treating implementation claims or documentation checkboxes as proof. The owner-authorized implementation is recorded in proof/SB07/manifest.md; earlier preparation-only statements are historical.
 
-For future closure, inspect R requirements and B01–B30, comparing current behavior oracles to actual tests and real-host outcomes. Check lazy read timing/context, selection versus open, exact identities, editor lifetime/version/reset, whole-draft capability saves, delete result channel and committed-write/failed-refresh handling.
+For implementation closure, inspect R requirements and B01–B30, comparing current behavior oracles to actual tests and real-host outcomes. Check lazy read timing/context, selection versus open, exact identities, editor lifetime/version/reset, whole-draft capability saves, delete result channel and committed-write/failed-refresh handling.
 
 Constructibility and production wiring matter: fake controllers do not prove their implementations. Follow public type and real child service/asset dependencies transitively. Inspect conditional sections, nested dialogs, Memory/store/drivers, storage, roots, provider refresh, avatar and capability flows. Confirm typed sections do not conceal DialogService's navigation-close limitation.
 

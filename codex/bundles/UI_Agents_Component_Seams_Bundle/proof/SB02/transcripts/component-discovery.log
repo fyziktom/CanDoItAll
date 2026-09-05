@@ -1,0 +1,17 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab
+    CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation
+    CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Hr_agent_avatar_action_remains_in_the_page_header_across_module_tabs
+    CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces
+    CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs
+    CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chat_inner_view_is_restored_from_the_typed_query_state
+    CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.History_demand_skips_aggregates_but_keeps_shell_identity(section: Providers)
+    CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.History_demand_skips_aggregates_but_keeps_shell_identity(section: RequestHistory)
+    CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Usage_refresh_does_not_reload_shell
+    CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Real_registration_reads_overview_and_bound_resources
+    CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Hr_catalog_failure_is_partial_but_overview_failure_is_not(failOverview: False)
+    CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Hr_catalog_failure_is_partial_but_overview_failure_is_not(failOverview: True)
+    CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested(tab: "providers")
+    CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested(tab: "request-history")
+    CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation

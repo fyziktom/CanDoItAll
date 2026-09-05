@@ -1,0 +1,63 @@
+{
+  "discoveryEntries": 9542,
+  "executedCases": 9597,
+  "reconciliation": "Seven existing MemberData theories appear once in VSTest discovery and expand during execution. Counts were reconciled after the run against unchanged source; the initial discovery entry count was not an exact runtime case count. Future executions should freeze these known expansions alongside discovery.",
+  "expansions": [
+    {
+      "method": "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects",
+      "executedRows": 6,
+      "source": "repo://tests/Integration/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs",
+      "member": "BundledPluginSimulationCases",
+      "explanation": "Six yielded bundled simulation descriptors",
+      "discoveredRows": 1
+    },
+    {
+      "method": "CanDoItAll.Memory.Tests.Security.MemoryOperationAccessAuthorizerTests.Any_changed_ownership_dimension_is_denied",
+      "executedRows": 9,
+      "source": "repo://tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationAccessAuthorizerTests.cs",
+      "member": "ForeignCallers",
+      "explanation": "Nine changed requester ownership dimensions",
+      "discoveredRows": 1
+    },
+    {
+      "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.Capability_mismatch_denial_is_consistent_for_all_handler_callers",
+      "executedRows": 5,
+      "source": "repo://tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationHandlerTests.cs",
+      "member": "CrossCallerRoutes",
+      "explanation": "Tool, workflow, context contributor, UI action and API endpoint",
+      "discoveredRows": 1
+    },
+    {
+      "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.No_provider_denial_is_consistent_for_all_handler_callers",
+      "executedRows": 5,
+      "source": "repo://tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationHandlerTests.cs",
+      "member": "CrossCallerRoutes",
+      "explanation": "Same five caller routes",
+      "discoveredRows": 1
+    },
+    {
+      "method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+      "executedRows": 8,
+      "source": "repo://tests/Unit/CanDoItAll.Tests.Unit/MafFinalizerToolFactorySchemaCharacterizationTests.cs",
+      "member": "Contracts / ExpectedBaselines",
+      "explanation": "Eight yielded structured output contracts",
+      "discoveredRows": 1
+    },
+    {
+      "method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+      "executedRows": 21,
+      "source": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProcessRuntimeToolPreflightServiceTests.cs",
+      "member": "ProcessStartingToolCapabilityRoutes",
+      "explanation": "Twenty-one explicit tool/capability pairs",
+      "discoveredRows": 1
+    },
+    {
+      "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+      "executedRows": 8,
+      "source": "repo://tests/Unit/CanDoItAll.Tests.Unit/FloatingAgentChatArchitectureTests.cs",
+      "member": "InvalidSettings",
+      "explanation": "Eight explicit lower/upper boundary violations",
+      "discoveredRows": 1
+    }
+  ]
+}

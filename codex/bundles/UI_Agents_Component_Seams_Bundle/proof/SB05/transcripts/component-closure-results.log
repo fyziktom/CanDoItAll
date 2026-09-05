@@ -1,0 +1,28 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:01:27.78]     CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces [2 s]
+  Chybová zpráva:
+   Npgsql.NpgsqlException : Received backend message ParseComplete while expecting ReadyForQueryMessage. Please file a bug.
+  Trasování zásobníku:
+     at Npgsql.Util.Statics.ThrowIfMsgWrongType[T](IBackendMessage msg, NpgsqlConnector connector)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.Consume(Boolean async, Exception firstException)
+   at Npgsql.NpgsqlDataReader.Consume(Boolean async, Exception firstException)
+   at Npgsql.NpgsqlDataReader.Close(Boolean async, Boolean connectionClosing, Boolean isDisposing)
+   at Npgsql.Internal.NpgsqlConnector.CloseOngoingOperations(Boolean async)
+   at Npgsql.NpgsqlConnection.CloseAsync(Boolean async)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.ResetStateAsync(Boolean disposeDbConnection)
+   at Microsoft.EntityFrameworkCore.DbContext.Microsoft.EntityFrameworkCore.Infrastructure.IResettableService.ResetStateAsync(CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Internal.DbContextPool`1.ReturnAsync(IDbContextPoolable context, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.DisposeAsync()
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.<DisposeAsync>g__Await|26_0(Int32 i, ValueTask vt, List`1 toDispose)
+   at Bunit.BunitServiceProvider.DisposeAsync() in /_/src/bunit/BunitServiceProvider.cs:line 170
+   at Bunit.BunitContext.DisposeAsyncCore() in /_/src/bunit/BunitContext.cs:line 105
+   at Bunit.BunitContext.DisposeAsync() in /_/src/bunit/BunitContext.cs:line 80
+   at CanDoItAll.Tests.Components.ComponentTestHarness.DisposeAsync() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ComponentTestHarness.cs:line 86
+   at CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentsHomePageTests.cs:line 168
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:   113, Přeskočeno:     0, Celkem:   114, Doba trvání: 2 m 32 s - CanDoItAll.Tests.Components.dll (net10.0)

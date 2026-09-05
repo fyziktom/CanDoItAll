@@ -1959,11 +1959,7 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
         });
         Assert.Contains("Open workflows", cut.Markup, StringComparison.Ordinal);
-        var openWorkflows = typeof(AgentsHomePage).GetMethod(
-            "OpenWorkflows",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        Assert.NotNull(openWorkflows);
-        await cut.InvokeAsync(() => openWorkflows.Invoke(cut.Instance, null));
+        await cut.Find("[data-testid='agents-shell-open-workflows']").ClickAsync();
 
         Assert.EndsWith("/agents/workflows", navigation.Uri, StringComparison.Ordinal);
     }

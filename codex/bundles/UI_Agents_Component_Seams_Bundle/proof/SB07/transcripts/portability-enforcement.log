@@ -1,0 +1,6 @@
+SB07 INV-PORTABILITY; cwd C:\repositories\CanDoItAll; reviewed six ADDED and seven STALE entries in portability-review.md. Explicit baseline refresh from current full-source scan, diff review, then final enforcement WITHOUT --write-baseline.
+2026-09-04T23:33:10.0100868-04:00
+Wrote reviewed portability baseline with 14251 allowances: tools\Validation\Portability\portability-risk-baseline.json
+BaselineRefresh ExitCode=0
+RESULT: PASS (14251 reviewed executable-source findings unchanged)
+FinalNoWrite ExitCode=0

@@ -1,0 +1,56 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:10.35]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: False) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: False) [9 s]
+  Chybová zpráva:
+   Assert.Same() Failure: Values are not the same instance
+Expected: EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "", ConfigurationJson = "", EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = null, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+Actual:   EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "_content/CanDoItAll.Components.BaseLib/assets/iden"···, ConfigurationJson = "{\"enableCompaction\":true,\"slidingWindowTurns\":"···, EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = 2026-04-10T00:00:00.0000000+00:00, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 34
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 37
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:14.71]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True) [4 s]
+  Chybová zpráva:
+   Assert.Same() Failure: Values are not the same instance
+Expected: EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "_content/CanDoItAll.Components.BaseLib/assets/iden"···, ConfigurationJson = "{\"enableCompaction\":true,\"slidingWindowTurns\":"···, EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = 2026-04-10T00:00:00.0000000+00:00, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+Actual:   EditContext { Model = AgentEditorModel { AllowedSecretReferences = [···], AvatarImageUrl = "", ConfigurationJson = "", EnableBackgroundResponses = False, ExpectedUpdatedAtUtc = null, ··· }, Properties = EditContextProperties { Item = (throws TargetParameterCountException) }, ShouldUseFieldIdentifiers = True }
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 34
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 37
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:18.61]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: False) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: False) [3 s]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Filter matched in collection
+             ↓ (pos 0)
+Collection: [NotificationMessage { Class = null, Click = null, Close = null, CloseAriaLabel = "Dismiss notification", CloseOnClick = False, ··· }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 64
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 64
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:21.97]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: True) [3 s]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Filter matched in collection
+             ↓ (pos 0)
+Collection: [NotificationMessage { Class = null, Click = null, Close = null, CloseAriaLabel = "Dismiss notification", CloseOnClick = False, ··· }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 64
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 64
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:25.52]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits [3 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Submitted name"
+Actual:   "Later edit"
+           ↑ (pos 0)
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 90
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 93
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     5, Úspěšné:     0, Přeskočeno:     0, Celkem:     5, Doba trvání: 25 s - CanDoItAll.Tests.Components.dll (net10.0)

@@ -10,9 +10,24 @@
 }
 else
 {
-    <EditForm Model="editorModel" OnValidSubmit="SaveAgentAsync">
+    var renderedSession = session;
+    <EditForm @key="renderedSession" EditContext="@session.Context" OnValidSubmit="SaveAgentAsync">
         <ConversationDefinitionEditorShell Class="agent-details-dialog min-h-0">
             <Header>
+                @if (!isBusy && session.PendingRefresh is not null) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-refresh-pending">
+                        <p>@(session.PendingRefresh.Kind == AgentEditorMutationKind.Save
+                            ? "The agent was saved, but the editor could not refresh."
+                            : "The capability was verified, but the editor could not refresh.") Your draft is retained.</p>
+                        <Button Text="Retry editor refresh" ButtonStyle="ButtonStyle.Light"
+                                Click="RetrySavedRefreshAsync" data-testid="agents-editor-retry-refresh" />
+                    </Alert>
+                }
+                @if (session.HasUnconfirmedWrite) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-write-unconfirmed">
+                        <p>The save result could not be confirmed. Your draft is retained. Check the catalog before reopening the agent or starting another draft.</p>
+                    </Alert>
+                }
                 @if (linkedPartyId.HasValue)
                 {
                     <Alert AlertStyle="AlertStyle.Info">
@@ -56,7 +71,7 @@ else
                                                         InstructionsTestId="agents-catalog-instructions">
                                 <AvatarActions>
                                     <AvatarPicker Value="@editorModel.AvatarImageUrl"
-                                                  ValueChanged="HandleAvatarChangedAsync"
+                                                  ValueChanged="value => HandleAvatarChangedAsync(renderedSession, value)"
                                                   EntityName="@editorModel.Name"
                                                   EntityDescription="@editorModel.RoleTitle"
                                                   EntityKind="Agent"
@@ -109,7 +124,7 @@ else
                                                          TestId="agents-catalog-thinking-effort"
                                                          SupportTestId="agents-catalog-thinking-effort-support" />
                             @if (SelectedRuntimeProvider is { IsSourceManaged: true } sharedProvider) {
-                                <SharedProviderRefreshButton @key="sharedProvider.Id" ProviderId="sharedProvider.Id" Refreshed="RefreshRuntimeProvidersAsync" />
+                                <SharedProviderRefreshButton @key="sharedProvider.Id" ProviderId="sharedProvider.Id" Refreshed="() => RefreshRuntimeProvidersAsync(renderedSession)" />
                             }
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
@@ -499,7 +514,7 @@ else
                                     <ExternalWorkspaceRootSelectionField
                                         AllowedAliases="@editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases"
                                         RootBindings="@editorModel.WorkspaceToolAccess.ExternalTargetRootBindings"
-                                        SelectionChanged="ApplyExternalWorkspaceRootSelection"
+                                        SelectionChanged="selection => ApplyExternalWorkspaceRootSelection(renderedSession, selection)"
                                         DataTestId="agents-catalog-workspace-external-roots" />
                                 </div>
                                 <div class="cda-admin-subpanel">
@@ -534,7 +549,7 @@ else
                                 <div class="cda-admin-subpanel md:col-span-2">
                                     <StorageCatalogSelectionField
                                         Value="@editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds"
-                                        ValueChanged="ApplyStorageCatalogSelection"
+                                        ValueChanged="selection => ApplyStorageCatalogSelection(renderedSession, selection)"
                                         AllowAll="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
                                         DataTestId="agents-catalog-storage-selection" />
                                 </div>
@@ -582,7 +597,7 @@ else
                                                                checked="@HasAllowedSecret(secret.Id)"
                                                                @onchange="args => ToggleAllowedSecret(secret, args.Value)" />
                                                         @secret.Name
-                                                        <span class="text-slate-500">(@secret.Kind)</span>
+                                                        <span class="text-slate-500">(@secret.KindLabel)</span>
                                                     </label>
                                                 }
                                             </Stack>
@@ -670,21 +685,21 @@ else
                                         Icon="build"
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
-                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Disabled="@(IsMutationBlocked || isOpeningCapabilityWizard)"
                                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
                                         data-testid="agents-details-new-tool" />
                                 <Button Text="New MCP"
                                         Icon="hub"
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
-                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Disabled="@(IsMutationBlocked || isOpeningCapabilityWizard)"
                                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
                                         data-testid="agents-details-new-mcp" />
                                 <Button Text="New skill"
                                         Icon="psychology"
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
-                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Disabled="@(IsMutationBlocked || isOpeningCapabilityWizard)"
                                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
                                         data-testid="agents-details-new-skill" />
                             </Cluster>
@@ -738,7 +753,7 @@ else
                             {
                                 <AgentCapabilityList Items="@FilteredAssignableCapabilities"
                                                      AttachedCapabilityIds="@editorModel.SelectedCapabilityIds"
-                                                     IsBusy="@isBusy"
+                                                     IsBusy="@IsMutationBlocked"
                                                      CanVerify="@editorModel.Id.HasValue"
                                                      AssignmentRequested="ToggleCapabilityAsync"
                                                      VerificationRequested="VerifyCapabilityAsync"
@@ -794,7 +809,7 @@ else
                     <PrimaryActions>
                         <Button Text="Save agent"
                                 Type="submit"
-                                Disabled="@(isBusy || HasIncompatibleThinkingEffortOverride)"
+                                Disabled="@(IsMutationBlocked || HasIncompatibleThinkingEffortOverride)"
                                 IsBusy="@isBusy"
                                 data-testid="agents-catalog-save" />
                     </PrimaryActions>
@@ -804,7 +819,7 @@ else
                             <Button Text="Delete"
                                     Icon="delete"
                                     ButtonStyle="ButtonStyle.Danger"
-                                    Disabled="@(isBusy || isConfirmingDelete)"
+                                    Disabled="@(IsMutationBlocked || isConfirmingDelete)"
                                     IsBusy="@isBusy"
                                     Click="DeleteAgentAsync"
                                     data-testid="agents-catalog-delete" />

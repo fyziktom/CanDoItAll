@@ -1,0 +1,65 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:08.05]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: False) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: False) [7 s]
+  Chybová zpráva:
+   System.Reflection.TargetException : Non-static method requires a target.
+  Trasování zásobníku:
+     at System.Reflection.MethodInvokerCommon.ValidateInvokeTarget(Object target, MethodBase method)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at System.Reflection.MethodBase.Invoke(Object obj, Object[] parameters)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorWorkspaceProbe.Invoke(MethodInfo targetMethod, Object[] args) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorLoadCharacterizationTests.cs:line 138
+   at generatedProxy_1.ListAgentsAsync(Boolean, CancellationToken)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 19
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 36
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:11.57]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True) [3 s]
+  Chybová zpráva:
+   System.Reflection.TargetException : Non-static method requires a target.
+  Trasování zásobníku:
+     at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at System.Reflection.MethodBase.Invoke(Object obj, Object[] parameters)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorWorkspaceProbe.Invoke(MethodInfo targetMethod, Object[] args) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorLoadCharacterizationTests.cs:line 138
+   at generatedProxy_1.ListAgentsAsync(Boolean, CancellationToken)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 19
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 36
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:14.91]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: False) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: False) [3 s]
+  Chybová zpráva:
+   System.Reflection.TargetException : Non-static method requires a target.
+  Trasování zásobníku:
+     at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at System.Reflection.MethodBase.Invoke(Object obj, Object[] parameters)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorWorkspaceProbe.Invoke(MethodInfo targetMethod, Object[] args) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorLoadCharacterizationTests.cs:line 138
+   at generatedProxy_1.ListAgentsAsync(Boolean, CancellationToken)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 46
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 62
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:18.02]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: True) [3 s]
+  Chybová zpráva:
+   System.Reflection.TargetException : Non-static method requires a target.
+  Trasování zásobníku:
+     at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at System.Reflection.MethodBase.Invoke(Object obj, Object[] parameters)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorWorkspaceProbe.Invoke(MethodInfo targetMethod, Object[] args) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorLoadCharacterizationTests.cs:line 138
+   at generatedProxy_1.ListAgentsAsync(Boolean, CancellationToken)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 46
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 62
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:21.07]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits [3 s]
+  Chybová zpráva:
+   System.Reflection.TargetException : Non-static method requires a target.
+  Trasování zásobníku:
+     at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at System.Reflection.MethodBase.Invoke(Object obj, Object[] parameters)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorWorkspaceProbe.Invoke(MethodInfo targetMethod, Object[] args) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorLoadCharacterizationTests.cs:line 138
+   at generatedProxy_1.ListAgentsAsync(Boolean, CancellationToken)
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 70
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandLifetimeTests.cs:line 90
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     5, Úspěšné:     0, Přeskočeno:     0, Celkem:     5, Doba trvání: 20 s - CanDoItAll.Tests.Components.dll (net10.0)

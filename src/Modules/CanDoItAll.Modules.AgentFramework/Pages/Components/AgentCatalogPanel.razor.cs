@@ -1,11 +1,8 @@
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
-
-using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 
 public partial class AgentCatalogPanel
 {
@@ -13,69 +10,31 @@ public partial class AgentCatalogPanel
     private const string TeamRootTreeNodeId = "agents:teams";
     private const string TeamTreeNodePrefix = "agents:team:";
     private const string AgentTreeNodePrefix = "agents:agent:";
-    [Parameter]
-    public Guid? RequestedAgentId { get; set; }
+    [Parameter, EditorRequired]
+    public AgentCatalogSnapshot Snapshot { get; set; } = AgentCatalogSnapshot.Empty;
+
+    [Parameter, EditorRequired]
+    public AgentCatalogSelection Selection { get; set; } = new(null, null);
 
     [Parameter]
-    public Guid? RequestedTeamId { get; set; }
+    public bool IsLoading { get; set; }
 
     [Parameter]
-    public IReadOnlyList<AgentDefinition>? InitialAgents { get; set; }
+    public Guid? OpeningManagedAgentChatId { get; set; }
 
     [Parameter]
-    public IReadOnlyList<ProviderProfile>? InitialProviders { get; set; }
+    public EventCallback<AgentCatalogIntent> Intent { get; set; }
 
-    [Parameter]
-    public IReadOnlyList<AgentTeamDefinition>? InitialTeams { get; set; }
-
-    [Parameter]
-    public bool SkipCatalogRepair { get; set; }
-
-    [Parameter]
-    public EventCallback<AgentDefinition?> SelectedAgentChanged { get; set; }
-
-    [Parameter]
-    public EventCallback<AgentTeamDefinition?> SelectedTeamChanged { get; set; }
-
-    [Parameter]
-    public EventCallback<AgentChatContextAccessState> ContextAccessStateChanged { get; set; }
-
-    [Inject]
-    public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
-
-    [Inject]
-    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
-
-    [Inject]
-    public IAgentFrameworkOrganizationCatalogRepairService OrganizationCatalogRepairService { get; set; } = default!;
-
-    [Inject]
-    public NotificationService NotificationService { get; set; } = default!;
-
-    [Inject]
-    public DialogService DialogService { get; set; } = default!;
-
-    [Inject]
-    public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
-
-    private IReadOnlyList<AgentDefinition> agents = [];
-    private IReadOnlyList<AgentTeamDefinition> teams = [];
-    private IReadOnlyDictionary<Guid, bool> privateProviderById = new Dictionary<Guid, bool>();
+    private IReadOnlyList<AgentDefinition> agents => Snapshot.Agents;
+    private IReadOnlyList<AgentTeamDefinition> teams => Snapshot.Teams;
+    private Guid? selectedAgentId => Selection.AgentId;
+    private Guid? selectedTeamId => Selection.TeamId;
+    private bool isLoading => IsLoading;
+    private Guid? openingManagedAgentChatId => OpeningManagedAgentChatId;
     private readonly HashSet<string> expandedTreeNodeIds = [TeamRootTreeNodeId];
     private string agentSearch = string.Empty;
-    private bool hasLoaded;
-    private bool isLoading = true;
-    private bool interactiveReloadAttempted;
-    private Task? loadTask;
-    private Guid? selectedAgentId;
-    private Guid? selectedTeamId;
-    private Guid? appliedRequestedTeamId;
-    private Guid? openedRequestedAgentId;
-    private Guid? openingManagedAgentChatId;
-    private AgentChatContextAccessState? publishedAccessState;
-    private Guid? contextRequestedAgentId;
-    private Guid? contextRequestedTeamId;
-    private bool contextRequestApplied;
+    private AgentCatalogSnapshot? previousSnapshot;
+    private Guid? previousSelectedTeamId;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
         .Where(MatchesSelectedTeam)
@@ -158,201 +117,43 @@ public partial class AgentCatalogPanel
         }
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await EnsureLoadedAsync();
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!contextRequestApplied ||
-            contextRequestedAgentId != RequestedAgentId ||
-            contextRequestedTeamId != RequestedTeamId)
-        {
-            contextRequestApplied = true;
-            contextRequestedAgentId = RequestedAgentId;
-            contextRequestedTeamId = RequestedTeamId;
-            publishedAccessState = null;
-            await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
-        }
-
-        await EnsureLoadedAsync();
-        ApplyRequestedTeam();
-        await OpenRequestedAgentDialogIfNeededAsync();
-        await PublishAccessStateAsync(
-            HasValidRequestedSelection()
-                ? AgentChatContextAccessState.Ready
-                : AgentChatContextAccessState.Failed);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender ||
-            interactiveReloadAttempted ||
-            hasLoaded)
-        {
-            return;
-        }
-
-        interactiveReloadAttempted = true;
-        await EnsureLoadedAsync();
-        StateHasChanged();
-    }
-
-    private Task EnsureLoadedAsync()
-    {
-        if (hasLoaded)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (loadTask is not null)
-        {
-            return loadTask;
-        }
-
-        loadTask = LoadAsync();
-        return loadTask;
-    }
-
-    private async Task LoadAsync()
-    {
-        isLoading = true;
-        await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
-
-        try
-        {
-            if (!SkipCatalogRepair)
-            {
-                await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
-            }
-
-            var agentsTask = InitialAgents is null
-                ? WorkspaceService.ListAgentsAsync(includeTemplates: false)
-                : Task.FromResult(InitialAgents);
-            var providersTask = InitialProviders is null
-            ? ProviderRuntimeAdministrationService.ListProvidersAsync()
-                : Task.FromResult(InitialProviders);
-            var teamsTask = InitialTeams is null
-                ? WorkspaceService.ListAgentTeamsAsync()
-                : Task.FromResult(InitialTeams);
-
-            agents = (await agentsTask).ToList();
-            privateProviderById = BuildPrivateProviderMap(await providersTask);
-            teams = (await teamsTask).ToList();
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(previousSnapshot, Snapshot)) {
+            previousSnapshot = Snapshot;
             ExpandTeamNodes();
-
-            if (RequestedAgentId.HasValue &&
-                agents.Any(item => item.Id == RequestedAgentId.Value))
-            {
-                selectedAgentId = RequestedAgentId.Value;
-            }
-
-            ApplyRequestedTeam(force: true);
-
-            hasLoaded = true;
-            await PublishAccessStateAsync(
-                HasValidRequestedSelection()
-                    ? AgentChatContextAccessState.Ready
-                    : AgentChatContextAccessState.Failed);
         }
-        catch
-        {
-            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
-            throw;
+        if (selectedTeamId != previousSelectedTeamId && selectedTeamId is { } teamId) {
+            expandedTreeNodeIds.Add(BuildTeamTreeNodeId(teamId));
         }
-        finally
-        {
-            isLoading = false;
-            loadTask = null;
-        }
+        previousSelectedTeamId = selectedTeamId;
     }
 
-    private async Task OpenRequestedAgentDialogIfNeededAsync()
-    {
-        if (!RequestedAgentId.HasValue ||
-            openedRequestedAgentId == RequestedAgentId.Value ||
-            !agents.Any(item => item.Id == RequestedAgentId.Value))
-        {
-            return;
-        }
+    private Task SelectAgentAsync(Guid agentId)
+        => Intent.InvokeAsync(new AgentCatalogIntent.SelectAgent(agentId));
 
-        openedRequestedAgentId = RequestedAgentId.Value;
-        selectedAgentId = RequestedAgentId.Value;
-        await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == RequestedAgentId.Value));
-        _ = OpenAgentDetailsDialogAsync(RequestedAgentId.Value);
-    }
-
-    private async Task SelectAgentAsync(Guid agentId)
-    {
-        selectedAgentId = agentId;
-        openedRequestedAgentId = agentId;
-        await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
-        await PublishAccessStateAsync(AgentChatContextAccessState.Ready);
-    }
-
-    private async Task OpenManagedAgentChatAsync(AgentDefinition agent)
-    {
-        if (openingManagedAgentChatId.HasValue)
-        {
-            return;
-        }
-
-        if (!IsManagedQuickChatAgent(agent))
-        {
-            throw new InvalidOperationException(
-                "Only an exact configured managed-agent identity can open a quick chat window.");
-        }
-
-        selectedAgentId = agent.Id;
-        await SelectedAgentChanged.InvokeAsync(agent);
-        openingManagedAgentChatId = agent.Id;
-        try
-        {
-            await AgentChatLauncher.StartNewChatAsync(agent.Id);
-            NotificationService.Success("Chat ready", $"Opened a new chat with {agent.Name}.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Unable to open managed agent chat", exception.Message);
-        }
-        finally
-        {
-            openingManagedAgentChatId = null;
-        }
-    }
-
-    private static bool IsManagedQuickChatAgent(AgentDefinition agent)
-    {
-        return HrAgentIdentity.Matches(agent) ||
-               PromptsCuratorAgentIdentity.Matches(agent) ||
-               WorkflowCuratorAgentIdentity.Matches(agent) ||
-               SchedulerAgentIdentity.Matches(agent);
-    }
+    private Task OpenManagedAgentChatAsync(AgentDefinition agent)
+        => Intent.InvokeAsync(new AgentCatalogIntent.OpenChat(agent.Id));
 
     private async Task HandleAgentTeamTreeSelectAsync(string nodeId)
     {
         if (string.Equals(nodeId, AllAgentsTreeNodeId, StringComparison.Ordinal))
         {
-            selectedTeamId = null;
-            await SelectedTeamChanged.InvokeAsync(null);
+            await Intent.InvokeAsync(new AgentCatalogIntent.SelectTeam(null));
             return;
         }
 
         if (TryParseTeamTreeNodeId(nodeId, out var teamId) &&
             teams.Any(item => item.Id == teamId))
         {
-            selectedTeamId = teamId;
             expandedTreeNodeIds.Add(nodeId);
-            await SelectedTeamChanged.InvokeAsync(teams.First(item => item.Id == teamId));
+            await Intent.InvokeAsync(new AgentCatalogIntent.SelectTeam(teamId));
             return;
         }
 
         if (TryParseAgentTreeNodeId(nodeId, out var agentId) &&
             agents.Any(item => item.Id == agentId))
         {
-            selectedAgentId = agentId;
-            await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
+            await Intent.InvokeAsync(new AgentCatalogIntent.SelectTeamMember(agentId));
         }
     }
 
@@ -367,230 +168,26 @@ public partial class AgentCatalogPanel
     }
 
     private Task OpenNewAgentDialogAsync()
-        => QueueAgentDetailsDialogAsync(agentId: null);
+        => Intent.InvokeAsync(new AgentCatalogIntent.OpenAgent(null));
 
     private Task OpenNewTeamDialogAsync()
-        => QueueTeamDetailsDialogAsync(teamId: null);
+        => Intent.InvokeAsync(new AgentCatalogIntent.OpenTeam(null));
 
     private Task OpenSelectedTeamDialogAsync()
-        => SelectedTeam is null
-            ? Task.CompletedTask
-            : QueueTeamDetailsDialogAsync(SelectedTeam.Id);
+        => SelectedTeam is null ? Task.CompletedTask : Intent.InvokeAsync(new AgentCatalogIntent.OpenTeam(SelectedTeam.Id));
 
     private Task OpenSelectedTeamMembersDialogAsync()
-    {
-        _ = OpenTeamMembersDialogAsync();
-        return Task.CompletedTask;
-    }
+        => SelectedTeam is null ? Task.CompletedTask : Intent.InvokeAsync(new AgentCatalogIntent.EditMembers(SelectedTeam.Id));
 
     private Task QueueAgentDetailsDialogAsync(Guid? agentId)
-    {
-        _ = OpenAgentDetailsDialogAsync(agentId);
-        return Task.CompletedTask;
-    }
+        => Intent.InvokeAsync(new AgentCatalogIntent.OpenAgent(agentId));
 
-    private Task QueueTeamDetailsDialogAsync(Guid? teamId)
-    {
-        _ = OpenTeamDetailsDialogAsync(teamId);
-        return Task.CompletedTask;
-    }
-
-    private async Task OpenAgentDetailsDialogAsync(Guid? agentId)
-    {
-        if (agentId.HasValue)
-        {
-            selectedAgentId = agentId.Value;
-            await SelectedAgentChanged.InvokeAsync(agents.FirstOrDefault(item => item.Id == agentId.Value));
-        }
-
-        try
-        {
-            var title = agentId.HasValue
-                ? ResolveDialogTitle(agentId.Value)
-                : "New technical agent";
-
-            var result = await DialogService.OpenAsync<AgentDetailsDialog>(
-                title,
-                new Dictionary<string, object?>
-                {
-                    [nameof(AgentDetailsDialog.AgentId)] = agentId,
-                    [nameof(AgentDetailsDialog.InitialProviders)] = InitialProviders,
-                    [nameof(AgentDetailsDialog.Saved)] =
-                        EventCallback.Factory.Create<AgentDetailsDialogResult>(this, HandleAgentDialogSavedAsync)
-                },
-                new DialogOptions
-                {
-                    Eyebrow = "Technical editor",
-                    Subtitle = "Edit identity, runtime, access policy, and capabilities for this technical agent.",
-                    Size = ModalSize.Full,
-                    DenseChrome = true,
-                    AriaLabel = "Agent details editor",
-                    TestId = "agents-details-dialog"
-                });
-
-            if (result is AgentDetailsDialogResult dialogResult)
-            {
-                await HandleAgentDialogSavedAsync(dialogResult);
-            }
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Agent dialog failed", exception.Message);
-        }
-    }
-
-    private string ResolveDialogTitle(Guid agentId)
-    {
-        var agent = agents.FirstOrDefault(item => item.Id == agentId);
-        return string.IsNullOrWhiteSpace(agent?.Name)
-            ? "Agent details"
-            : agent.Name;
-    }
-
-    private async Task HandleAgentDialogSavedAsync(AgentDetailsDialogResult result)
-    {
-        await ReloadCatalogAsync();
-        if (result.Deleted)
-        {
-            selectedAgentId = null;
-            await SelectedAgentChanged.InvokeAsync(null);
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (result.AgentId.HasValue)
-        {
-            selectedAgentId = result.AgentId.Value;
-            await SelectedAgentChanged.InvokeAsync(agents.FirstOrDefault(item => item.Id == result.AgentId.Value));
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OpenTeamDetailsDialogAsync(Guid? teamId)
-    {
-        try
-        {
-            var result = await DialogService.OpenAsync<AgentTeamDetailsDialog>(
-                teamId.HasValue ? "Edit agent team" : "New agent team",
-                new Dictionary<string, object?>
-                {
-                    [nameof(AgentTeamDetailsDialog.TeamId)] = teamId
-                },
-                new DialogOptions
-                {
-                    Eyebrow = "Technical team",
-                    Subtitle = "Create or rename an AgentFramework team for filtering and process delivery.",
-                    Size = ModalSize.Compact,
-                    AriaLabel = "Agent team editor",
-                    TestId = "agents-team-details-dialog"
-                });
-
-            if (result is AgentTeamDetailsDialogResult teamResult)
-            {
-                await ReloadCatalogAsync();
-                selectedTeamId = teamResult.TeamId;
-                expandedTreeNodeIds.Add(BuildTeamTreeNodeId(teamResult.TeamId));
-                await SelectedTeamChanged.InvokeAsync(SelectedTeam);
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Team dialog failed", exception.Message);
-        }
-    }
-
-    private async Task OpenTeamMembersDialogAsync()
-    {
-        var team = SelectedTeam;
-        if (team is null)
-        {
-            return;
-        }
-
-        try
-        {
-            var result = await DialogService.OpenAsync<AgentTeamMembersDialog>(
-                $"Add agents to {team.Name}",
-                new Dictionary<string, object?>
-                {
-                    [nameof(AgentTeamMembersDialog.Team)] = team,
-                    [nameof(AgentTeamMembersDialog.Agents)] = agents,
-                    [nameof(AgentTeamMembersDialog.PrivateAgentIds)] = ResolvePrivateAgentIds()
-                },
-                new DialogOptions
-                {
-                    Eyebrow = "Team membership",
-                    Subtitle = "Click agent cards to select multiple agents, then confirm the team membership.",
-                    Size = ModalSize.Wide,
-                    AriaLabel = "Add agents to team",
-                    TestId = "agents-team-members-dialog-shell"
-                });
-
-            if (result is AgentTeamMembersDialogResult membersResult)
-            {
-                await WorkspaceService.UpdateAgentTeamMembersAsync(
-                    membersResult.TeamId,
-                    membersResult.AgentIds,
-                    CancellationToken.None);
-                await ReloadCatalogAsync();
-                selectedTeamId = membersResult.TeamId;
-                expandedTreeNodeIds.Add(BuildTeamTreeNodeId(membersResult.TeamId));
-                await SelectedTeamChanged.InvokeAsync(SelectedTeam);
-                NotificationService.Success("Team updated", "Agent team membership was saved.");
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Team membership failed", exception.Message);
-        }
-    }
-
-    private async Task DeleteSelectedTeamAsync()
-    {
-        var team = SelectedTeam;
-        if (team is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await WorkspaceService.DeleteAgentTeamAsync(team.Id);
-            selectedTeamId = null;
-            await ReloadCatalogAsync();
-            await SelectedTeamChanged.InvokeAsync(null);
-            NotificationService.Success("Team deleted", $"Deleted {team.Name}.");
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Team delete failed", exception.Message);
-        }
-    }
+    private Task DeleteSelectedTeamAsync()
+        => SelectedTeam is null ? Task.CompletedTask : Intent.InvokeAsync(new AgentCatalogIntent.DeleteTeam(SelectedTeam.Id));
 
     private void ResetAgentSearch()
     {
         agentSearch = string.Empty;
-    }
-
-    private async Task ReloadCatalogAsync()
-    {
-        var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        var providersTask = ProviderRuntimeAdministrationService.ListProvidersAsync();
-        var teamsTask = WorkspaceService.ListAgentTeamsAsync();
-        agents = (await agentsTask).ToList();
-        privateProviderById = BuildPrivateProviderMap(await providersTask);
-        teams = (await teamsTask).ToList();
-        if (selectedTeamId.HasValue &&
-            teams.All(item => item.Id != selectedTeamId.Value))
-        {
-            selectedTeamId = null;
-        }
-
-        ExpandTeamNodes();
     }
 
     private void ExpandTeamNodes()
@@ -608,67 +205,7 @@ public partial class AgentCatalogPanel
         return team is null || team.AgentIds.Contains(agent.Id);
     }
 
-    private void ApplyRequestedTeam(bool force = false)
-    {
-        if (!force &&
-            appliedRequestedTeamId == RequestedTeamId)
-        {
-            return;
-        }
-
-        appliedRequestedTeamId = RequestedTeamId;
-        if (!RequestedTeamId.HasValue)
-        {
-            selectedTeamId = null;
-            return;
-        }
-
-        selectedTeamId = teams.Any(item => item.Id == RequestedTeamId.Value)
-            ? RequestedTeamId.Value
-            : null;
-
-        if (selectedTeamId.HasValue)
-        {
-            expandedTreeNodeIds.Add(BuildTeamTreeNodeId(selectedTeamId.Value));
-        }
-    }
-
-    private bool UsesPrivateProvider(AgentDefinition agent)
-    {
-        return agent.ProviderProfileId.HasValue &&
-               privateProviderById.TryGetValue(agent.ProviderProfileId.Value, out var isPrivateProvider) &&
-               isPrivateProvider;
-    }
-
-    private bool HasValidRequestedSelection()
-        => (!RequestedAgentId.HasValue || agents.Any(item => item.Id == RequestedAgentId.Value)) &&
-           (!RequestedTeamId.HasValue || teams.Any(item => item.Id == RequestedTeamId.Value));
-
-    private async Task PublishAccessStateAsync(AgentChatContextAccessState state)
-    {
-        if (publishedAccessState == state)
-        {
-            return;
-        }
-
-        publishedAccessState = state;
-        await ContextAccessStateChanged.InvokeAsync(state);
-    }
-
-    private IReadOnlyCollection<Guid> ResolvePrivateAgentIds()
-    {
-        return agents
-            .Where(UsesPrivateProvider)
-            .Select(agent => agent.Id)
-            .ToHashSet();
-    }
-
-    private static IReadOnlyDictionary<Guid, bool> BuildPrivateProviderMap(IReadOnlyList<ProviderProfile> providers)
-    {
-        return providers.ToDictionary(
-            provider => provider.Id,
-            provider => provider.IsPrivateProvider);
-    }
+    private bool UsesPrivateProvider(AgentDefinition agent) => Snapshot.UsesPrivateProvider(agent);
 
     private bool MatchesAgentSearch(AgentDefinition agent)
     {

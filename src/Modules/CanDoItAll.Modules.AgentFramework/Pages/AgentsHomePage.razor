@@ -1,4 +1,4 @@
-﻿@page "/agents"
+@page "/agents"
 
 <PageTitle>Agents</PageTitle>
 
@@ -109,7 +109,7 @@
         }
         else if (string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
         {
-            <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
+            <AgentCatalogHost RequestedAgentId="@effectiveRequestedAgentId"
                                RequestedTeamId="@effectiveRequestedTeamId"
                                SelectedAgentChanged="HandleSelectedAgentChangedAsync"
                                SelectedTeamChanged="HandleSelectedTeamChangedAsync"

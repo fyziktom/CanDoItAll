@@ -1,0 +1,15 @@
+# SB02 entry and chosen contracts
+
+Entered after green SB01 route/lazy/context gates at 68db2ee0e63a2ce6baa681e9722acc0a67877b21. B01–B04/B27/B29 preservation scope. No URL changes or project references.
+
+Chosen production contracts: AgentWorkspaceSection and immutable AgentsWorkspaceState own semantic selection and context readiness; current AgentWorkspaceRouteState remains the URL codec. IAgentsWorkspaceQuery/AgentsWorkspaceQuery own explicit shell demand and independent usage reads. IBoundAgentResourceQuery/BoundAgentResourceQuery is the narrow CRM-HR persistence read edge; the page has no EF dependency. Existing application/usage interfaces remain authoritative; no service locator or circuit-scoped mutable session.
+
+Frozen expected tests before source edits: existing 13 Unit baseline cases; six AgentsHomePageTests, two History_hosts_make_no_aggregate_or_history_reads_until_requested and one Agents_shell_exposes_workflows_page_navigation (9 component cases). New AgentsWorkspaceStateTests: Sections_preserve_existing_tab_keys (11 enum cases), Leaving_catalog_clears_team_but_retains_agent, Same_route_keeps_access_readiness_but_changed_selection_requires_loading. New AgentsWorkspaceQueryTests: History_demand_skips_aggregates_but_keeps_shell_identity (2 cases), Usage_refresh_does_not_reload_shell, Real_registration_reads_overview_and_bound_resources, Hr_catalog_failure_is_partial_but_overview_failure_is_not (2 cases). New total 13 unit + 6 component. Final discovery must reconcile exact counts before execution.
+
+Anti-shallow checks: preserve both history host cases, exercise the production query through normal DI and its real persistence adapter, and assert zero cross-demand calls. Existing page tests already use public UI and normal construction. This entry is planned proof, not a passing result.
+
+## Executed result
+
+Direct production build and refreshed Components build: exit 0, zero warnings/errors. First compile exposed a missing Models import; corrected before tests (both build attempts retained). Unit discovery/execution: expected 26, discovered 26, passed 26, zero skipped. Component discovery/execution: expected 15, discovered 15, passed 15, zero skipped. See transcripts/{production-build,component-build-after-import,unit-discovery,unit-results,component-discovery,component-results}.log. Filters select baseline 13 Unit plus AgentsWorkspaceStateTests; Components select AgentsHomePageTests, AgentsWorkspaceQueryTests, exact history-host method and exact Workflows navigation method.
+
+Diff review: same demand triggers, same current codec and replacement behavior, same selected-context projections, same partial HR failure policy. Persistence ownership moved from the page to BoundAgentResourceQuery; no project reference changes. Production query cases exercise skipped aggregate calls, independent usage, partial HR versus fatal overview errors, and actual registered EF adapter. Public existing page tests remain unchanged. SB02 owning gates pass; SB03 unlocked. Final stable/portability/browser closure remains SB07 work, not claimed here.

@@ -1,0 +1,49 @@
+SB03 reopened after browser negative: INV-STATE INV-SESSION INV-WRITE; expected1 First_save_and_update_keep_one_editor_through_real_page_selection_echo; owning build, exact discovery, failing-first run.
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:34.81
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo
+Vytváření sestavení bylo zahájeno 04.09.2026 23:51:32.
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.19]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.34]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.37]   Starting:    CanDoItAll.Tests.Components
+[xUnit.net 00:00:16.98]     CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo [FAIL]
+[xUnit.net 00:00:16.98]       Assert.Single() Failure: The collection contained 2 items
+[xUnit.net 00:00:16.98]       Collection: [DialogReference { ComponentType = typeof(CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog), ChildContent = null, Id = f2a03c15-849b-4178-8da4-5c5d66028f35, Options = DialogOptions { AriaLabel = "Agent details editor", Class = null, CloseOnBackdrop = True, DenseChrome = True, Eyebrow = "Technical editor", ··· }, Parameters = [["AgentId"] = null, ["InitialProviders"] = null, ["TargetChanged"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.AgentEditorTarget], ["Saved"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult]], ··· }, DialogReference { ComponentType = typeof(CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog), ChildContent = null, Id = fa16151b-6dec-4311-bb4f-278e47c8d4a0, Options = DialogOptions { AriaLabel = "Agent details editor", Class = null, CloseOnBackdrop = True, DenseChrome = True, Eyebrow = "Technical editor", ··· }, Parameters = [["AgentId"] = bba5c344-fe87-4962-8086-bbef2a264f33, ["InitialProviders"] = null, ["TargetChanged"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.AgentEditorTarget], ["Saved"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult]], ··· }]
+[xUnit.net 00:00:16.98]       Stack Trace:
+[xUnit.net 00:00:16.98]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs(205,0): at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo()
+[xUnit.net 00:00:16.98]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs(212,0): at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo()
+[xUnit.net 00:00:16.98]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:17.00]   Finished:    CanDoItAll.Tests.Components
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo [16 s]
+  Chybová zpráva:
+   Assert.Single() Failure: The collection contained 2 items
+Collection: [DialogReference { ComponentType = typeof(CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog), ChildContent = null, Id = f2a03c15-849b-4178-8da4-5c5d66028f35, Options = DialogOptions { AriaLabel = "Agent details editor", Class = null, CloseOnBackdrop = True, DenseChrome = True, Eyebrow = "Technical editor", ··· }, Parameters = [["AgentId"] = null, ["InitialProviders"] = null, ["TargetChanged"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.AgentEditorTarget], ["Saved"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult]], ··· }, DialogReference { ComponentType = typeof(CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog), ChildContent = null, Id = fa16151b-6dec-4311-bb4f-278e47c8d4a0, Options = DialogOptions { AriaLabel = "Agent details editor", Class = null, CloseOnBackdrop = True, DenseChrome = True, Eyebrow = "Technical editor", ··· }, Parameters = [["AgentId"] = bba5c344-fe87-4962-8086-bbef2a264f33, ["InitialProviders"] = null, ["TargetChanged"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.AgentEditorTarget], ["Saved"] = Microsoft.AspNetCore.Components.EventCallback`1[CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult]], ··· }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs:line 205
+   at CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs:line 212
+--- End of stack trace from previous location ---
+
+Celkový počet testů: 1
+Testovací běh nebyl úspěšný.
+     Neúspěšné: 1
+ Celkový čas: 17,6107 Sekundy
+     1>Projekt C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj v uzlu 1 (počet cílů: VSTest).
+     1>_VSTestConsole:
+         MSB4181: Úloha VSTestTask vrátila false, ale do protokolu se nezaznamenala chyba.
+     1>Sestavení projektu C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj (počet cílů: VSTest) bylo dokončeno: CHYBA.
+
+Sestavení SE NEZDAŘILO.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:18.34
+ExitCode=1

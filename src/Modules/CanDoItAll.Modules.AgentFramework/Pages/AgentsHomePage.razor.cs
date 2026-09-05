@@ -4,11 +4,8 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Charts;
-using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
@@ -21,19 +18,13 @@ public partial class AgentsHomePage
     public NavigationManager Navigation { get; set; } = default!;
 
     [Inject]
-    public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
-
-    [Inject]
-    public ProviderUsageQueryService UsageQueryService { get; set; } = default!;
+    public IAgentsWorkspaceQuery WorkspaceQuery { get; set; } = default!;
 
     [Inject]
     public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
 
     [Inject]
     private AgentFrameworkCatalogWarmupService CatalogWarmupService { get; set; } = default!;
-
-    [Inject]
-    public IDbContextFactory<AppDbContext> DbContextFactory { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -68,14 +59,15 @@ public partial class AgentsHomePage
     private int capabilityCount;
     private int activeRunCount;
     private int failedRunCount;
-    private string selectedTab = AgentWorkspaceTabs.Overview;
-    private Guid? effectiveRequestedAgentId;
-    private Guid? effectiveRequestedTeamId;
-    private SimpleChatWorkspaceRouteState simpleChatRouteState = SimpleChatWorkspaceRouteState.Default;
+    private AgentsWorkspaceState workspaceState = new();
+    private string selectedTab => workspaceState.Section.ToTabKey();
+    private Guid? effectiveRequestedAgentId => workspaceState.AgentId;
+    private Guid? effectiveRequestedTeamId => workspaceState.TeamId;
+    private SimpleChatWorkspaceRouteState simpleChatRouteState => workspaceState.SimpleChat;
     private AgentDefinition? selectedContextAgent;
     private AgentTeamDefinition? selectedContextTeam;
     private AgentDefinition? hrAgent;
-    private AgentChatContextAccessState selectionAccessState = AgentChatContextAccessState.Loading;
+    private AgentChatContextAccessState selectionAccessState => workspaceState.SelectionAccess;
     private bool isLoaded;
     private bool isConfirmingDefaults;
     private bool isFeedingDefaults;
@@ -83,14 +75,14 @@ public partial class AgentsHomePage
     private bool hasOverviewLoadError;
     private string? overviewLoadError;
     private AgentOverviewSnapshot overview = AgentOverviewSnapshot.Empty;
-    private ProviderUsageWorkloadSelection usageSelection = ProviderUsageWorkloadSelection.Both;
+    private ProviderUsageWorkloadSelection usageSelection => workspaceState.UsageSelection;
     private ProviderUsageSnapshot usage = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isUsageLoading;
     private bool refreshUsageFromRoute;
     private bool hasUsageLoaded;
     private bool hasOverviewLoaded;
     private bool isRefreshingShell;
-    private bool IsHistoryHost => selectedTab is AgentWorkspaceTabs.Providers or AgentWorkspaceTabs.RequestHistory;
+    private bool IsHistoryHost => workspaceState.Section.IsHistoryHost();
     private string? usageLoadError;
     private IReadOnlyDictionary<string, string?> overviewConsumerAvatarImageUrls =
         new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -124,7 +116,7 @@ public partial class AgentsHomePage
         => hasOverviewLoadError
             ? AgentChatContextAccessState.Failed
             : isLoaded
-                ? UsesAgentSelection(selectedTab)
+                ? workspaceState.Section.UsesAgentSelection()
                     ? selectionAccessState
                     : AgentChatContextAccessState.Ready
                 : AgentChatContextAccessState.Loading;
@@ -381,28 +373,20 @@ public partial class AgentsHomePage
         }
     }
 
-    private async Task LoadDashboardAsync()
-    {
-        var loadUsage = !IsHistoryHost;
-        var overviewTask = loadUsage ? WorkspaceService.GetAgentOverviewAsync() : Task.FromResult(overview);
-        var usageTask = loadUsage ? UsageQueryService.QueryAsync(usageSelection).AsTask() : Task.FromResult(usage);
-        var hrAgentTask = TryResolveHrAgentAsync();
-        var boundResourceCountTask = LoadBoundResourceCountAsync();
-        await Task.WhenAll(overviewTask, usageTask, hrAgentTask, boundResourceCountTask);
-
-        overview = await overviewTask;
-        hasOverviewLoaded |= loadUsage;
-        usage = await usageTask;
-        hasUsageLoaded |= loadUsage;
+    private async Task LoadDashboardAsync() {
+        var snapshot = await WorkspaceQuery.ReadShellAsync(workspaceState.Section, usageSelection);
+        if (snapshot.Overview is { } loadedOverview) {
+            overview = loadedOverview;
+            hasOverviewLoaded = true;
+        }
+        if (snapshot.Usage is { } loadedUsage) {
+            usage = loadedUsage;
+            hasUsageLoaded = true;
+        }
         usageLoadError = ResolveUsageSourceError(usage);
-        var hrAgentResolution = await hrAgentTask;
-        hrAgent = hrAgentResolution.Agent;
-        overviewConsumerAvatarImageUrls = hrAgentResolution.Agents.ToDictionary(
-            item => item.Id.ToString("D"),
-            item => item.AvatarImageUrl,
-            StringComparer.OrdinalIgnoreCase);
-        if (hrAgentResolution.ErrorMessage is { } hrAgentError)
-        {
+        hrAgent = snapshot.HrAgent;
+        overviewConsumerAvatarImageUrls = snapshot.AvatarImageUrls;
+        if (snapshot.HrAgentError is { } hrAgentError) {
             NotificationService.Warning("HR Agent unavailable", hrAgentError);
         }
         technicalAgentCount = overview.Totals.AgentCount;
@@ -410,34 +394,8 @@ public partial class AgentsHomePage
         capabilityCount = overview.Totals.CapabilityCount;
         activeRunCount = overview.Totals.ActiveRuns;
         failedRunCount = overview.Totals.FailedRuns;
-        boundResourceCount = await boundResourceCountTask;
-
+        boundResourceCount = snapshot.BoundResourceCount;
         isLoaded = true;
-    }
-
-    private async Task<(AgentDefinition? Agent, IReadOnlyList<AgentDefinition> Agents, string? ErrorMessage)> TryResolveHrAgentAsync()
-    {
-        try
-        {
-            var agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-            var agent = agents.SingleOrDefault(HrAgentIdentity.Matches);
-            return agent is null
-                ? (null, agents, $"The managed agent '{HrAgentIdentity.AgentId:D}' is not available.")
-                : (agent, agents, null);
-        }
-        catch (Exception exception)
-        {
-            return (null, [], exception.Message);
-        }
-    }
-
-    private async Task<int> LoadBoundResourceCountAsync()
-    {
-        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-        return await dbContext.Set<AiResourceBinding>()
-            .CountAsync(item =>
-                item.TechnicalAgentId.HasValue &&
-                item.BindingStatus == AiResourceBindingStatus.Bound);
     }
 
     private async Task FeedDefaultsAsync()
@@ -486,33 +444,19 @@ public partial class AgentsHomePage
         }
     }
 
-    private Task HandleTabChangedAsync(
-        string key)
-    {
-        if (!string.Equals(selectedTab, key, StringComparison.Ordinal))
-        {
-            selectionAccessState = UsesAgentSelection(key)
-                ? AgentChatContextAccessState.Loading
-                : AgentChatContextAccessState.Ready;
-        }
-
-        selectedTab = key;
-        if (!string.Equals(key, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
-        {
-            effectiveRequestedTeamId = null;
-        }
-
+    private Task HandleTabChangedAsync(string key) {
+        workspaceState = workspaceState.SelectSection(AgentWorkspaceSections.FromTabKey(key));
         Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
         return Task.CompletedTask;
     }
 
     private Task HandleSelectedAgentChangedAsync(AgentDefinition? agent)
     {
-        effectiveRequestedAgentId = agent?.Id;
+        workspaceState = workspaceState with { AgentId = agent?.Id };
         selectedContextAgent = agent;
         if (!string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
         {
-            effectiveRequestedTeamId = null;
+            workspaceState = workspaceState with { TeamId = null };
             selectedContextTeam = null;
         }
 
@@ -521,7 +465,7 @@ public partial class AgentsHomePage
 
     private Task HandleSelectedTeamChangedAsync(AgentTeamDefinition? team)
     {
-        effectiveRequestedTeamId = team?.Id;
+        workspaceState = workspaceState with { TeamId = team?.Id };
         selectedContextTeam = team;
         return Task.CompletedTask;
     }
@@ -533,15 +477,12 @@ public partial class AgentsHomePage
             throw new ArgumentOutOfRangeException(nameof(state), state, "The Agents selection access state is undefined.");
         }
 
-        selectionAccessState = state;
+        workspaceState = workspaceState with { SelectionAccess = state };
         return Task.CompletedTask;
     }
 
     private void ApplyRequestedTab()
     {
-        var previousTab = selectedTab;
-        var previousAgentId = effectiveRequestedAgentId;
-        var previousTeamId = effectiveRequestedTeamId;
         var routeState = AgentWorkspaceRouteState.Parse(
             ResolveRequestedTab(),
             ResolveRequestedAgentId(),
@@ -562,29 +503,10 @@ public partial class AgentsHomePage
             selectedContextTeam = null;
         }
 
-        effectiveRequestedAgentId = requestedAgentId;
-        effectiveRequestedTeamId = requestedTeamId;
-        selectedTab = routeState.Tab;
-        simpleChatRouteState = routeState.SimpleChat;
+        workspaceState = workspaceState.ApplyRoute(routeState);
         refreshUsageFromRoute = !IsHistoryHost && isLoaded && !isUsageLoading &&
             (!hasUsageLoaded || usage.Selection != routeState.UsageSelection);
-
-        usageSelection = routeState.UsageSelection;
-        if (!string.Equals(previousTab, selectedTab, StringComparison.Ordinal) ||
-            previousAgentId != effectiveRequestedAgentId ||
-            previousTeamId != effectiveRequestedTeamId)
-        {
-            selectionAccessState = UsesAgentSelection(selectedTab)
-                ? AgentChatContextAccessState.Loading
-                : AgentChatContextAccessState.Ready;
-        }
     }
-
-    private static bool UsesAgentSelection(string tab)
-        => tab is AgentWorkspaceTabs.Agents or
-            AgentWorkspaceTabs.Chat or
-            AgentWorkspaceTabs.Capabilities or
-            AgentWorkspaceTabs.Governance;
 
     private string? ResolveRequestedTab()
     {
@@ -730,7 +652,7 @@ public partial class AgentsHomePage
             return;
         }
 
-        usageSelection = selection;
+        workspaceState = workspaceState with { UsageSelection = selection };
         isUsageLoading = true;
         Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
         await LoadUsageSelectionAsync(selection);
@@ -742,7 +664,7 @@ public partial class AgentsHomePage
         usageLoadError = null;
         try
         {
-            usage = await UsageQueryService.QueryAsync(selection);
+            usage = await WorkspaceQuery.ReadUsageAsync(selection);
             hasUsageLoaded = true;
             usageLoadError = ResolveUsageSourceError(usage);
         }
@@ -760,18 +682,13 @@ public partial class AgentsHomePage
     private Task HandleSimpleChatRouteStateChangedAsync(SimpleChatWorkspaceRouteState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        simpleChatRouteState = state;
+        workspaceState = workspaceState with { SimpleChat = state };
         Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
         return Task.CompletedTask;
     }
 
     private string BuildCurrentRoute()
-        => AgentWorkspaceRouteState.Build(new(
-            selectedTab,
-            effectiveRequestedAgentId,
-            effectiveRequestedTeamId,
-            simpleChatRouteState,
-            usageSelection));
+        => AgentWorkspaceRouteState.Build(workspaceState.ToRoute());
 
     private static string? ResolveUsageSourceError(ProviderUsageSnapshot snapshot)
     {
@@ -863,9 +780,7 @@ public partial class AgentsHomePage
 
     private Task OpenAgentsForTeamAsync(Guid teamId)
     {
-        selectedTab = AgentWorkspaceTabs.Agents;
-        effectiveRequestedAgentId = null;
-        effectiveRequestedTeamId = teamId;
+        workspaceState = workspaceState with { Section = AgentWorkspaceSection.Agents, AgentId = null, TeamId = teamId };
         Navigation.NavigateTo(BuildAgentsRoute(AgentWorkspaceTabs.Agents, null, teamId));
         return Task.CompletedTask;
     }

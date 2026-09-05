@@ -1,0 +1,50 @@
+SB06 INV-STATE INV-WRITE; dotnet test owning Unit -c Release --no-build --no-restore --verbosity normal --filter (unit-discovery.log); expected28
+2026-09-04T23:31:12.5847483-04:00
+Vytváření sestavení bylo zahájeno 04.09.2026 23:31:12.
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.26]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.78]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.82]   Starting:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Leaving_catalog_clears_team_but_retains_agent [7 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_builder_exposes_only_selections_relevant_to_the_active_view [9 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.ChatsRouteRedirectsAndPreservesRecognizedState [7 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_builder_uses_validated_component_selection_labels [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Request_history_context_has_no_invented_summary_or_inherited_agent_selection [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.History_hosts_round_trip_without_inheriting_chat_or_team_routes(tab: "request-history") [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.History_hosts_round_trip_without_inheriting_chat_or_team_routes(tab: "providers") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "simple-chats", expected: SimpleChats) [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Voice, key: "voice") [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "invalid", expected: Both) [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "both", expected: Both) [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "agents", expected: Agents) [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Overview, key: "overview") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Providers, key: "providers") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Agents, key: "agents") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: RequestHistory, key: "request-history") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Capabilities, key: "capabilities") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Diagnostics, key: "diagnostics") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: SimpleChats, key: "simple-chats") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Governance, key: "governance") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: FloatingChat, key: "floating-chat") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Chat, key: "chat") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.InvalidOrIncompatibleSimpleChatStateIsDiscardedDeterministically [1 ms]
+[xUnit.net 00:00:00.96]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.ConversationDeepLinksRemainExplicitAfterDefinitionsBecomeTheDefault [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.DefinitionsAreTheDefaultSimpleChatWorkspaceView [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Same_route_keeps_access_readiness_but_changed_selection_requires_loading [4 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests.Capture_preserves_version_and_owns_nested_mutable_state [114 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests.Capture_normalizes_tags_and_defaults_without_changing_visible_draft [4 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 28
+     Úspěšné: 28
+ Celkový čas: 1,3743 Sekundy
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:01.92
+ExitCode=0

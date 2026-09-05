@@ -1,8 +1,8 @@
-# Future execution proof placement
+# Execution proof placement
 
-This directory currently contains only this contract. No subbundle execution evidence is claimed.
+This directory now contains actual SB01-SB07 execution artifacts. See SB06/manifest.md for final focused 130 Components / 28 Unit proof and SB07 for governed integration closure. Historical failed/invalidated attempts remain labeled; they are not acceptance evidence.
 
-Future execution creates proof/SB01 through proof/SB07. Every phase keeps a concise manifest.md with source SHA/dirty state and sibling SHAs/mode, owned R/B rows and raw notes, P/S/U classification, changed files, chosen production contracts/constructor dependencies, exact commands/selectors, expected test names/data/counts frozen before edits, actual discovery/results/exit codes, UI composition decision, artifacts and reopen/invalidation outcome.
+Authorized execution records evidence in proof/SB01 through proof/SB07. Every phase keeps a concise manifest.md with source SHA/dirty state and sibling SHAs/mode, owned R/B rows and raw notes, P/S/U classification, changed files, chosen production contracts/constructor dependencies, exact commands/selectors, expected test names/data/counts frozen before edits, actual discovery/results/exit codes, UI composition decision, artifacts and reopen/invalidation outcome.
 
 Standard SB01 needs baseline/characterization/reference/measurement evidence. Behavioral phases may keep exact commands/results in their report without separate full transcript manifests. They must still show semantic adequacy: literal/normalized owned note, production behavior and source, test proof, shallow-pass trap, realistic positive case, adversarial negative case and anti-stub audit.
 
@@ -40,4 +40,4 @@ Verify every path/hash/source association and reject stale evidence. Root MANIFE
 
 Store bounded masked logs and disposable fixture identifiers. Do not retain credentials, connection strings, full database dumps, runtime caches or packages. Source rollback cannot undo validation mutations; record fixture cleanup separately.
 
-The bundle-local ignore rule exposes this preparation contract while keeping future runtime artifacts ignored by default. During authorized execution, deliberately include required reviewed proof artifacts through a scoped tracking rule or explicit file staging; never let ignored/missing evidence masquerade as delivered closure.
+The bundle-local ignore rule exposes the reviewed SB01-SB07 proof, while redundant raw portability scan files remain local; the complete final JSON scan is delivered as gzip. During authorized execution, deliberately include required reviewed proof artifacts through a scoped tracking rule or explicit file staging; never let ignored/missing evidence masquerade as delivered closure.

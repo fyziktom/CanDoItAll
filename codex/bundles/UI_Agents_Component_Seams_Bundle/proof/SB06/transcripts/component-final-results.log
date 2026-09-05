@@ -1,0 +1,200 @@
+SB06 INV-STATE INV-SESSION INV-WRITE INV-COMPOSITION; dotnet test owning Components -c Release --no-build --no-restore --verbosity normal --filter (component-final-discovery.log); expected129
+2026-09-04T23:21:48.7601409-04:00
+Vytváření sestavení bylo zahájeno 04.09.2026 23:21:48.
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.15]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.27]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.30]   Starting:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogAvatarGenerationTests.Avatar_dialog_explains_when_no_default_image_provider_is_available [370 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogAvatarGenerationTests.Avatar_dialog_prefills_and_prepares_prompt_for_the_default_image_provider [57 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.ExternalWorkspaceRootSelectionFieldTests.Absolute_path_round_trips_through_persisted_bindings_in_a_fresh_component_registry [62 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.ExternalWorkspaceRootSelectionFieldTests.Canonical_alias_can_be_added_once_and_duplicate_input_is_retained_with_validation [13 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.ExternalWorkspaceRootSelectionFieldTests.Removing_a_root_prunes_its_binding_and_preserves_other_roots [14 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.ExternalWorkspaceRootSelectionFieldTests.Canonical_alias_without_a_binding_remains_visible_as_unresolved [4 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.ExternalWorkspaceRootSelectionFieldTests.Invalid_relative_path_keeps_the_input_and_reports_inline_validation [3 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: False) [9 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion(fail: True) [4 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: False) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion(fail: True) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Target_echo_after_first_save_retains_session_and_later_edits [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogProjectStructureAccessTests.Save_normalizes_a_stale_mixed_project_scope_before_persistence [9 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogProjectStructureAccessTests.Enabling_all_projects_clears_an_existing_explicit_allowlist [4 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Field_resolves_a_saved_catalog_id_to_its_readable_name_without_opening_the_chooser [11 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Dialog_loads_the_current_catalog_on_every_open [22 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Dialog_preserves_missing_and_disabled_selected_ids_until_removed [8 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Cancel_discards_staged_selection [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Dialog_blocks_new_disabled_ids_and_allows_read_only_ids [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Field_resolves_catalog_details_when_selected_ids_arrive_after_initial_render [5 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Dialog_retry_recovers_from_a_catalog_load_failure [5 ms]
+  Úspěšné CanDoItAll.Tests.Components.Workspace.StorageCatalogSelectionComponentsTests.Field_preserves_selection_and_disables_editing_when_allow_all_is_enabled [2 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelOrderingTests.Required_behavior_roundtrips_through_add_and_edit_controls [50 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelOrderingTests.Removing_binding_prunes_every_hidden_provider_selector [7 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelOrderingTests.Existing_bindings_render_in_configured_order_and_can_move [4 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorReadCompositionTests.Registered_reader_loads_existing_identity_version_and_reference_adapters [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorReadCompositionTests.Registered_reader_returns_independent_drafts_for_new_and_existing_targets [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogCapabilityTests.Capability_wizard_stages_new_agents_and_persists_existing_agents(existingAgent: True) [40 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogCapabilityTests.Capability_wizard_stages_new_agents_and_persists_existing_agents(existingAgent: False) [11 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogCapabilityTests.Capabilities_tab_shows_tools_and_filters_the_shared_catalog [23 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested(tab: "request-history") [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested(tab: "providers") [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Section_changes_retain_edit_context_and_unsaved_draft [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Projects_remain_lazy_and_retry_does_not_replace_draft [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Dispose_ignores_delayed_load [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reference_failures_are_independent(failSecrets: True) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reference_failures_are_independent(failSecrets: False) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_invalidates_pending_project_result_and_allows_new_request [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Separate_editors_keep_independent_drafts [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Target_change_ignores_old_load_completion(failOldLoad: False) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Target_change_ignores_old_load_completion(failOldLoad: True) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save [25 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence [10 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null [3 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default [10 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected [3 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab [3 s]
+[xUnit.net 00:01:18.46]     CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces [FAIL]
+[xUnit.net 00:01:18.46]       Npgsql.NpgsqlException : Received backend message ParseComplete while expecting ReadyForQueryMessage. Please file a bug.
+[xUnit.net 00:01:18.46]       Stack Trace:
+[xUnit.net 00:01:18.46]            at Npgsql.Util.Statics.ThrowIfMsgWrongType[T](IBackendMessage msg, NpgsqlConnector connector)
+[xUnit.net 00:01:18.46]            at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+[xUnit.net 00:01:18.46]            at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+[xUnit.net 00:01:18.46]            at Npgsql.NpgsqlDataReader.Consume(Boolean async, Exception firstException)
+[xUnit.net 00:01:18.46]            at Npgsql.NpgsqlDataReader.Consume(Boolean async, Exception firstException)
+[xUnit.net 00:01:18.46]            at Npgsql.NpgsqlDataReader.Close(Boolean async, Boolean connectionClosing, Boolean isDisposing)
+[xUnit.net 00:01:18.46]            at Npgsql.Internal.NpgsqlConnector.CloseOngoingOperations(Boolean async)
+[xUnit.net 00:01:18.46]            at Npgsql.NpgsqlConnection.CloseAsync(Boolean async)
+[xUnit.net 00:01:18.46]            at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.ResetStateAsync(Boolean disposeDbConnection)
+[xUnit.net 00:01:18.46]            at Microsoft.EntityFrameworkCore.DbContext.Microsoft.EntityFrameworkCore.Infrastructure.IResettableService.ResetStateAsync(CancellationToken cancellationToken)
+[xUnit.net 00:01:18.46]            at Microsoft.EntityFrameworkCore.Internal.DbContextPool`1.ReturnAsync(IDbContextPoolable context, CancellationToken cancellationToken)
+[xUnit.net 00:01:18.46]            at Microsoft.EntityFrameworkCore.DbContext.DisposeAsync()
+[xUnit.net 00:01:18.46]            at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.<DisposeAsync>g__Await|26_0(Int32 i, ValueTask vt, List`1 toDispose)
+[xUnit.net 00:01:18.46]         /_/src/bunit/BunitServiceProvider.cs(170,0): at Bunit.BunitServiceProvider.DisposeAsync()
+[xUnit.net 00:01:18.46]         /_/src/bunit/BunitContext.cs(105,0): at Bunit.BunitContext.DisposeAsyncCore()
+[xUnit.net 00:01:18.46]         /_/src/bunit/BunitContext.cs(80,0): at Bunit.BunitContext.DisposeAsync()
+[xUnit.net 00:01:18.46]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ComponentTestHarness.cs(86,0): at CanDoItAll.Tests.Components.ComponentTestHarness.DisposeAsync()
+[xUnit.net 00:01:18.46]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentsHomePageTests.cs(172,0): at CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces()
+[xUnit.net 00:01:18.46]         --- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces [2 s]
+  Chybová zpráva:
+   Npgsql.NpgsqlException : Received backend message ParseComplete while expecting ReadyForQueryMessage. Please file a bug.
+  Trasování zásobníku:
+     at Npgsql.Util.Statics.ThrowIfMsgWrongType[T](IBackendMessage msg, NpgsqlConnector connector)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.Consume(Boolean async, Exception firstException)
+   at Npgsql.NpgsqlDataReader.Consume(Boolean async, Exception firstException)
+   at Npgsql.NpgsqlDataReader.Close(Boolean async, Boolean connectionClosing, Boolean isDisposing)
+   at Npgsql.Internal.NpgsqlConnector.CloseOngoingOperations(Boolean async)
+   at Npgsql.NpgsqlConnection.CloseAsync(Boolean async)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.ResetStateAsync(Boolean disposeDbConnection)
+   at Microsoft.EntityFrameworkCore.DbContext.Microsoft.EntityFrameworkCore.Infrastructure.IResettableService.ResetStateAsync(CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Internal.DbContextPool`1.ReturnAsync(IDbContextPoolable context, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.DisposeAsync()
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.<DisposeAsync>g__Await|26_0(Int32 i, ValueTask vt, List`1 toDispose)
+   at Bunit.BunitServiceProvider.DisposeAsync() in /_/src/bunit/BunitServiceProvider.cs:line 170
+   at Bunit.BunitContext.DisposeAsyncCore() in /_/src/bunit/BunitContext.cs:line 105
+   at Bunit.BunitContext.DisposeAsync() in /_/src/bunit/BunitContext.cs:line 80
+   at CanDoItAll.Tests.Components.ComponentTestHarness.DisposeAsync() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ComponentTestHarness.cs:line 86
+   at CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentsHomePageTests.cs:line 172
+--- End of stack trace from previous location ---
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Hr_agent_avatar_action_remains_in_the_page_header_across_module_tabs [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chat_inner_view_is_restored_from_the_typed_query_state [3 s]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Enabled_provider_without_sync_query_is_not_offered_for_context_binding [3 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Selected_configured_provider_is_added_as_alias_binding [5 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.No_provider_state_disables_binding_actions [1 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Existing_bindings_render_when_profiles_are_disabled_or_deleted [2 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Non_automatic_mode_clears_and_disables_memory_tools(mode: ExplicitDirective) [1 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Non_automatic_mode_clears_and_disables_memory_tools(mode: Disabled) [1 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Provider_load_failure_is_displayed_and_logged_without_mutating_settings [2 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Arbitrary_unconfigured_provider_id_is_rejected [2 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Picker_excludes_unhealthy_missing_driver_and_ambiguous_driver_profiles [1 ms]
+  Úspěšné CanDoItAll.Tests.Components.Memory.AgentMemorySettingsPanelTests.Enabled_providers_are_listed_and_disabled_providers_are_excluded [4 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests.Core_load_failure_currently_exposes_a_blank_editable_form(failure: Agents) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests.Core_load_failure_currently_exposes_a_blank_editable_form(failure: Capabilities) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests.Accepted_save_followed_by_refresh_failure_retains_identity_and_blocks_repeated_write [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests.Clear_on_an_existing_agent_creates_a_blank_draft_without_saving [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Real_save_refresh_retry_reuses_acknowledgement_without_another_write [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Real_save_callback_failure_keeps_current_version_and_does_not_replay [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Unknown_write_outcome_retains_draft_and_requires_catalog_check [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Registered_commands_reject_root_preparation_before_write [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Registered_commands_round_trip_settings_and_preserve_optimistic_version [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Managed_delete_is_rejected_by_registered_command_and_preserves_catalog [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Editor_memory_binding_round_trips_real_child_settings [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Real_operations_update_and_delete_only_the_selected_team [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_opens_once_and_changed_request_opens_again [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Real_operations_respect_initial_data_and_repair_then_reload [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_delete_preserves_no_confirmation_and_clears_selection [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_results_refresh_once_and_cancel_has_no_write(members: True) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_results_refresh_once_and_cancel_has_no_write(members: False) [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Controlled_panel_search_and_selection_emit_intents_without_services [9 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: False) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: True) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Existing_capability_toggle_saves_whole_unsaved_draft_new_agent_stages(existing: False) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Existing_capability_toggle_saves_whole_unsaved_draft_new_agent_stages(existing: True) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Real_capability_wizard_creates_and_assigns(existing: True) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Real_capability_wizard_creates_and_assigns(existing: False) [3 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.History_demand_skips_aggregates_but_keeps_shell_identity(section: Providers) [3 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.History_demand_skips_aggregates_but_keeps_shell_identity(section: RequestHistory) [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Real_registration_reads_overview_and_bound_resources [2 s]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Hr_catalog_failure_is_partial_but_overview_failure_is_not(failOverview: False) [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Hr_catalog_failure_is_partial_but_overview_failure_is_not(failOverview: True) [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentsWorkspaceQueryTests.Usage_refresh_does_not_reload_shell [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Delete_opens_confirmation_without_mutating_the_agent [11 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Successful_dialog_delete_emits_only_the_close_result_channel [7 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Confirming_delete_mutates_the_agent_exactly_once [5 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Failed_delete_keeps_agent_details_open_and_usable [11 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Cancelling_delete_does_not_mutate_or_close_agent_details [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(fail: False) [13 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_notifies_only_on_success(fail: True) [1 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft(fail: True) [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft(fail: False) [4 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Reset_rejects_pending_avatar_result [9 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Avatar_generation_failure_retains_unrelated_draft [9 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_workflow_curator_identity [9 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_marks_card_selection_as_handled_for_requested_dialog_echo [4 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Deleted_agent_result_clears_selection_instead_of_selecting_another_agent [7 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_reports_the_actual_selected_agent_to_its_page_owner [2 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Enterprise_agent_card_has_stable_status_type_tags_and_service_tooltips [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_scheduler_agent_identity [3 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_hr_agent [5 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Agent_selection_card_renders_actions_outside_the_selection_button [1 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_prompts_curator_agent [3 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Cancelling_auto_approval_confirmation_leaves_the_policy_disabled [9 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Legacy_external_workspace_root_is_migrated_with_a_binding_on_save [9 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Changing_workspace_profile_preserves_existing_external_root_binding(selectedProfile: Custom) [16 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Changing_workspace_profile_preserves_existing_external_root_binding(selectedProfile: SoftwareDevelopment) [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Relative_external_workspace_root_is_rejected_without_clearing_the_input [4 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Acknowledging_auto_approval_enables_the_policy_and_keeps_a_warning_visible [7 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Storage_catalog_picker_selection_is_saved_from_the_typed_field [26 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Removing_a_saved_storage_catalog_removes_its_id_on_save [6 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Native_external_workspace_root_survives_save [15 ms]
+[xUnit.net 00:02:43.67]   Finished:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Identity_contains_tags_without_a_separate_tags_tab [2 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.External_call_approval_switch_updates_the_runtime_policy [1 ms]
+  Úspěšné CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Removing_a_saved_external_root_removes_its_alias_and_binding_on_save [5 ms]
+
+Testovací běh nebyl úspěšný.
+Celkový počet testů: 129
+     Úspěšné: 128
+     Neúspěšné: 1
+ Celkový čas: 2,7361 Minuty
+     1>Projekt C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj v uzlu 1 (počet cílů: VSTest).
+     1>_VSTestConsole:
+         MSB4181: Úloha VSTestTask vrátila false, ale do protokolu se nezaznamenala chyba.
+     1>Sestavení projektu C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj (počet cílů: VSTest) bylo dokončeno: CHYBA.
+
+Sestavení SE NEZDAŘILO.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:02:44.72
+ExitCode=1

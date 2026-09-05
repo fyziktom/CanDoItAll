@@ -1,0 +1,9 @@
+SB07 INV-PORTABILITY; cwd C:\repositories\CanDoItAll; python tools/Validation/Portability/scan_portability.py --repo-root . --output (proof/SB07/portability-final-scan.json); includes untracked source
+2026-09-04T23:22:10.2488806-04:00
+Scanned files: 5222
+Findings: 28670
+JSON: C:\repositories\CanDoItAll\codex\bundles\UI_Agents_Component_Seams_Bundle\proof\SB07\portability-final-scan.json
+CSV: C:\repositories\CanDoItAll\codex\bundles\UI_Agents_Component_Seams_Bundle\proof\SB07\portability-final-scan.csv
+Markdown: C:\repositories\CanDoItAll\codex\bundles\UI_Agents_Component_Seams_Bundle\proof\SB07\portability-final-scan.md
+RESULT: PASS
+Scan ExitCode=0

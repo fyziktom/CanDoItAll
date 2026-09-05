@@ -5,18 +5,14 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
-
 public sealed record AgentDetailsDialogResult(Guid? AgentId, bool Deleted);
 
-public partial class AgentDetailsDialog
+public partial class AgentDetailsDialog : IDisposable
 {
     [Parameter]
     public Guid? AgentId { get; set; }
@@ -27,17 +23,22 @@ public partial class AgentDetailsDialog
     [Parameter]
     public EventCallback<AgentDetailsDialogResult> Saved { get; set; }
 
-    [Inject]
-    public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+    [Parameter]
+    public AgentEditorSection Section { get; set; } = AgentEditorSection.Identity;
+
+    [Parameter]
+    public EventCallback<AgentEditorSection> SectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentEditorTarget> TargetChanged { get; set; }
+
+    public AgentEditorTarget CurrentTarget => session.Target;
 
     [Inject]
-    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
+    public IAgentEditorCommands EditorCommands { get; set; } = default!;
 
     [Inject]
-    public ProjectsService ProjectsService { get; set; } = default!;
-
-    [Inject]
-    public SecretService SecretService { get; set; } = default!;
+    public IAgentEditorReads EditorReads { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -45,18 +46,19 @@ public partial class AgentDetailsDialog
     [Inject]
     public DialogService DialogService { get; set; } = default!;
 
-    [Inject]
-    public IExternalTargetPathRegistryFactory ExternalTargetPathRegistryFactory { get; set; } = default!;
-
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
-    private AgentEditorModel editorModel = new();
+    private AgentEditorSession session = new(AgentEditorTarget.Create);
+    private AgentEditorModel editorModel => session.Draft;
+    private bool targetApplied;
+    private Guid? appliedTargetId;
+    private bool isDisposed;
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyList<CapabilityCatalogItem> capabilities = [];
-    private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
-    private IReadOnlyList<SecretListItem> secrets = [];
+    private IReadOnlyList<AgentEditorProject> projectStructureProjects = [];
+    private IReadOnlyList<AgentEditorSecret> secrets = [];
     private IReadOnlyList<string> tagValues = [];
     private string capabilitySearch = string.Empty;
     private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
@@ -72,12 +74,12 @@ public partial class AgentDetailsDialog
     private bool isLoadingProjectStructureProjects;
     private bool projectStructureProjectsRequested;
     private bool areSecretsLoaded;
-    private bool isLoadingSecrets;
+    private bool isLoadingSecrets => isLoading;
     private string? providerLoadErrorMessage;
     private string? projectStructureProjectsErrorMessage;
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
-    private int selectedTabIndex;
+    private int selectedTabIndex => (int)Section;
     private int autoApprovalInputVersion;
 
     private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
@@ -95,8 +97,15 @@ public partial class AgentDetailsDialog
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
 
-    private async Task RefreshRuntimeProvidersAsync() {
-        providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
+    private async Task RefreshRuntimeProvidersAsync(AgentEditorSession owner) {
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        var refreshedProviders = await EditorReads.ReadProvidersAsync(owner.CancellationToken);
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        providers = refreshedProviders;
         areProvidersLoaded = true;
         providerLoadErrorMessage = null;
     }
@@ -201,96 +210,100 @@ public partial class AgentDetailsDialog
         .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnParametersSetAsync() {
+        if (!Enum.IsDefined(Section)) {
+            throw new ArgumentOutOfRangeException(nameof(Section), Section, "Unknown agent editor section.");
+        }
+        if (targetApplied && (appliedTargetId == AgentId || session.Target.AgentId == AgentId)) {
+            appliedTargetId = AgentId;
+            return;
+        }
+        targetApplied = true;
+        appliedTargetId = AgentId;
+        ReplaceSession(new(AgentId));
+        providers = [];
+        capabilities = [];
+        agents = [];
+        secrets = [];
+        projectStructureProjects = [];
+        areProvidersLoaded = false;
+        areSecretsLoaded = false;
+        areProjectStructureProjectsLoaded = false;
+        projectStructureProjectsRequested = false;
+        providerLoadErrorMessage = null;
+        secretsErrorMessage = null;
+        projectStructureProjectsErrorMessage = null;
         await LoadAsync();
     }
 
-    private async Task LoadAsync()
-    {
+    private async Task LoadAsync() {
+        var owner = session;
         isLoading = true;
-
-        try
-        {
-            var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
-            var providersTask = InitialProviders is null
-            ? ProviderRuntimeAdministrationService.ListProvidersAsync()
-                : Task.FromResult<IReadOnlyList<ProviderProfile>>(InitialProviders);
-            var capabilitiesTask = WorkspaceService.ListCapabilitiesAsync();
-            var secretsTask = SecretService.ListForPickerAsync();
-
-            agents = (await agentsTask).ToList();
-            capabilities = (await capabilitiesTask).ToList();
-            await LoadSecretsAsync(secretsTask);
-            await LoadProvidersAsync(providersTask);
-
-            if (AgentId.HasValue)
-            {
-                var definition = agents.FirstOrDefault(item => item.Id == AgentId.Value);
-                if (definition is not null)
-                {
-                    ApplySelectedAgent(definition);
-                }
-                else
-                {
-                    editorModel = await WorkspaceService.GetAgentEditorAsync(AgentId.Value);
-                    ApplyDerivedEditorState();
-                    linkedPartyId = null;
-                }
+        try {
+            var loaded = await EditorReads.LoadAsync(owner.Target, InitialProviders, owner.CancellationToken);
+            if (!IsCurrent(owner)) {
+                return;
             }
-            else
-            {
-                ResetEditorState();
+            owner.Load(loaded.Draft);
+            agents = loaded.Agents;
+            capabilities = loaded.Capabilities;
+            providers = loaded.Providers.Items;
+            secrets = loaded.Secrets.Items;
+            linkedPartyId = loaded.LinkedPartyId;
+            areProvidersLoaded = loaded.Providers.Error is null;
+            areSecretsLoaded = loaded.Secrets.Error is null;
+            ApplyDerivedEditorState();
+            if (loaded.Providers.Error is { } providerError) {
+                providerLoadErrorMessage = $"Failed to load providers. {providerError}";
+                NotificationService.Error("Providers failed to load", providerError);
+            }
+            if (loaded.Secrets.Error is { } secretError) {
+                secretsErrorMessage = $"Failed to load secrets. {secretError}";
+                NotificationService.Error("Secrets failed to load", secretError);
+            }
+            await TargetChanged.InvokeAsync(owner.Target);
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error("Agent editor failed to load", exception.Message);
+            }
+        } finally {
+            if (IsCurrent(owner)) {
+                isLoading = false;
             }
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Agent editor failed to load", exception.Message);
-        }
-        finally
-        {
-            isLoading = false;
-        }
     }
 
-    private async Task LoadProvidersAsync(Task<IReadOnlyList<ProviderProfile>> providersTask)
-    {
-        try
-        {
-            providers = (await providersTask).ToList();
-            areProvidersLoaded = true;
+    private async Task HandleSelectedTabIndexChanged(int index) {
+        var section = (AgentEditorSection)index;
+        if (!Enum.IsDefined(section)) {
+            throw new ArgumentOutOfRangeException(nameof(index), index, "Unknown agent editor section.");
         }
-        catch (Exception exception)
-        {
-            providerLoadErrorMessage = $"Failed to load providers. {exception.Message}";
-            NotificationService.Error("Providers failed to load", exception.Message);
-        }
+        Section = section;
+        await SectionChanged.InvokeAsync(section);
     }
 
-    private async Task LoadSecretsAsync(Task<IReadOnlyList<SecretListItem>> secretsTask)
-    {
-        isLoadingSecrets = true;
-        secretsErrorMessage = null;
-        try
-        {
-            secrets = (await secretsTask).ToList();
-            areSecretsLoaded = true;
-        }
-        catch (Exception exception)
-        {
-            secretsErrorMessage = $"Failed to load secrets. {exception.Message}";
-            NotificationService.Error("Secrets failed to load", exception.Message);
-        }
-        finally
-        {
-            isLoadingSecrets = false;
-        }
+    private bool IsCurrent(AgentEditorSession owner) => !isDisposed && ReferenceEquals(session, owner);
+
+    private void ReplaceSession(AgentEditorTarget target) {
+        session.Dispose();
+        session = new(target);
+        tagValues = [];
+        linkedPartyId = null;
+        isBusy = false;
+        isConfirmingDelete = false;
+        isConfirmingAutoApproval = false;
+        isOpeningCapabilityWizard = false;
+        isLoadingProjectStructureProjects = false;
+        projectStructureProjectsLoadTask = null;
+        autoApprovalInputVersion++;
     }
 
-    private Task HandleSelectedTabIndexChanged(int index)
-    {
-        selectedTabIndex = index;
-        return Task.CompletedTask;
+    public void Dispose() {
+        if (isDisposed) {
+            return;
+        }
+        isDisposed = true;
+        session.Dispose();
     }
 
     private Task RequestProjectStructureProjectsAsync()
@@ -311,108 +324,169 @@ public partial class AgentDetailsDialog
             return projectStructureProjectsLoadTask;
         }
 
-        projectStructureProjectsLoadTask = LoadProjectStructureProjectsAsync();
-        return projectStructureProjectsLoadTask;
+        var pendingLoad = LoadProjectStructureProjectsAsync();
+        projectStructureProjectsLoadTask = pendingLoad.IsCompleted ? null : pendingLoad;
+        return pendingLoad;
     }
 
-    private async Task LoadProjectStructureProjectsAsync()
-    {
+    private async Task LoadProjectStructureProjectsAsync() {
+        var owner = session;
         isLoadingProjectStructureProjects = true;
         projectStructureProjectsErrorMessage = null;
         await InvokeAsync(StateHasChanged);
-
-        try
-        {
-            projectStructureProjects = await ProjectsService.ListAccessListAsync();
-            areProjectStructureProjectsLoaded = true;
-        }
-        catch (Exception exception)
-        {
-            projectStructureProjectsErrorMessage = $"Failed to load projects. {exception.Message}";
-            NotificationService.Error("Project list failed to load", exception.Message);
-        }
-        finally
-        {
-            isLoadingProjectStructureProjects = false;
-            projectStructureProjectsLoadTask = null;
-            await InvokeAsync(StateHasChanged);
+        try {
+            var projects = await EditorReads.ReadProjectsAsync(owner.CancellationToken);
+            if (IsCurrent(owner)) {
+                projectStructureProjects = projects;
+                areProjectStructureProjectsLoaded = true;
+            }
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                projectStructureProjectsErrorMessage = $"Failed to load projects. {exception.Message}";
+                NotificationService.Error("Project list failed to load", exception.Message);
+            }
+        } finally {
+            if (IsCurrent(owner)) {
+                isLoadingProjectStructureProjects = false;
+                projectStructureProjectsLoadTask = null;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
-    private async Task SaveAgentAsync()
-    {
-        if (isBusy)
-        {
-            return;
-        }
+    private bool IsMutationBlocked => isBusy || !session.CanWrite;
 
+    private Task SaveAgentAsync()
+        => SaveCurrentDraftAsync("Agent saved", "Technical agent saved.", "Agent save failed");
+
+    private async Task<bool> SaveCurrentDraftAsync(string successTitle, string successDetail, string failureTitle) {
+        if (IsMutationBlocked) {
+            return false;
+        }
+        var owner = session;
         isBusy = true;
-        try
-        {
-            var agentId = await PersistEditorAsync();
-            await ReloadCatalogStateAsync(agentId);
-            NotificationService.Success("Agent saved", "Technical agent saved.");
-            await Saved.InvokeAsync(new AgentDetailsDialogResult(agentId, Deleted: false));
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Agent save failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
+        try {
+            var submission = AgentEditorDraftPolicy.Capture(owner.Draft, tagValues, providers);
+            var outcome = await EditorCommands.SaveAsync(submission.Request, owner.CancellationToken);
+            if (!IsCurrent(owner)) {
+                return false;
+            }
+            switch (outcome) {
+                case AgentEditorSaveOutcome.Rejected rejected:
+                    NotificationService.Error(rejected.IsConflict ? "Agent changed elsewhere" : failureTitle, rejected.Message);
+                    return false;
+                case AgentEditorSaveOutcome.Unconfirmed unconfirmed:
+                    owner.MarkWriteUnconfirmed();
+                    NotificationService.Error("Agent save could not be confirmed", unconfirmed.Message);
+                    return false;
+                case AgentEditorSaveOutcome.Committed committed:
+                    owner.AcknowledgeMutation(committed.AgentId, submission);
+                    try {
+                        await TargetChanged.InvokeAsync(owner.Target);
+                    } catch (Exception exception) {
+                        if (IsCurrent(owner)) {
+                            NotificationService.Error("Agent saved, but the editor target update failed", exception.Message);
+                        }
+                    }
+                    if (!IsCurrent(owner)) {
+                        return false;
+                    }
+                    return await ReconcileSaveAsync(owner, successTitle, successDetail);
+                default:
+                    throw new InvalidOperationException("Unknown agent save outcome.");
+            }
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error(failureTitle, exception.Message);
+            }
+            return false;
+        } finally {
+            if (IsCurrent(owner)) {
+                isBusy = false;
+            }
         }
     }
 
-    private async Task<Guid> PersistEditorAsync()
-    {
-        NormalizeWorkspaceToolAccessForSave();
-        NormalizeRuntimeModelSelectionForSave();
-        NormalizeImageGenerationAccessForSave();
-        editorModel.ProjectStructureAccess =
-            AgentProjectStructureAccessMetadata.Normalize(editorModel.ProjectStructureAccess);
-        editorModel.Tags = BuildAgentTagsForSave().ToList();
-        return await WorkspaceService.SaveAgentAsync(editorModel);
+    private async Task<bool> ReconcileSaveAsync(AgentEditorSession owner, string successTitle, string successDetail) {
+        var pending = owner.PendingRefresh ?? throw new InvalidOperationException("There is no acknowledged save to refresh.");
+        try {
+            var refreshed = await EditorCommands.ReconcileAsync(pending.AgentId, providers, owner.CancellationToken);
+            if (!IsCurrent(owner)) {
+                return false;
+            }
+            ApplyReconciledEditor(owner, pending.Submission, refreshed);
+            owner.CompleteReconciliation();
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error(pending.Kind == AgentEditorMutationKind.Save
+                    ? "Agent saved, but the editor refresh failed"
+                    : "Capability verified, but the editor refresh failed", exception.Message);
+            }
+            return false;
+        }
+        NotificationService.Success(successTitle, successDetail);
+        if (pending.Kind != AgentEditorMutationKind.Save) {
+            return true;
+        }
+        try {
+            await Saved.InvokeAsync(new AgentDetailsDialogResult(pending.AgentId, Deleted: false));
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error("Agent saved, but the catalog refresh failed", exception.Message);
+            }
+        }
+        return true;
     }
 
-    private async Task ReloadCatalogStateAsync(Guid selectedAgentId)
-    {
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        capabilities = await WorkspaceService.ListCapabilitiesAsync();
-        var definition = agents.FirstOrDefault(item => item.Id == selectedAgentId);
-        if (definition is not null)
-        {
-            ApplySelectedAgent(definition);
+    private void ApplyReconciledEditor(AgentEditorSession owner, AgentEditorSubmission submission,
+        AgentEditorCatalogRefresh refreshed) {
+        if (refreshed.Draft.Id != owner.Target.AgentId || !refreshed.Draft.ExpectedUpdatedAtUtc.HasValue) {
+            throw new InvalidOperationException("The refreshed agent identity or version is missing.");
+        }
+        agents = refreshed.Agents;
+        capabilities = refreshed.Capabilities;
+        linkedPartyId = refreshed.LinkedPartyId;
+        if (submission.HasLaterEdits(owner.Draft, tagValues)) {
+            owner.Draft.ExpectedUpdatedAtUtc = refreshed.Draft.ExpectedUpdatedAtUtc;
+        } else {
+            owner.Load(refreshed.Draft);
+            ApplyDerivedEditorState();
         }
     }
 
-    private async Task DeleteAgentAsync()
-    {
-        if (!editorModel.Id.HasValue ||
-            isBusy ||
-            isConfirmingDelete ||
-            IsManagedSeedAgent)
-        {
+    private async Task RetrySavedRefreshAsync() {
+        if (isBusy || session.PendingRefresh is null) {
             return;
         }
+        var owner = session;
+        isBusy = true;
+        try {
+            await ReconcileSaveAsync(owner,
+                owner.PendingRefresh.Kind == AgentEditorMutationKind.Save ? "Agent saved" : "Capability verified",
+                owner.PendingRefresh.Kind == AgentEditorMutationKind.Save ? "Technical agent saved." : "Capability verification completed.");
+        } finally {
+            if (IsCurrent(owner)) {
+                isBusy = false;
+            }
+        }
+    }
 
-        var deletedAgentId = editorModel.Id.Value;
-        var deletedAgentName = string.IsNullOrWhiteSpace(editorModel.Name)
-            ? "Unnamed agent"
-            : editorModel.Name.Trim();
+    private async Task DeleteAgentAsync() {
+        if (!editorModel.Id.HasValue || IsMutationBlocked || isConfirmingDelete || IsManagedSeedAgent) {
+            return;
+        }
+        var owner = session;
+        var deletedAgentId = owner.Draft.Id!.Value;
+        var deletedAgentName = string.IsNullOrWhiteSpace(owner.Draft.Name) ? "Unnamed agent" : owner.Draft.Name.Trim();
         var confirmed = false;
-
-        try
-        {
+        try {
             isConfirmingDelete = true;
             confirmed = await DialogService.OpenAsync<AgentDeleteConfirmationDialog>(
                 "Delete agent?",
-                new Dictionary<string, object?>
-                {
+                new Dictionary<string, object?> {
                     [nameof(AgentDeleteConfirmationDialog.AgentName)] = deletedAgentName
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     Eyebrow = "Danger action",
                     Subtitle = "This action cannot be undone.",
                     Size = ModalSize.Compact,
@@ -420,54 +494,46 @@ public partial class AgentDetailsDialog
                     AriaLabel = $"Confirm deletion of agent {deletedAgentName}",
                     TestId = "agents-catalog-delete-confirmation"
                 }) is true;
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error("Agent delete confirmation failed", exception.Message);
+            }
+        } finally {
+            if (IsCurrent(owner)) {
+                isConfirmingDelete = false;
+            }
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Agent delete confirmation failed", exception.Message);
-        }
-        finally
-        {
-            isConfirmingDelete = false;
-        }
-
-        if (!confirmed)
-        {
+        if (!IsCurrent(owner) || !confirmed || IsMutationBlocked) {
             return;
         }
-
         isBusy = true;
-        try
-        {
-            await WorkspaceService.DeleteAgentAsync(deletedAgentId);
+        try {
+            await EditorCommands.DeleteAsync(deletedAgentId, owner.CancellationToken);
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error("Agent delete failed", exception.Message);
+            }
+            return;
+        } finally {
+            if (IsCurrent(owner)) {
+                isBusy = false;
+            }
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Agent delete failed", exception.Message);
+        if (!IsCurrent(owner)) {
             return;
         }
-        finally
-        {
-            isBusy = false;
-        }
-
         NotificationService.Success("Agent deleted", $"Technical agent '{deletedAgentName}' deleted.");
         var result = new AgentDetailsDialogResult(deletedAgentId, Deleted: true);
-        try
-        {
-            if (DialogReference is not null)
-            {
+        try {
+            if (DialogReference is not null) {
                 await DialogReference.CloseAsync(result);
-            }
-            else
-            {
+            } else {
                 await Saved.InvokeAsync(result);
             }
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error(
-                "Agent deleted, but the catalog refresh failed",
-                exception.Message);
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error("Agent deleted, but the catalog refresh failed", exception.Message);
+            }
         }
     }
 
@@ -486,11 +552,14 @@ public partial class AgentDetailsDialog
         }
     }
 
-    private Task ResetAgentAsync()
-    {
-        ResetEditorState();
-        selectedTabIndex = 0;
-        return Task.CompletedTask;
+    private async Task ResetAgentAsync() {
+        ReplaceSession(AgentEditorTarget.Create);
+        projectStructureProjectsRequested = areProjectStructureProjectsLoaded;
+        projectStructureProjectsErrorMessage = null;
+        isLoading = false;
+        Section = AgentEditorSection.Identity;
+        await TargetChanged.InvokeAsync(session.Target);
+        await SectionChanged.InvokeAsync(Section);
     }
 
     private string ResolveAvatarImageModel(ProviderProfile provider)
@@ -527,72 +596,38 @@ public partial class AgentDetailsDialog
     private string ResolveAvatarSeed()
         => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");
 
-    private async Task ToggleCapabilityAsync(Guid capabilityId)
-    {
-        if (isBusy)
-        {
+    private async Task ToggleCapabilityAsync(Guid capabilityId) {
+        if (IsMutationBlocked) {
             return;
         }
-
-        var selectedCapabilityIds = editorModel.SelectedCapabilityIds.ToList();
-        var isAttached = selectedCapabilityIds.Contains(capabilityId);
-        if (isAttached)
-        {
-            selectedCapabilityIds.Remove(capabilityId);
+        var selected = editorModel.SelectedCapabilityIds.ToList();
+        if (!selected.Remove(capabilityId)) {
+            selected.Add(capabilityId);
         }
-        else
-        {
-            selectedCapabilityIds.Add(capabilityId);
-        }
-
-        editorModel.SelectedCapabilityIds = selectedCapabilityIds
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-
-        if (!editorModel.Id.HasValue)
-        {
+        editorModel.SelectedCapabilityIds = selected.Distinct().OrderBy(id => id).ToList();
+        if (!editorModel.Id.HasValue) {
             NotificationService.Info("Capability staged", "Save the new agent to persist capability assignments.");
             return;
         }
-
-        isBusy = true;
-        try
-        {
-            var agentId = await PersistEditorAsync();
-            await ReloadCatalogStateAsync(agentId);
-            NotificationService.Success("Capability assignment updated", "Agent capability assignment saved.");
-            await Saved.InvokeAsync(new AgentDetailsDialogResult(agentId, Deleted: false));
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Capability assignment failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
+        await SaveCurrentDraftAsync("Capability assignment updated",
+            "Agent capability assignment saved.", "Capability assignment failed");
     }
 
-    private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind)
-    {
-        if (isBusy || isOpeningCapabilityWizard)
-        {
+    private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind) {
+        if (IsMutationBlocked || isOpeningCapabilityWizard) {
             return;
         }
-
+        var owner = session;
         isOpeningCapabilityWizard = true;
-        try
-        {
+        var created = false;
+        try {
             var result = await DialogService.OpenAsync<CapabilitySetupWizardDialog>(
                 ResolveCapabilityWizardTitle(initialKind),
-                new Dictionary<string, object?>
-                {
+                new Dictionary<string, object?> {
                     [nameof(CapabilitySetupWizardDialog.InitialKind)] = initialKind,
                     [nameof(CapabilitySetupWizardDialog.TagSuggestions)] = AvailableCapabilityTags
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     Eyebrow = "Capability setup",
                     Subtitle = "Create a skill, tool, or MCP capability and assign it to this agent.",
                     Size = ModalSize.Wide,
@@ -600,50 +635,42 @@ public partial class AgentDetailsDialog
                     AriaLabel = "Capability setup wizard",
                     TestId = "agents-details-capability-setup-dialog"
                 });
-
-            if (result is not CapabilityDetailsDialogResult createdCapability)
-            {
+            if (!IsCurrent(owner) || result is not CapabilityDetailsDialogResult capability) {
                 return;
             }
-
+            created = true;
             isBusy = true;
-            try
-            {
-                capabilities = await WorkspaceService.ListCapabilitiesAsync();
-                if (!editorModel.SelectedCapabilityIds.Contains(createdCapability.CapabilityId))
-                {
-                    editorModel.SelectedCapabilityIds = editorModel.SelectedCapabilityIds
-                        .Append(createdCapability.CapabilityId)
-                        .Distinct()
-                        .OrderBy(item => item)
-                        .ToList();
-                }
-
-                if (editorModel.Id.HasValue)
-                {
-                    var agentId = await PersistEditorAsync();
-                    await ReloadCatalogStateAsync(agentId);
-                    await Saved.InvokeAsync(new AgentDetailsDialogResult(agentId, Deleted: false));
-                }
-
-                NotificationService.Success(
-                    "Capability created",
-                    editorModel.Id.HasValue
-                        ? "Capability was created and assigned."
-                        : "Capability was created and staged for assignment when the new agent is saved.");
+            var refreshedCapabilities = await EditorCommands.ReadCapabilitiesAsync(owner.CancellationToken);
+            if (!IsCurrent(owner)) {
+                return;
             }
-            finally
-            {
+            capabilities = refreshedCapabilities;
+            owner.Draft.SelectedCapabilityIds = owner.Draft.SelectedCapabilityIds
+                .Append(capability.CapabilityId).Distinct().OrderBy(id => id).ToList();
+            isBusy = false;
+            if (owner.Draft.Id.HasValue) {
+                var reconciled = await SaveCurrentDraftAsync("Capability created",
+                    "Capability was created and assigned.", "Capability was created, but assignment failed");
+                if (!reconciled && IsCurrent(owner)) {
+                    NotificationService.Info("Capability created", owner.PendingRefresh is not null
+                        ? "Agent assignment was saved; the editor refresh still needs attention."
+                        : owner.HasUnconfirmedWrite
+                            ? "The agent assignment could not be confirmed."
+                            : "The agent assignment was not saved.");
+                }
+            } else {
+                NotificationService.Success("Capability created",
+                    "Capability was created and staged for assignment when the new agent is saved.");
+            }
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error(created ? "Capability created, but assignment setup failed" : "Capability setup failed", exception.Message);
+            }
+        } finally {
+            if (IsCurrent(owner)) {
                 isBusy = false;
+                isOpeningCapabilityWizard = false;
             }
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Capability setup failed", exception.Message);
-        }
-        finally
-        {
-            isOpeningCapabilityWizard = false;
         }
     }
 
@@ -691,29 +718,28 @@ public partial class AgentDetailsDialog
         capabilityKindFilter = CapabilityDialogKindFilter.All;
     }
 
-    private async Task VerifyCapabilityAsync(Guid capabilityId)
-    {
-        if (!editorModel.Id.HasValue || isBusy)
-        {
+    private async Task VerifyCapabilityAsync(Guid capabilityId) {
+        if (!editorModel.Id.HasValue || IsMutationBlocked) {
             return;
         }
-
+        var owner = session;
         isBusy = true;
-        try
-        {
-            await WorkspaceService.VerifyCapabilityAsync(editorModel.Id.Value, capabilityId);
-            capabilities = await WorkspaceService.ListCapabilitiesAsync();
-            editorModel = await WorkspaceService.GetAgentEditorAsync(editorModel.Id.Value);
-            ApplyDerivedEditorState();
-            NotificationService.Success("Capability verified", "Capability verification completed.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Capability verification failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
+        try {
+            var submission = AgentEditorDraftPolicy.Capture(owner.Draft, tagValues, providers);
+            await EditorCommands.VerifyCapabilityAsync(owner.Draft.Id!.Value, capabilityId, owner.CancellationToken);
+            if (!IsCurrent(owner)) {
+                return;
+            }
+            owner.AcknowledgeMutation(owner.Draft.Id.Value, submission, AgentEditorMutationKind.CapabilityVerification);
+            await ReconcileSaveAsync(owner, "Capability verified", "Capability verification completed.");
+        } catch (Exception exception) {
+            if (IsCurrent(owner)) {
+                NotificationService.Error("Capability verification failed", exception.Message);
+            }
+        } finally {
+            if (IsCurrent(owner)) {
+                isBusy = false;
+            }
         }
     }
 
@@ -830,7 +856,7 @@ public partial class AgentDetailsDialog
     private bool HasAllowedSecret(Guid secretId)
         => editorModel.AllowedSecretReferences.Any(item => item.SecretId == secretId);
 
-    private void ToggleAllowedSecret(SecretListItem secret, object? rawValue)
+    private void ToggleAllowedSecret(AgentEditorSecret secret, object? rawValue)
     {
         var isEnabled = rawValue is bool value && value;
         editorModel.AllowedSecretReferences.RemoveAll(item => item.SecretId == secret.Id);
@@ -1008,7 +1034,7 @@ public partial class AgentDetailsDialog
 
         var current = editorModel.WorkspaceToolAccess;
         var next = profile == AgentWorkspaceToolProfileKind.Custom
-            ? CloneWorkspaceToolAccess(current)
+            ? AgentEditorDraftPolicy.CopyWorkspaceAccess(current)
             : AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
         next.Profile = profile;
         next.AllowedExternalTargetAliases = current.AllowedExternalTargetAliases.ToList();
@@ -1089,50 +1115,6 @@ public partial class AgentDetailsDialog
     private void NormalizeWorkspaceToolAccess()
     {
         editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
-    }
-
-    private void NormalizeWorkspaceToolAccessForSave()
-    {
-        var normalized = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
-        var externalTargetRegistry = ExternalTargetPathRegistryFactory.Create(
-            normalized.ExternalTargetRootBindings);
-        var canonicalAliases = normalized.AllowedExternalTargetAliases
-            .Select(alias =>
-                AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
-                    alias,
-                    externalTargetRegistry) ??
-                throw new InvalidOperationException(
-                    $"External workspace root '{alias}' is not a supported path or alias."))
-            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
-            .OrderBy(alias => alias, StringComparer.Ordinal)
-            .ToList();
-
-        normalized.AllowedExternalTargetAliases = canonicalAliases;
-        normalized.ExternalTargetRootBindings = normalized.ExternalTargetRootBindings
-            .Concat(externalTargetRegistry.ExportBindings(canonicalAliases))
-            .ToList();
-        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(normalized);
-    }
-
-    private static AgentWorkspaceToolAccessSettings CloneWorkspaceToolAccess(AgentWorkspaceToolAccessSettings source)
-    {
-        return new AgentWorkspaceToolAccessSettings
-        {
-            Profile = source.Profile,
-            CanReadFiles = source.CanReadFiles,
-            CanWriteFiles = source.CanWriteFiles,
-            CanRunValidationCommands = source.CanRunValidationCommands,
-            CanRunLocalScripts = source.CanRunLocalScripts,
-            CanScaffoldProjects = source.CanScaffoldProjects,
-            CanManageWorkspacePaths = source.CanManageWorkspacePaths,
-            CanTransformArtifacts = source.CanTransformArtifacts,
-            AllowedExternalTargetAliases = source.AllowedExternalTargetAliases.ToList(),
-            ExternalTargetRootBindings = source.ExternalTargetRootBindings.ToList(),
-            CanReadStorage = source.CanReadStorage,
-            CanWriteStorage = source.CanWriteStorage,
-            AllowAllStorageCatalogs = source.AllowAllStorageCatalogs,
-            AllowedStorageCatalogIds = source.AllowedStorageCatalogIds.ToList()
-        };
     }
 
     private void ToggleStorageRead(object? rawValue)
@@ -1237,8 +1219,11 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
-    private Task HandleAvatarChangedAsync(string? value)
+    private Task HandleAvatarChangedAsync(AgentEditorSession owner, string? value)
     {
+        if (!IsCurrent(owner)) {
+            return Task.CompletedTask;
+        }
         editorModel.AvatarImageUrl = value?.Trim() ?? string.Empty;
         return Task.CompletedTask;
     }
@@ -1306,6 +1291,7 @@ public partial class AgentDetailsDialog
             return;
         }
 
+        var owner = session;
         isConfirmingAutoApproval = true;
         var confirmed = false;
         try
@@ -1321,7 +1307,7 @@ public partial class AgentDetailsDialog
                     AriaLabel = "Confirm automatic approval for agent tool calls",
                     TestId = "agents-auto-approval-confirmation"
                 }) is true;
-            if (confirmed)
+            if (confirmed && IsCurrent(owner))
             {
                 editorModel.Permissions = editorModel.Permissions with
                 {
@@ -1331,14 +1317,17 @@ public partial class AgentDetailsDialog
         }
         catch (Exception exception)
         {
-            NotificationService.Error("Auto-approval confirmation failed", exception.Message);
+            if (IsCurrent(owner)) {
+                NotificationService.Error("Auto-approval confirmation failed", exception.Message);
+            }
         }
         finally
         {
-            isConfirmingAutoApproval = false;
-            if (!confirmed)
-            {
-                autoApprovalInputVersion++;
+            if (IsCurrent(owner)) {
+                isConfirmingAutoApproval = false;
+                if (!confirmed) {
+                    autoApprovalInputVersion++;
+                }
             }
         }
     }
@@ -1383,33 +1372,6 @@ public partial class AgentDetailsDialog
     {
         editorModel.ImageGenerationAccess.CanStoreImagesAsProjectAssets = rawValue is bool value && value;
         editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
-    }
-
-    private void NormalizeRuntimeModelSelectionForSave()
-    {
-        editorModel.Model = SelectedRuntimeProvider is { } provider
-            ? ProviderModelSelector.NormalizeProviderDefaultModel(editorModel.Model, provider)
-            : string.IsNullOrWhiteSpace(editorModel.Model)
-                ? string.Empty
-                : editorModel.Model.Trim();
-    }
-
-    private void NormalizeImageGenerationAccessForSave()
-    {
-        var access = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
-        if (access.CanGenerateImages &&
-            !access.PreferredProviderProfileId.HasValue &&
-            SelectedImageGenerationProvider is { } selectedProvider)
-        {
-            access.PreferredProviderProfileId = selectedProvider.Id;
-        }
-
-        access.DefaultModel = SelectedImageGenerationProvider is { } provider
-            ? ProviderModelSelector.NormalizeProviderDefaultModel(access.DefaultModel, provider)
-            : string.IsNullOrWhiteSpace(access.DefaultModel)
-                ? string.Empty
-                : access.DefaultModel.Trim();
-        editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(access);
     }
 
     private string DescribeImageGenerationProviderChoice()
@@ -1459,35 +1421,27 @@ public partial class AgentDetailsDialog
         return string.Empty;
     }
 
-    private void ApplyExternalWorkspaceRootSelection(ExternalWorkspaceRootSelection selection)
+    private void ApplyExternalWorkspaceRootSelection(AgentEditorSession owner, ExternalWorkspaceRootSelection selection)
     {
+        if (!IsCurrent(owner)) {
+            return;
+        }
         editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = selection.AllowedAliases.ToList();
         editorModel.WorkspaceToolAccess.ExternalTargetRootBindings = selection.RootBindings.ToList();
         NormalizeWorkspaceToolAccess();
     }
 
-    private void ApplyStorageCatalogSelection(IReadOnlyList<Guid> catalogIds)
+    private void ApplyStorageCatalogSelection(AgentEditorSession owner, IReadOnlyList<Guid> catalogIds)
     {
+        if (!IsCurrent(owner)) {
+            return;
+        }
         editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = catalogIds
             .Where(catalogId => catalogId != Guid.Empty)
             .Distinct()
             .OrderBy(catalogId => catalogId)
             .ToList();
         NormalizeWorkspaceToolAccess();
-    }
-
-    private IReadOnlyList<string> BuildAgentTagsForSave()
-    {
-        var nextTags = NormalizeVisibleTags(tagValues).ToList();
-        if (editorModel.Tags.Any(AgentSpecialTags.IsFavorite))
-        {
-            nextTags.Add(AgentSpecialTags.Favorite);
-        }
-
-        return nextTags
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private static IReadOnlyList<string> NormalizeVisibleTags(IEnumerable<string> tags)
@@ -1539,35 +1493,12 @@ public partial class AgentDetailsDialog
         };
     }
 
-    private void ApplySelectedAgent(AgentDefinition definition)
-    {
-        var providerKind = definition.ProviderProfileId is { } providerProfileId
-            ? providers.FirstOrDefault(provider => provider.Id == providerProfileId)?.Kind
-            : null;
-        editorModel = AgentEditorModel.FromDefinition(definition, providerKind);
-        ApplyDerivedEditorState();
-        ResetAvatarGenerationState();
-        linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;
-    }
-
     private void ApplyDerivedEditorState()
     {
         tagValues = NormalizeVisibleTags(editorModel.Tags);
     }
 
-    private void ResetEditorState()
-    {
-        editorModel = new AgentEditorModel();
-        tagValues = [];
-        ResetAvatarGenerationState();
-        linkedPartyId = null;
-    }
-
-    private void ResetAvatarGenerationState()
-    {
-    }
-
-    private enum CapabilityDialogAssignmentFilter
+private enum CapabilityDialogAssignmentFilter
     {
         All,
         Attached,

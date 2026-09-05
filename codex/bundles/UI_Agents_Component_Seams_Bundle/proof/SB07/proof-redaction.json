@@ -1,0 +1,220 @@
+{
+  "policy": "Only verified synthetic security-test fixture values are masked, after execution. Test method, provider/case context, outcomes and case counts remain; SHA-256 identifies each exact redacted display fragment; long arguments were already truncated by VSTest. The committed fixture sources define the full synthetic inputs. Compressed local raw copies remain ignored under .mcp-state, not deliverables.",
+  "sourceReferences": [
+    "repo://tests/Unit/CanDoItAll.Tests.Unit/SecretScanningTests.cs",
+    "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs",
+    "repo://tests/Unit/CanDoItAll.Tests.Unit/WorkflowExecutorPolicyObservabilityTests.cs"
+  ],
+  "files": [
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-discovery.log",
+      "originalSha256": "d8e447c4d121c23af39b5a48c901bf2c92f0b842b8c78ca0e9998c069b317d3e",
+      "deliveredSha256": "5f36ad59ed300b7519ec870632ce8b56a3c35f40c9afd8ae63514e14d8ebb663",
+      "replacements": [
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / OpenAI",
+          "displayValueSha256": "4fa30a2ba130d63d7d989327bc839dcc81b420d97a523b00441a7665ba329a6b",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / GitHub",
+          "displayValueSha256": "49e7237e11464693589bca95fe317f2fde5793bb7d70da9749f55641a5fff406",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated fine-grained GitHub display",
+          "displayValueSha256": "651c5c11a2ac9c7014847676a3049961cb0acdcb7b6955d6d675da16e41350d6",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated Azure storage display",
+          "displayValueSha256": "e5bb2ecbdd6f7c03c746fc4036be3d730f4991e1049be0dc7738f1a1c440c4d6",
+          "occurrences": 1
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests spoofed managed envelope InlineData",
+          "displayValueSha256": "5752226efe62ae1bf366a01e43120682e8ca52980c3a37473a47398e68d054e3",
+          "occurrences": 2
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests non-object JSON InlineData",
+          "displayValueSha256": "f5f68098618ee1bf2de76e0bed41f3e83b6610c0d6b3ef9560aa1c855f71b311",
+          "occurrences": 1
+        },
+        {
+          "source": "WorkflowExecutorPolicyObservabilityTests and AgentToolInvocationPolicyTests InlineData",
+          "displayValueSha256": "01cf075575ce847cb0104f58e5ac1e15f8e84ef6e561e2f5ec9b13757b92ed3e",
+          "occurrences": 3
+        }
+      ]
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-expected-cases.txt",
+      "originalSha256": "0e4eeed8af1256ff79a24e029bdbb4eb79ccd103c25ec9e1d97a5097eaf37703",
+      "deliveredSha256": "2f927fee028d853f93311791a12eed6e5d265956a33b9b738b52e0cc2d98ae9f",
+      "replacements": [
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / OpenAI",
+          "displayValueSha256": "4fa30a2ba130d63d7d989327bc839dcc81b420d97a523b00441a7665ba329a6b",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / GitHub",
+          "displayValueSha256": "49e7237e11464693589bca95fe317f2fde5793bb7d70da9749f55641a5fff406",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated fine-grained GitHub display",
+          "displayValueSha256": "651c5c11a2ac9c7014847676a3049961cb0acdcb7b6955d6d675da16e41350d6",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated Azure storage display",
+          "displayValueSha256": "e5bb2ecbdd6f7c03c746fc4036be3d730f4991e1049be0dc7738f1a1c440c4d6",
+          "occurrences": 1
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests spoofed managed envelope InlineData",
+          "displayValueSha256": "5752226efe62ae1bf366a01e43120682e8ca52980c3a37473a47398e68d054e3",
+          "occurrences": 2
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests non-object JSON InlineData",
+          "displayValueSha256": "f5f68098618ee1bf2de76e0bed41f3e83b6610c0d6b3ef9560aa1c855f71b311",
+          "occurrences": 1
+        },
+        {
+          "source": "WorkflowExecutorPolicyObservabilityTests and AgentToolInvocationPolicyTests InlineData",
+          "displayValueSha256": "01cf075575ce847cb0104f58e5ac1e15f8e84ef6e561e2f5ec9b13757b92ed3e",
+          "occurrences": 3
+        }
+      ]
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/final-stable-results.log",
+      "originalSha256": "575ac97774134f0b26065fc9c3cde261630f969ca974e1ab38082f7062a2d856",
+      "deliveredSha256": "b75245134a144d3f4ecb5ae312ba7036beb62a780241f6e93455a4631b699a9c",
+      "replacements": [
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / OpenAI",
+          "displayValueSha256": "4fa30a2ba130d63d7d989327bc839dcc81b420d97a523b00441a7665ba329a6b",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / GitHub",
+          "displayValueSha256": "49e7237e11464693589bca95fe317f2fde5793bb7d70da9749f55641a5fff406",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated fine-grained GitHub display",
+          "displayValueSha256": "651c5c11a2ac9c7014847676a3049961cb0acdcb7b6955d6d675da16e41350d6",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated Azure storage display",
+          "displayValueSha256": "e5bb2ecbdd6f7c03c746fc4036be3d730f4991e1049be0dc7738f1a1c440c4d6",
+          "occurrences": 1
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests spoofed managed envelope InlineData",
+          "displayValueSha256": "5752226efe62ae1bf366a01e43120682e8ca52980c3a37473a47398e68d054e3",
+          "occurrences": 2
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests non-object JSON InlineData",
+          "displayValueSha256": "f5f68098618ee1bf2de76e0bed41f3e83b6610c0d6b3ef9560aa1c855f71b311",
+          "occurrences": 1
+        },
+        {
+          "source": "WorkflowExecutorPolicyObservabilityTests and AgentToolInvocationPolicyTests InlineData",
+          "displayValueSha256": "01cf075575ce847cb0104f58e5ac1e15f8e84ef6e561e2f5ec9b13757b92ed3e",
+          "occurrences": 3
+        }
+      ]
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-discovery.log",
+      "originalSha256": "c7ecb0302af88934d257bb144aaf3d5be8f1917e3f7497279d28df673c726b92",
+      "deliveredSha256": "2132bfefabef5b3b8dd41c797459c3554e2e34d1057f5e68c715ea4ad697ba8a",
+      "replacements": [
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / OpenAI",
+          "displayValueSha256": "4fa30a2ba130d63d7d989327bc839dcc81b420d97a523b00441a7665ba329a6b",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / GitHub",
+          "displayValueSha256": "49e7237e11464693589bca95fe317f2fde5793bb7d70da9749f55641a5fff406",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated fine-grained GitHub display",
+          "displayValueSha256": "651c5c11a2ac9c7014847676a3049961cb0acdcb7b6955d6d675da16e41350d6",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated Azure storage display",
+          "displayValueSha256": "e5bb2ecbdd6f7c03c746fc4036be3d730f4991e1049be0dc7738f1a1c440c4d6",
+          "occurrences": 1
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests spoofed managed envelope InlineData",
+          "displayValueSha256": "5752226efe62ae1bf366a01e43120682e8ca52980c3a37473a47398e68d054e3",
+          "occurrences": 2
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests non-object JSON InlineData",
+          "displayValueSha256": "f5f68098618ee1bf2de76e0bed41f3e83b6610c0d6b3ef9560aa1c855f71b311",
+          "occurrences": 1
+        },
+        {
+          "source": "WorkflowExecutorPolicyObservabilityTests and AgentToolInvocationPolicyTests InlineData",
+          "displayValueSha256": "01cf075575ce847cb0104f58e5ac1e15f8e84ef6e561e2f5ec9b13757b92ed3e",
+          "occurrences": 3
+        }
+      ]
+    },
+    {
+      "path": "bundle://proof/SB07/transcripts/stable-expected-cases.txt",
+      "originalSha256": "a1e7078c46e31ded0a5b077089efd50890a67c5305d4638a2d48415bfbec9944",
+      "deliveredSha256": "23e32aee1aad2c43a9ba6806065d19d18ee47c191270a8f00e7ca7bf7f2c1172",
+      "replacements": [
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / OpenAI",
+          "displayValueSha256": "4fa30a2ba130d63d7d989327bc839dcc81b420d97a523b00441a7665ba329a6b",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / GitHub",
+          "displayValueSha256": "49e7237e11464693589bca95fe317f2fde5793bb7d70da9749f55641a5fff406",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated fine-grained GitHub display",
+          "displayValueSha256": "651c5c11a2ac9c7014847676a3049961cb0acdcb7b6955d6d675da16e41350d6",
+          "occurrences": 1
+        },
+        {
+          "source": "SecretScanningTests.RealisticSecretSamples / truncated Azure storage display",
+          "displayValueSha256": "e5bb2ecbdd6f7c03c746fc4036be3d730f4991e1049be0dc7738f1a1c440c4d6",
+          "occurrences": 1
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests spoofed managed envelope InlineData",
+          "displayValueSha256": "5752226efe62ae1bf366a01e43120682e8ca52980c3a37473a47398e68d054e3",
+          "occurrences": 2
+        },
+        {
+          "source": "AgentToolInvocationPolicyTests non-object JSON InlineData",
+          "displayValueSha256": "f5f68098618ee1bf2de76e0bed41f3e83b6610c0d6b3ef9560aa1c855f71b311",
+          "occurrences": 1
+        },
+        {
+          "source": "WorkflowExecutorPolicyObservabilityTests and AgentToolInvocationPolicyTests InlineData",
+          "displayValueSha256": "01cf075575ce847cb0104f58e5ac1e15f8e84ef6e561e2f5ec9b13757b92ed3e",
+          "occurrences": 3
+        }
+      ]
+    }
+  ]
+}

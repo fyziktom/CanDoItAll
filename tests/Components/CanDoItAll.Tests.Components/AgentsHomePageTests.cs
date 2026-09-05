@@ -1,4 +1,6 @@
 using AngleSharp.Dom;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -135,7 +137,11 @@ public sealed class AgentsHomePageTests
         {
             services.AddSingleton<ILlmChatUiAuthorizationFacade>(new AllowSimpleChatsAuthorization());
             services.AddSimpleChatsComponents();
+            services.AddScoped<ObservedConversationGateway>(provider => new(
+                ActivatorUtilities.CreateInstance<LlmChatConversationUiGateway>(provider)));
+            services.AddScoped<ILlmChatConversationUiGateway>(provider => provider.GetRequiredService<ObservedConversationGateway>());
         });
+        var conversations = harness.Context.Services.GetRequiredService<ObservedConversationGateway>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/agents");
 
@@ -149,10 +155,14 @@ public sealed class AgentsHomePageTests
         var simpleChatsIndex = Array.FindIndex(tabs, label => label.StartsWith("Simple Chats", StringComparison.Ordinal));
 
         Assert.Equal(agentsIndex + 1, simpleChatsIndex);
-        FindTab(cut, "Simple Chats").Click();
+        await FindTab(cut, "Simple Chats").ClickAsync();
 
         cut.WaitForElement("[data-testid='llm-chats-tabs']", TimeSpan.FromSeconds(10));
         cut.WaitForElement("[data-testid='llm-chat-definition-catalog']", TimeSpan.FromSeconds(10));
+        cut.WaitForAssertion(() => Assert.Matches("^[0-9]+ definitions?$",
+            cut.FindComponent<LlmChatDefinitionCatalogPanel>()
+                .FindComponent<FilterBar>().Instance.ResultText ?? string.Empty),
+            TimeSpan.FromSeconds(10));
         Assert.Contains("tab=simple-chats", navigation.Uri, StringComparison.Ordinal);
         var workspaceTabs = cut.FindAll("[data-testid='llm-chats-tabs'] [role='tab']");
         Assert.Collection(
@@ -163,7 +173,10 @@ public sealed class AgentsHomePageTests
             "true",
             cut.Find("[data-testid='llm-chats-tab-definitions']").GetAttribute("aria-selected"));
 
-        cut.Find("[data-testid='llm-chats-tab-conversations']").Click();
+        await cut.Find("[data-testid='llm-chats-tab-conversations']").ClickAsync();
+        var loadedConversations = await conversations.Listed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.True(loadedConversations.IsSuccess);
+        Assert.Empty(loadedConversations.Value!.Items);
         cut.WaitForElement("[data-testid='llm-chat-conversation-workspace']", TimeSpan.FromSeconds(10));
         cut.WaitForAssertion(() => Assert.DoesNotContain(
             "Loading conversations...",
@@ -265,6 +278,39 @@ public sealed class AgentsHomePageTests
                 now,
                 HiddenAtUtc: null);
         }
+    }
+
+    private sealed class ObservedConversationGateway(LlmChatConversationUiGateway inner) : ILlmChatConversationUiGateway {
+        public TaskCompletionSource<LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>> Listed { get; }
+            = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>> ListPageAsync(
+            LlmChatConversationQuery query, CancellationToken cancellationToken = default) {
+            try {
+                var result = await inner.ListPageAsync(query, cancellationToken);
+                Listed.TrySetResult(result);
+                return result;
+            } catch (Exception exception) {
+                Listed.TrySetException(exception);
+                throw;
+            }
+        }
+
+        public Task<LlmChatUiResult<LlmChatConversationView>> GetAsync(Guid conversationId,
+            LlmChatTranscriptQuery query, CancellationToken cancellationToken = default)
+            => inner.GetAsync(conversationId, query, cancellationToken);
+
+        public Task<LlmChatUiResult<LlmChatConversationView>> CreateAsync(Guid definitionId, string title,
+            CancellationToken cancellationToken = default)
+            => inner.CreateAsync(definitionId, title, cancellationToken);
+
+        public Task<LlmChatUiResult<LlmChatConversationView>> RenameAsync(Guid conversationId, string title,
+            long expectedConcurrencyToken, long expectedTranscriptRevision, CancellationToken cancellationToken = default)
+            => inner.RenameAsync(conversationId, title, expectedConcurrencyToken, expectedTranscriptRevision, cancellationToken);
+
+        public Task<LlmChatUiResult<LlmChatConversationView>> ArchiveAsync(Guid conversationId,
+            long expectedConcurrencyToken, CancellationToken cancellationToken = default)
+            => inner.ArchiveAsync(conversationId, expectedConcurrencyToken, cancellationToken);
     }
 
     private sealed class AllowSimpleChatsAuthorization : ILlmChatUiAuthorizationFacade

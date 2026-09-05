@@ -1,0 +1,15 @@
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(29,28): error CS0029: Typ CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId nejde implicitně převést na typ string. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(30,32): error CS0029: Typ CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId nejde implicitně převést na typ string. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(38,21): error CS0029: Typ CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId nejde implicitně převést na typ string. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(47,22): error CS1503: Argument 1: Nejde převést z CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId na System.Collections.Generic.IEnumerable<char>?. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+
+Sestavení SE NEZDAŘILO.
+
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(29,28): error CS0029: Typ CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId nejde implicitně převést na typ string. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(30,32): error CS0029: Typ CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId nejde implicitně převést na typ string. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(38,21): error CS0029: Typ CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId nejde implicitně převést na typ string. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs(47,22): error CS1503: Argument 1: Nejde převést z CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelId na System.Collections.Generic.IEnumerable<char>?. [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+    0 upozornění
+    Počet chyb: 4
+
+Uplynulý čas 00:00:30.45

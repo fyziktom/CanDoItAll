@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -7,8 +6,6 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -123,21 +120,16 @@ public sealed class AgentDetailsDialogCapabilityTests
         var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
         workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
         context.Services.AddSingleton(workspaceService);
-        context.Services.AddSingleton(
-            (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
-        context.Services.AddSingleton(
-            (SecretService)RuntimeHelpers.GetUninitializedObject(typeof(SecretService)));
+        context.Services.AddAgentEditorReadFixture();
         return context;
     }
 
-    private static IRenderedComponent<TestAgentDetailsDialog> RenderCapabilitiesTab(
+    private static IRenderedComponent<AgentDetailsDialog> RenderCapabilitiesTab(
         BunitContext context,
         AgentEditorModel editor,
         IReadOnlyList<CapabilityCatalogItem> capabilities)
     {
-        return context.Render<TestAgentDetailsDialog>(parameters => parameters
-            .Add(component => component.TestEditor, editor)
-            .Add(component => component.TestCapabilities, capabilities));
+        return context.RenderEditor(editor, AgentEditorSection.Capabilities, capabilities: capabilities);
     }
 
     private static CapabilityCatalogItem CreateCapability(
@@ -160,33 +152,6 @@ public sealed class AgentDetailsDialogCapabilityTests
         {
             Tags = ["test", kind.ToString().ToLowerInvariant()]
         };
-    }
-
-    public sealed class TestAgentDetailsDialog : AgentDetailsDialog
-    {
-        [Parameter]
-        public AgentEditorModel TestEditor { get; set; } = new();
-
-        [Parameter]
-        public IReadOnlyList<CapabilityCatalogItem> TestCapabilities { get; set; } = [];
-
-        protected override Task OnInitializedAsync()
-        {
-            SetBaseField("editorModel", TestEditor);
-            SetBaseField("capabilities", TestCapabilities);
-            SetBaseField("selectedTabIndex", 8);
-            SetBaseField("isLoading", false);
-            return Task.CompletedTask;
-        }
-
-        private void SetBaseField(string fieldName, object value)
-        {
-            var field = typeof(AgentDetailsDialog).GetField(
-                fieldName,
-                BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(AgentDetailsDialog).FullName, fieldName);
-            field.SetValue(this, value);
-        }
     }
 
     public class RecordingWorkspaceServiceProxy : DispatchProxy

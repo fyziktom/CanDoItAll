@@ -1,0 +1,8 @@
+SB07 INV-COMPOSITION INV-STATE INV-SESSION INV-WRITE
+WorkingDirectory=C:\repositories\CanDoItAll
+RunLabel=stable-results
+Started=2026-09-04T23:32:35.7021751-04:00
+Command=dotnet test tests/Solutions/CanDoItAll.Tests.Stable.slnx -c Release --no-build --no-restore --filter Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true /m:1
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+ExitCode=-1

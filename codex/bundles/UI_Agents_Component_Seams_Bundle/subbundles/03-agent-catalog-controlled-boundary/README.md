@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # SB03 — Controlled catalog and host effects
 
-Status: **Not started**. Proof tier: **Behavioral**. Current authorization is documentation only.
+Status: **Complete; owning and final integration gates passed**. Proof tier: **Behavioral**. Implementation authorized by inputs/04-implementation-authorization.md.
 
 ## Objective and covered inputs
 
@@ -18,7 +20,7 @@ src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel
 
 Typed snapshot/selection/intents; external load/repair/team operation boundary; host-owned open/chat/result coordination; public tests; catalog-first extraction candidate assessment.
 
-## Implementation steps for later authorized execution
+## Execution steps
 
 1. Define select versus open/create/team/chat/repair intents and ownership; preserve local search/expansion and current initial-data/SkipCatalogRepair behavior.
 2. Move feature I/O out of catalog and move host effects into page/workspace coordination or a justified narrow adapter; avoid a god page.
@@ -36,9 +38,9 @@ Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [patt
 
 AgentsHomePageTests/AgentCatalogPanelTests plus named real catalog/host/context cases mapped to B04–B08. Preserve AgentSelectionCard behaviors included in historical class. Execute page request -> catalog readiness -> open -> result -> selection reconciliation. Counts derived from exact selected tests. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-- [ ] Catalog has no feature I/O, dialog or chat launch; local presentation state is allowed.
-- [ ] Selection/open/result/context and current confirmation policies are preserved through real host flows.
-- [ ] Real catalog operations are tested; candidate graph/handoff distinguishes catalog intents from full editor/team interaction.
+- [x] Catalog has no feature I/O, dialog or chat launch; local presentation state is allowed.
+- [x] Selection/open/result/context and current confirmation policies are preserved through real host flows.
+- [x] Real catalog operations are tested; candidate graph/handoff distinguishes catalog intents from full editor/team interaction.
 
 ## Proof and progression gate
 
@@ -49,3 +51,5 @@ Unlock SB04 with stable host target/result ownership. Candidate preparation may 
 ## Reopen triggers
 
 Catalog public state/intent, host result semantics, repair/load triggers, selected-context mapping, or candidate type/child closure changes.
+
+Execution evidence: ../../proof/SB03/manifest.md and ../../reviews/02-execution-status.md. Final governed closure remains SB07; SB01 timing qualification is explicit.

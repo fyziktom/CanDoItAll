@@ -1,0 +1,15 @@
+# Agents implementation status
+
+Owner-authorized implementation baseline: 68db2ee0e63a2ce6baa681e9722acc0a67877b21, components-decoupling. No commits, staging or pushes. Live Components/FileTools sibling source unchanged.
+
+- SB01: baseline/characterization accepted: 13 Unit, 49 Components and 4 characterization cases passed; actual large-desktop screenshots inspected. Warm watch timing remains unmeasured because WatchReady disagreed with the healthy page; no speed improvement claimed.
+- SB02: owning gates passed. Typed workspace/query/resource adapter; current route, lazy history and context semantics preserved.
+- SB03: owning gates passed after two later review corrections: recheck editor target after awaited catalog refresh, and mark the acknowledged identity before publishing page selection so first save does not open another editor. Both have meaningful failing-first proof and final real composition tests.
+- SB04: owning gates passed. Typed sections and per-instance session/read metadata; current target/version/EditContext and stale-result handling. Existing B12 blank editable core-load failure remains explicitly characterized, not silently repaired.
+- SB05: owning gates passed. Independent typed submission, actual command adapters, optimistic conflict, acknowledgement/read-only reconciliation retry, actual capability/settings/child wiring, Clear/disposal/late callback protection.
+- SB06: passed final discovery and execution: 130 Components and 28 Unit, zero skipped. Public Workflows click and real nested Simple Chat query completion observer. See proof/SB06/coverage-map.md and component-browser-corrected/unit transcripts.
+- SB07: complete. Fresh final solution/stable builds and all 9,597 stable cases passed with zero skipped. Final no-write portability enforcement passes (14,251 reviewed entries) against the complete current-source scan. Corrected production browser flows, fixture cleanup, artifact/source hashes, requirement audit and final verifier passed. See proof/SB07/manifest.md for exact evidence and qualifications.
+
+Initial browser proof found two editor presentations after one new-agent save. That was fixed in SB03 and the in-progress first stable run was explicitly interrupted/invalidated. Its transcript is retained as unsuccessful evidence. Final runs have separate final-* names. A managed SourceRun build also hit the existing long Windows artifact path; browser proof uses the already validated Release DLL through the managed runtime. No launcher/build configuration change was added.
+
+The catalog is a real deterministic semantic sandbox candidate. Physical project extraction, standalone browser host, actual faster dotnet watch and production bookmarkability remain separate follow-ups. See proof/SB07/sandbox-navigation-handoff.md. AvatarPicker's existing global notification lifetime remains an external-child limitation; parent draft publication is fenced.

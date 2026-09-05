@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # SB01 — Freeze baseline and characterize
 
-Status: **Not started**. Proof tier: **Standard**. Current authorization is documentation only.
+Status: **Baseline accepted with documented watch timing limitation**. Proof tier: **Standard**. Implementation authorized by inputs/04-implementation-authorization.md.
 
 ## Objective and covered inputs
 
@@ -18,7 +20,7 @@ All primary paths in inventories/00-source-scope.md; tests/Components/CanDoItAll
 
 Source/dirty-state/sibling observations; exact test discovery; B01–B30 behavior-to-test map with named missing scenarios; characterized save/reset/load/result semantics; subtree/type/reference/assets baseline; current browser/iteration baseline; recorded existing defects.
 
-## Implementation steps for later authorized execution
+## Execution steps
 
 1. Refresh direct callers, service constructors, child scenarios and evaluated references; distinguish snapshot coverage from complete graph.
 2. Discover historical primary/route/history-host/workflow anchors and selected chat-context/child cases. Map exact methods and data cases to B rows; add focused characterization tests for meaningful gaps before production edits.
@@ -36,9 +38,9 @@ Apply the [invariants](../../requirements/01-invariants-and-non-goals.md), [patt
 
 Run baseline discovery/build/focused selectors from commands; expected historical anchors 46/10/2/1 are observations to reconcile, not mandatory future totals. Characterization success/failure traces and real-host baseline complement tests. No full stable suite is required merely to document the baseline. [Shared commands](../../commands/00-validation-commands.md) define reusable selectors; phase proof records the exact selected names/data cases and expected count before source edits, then actual discovery/results.
 
-- [ ] Current behavior and required gaps are mapped by exact scenario/test names; baseline failures are resolved or explicitly scoped before dependent work.
-- [ ] No existing core-load defect is mislabeled as a new guarantee.
-- [ ] Subtree/type graph and watch/host baseline evidence are sufficient to select a bounded next step.
+- [x] Current behavior and required gaps are mapped by exact scenario/test names; baseline failures are resolved or explicitly scoped before dependent work.
+- [x] No existing core-load defect is mislabeled as a new guarantee.
+- [x] Subtree/type graph and watch/host baseline evidence are sufficient to select a bounded next step.
 
 ## Proof and progression gate
 
@@ -49,3 +51,5 @@ Unlock SB02 only after its current route/lazy-load/context baseline is green and
 ## Reopen triggers
 
 Source/sibling/test drift, omitted dependency/scenario, changed baseline assumption or measurement environment.
+
+Execution evidence: ../../proof/SB01/manifest.md and ../../reviews/02-execution-status.md. Final governed closure remains SB07; SB01 timing qualification is explicit.

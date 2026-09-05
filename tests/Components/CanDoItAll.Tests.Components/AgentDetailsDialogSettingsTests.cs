@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
@@ -8,8 +7,6 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -25,7 +22,7 @@ public sealed class AgentDetailsDialogSettingsTests
     {
         using var context = CreateContext(out var workspaceProxy, out var externalTargetRegistryFactory);
         var editor = CreateEditor();
-        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
         var externalRoot = Path.GetFullPath(Path.Combine(
             Path.GetTempPath(),
             $"agent-settings-root-{Guid.NewGuid():N}"));
@@ -85,7 +82,7 @@ public sealed class AgentDetailsDialogSettingsTests
         const string legacyAlias = "external-target/C/repositories/legacy-agent-root";
         var editor = CreateEditor();
         editor.WorkspaceToolAccess.AllowedExternalTargetAliases = [legacyAlias];
-        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
 
         cut.Find("[data-testid='agents-catalog-save']").Click();
 
@@ -136,7 +133,7 @@ public sealed class AgentDetailsDialogSettingsTests
         var storageCatalogId = Guid.NewGuid();
         editor.WorkspaceToolAccess.AllowAllStorageCatalogs = true;
         editor.WorkspaceToolAccess.AllowedStorageCatalogIds = [storageCatalogId];
-        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
 
         cut.Find("[data-testid='agents-catalog-workspace-profile']")
             .Change(selectedProfile.ToString());
@@ -157,7 +154,7 @@ public sealed class AgentDetailsDialogSettingsTests
     {
         using var context = CreateContext(out _, out _);
         var editor = CreateEditor();
-        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
         const string relativeRoot = "relative-workspace-root";
 
         cut.Find("[data-testid='agents-catalog-workspace-external-roots-input']")
@@ -186,7 +183,7 @@ public sealed class AgentDetailsDialogSettingsTests
         using var context = CreateContext(out var workspaceProxy, out _, catalogSource);
         var dialogHost = context.Render<DialogHost>();
         var editor = CreateEditor();
-        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
 
         var openTask = cut
             .Find("[data-testid='agents-catalog-storage-selection-choose']")
@@ -240,7 +237,7 @@ public sealed class AgentDetailsDialogSettingsTests
         var editor = CreateEditor();
         editor.WorkspaceToolAccess.AllowedExternalTargetAliases = [alias];
         editor.WorkspaceToolAccess.ExternalTargetRootBindings = [binding];
-        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
 
         cut.Find("[data-testid='agents-catalog-workspace-external-roots-table'] button")
             .Click();
@@ -262,7 +259,7 @@ public sealed class AgentDetailsDialogSettingsTests
         using var context = CreateContext(out var workspaceProxy, out _, catalogSource);
         var editor = CreateEditor();
         editor.WorkspaceToolAccess.AllowedStorageCatalogIds = [catalog.Id];
-        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
 
         cut.WaitForElement(
                 $"[data-testid='agents-catalog-storage-selection-selected-row-{catalog.Id:N}-remove']")
@@ -281,7 +278,7 @@ public sealed class AgentDetailsDialogSettingsTests
     {
         using var context = CreateContext();
         var editor = CreateEditor();
-        var cut = RenderTab(context, editor, selectedTabIndex: 1);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.Runtime);
 
         Assert.True(editor.Permissions.RequiresApprovalForExternalCalls);
 
@@ -296,7 +293,7 @@ public sealed class AgentDetailsDialogSettingsTests
         using var context = CreateContext();
         var dialogHost = context.Render<DialogHost>();
         var editor = CreateEditor();
-        var cut = RenderTab(context, editor, selectedTabIndex: 1);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.Runtime);
 
         var changeTask = cut
             .Find("[data-testid='agents-catalog-auto-approval']")
@@ -322,7 +319,7 @@ public sealed class AgentDetailsDialogSettingsTests
         using var context = CreateContext();
         var dialogHost = context.Render<DialogHost>();
         var editor = CreateEditor();
-        var cut = RenderTab(context, editor, selectedTabIndex: 1);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.Runtime);
 
         var changeTask = cut
             .Find("[data-testid='agents-catalog-auto-approval']")
@@ -357,7 +354,7 @@ public sealed class AgentDetailsDialogSettingsTests
         using var context = CreateContext();
         var editor = CreateEditor();
         editor.Tags = ["architecture", "review"];
-        var cut = RenderTab(context, editor, selectedTabIndex: 0);
+        var cut = RenderTab(context, editor, section: AgentEditorSection.Identity);
 
         var selectedTab = cut.Find("button[role='tab'][aria-selected='true']");
         Assert.Equal("Identity", selectedTab.TextContent.Trim());
@@ -390,10 +387,7 @@ public sealed class AgentDetailsDialogSettingsTests
         context.Services.AddSingleton(externalTargetRegistryFactory);
         context.Services.AddSingleton<IStorageCatalogSelectionSource>(
             storageCatalogSource ?? new RecordingStorageCatalogSelectionSource([]));
-        context.Services.AddSingleton(
-            (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
-        context.Services.AddSingleton(
-            (SecretService)RuntimeHelpers.GetUninitializedObject(typeof(SecretService)));
+        context.Services.AddAgentEditorReadFixture();
         var avatarGenerationService = new AgentAvatarGenerationService(
             new UnavailableAgentImageGenerationService(),
             NullLogger<AgentAvatarGenerationService>.Instance);
@@ -403,14 +397,12 @@ public sealed class AgentDetailsDialogSettingsTests
         return context;
     }
 
-    private static IRenderedComponent<TestAgentDetailsDialog> RenderTab(
+    private static IRenderedComponent<AgentDetailsDialog> RenderTab(
         BunitContext context,
         AgentEditorModel editor,
-        int selectedTabIndex)
+        AgentEditorSection section)
     {
-        return context.Render<TestAgentDetailsDialog>(parameters => parameters
-            .Add(component => component.TestEditor, editor)
-            .Add(component => component.TestSelectedTabIndex, selectedTabIndex));
+        return context.RenderEditor(editor, section);
     }
 
     private static AgentEditorModel CreateEditor()
@@ -441,33 +433,6 @@ public sealed class AgentDetailsDialogSettingsTests
             StorageHealthStatus.Healthy,
             LastTestedAtUtc: null,
             LastHealthMessage: string.Empty);
-    }
-
-    public sealed class TestAgentDetailsDialog : AgentDetailsDialog
-    {
-        [Parameter]
-        public AgentEditorModel TestEditor { get; set; } = new();
-
-        [Parameter]
-        public int TestSelectedTabIndex { get; set; }
-
-        protected override Task OnInitializedAsync()
-        {
-            SetBaseField("editorModel", TestEditor);
-            SetBaseField("tagValues", TestEditor.Tags);
-            SetBaseField("selectedTabIndex", TestSelectedTabIndex);
-            SetBaseField("isLoading", false);
-            return Task.CompletedTask;
-        }
-
-        private void SetBaseField(string fieldName, object value)
-        {
-            var field = typeof(AgentDetailsDialog).GetField(
-                fieldName,
-                BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(AgentDetailsDialog).FullName, fieldName);
-            field.SetValue(this, value);
-        }
     }
 
     private sealed class RecordingStorageCatalogSelectionSource(

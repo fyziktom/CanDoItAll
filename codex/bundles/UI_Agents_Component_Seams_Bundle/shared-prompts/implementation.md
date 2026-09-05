@@ -1,6 +1,8 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # Future implementation prompt
 
-The current owner request is documentation only. Use this prompt only after a later implementation authorization.
+The owner authorized implementation on 2026-09-04. This execution follows that request; consult reviews/02-execution-status.md and actual phase proof before resuming.
 
 Read the shared CDA-UI-SEAMS-BASE-v2 bundle and this child's requirements, behavior matrix, subtree/type inventory, editor lifetime/UI composition contracts, phase plan and commands. Refresh repository engineering/testing/CI instructions before edits.
 

@@ -1,0 +1,10 @@
+SB07 final artifact/source verifier
+Started=2026-09-05T01:19:34.0302958-04:00
+WorkingDirectory=repo://
+Command=python codex/bundles/UI_Agents_Component_Seams_Bundle/proof/SB07/verify-proof.py verify
+Verifier adversarial self-check rejected wrong artifact hash
+Verifier adversarial self-check rejected missing artifact
+PASS final verifier: 65 changed files, 165 artifacts, 130 + 28 focused and 9597 stable cases; no missing/stale proof.
+INV-STATE INV-SESSION INV-WRITE INV-COMPOSITION INV-HANDOFF INV-PORTABILITY
+Source patch SHA-256: fdd5e8b944cd1e9f8faa2056d2f05928e8757a5e99ee6c6e3fb0e26e7d21fff5
+ExitCode=0

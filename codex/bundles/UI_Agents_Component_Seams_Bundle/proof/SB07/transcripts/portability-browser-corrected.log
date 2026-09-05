@@ -1,0 +1,11 @@
+SB07 INV-PORTABILITY current source after browser-discovered first-save echo correction; scan all proposed source including untracked files. WorkingDirectory=C:\repositories\CanDoItAll
+2026-09-04T23:53:55.6836426-04:00
+Scanned files: 5222
+Findings: 28670
+JSON: C:\repositories\CanDoItAll\codex\bundles\UI_Agents_Component_Seams_Bundle\proof\SB07\portability-browser-corrected-scan.json
+CSV: C:\repositories\CanDoItAll\codex\bundles\UI_Agents_Component_Seams_Bundle\proof\SB07\portability-browser-corrected-scan.csv
+Markdown: C:\repositories\CanDoItAll\codex\bundles\UI_Agents_Component_Seams_Bundle\proof\SB07\portability-browser-corrected-scan.md
+RESULT: PASS
+Scan ExitCode=0
+RESULT: PASS (14251 reviewed executable-source findings unchanged)
+FinalNoWrite ExitCode=0

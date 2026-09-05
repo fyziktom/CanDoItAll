@@ -1,0 +1,35 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:47.60]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Projects_remain_lazy_and_retry_does_not_replace_draft [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Projects_remain_lazy_and_retry_does_not_replace_draft [32 s]
+  Chybová zpráva:
+   Bunit.Extensions.WaitForHelpers.WaitForFailedException : The CSS selector and/or predicate did not result in a matching element before the timeout period passed.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 1.
+Component render count: 45.
+Total render count across all components: 0.
+---- Bunit.ElementNotFoundException : No elements were found that matches the selector '[data-testid='agents-catalog-project-structure-projects']'
+  Trasování zásobníku:
+     at Bunit.RenderedComponentWaitForHelperExtensions.WaitForElementCore[TComponent,TElement](IRenderedComponent`1 renderedComponent, String cssSelector, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForElement.cs:line 363
+   at Bunit.RenderedComponentWaitForHelperExtensions.WaitForElementCore[TComponent](IRenderedComponent`1 renderedComponent, String cssSelector, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForElement.cs:line 353
+   at Bunit.RenderedComponentWaitForHelperExtensions.WaitForElement[TComponent](IRenderedComponent`1 renderedComponent, String cssSelector) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForElement.cs:line 21
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Projects_remain_lazy_and_retry_does_not_replace_draft() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 162
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Projects_remain_lazy_and_retry_does_not_replace_draft() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 166
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Bunit.RenderedComponentExtensions.Find[TComponent,TElement](IRenderedComponent`1 renderedComponent, String cssSelector) in /_/src/bunit/Extensions/RenderedComponentExtensions.cs:line 42
+   at Bunit.Extensions.WaitForHelpers.WaitForElementHelper`2.<>c__DisplayClass5_0.<.ctor>b__0() in /_/src/bunit/Extensions/WaitForHelpers/WaitForElementHelper.cs:line 35
+   at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args) in /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs:line 173
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:    44, Přeskočeno:     0, Celkem:    45, Doba trvání: 1 m 22 s - CanDoItAll.Tests.Components.dll (net10.0)

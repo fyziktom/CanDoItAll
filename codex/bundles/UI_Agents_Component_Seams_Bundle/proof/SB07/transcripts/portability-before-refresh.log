@@ -1,0 +1,15 @@
+RESULT: FAIL (portability-sensitive executable source changed)
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor [absolute-path-field] d54ef3c7b1ea6dde count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs [absolute-path-field] 88b48b5cb4716da9 count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorAccessQuery.cs [secret-provider] f7974ab248c7f3cc count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs [case-policy] 966471e7bf59b2b8 count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs [case-policy] b9bcd4f8a08335bb count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs [case-policy] da2e1586d91725a1 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs [case-policy] d9c264889888b0ff count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor [absolute-path-field] eee12a90dd7fad9c count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs [absolute-path-field] 69b6e44c6c82dbd6 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs [case-policy] 0ca9264a443c6f9c count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs [case-policy] d66efbc0dc77d52d count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs [secret-provider] 636cf9c1f71b1165 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs [secret-provider] ec47bd8f0f6f97bf count=1
+Review the source change, then refresh the baseline explicitly with --write-baseline.

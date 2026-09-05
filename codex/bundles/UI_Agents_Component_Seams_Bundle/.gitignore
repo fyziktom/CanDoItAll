@@ -1,3 +1,13 @@
 !proof/
 proof/*
 !proof/README.md
+!proof/SB0[1-7]/
+!proof/SB0[1-7]/**
+proof/SB07/portability-*-scan.json
+proof/SB07/portability-scan.json
+proof/SB07/portability-*.csv
+proof/SB07/portability-scan.md
+proof/SB07/portability-final-scan.md
+proof/SB07/portability-current-scan.md
+proof/SB07/portability-*-scan.md
+proof/SB07/transcripts/final-stable-results.log

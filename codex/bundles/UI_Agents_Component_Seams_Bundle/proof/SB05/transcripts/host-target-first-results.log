@@ -1,0 +1,28 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:44.81]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection [34 s]
+  Chybová zpráva:
+   Bunit.Extensions.WaitForHelpers.WaitForFailedException : The state predicate did not pass before the timeout period passed.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 4.
+Component render count: 8.
+Total render count across all components: 0.
+  Trasování zásobníku:
+     at Bunit.RenderedComponentWaitForHelperExtensions.WaitForState[TComponent](IRenderedComponent`1 renderedComponent, Func`1 statePredicate, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForState.cs:line 33
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 89
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorSessionTests.cs:line 90
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     1, Přeskočeno:     0, Celkem:     2, Doba trvání: 44 s - CanDoItAll.Tests.Components.dll (net10.0)

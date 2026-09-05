@@ -1,3 +1,5 @@
+> Implementation authorized by the owner on 2026-09-04. See inputs/04-implementation-authorization.md and reviews/02-execution-status.md. Documentation-only wording below records the preparation stage and does not block this authorized execution.
+
 # Validation commands for later execution
 
 **Do not run implementation gates under the current documentation-only request.** Run from repository root when execution is authorized. Refresh this recipe against docs/testing.md and .github/workflows/ci.yml. Preserve the same sibling source roots/configuration across commands.

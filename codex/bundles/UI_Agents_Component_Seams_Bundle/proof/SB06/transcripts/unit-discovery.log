@@ -1,0 +1,31 @@
+Exact selector: FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests|FullyQualifiedName=CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Request_history_context_has_no_invented_summary_or_inherited_agent_selection|FullyQualifiedName=CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_builder_exposes_only_selections_relevant_to_the_active_view|FullyQualifiedName=CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_builder_uses_validated_component_selection_labels|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Request_history_context_has_no_invented_summary_or_inherited_agent_selection
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_builder_exposes_only_selections_relevant_to_the_active_view
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_builder_uses_validated_component_selection_labels
+    CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests.Capture_preserves_version_and_owns_nested_mutable_state
+    CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests.Capture_normalizes_tags_and_defaults_without_changing_visible_draft
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.History_hosts_round_trip_without_inheriting_chat_or_team_routes(tab: "providers")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.History_hosts_round_trip_without_inheriting_chat_or_team_routes(tab: "request-history")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.DefinitionsAreTheDefaultSimpleChatWorkspaceView
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.ConversationDeepLinksRemainExplicitAfterDefinitionsBecomeTheDefault
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.ChatsRouteRedirectsAndPreservesRecognizedState
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.InvalidOrIncompatibleSimpleChatStateIsDiscardedDeterministically
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "agents", expected: Agents)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "simple-chats", expected: SimpleChats)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "both", expected: Both)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: "invalid", expected: Both)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Overview, key: "overview")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Agents, key: "agents")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: SimpleChats, key: "simple-chats")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Providers, key: "providers")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: RequestHistory, key: "request-history")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Voice, key: "voice")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: FloatingChat, key: "floating-chat")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Chat, key: "chat")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Capabilities, key: "capabilities")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Governance, key: "governance")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Diagnostics, key: "diagnostics")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Leaving_catalog_clears_team_but_retains_agent
+    CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Same_route_keeps_access_readiness_but_changed_selection_requires_loading

@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:43.79]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Editor_memory_binding_round_trips_real_child_settings [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Editor_memory_binding_round_trips_real_child_settings [3 s]
+  Chybová zpráva:
+   Assert.Contains() Failure: Item not found in collection
+Collection: []
+Not found:  provider.editor
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Editor_memory_binding_round_trips_real_child_settings() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandCompositionTests.cs:line 199
+   at CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Editor_memory_binding_round_trips_real_child_settings() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorCommandCompositionTests.cs:line 199
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     9, Přeskočeno:     0, Celkem:    10, Doba trvání: 43 s - CanDoItAll.Tests.Components.dll (net10.0)
