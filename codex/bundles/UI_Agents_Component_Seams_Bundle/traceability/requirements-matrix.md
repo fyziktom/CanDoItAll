@@ -27,3 +27,17 @@
 | F09 | Meeting pack remains proposal, URL decisions open | SB01/SB07 and separate navigation child |
 
 Runtime proof must extend this table with actual test/artifact paths. Preparation traceability is not proof of implementation.
+
+## Owner hardening follow-up (SB08)
+
+Current source owners, concrete positive/adversarial cases, exact filters and runtime evidence are recorded in [hardening closure](../reviews/03-hardening-closure.md) and [compact evidence](../reviews/04-hardening-evidence.json).
+
+| Owner review requirement | Existing contract reopened | Proof owner |
+|---|---|---|
+| Four save outcomes and actual pre-write/post-commit producer | R-043-R-046; B19/B20 | Unit AgentEditorCommandsTests; Integration AgentEditorAdapterIntegrationTests; Components AgentEditorCommandCompositionTests |
+| Fail-closed core load, identity-preserving Retry | R-023-R-026; B12 | AgentEditorLoadCharacterizationTests; real missing-record browser scenario |
+| A -> null/invalid -> A, unchanged/manual echoes | R-040-R-042; B06 | AgentCatalogBoundaryTests and AgentCatalogPanelTests; same-document browser transitions |
+| Lifetime cancellation of actual effects and no orphan dialogs | R-030-R-033; B18 | AgentCatalogBoundaryTests; failing-first disposal/remount proof and startup browser recheck |
+| Non-Razor normalization, snapshot completeness, semantic sections | R-034-R-039; B09/B20 | AgentEditorSnapshotContractTests, AgentEditorDraftPolicyTests, public editor section cases |
+| Read capability ownership and unique team IDs | R-043-R-046; B15/B22 | AgentDetailsDialogCapabilityTests, AgentEditorReadCompositionTests, real DialogHost/browser |
+| Lane moves and shared feedback | R-050-R-059 | Exact Unit/Components/Integration selection; shared architecture 02/03/05 and review feedback |

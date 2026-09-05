@@ -41,6 +41,12 @@ Current DialogService closes all dialogs on LocationChanged. No new navigation i
 
 ## Failure and test contract
 
-Core-load failure B12 is a baseline uncertainty: inspect rendered controls and save eligibility, record the defect if any, and keep repair separate from refactoring authorization. Provider/secret/project errors already have separate regions; preserve them.
+The 2026-09-05 owner review explicitly authorizes B12 repair: failed core agent/capability load must hide the EditForm and all mutation/Clear actions, retain target identity and offer Retry. Replace the prior unsafe characterization oracle. Provider/secret/project errors retain their independent partial/lazy regions.
 
 Test delayed old success and old failure after a newer target/reset/disposal, two concurrent editors, first-save identity, same-target section retention, conflict, and mutation-versus-refresh failure. Public fake load results should travel through the same production loading path. If a real production need justifies preloaded sessions, document precedence, cloning, rebind, identity mismatch and refresh invalidation before adding that API.
+
+## SB08 implemented hardening clarification
+
+The [2026-09-05 hardening closure](../reviews/03-hardening-closure.md) supersedes any earlier characterization of writable blank core-load failure. Core failure renders no form and retries the same target. Known commit, commit with projection/cache warning, known rejection and unknown write are distinct; only unknown replay remains blocked pending external resolution. Post-commit cancellation retains a known identity.
+
+The host's semantic mirror is reconciled with changed requests; null/invalid requests rearm opening without defeating an unchanged manual-selection echo. Its lifetime token reaches DialogService itself so disposal removes owned presentations, not just their pending waits. An unrelated dialog remains unaffected. Public section definitions drive markup and index mapping; mutable submission copies have a recursive public-contract completeness guard.

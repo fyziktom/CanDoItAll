@@ -18,6 +18,7 @@ public sealed record AgentEditorLoadResult(
     Guid? LinkedPartyId);
 
 public interface IAgentEditorReads {
+    Task<IReadOnlyList<CapabilityCatalogItem>> ReadCapabilitiesAsync(CancellationToken cancellationToken = default);
     Task<AgentEditorLoadResult> LoadAsync(AgentEditorTarget target,
         IReadOnlyList<ProviderProfile>? initialProviders = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ProviderProfile>> ReadProvidersAsync(CancellationToken cancellationToken = default);
@@ -49,6 +50,9 @@ public sealed class AgentEditorReads(
         return new(draft, agents, await capabilitiesTask, providerResult, await secretsTask,
             definition is null ? null : AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId);
     }
+
+    public Task<IReadOnlyList<CapabilityCatalogItem>> ReadCapabilitiesAsync(CancellationToken cancellationToken = default)
+        => workspace.ListCapabilitiesAsync(cancellationToken);
 
     public Task<IReadOnlyList<ProviderProfile>> ReadProvidersAsync(CancellationToken cancellationToken = default)
         => providers.ListProvidersAsync(cancellationToken);

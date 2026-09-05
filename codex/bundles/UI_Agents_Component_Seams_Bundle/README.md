@@ -4,7 +4,7 @@
 
 Reference: **CDA-UI-SEAMS-AGENTS-01-v2**. Shared architecture: [CDA-UI-SEAMS-BASE-v2](../UI_Component_Seams_Shared_Architecture_Bundle/README.md).
 
-**Implementation and governed validation are complete, with explicit watch/sandbox follow-ups.** See [execution status](reviews/02-execution-status.md), [coverage](proof/SB06/coverage-map.md) and [governed proof](proof/SB07/manifest.md). Original preparation inputs remain historical evidence; the accepted revision controls the intended architecture.
+**SB01-SB07 proof is historical. SB08 implements the owner-authorized hardening; see the current [hardening review and validation](reviews/03-hardening-closure.md), including the pre-existing documentation/merge blocker.** See [hardening scope](subbundles/08-agents-seam-hardening/README.md). See [execution status](reviews/02-execution-status.md), [coverage](proof/SB06/coverage-map.md) and [governed proof](proof/SB07/manifest.md). Original preparation inputs remain historical evidence; the accepted revision controls the intended architecture.
 
 The goal is to make Agents UI boundaries explicit without losing existing behavior, and prepare a credible first small sandbox that improves developer iteration. Agents is the first application UI slice, not the architecture for every later module.
 
@@ -13,8 +13,9 @@ The goal is to make Agents UI boundaries explicit without losing existing behavi
 1. [Requirements](requirements/00-normalized-requirements.md), [invariants](requirements/01-invariants-and-non-goals.md), and [behavior preservation matrix](requirements/02-behavior-preservation-matrix.md).
 2. [Ownership map](architecture/01-csharp-boundary-map.md), [editor session and host contract](architecture/09-editor-session-and-host-contract.md), and [UI composition](architecture/10-ui-composition.md).
 3. [Rendered subtree and contract closure](inventories/04-rendered-subtree-and-contract-closure.md), [test impact](inventories/02-test-impact-and-classification.md).
-4. [Seven phases](plan/00-phase-plan.md), [proof](plan/02-proof-and-validation-plan.md), [commands](commands/00-validation-commands.md), and [sandbox/navigation handoff](plan/03-sandbox-and-navigation-handoff.md).
-5. [Preparation review](reviews/00-preparation-readiness.md) and [revision validation](reviews/01-revision-validation.md).
+4. [Historical seven phases](plan/00-phase-plan.md), [proof](plan/02-proof-and-validation-plan.md), [commands](commands/00-validation-commands.md), and [sandbox/navigation handoff](plan/03-sandbox-and-navigation-handoff.md).
+5. [SB08 hardening](subbundles/08-agents-seam-hardening/README.md) owns current scope, validation selection and invalidation; its bounded Behavioral gates supersede historical SB07 commands for this follow-up.
+6. [Preparation review](reviews/00-preparation-readiness.md) and [revision validation](reviews/01-revision-validation.md).
 
 ## Decisions changed by the review
 

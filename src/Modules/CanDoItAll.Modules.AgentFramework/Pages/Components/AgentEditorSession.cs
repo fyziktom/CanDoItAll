@@ -21,6 +21,8 @@ public readonly record struct AgentEditorTarget(Guid? AgentId) {
     public static AgentEditorTarget Create => new(null);
 }
 
+public enum AgentEditorLoadState { Loading, Ready, Failed }
+
 public enum AgentEditorMutationKind { Save, CapabilityVerification }
 
 public sealed record AgentEditorPendingRefresh(Guid AgentId, AgentEditorSubmission Submission, AgentEditorMutationKind Kind);
@@ -42,6 +44,9 @@ public sealed class AgentEditorSession : IDisposable {
     public bool IsDisposed { get; private set; }
     public AgentEditorPendingRefresh? PendingRefresh { get; private set; }
     public bool HasUnconfirmedWrite { get; private set; }
+    public string? CommitWarning { get; private set; }
+
+    public void SetCommitWarning(string? warning) => CommitWarning = warning;
     public bool CanWrite => !IsDisposed && PendingRefresh is null && !HasUnconfirmedWrite;
 
     public void AcknowledgeMutation(Guid agentId, AgentEditorSubmission submission, AgentEditorMutationKind kind = AgentEditorMutationKind.Save) {

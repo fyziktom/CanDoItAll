@@ -64,7 +64,9 @@ public partial class AgentDetailsDialog : IDisposable
     private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
     private CapabilityDialogKindFilter capabilityKindFilter = CapabilityDialogKindFilter.All;
     private Guid? linkedPartyId;
-    private bool isLoading = true;
+    private AgentEditorLoadState loadState = AgentEditorLoadState.Loading;
+    private bool isLoading => loadState == AgentEditorLoadState.Loading;
+    private string? coreLoadError;
     private bool isBusy;
     private bool isOpeningCapabilityWizard;
     private bool isConfirmingAutoApproval;
@@ -79,7 +81,7 @@ public partial class AgentDetailsDialog : IDisposable
     private string? projectStructureProjectsErrorMessage;
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
-    private int selectedTabIndex => (int)Section;
+    private int selectedTabIndex => AgentEditorSections.IndexOf(Section);
     private int autoApprovalInputVersion;
 
     private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
@@ -238,11 +240,15 @@ public partial class AgentDetailsDialog : IDisposable
 
     private async Task LoadAsync() {
         var owner = session;
-        isLoading = true;
+        loadState = AgentEditorLoadState.Loading;
+        coreLoadError = null;
         try {
             var loaded = await EditorReads.LoadAsync(owner.Target, InitialProviders, owner.CancellationToken);
             if (!IsCurrent(owner)) {
                 return;
+            }
+            if (loaded.Draft.Id != owner.Target.AgentId) {
+                throw new InvalidOperationException("The loaded agent does not match the requested editor target.");
             }
             owner.Load(loaded.Draft);
             agents = loaded.Agents;
@@ -261,23 +267,22 @@ public partial class AgentDetailsDialog : IDisposable
                 secretsErrorMessage = $"Failed to load secrets. {secretError}";
                 NotificationService.Error("Secrets failed to load", secretError);
             }
+            loadState = AgentEditorLoadState.Ready;
             await TargetChanged.InvokeAsync(owner.Target);
+        } catch (OperationCanceledException) when (owner.CancellationToken.IsCancellationRequested) {
         } catch (Exception exception) {
             if (IsCurrent(owner)) {
+                loadState = AgentEditorLoadState.Failed;
+                coreLoadError = exception.Message;
                 NotificationService.Error("Agent editor failed to load", exception.Message);
-            }
-        } finally {
-            if (IsCurrent(owner)) {
-                isLoading = false;
             }
         }
     }
 
+    private Task CloseFailedEditorAsync() => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+
     private async Task HandleSelectedTabIndexChanged(int index) {
-        var section = (AgentEditorSection)index;
-        if (!Enum.IsDefined(section)) {
-            throw new ArgumentOutOfRangeException(nameof(index), index, "Unknown agent editor section.");
-        }
+        var section = AgentEditorSections.At(index).Section;
         Section = section;
         await SectionChanged.InvokeAsync(section);
     }
@@ -354,7 +359,7 @@ public partial class AgentDetailsDialog : IDisposable
         }
     }
 
-    private bool IsMutationBlocked => isBusy || !session.CanWrite;
+    private bool IsMutationBlocked => loadState != AgentEditorLoadState.Ready || isBusy || !session.CanWrite;
 
     private Task SaveAgentAsync()
         => SaveCurrentDraftAsync("Agent saved", "Technical agent saved.", "Agent save failed");
@@ -381,6 +386,7 @@ public partial class AgentDetailsDialog : IDisposable
                     return false;
                 case AgentEditorSaveOutcome.Committed committed:
                     owner.AcknowledgeMutation(committed.AgentId, submission);
+                    owner.SetCommitWarning(committed.Warning);
                     try {
                         await TargetChanged.InvokeAsync(owner.Target);
                     } catch (Exception exception) {
@@ -395,6 +401,8 @@ public partial class AgentDetailsDialog : IDisposable
                 default:
                     throw new InvalidOperationException("Unknown agent save outcome.");
             }
+        } catch (OperationCanceledException) when (owner.CancellationToken.IsCancellationRequested) {
+            return false;
         } catch (Exception exception) {
             if (IsCurrent(owner)) {
                 NotificationService.Error(failureTitle, exception.Message);
@@ -424,7 +432,9 @@ public partial class AgentDetailsDialog : IDisposable
             }
             return false;
         }
-        NotificationService.Success(successTitle, successDetail);
+        if (owner.CommitWarning is null) {
+            NotificationService.Success(successTitle, successDetail);
+        }
         if (pending.Kind != AgentEditorMutationKind.Save) {
             return true;
         }
@@ -553,10 +563,13 @@ public partial class AgentDetailsDialog : IDisposable
     }
 
     private async Task ResetAgentAsync() {
+        if (loadState != AgentEditorLoadState.Ready) {
+            return;
+        }
         ReplaceSession(AgentEditorTarget.Create);
         projectStructureProjectsRequested = areProjectStructureProjectsLoaded;
         projectStructureProjectsErrorMessage = null;
-        isLoading = false;
+        loadState = AgentEditorLoadState.Ready;
         Section = AgentEditorSection.Identity;
         await TargetChanged.InvokeAsync(session.Target);
         await SectionChanged.InvokeAsync(Section);
@@ -640,7 +653,7 @@ public partial class AgentDetailsDialog : IDisposable
             }
             created = true;
             isBusy = true;
-            var refreshedCapabilities = await EditorCommands.ReadCapabilitiesAsync(owner.CancellationToken);
+            var refreshedCapabilities = await EditorReads.ReadCapabilitiesAsync(owner.CancellationToken);
             if (!IsCurrent(owner)) {
                 return;
             }

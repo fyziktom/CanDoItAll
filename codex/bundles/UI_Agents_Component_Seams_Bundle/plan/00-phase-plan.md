@@ -32,3 +32,7 @@ No routing prerequisite points to extraction/sandbox. Ordinarily follow-up imple
 Each phase carries source scope, named expected cases, observed-versus-new behavior, UI composition decision, dependency impact, artifacts, rollback and invalidation. Tests migrate in the phase that changes their seam. SB06 cannot be used to justify broken earlier gates.
 
 No phase is parallel-safe on the same source tree. A later phase reopens earlier proof whenever it changes the earlier contract, state lifetime, load timing, UI composition or operation result semantics.
+
+## Owner hardening follow-up
+
+The seven phases above are historical. [SB08](../subbundles/08-agents-seam-hardening/README.md) owns the bounded 2026-09-05 repair, its exact affected test selection and the current [closure report](../reviews/03-hardening-closure.md). Historical stable proof is not a required automatic rerun without a named invalidation trigger.

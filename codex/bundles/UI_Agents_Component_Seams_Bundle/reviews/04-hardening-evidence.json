@@ -1,0 +1,870 @@
+{
+  "date": "2026-09-05",
+  "baselineCommit": "96ee03a97c510d5363636fb06b903b9bc12f47dc",
+  "branch": "components-decoupling",
+  "sourceStatus": "uncommitted authorized working-tree repair",
+  "proofTier": "Behavioral",
+  "functionalValidation": "passed",
+  "repositoryDocumentationGate": "blocked-pre-existing-118-tracked-logs",
+  "tests": {
+    "unit": {
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentEditorSnapshotContractTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentEditorCommandsTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentFrameworkWorkspaceServiceTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests",
+      "expected": 66,
+      "discovered": 66,
+      "passed": 66,
+      "failed": 0,
+      "skipped": 0,
+      "caseContracts": [
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests.Capture_preserves_version_and_owns_nested_mutable_state",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorDraftPolicyTests.Capture_normalizes_tags_and_defaults_without_changing_visible_draft",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorSnapshotContractTests.Copy_preserves_every_public_property_and_owns_all_mutable_descendants",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorSnapshotContractTests.Sections_are_complete_unique_and_round_trip_without_enum_ordinals",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorSnapshotContractTests.Model_normalization_retains_explicit_values",
+          "count": 3
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorCommandsTests.Root_preparation_rejection_never_reaches_the_write_port",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorCommandsTests.Only_typed_known_rejections_allow_replay",
+          "count": 5
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentEditorCommandsTests.Owner_cancellation_during_save_propagates_without_becoming_unconfirmed",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.History_demand_skips_aggregates_but_keeps_shell_identity",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.Usage_refresh_does_not_reload_shell",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.Hr_catalog_failure_is_partial_but_overview_failure_is_not",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys",
+          "count": 11
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Leaving_catalog_clears_team_but_retains_agent",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Same_route_keeps_access_readiness_but_changed_selection_requires_loading",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentFrameworkWorkspaceServiceTests.Directory_projection_mutation_invalidates_reference_data_on_both_sides_of_successful_synchronization",
+          "count": 10
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentFrameworkWorkspaceServiceTests.Project_access_mutation_succeeds_after_catalog_commit_when_secondary_projections_fail",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentFrameworkWorkspaceServiceTests.Agent_deletion_succeeds_after_catalog_commit_when_secondary_projections_fail",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_LocalManualModelOverrideStillRequiresPrice",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_PublishedSharedModelWithoutPriceCanBeSelected",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_SharedProviderWithoutPublishedConstraintIsRejected",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_ExplicitNoneCanonicalizesConfigurationAndRehydratesEditor",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_NullOverrideRemovesAliasesWithoutProviderValidation",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_MigratesLegacyThinkForOllamaAtSaveBoundary",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_ExplicitProviderDefaultResetRemovesLegacyThinkForOllama",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_DropsLegacyThinkForOpenAiAtSaveBoundary",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_InheritedProviderDefaultRejectsDisallowedEffortForSupportedModel",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_InheritedProviderDefaultIsIgnoredForUnsupportedOrUnknownModel",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_ExplicitOverrideRequiresSelectedProvider",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_ExplicitOverrideRejectsMissingProviderProfile",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_ExplicitOverrideRejectsUnsupportedAndUnknownOpenAiModels",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_ExplicitOverrideRejectsDisallowedOllamaLevel",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UsesNormalizedAgentModelBeforeProviderDefault",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UsesTheExactModelMatrixForOriginalGpt5",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UsesProviderDefaultWhenAgentModelIsEmpty",
+          "count": 1
+        }
+      ]
+    },
+    "components": {
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogAvatarGenerationTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogCapabilityTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogProjectStructureAccessTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests",
+      "expected": 101,
+      "discovered": 101,
+      "passed": 101,
+      "failed": 0,
+      "skipped": 0,
+      "caseContracts": [
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Controlled_panel_search_and_selection_emit_intents_without_services",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_opens_once_and_changed_request_opens_again",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_delete_preserves_no_confirmation_and_clears_selection",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_results_refresh_once_and_cancel_has_no_write",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_can_be_cleared_and_same_deep_link_reopens",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_cancels_load_and_ignores_late_success_or_failure",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_ignores_team_dialog_results",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_inflight_team_mutations_without_refresh_or_notification",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_chat_launch_and_ignores_late_result",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Agent_selection_card_renders_actions_outside_the_selection_button",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Enterprise_agent_card_has_stable_status_type_tags_and_service_tooltips",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_hr_agent",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_prompts_curator_agent",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_workflow_curator_identity",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_scheduler_agent_identity",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_reports_the_actual_selected_agent_to_its_page_owner",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_marks_card_selection_as_handled_for_requested_dialog_echo",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Deleted_agent_result_clears_selection_instead_of_selecting_another_agent",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogAvatarGenerationTests.Avatar_dialog_explains_when_no_default_image_provider_is_available",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogAvatarGenerationTests.Avatar_dialog_prefills_and_prepares_prompt_for_the_default_image_provider",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogCapabilityTests.Capabilities_tab_shows_tools_and_filters_the_shared_catalog",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogCapabilityTests.Capability_wizard_stages_new_agents_and_persists_existing_agents",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Delete_opens_confirmation_without_mutating_the_agent",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Cancelling_delete_does_not_mutate_or_close_agent_details",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Confirming_delete_mutates_the_agent_exactly_once",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Successful_dialog_delete_emits_only_the_close_result_channel",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogDeletionTests.Failed_delete_keeps_agent_details_open_and_usable",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogProjectStructureAccessTests.Enabling_all_projects_clears_an_existing_explicit_allowlist",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogProjectStructureAccessTests.Save_normalizes_a_stale_mixed_project_scope_before_persistence",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Native_external_workspace_root_survives_save",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Legacy_external_workspace_root_is_migrated_with_a_binding_on_save",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Changing_workspace_profile_preserves_existing_external_root_binding",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Relative_external_workspace_root_is_rejected_without_clearing_the_input",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Storage_catalog_picker_selection_is_saved_from_the_typed_field",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Removing_a_saved_external_root_removes_its_alias_and_binding_on_save",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Removing_a_saved_storage_catalog_removes_its_id_on_save",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.External_call_approval_switch_updates_the_runtime_policy",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Cancelling_auto_approval_confirmation_leaves_the_policy_disabled",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Acknowledging_auto_approval_enables_the_policy_and_keeps_a_warning_visible",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogSettingsTests.Identity_contains_tags_without_a_separate_tags_tab",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Existing_capability_toggle_saves_whole_unsaved_draft_new_agent_stages",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCapabilityCompositionTests.Real_capability_wizard_creates_and_assigns",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Avatar_generation_failure_retains_unrelated_draft",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Reset_rejects_pending_avatar_result",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Known_validation_rejection_keeps_the_draft_writable_for_correction",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Committed_warning_survives_refresh_retry_and_preserves_the_saved_identity",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Real_save_refresh_retry_reuses_acknowledgement_without_another_write",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Real_save_callback_failure_keeps_current_version_and_does_not_replay",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Unknown_write_outcome_retains_draft_and_requires_catalog_check",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandCompositionTests.Editor_memory_binding_round_trips_real_child_settings",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_ignores_late_save_completion",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Dispose_ignores_late_save_completion",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Save_snapshots_draft_and_preserves_later_edits",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Target_echo_after_first_save_retains_session_and_later_edits",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorCommandLifetimeTests.Reset_cancels_an_inflight_save_without_an_unconfirmed_write_warning",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests.Core_load_failure_blocks_writes_and_retry_preserves_the_requested_agent",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests.Clear_on_an_existing_agent_creates_a_blank_draft_without_saving",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorLoadCharacterizationTests.Accepted_save_followed_by_refresh_failure_retains_identity_and_blocks_repeated_write",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Section_changes_retain_edit_context_and_unsaved_draft",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Target_change_ignores_old_load_completion",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_uses_create_target_without_changing_catalog_selection",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reset_invalidates_pending_project_result_and_allows_new_request",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Dispose_ignores_delayed_load",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Separate_editors_keep_independent_drafts",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Reference_failures_are_independent",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentEditorSessionTests.Projects_remain_lazy_and_retry_does_not_replace_draft",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Hr_agent_avatar_action_remains_in_the_page_header_across_module_tabs",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chat_inner_view_is_restored_from_the_typed_query_state",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_shell_and_content_have_unique_test_ids",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposing_catalog_closes_only_its_editor_and_allows_same_target_in_replacement_host",
+          "count": 1
+        }
+      ]
+    },
+    "integration": {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentEditorReadCompositionTests|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentCatalogOperationsIntegrationTests",
+      "expected": 13,
+      "discovered": 13,
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "caseContracts": [
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests.Managed_delete_is_rejected_by_registered_command_and_preserves_catalog",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests.Registered_commands_round_trip_settings_and_preserve_optimistic_version",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests.Real_save_reports_committed_identity_when_projection_fails_or_cancels",
+          "count": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests.Cancelled_save_is_cancellation_and_does_not_create_an_agent",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests.Duplicate_template_is_typed_pre_write_rejection_and_can_be_corrected",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorReadCompositionTests.Registered_reader_loads_existing_identity_version_and_reference_adapters",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorReadCompositionTests.Registered_reader_returns_independent_drafts_for_new_and_existing_targets",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Real_registration_reads_overview_and_bound_resources",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentCatalogOperationsIntegrationTests.Real_operations_respect_initial_data_and_repair_then_reload",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentCatalogOperationsIntegrationTests.Real_operations_update_and_delete_only_the_selected_team",
+          "count": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests.Cache_invalidation_failure_after_commit_keeps_the_saved_identity",
+          "count": 2
+        }
+      ]
+    }
+  },
+  "totalFocusedPassed": 180,
+  "broadStableRerun": {
+    "selected": false,
+    "reason": "Bounded contracts and consumers; no schema, root build, shared runtime composition or sibling changes.",
+    "historicalStableResultIsCurrentProof": false
+  },
+  "dialogLifetimeFailingFirst": {
+    "beforeFailed": 3,
+    "afterPassed": 3,
+    "before": ".mcp-state/agents-hardening-results/agents-hardening-dialog-lifetime-before.trx",
+    "after": ".mcp-state/agents-hardening-results/agents-hardening-dialog-lifetime-after.trx"
+  },
+  "portability": {
+    "scope": "full proposed source, including new unstaged protected files",
+    "result": "PASS",
+    "reviewedExecutableSourceFindings": 14251,
+    "baselineChanged": false,
+    "finalEnforcementWithoutWriteBaseline": true
+  },
+  "documentation": {
+    "result": "FAIL",
+    "preExistingTrackedLogsAtHead": 118,
+    "currentTrackedLogs": 118,
+    "introduced": 0,
+    "validatorChanged": false
+  },
+  "browser": {
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "runtime": "managed local Release DLL, Development, configured PostgreSQL development profile",
+    "fixtureId": "654eb7c9-fda0-48c0-8a3c-a4a3c36c14ad",
+    "fixtureDeleted": true,
+    "runtimeStopped": true,
+    "createAndUpdatePersisted": true,
+    "oneEditorAfterSave": true,
+    "sameDocumentNullAndInvalidReentry": true,
+    "uniqueTeamShellAndContent": true,
+    "realMissingRecordHasNoFormSaveOrClear": true,
+    "retryRetainsMissingTarget": true,
+    "finalStartupPausedEditors": 0,
+    "finalStartupResumedEditors": 1,
+    "screenshotsSha256": {
+      ".mcp-state/agents-hardening-browser/catalog.png": "4857e0d0f7df8b6fcc8c1de53329ec4affc043b863cdeb947be2b99f6dd36f47",
+      ".mcp-state/agents-hardening-browser/deep-link-reopened.png": "47cada3cfd656ef17f46e774a8c6783b1bca0687afbb4c4f66f4e0afe29003eb",
+      ".mcp-state/agents-hardening-browser/editor-saved.png": "d1fb193f6e8ebaa588c3b78f6cf4d0cc2d7a77dda6189552ec30cb0bb208e9a1",
+      ".mcp-state/agents-hardening-browser/load-failed.png": "e4bd66cb8866a8a2bf7fffccd9af37a5a38ebbccb2e114834472186811d544de",
+      ".mcp-state/agents-hardening-browser/startup-resumed-single-editor.png": "37cf480eac1a435d1331788bf5c72b8e3961d2ea03952da30e017eaa9411b3d3",
+      ".mcp-state/agents-hardening-browser/team-dialog.png": "b92c606c0534956341dce62c0268265c08cd7f29a31f705738356b76cb87192a"
+    },
+    "limitations": [
+      "Retry recovery after an actual read failure is proven in composed component tests; browser missing-record retry continues to fail closed.",
+      "HTTP missing-agent lookup returns the existing 500; no endpoint status repair is claimed.",
+      "Console reconnect failures during owned runtime stops are not a clean-console pass."
+    ]
+  },
+  "codeAnalytics": {
+    "beforeSnapshot": "snap-20260905111822-99e80758",
+    "afterSnapshot": "snap-20260905115552-99e80758",
+    "beforeSummary": {
+      "projectCount": 1,
+      "typeCount": 503,
+      "memberCount": 5386,
+      "serviceRegistrationCount": 55,
+      "entityCount": 0,
+      "findingCount": 205,
+      "openQuestionCount": 20,
+      "diagnosticCount": 20
+    },
+    "afterSummary": {
+      "projectCount": 1,
+      "typeCount": 506,
+      "memberCount": 5401,
+      "serviceRegistrationCount": 55,
+      "entityCount": 0,
+      "findingCount": 205,
+      "openQuestionCount": 20,
+      "diagnosticCount": 20
+    },
+    "cyclesAfter": [
+      {
+        "level": "Module",
+        "names": [
+          "CanDoItAll.Modules.AgentFramework.Hosting",
+          "CanDoItAll.Modules.AgentFramework"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+          "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+        ]
+      }
+    ],
+    "hasBlockingErrors": false,
+    "finalSnapshot": "snap-20260905123529-38ffcf5c",
+    "finalSummary": {
+      "projectCount": 1,
+      "typeCount": 506,
+      "memberCount": 5401,
+      "serviceRegistrationCount": 55,
+      "entityCount": 0,
+      "findingCount": 205,
+      "openQuestionCount": 20,
+      "diagnosticCount": 20
+    },
+    "cyclesFinal": [
+      {
+        "level": "Module",
+        "names": [
+          "CanDoItAll.Modules.AgentFramework.Hosting",
+          "CanDoItAll.Modules.AgentFramework"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+          "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+        ]
+      }
+    ]
+  },
+  "sourceHashes": {
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/ProviderModelSelector.razor": {
+      "beforeSha256": "01936655f1347a538bee6c9e5afc913ef89220877559f3ea55710b08411b5789",
+      "afterSha256": "26d02b0ddb8cbfabf224e978e6b5526b41b75aa56941d1fb439cade377809412"
+    },
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentEditorValidationException.cs": {
+      "beforeSha256": null,
+      "afterSha256": "6cf0eb810be3c5efbf15b6c607b190e953e1a356e42424738e7f10be724c1031"
+    },
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs": {
+      "beforeSha256": "cc31d762c5a1ac7e5de049be9e4c4df2a9e7e53139eb8e9655fbd977ff1bcaaa",
+      "afterSha256": "5ee8930687da02fbbccc949c011f79e767c7c0eccc99d1168c93aea98a0c8904"
+    },
+    "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderModelValuePolicy.cs": {
+      "beforeSha256": null,
+      "afterSha256": "7055116aac3ad227ac74537f01bb0f0cebc2f4426c745af9c89e117867974a63"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor": {
+      "beforeSha256": "5199e8d1554abbc7aae15ed65339156864324a1886d80b6b307a2c377e697988",
+      "afterSha256": "6c4f80261b121bc143a37155f3e9ae5dfa2c14c316f3cca3aefe8cb14b0a1d20"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor": {
+      "beforeSha256": "cb6c4a904dd95d8ff6670cdc9ee16b4eaf6b59698c2366249c3c2a89fc580345",
+      "afterSha256": "6ec365f69e27794cc8921235e7cddc9cc8ffbdb446980e62d0f23bca5437aba4"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs": {
+      "beforeSha256": "554b639e06591ab7e0ee65cf7708be5d8d75f8f382e96bde5436f4deaad6892a",
+      "afterSha256": "3b48606bc30d9d8fa19b57e25063fce5938b40d5d0bf45e0ce2a1984713e8cb3"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentEditorSections.cs": {
+      "beforeSha256": null,
+      "afterSha256": "7c0070649f2d4e894b8d9b557f68ebe25ea4948850176152419f7a8abb72a885"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentEditorSession.cs": {
+      "beforeSha256": "39d722636c283c535e96f770f36eb683a5cc39d27da6683d45665873f9298a82",
+      "afterSha256": "c183a22e802900a09f9c07c6c479db2407f91fa8418c272345e99fb60ef63e87"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamDetailsDialog.razor": {
+      "beforeSha256": "d4517092c09f58c1407b863b0d2b51f1c19020aefa83e1f7201413079116a5dd",
+      "afterSha256": "ff3fda96cf1e8f643935eef46688c7ac8c52b5e88f0ac350685a467221c10d8b"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorCommands.cs": {
+      "beforeSha256": "32e21ec86d81da09803a4a3e2c2a88ed1c8fecd1405651ba78f38103ee58175b",
+      "afterSha256": "281c1b4e008713f465e66b6c33b5c80577dc343cd06780e0df01727aea0c015a"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs": {
+      "beforeSha256": "ee5c20e85d0d820cc94b0ebd92397bffca0cf6587f6614bd62478a8d8c497c50",
+      "afterSha256": "02431be5b55aa36a78ecaabc78d855034ee4c8e8dbb19724cb387054c7f0f2d2"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorReads.cs": {
+      "beforeSha256": "32daccfdb00d5830f140a0891179ac78a15870d1c322af1e148c28c3452c676b",
+      "afterSha256": "f322362dd3d8ae6effa502015fd8e878685a9ea43849269d5c4beacb1d5dccd0"
+    },
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs": {
+      "beforeSha256": "8b376557be00a3400840e7caa79e25d36a4f2e4ef7d5f0de916069c57ac9cc71",
+      "afterSha256": "f359ecc67a0c486b8e7ce8788daf06beb616b2d5cafd03058d33c6f87f8ed7be"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentCatalogBoundaryTests.cs": {
+      "beforeSha256": "1477c2a018f9d06c93950423aca284413a7df4a3ec355e33a75743e9e9d91f7f",
+      "afterSha256": "f672e52f3614e4faa3c4f460dad55c03d0054f453ced5fcc57ae7006abaec38d"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentCatalogPanelTests.cs": {
+      "beforeSha256": "223ab7dff25030023d836c0eb1862aa52832e923f49d534e1be5234966ba446c",
+      "afterSha256": "8b09d92158794b6e234db2eb2271c0ffe35ec765808f5321b65e1c1d39133f8d"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogCapabilityTests.cs": {
+      "beforeSha256": "5642cd30fb4d7223a89e41cffce3430905b6e26c7c921536a7037a8f743ce7cf",
+      "afterSha256": "e50c0835bd572917d673c039be6e5ed0fe1c570946546e89695e38635ba9c2f1"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentEditorCommandCompositionTests.cs": {
+      "beforeSha256": "70a1b6ad95732c154588bb701bf7964d3883fa0170be2a7480273a4ebcf5c716",
+      "afterSha256": "ef4c9b3dc3e0dcc1bf59d11bca9626dbefbe8fdee48b76f2740af0912a4bff4b"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentEditorCommandLifetimeTests.cs": {
+      "beforeSha256": "e94ce00686316623246addd21d0dab5c3ab73868cf64ce193239bde261e77b0b",
+      "afterSha256": "4c38b6b34c81e527c0f1ba23d8db960629aafae25ad9882ac880cdc7b068a25f"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentEditorLoadCharacterizationTests.cs": {
+      "beforeSha256": "078cd8544b9ba779413d4c248693395bf41cc3138825da8e2d21dadd0d5cfb57",
+      "afterSha256": "504560baba4a47bb737088e2ea85dcb2b527f76358e4ef4554b0e6474785bbd2"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentEditorReadCompositionTests.cs": {
+      "beforeSha256": "764e6b8511755f31c28434dbe5fe2b83440108f5a5b14879628e9510bece1230",
+      "afterSha256": null
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentEditorReadFixture.cs": {
+      "beforeSha256": "9efc43bfd4f18162e46edb994ce64d408dc269e4b4946d52fe9c3b1d824b3bb2",
+      "afterSha256": "1a4a1396e083e56750265e8d4122a71e8ffc7f2702899c6e1cf1d2c386c928cf"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/AgentsWorkspaceQueryTests.cs": {
+      "beforeSha256": "5875ba831e2c7b377004d2c62b448e0d87c19730e2649795c037a712e3ea0f7d",
+      "afterSha256": null
+    },
+    "tests/Integration/CanDoItAll.Tests.Integration/AgentCatalogOperationsIntegrationTests.cs": {
+      "beforeSha256": null,
+      "afterSha256": "59b9e522ebfbf088b59b0662996f356b1cbf6a793f2c2bd14cec1b1ffe67332a"
+    },
+    "tests/Integration/CanDoItAll.Tests.Integration/AgentEditorAdapterIntegrationTests.cs": {
+      "beforeSha256": null,
+      "afterSha256": "8a5274ca6b088e52816014dfd933d94563fc15f50f9e619077ff575058387762"
+    },
+    "tests/Integration/CanDoItAll.Tests.Integration/AgentEditorReadCompositionTests.cs": {
+      "beforeSha256": null,
+      "afterSha256": "785d103aab7310277ce8c1d72b580a93d1934fe0cfdd3dacafc7339c1419aca7"
+    },
+    "tests/Integration/CanDoItAll.Tests.Integration/AgentUiAdapterTestHost.cs": {
+      "beforeSha256": null,
+      "afterSha256": "965005441d3aa8b4c274a5d406aebbf4a0019f367d9471a5b205ead29736e3c9"
+    },
+    "tests/Integration/CanDoItAll.Tests.Integration/AgentsWorkspaceQueryTests.cs": {
+      "beforeSha256": null,
+      "afterSha256": "f47294e71da9b05f43c26ecc6c8cc0ae39d714c7e8d85a56f1f55b3978411a42"
+    },
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentEditorCommandsTests.cs": {
+      "beforeSha256": null,
+      "afterSha256": "a3f6a6f682c8ab8b69601d9d109f05d828f5cd18be12ffc29eb3831e2db793d6"
+    },
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentEditorSnapshotContractTests.cs": {
+      "beforeSha256": null,
+      "afterSha256": "3525ea0618aceb89b32af9b083930ff44126cc1133275893a8752b2f6910b499"
+    },
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsWorkspaceQueryTests.cs": {
+      "beforeSha256": null,
+      "afterSha256": "b1b8b6de48d8d217851aa728119f4a939b754213bcb0d209c4957e273f70116b"
+    }
+  },
+  "localArtifactSha256": {
+    ".mcp-state/agents-hardening-results/agents-hardening-unit.trx": "250825fc6617fc8aa747afd2a3d9bec1127d1120b54b95ba8aca931fff12d3c4",
+    ".mcp-state/agents-hardening-unit-discovery.log": "5420a867db5224596fd573aa01ef98e62e67394e6b8b7581015da9460833d608",
+    ".mcp-state/agents-hardening-unit-test.log": "65f7a9ae95f1d95561d16992f85d69bf3dec74fc08a41e329c9d56158bf9e058",
+    ".mcp-state/agents-hardening-results/agents-hardening-components.trx": "52f45e1b3d1371b243848864e975c20ccd8971d15f9f8924effa896ac8dbc32c",
+    ".mcp-state/agents-hardening-components-discovery.log": "344eef33f171e508fb5f137247f897b66d017bf6e2657df9096ea8618d297230",
+    ".mcp-state/agents-hardening-components-test.log": "2897f48360496cd06a7b5d478f0c5e95bd38fa3124ff2fa65f32748cb409cd7c",
+    ".mcp-state/agents-hardening-results/agents-hardening-integration.trx": "321ca9ceca2559fbacf90da5163bbaf1d595f8ba468f10084f75514bc021e7d8",
+    ".mcp-state/agents-hardening-integration-discovery.log": "a6e413bc5c0a21586855b974cc8edf2f6197170f3bec448467a23e30146739ff",
+    ".mcp-state/agents-hardening-integration-test.log": "18f91983bb8ad9eabc8b4ab1fd60430b6a9b5eb72b988426387fee2e69625a75",
+    ".mcp-state/agents-hardening-results/agents-hardening-dialog-lifetime-before.trx": "b1cd0a5c0fa68be5d971f96d7c10eeea8a009cc564795904bd9ec109d4e3695c",
+    ".mcp-state/agents-hardening-results/agents-hardening-dialog-lifetime-after.trx": "eb5d2f828c1140ce3c8dac45e42906cfc9d186197a65759cd9eac766c5e236ce",
+    ".mcp-state/agents-hardening-dialog-lifetime-before.log": "c77c79b95329f72661327b7b4b5f9b9352f271b92a579550de1c1d66cedeb2ec",
+    ".mcp-state/agents-hardening-dialog-lifetime-after.log": "8a28b193e4a8c53c942c5cfe737d1fc3f76215854ab93fa9f8fb6f34680f5f6d",
+    ".mcp-state/agents-hardening-production-builds.log": "388d9c442988ad434ce6053338fa5a75fd8bba77a727dc9d4f164e5bd3635c23",
+    ".mcp-state/agents-hardening-host-final-build.log": "bab1da3c14cad1386c327f55f60490c98a70a5b89e5d1187edfdec5e6335fb12",
+    ".mcp-state/agents-hardening-portability-final.log": "b27b785ea104c8490b84a12baea5e5bbff3c19e7cfef39e9e204fa22a81a69b9",
+    ".mcp-state/agents-hardening-documentation.log": "2d737410e2892a1e50565eacb86fbc64deb03d572629467a669130916eccb06a",
+    ".mcp-state/agents-hardening-documentation-final.log": "2d737410e2892a1e50565eacb86fbc64deb03d572629467a669130916eccb06a",
+    ".mcp-state/agents-hardening-secret-review.json": "05ce09dd33a51542a2ca9e849ccd98fbcf4e636ddcdf86bd25461d268768bfe5",
+    ".mcp-state/agents-hardening-bundle-validation.json": "67f6bf7873727407666b480a171ac7cff0df5bf5441bf5c0942b03c740844e57"
+  },
+  "nextScope": "Catalog-only UI assembly/sandbox plus reproducible warm watch measurement; no speedup claimed.",
+  "sourceLineEndings": "Final authored text normalized to repository LF policy; no semantic change after passing gates.",
+  "bundleValidation": {
+    "bundles": [
+      {
+        "bundle": "codex/bundles/UI_Agents_Component_Seams_Bundle",
+        "manifestEntries": 228,
+        "json": 16,
+        "localLinks": 144
+      },
+      {
+        "bundle": "codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle",
+        "manifestEntries": 27,
+        "json": 1,
+        "localLinks": 19
+      }
+    ],
+    "linkErrors": []
+  },
+  "artifactSecretScan": {
+    "result": "PASS",
+    "scannedTextFiles": 36,
+    "findings": 0,
+    "oversizedSkipped": 0,
+    "unreadableSkipped": 0
+  },
+  "sourceAudit": {
+    "diffCheck": "PASS",
+    "stagedChanges": 0,
+    "projectReferenceOrBuildChanges": 0,
+    "historicalProofFilesChanged": 0,
+    "newPrivateReflectionOrUninitializedServiceFixtures": 0
+  }
+}

@@ -43,6 +43,22 @@ Remove incidental private-field/method reflection, uninitialized concrete servic
 partial counts, filename snapshots, and dependency-number quotas. Temporary migration
 checks may prove moved calls left the old class; label and retire them after closure.
 
+Manual mutable-model snapshots require a public-contract completeness guard: sentinel values
+for every public property, equal copied values and independent nested mutable collections.
+New unsupported property types must fail the guard instead of being silently skipped.
+Public reflection for this data contract is legitimate; private component-state reflection is not.
+
+An unsafe characterization test is temporary defect evidence. Once repair is authorized,
+replace its acceptance oracle with the safe behavior. If still unresolved, carry an explicit
+open defect and block the dependent hardened-readiness claim; do not cite green execution
+of the unsafe oracle as closure.
+
+Place deterministic policies/state and service-only fake-port tests in Unit, rendering and
+host lifecycle in Components, and EF/persistence/registered production adapters in Integration.
+Preserve behavior coverage when moving tests. Use unique dialog IDs within a DOM, conventionally
+*-dialog-shell and *-dialog-content, and prove the composed shell/content rather than fixing
+browser strict-mode collisions with increasingly fragile selectors.
+
 ProjectStructurePageArchitectureTests' exact 22-partial assertion is a known example for
 the owning future child, not permission to change unrelated tests during Agents work.
 

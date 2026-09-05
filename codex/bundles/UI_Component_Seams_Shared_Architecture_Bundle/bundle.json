@@ -5,7 +5,7 @@
   "supersedes": "CDA-UI-SEAMS-BASE-v1",
   "kind": "architecture-reference",
   "preparedAt": "2026-09-04",
-  "revisedAt": "2026-09-04",
+  "revisedAt": "2026-09-05",
   "repository": "fyziktom/CanDoItAll",
   "observedBranch": "components-decoupling",
   "observedCommit": "a249d77b175916d760e9f6c86633202a4ea3ae44",

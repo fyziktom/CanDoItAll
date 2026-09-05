@@ -19,6 +19,7 @@ internal sealed class AgentEditorReadFixture : IAgentEditorReads {
     public int ProviderReads { get; private set; }
     public Func<AgentEditorTarget, CancellationToken, Task<AgentEditorLoadResult>>? Load { get; set; }
     public Func<CancellationToken, Task<IReadOnlyList<AgentEditorProject>>>? ReadProjects { get; set; }
+    public Func<CancellationToken, Task<IReadOnlyList<CapabilityCatalogItem>>>? ReadCapabilities { get; set; }
 
     public Task<AgentEditorLoadResult> LoadAsync(AgentEditorTarget target,
         IReadOnlyList<ProviderProfile>? initialProviders = null, CancellationToken cancellationToken = default) {
@@ -33,6 +34,9 @@ internal sealed class AgentEditorReadFixture : IAgentEditorReads {
 
     public AgentEditorLoadResult Result(AgentEditorModel draft, IReadOnlyList<ProviderProfile>? initialProviders = null)
         => new(draft, Agents, Capabilities, new(initialProviders ?? Providers, ProviderError), new(Secrets, SecretError), null);
+
+    public Task<IReadOnlyList<CapabilityCatalogItem>> ReadCapabilitiesAsync(CancellationToken cancellationToken = default)
+        => ReadCapabilities?.Invoke(cancellationToken) ?? Task.FromResult(Capabilities);
 
     public Task<IReadOnlyList<ProviderProfile>> ReadProvidersAsync(CancellationToken cancellationToken = default) {
         ProviderReads++;

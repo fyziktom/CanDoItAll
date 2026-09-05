@@ -4,9 +4,8 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components.AgentFramework;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentsWorkspaceQueryTests {
     [Theory]
@@ -37,21 +36,6 @@ public sealed class AgentsWorkspaceQueryTests {
         Assert.Equal(0, workspace.OverviewReads);
         Assert.Equal(0, workspace.AgentReads);
         Assert.Equal(0, bindings.Reads);
-    }
-
-    [Fact]
-    public async Task Real_registration_reads_overview_and_bound_resources() {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        var query = Assert.IsType<AgentsWorkspaceQuery>(harness.Context.Services.GetRequiredService<IAgentsWorkspaceQuery>());
-        Assert.IsType<BoundAgentResourceQuery>(harness.Context.Services.GetRequiredService<IBoundAgentResourceQuery>());
-        var result = await query.ReadShellAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
-        var workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var expected = await workspace.GetAgentOverviewAsync();
-        Assert.Equal(expected.Totals, Assert.IsType<AgentOverviewSnapshot>(result.Overview).Totals);
-        Assert.NotNull(result.Usage);
-        Assert.Equal(HrAgentIdentity.AgentId, result.HrAgent?.Id);
-        Assert.Contains(HrAgentIdentity.AgentId.ToString("D"), result.AvatarImageUrls.Keys);
-        Assert.Equal(await harness.Context.Services.GetRequiredService<IBoundAgentResourceQuery>().CountAsync(), result.BoundResourceCount);
     }
 
     [Theory]

@@ -2,7 +2,7 @@
 
 ## Choose by responsibility
 
-- Extract deterministic policy/mapping/normalization into ordinary top-level types.
+- Extract deterministic policy/mapping/normalization into ordinary non-Razor types. Policies must not call static methods on component classes. Reuse a model policy where dependencies permit; do not add a domain reference to generic UI merely to share trivial string trimming.
 - Reuse an existing cohesive application contract where its type graph is suitable.
 - Add a workflow boundary for meaningful multi-service coordination.
 - Add an I/O/host port when substitution or dependency direction requires it.
@@ -30,7 +30,12 @@ when that creates a real boundary rather than mocking an entire runtime.
 Distinguish shell summary, overview, usage, catalog, selected detail, and lazy supporting
 data. Record triggers, keys, cached data validity, partial failures, retries, cancellation,
 and forbidden eager reads. One interface may expose more than one cohesive operation.
-An aggregate query must not force every region to reload together.
+An aggregate query must not force every region to reload together. Catalog/reference reads
+belong on the existing read contract, not a command port merely because a command triggers
+them. A core target/capability load must distinguish Loading, Ready and Failed. Failed core
+load retains the requested identity, hides the editable form and exposes same-target Retry;
+it must never present an empty create draft. Independent provider/secret failures can remain
+partial when their absent data cannot silently overwrite saved settings.
 
 ## Mutation and failure boundaries
 
@@ -38,6 +43,22 @@ Record validation, confirmation, authorization, expected version, persistence co
 post-commit refresh, notifications, and completion channels. Cancellation of a view does
 not prove a command did not commit. Represent known committed outcomes separately from
 refresh failures; an uncertain outcome must not cause an automatic duplicate write.
+
+Define and prove four cases at the producer's actual commit boundary:
+
+| Outcome | Required treatment |
+|---|---|
+| Known rejected before write | Preserve draft and permit correction/retry; distinguish concurrency conflict |
+| Known committed | Preserve returned identity; reconcile version and publish completion once |
+| Committed with secondary warning | Retain identity and visible warning; retry reads without replaying the mutation |
+| Genuinely unknown persistence result | Preserve draft, prevent blind replay, provide an explicit recovery path |
+
+A general catch of persistence exceptions as unknown is insufficient when producers already
+carry commit identity or deterministic validation rejection. Use a typed validation exception
+or result produced strictly before persistence; do not classify arbitrary InvalidOperationException
+from an entire save call as rejected. Include cache invalidation and projection work after the
+commit in the committed-warning boundary. Owner cancellation propagates unless the producer
+already knows a commit occurred; in that case commit knowledge wins over the cancellation.
 
 Preserve existing provider/secret partial loads and lazy catalog semantics, including
 unavailable saved selections. Empty due to failure must not silently erase permissions.

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.AgentFramework;
@@ -34,8 +33,7 @@ public static class AgentEditorDraftPolicy {
         original.Tags = BuildTags(draft.Tags, visibleTags);
         var request = Copy(original);
         var runtime = providers.FirstOrDefault(provider => provider.Id == request.ProviderProfileId);
-        request.Model = runtime is null ? request.Model.Trim()
-            : ProviderModelSelector.NormalizeProviderDefaultModel(request.Model, runtime);
+        request.Model = ProviderModelValuePolicy.Normalize(request.Model);
         var image = request.ImageGenerationAccess.PreferredProviderProfileId is { } imageProviderId
             ? providers.FirstOrDefault(provider => provider.Id == imageProviderId)
             : ImageGenerationProviderSelectionPolicy.ResolveDefault(providers, runtime);
@@ -43,8 +41,7 @@ public static class AgentEditorDraftPolicy {
         if (access.CanGenerateImages && !access.PreferredProviderProfileId.HasValue && image is not null) {
             access.PreferredProviderProfileId = image.Id;
         }
-        access.DefaultModel = image is null ? access.DefaultModel.Trim()
-            : ProviderModelSelector.NormalizeProviderDefaultModel(access.DefaultModel, image);
+        access.DefaultModel = ProviderModelValuePolicy.Normalize(access.DefaultModel);
         request.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(access);
         request.ProjectStructureAccess = AgentProjectStructureAccessMetadata.Normalize(request.ProjectStructureAccess);
         return new(original, request);

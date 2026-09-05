@@ -3,16 +3,17 @@
 **Reference ID:** CDA-UI-SEAMS-BASE-v2
 **Version:** 2
 **Kind:** Non-executable architecture reference
-**Revision date:** 2026-09-04
+**Revision date:** 2026-09-05
 **Preparation status:** Revised; manual semantic validation recorded in reviews
-**Execution status:** Not started; the current owner request authorizes bundle edits only
+**Execution status:** Non-executable reference; the current owner request authorizes Agents hardening and shared-rule updates through its child bundle
 
 ## Purpose and authority
 
 Improve component boundaries across the application while preserving working behavior.
 Agents is the first pilot, not a universal implementation template. This revision adopts
-the accepted architectural review; it does not authorize product implementation, physical
-moves, new routes, sandbox creation, or sibling changes.
+the accepted architectural review and the Agents hardening feedback. The Agents child owns
+its authorized implementation; this reference does not itself schedule physical moves,
+new routes, sandbox creation or sibling changes.
 
 Read [the revision input and finding map](inputs/01-accepted-review-and-revision-request.md).
 The earlier owner directive and bookmarkability meeting sources remain historical inputs.
@@ -54,6 +55,7 @@ scope are not final owner decisions. Current requirements take precedence over t
 - [Reference block](templates/child-bundle-reference-block.md)
 - [Source register](references/00-source-register.md)
 - [Review and validation](reviews/00-shared-base-review-checklist.md)
+- [Agents hardening feedback](reviews/02-agents-hardening-feedback.md)
 
 ## Readiness vocabulary
 

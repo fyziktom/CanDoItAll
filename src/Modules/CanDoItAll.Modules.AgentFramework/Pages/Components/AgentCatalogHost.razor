@@ -50,7 +50,24 @@
     private readonly Dictionary<Guid, AgentEditorTarget> editorTargets = [];
     public IReadOnlyList<AgentEditorTarget> OpenEditorTargets => editorTargets.Values.ToArray();
 
-    public void Dispose() => editorTargets.Clear();
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationToken lifetimeToken;
+    private bool isDisposed;
+    private long requestGeneration;
+    private long catalogGeneration;
+
+    public void Dispose() {
+        if (isDisposed) {
+            return;
+        }
+        isDisposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+        editorTargets.Clear();
+    }
+
+    private bool IsCurrentRequest(long generation) => !isDisposed && requestGeneration == generation;
+
 
     private AgentCatalogSnapshot snapshot = AgentCatalogSnapshot.Empty;
     private IReadOnlyList<AgentDefinition> agents => snapshot.Agents;
@@ -71,7 +88,7 @@
 
     private AgentTeamDefinition? SelectedTeam => teams.FirstOrDefault(team => team.Id == selectedTeamId);
 
-    private Task HandleIntentAsync(AgentCatalogIntent intent) => intent switch {
+    private Task HandleIntentAsync(AgentCatalogIntent intent) => isDisposed ? Task.CompletedTask : intent switch {
         AgentCatalogIntent.SelectAgent select => SelectAgentAsync(select.AgentId),
         AgentCatalogIntent.SelectTeamMember select => SelectTeamMemberAsync(select.AgentId),
         AgentCatalogIntent.SelectTeam select => SelectTeamAsync(select.TeamId),
@@ -93,56 +110,77 @@
         await SelectedAgentChanged.InvokeAsync(agents.First(agent => agent.Id == agentId));
     }
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() {
+        lifetimeToken = lifetime.Token;
         await EnsureLoadedAsync();
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!contextRequestApplied ||
-            contextRequestedAgentId != RequestedAgentId ||
-            contextRequestedTeamId != RequestedTeamId)
-        {
+    protected override async Task OnParametersSetAsync() {
+        if (isDisposed) {
+            return;
+        }
+        var previousAgentId = contextRequestedAgentId;
+        var agentRequestChanged = !contextRequestApplied || previousAgentId != RequestedAgentId;
+        var requestChanged = !contextRequestApplied || agentRequestChanged || contextRequestedTeamId != RequestedTeamId;
+        if (requestChanged) {
+            requestGeneration++;
             contextRequestApplied = true;
             contextRequestedAgentId = RequestedAgentId;
             contextRequestedTeamId = RequestedTeamId;
             publishedAccessState = null;
+        }
+        var generation = requestGeneration;
+        if (requestChanged) {
             await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
         }
-
+        if (!IsCurrentRequest(generation)) {
+            return;
+        }
         await EnsureLoadedAsync();
+        if (!IsCurrentRequest(generation)) {
+            return;
+        }
+        if (!RequestedAgentId.HasValue || agents.All(agent => agent.Id != RequestedAgentId.Value)) {
+            if (agentRequestChanged && openedRequestedAgentId == previousAgentId) {
+                openedRequestedAgentId = null;
+            }
+            if (agentRequestChanged && previousAgentId.HasValue && selectedAgentId == previousAgentId) {
+                selectedAgentId = null;
+                await SelectedAgentChanged.InvokeAsync(null);
+                if (!IsCurrentRequest(generation)) {
+                    return;
+                }
+            }
+        }
         ApplyRequestedTeam();
         await OpenRequestedAgentDialogIfNeededAsync();
+        if (!IsCurrentRequest(generation)) {
+            return;
+        }
         await PublishAccessStateAsync(
-            HasValidRequestedSelection()
-                ? AgentChatContextAccessState.Ready
-                : AgentChatContextAccessState.Failed);
+            HasValidRequestedSelection() ? AgentChatContextAccessState.Ready : AgentChatContextAccessState.Failed);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (!firstRender ||
             interactiveReloadAttempted ||
-            hasLoaded)
-        {
+            hasLoaded) {
             return;
         }
 
         interactiveReloadAttempted = true;
         await EnsureLoadedAsync();
-        StateHasChanged();
+        if (!isDisposed) {
+            StateHasChanged();
+        }
     }
 
-    private Task EnsureLoadedAsync()
-    {
-        if (hasLoaded)
-        {
+    private Task EnsureLoadedAsync() {
+        if (isDisposed || hasLoaded) {
             return Task.CompletedTask;
         }
 
-        if (loadTask is not null)
-        {
+        if (loadTask is not null) {
             return loadTask;
         }
 
@@ -150,18 +188,23 @@
         return loadTask;
     }
 
-    private async Task LoadAsync()
-    {
+    private async Task LoadAsync() {
+        var generation = ++catalogGeneration;
         isLoading = true;
         await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
+        if (isDisposed) {
+            return;
+        }
 
-        try
-        {
-            snapshot = await CatalogOperations.LoadAsync(new(!SkipCatalogRepair, InitialAgents, InitialProviders, InitialTeams));
+        try {
+            var loaded = await CatalogOperations.LoadAsync(new(!SkipCatalogRepair, InitialAgents, InitialProviders, InitialTeams), lifetimeToken);
+            if (isDisposed || generation != catalogGeneration) {
+                return;
+            }
+            snapshot = loaded;
 
             if (RequestedAgentId.HasValue &&
-                agents.Any(item => item.Id == RequestedAgentId.Value))
-            {
+                agents.Any(item => item.Id == RequestedAgentId.Value)) {
                 selectedAgentId = RequestedAgentId.Value;
             }
 
@@ -172,119 +215,125 @@
                 HasValidRequestedSelection()
                     ? AgentChatContextAccessState.Ready
                     : AgentChatContextAccessState.Failed);
-        }
-        catch
-        {
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch {
+            if (isDisposed) {
+                return;
+            }
             await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
             throw;
-        }
-        finally
-        {
-            isLoading = false;
-            loadTask = null;
+        } finally {
+            if (!isDisposed && generation == catalogGeneration) {
+                isLoading = false;
+                loadTask = null;
+            }
         }
     }
 
-    private async Task OpenRequestedAgentDialogIfNeededAsync()
-    {
+    private async Task OpenRequestedAgentDialogIfNeededAsync() {
         if (!RequestedAgentId.HasValue ||
             openedRequestedAgentId == RequestedAgentId.Value ||
-            !agents.Any(item => item.Id == RequestedAgentId.Value))
-        {
+            !agents.Any(item => item.Id == RequestedAgentId.Value)) {
             return;
         }
 
         openedRequestedAgentId = RequestedAgentId.Value;
         selectedAgentId = RequestedAgentId.Value;
-        await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == RequestedAgentId.Value));
-        _ = OpenAgentDetailsDialogAsync(RequestedAgentId.Value);
+        var agentId = RequestedAgentId.Value;
+        var generation = requestGeneration;
+        await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
+        if (IsCurrentRequest(generation) && RequestedAgentId == agentId) {
+            _ = OpenAgentDetailsDialogAsync(agentId);
+        }
     }
 
-    private async Task SelectAgentAsync(Guid agentId)
-    {
+    private async Task SelectAgentAsync(Guid agentId) {
         selectedAgentId = agentId;
         openedRequestedAgentId = agentId;
         await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
         await PublishAccessStateAsync(AgentChatContextAccessState.Ready);
     }
 
-    private async Task OpenManagedAgentChatAsync(AgentDefinition agent)
-    {
-        if (openingManagedAgentChatId.HasValue)
-        {
+    private async Task OpenManagedAgentChatAsync(AgentDefinition agent) {
+        if (openingManagedAgentChatId.HasValue) {
             return;
         }
 
-        if (!IsManagedQuickChatAgent(agent))
-        {
+        if (!IsManagedQuickChatAgent(agent)) {
             throw new InvalidOperationException(
                 "Only an exact configured managed-agent identity can open a quick chat window.");
         }
 
         selectedAgentId = agent.Id;
         await SelectedAgentChanged.InvokeAsync(agent);
+        if (isDisposed) {
+            return;
+        }
         openingManagedAgentChatId = agent.Id;
-        try
-        {
-            await AgentChatLauncher.StartNewChatAsync(agent.Id);
+        try {
+            await AgentChatLauncher.StartNewChatAsync(agent.Id, lifetimeToken);
+            if (isDisposed) {
+                return;
+            }
             NotificationService.Success("Chat ready", $"Opened a new chat with {agent.Name}.");
-        }
-        catch (Exception exception)
-        {
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (isDisposed) {
+                return;
+            }
             NotificationService.Error("Unable to open managed agent chat", exception.Message);
-        }
-        finally
-        {
-            openingManagedAgentChatId = null;
+        } finally {
+            if (!isDisposed) {
+                openingManagedAgentChatId = null;
+            }
         }
     }
 
-    private static bool IsManagedQuickChatAgent(AgentDefinition agent)
-    {
+    private static bool IsManagedQuickChatAgent(AgentDefinition agent) {
         return HrAgentIdentity.Matches(agent) ||
                PromptsCuratorAgentIdentity.Matches(agent) ||
                WorkflowCuratorAgentIdentity.Matches(agent) ||
                SchedulerAgentIdentity.Matches(agent);
     }
 
-    private Task OpenSelectedTeamMembersDialogAsync()
-    {
+    private Task OpenSelectedTeamMembersDialogAsync() {
         _ = OpenTeamMembersDialogAsync();
         return Task.CompletedTask;
     }
 
-    private Task QueueAgentDetailsDialogAsync(Guid? agentId)
-    {
+    private Task QueueAgentDetailsDialogAsync(Guid? agentId) {
         _ = OpenAgentDetailsDialogAsync(agentId);
         return Task.CompletedTask;
     }
 
-    private Task QueueTeamDetailsDialogAsync(Guid? teamId)
-    {
+    private Task QueueTeamDetailsDialogAsync(Guid? teamId) {
         _ = OpenTeamDetailsDialogAsync(teamId);
         return Task.CompletedTask;
     }
 
-    private async Task OpenAgentDetailsDialogAsync(Guid? agentId)
-    {
+    private async Task OpenAgentDetailsDialogAsync(Guid? agentId) {
+        if (isDisposed) {
+            return;
+        }
         var presentationId = Guid.NewGuid();
-        if (agentId.HasValue)
-        {
+        if (agentId.HasValue) {
+            openedRequestedAgentId = agentId.Value;
             selectedAgentId = agentId.Value;
             await SelectedAgentChanged.InvokeAsync(agents.FirstOrDefault(item => item.Id == agentId.Value));
         }
 
+        if (isDisposed || (agentId.HasValue && selectedAgentId != agentId)) {
+            return;
+        }
         editorTargets.Add(presentationId, new(agentId));
-        try
-        {
+        try {
             var title = agentId.HasValue
                 ? ResolveDialogTitle(agentId.Value)
                 : "New technical agent";
 
             var result = await DialogService.OpenAsync<AgentDetailsDialog>(
                 title,
-                new Dictionary<string, object?>
-                {
+                new Dictionary<string, object?> {
                     [nameof(AgentDetailsDialog.AgentId)] = agentId,
                     [nameof(AgentDetailsDialog.InitialProviders)] = InitialProviders,
                     [nameof(AgentDetailsDialog.TargetChanged)] =
@@ -297,23 +346,23 @@
                         EventCallback.Factory.Create<AgentDetailsDialogResult>(this, result =>
                             HandleAgentDialogSavedAsync(presentationId, result))
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     Eyebrow = "Technical editor",
                     Subtitle = "Edit identity, runtime, access policy, and capabilities for this technical agent.",
                     Size = ModalSize.Full,
                     DenseChrome = true,
                     AriaLabel = "Agent details editor",
                     TestId = "agents-details-dialog"
-                });
+                }, lifetimeToken);
 
-            if (result is AgentDetailsDialogResult dialogResult)
-            {
+            if (result is AgentDetailsDialogResult dialogResult) {
                 await HandleAgentDialogSavedAsync(presentationId, dialogResult);
             }
-        }
-        catch (Exception exception)
-        {
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (isDisposed) {
+                return;
+            }
             NotificationService.Error("Agent dialog failed", exception.Message);
         } finally {
             editorTargets.Remove(presentationId);
@@ -321,10 +370,9 @@
     }
 
     private bool IsCurrentEditorResult(Guid presentationId, AgentDetailsDialogResult result)
-        => result.AgentId is { } agentId && editorTargets.TryGetValue(presentationId, out var target) && target.AgentId == agentId;
+        => !isDisposed && result.AgentId is { } agentId && editorTargets.TryGetValue(presentationId, out var target) && target.AgentId == agentId;
 
-    private string ResolveDialogTitle(Guid agentId)
-    {
+    private string ResolveDialogTitle(Guid agentId) {
         var agent = agents.FirstOrDefault(item => item.Id == agentId);
         return string.IsNullOrWhiteSpace(agent?.Name)
             ? "Agent details"
@@ -335,148 +383,176 @@
         if (!IsCurrentEditorResult(presentationId, result)) {
             return;
         }
+        var generation = requestGeneration;
         await ReloadCatalogAsync();
-        if (!IsCurrentEditorResult(presentationId, result)) {
+        if (!IsCurrentRequest(generation) || !IsCurrentEditorResult(presentationId, result)) {
             return;
         }
-        if (result.Deleted)
-        {
+        if (result.Deleted) {
             selectedAgentId = null;
             await SelectedAgentChanged.InvokeAsync(null);
-            await InvokeAsync(StateHasChanged);
+            await RenderIfAliveAsync();
             return;
         }
 
-        if (result.AgentId.HasValue)
-        {
+        if (result.AgentId.HasValue) {
             openedRequestedAgentId = result.AgentId.Value;
             selectedAgentId = result.AgentId.Value;
             await SelectedAgentChanged.InvokeAsync(agents.FirstOrDefault(item => item.Id == result.AgentId.Value));
         }
 
-        await InvokeAsync(StateHasChanged);
+        await RenderIfAliveAsync();
     }
 
-    private async Task OpenTeamDetailsDialogAsync(Guid? teamId)
-    {
-        try
-        {
+    private async Task OpenTeamDetailsDialogAsync(Guid? teamId) {
+        if (isDisposed) {
+            return;
+        }
+        var generation = requestGeneration;
+        try {
             var result = await DialogService.OpenAsync<AgentTeamDetailsDialog>(
                 teamId.HasValue ? "Edit agent team" : "New agent team",
-                new Dictionary<string, object?>
-                {
+                new Dictionary<string, object?> {
                     [nameof(AgentTeamDetailsDialog.TeamId)] = teamId
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     Eyebrow = "Technical team",
                     Subtitle = "Create or rename an AgentFramework team for filtering and process delivery.",
                     Size = ModalSize.Compact,
                     AriaLabel = "Agent team editor",
-                    TestId = "agents-team-details-dialog"
-                });
+                    TestId = "agents-team-details-dialog-shell"
+                }, lifetimeToken);
 
-            if (result is AgentTeamDetailsDialogResult teamResult)
-            {
+            if (IsCurrentRequest(generation) && result is AgentTeamDetailsDialogResult teamResult) {
                 await ReloadCatalogAsync();
+                if (!IsCurrentRequest(generation)) {
+                    return;
+                }
                 selectedTeamId = teamResult.TeamId;
                 await SelectedTeamChanged.InvokeAsync(SelectedTeam);
-                await InvokeAsync(StateHasChanged);
+                await RenderIfAliveAsync();
             }
-        }
-        catch (Exception exception)
-        {
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (isDisposed) {
+                return;
+            }
             NotificationService.Error("Team dialog failed", exception.Message);
         }
     }
 
-    private async Task OpenTeamMembersDialogAsync()
-    {
+    private async Task OpenTeamMembersDialogAsync() {
+        var generation = requestGeneration;
         var team = SelectedTeam;
-        if (team is null)
-        {
+        if (isDisposed || team is null) {
             return;
         }
 
-        try
-        {
+        try {
             var result = await DialogService.OpenAsync<AgentTeamMembersDialog>(
                 $"Add agents to {team.Name}",
-                new Dictionary<string, object?>
-                {
+                new Dictionary<string, object?> {
                     [nameof(AgentTeamMembersDialog.Team)] = team,
                     [nameof(AgentTeamMembersDialog.Agents)] = agents,
                     [nameof(AgentTeamMembersDialog.PrivateAgentIds)] = ResolvePrivateAgentIds()
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     Eyebrow = "Team membership",
                     Subtitle = "Click agent cards to select multiple agents, then confirm the team membership.",
                     Size = ModalSize.Wide,
                     AriaLabel = "Add agents to team",
                     TestId = "agents-team-members-dialog-shell"
-                });
+                }, lifetimeToken);
 
-            if (result is AgentTeamMembersDialogResult membersResult)
-            {
+            if (IsCurrentRequest(generation) && result is AgentTeamMembersDialogResult membersResult) {
                 await CatalogOperations.UpdateMembersAsync(
                     membersResult.TeamId,
                     membersResult.AgentIds,
-                    CancellationToken.None);
+                    lifetimeToken);
+                if (!IsCurrentRequest(generation)) {
+                    return;
+                }
                 await ReloadCatalogAsync();
+                if (!IsCurrentRequest(generation)) {
+                    return;
+                }
                 selectedTeamId = membersResult.TeamId;
                 await SelectedTeamChanged.InvokeAsync(SelectedTeam);
+                if (!IsCurrentRequest(generation)) {
+                    return;
+                }
                 NotificationService.Success("Team updated", "Agent team membership was saved.");
-                await InvokeAsync(StateHasChanged);
+                await RenderIfAliveAsync();
             }
-        }
-        catch (Exception exception)
-        {
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (isDisposed) {
+                return;
+            }
             NotificationService.Error("Team membership failed", exception.Message);
         }
     }
 
-    private async Task DeleteSelectedTeamAsync()
-    {
+    private async Task DeleteSelectedTeamAsync() {
+        var generation = requestGeneration;
         var team = SelectedTeam;
-        if (team is null)
-        {
+        if (isDisposed || team is null) {
             return;
         }
 
-        try
-        {
-            await CatalogOperations.DeleteTeamAsync(team.Id);
-            selectedTeamId = null;
+        try {
+            await CatalogOperations.DeleteTeamAsync(team.Id, lifetimeToken);
+            if (!IsCurrentRequest(generation)) {
+                return;
+            }
             await ReloadCatalogAsync();
+            if (!IsCurrentRequest(generation)) {
+                return;
+            }
+            selectedTeamId = null;
             await SelectedTeamChanged.InvokeAsync(null);
+            if (!IsCurrentRequest(generation)) {
+                return;
+            }
             NotificationService.Success("Team deleted", $"Deleted {team.Name}.");
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception exception)
-        {
+            await RenderIfAliveAsync();
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (isDisposed) {
+                return;
+            }
             NotificationService.Error("Team delete failed", exception.Message);
         }
     }
 
     private async Task ReloadCatalogAsync() {
-        snapshot = await CatalogOperations.LoadAsync(new(Repair: false));
+        if (isDisposed) {
+            return;
+        }
+        var generation = ++catalogGeneration;
+        AgentCatalogSnapshot loaded;
+        try {
+            loaded = await CatalogOperations.LoadAsync(new(Repair: false), lifetimeToken);
+        } catch (Exception) when (isDisposed) {
+            return;
+        }
+        if (isDisposed || generation != catalogGeneration) {
+            return;
+        }
+        snapshot = loaded;
         if (selectedTeamId.HasValue && teams.All(item => item.Id != selectedTeamId.Value)) {
             selectedTeamId = null;
         }
     }
 
-    private void ApplyRequestedTeam(bool force = false)
-    {
+    private void ApplyRequestedTeam(bool force = false) {
         if (!force &&
-            appliedRequestedTeamId == RequestedTeamId)
-        {
+            appliedRequestedTeamId == RequestedTeamId) {
             return;
         }
 
         appliedRequestedTeamId = RequestedTeamId;
-        if (!RequestedTeamId.HasValue)
-        {
+        if (!RequestedTeamId.HasValue) {
             selectedTeamId = null;
             return;
         }
@@ -491,10 +567,8 @@
         => (!RequestedAgentId.HasValue || agents.Any(item => item.Id == RequestedAgentId.Value)) &&
            (!RequestedTeamId.HasValue || teams.Any(item => item.Id == RequestedTeamId.Value));
 
-    private async Task PublishAccessStateAsync(AgentChatContextAccessState state)
-    {
-        if (publishedAccessState == state)
-        {
+    private async Task PublishAccessStateAsync(AgentChatContextAccessState state) {
+        if (isDisposed || publishedAccessState == state) {
             return;
         }
 
@@ -502,8 +576,9 @@
         await ContextAccessStateChanged.InvokeAsync(state);
     }
 
-    private IReadOnlyCollection<Guid> ResolvePrivateAgentIds()
-    {
+    private Task RenderIfAliveAsync() => isDisposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    private IReadOnlyCollection<Guid> ResolvePrivateAgentIds() {
         return agents
             .Where(snapshot.UsesPrivateProvider)
             .Select(agent => agent.Id)

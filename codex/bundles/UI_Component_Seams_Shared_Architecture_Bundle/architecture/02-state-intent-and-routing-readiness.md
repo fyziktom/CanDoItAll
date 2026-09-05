@@ -16,6 +16,12 @@
 | Scenario selection | Development host only |
 
 A single owner means one authority per state, not one giant record or one giant class.
+An effect host must not become a second authority for route-significant selection. It may
+mirror input for compatibility and own an opening acknowledgment, pending operation or
+presentation lifetime. Document when its mirror changes and how it reports changes to the
+workspace. A request A -> null/missing -> A must clear request-owned selection and rearm
+opening; an unchanged A echo must not create another editor. Cover both through public
+parameters and the actual page callback path.
 Do not place mutable drafts or request generations in serializable navigation state.
 
 ## Controlled contracts
@@ -42,7 +48,12 @@ Before extraction, specify:
 - Multiple instances: drafts and request keys must not leak through circuit-scoped services.
 
 Keep workflow services stateless unless an explicitly created/disposed session owns state.
-A DI scope is not a component/editor lifetime.
+A DI scope is not a component/editor lifetime. Effect-owning catalog hosts need this
+protection as much as editors: pass a lifetime token to supported reads, mutations and
+launchers; observe dialog waits; fence completion after each await and suppress only
+owner cancellation or stale-instance publication. Cancellation does not undo committed work.
+Use a request generation for superseded requests and a load generation for overlapping
+snapshots when those operations can overlap; do not put these in semantic workspace state.
 
 ## Transitional host contract
 
@@ -67,3 +78,7 @@ or new user-visible navigation behavior is authorized by a seam bundle implicitl
 Semantic-state readiness requires known transitions and one owner. Route-binding readiness
 additionally requires a viable lifetime/host adaptation and no ownership redesign. Neither
 claim means refresh, Back/Forward, or bookmarkability has been implemented.
+
+A canceled wait does not necessarily cancel or release the underlying effect. Pass lifetime cancellation into the effect owner itself (for example, DialogService.OpenAsync), so disposing a host removes its own global-host presentations as well as fencing result callbacks. Preserve unrelated dialogs; a global CloseAll is not an ownership boundary. Test disposal/remount with the same semantic target and an unrelated concurrent presentation.
+
+Stable section definitions should own labels and presentation ordering while semantic sections retain typed identities. Render from those definitions and map indices explicitly; enum ordinals must not become URL or persistent state contracts.

@@ -8,7 +8,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public abstract record AgentEditorSaveOutcome {
     private AgentEditorSaveOutcome() { }
-    public sealed record Committed(Guid AgentId) : AgentEditorSaveOutcome;
+    public sealed record Committed(Guid AgentId, string? Warning = null) : AgentEditorSaveOutcome;
     public sealed record Rejected(string Message, bool IsConflict = false) : AgentEditorSaveOutcome;
     public sealed record Unconfirmed(string Message) : AgentEditorSaveOutcome;
 }
@@ -20,7 +20,6 @@ public interface IAgentEditorCommands {
     Task<AgentEditorSaveOutcome> SaveAsync(AgentEditorModel request, CancellationToken cancellationToken = default);
     Task<AgentEditorCatalogRefresh> ReconcileAsync(Guid agentId, IReadOnlyList<ProviderProfile> providers,
         CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<CapabilityCatalogItem>> ReadCapabilitiesAsync(CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
 }
@@ -28,6 +27,7 @@ public interface IAgentEditorCommands {
 public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspace,
     IExternalTargetPathRegistryFactory externalTargets) : IAgentEditorCommands {
     public async Task<AgentEditorSaveOutcome> SaveAsync(AgentEditorModel request, CancellationToken cancellationToken = default) {
+        cancellationToken.ThrowIfCancellationRequested();
         try {
             NormalizeWorkspaceAccess(request);
         } catch (Exception exception) {
@@ -35,8 +35,14 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
         }
         try {
             return new AgentEditorSaveOutcome.Committed(await workspace.SaveAgentAsync(request, cancellationToken));
+        } catch (AgentDirectoryProjectionSynchronizationException exception) {
+            return new AgentEditorSaveOutcome.Committed(exception.AgentId, exception.Message);
         } catch (AgentCatalogConcurrencyException exception) {
             return new AgentEditorSaveOutcome.Rejected(exception.Message, IsConflict: true);
+        } catch (AgentEditorValidationException exception) {
+            return new AgentEditorSaveOutcome.Rejected(exception.Message);
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         } catch (Exception exception) {
             return new AgentEditorSaveOutcome.Unconfirmed(exception.Message);
         }
@@ -52,9 +58,6 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
                 providers.FirstOrDefault(provider => provider.Id == definition.ProviderProfileId)?.Kind),
             agents, capabilities, AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId);
     }
-
-    public Task<IReadOnlyList<CapabilityCatalogItem>> ReadCapabilitiesAsync(CancellationToken cancellationToken = default)
-        => workspace.ListCapabilitiesAsync(cancellationToken);
 
     public Task DeleteAsync(Guid agentId, CancellationToken cancellationToken = default)
         => workspace.DeleteAgentAsync(agentId, cancellationToken);

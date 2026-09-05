@@ -268,6 +268,7 @@ public sealed class AgentCatalogPanelTests
             .Add(component => component.SkipCatalogRepair, true));
 
         cut.Find("[data-testid='agents-catalog-card']").Click();
+        cut.Render(parameters => parameters.Add(component => component.RequestedAgentId, (Guid?)null));
         cut.Render(parameters => parameters.Add(component => component.RequestedAgentId, agent.Id));
         Assert.Empty(context.Services.GetRequiredService<DialogService>().Dialogs);
         Assert.Equal(agent.Id, cut.FindComponent<AgentCatalogPanel>().Instance.Selection.AgentId);

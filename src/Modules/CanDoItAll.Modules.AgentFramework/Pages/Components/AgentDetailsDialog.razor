@@ -8,12 +8,26 @@
         </p>
     </SurfaceCard>
 }
+else if (loadState == AgentEditorLoadState.Failed) {
+    <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-details-load-failed">
+        <p>The agent editor could not be loaded. @coreLoadError</p>
+        <Button Text="Retry" Click="LoadAsync" data-testid="agents-details-retry-load" />
+        @if (DialogReference is not null) {
+            <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="CloseFailedEditorAsync" />
+        }
+    </Alert>
+}
 else
 {
     var renderedSession = session;
     <EditForm @key="renderedSession" EditContext="@session.Context" OnValidSubmit="SaveAgentAsync">
         <ConversationDefinitionEditorShell Class="agent-details-dialog min-h-0">
             <Header>
+                @if (session.CommitWarning is { } warning) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-commit-warning">
+                        <p>@warning</p>
+                    </Alert>
+                }
                 @if (!isBusy && session.PendingRefresh is not null) {
                     <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-refresh-pending">
                         <p>@(session.PendingRefresh.Kind == AgentEditorMutationKind.Save
@@ -49,7 +63,10 @@ else
                   Class="agent-details-dialog__tabs w-full min-w-0 flex-1 min-h-0"
                   AriaLabel="Agent details sections">
                 <TabItems>
-                    <TabsItem Text="Identity">
+                    @foreach (var definition in AgentEditorSections.All) {
+                        <TabsItem Text="@definition.Label">
+                            @switch (definition.Section) {
+                                case AgentEditorSection.Identity:
                         <FormSection Title="Identity" Description="Keep the technical identity explicit and strongly typed. Business metadata stays in CRM-HR; runtime behavior lives here.">
                             <ConversationIdentityFields Name="@editorModel.Name"
                                                         NameChanged="HandleNameChangedAsync"
@@ -94,9 +111,8 @@ else
                                 </AdditionalFields>
                             </ConversationIdentityFields>
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Runtime">
+                                    break;
+                                case AgentEditorSection.Runtime:
                         <FormSection Title="Runtime" Description="Pick the provider and model that the imported AgentFramework runtime will actually execute.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <ConversationProviderSelector Options="@RuntimeProviderOptions"
@@ -197,13 +213,11 @@ else
                                 </Stack>
                             </SurfaceCard>
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Memory">
+                                    break;
+                                case AgentEditorSection.Memory:
                         <AgentMemorySettingsPanel Value="@editorModel.MemoryAccess" />
-                    </TabsItem>
-
-                    <TabsItem Text="Images">
+                                    break;
+                                case AgentEditorSection.Images:
                         <FormSection Title="Image Generation" Description="Control whether this agent may generate image deliverables and which image provider it should use.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-image-generation-access">
                                 <div class="cda-admin-subpanel">
@@ -268,9 +282,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Project Structure Access">
+                                    break;
+                                case AgentEditorSection.ProjectStructureAccess:
                         <FormSection Title="Project Structure Access" Description="Project reads, project creation, subproject creation, non-task structure changes, task-only changes, and unrestricted changes are separate permissions. Advanced plan and cost analysis additionally requires its assigned planning skill and tool capability.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-project-structure-access">
                                 <div class="cda-admin-subpanel">
@@ -427,9 +440,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Workspace Tools">
+                                    break;
+                                case AgentEditorSection.WorkspaceTools:
                         <FormSection Title="Workspace Tools" Description="These settings decide whether the current agent receives native workspace file tools, external workspace roots, and storage-driver tools.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-workspace-tools">
                                 <div class="cda-admin-subpanel">
@@ -555,9 +567,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Secrets">
+                                    break;
+                                case AgentEditorSection.Secrets:
                         <FormSection Title="Secrets" Description="Grant only the stored secrets this agent may request during explicit runtime actions. Values are not stored in the agent definition.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-secrets">
                                 <div class="cda-admin-subpanel">
@@ -606,9 +617,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Process Access">
+                                    break;
+                                case AgentEditorSection.ProcessAccess:
                         <FormSection Title="Process Access" Description="Internal agents always carry the process-module tool family. These settings decide whether the current agent can read or mutate process data and which process definitions it may touch.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-process-access">
                                 <div class="cda-admin-subpanel">
@@ -648,9 +658,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Capabilities">
+                                    break;
+                                case AgentEditorSection.Capabilities:
                         <FormSection Title="Capabilities" Description="Attach cataloged tools, skills, and MCP servers to this agent, or open the guided setup flow to create and assign one.">
                             <div data-testid="agents-details-capability-summary">
                                 <CompactStatStrip>
@@ -761,9 +770,8 @@ else
                                                      ColumnTemplateLg="repeat(2,minmax(16rem,1fr))" />
                             }
                         </FormSection>
-                    </TabsItem>
-
-                    <TabsItem Text="Voice">
+                                    break;
+                                case AgentEditorSection.Voice:
                         <FormSection Title="Voice" Description="Allow this agent to participate in audio mode and optionally override the general text-to-speech voice.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2" data-testid="agents-catalog-voice-access">
                                 <div class="cda-admin-subpanel">
@@ -796,7 +804,10 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                    </TabsItem>
+                                    break;
+                            }
+                        </TabsItem>
+                    }
 
                 </TabItems>
                 </Tabs>

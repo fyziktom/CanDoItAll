@@ -122,6 +122,27 @@ public sealed class AgentEditorCommandLifetimeTests {
         Assert.Equal(1, host.Instance.Completions);
     }
 
+    [Fact]
+    public async Task Reset_cancels_an_inflight_save_without_an_unconfirmed_write_warning() {
+        var probe = AgentEditorLoadCharacterizationTests.CreateProbe(out var workspace);
+        await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
+        var pending = new TaskCompletionSource<Guid>();
+        probe.Save = _ => pending.Task;
+        var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Cancelled editor");
+        var submitted = cut.Find("form").SubmitAsync();
+        await cut.FindComponent<StickyActionFooter>().FindAll("button")
+            .Single(button => button.TextContent.Trim() == "Clear").ClickAsync();
+        Assert.True(probe.SaveToken.IsCancellationRequested);
+        await cut.InvokeAsync(() => pending.SetCanceled(probe.SaveToken));
+        await submitted;
+        Assert.Empty(cut.FindAll("[data-testid='agents-editor-write-unconfirmed']"));
+        Assert.False(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary is "Agent save failed" or "Agent save could not be confirmed");
+    }
+
     private static void Complete(TaskCompletionSource<Guid> pending, Guid id, bool fail) {
         if (fail) {
             pending.SetException(new InvalidOperationException("Delayed save failure."));

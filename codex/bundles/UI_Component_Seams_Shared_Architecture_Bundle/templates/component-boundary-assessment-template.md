@@ -26,13 +26,16 @@ CSS/static assets, Tailwind source inputs, and host/composition registrations.
 |---|---|---|---|---|---|
 
 Explicitly cover section versus entity change, create/save identity, Clear/Reset,
-mutation success with failed refresh, missing target, saved unavailable references,
+known rejection, commit, commit-warning and unknown write results; failed core load and Retry;
+request A -> null/missing -> A versus unchanged echoes; mutation success with failed refresh, missing target, saved unavailable references,
 concurrency/version, overlap and disposal where relevant.
 
 ## Boundary decisions
 
 - Reused contracts and declaring assemblies:
-- Pure policies and coherent workflows:
+- Pure policies and coherent workflows (no Razor dependency):
+- Single semantic selection authority and host acknowledgment lifetime:
+- Mutable submission snapshot completeness/independence guard:
 - Required I/O/host ports and production implementations:
 - Justified host/section components:
 - Rejected simpler alternatives:

@@ -72,6 +72,8 @@ public sealed class AgentDetailsDialogCapabilityTests
             Id = agentId,
             Name = "Capability test agent"
         };
+        context.Services.GetRequiredService<AgentEditorReadFixture>().ReadCapabilities =
+            _ => Task.FromResult(workspaceProxy.Capabilities);
         var cut = RenderCapabilitiesTab(context, editor, []);
         var dialogService = context.Services.GetRequiredService<DialogService>();
 

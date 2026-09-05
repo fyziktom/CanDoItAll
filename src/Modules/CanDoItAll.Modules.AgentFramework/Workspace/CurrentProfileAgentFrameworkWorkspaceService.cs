@@ -968,21 +968,13 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         CancellationToken cancellationToken,
         Func<Exception, Exception>? synchronizationExceptionFactory = null)
     {
-        referenceDataCacheInvalidator.Invalidate();
-        try
-        {
+        try {
+            referenceDataCacheInvalidator.Invalidate();
             await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception) when (synchronizationExceptionFactory is not null)
-        {
+            referenceDataCacheInvalidator.Invalidate();
+        } catch (Exception exception) when (synchronizationExceptionFactory is not null) {
             throw synchronizationExceptionFactory(exception);
         }
-
-        referenceDataCacheInvalidator.Invalidate();
     }
 
     private async Task RefreshDirectoryProjectionAfterCommittedAgentDeletionAsync(

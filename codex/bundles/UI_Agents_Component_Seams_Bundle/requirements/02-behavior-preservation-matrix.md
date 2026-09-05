@@ -17,7 +17,7 @@ A row may require multiple cases (success, failure, absent data, overlap). Do no
 | B09 / P | Editor loads existing/new model, supplied providers, all references and defaults; first section Identity and all ten labels/order preserved | SB04; real component with fake loading boundary |
 | B10 / P | Provider and secret load failures remain independent partial errors; recovery retains the current draft | SB04/SB05; parameterized failure/retry interactions |
 | B11 / P | Project list remains explicit/lazy with independent loading/error/retry and existing selection semantics | SB04/SB05; unopened-section call counts + real child interaction |
-| B12 / U | Core agent/capability failure: baseline catches errors and clears loading; establish rendered state and whether saving remains possible. Do not silently replace it with a claimed existing fail-closed policy | SB01 before SB04; characterization; separate defect/scope decision if unsafe |
+| B12 / S | Owner-authorized hardening: core agent/capability failure hides EditForm, Save and Clear; retain requested target and allow same-target Retry. Provider/secret partial failures remain independent | SB08; replacing unsafe historical oracle, actual read producer and UI Retry |
 | B13 / P | Normal save normalization, permission flags, defaults, tags, aliases, model/runtime/image/workspace settings and selected references round-trip; editor stays open and Saved/caller refresh are preserved | SB05; pure policy + actual save boundary + host |
 | B14 / P | Capability toggle/wizard: existing agent saves the whole current draft; new draft stages assignment; wizard external creation and agent assignment outcomes remain distinct | SB05; record exact mutation calls, failures and final draft |
 | B15 / P | Managed agent delete is blocked; ordinary delete confirmation/cancel/failure/success retain behavior; DialogReference result or Saved delivers exactly once | SB05; real host and operation failure tests |
@@ -36,6 +36,8 @@ A row may require multiple cases (success, failure, absent data, overlap). Do no
 | B28 / P | Normal close/escape/confirmation, overlay stacking, sticky actions, internal scrolling and notifications remain usable at large desktop viewport | SB04/SB07; real browser interactions/screenshots |
 | B29 / P | Actual UI registration resolves production operations normally and exercises read/mutation/result mapping without private state injection or uninitialized service objects | SB02–SB07; composition/integration proof |
 | B30 / S | Sandbox candidate's entire selected subtree/type/reference/asset graph is inventoried; fake render claims and measured standalone-watch claims remain separate | SB01/SB03/SB07; inventory, measurement baseline and handoff |
+
+SB08 additionally requires B06 request A -> null/invalid -> A re-entry and unchanged echoes; B18 known rejection/commit/commit-warning/unknown outcomes at real producer boundaries; B19 explicit section definitions and public copy completeness; B20 host read/mutation/dialog/chat cancellation and stale publication proof.
 
 For B18/B20, characterize current notification/result ordering and persistence boundaries first. Adding explicit operation outcomes is an isolation safeguard, not permission to redesign messages or transactional semantics. An indeterminate write outcome must not be labeled a proven failed write.
 

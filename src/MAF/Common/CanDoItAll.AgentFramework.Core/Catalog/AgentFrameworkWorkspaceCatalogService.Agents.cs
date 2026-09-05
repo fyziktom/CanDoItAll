@@ -67,14 +67,19 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                         .Append(selectedProvider)
                         .ToList()
                 };
-            var definition = AgentDefinitionFactory.Create(
-                validationCatalog,
-                model,
-                id,
-                existingAgent,
-                now,
-                providerProfileService,
-                "Agent save");
+            AgentDefinition definition;
+            try {
+                definition = AgentDefinitionFactory.Create(
+                    validationCatalog,
+                    model,
+                    id,
+                    existingAgent,
+                    now,
+                    providerProfileService,
+                    "Agent save");
+            } catch (InvalidOperationException exception) {
+                throw new AgentEditorValidationException(exception.Message, exception);
+            }
 
             return validationCatalog with
             {

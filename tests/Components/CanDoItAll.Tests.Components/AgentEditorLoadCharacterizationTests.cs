@@ -15,23 +15,32 @@ public sealed class AgentEditorLoadCharacterizationTests {
     [Theory]
     [InlineData(AgentEditorProbeFailure.Agents)]
     [InlineData(AgentEditorProbeFailure.Capabilities)]
-    public async Task Core_load_failure_currently_exposes_a_blank_editable_form(AgentEditorProbeFailure failure) {
+    public async Task Core_load_failure_blocks_writes_and_retry_preserves_the_requested_agent(AgentEditorProbeFailure failure) {
         var probe = CreateProbe(out var workspace);
         await using var harness = await CreateHarnessAsync(workspace, probe);
+        var currentWorkspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agentId = await currentWorkspace.SaveAgentAsync(new() { Name = "Retry target" });
+        var agent = (await currentWorkspace.ListAgentsAsync(false)).Single(item => item.Id == agentId);
         probe.Failure = failure;
 
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
-            .Add(component => component.AgentId, Guid.NewGuid())
+            .Add(component => component.AgentId, agent.Id)
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
 
-        cut.WaitForElement("[data-testid='agents-catalog-save']");
-        Assert.Empty(cut.FindAll("[data-testid='agents-details-loading']"));
-        Assert.False(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
+        cut.WaitForElement("[data-testid='agents-details-load-failed']");
+        Assert.Empty(cut.FindAll("form"));
+        Assert.Empty(cut.FindAll("[data-testid='agents-catalog-save']"));
+        Assert.DoesNotContain(cut.FindAll("button"), button => button.TextContent.Trim() == "Clear");
+        Assert.Equal(agent.Id, cut.Instance.CurrentTarget.AgentId);
+        Assert.Equal(0, probe.AcceptedSaves);
+        probe.Failure = AgentEditorProbeFailure.None;
+        await cut.Find("[data-testid='agents-details-retry-load']").ClickAsync();
         var draft = Assert.IsType<AgentEditorModel>(cut.FindComponent<EditForm>().Instance.EditContext!.Model);
-        Assert.Null(draft.Id);
-        Assert.Empty(draft.Name);
-        Assert.Contains(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
-            message => message.Summary == "Agent editor failed to load");
+        Assert.Equal(agent.Id, draft.Id);
+        Assert.Equal(agent.Name, draft.Name);
+        Assert.Equal(agent.UpdatedAtUtc, draft.ExpectedUpdatedAtUtc);
+        Assert.False(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
+        Assert.Equal(0, probe.AcceptedSaves);
     }
 
     [Fact]
@@ -113,6 +122,7 @@ public class AgentEditorWorkspaceProbe : DispatchProxy {
     public AgentEditorProbeFailure Failure { get; set; }
     public int AcceptedSaves { get; private set; }
     public Func<AgentEditorModel, Task<Guid>>? Save { get; set; }
+    public CancellationToken SaveToken { get; private set; }
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
         ArgumentNullException.ThrowIfNull(targetMethod);
@@ -128,6 +138,7 @@ public class AgentEditorWorkspaceProbe : DispatchProxy {
         }
 
         if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) && Save is not null) {
+            SaveToken = (CancellationToken)args![1]!;
             AcceptedSaves++;
             return Save((AgentEditorModel)args![0]!);
         }

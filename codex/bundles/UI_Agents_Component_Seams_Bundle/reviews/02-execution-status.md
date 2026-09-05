@@ -1,5 +1,7 @@
 # Agents implementation status
 
+2026-09-05: owner review reopened the affected SB03-SB07 contracts. [SB08 hardening](../subbundles/08-agents-seam-hardening/README.md) now has a separate [current review and evidence](03-hardening-closure.md). The results below describe the prior committed implementation, not current hardening validation. The unsafe B12 oracle is replaced by fail-closed loading in SB08.
+
 Owner-authorized implementation baseline: 68db2ee0e63a2ce6baa681e9722acc0a67877b21, components-decoupling. No commits, staging or pushes. Live Components/FileTools sibling source unchanged.
 
 - SB01: baseline/characterization accepted: 13 Unit, 49 Components and 4 characterization cases passed; actual large-desktop screenshots inspected. Warm watch timing remains unmeasured because WatchReady disagreed with the healthy page; no speed improvement claimed.
