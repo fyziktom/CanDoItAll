@@ -1,0 +1,75 @@
+{
+  "ok": true,
+  "complete": false,
+  "confidence": "Low",
+  "fallback": "AllSuppliedSuites",
+  "reason": "At least one relationship uses dispatch that cannot be resolved completely by static analysis.",
+  "workspaces": [
+    {
+      "suiteName": "Unit",
+      "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\CanDoItAll.Tests.Unit.csproj",
+      "projectCount": 1,
+      "sourceTestCount": 5670,
+      "isHealthy": true,
+      "diagnostics": [
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\AgentChatExternalTargetAccessAttachmentTests.cs:17: Reflection or expression dispatch through 'System.Reflection.CustomAttributeExtensions.GetCustomAttributes<System.Runtime.CompilerServices.InternalsVisibleToAttribute>(System.Reflection.Assembly)'.",
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\AgentContextContributionTests.cs:120: Reflection or expression dispatch through 'System.Reflection.PropertyInfo.GetValue(object?)'.",
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\AgentContextContributionTests.cs:120: Reflection or expression dispatch through 'System.Type.GetProperty(string, System.Reflection.BindingFlags)'."
+      ]
+    },
+    {
+      "suiteName": "Components",
+      "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\CanDoItAll.Tests.Components.csproj",
+      "projectCount": 1,
+      "sourceTestCount": 1133,
+      "isHealthy": true,
+      "diagnostics": [
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\AgentCatalogPanelTests.cs:277: Reflection or expression dispatch through 'System.Reflection.DispatchProxy.Create<CanDoItAll.AgentFramework.Core.IAgentFrameworkWorkspaceService, CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.CatalogReloadWorkspaceServiceProxy>()'.",
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\AgentCatalogPanelTests.cs:315: Reflection or expression dispatch through 'System.Reflection.DispatchProxy.Create<CanDoItAll.AgentFramework.Core.IAgentFrameworkWorkspaceService, CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.UnusedWorkspaceServiceProxy>()'.",
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Components\\CanDoItAll.Tests.Components\\AgentChatPanelResponsivenessTests.cs:21: Reflection or expression dispatch through 'System.Reflection.DispatchProxy.Create<CanDoItAll.AgentFramework.Core.IAgentChatExecutionOrchestrator, CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.CompletedRunOrchestratorProxy>()'."
+      ]
+    },
+    {
+      "suiteName": "Integration",
+      "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj",
+      "projectCount": 1,
+      "sourceTestCount": 1120,
+      "isHealthy": true,
+      "diagnostics": [
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentApiFailureContractIntegrationTests.cs:516: Reflection or expression dispatch through 'System.Reflection.DispatchProxy.Create<CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService, CanDoItAll.Tests.Integration.AgentFramework.AgentApiFailureContractIntegrationTests.ProviderSaveStorageFailureProxy>()'.",
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentEventsApiIntegrationTests.cs:119: Reflection or expression dispatch through 'System.Reflection.DispatchProxy.Create<CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService, CanDoItAll.Tests.Integration.AgentFramework.AgentEventsApiIntegrationTests.ProviderAdministrationProxy>()'.",
+        "TIA1006: C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentEventsApiIntegrationTests.cs:193: Reflection or expression dispatch through 'System.Reflection.DispatchProxy.Create<CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService, CanDoItAll.Tests.Integration.AgentFramework.AgentEventsApiIntegrationTests.ProviderAdministrationProxy>()'."
+      ]
+    }
+  ],
+  "required": [
+    {
+      "suiteName": "All supplied suites",
+      "workspacePath": "",
+      "projectName": "All test projects",
+      "projectPath": "",
+      "scopeKind": "AllSuppliedSuites",
+      "selectors": [],
+      "impactedSourceTestCount": 7923,
+      "selectedSourceTestCount": 7923,
+      "additionalSourceTestCount": 0
+    }
+  ],
+  "conditional": 0,
+  "unresolved": [
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\AgentCatalogHost.razor",
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\AgentDetailsDialog.razor.cs",
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\AgentProviderProfilesPanel.razor",
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\AgentProviderProfilesPanel.razor.cs",
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Services\\AgentFrameworkUiServiceCollectionExtensions.cs",
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\ProviderProfilesSession.cs",
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\ProviderProfilesState.cs",
+    "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Services\\ProviderProfilesReads.cs"
+  ],
+  "diagnosticCounts": {
+    "TIA1006": 497,
+    "TIA3001": 1,
+    "TIA3002": 1,
+    "TIA3004": 1
+  }
+}

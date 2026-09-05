@@ -36,14 +36,16 @@ when their own implementation exists.
 
 ## First delivery path
 
-1. Revise and characterize the Agents plan; no implementation in this revision.
-2. Extract catalog/workspace and required editor seams in place through the Agents child.
-3. At its first accepted catalog checkpoint, identify the exact small extraction candidate.
-4. Schedule a catalog UI extraction + sandbox child as the next delivery after the relevant
-   source is frozen, ordinarily after current Agents closure. Do not put provider refactoring,
-   full bookmarkability, or application-wide untangling ahead of that first sandbox.
-5. Bind the first navigation slice against the same semantic state and explicit host lifetime.
-6. Validate the approach on another UI archetype before broad standardization.
+The owner's 2026-09-05 review supersedes the earlier sandbox-immediately-after-Agents scheduling preference:
+
+1. Close Agents SB09: initial load/reload overlap and session-owned nested dialogs.
+2. Execute CDA-UI-SEAMS-PROVIDERS-01: typed state, selection, session and reads in place.
+3. Prepare/execute CDA-UI-SEAMS-PROVIDERS-02 separately: commands and owned effects, based on the actual registry commit boundary.
+4. Freeze AgentCatalogPanel for a light UI assembly, small catalog sandbox and real warm dotnet-watch measurement.
+5. Prepare PROVIDER-HISTORY-01 independently, covering typed queries, selection and profile-change lifetime.
+6. Then choose the next module hotspot. Do not combine provider history/shared backend/ProjectStructure into the provider-profile slice.
+
+The current request executes steps 1 and 2. Subsequent steps need their own concrete scope/proof; neither routing nor full editor extraction is implied.
 
 An earlier sandbox delivery from SB03 is possible only through an explicit coordinated
 scope handoff/frozen branch. Moving files concurrently with SB04–SB07 on the same checkout

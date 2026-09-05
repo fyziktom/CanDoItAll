@@ -58,12 +58,29 @@
     <DetailHeader>
         <Stack GapScale="LayoutGap.Tiny">
             <p class="cda-eyebrow">Provider editor</p>
-            <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
+            <h2 class="cda-title-xl">@(session.State.ProviderId.HasValue
+                ? session.CanEdit ? providerModel.Name : SelectedProvider?.Name ?? "Unavailable provider"
+                : "New provider profile")</h2>
             <p class="cda-body-muted">@ResolveSelectedProviderStatus()</p>
         </Stack>
     </DetailHeader>
 
     <DetailContent>
+        @if (session.Error is { } error) {
+            <Stack GapScale="LayoutGap.Medium" data-testid="providers-load-failed">
+                <Alert AlertStyle="AlertStyle.Danger">@error</Alert>
+                <Button Text="Retry" Icon="refresh" Click="LoadAsync" data-testid="providers-load-retry" />
+            </Stack>
+        } else if (!session.CanEdit) {
+            <Stack data-testid="providers-editor-loading">
+                <EmptyState Title="Loading provider editor" Description="Reading the selected provider profile." />
+            </Stack>
+        } else {
+            @if (session.Catalog.Secrets.Error is { } secretError) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-secret-warning">
+                    Secret metadata could not be loaded: @secretError. Saved references are retained.
+                </Alert>
+            }
                 <div class="agent-provider-editor-tabs-shell">
                     <Tabs @bind-SelectedIndex="providerEditorTabIndex"
                           RenderMode="TabRenderMode.Server"
@@ -72,7 +89,12 @@
                           Class="agent-provider-editor-tabs"
                           AriaLabel="Provider editor tabs"
                           data-testid="provider-editor-tabs">
-                        <TabsItem Text="Connection" Icon="plug" data-testid="provider-editor-tab-connection">
+                        @foreach (var definition in ProviderEditorSections.All) {
+                            <TabsItem @key="definition.Section" Text="@definition.Label" Icon="@definition.Icon"
+                                      data-testid="@($"provider-editor-tab-{definition.Section.ToString().ToLowerInvariant()}")">
+                                @switch (definition.Section) {
+                                    case ProviderEditorSection.Connection:
+
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
                                                        HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
@@ -165,8 +187,10 @@
                             </div>
                             </fieldset>
                             </ProviderProfileEditorForm>
-                        </TabsItem>
-                        <TabsItem Text="Prices" Icon="paid" data-testid="provider-editor-tab-prices">
+
+                                        break;
+                                    case ProviderEditorSection.Prices:
+
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
                                                        HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
@@ -185,8 +209,10 @@
                             </div>
                             </fieldset>
                             </ProviderProfileEditorForm>
-                        </TabsItem>
-                        <TabsItem Text="Runtime" Icon="tune" data-testid="provider-editor-tab-runtime">
+
+                                        break;
+                                    case ProviderEditorSection.Runtime:
+
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
                                                        HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
@@ -244,8 +270,10 @@
                             </div>
                             </fieldset>
                             </ProviderProfileEditorForm>
-                        </TabsItem>
-                        <TabsItem Text="Thinking" Icon="psychology" data-testid="provider-editor-tab-thinking">
+
+                                        break;
+                                    case ProviderEditorSection.Thinking:
+
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
                                                        HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
@@ -254,22 +282,31 @@
                             <ProviderModelThinkingEditor @key="providerModel" Model="providerModel" Provider="SelectedProvider"
                                                          Refreshed="RefreshProvidersAfterSharedChangeAsync" />
                             </ProviderProfileEditorForm>
-                        </TabsItem>
-                        <TabsItem Text="Sharing" Icon="share" data-testid="provider-editor-tab-sharing">
+
+                                        break;
+                                    case ProviderEditorSection.Sharing:
+
                             <SharedProviderManagementPanel ProviderProfileId="providerModel.Id"
                                                            ProvidersChanged="RefreshProvidersAfterSharedChangeAsync" />
-                        </TabsItem>
-                        <TabsItem Text="History" Icon="history" data-testid="provider-editor-tab-history">
+
+                                        break;
+                                    case ProviderEditorSection.History:
+
                             @if (providerModel.Id is { } providerId) {
                                 <CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel @key="providerId"
                                     Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.SingleProvider(new(providerId)))" />
                             } else {
                                 <EmptyState Title="Save this provider first" Description="Request history is scoped to a saved provider identity." />
                             }
-                        </TabsItem>
+
+                                        break;
+                                }
+                            </TabsItem>
+                        }
                     </Tabs>
                 </div>
 
+        }
     </DetailContent>
 </ListDetailShell>
 

@@ -1,0 +1,118 @@
+{
+  "baselineCommit": "d3ba280a431bfe74ce03a72638ac06dff47de660",
+  "completedAt": "2026-09-05",
+  "sourceScope": "Agents SB09 and CDA-UI-SEAMS-PROVIDERS-01",
+  "sourceStatus": "implemented-and-scoped-proof-passed",
+  "repositoryGateStatus": "blocked-by-unchanged-historical-documentation-logs",
+  "newCases": {
+    "agentsComponents": 8,
+    "providerComponents": 16,
+    "providerUnit": 27,
+    "total": 51
+  },
+  "broadStable": {
+    "unit": {
+      "executed": 6864,
+      "passed": 6864,
+      "failed": 0
+    },
+    "components": {
+      "executed": 1278,
+      "passed": 1277,
+      "failed": 1,
+      "exactUnchangedFailurePassedOnRerun": true
+    },
+    "integration": {
+      "executed": 1320,
+      "passed": 1320,
+      "failed": 0
+    },
+    "totalExecuted": 9462,
+    "skipped": 0,
+    "uninterruptedGreen": false
+  },
+  "finalSourceRevalidation": {
+    "providerUnit": 27,
+    "providerAffectedComponents": 6,
+    "passed": true,
+    "otherProviderComponentCasesRetainTheirUnaffectedPassingProof": true
+  },
+  "portability": {
+    "result": "Pass",
+    "reviewedFindings": 14251,
+    "baselineChanged": false,
+    "includesUntracked": true,
+    "artifact": ".mcp-state/providers-delivered-portability-enforcement.log",
+    "sha256": "f1e0784a5825aaab62ad55f1ac596a5d8cac9532bc9f223050ad4d51b153d736"
+  },
+  "directProductionBuild": {
+    "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+    "result": "Pass",
+    "warnings": 0,
+    "errors": 0,
+    "artifact": ".mcp-state/providers-final-read-build.log",
+    "sha256": "454736c71cf312454f5507dbd0e2c3e15bfd2bcbc6bec6d445637b738502327b"
+  },
+  "documentation": {
+    "result": "Blocked",
+    "historicalTrackedLogs": 118,
+    "baselineAndCurrentTrackedSetIdentical": true,
+    "newTrackedLogs": 0
+  },
+  "sourceFiles": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
+      "sha256": "b9a090649ed1dcbd72cbd11d63857fb5278a60e65eae31053a0ca45bb3eb5e8a"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+      "sha256": "da0a0f4cc3e224e12934a9a4c1d4adea13005c1fa11abe596804a5f47a40d8d6"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
+      "sha256": "35f82951968468ec8c97ad04437ab034f2b196ba827e6e0379e82d65887fc6c0"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
+      "sha256": "5724987310526580fb354c218660370773aac30591d8167c8947f3e794cd1fbb"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesSession.cs",
+      "sha256": "5dba080079389a0bb1d4d1970f7db34c9200e4ef918168d7fabf4ed40170adfe"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesState.cs",
+      "sha256": "be89da5067ef01be122a91a6d82f2d978f18422c1923daf6d018aadc9d5f072c"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs",
+      "sha256": "67a3ab26b20997d4a8422624c974ebfaae24ba16f7207fafa2fe5614a682d543"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderProfilesReads.cs",
+      "sha256": "0d240f08a42314383c0be8855fc32ecca7f083593c9e7d7323df23bef637ad02"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentSeamFinalizationTests.cs",
+      "sha256": "2beb2e317b537be15152fbb1d4f1cb5a1d06456326263d2c56bdc1d540bfa670"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProviderProfilesSeamTests.cs",
+      "sha256": "b90dbc9979e0614b898e070445564c2b196f5baad9fb20cc9ea3986d3c4fa670"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderProfilesReadsTests.cs",
+      "sha256": "ec2aa8798252799557c0494f5b00e40a8d6cd886ac706a83e290431b7f9654aa"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderProfilesSessionTests.cs",
+      "sha256": "a1dbf98a772cb11330f68025a9d08b4f5dcd7aaace0c3ae5b34a96b90e5da8a6"
+    }
+  ],
+  "limits": [
+    "No uninterrupted full stable green claim; one workflow timeout passed unchanged on rerun.",
+    "No full solution, Memory, Playwright suite or excluded live/long-running lane claim.",
+    "No provider mutation taxonomy or first-save reconciliation hardening claim.",
+    "No watch speedup, sandbox or physical extraction claim."
+  ]
+}

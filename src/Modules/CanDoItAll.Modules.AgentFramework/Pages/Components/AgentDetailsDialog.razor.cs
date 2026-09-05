@@ -503,7 +503,7 @@ public partial class AgentDetailsDialog : IDisposable
                     DenseChrome = true,
                     AriaLabel = $"Confirm deletion of agent {deletedAgentName}",
                     TestId = "agents-catalog-delete-confirmation"
-                }) is true;
+                }, owner.CancellationToken) is true;
         } catch (Exception exception) {
             if (IsCurrent(owner)) {
                 NotificationService.Error("Agent delete confirmation failed", exception.Message);
@@ -647,7 +647,7 @@ public partial class AgentDetailsDialog : IDisposable
                     DenseChrome = true,
                     AriaLabel = "Capability setup wizard",
                     TestId = "agents-details-capability-setup-dialog"
-                });
+                }, owner.CancellationToken);
             if (!IsCurrent(owner) || result is not CapabilityDetailsDialogResult capability) {
                 return;
             }
@@ -1319,7 +1319,7 @@ public partial class AgentDetailsDialog : IDisposable
                     DenseChrome = true,
                     AriaLabel = "Confirm automatic approval for agent tool calls",
                     TestId = "agents-auto-approval-confirmation"
-                }) is true;
+                }, cancellationToken: owner.CancellationToken) is true;
             if (confirmed && IsCurrent(owner))
             {
                 editorModel.Permissions = editorModel.Permissions with

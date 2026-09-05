@@ -5,7 +5,7 @@
 **Kind:** Non-executable architecture reference
 **Revision date:** 2026-09-05
 **Preparation status:** Revised; manual semantic validation recorded in reviews
-**Execution status:** Non-executable reference; the current owner request authorizes Agents hardening and shared-rule updates through its child bundle
+**Execution status:** Non-executable reference; the current owner request authorizes Agents SB09, Providers-01 and shared-rule updates through their child bundles
 
 ## Purpose and authority
 
@@ -85,3 +85,5 @@ inputs; architecture requirements; inventories/references for current state; pla
 for dependencies and consumers; reviews for status and validation. Structural implementation
 scaffolding would add no meaning. Validate those roles manually and verify links, JSON,
 input preservation, and the complete checksum manifest.
+
+- [Lifecycle follow-up and provider sequence](reviews/03-lifecycle-and-provider-followup.md)

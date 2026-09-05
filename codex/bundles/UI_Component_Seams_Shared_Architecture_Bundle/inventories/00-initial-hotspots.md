@@ -10,7 +10,7 @@ Each child refreshes its actual callers, state/lifetime, subtree/type/reference 
 |---|---|---|
 | Agents home/catalog/details | Route/selection/context, EF/dashboard reads, dialogs/chat, mutable editor, cross-module references and child services | Current Agents child: typed state, lazy operations, controlled catalog, explicit editor lifetime; feature-owned UI |
 | Small catalog/card sandbox | Catalog render/state can be isolated from editor/team host effects once actual graph is checked | Near-term extraction/host pilot after proven catalog seam, independent of production URLs |
-| AgentProviderProfilesPanel | List/tree/editor/CRUD/testing/pricing/shared connections/history state | Separate provider workspace/editor slice after the small sandbox opportunity is assessed |
+| AgentProviderProfilesPanel | List/tree/editor/CRUD/testing/pricing/shared connections/history state | Providers-01 state/reads, then Providers-02 effects; first catalog sandbox checkpoint follows both under the owner-approved 2026-09-05 sequence |
 | ProcessWorkspaceShell | IServiceProvider hides capabilities and dependencies | Narrow explicit capability operations; useful second archetype for shared rules |
 | ProjectFilesDialog | File sessions, FileTools operations, JS/preview/download/open coordination | Project-files use cases and explicit UI state; generic adapters only when genuinely shared |
 | ProjectStructurePage | Many feature/runtime dependencies and a large partial cluster, including source-shape test debt | Capability-by-capability migration across surface loading, windows/selection, file/runtime/process/workflow actions |

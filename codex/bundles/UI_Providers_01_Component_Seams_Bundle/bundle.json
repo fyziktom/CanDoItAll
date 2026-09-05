@@ -1,0 +1,30 @@
+{
+  "name": "Provider profiles state and read seam",
+  "referenceId": "CDA-UI-SEAMS-PROVIDERS-01",
+  "kind": "implementation",
+  "preparedAt": "2026-09-05",
+  "observedCommit": "d3ba280a431bfe74ce03a72638ac06dff47de660",
+  "observedCommitIsPin": false,
+  "sharedArchitectureReference": "CDA-UI-SEAMS-BASE-v2",
+  "executionAuthorizedByCurrentRequest": true,
+  "proofProfile": "Behavioral",
+  "shape": "compact-compatible",
+  "validationMethod": "manual semantic validation; retained role coverage without canonical scaffold migration",
+  "executionStatus": "implementation-validated-repository-docs-gate-blocked",
+  "workUnits": [
+    "foundation",
+    "panel-integration",
+    "closure"
+  ],
+  "outOfScope": [
+    "provider mutation outcome redesign",
+    "history internals",
+    "routing",
+    "physical extraction",
+    "sandbox timing",
+    "sibling edits"
+  ],
+  "executionCompletedAt": "2026-09-05",
+  "currentEvidence": "reviews/closure.md",
+  "openRepositoryGate": "Documentation: 118 tracked historical logs already present in baseline HEAD; no new tracked logs."
+}

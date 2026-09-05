@@ -1,0 +1,381 @@
+{
+  "note": "Historical failed attempts remain visible. Applicable final reruns and local invalidation are explained in closure.md and validation-scope.md. Full logs/TRX and screenshots stay in ignored local .mcp-state, outside delivered bundle manifests.",
+  "runs": [
+    {
+      "artifact": ".mcp-state/sb09-results/sb09-after.trx",
+      "sha256": "7140111b2bf78c958226042f51ee45fe7dddb5a7054dcabf8a6fbc430ae5fffa",
+      "times": {
+        "creation": "2026-09-05T09:45:12.7730087-04:00",
+        "queuing": "2026-09-05T09:45:12.7730091-04:00",
+        "start": "2026-09-05T09:45:04.8506253-04:00",
+        "finish": "2026-09-05T09:45:32.4743412-04:00"
+      },
+      "counts": {
+        "total": 8,
+        "executed": 8,
+        "passed": 8,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/sb09-results/sb09-before.trx",
+      "sha256": "c3442c8942e1f25c60e83861b2473c2ae490164f50f43361cdd2ecb1c7eb159c",
+      "times": {
+        "creation": "2026-09-05T09:37:47.2454066-04:00",
+        "queuing": "2026-09-05T09:37:47.2454069-04:00",
+        "start": "2026-09-05T09:37:39.0779845-04:00",
+        "finish": "2026-09-05T09:39:07.4582547-04:00"
+      },
+      "counts": {
+        "total": 8,
+        "executed": 8,
+        "passed": 0,
+        "failed": 8,
+        "notExecuted": 0
+      },
+      "nonPassingCases": [
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Disposing_or_replacing_editor_session_cancels_owned_nested_dialogs_but_preserves_unrelated_dialogs(section: Runtime, replaceSession: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Disposing_or_replacing_editor_session_cancels_owned_nested_dialogs_but_preserves_unrelated_dialogs(section: Runtime, replaceSession: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Disposing_or_replacing_editor_session_cancels_owned_nested_dialogs_but_preserves_unrelated_dialogs(section: Capabilities, replaceSession: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Saving_new_agent_while_initial_catalog_load_is_pending_does_not_leave_catalog_loading(initialFails: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Disposing_or_replacing_editor_session_cancels_owned_nested_dialogs_but_preserves_unrelated_dialogs(section: Identity, replaceSession: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Disposing_or_replacing_editor_session_cancels_owned_nested_dialogs_but_preserves_unrelated_dialogs(section: Capabilities, replaceSession: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Saving_new_agent_while_initial_catalog_load_is_pending_does_not_leave_catalog_loading(initialFails: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentSeamFinalizationTests.Disposing_or_replacing_editor_session_cancels_owned_nested_dialogs_but_preserves_unrelated_dialogs(section: Identity, replaceSession: True)"
+      ]
+    },
+    {
+      "artifact": ".mcp-state/providers-results/CanDoItAll.Tests.Components-provider-gate.trx",
+      "sha256": "77be2fe623604ac89af75d4960dbef74a0ef00afbc1818c8d12ff7d81e2f1e3f",
+      "times": {
+        "creation": "2026-09-05T10:14:54.6063691-04:00",
+        "queuing": "2026-09-05T10:14:54.6063693-04:00",
+        "start": "2026-09-05T10:14:53.0152331-04:00",
+        "finish": "2026-09-05T10:32:38.5124647-04:00"
+      },
+      "counts": {
+        "total": 1278,
+        "executed": 1278,
+        "passed": 1277,
+        "failed": 1,
+        "notExecuted": 0
+      },
+      "nonPassingCases": [
+        "CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes"
+      ]
+    },
+    {
+      "artifact": ".mcp-state/providers-results/CanDoItAll.Tests.Integration-provider-gate.trx",
+      "sha256": "709c6a739a038de2032bebc579594c3839b86690f6ae8376e3d3832e53c2765f",
+      "times": {
+        "creation": "2026-09-05T10:32:41.2994724-04:00",
+        "queuing": "2026-09-05T10:32:41.2994727-04:00",
+        "start": "2026-09-05T10:32:39.4036464-04:00",
+        "finish": "2026-09-05T11:20:30.8994200-04:00"
+      },
+      "counts": {
+        "total": 1320,
+        "executed": 1320,
+        "passed": 1320,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/CanDoItAll.Tests.Unit-provider-gate.trx",
+      "sha256": "7964268cd1c2adb940af918f790618ae1555ae40a4d7fdcd0ea9e19e4f053a90",
+      "times": {
+        "creation": "2026-09-05T10:13:14.9420037-04:00",
+        "queuing": "2026-09-05T10:13:14.9420040-04:00",
+        "start": "2026-09-05T10:13:13.0810459-04:00",
+        "finish": "2026-09-05T10:14:51.4371919-04:00"
+      },
+      "counts": {
+        "total": 6864,
+        "executed": 6864,
+        "passed": 6864,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-before.trx",
+      "sha256": "bf13631f173467c83375bfb42a0127c473ec0af0fba948ef56a71cfb4500e587",
+      "times": {
+        "creation": "2026-09-05T09:46:58.9875378-04:00",
+        "queuing": "2026-09-05T09:46:58.9875380-04:00",
+        "start": "2026-09-05T09:46:50.0173740-04:00",
+        "finish": "2026-09-05T09:48:33.7798672-04:00"
+      },
+      "counts": {
+        "total": 70,
+        "executed": 70,
+        "passed": 70,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-components.trx",
+      "sha256": "2dcf10678ba353d49bae3832f0a67e1fe4762ee2dc3e9cc911c38b141d89c626",
+      "times": {
+        "creation": "2026-09-05T10:02:41.0553415-04:00",
+        "queuing": "2026-09-05T10:02:41.0553417-04:00",
+        "start": "2026-09-05T10:02:37.6730683-04:00",
+        "finish": "2026-09-05T10:03:49.8256425-04:00"
+      },
+      "counts": {
+        "total": 28,
+        "executed": 28,
+        "passed": 7,
+        "failed": 21,
+        "notExecuted": 0
+      },
+      "nonPassingCases": [
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.Failed_or_empty_refresh_preserves_the_existing_editor_catalog(status: BadGateway, payload: \"{}\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"History\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.Compact_filter_can_be_cleared",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.Failed_or_empty_refresh_preserves_the_existing_editor_catalog(status: OK, payload: \"{\\\"models\\\":[]}\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Connection\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentProviderProfilesPanelPricingTests.Provider_editor_surfaces_model_prices_on_dedicated_prices_tab",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Disposal_cancels_inflight_read_without_late_notifications(catalogRead: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Runtime\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.Toolbar_is_icon_only_and_connections_load_only_when_opened",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_submit_cannot_save_provider_edits_and_editor_context_survives_tab_switches",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: True, newDraft: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: True, newDraft: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Sharing\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Prices\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Thinking\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.Failed_or_empty_refresh_preserves_the_existing_editor_catalog(status: OK, payload: \"{}\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: False, newDraft: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Disposal_cancels_inflight_read_without_late_notifications(catalogRead: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested(tab: \"providers\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.Kind_change_clears_old_state_and_draft_discovery_saves_the_full_unpriced_catalog",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: False, newDraft: True)"
+      ]
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-continuation-unit.trx",
+      "sha256": "b2453c080a0fe3f2c4fcf2c324a0a56090d32482d3d4c81c5d5c46b85f68d122",
+      "times": {
+        "creation": "2026-09-05T10:20:45.8961384-04:00",
+        "queuing": "2026-09-05T10:20:45.8961388-04:00",
+        "start": "2026-09-05T10:20:44.1517762-04:00",
+        "finish": "2026-09-05T10:20:45.9493434-04:00"
+      },
+      "counts": {
+        "total": 27,
+        "executed": 27,
+        "passed": 27,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-final-components.trx",
+      "sha256": "f1445a6ef46742fdd70eef42872dc8bdc6a9a431c1030b2f0f78b322eb16ec22",
+      "times": {
+        "creation": "2026-09-05T10:05:57.2856843-04:00",
+        "queuing": "2026-09-05T10:05:57.2856845-04:00",
+        "start": "2026-09-05T10:05:48.0082021-04:00",
+        "finish": "2026-09-05T10:08:28.9384948-04:00"
+      },
+      "counts": {
+        "total": 86,
+        "executed": 86,
+        "passed": 80,
+        "failed": 6,
+        "notExecuted": 0
+      },
+      "nonPassingCases": [
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Runtime\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Sharing\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Prices\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"History\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Thinking\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: \"Connection\")"
+      ]
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-final-read-components.trx",
+      "sha256": "137dec91c7a2d568ca2df257357d68434a59d7a3d451e33fe4d3eb2c6b1625e5",
+      "times": {
+        "creation": "2026-09-05T11:11:50.1082416-04:00",
+        "queuing": "2026-09-05T11:11:50.1082420-04:00",
+        "start": "2026-09-05T11:11:39.4450551-04:00",
+        "finish": "2026-09-05T11:12:04.8171195-04:00"
+      },
+      "counts": {
+        "total": 6,
+        "executed": 6,
+        "passed": 6,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-final-read-unit.trx",
+      "sha256": "99ad0c4a4898715a9a6d5dc1253fac2483ee9c7f17fe5fe265d0d18d5188507c",
+      "times": {
+        "creation": "2026-09-05T11:12:36.4333668-04:00",
+        "queuing": "2026-09-05T11:12:36.4333672-04:00",
+        "start": "2026-09-05T11:12:34.7118964-04:00",
+        "finish": "2026-09-05T11:12:36.4896797-04:00"
+      },
+      "counts": {
+        "total": 27,
+        "executed": 27,
+        "passed": 27,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-final-recheck.trx",
+      "sha256": "620fd93563893d9ec2c3f20d2846bc3b70d3566dea1b8f32a4258eff916342a4",
+      "times": {
+        "creation": "2026-09-05T10:39:34.8981402-04:00",
+        "queuing": "2026-09-05T10:39:34.8981406-04:00",
+        "start": "2026-09-05T10:39:24.7996180-04:00",
+        "finish": "2026-09-05T10:39:48.1872290-04:00"
+      },
+      "counts": {
+        "total": 5,
+        "executed": 5,
+        "passed": 5,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-final-unit.trx",
+      "sha256": "61ce42ebc4730f16754e71322066c40054b2ad13dafeb6a6749936da456f8ebe",
+      "times": {
+        "creation": "2026-09-05T10:08:57.6119528-04:00",
+        "queuing": "2026-09-05T10:08:57.6119530-04:00",
+        "start": "2026-09-05T10:08:56.1169399-04:00",
+        "finish": "2026-09-05T10:08:57.6567901-04:00"
+      },
+      "counts": {
+        "total": 27,
+        "executed": 27,
+        "passed": 27,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-heading-final.trx",
+      "sha256": "af47ab2233cf565258e9972a220a8829e2c4099c8deae76b3c7f129e8b46014e",
+      "times": {
+        "creation": "2026-09-05T10:54:53.1248621-04:00",
+        "queuing": "2026-09-05T10:54:53.1248624-04:00",
+        "start": "2026-09-05T10:54:43.1945303-04:00",
+        "finish": "2026-09-05T10:55:08.6827664-04:00"
+      },
+      "counts": {
+        "total": 6,
+        "executed": 6,
+        "passed": 6,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-heading.trx",
+      "sha256": "2e8d36e86d68a8008bed6c53653bb6156c3238d8719254a58f76e000f3a728aa",
+      "times": {
+        "creation": "2026-09-05T10:51:10.7788366-04:00",
+        "queuing": "2026-09-05T10:51:10.7788369-04:00",
+        "start": "2026-09-05T10:51:00.9049749-04:00",
+        "finish": "2026-09-05T10:51:25.9104110-04:00"
+      },
+      "counts": {
+        "total": 6,
+        "executed": 6,
+        "passed": 0,
+        "failed": 6,
+        "notExecuted": 0
+      },
+      "nonPassingCases": [
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Core_read_failure_hides_form_and_retry_keeps_the_selected_target(catalogFails: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: True, newDraft: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: False, newDraft: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: False, newDraft: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: True, newDraft: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Core_read_failure_hides_form_and_retry_keeps_the_selected_target(catalogFails: True)"
+      ]
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-owner-final.trx",
+      "sha256": "2078b072231411bfca26497f5edafff8755e9c22612fbd1a70e052d6a2fc0806",
+      "times": {
+        "creation": "2026-09-05T10:36:45.5499068-04:00",
+        "queuing": "2026-09-05T10:36:45.5499072-04:00",
+        "start": "2026-09-05T10:36:34.2221669-04:00",
+        "finish": "2026-09-05T10:38:05.4247205-04:00"
+      },
+      "counts": {
+        "total": 28,
+        "executed": 28,
+        "passed": 24,
+        "failed": 4,
+        "notExecuted": 0
+      },
+      "nonPassingCases": [
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: True, newDraft: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: False, newDraft: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: True, newDraft: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.New_or_another_selection_wins_over_a_pending_editor_read(fails: False, newDraft: False)"
+      ]
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-tabs.trx",
+      "sha256": "7ada0b562c6811dc60400ca7ed57a12608499a5d9c679b309019a93313ca612b",
+      "times": {
+        "creation": "2026-09-05T10:10:31.4183603-04:00",
+        "queuing": "2026-09-05T10:10:31.4183605-04:00",
+        "start": "2026-09-05T10:10:23.1155709-04:00",
+        "finish": "2026-09-05T10:10:44.7832766-04:00"
+      },
+      "counts": {
+        "total": 6,
+        "executed": 6,
+        "passed": 6,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    },
+    {
+      "artifact": ".mcp-state/providers-results/providers-unit.trx",
+      "sha256": "32682a3ab6a5be0b0612ff748486a89d9477ec6f4980af3ef1f39deba89e41e3",
+      "times": {
+        "creation": "2026-09-05T09:56:34.0604718-04:00",
+        "queuing": "2026-09-05T09:56:34.0604719-04:00",
+        "start": "2026-09-05T09:56:32.8107908-04:00",
+        "finish": "2026-09-05T09:56:34.0981904-04:00"
+      },
+      "counts": {
+        "total": 22,
+        "executed": 22,
+        "passed": 22,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "nonPassingCases": []
+    }
+  ]
+}

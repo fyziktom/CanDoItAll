@@ -82,3 +82,11 @@ claim means refresh, Back/Forward, or bookmarkability has been implemented.
 A canceled wait does not necessarily cancel or release the underlying effect. Pass lifetime cancellation into the effect owner itself (for example, DialogService.OpenAsync), so disposing a host removes its own global-host presentations as well as fencing result callbacks. Preserve unrelated dialogs; a global CloseAll is not an ownership boundary. Test disposal/remount with the same semantic target and an unrelated concurrent presentation.
 
 Stable section definitions should own labels and presentation ordering while semantic sections retain typed identities. Render from those definitions and map indices explicitly; enum ordinals must not become URL or persistent state contracts.
+
+## Initial reads, refresh and nested presentation ownership
+
+Initial task-slot ownership, latest accepted snapshot generation, and presentation loading are separate responsibilities. A stale initial completion must release its own task slot even after a newer reload wins; every accepted catalog must finish loading. Guard synchronous completion when assigning a task slot. If create remains available during initial loading, prove save/reload overlap with both late success and late failure.
+
+Every directly opened nested dialog belongs to the actual editor/session lifetime. A token on a top-level dialog does not cascade to independently registered dialog references. Pass the captured session token to confirmations and wizards; prove both replacement and disposal remove only owned dialogs while preserving unrelated presentations.
+
+For an unrouted list/editor panel, one explicitly constructed session can own the typed semantic state and draft/read lifetime. A page store is not mandatory. Tree/child identities derive from that authority. Initial automatic selection cannot override an explicit New or selection made while loading. A catalog that removes a pending target must prevent its late editor result becoming editable.

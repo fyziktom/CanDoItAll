@@ -1,0 +1,67 @@
+{
+  "route": "https://localhost:7271/agents?tab=providers",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "runtime": {
+    "sessionId": "app_715d1eabc9ff4758bc62c7a1da75b28e",
+    "launchType": "PublishedDll",
+    "mode": "RunOnce",
+    "revision": "2026-09-05T15:14:17.1754275+00:00:49572",
+    "runtimePid": 49572,
+    "stopped": true,
+    "stopConfirmedUtc": "2026-09-05T15:30:19.0542737+00:00",
+    "browserReleasedTo": "about:blank",
+    "moduleAssemblySha256": "dffc4f37080bebeb7ee1c925aa57f82619eef7b9432e64efb5406fb84dd7bb72"
+  },
+  "checks": {
+    "sixExplicitSections": true,
+    "unsavedDraftSurvivesTabs": true,
+    "historySeparateFormNoProviderSave": true,
+    "filterAndReset": true,
+    "lazySharedConnectionsOpenClose": true,
+    "newSurvivesReadRefresh": true,
+    "noHorizontalOverflow": true,
+    "nestedWizardOpensOverEditor": true,
+    "wizardCancelPreservesParent": true,
+    "parentCloseLeavesNoDialogs": true,
+    "noExplicitProviderAgentOrCapabilitySaveDelete": true,
+    "newRawSuggestedModelsSurviveCatalogRefresh": true,
+    "finalReadyProviderAndConnectionsRechecked": true
+  },
+  "visualReview": {
+    "normal": "Pass: list and detail are distinct; six tabs and identity fields plus action footer fit first viewport. No overlap or clipped controls.",
+    "sharedConnections": "Pass: centered panel within viewport; heading, source card and both close actions visible; backdrop separates it from editor.",
+    "nestedWizard": "Pass: stacked modal remains bounded; complete first wizard step and navigation footer visible; no clipped controls.",
+    "scrollOwner": "Existing Agents workspace overflow-y-auto container (884px client height); long tag tree uses workspace scrolling. No scroll redesign in this child."
+  },
+  "artifacts": [
+    {
+      "path": ".mcp-state/providers-final-normal.png",
+      "sha256": "da848578e419281c546d701ec866323076662d8d23f7a494d297dd4c746fb884"
+    },
+    {
+      "path": ".mcp-state/providers-final-connections.png",
+      "sha256": "8c505ca94ef320c5592b8b9477dc4dcbcfd0f4066c439f0f5ad17b4e36eb0aee"
+    },
+    {
+      "path": ".mcp-state/sb09-nested-wizard.png",
+      "sha256": "eb108397f4c61136dca831c60df63b146cbe34cc6f82924637fc78681094978a"
+    }
+  ],
+  "limitations": [
+    "Deterministic delayed-read and selective nested-dialog cancellation proof is in Components/Unit, not browser fault injection.",
+    "No watch performance measurement or lightweight project extraction.",
+    "Runtime shutdown produced expected disconnected-browser messages; no all-console-clean claim.",
+    "Automation attempts needed corrected asynchronous tab waits, tree selectors and navigation sequencing. Final reload, normal provider view, Connections open/close and New raw-text refresh checks passed; no product change was made to compensate for selector timing.",
+    "Agents nested-wizard visual proof uses the earlier runtime recorded above; SB09 source did not change between runtime builds."
+  ],
+  "earlierRuntime": {
+    "sessionId": "app_c9e461cced9f42c690ede72af185c556",
+    "launchType": "PublishedDll",
+    "mode": "RunOnce",
+    "revision": "2026-09-05T14:21:35.6018850+00:00:42060",
+    "stopped": true
+  }
+}

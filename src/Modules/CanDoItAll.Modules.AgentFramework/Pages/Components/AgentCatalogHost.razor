@@ -76,6 +76,7 @@
     private bool isLoading = true;
     private bool interactiveReloadAttempted;
     private Task? loadTask;
+    private object? initialLoadOwner;
     private Guid? selectedAgentId;
     private Guid? selectedTeamId;
     private Guid? appliedRequestedTeamId;
@@ -184,19 +185,23 @@
             return loadTask;
         }
 
-        loadTask = LoadAsync();
-        return loadTask;
+        var owner = new object();
+        initialLoadOwner = owner;
+        var task = LoadAsync(owner);
+        if (ReferenceEquals(initialLoadOwner, owner)) {
+            loadTask = task;
+        }
+        return task;
     }
 
-    private async Task LoadAsync() {
+    private async Task LoadAsync(object owner) {
         var generation = ++catalogGeneration;
         isLoading = true;
-        await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
-        if (isDisposed) {
-            return;
-        }
-
         try {
+            await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
+            if (isDisposed) {
+                return;
+            }
             var loaded = await CatalogOperations.LoadAsync(new(!SkipCatalogRepair, InitialAgents, InitialProviders, InitialTeams), lifetimeToken);
             if (isDisposed || generation != catalogGeneration) {
                 return;
@@ -217,7 +222,7 @@
                     : AgentChatContextAccessState.Failed);
         } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
         } catch {
-            if (isDisposed) {
+            if (isDisposed || generation != catalogGeneration) {
                 return;
             }
             await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
@@ -225,6 +230,9 @@
         } finally {
             if (!isDisposed && generation == catalogGeneration) {
                 isLoading = false;
+            }
+            if (ReferenceEquals(initialLoadOwner, owner)) {
+                initialLoadOwner = null;
                 loadTask = null;
             }
         }
@@ -530,18 +538,24 @@
             return;
         }
         var generation = ++catalogGeneration;
-        AgentCatalogSnapshot loaded;
         try {
-            loaded = await CatalogOperations.LoadAsync(new(Repair: false), lifetimeToken);
-        } catch (Exception) when (isDisposed) {
-            return;
-        }
-        if (isDisposed || generation != catalogGeneration) {
-            return;
-        }
-        snapshot = loaded;
-        if (selectedTeamId.HasValue && teams.All(item => item.Id != selectedTeamId.Value)) {
-            selectedTeamId = null;
+            var loaded = await CatalogOperations.LoadAsync(new(Repair: false), lifetimeToken);
+            if (isDisposed || generation != catalogGeneration) {
+                return;
+            }
+            snapshot = loaded;
+            hasLoaded = true;
+            isLoading = false;
+            if (selectedTeamId.HasValue && teams.All(item => item.Id != selectedTeamId.Value)) {
+                selectedTeamId = null;
+            }
+            await PublishAccessStateAsync(
+                HasValidRequestedSelection() ? AgentChatContextAccessState.Ready : AgentChatContextAccessState.Failed);
+        } catch (Exception) when (isDisposed || generation != catalogGeneration) {
+        } finally {
+            if (!isDisposed && generation == catalogGeneration) {
+                isLoading = false;
+            }
         }
     }
 

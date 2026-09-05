@@ -19,10 +19,10 @@
     "version": 2
   },
   "preparationStatus": "accepted-for-implementation",
-  "executionStatus": "hardening-validated-with-pre-existing-documentation-blocker",
+  "executionStatus": "sb09-validated-repository-docs-gate-blocked",
   "executionCompletedAt": "2026-09-05",
   "executionAuthorizedByCurrentRequest": true,
-  "proofProfile": "Historical SB07 Governed closure; SB08 bounded Behavioral hardening",
+  "proofProfile": "Historical SB07 Governed; SB08 and SB09 bounded Behavioral follow-ups",
   "remoteWritesRequireExplicitAuthorization": true,
   "sourceDependencyMode": {
     "components": "live sibling source",
@@ -36,7 +36,8 @@
     "05-agent-editor-command-boundary",
     "06-rewrite-tests-and-remove-shape-coupling",
     "07-integration-architecture-and-browser-closure",
-    "08-agents-seam-hardening"
+    "08-agents-seam-hardening",
+    "09-load-and-nested-dialog-lifetimes"
   ],
   "sandboxRequiresProductionBookmarkability": false,
   "readinessDimensions": [
@@ -61,6 +62,8 @@
   "executionBaselineCommit": "68db2ee0e63a2ce6baa681e9722acc0a67877b21",
   "hardeningBaselineCommit": "96ee03a97c510d5363636fb06b903b9bc12f47dc",
   "hardeningCompletedAt": "2026-09-05",
-  "currentEvidence": "reviews/04-hardening-evidence.json",
-  "openRepositoryGate": "Documentation: 118 tracked historical logs already present in baseline HEAD."
+  "currentEvidence": "reviews/05-sb09-closure.md",
+  "openRepositoryGate": "Documentation: 118 tracked historical logs already present in baseline HEAD.",
+  "lifecycleFinalizationBaselineCommit": "d3ba280a431bfe74ce03a72638ac06dff47de660",
+  "lifecycleFinalizationCompletedAt": "2026-09-05"
 }

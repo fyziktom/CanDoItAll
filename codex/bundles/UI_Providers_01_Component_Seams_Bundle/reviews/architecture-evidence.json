@@ -1,0 +1,44 @@
+{
+  "before": "snap-20260905133125-38ffcf5c",
+  "after": "snap-20260905142049-38ffcf5c",
+  "blocking": false,
+  "documents": [
+    191,
+    194
+  ],
+  "types": [
+    506,
+    516
+  ],
+  "findings": [
+    205,
+    206
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodeIds": [
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+      ],
+      "names": [
+        "CanDoItAll.Modules.AgentFramework.Hosting",
+        "CanDoItAll.Modules.AgentFramework"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+      ],
+      "names": [
+        "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+        "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+      ]
+    }
+  ],
+  "partialFilesAdded": 0,
+  "projectReferencesChanged": 0,
+  "limitation": "Scoped snapshots exclude referenced project edges; TryAddScoped UI registrations are verified through source and production-composed tests."
+}

@@ -25,5 +25,9 @@
   "firstChildReference": "CDA-UI-SEAMS-AGENTS-01-v2",
   "requiredChildBundleReference": "CDA-UI-SEAMS-BASE-v2",
   "sandboxRequiresProductionBookmarkability": false,
-  "validationMethod": "manual semantic review plus links, JSON, input preservation and complete checksum manifest"
+  "validationMethod": "manual semantic review plus links, JSON, input preservation and complete checksum manifest",
+  "activeChildReferences": [
+    "CDA-UI-SEAMS-AGENTS-01-v2",
+    "CDA-UI-SEAMS-PROVIDERS-01"
+  ]
 }
