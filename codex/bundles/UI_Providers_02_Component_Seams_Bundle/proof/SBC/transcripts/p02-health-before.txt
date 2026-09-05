@@ -1,0 +1,31 @@
+Run label: p02-health-before
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~Local_health_failure_before_persistence_is_retryable_and_does_not_change_revision|FullyQualifiedName~Api_local_health_diagnostic_failure_is_sanitized_and_does_not_persist' /m:1 --logger 'trx;LogFileName=p02-health-before.trx' --results-directory .mcp-state/p02-results
+Exit code: 1
+Captured console output (verbatim):
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:09.34]     CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Local_health_failure_before_persistence_is_retryable_and_does_not_change_revision [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Local_health_failure_before_persistence_is_retryable_and_does_not_change_revision [1 s]
+  Chybová zpráva:
+   Assert.Null() Failure: Value is not null
+Expected: null
+Actual:   ProviderWriteResult { Disposition = Unconfirmed, ProviderId = , Message = The provider write is unconfirmed. Verify the canonical state before another write., ConcurrencyToken =  }
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Local_health_failure_before_persistence_is_retryable_and_does_not_change_revision() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderApiOutcomeIntegrationTests.cs:line 110
+   at CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Local_health_failure_before_persistence_is_retryable_and_does_not_change_revision() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderApiOutcomeIntegrationTests.cs:line 114
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:10.12]     CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Api_local_health_diagnostic_failure_is_sanitized_and_does_not_persist [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Api_local_health_diagnostic_failure_is_sanitized_and_does_not_persist [783 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: BadGateway
+Actual:   InternalServerError
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Api_local_health_diagnostic_failure_is_sanitized_and_does_not_persist() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderApiOutcomeIntegrationTests.cs:line 130
+   at CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.Api_local_health_diagnostic_failure_is_sanitized_and_does_not_persist() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderApiOutcomeIntegrationTests.cs:line 134
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02-health-before.trx
+
+Neúspěšné!  - Neúspěšné:     2, Úspěšné:     0, Přeskočeno:     0, Celkem:     2, Doba trvání: 1 s - CanDoItAll.Tests.Integration.dll (net10.0)

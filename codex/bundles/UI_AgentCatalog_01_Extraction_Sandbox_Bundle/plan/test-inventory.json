@@ -1,0 +1,44 @@
+{
+  "AgentCatalogPanelTests": [
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_hr_agent",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Enterprise_agent_card_has_stable_status_type_tags_and_service_tooltips",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_marks_card_selection_as_handled_for_requested_dialog_echo",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Agent_selection_card_renders_actions_outside_the_selection_button",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_workflow_curator_identity",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_reports_the_actual_selected_agent_to_its_page_owner",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Deleted_agent_result_clears_selection_instead_of_selecting_another_agent",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_prompts_curator_agent",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_scheduler_agent_identity"
+  ],
+  "AgentCatalogBoundaryTests": [
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_inflight_team_mutations_without_refresh_or_notification(members: True)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: False)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_results_refresh_once_and_cancel_has_no_write(members: False)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_cancels_load_and_ignores_late_success_or_failure(fail: True)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_can_be_cleared_and_same_deep_link_reopens(invalidRequest: False)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposing_catalog_closes_only_its_editor_and_allows_same_target_in_replacement_host",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_chat_launch_and_ignores_late_result(fail: True)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_ignores_team_dialog_results(members: False)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_cancels_load_and_ignores_late_success_or_failure(fail: False)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_can_be_cleared_and_same_deep_link_reopens(invalidRequest: True)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_shell_and_content_have_unique_test_ids",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Controlled_panel_search_and_selection_emit_intents_without_services",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_inflight_team_mutations_without_refresh_or_notification(members: False)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_delete_preserves_no_confirmation_and_clears_selection",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_results_refresh_once_and_cancel_has_no_write(members: True)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_opens_once_and_changed_request_opens_again",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: True)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_ignores_team_dialog_results(members: True)",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_chat_launch_and_ignores_late_result(fail: False)"
+  ],
+  "TailwindSourceMonitoringTests": [
+    "CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Linux_case_distinct_source_paths_remain_distinct",
+    "CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Signal_queue_preserves_both_rename_paths_and_poll_recovery",
+    "CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Fingerprint_detects_content_change_without_a_watcher_signal",
+    "CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Linux_path_policy_does_not_ignore_case_distinct_segments_or_extensions",
+    "CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Signal_queue_coalesces_duplicate_paths_without_losing_generation_or_kind",
+    "CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Fingerprint_ignores_generated_output_changes"
+  ]
+}

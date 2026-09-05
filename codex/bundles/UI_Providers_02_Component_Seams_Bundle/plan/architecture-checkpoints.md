@@ -1,0 +1,5 @@
+# Sequential checkpoints
+1. 02A: adjudication and baseline failing-first proof -> local outcome/immutable submission/target mutation owner -> direct Unit + production database proof + existing provider Components -> architecture review. Reopen downstream if identity, cancellation or draft preservation fails.
+2. 02B: only after 02A source/behavior gate, extend producer scope/secondary outcomes and shared target/overlay ownership; prove publication A, guards, parent reconciliation and shared real backend effects. Reopen 02A if external change invalidates submission/session ownership.
+3. 02C: stable API mapping, production composition, source/secret/portability checks, exact affected selections and one named broader checkpoint, full owner browser matrix. Close every input topic and current source hash. Historical docs blocker remains separate; no unconditional merge claim.
+4. After provider behavioral/architecture closure, prepare catalog light UI/sandbox/reproducible cold+warm watch measurement child. Do not execute that child in this run.

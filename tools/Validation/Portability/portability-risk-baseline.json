@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-05T03:33:10.319403+00:00",
+  "generated_utc": "2026-09-05T18:52:54.908443+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -42142,12 +42142,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
       "category": "case-policy",
-      "source_fingerprint": "d2cea70b7ce68e6dbf6ba78a39c3dc6a2411a48567fd74db135cdf4fa83d6cd3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
       "source_fingerprint": "de43f3128459227edfb347668f47813a76714e3ef5251e7fa3719ea0279f6c68",
       "count": 3
     },
@@ -42155,12 +42149,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "e3bfce43f2784dca14186df80a5815a2475e949d49025984b4777f27c28326f5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f273d0e3cbe37cc58cda4f0e4856d2cde287799d75bd72f92b43b26cf003e26e",
       "count": 1
     },
     {
@@ -44945,6 +44933,18 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentUsageAnalyticsService.cs",
       "category": "case-policy",
       "source_fingerprint": "e861d07fb6c91bd21707e25ccd079d60d1e0665e9e1180dff67a5abd7f5076b1",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorOperations.cs",
+      "category": "case-policy",
+      "source_fingerprint": "50c82338a07d8698773448c0d326abd7be98df865dc775c94d284298d3668942",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorOperations.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ac0b6e18c55ba3230e90e8dabae3cebcf248932a18cb24e97e53f3d0e2f92f17",
       "count": 1
     },
     {

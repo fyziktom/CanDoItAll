@@ -76,6 +76,7 @@ public sealed class SharedProviderCatalogProjection
 public static class SharedProviderPublicHealthMapper
 {
     public const string HealthyStatus = "Healthy";
+    public const string UnhealthyStatus = "Unhealthy";
 
     public static SharedProviderHealthState Map(ProviderProfile profile)
     {

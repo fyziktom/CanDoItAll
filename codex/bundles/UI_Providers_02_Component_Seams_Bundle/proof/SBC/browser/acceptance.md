@@ -1,0 +1,17 @@
+# Full-app browser acceptance
+
+Executed against the production Web host with an isolated PostgreSQL profile and a local HTTP server implementing the shared-provider catalog protocol. This is a test fixture, not the next lightweight UI sandbox. No personal provider/source data was used. The fixture and its Web child were stopped after the run; the exclusive projection-failure handle was released.
+
+The exact real UI actions and observations are recorded in evidence.json. Browser actions used the rendered controls. Database observations used the fixture's safe metadata endpoint; credentials were never returned. Unsaved retention compared every rendered public Runtime field, modified markers, raw suggested-model text, name and endpoint, plus same form identity and typed section. Lower-level tests additionally prove exact read counts and EditContext reference identity; browser DOM evidence does not claim access to Blazor private state.
+
+Publication contract A was exercised through opening Sharing, first Publish, Unpublish, and blocked Delete. The never-published fixture remained deletable. First Publish retained one permanent public ID after Unpublish. Import retirement retained the selected identity and removed the editable form. Source enable/disable changed effective status with local enabled intent true; when local intent was false its status correctly took precedence.
+
+A normal first save produced one canonical provider and one editor form. For the deterministic post-commit warning, only the task-owned FileSandboxWorkspaceStore catalog file was held exclusively; canonical PostgreSQL save succeeded and projection failed. After releasing that handle, Reconcile saved change preserved its ID and a later unsaved name while the database still held the original submitted name and exactly one row. This complements the real-registry tests that count zero replay writes.
+
+All eleven screenshots were visually inspected. The provider editor is the primary surface; the tag tree is a secondary column; page content owns vertical scrolling. Connection, Sharing, warning and retired states retain readable actions. Connections uses one wide overlay; source editing uses a contained compact nested dialog; catalog selection remains within its overlay. No full-screen side workspace or nested dashboard was added. Existing Runtime configuration/notes layout is tight at 1600×1000; no layout redesign was included. Scoped controls, warnings and primary actions remained usable.
+
+The imported Sharing badge reflects cached remote publication availability; the editor header reflects effective runtime status including source/local enable intent. These are distinct authority facts, not a claim that a disabled source can execute.
+
+The browser console contained zero errors and warnings. The successful Blazor negotiation is captured in network.txt. Startup had a stale localhost antiforgery-cookie warning from a previous isolated profile; a fresh cookie was issued before provider actions. No provider-browser failure resulted. An early diagnostic form query included the generated hidden antiforgery field; that output is deliberately not included in these artifacts. The retained comparison and proof contain only public fields.
+
+Screenshots are unedited originals. evidence.json includes their SHA-256 hashes. Raw Playwright transport records remain ignored locally; only the compact acceptance facts and selected actual artifacts are retained here. No cold/warm dotnet-watch measurement was performed or claimed.

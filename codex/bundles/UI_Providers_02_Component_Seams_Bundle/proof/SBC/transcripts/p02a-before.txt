@@ -1,0 +1,40 @@
+Run label: p02a-before
+Invariant: P02-LOCAL
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~ProviderMutationRegressionTests' /m:1 --logger 'trx;LogFileName=p02a-before.trx' --results-directory .mcp-state/p02-results
+Exit code: 1
+Captured console output (verbatim):
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs(383,44): warning xUnit2031: Do not use a Where clause to filter before calling Assert.Single. Use the overload of Assert.Single that accepts a filtering function. (https://xunit.net/xunit.analyzers/rules/xUnit2031) [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+  CanDoItAll.Tests.Components -> C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.Pending_save_owns_submission_and_preserves_later_edits(firstSave: False) [8 s]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.Pending_save_owns_submission_and_preserves_later_edits(Boolean firstSave) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderMutationRegressionTests.cs:line 66
+   at CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.Pending_save_owns_submission_and_preserves_later_edits(Boolean firstSave) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderMutationRegressionTests.cs:line 71
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.Pending_save_owns_submission_and_preserves_later_edits(firstSave: True) [3 s]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.Pending_save_owns_submission_and_preserves_later_edits(Boolean firstSave) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderMutationRegressionTests.cs:line 66
+   at CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.Pending_save_owns_submission_and_preserves_later_edits(Boolean firstSave) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderMutationRegressionTests.cs:line 71
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.New_commit_projection_failure_retains_identity_without_another_write [2 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 7e7ea5b2-07d9-476b-8900-a11c82dfd3ed
+Actual:   null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.New_commit_projection_failure_retains_identity_without_another_write() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderMutationRegressionTests.cs:line 31
+   at CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.New_commit_projection_failure_retains_identity_without_another_write() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderMutationRegressionTests.cs:line 32
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02a-before.trx
+
+Neúspěšné!  - Neúspěšné:     3, Úspěšné:     0, Přeskočeno:     0, Celkem:     3, Doba trvání: 14 s - CanDoItAll.Tests.Components.dll (net10.0)

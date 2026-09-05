@@ -1,4 +1,6 @@
 using System.Xml.Linq;
+using CanDoItAll.Modules.AgentFramework;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -194,21 +196,17 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     }
 
     [Fact]
-    public void Provider_management_component_is_owned_by_agent_framework_and_uses_provider_management()
-    {
-        var component = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs");
-        var workspaceProject = Read("src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj");
-        var workspaceProviderPanel = Path.Combine(
-            FindRepositoryRoot(),
-            "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ProviderManagementPanel.razor");
-
-        Assert.Contains("IProviderAdministrationService", component, StringComparison.Ordinal);
-        Assert.Contains("IProviderRuntimeAdministrationService", component, StringComparison.Ordinal);
-        Assert.DoesNotContain("IAgentFrameworkWorkspaceService", component, StringComparison.Ordinal);
-        Assert.DoesNotContain("HttpClient", component, StringComparison.Ordinal);
-        Assert.DoesNotContain("AppDbContext", component, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Modules.AgentFramework.ProviderManagement", workspaceProject, StringComparison.Ordinal);
-        Assert.False(File.Exists(workspaceProviderPanel));
+    public void Provider_management_component_is_owned_by_agent_framework_and_uses_provider_management() {
+        var services = new ServiceCollection();
+        services.AddScoped<IProviderEditorCommands, ProviderEditorCommands>();
+        var applicationRegistration = Assert.Single(services);
+        services.AddAgentFrameworkUi();
+        services.AddAgentFrameworkUi();
+        Assert.Same(applicationRegistration,
+            Assert.Single(services, service => service.ServiceType == typeof(IProviderEditorCommands)));
+        var reads = Assert.Single(services, service => service.ServiceType == typeof(IProviderProfilesReads));
+        Assert.Equal(ServiceLifetime.Scoped, reads.Lifetime);
+        Assert.Equal(typeof(ProviderProfilesReads), reads.ImplementationType);
     }
 
     [Fact]

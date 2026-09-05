@@ -1,0 +1,18 @@
+Run label: p02-followup-pm-build.log
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet build src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj --configuration Release --no-restore /m:1
+Exit code: 0
+Captured final build summary (excerpt; full captured output SHA-256 c43b9494d101b320fc851cce9680aa43931effae07baa7798a084924ad49cf8c):
+  CanDoItAll.Security.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Security.Abstractions\bin\Release\net10.0\CanDoItAll.Security.Abstractions.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Security\bin\Release\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.SharedProviders.Abstractions -> C:\repositories\CanDoItAll\src\Integration\CanDoItAll.SharedProviders.Abstractions\bin\Release\net10.0\CanDoItAll.SharedProviders.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderHistory.Application -> C:\repositories\CanDoItAll\src\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Application\bin\Release\net10.0\CanDoItAll.AgentFramework.ProviderHistory.Application.dll
+  CanDoItAll.AgentFramework.ProviderHistory.Persistence -> C:\repositories\CanDoItAll\src\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Persistence\bin\Release\net10.0\CanDoItAll.AgentFramework.ProviderHistory.Persistence.dll
+  CanDoItAll.Modules.AgentFramework.ProviderManagement -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\bin\Release\net10.0\CanDoItAll.Modules.AgentFramework.ProviderManagement.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:03.03

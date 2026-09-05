@@ -15,11 +15,12 @@ public sealed class ProviderProfilesReadsTests {
             _ => throw new NotSupportedException(method.Name)
         });
         var administration = Port<IProviderAdministrationService>((method, _) => method.Name switch {
-            nameof(IProviderAdministrationService.ListSecretsAsync) => Task.FromException<IReadOnlyList<SecretListItem>>(new InvalidOperationException("Secret metadata offline")),
+            nameof(IProviderAdministrationService.ListSecretsAsync) => Task.FromException<IReadOnlyList<SecretListItem>>(new InvalidOperationException("fixture-private-secret-catalog-detail")),
             _ => throw new NotSupportedException(method.Name)
         });
         var result = await new ProviderProfilesReads(runtime, administration).LoadCatalogAsync();
-        Assert.Equal("Secret metadata offline", result.Secrets.Error);
+        Assert.False(string.IsNullOrWhiteSpace(result.Secrets.Error));
+        Assert.DoesNotContain("fixture-private-secret-catalog-detail", result.Secrets.Error, StringComparison.Ordinal);
         Assert.Empty(result.Secrets.Items);
     }
 

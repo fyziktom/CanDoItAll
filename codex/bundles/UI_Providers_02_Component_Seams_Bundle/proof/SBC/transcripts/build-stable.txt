@@ -1,0 +1,18 @@
+Run label: p02-stable-build.log
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet build tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-restore /m:1
+Exit code: 0
+Captured final build summary (excerpt; full captured output SHA-256 acf26eae42ba0ab65a6e7c72ed1a429587c12ed96a7813f552062e72c8180fd3):
+  CanDoItAll.DurableFileWriter.TestHost -> C:\repositories\CanDoItAll\tests\Support\CanDoItAll.DurableFileWriter.TestHost\bin\Release\net10.0\CanDoItAll.DurableFileWriter.TestHost.dll
+  CanDoItAll.Components.WebGlLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib\bin\Release\net10.0\CanDoItAll.Components.WebGlLib.dll
+  CanDoItAll.Tests.Unit -> C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+
+C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentCatalogBoundaryTests.cs(383,44): warning xUnit2031: Do not use a Where clause to filter before calling Assert.Single. Use the overload of Assert.Single that accepts a filtering function. (https://xunit.net/xunit.analyzers/rules/xUnit2031) [C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj]
+C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs(30,13): warning xUnit2029: Do not use Assert.Empty to check if a value does not exist in a collection. Use Assert.DoesNotContain instead. (https://xunit.net/xunit.analyzers/rules/xUnit2029) [C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj]
+    2 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:43.30

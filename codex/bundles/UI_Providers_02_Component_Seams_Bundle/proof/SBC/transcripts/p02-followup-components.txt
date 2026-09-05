@@ -1,0 +1,11 @@
+Run label: p02-followup-components
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft' /m:1 --logger 'trx;LogFileName=p02-followup-components.trx' --results-directory .mcp-state/p02-results
+Exit code: 0
+Captured console output (verbatim):
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02-followup-components.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 408 ms - CanDoItAll.Tests.Components.dll (net10.0)

@@ -11,7 +11,7 @@ public sealed class SharedProviderRefreshButtonTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Refresh_preserves_selected_imports_and_notifies_only_on_success(bool fail) {
+    public void Refresh_preserves_selected_imports_and_emits_explicit_scope(bool fail) {
         using var context = new BunitContext();
         var service = DispatchProxy.Create<ISharedProviderManagementService, RefreshProxy>();
         var proxy = (RefreshProxy)(object)service;
@@ -20,14 +20,14 @@ public sealed class SharedProviderRefreshButtonTests {
         var notified = false;
         var cut = context.Render<SharedProviderRefreshButton>(p => p
             .Add(c => c.ProviderId, proxy.Selected.ProviderProfileId)
-            .Add(c => c.Refreshed, () => notified = true));
+            .Add(c => c.Refreshed, (SharedProviderChange _) => notified = true));
         Assert.Equal(0, proxy.ListCalls);
         cut.Find("[data-testid='shared-provider-refresh-capabilities']").Click();
         cut.WaitForAssertion(() => {
             Assert.Equal([proxy.Selected.RemotePublicationId], proxy.SynchronizedIds);
-            Assert.Equal(!fail, notified);
+            Assert.True(notified);
         });
-        Assert.Contains(fail ? "Source unavailable" : "unsaved selections were preserved",
+        Assert.Contains(fail ? "could not be confirmed" : "unsaved selections were preserved",
             cut.Find("[data-testid='shared-provider-refresh-result']").TextContent);
     }
 
@@ -51,7 +51,9 @@ public sealed class SharedProviderRefreshButtonTests {
                 SynchronizedIds = ((IReadOnlySet<SharedProviderPublicationId>)args[1]!).ToArray();
                 return Fail
                     ? Task.FromException<SharedProviderSourceOperationResult>(new InvalidOperationException("Source unavailable"))
-                    : Task.FromResult(SharedProviderSourceOperationResult.NotModified(new SharedProviderCatalogEntityTag($"\"sha256:{new string('a', 64)}\"")));
+                    : Task.FromResult(SharedProviderSourceOperationResult.NotModified(new SharedProviderCatalogEntityTag($"\"sha256:{new string('a', 64)}\"")) with {
+                        Change = new(SharedProviderChangeKind.Reconciliation, [Selected.ProviderProfileId], remoteOwnedFieldsChanged: true)
+                    });
             }
             throw new InvalidOperationException($"Unexpected operation {targetMethod?.Name}.");
         }

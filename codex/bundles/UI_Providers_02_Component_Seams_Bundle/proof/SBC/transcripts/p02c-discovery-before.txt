@@ -1,0 +1,23 @@
+Run label: p02c-discovery-before
+Invariant: P02-AUTHORITY
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect' /m:1 --logger 'trx;LogFileName=p02c-discovery-before.trx' --results-directory .mcp-state/p02-results
+Exit code: 1
+Captured console output (verbatim):
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:08.89]     CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect [348 ms]
+  Chybová zpráva:
+   System.IO.IOException : Forbidden fixture secret resolution.
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.SeamSecretProbe.Invoke(MethodInfo method, Object[] args) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderRuntimeProjectionIntegrationTests.cs:line 1386
+   at generatedProxy_1.ResolveValueAsync(SecretRuntimeRequest, CancellationToken)
+   at CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderAdministrationService.ResolveProviderSecretValueAsync(ProviderProfile profile, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\Administration\ProviderAdministrationService.cs:line 477
+   at CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderAdministrationService.RefreshProviderModelPricesAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\Administration\ProviderAdministrationService.cs:line 393
+   at CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderRuntimeProjectionIntegrationTests.cs:line 1377
+   at CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderRuntimeProjectionIntegrationTests.cs:line 1379
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02c-discovery-before.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 348 ms - CanDoItAll.Tests.Integration.dll (net10.0)

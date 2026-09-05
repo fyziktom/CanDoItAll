@@ -1,0 +1,18 @@
+Run label: p02-followup-web-build-final.log
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --configuration Release --no-restore /m:1
+Exit code: 0
+Captured final build summary (excerpt; full captured output SHA-256 6e3ec4371ec1736b708a8bfa74ee74601173b0aceda923e5cc22529a8235f364):
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\Implementations\CanDoItAll.Plugin.Email\bin\Release\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\src\plugins\Implementations\CanDoItAll.Plugin.Gmail\bin\Release\net10.0\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\src\plugins\Implementations\CanDoItAll.Plugin.Office365\bin\Release\net10.0\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\src\App\CanDoItAll.Composition\bin\Release\net10.0\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Migrations.PostgreSql\bin\Release\net10.0\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\src\App\CanDoItAll.Web\bin\Release\net10.0\CanDoItAll.Web.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:23.46

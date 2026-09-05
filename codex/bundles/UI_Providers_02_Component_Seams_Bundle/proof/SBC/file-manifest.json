@@ -1,0 +1,811 @@
+{
+  "baselineCommit": "7684f25854594f4a4b5486559890164aec382fb7",
+  "scope": "complete final proposal; includes preparation-only next child; checksum manifests and this manifest exclude themselves",
+  "files": [
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/README.md",
+      "beforeSha256": null,
+      "afterSha256": "a8c1ec52cdbc0439c7c0d9b38ab05d894e01b7e8f7963f6f656ad5a1f27f8674"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/architecture/01-boundaries.md",
+      "beforeSha256": null,
+      "afterSha256": "3e9a091e7dcd48620a2ef83bc925da7e8da3092540581701232255233c38d777"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/architecture/02-assets-and-composition.md",
+      "beforeSha256": null,
+      "afterSha256": "1760ea4012017b21d666c48b40145399f4f04290c0e268738188f21acaefc181"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/bundle.json",
+      "beforeSha256": null,
+      "afterSha256": "f921195691cbb24bfbdaca7c007432533527bb9d4d4b348c3303ae7794ff5e51"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/inputs/mission.md",
+      "beforeSha256": null,
+      "afterSha256": "2ab986c3b44d92c93296f9abdd74a1a0ef3a333cf27de1d8bf0b6f83b8a4d0bb"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/plan/00-sequence.md",
+      "beforeSha256": null,
+      "afterSha256": "ea203bf76b8be3934302de9c38f8cdb51b2a4eeaaeac72d4f4426233d9901339"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/plan/01-validation.md",
+      "beforeSha256": null,
+      "afterSha256": "545cacc84cf5bb49cb75efb42464ba553bca9ad9039600882f3462a6aae490b8"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/plan/02-measurements.md",
+      "beforeSha256": null,
+      "afterSha256": "93fe72ef757ff9859e7415e4fe94b0de2b679ba9682086b36053d4d664b38a16"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/plan/test-inventory.json",
+      "beforeSha256": null,
+      "afterSha256": "f991df6069518d7602d4b0f49076d161c966fe2bbb35fb0622b687bc69ce689b"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/requirements.md",
+      "beforeSha256": null,
+      "afterSha256": "194ea44ffaf68cd076de4b30079dcbf8321fc84d63464cf0c047f06944b4c4f0"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/reviews/readiness.md",
+      "beforeSha256": null,
+      "afterSha256": "75746ee05db77bada66205d89aa917dba8f8be99926a576871eecb4b678cc69c"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/source-inventory.json",
+      "beforeSha256": null,
+      "afterSha256": "a24b7180f11e0de649307ec6153aaf90f4316180dc517b771ba8a5122f90c632"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/subbundles/SB00/README.md",
+      "beforeSha256": null,
+      "afterSha256": "0a6bc7d3ca6541ab63a144898c35286616abca348c63c4dc35a67e3ef71bf72f"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/subbundles/SB01/README.md",
+      "beforeSha256": null,
+      "afterSha256": "9105915b5d63d5e6b72d44542ac9a584267bf116474cf1c2bf0b27e97ea4025c"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/subbundles/SB02/README.md",
+      "beforeSha256": null,
+      "afterSha256": "a78dadf9b49339b20d7fbc5114436ae07e0027ef32d8966abd2218c59c991534"
+    },
+    {
+      "path": "repo://codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/subbundles/SB03/README.md",
+      "beforeSha256": null,
+      "afterSha256": "3490494a7027a5db218a205e2907d13cf116843a3141c659cb2eb9e7147dda07"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/README.md",
+      "beforeSha256": "1ce0842497da0d0fc4da4ec4a198cd711f6c2ada55e23db0ab4a70b77f47d2eb",
+      "afterSha256": "b1aa9e6989cce38b61d6590cdc706e3cb777e3862d1a0cfee30f0d93edef53f5"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/architecture/02-state-intent-and-routing-readiness.md",
+      "beforeSha256": "d4c821b976ab88965e9492c1a991d1c422f62453e9777d8ec7dfec42655361e9",
+      "afterSha256": "5e6ae6f39d7b8ca21ec8bb569ed22e03a27a4a5eb463114b5d5a64a61c41694f"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/architecture/03-service-io-and-controller-seams.md",
+      "beforeSha256": "4a83289caf1ae97be83a3edbd344ab6c312f5cdd9a978e384fd3465bb2bb70e4",
+      "afterSha256": "4ce07191e0c0a8e6a20d1b81b50779bbdd754152ce54f15cfaab5ab0f6679bed"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/bundle.json",
+      "beforeSha256": "a0719e36793aca5c9bbe6bb3841773ad289cf8c3ddad4224755d7bcb6d3b6973",
+      "afterSha256": "226dc8890d0ce79be2a98ed2b49efd8e0a42dfe8dc50a6935f4487be6c9e767d"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/plan/00-program-sequence.md",
+      "beforeSha256": "e7cd31d44cf77106f40b8dae0b5cc457e58355f4b0c9c7c3d1b9bc89e2282990",
+      "afterSha256": "723d46984ac4d6f1ef8724199d3952b802de42b91b9acbe5a1cd899b524969f8"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/reviews/04-provider-mutation-and-authority-feedback.md",
+      "beforeSha256": null,
+      "afterSha256": "2d61d0066a4e18fdd83ae62054db6e0a3af6cdc8b50f7430bec1a7745f5cac58"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_01_Component_Seams_Bundle/reviews/providers-02-follow-up.md",
+      "beforeSha256": null,
+      "afterSha256": "79fe478b141b5915177cf70a8690d79e93dea4a602cb832b4c1ae75796b91798"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/.gitignore",
+      "beforeSha256": null,
+      "afterSha256": "d2b7c0d7fa5402229c152b69c2fc6584515a365ba5a1b709078c8e01853b1b38"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/README.md",
+      "beforeSha256": null,
+      "afterSha256": "50d6bb907d6e6f6e9327a05e86411fb776838378f716f682a807e888cb43ad07"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/architecture/00-csharp-current-state-inventory.md",
+      "beforeSha256": null,
+      "afterSha256": "d2686c9da60504b70cab78427a51645a7a79dce3c8bc1dce393e911ca9d13782"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/architecture/01-csharp-boundary-map.md",
+      "beforeSha256": null,
+      "afterSha256": "4506ec6c12dbcb6a84d137d783218876fd9722dda3bea251058eefee48e1407a"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/architecture/02-csharp-dependency-direction.md",
+      "beforeSha256": null,
+      "afterSha256": "e34cb08a97793d36a2c25361fa70867b997e20a973a4207bac52f66f8c87f6a0"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/architecture/03-csharp-pattern-selection-records.md",
+      "beforeSha256": null,
+      "afterSha256": "f9417da549b9d3229588b98e4a3c06edd828bec942dde0e9636c5c94583064a8"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/architecture/04-csharp-testability-plan.md",
+      "beforeSha256": null,
+      "afterSha256": "4c0ff16c66eea868955f06f48def7d56b27349e58f4f9fcf656673ef73b7a944"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/architecture/05-ui-composition.md",
+      "beforeSha256": null,
+      "afterSha256": "934dc93a084f76ffb812c66c1d67baa2302c62dc2b7950dde5310b9f99cd1b2a"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/bundle.json",
+      "beforeSha256": null,
+      "afterSha256": "35a1107865de650d50387b079d2eae52718b5eb2834a35e0d8b175ffb1e2fdb8"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/inputs/mission.md",
+      "beforeSha256": null,
+      "afterSha256": "3530413489ba0d035caa55d35f23c0a5106e084637da2a505bbf0e829053fc62"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/plan/architecture-checkpoints.md",
+      "beforeSha256": null,
+      "afterSha256": "e55adfbee5b6e4fd98412facf8224afdf24c406d8cff9b5a7128240dca745ec2"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBA/manifest.md",
+      "beforeSha256": null,
+      "afterSha256": "d73cda7c94504e5259d517211fba60e9993f9591b093293813ddba2a97e51570"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBA/semantic-invariants.md",
+      "beforeSha256": null,
+      "afterSha256": "bee9c5b930530f0da270e4b7d8affe730c99f73f6308e7edc7804bc2f2147259"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBB/entry.md",
+      "beforeSha256": null,
+      "afterSha256": "8b6be4b78ba9412b855d228af492dcf5b6fedc9c0e22657a13b04c34fee4c578"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBB/manifest.md",
+      "beforeSha256": null,
+      "afterSha256": "1f28bc45159fb7cea9089694a3529de7c57f84c79f7a23d3cffd64a7bf95831a"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBB/semantic-invariants.md",
+      "beforeSha256": null,
+      "afterSha256": "96c9beb7da18afbc47ef774f440d0d840ebed932f584b361659452c7b1b633e1"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/architecture-evidence.json",
+      "beforeSha256": null,
+      "afterSha256": "01ff1806dd696ef13a17a724436978fea96e49a3da45327fbbb8c50c5ef7a128"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/acceptance.md",
+      "beforeSha256": null,
+      "afterSha256": "2a0129061d6588cf07553b113902638412d9b3f0a0917054ea9faf119d655bde"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/catalog.png",
+      "beforeSha256": null,
+      "afterSha256": "2abcc220c11230890836185dc762cea3f31b2f3ef5b07a8cbcc55035a04f5346"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/committed-warning.png",
+      "beforeSha256": null,
+      "afterSha256": "8df475fea545faa76f4a7ee028cc3a983c973738bce7222b07b3aafba1f041e9"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/console.txt",
+      "beforeSha256": null,
+      "afterSha256": "71e3f6f776572d7d89f1d2df3a7a52bae2ef0d88ecbdd88a86383f21956c9269"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/evidence.json",
+      "beforeSha256": null,
+      "afterSha256": "7a5dd05b42e0e63464febd319cbe6af0b2ca82e006e7c1a94f1f400807cf5e64"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/first-save.png",
+      "beforeSha256": null,
+      "afterSha256": "23a9b228d830bc4d83fb0bb0e2376e149cf6f1b8034478c6b31f0264f5aa5f65"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/imported.png",
+      "beforeSha256": null,
+      "afterSha256": "9a307a1185d40627e5ea70f5dab028c471a6fc85d10c9f749497f1ab7e0f95b2"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/network.txt",
+      "beforeSha256": null,
+      "afterSha256": "cd937d8152b6df56c3fa8c8ccedf24bc7eeba87a60c430cba53810482e394dc4"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/normal.png",
+      "beforeSha256": null,
+      "afterSha256": "6ac019b927cbcc517cbd504f326dbc186bcd5709f919f2310577546a6f804984"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/overlay.png",
+      "beforeSha256": null,
+      "afterSha256": "f210597ebdbfc4193d0d29b88f2a8e5ab7b5d2f2008dd4ec8654c9f22bd91e1a"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/publication.png",
+      "beforeSha256": null,
+      "afterSha256": "d1ce2ce03afc15aa549bc26753c79db7e348da4f7a569770a5ff2d9b04ce6ad1"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/retired.png",
+      "beforeSha256": null,
+      "afterSha256": "3438302a6c5b2ddffdcc634252d36cd13812575343296a067fbdbddc44902690"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/sharing.png",
+      "beforeSha256": null,
+      "afterSha256": "65a69660fafe4c1b0061fe1c02a39833c99b2759437f2568485aa7de421b2559"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/source-dialog.png",
+      "beforeSha256": null,
+      "afterSha256": "50e23e4397f9a6c5c8e4a2ec393e40ff96a36c11a61bef4d0d7775a45b130d6d"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/browser/source-disabled.png",
+      "beforeSha256": null,
+      "afterSha256": "0a1cbd0c6970141c33b3d7ce2b1c555af6f1864e51efb1474a5052b194df4171"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/focused-plan.json",
+      "beforeSha256": null,
+      "afterSha256": "56a6732d6703df2ea2c93e7e87ac23e4e83df2f5003506ddebc43d85296f932c"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/followup-plan.json",
+      "beforeSha256": null,
+      "afterSha256": "54d0967efaae1a157d44bd2efc95920843fedf6f4c1240d2da78b855286441b0"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/manifest.md",
+      "beforeSha256": null,
+      "afterSha256": "2932dbeb2f4e868dc0078d4b936fd884c299b69370f7fee3a04d647a080d6b7a"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/production-artifacts.md",
+      "beforeSha256": null,
+      "afterSha256": "9b15ab016c94315e7148d6b2cbd4782889797b54acef55a3b18d3fef01bcdb22"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/semantic-invariants.md",
+      "beforeSha256": null,
+      "afterSha256": "b72ad93a05f7eaafa5bf9a00af461a879b110983afad4ae277e2fd6a6facbc8d"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/stable-plan.json",
+      "beforeSha256": null,
+      "afterSha256": "edfed5cece114797e0d1a4b30b3de2ac7467bf10bdd9dc3bc970c2daed79af97"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/test-receipts.json",
+      "beforeSha256": null,
+      "afterSha256": "ad00f53e43df5ed79afc26c8a9a53b789313e2614f54dcb78eb8c57f29e54e8c"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/topic-map.json",
+      "beforeSha256": null,
+      "afterSha256": "29549966771d778b38adb8af662903246024f5e54ca73232e6c4a6a802a1d106"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/anti-stub.txt",
+      "beforeSha256": null,
+      "afterSha256": "cd6f37edaa23d3409a009e1675f03bc44cd7822bfdb5246c2081f57783d40af7"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/build-models.txt",
+      "beforeSha256": null,
+      "afterSha256": "62f38ca96ab8d2d60fe858d454cfa99c88eeb910cab41cac52049c2cb14a8bda"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/build-provider-management.txt",
+      "beforeSha256": null,
+      "afterSha256": "48d7f559b04003c30ce102cbbea15e6074fe492f1bf67b3b082f79ff138b0f39"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/build-solution.txt",
+      "beforeSha256": null,
+      "afterSha256": "3abcaaa2182d1b8fbc3a633c56cbeac6cd1d4e082dc6c7233b7cddcbc9965d52"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/build-stable.txt",
+      "beforeSha256": null,
+      "afterSha256": "4b27dfa4b714327445467233d00ea447c30f97dd65b247d6b367010d83de001b"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/build-ui.txt",
+      "beforeSha256": null,
+      "afterSha256": "674a4123ce3db2f413669f2ed0d53ead92a440380fa4cdbfa7a0a4d330e688b8"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/build-web.txt",
+      "beforeSha256": null,
+      "afterSha256": "69b14b00d3457d16f5da510723dcdbdf518109fe0b4adba09f3e769484cd14fd"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/documentation.txt",
+      "beforeSha256": null,
+      "afterSha256": "55d0d81b3fd6839197c7664f74186a1edd6d0a34880a978cf48e5edf8621557b"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-final-Components.txt",
+      "beforeSha256": null,
+      "afterSha256": "9113701f15f5327f6f7af798eef17e1223261b8db901dde7105c6d335fe5adbe"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-final-Integration.txt",
+      "beforeSha256": null,
+      "afterSha256": "bdb7215d6625163ae5430ab2d24f8d356e09ec27606b1308cbf506d673fd7b50"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-final-Unit-corrected.txt",
+      "beforeSha256": null,
+      "afterSha256": "1639563bb763904b440a3202da15d736bddd5c8fa6bfd437a596959cf541c0e6"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-followup-components.txt",
+      "beforeSha256": null,
+      "afterSha256": "9fbc34bc9e62ad1db89c6195b5766acae748675e27aa611ac2d40ff5af0644fb"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-followup-history.txt",
+      "beforeSha256": null,
+      "afterSha256": "235f3f1de70a897e268a42a6b27a05fe555b237b7c1e55088a443ec556c2c2b3"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-followup-integration.txt",
+      "beforeSha256": null,
+      "afterSha256": "09c19b72a055c4636c6fba05a597f3750339b228e83119fd32d33bd1cb3de1ef"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-followup-unit.txt",
+      "beforeSha256": null,
+      "afterSha256": "411b556350441d342b06ce2684459e2dc507c91f88fc34307ce74c59e194ab6d"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-health-before.txt",
+      "beforeSha256": null,
+      "afterSha256": "ad81a66c8322016c42edca5949c4dee4840ceb4ebaf6667e498aff30fe8333d1"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02-secret-read-before.txt",
+      "beforeSha256": null,
+      "afterSha256": "dfc63151acc2c0f360b06a05e88425f5005e11b23ab0e6cd4b56823d0ee10bca"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02a-before.txt",
+      "beforeSha256": null,
+      "afterSha256": "8fca9a2803c5e4e012a1a07bcd155891a3055dd65cb83b50d13cb3ebc7d38c43"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02a-component-after.txt",
+      "beforeSha256": null,
+      "afterSha256": "a362a526f9db52387b5a18ada5812e9c1f11d0104055cb9e2928538b4fa05dc7"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02a-unit.txt",
+      "beforeSha256": null,
+      "afterSha256": "499a18926532271f3bc71d55230262c053096ae1ce4b319d8faeee0c1f9b8d43"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02b-component-before.txt",
+      "beforeSha256": null,
+      "afterSha256": "dd3d2deea4850d3556675e7f8f04b195b4e1a1145ae473c97caaed2e1395a892"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02b-components-corrected.txt",
+      "beforeSha256": null,
+      "afterSha256": "ba868a155088f33d7c0946634514a94eb1019a9ae5d673e34f772a6aa6e80f4d"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02b-integration-corrected.txt",
+      "beforeSha256": null,
+      "afterSha256": "edb25f66fb4adf7deae98eb99ff173f406fb5eb361cf18776113b93c08100598"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02b-read-before.txt",
+      "beforeSha256": null,
+      "afterSha256": "046c844bdf8bfb335654987dff1132669750d4d213e312efd121797cc25a9c49"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02b-unit.txt",
+      "beforeSha256": null,
+      "afterSha256": "8b6fd6f0f0ac9baee9dcf152f40539e5ae6de132618bd35ddf4ab5ac9322ba0d"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02c-api-corrected.txt",
+      "beforeSha256": null,
+      "afterSha256": "04bbd590140bb5112429e929613d9d83d8d9ae176af7ecf4124378ce609465ea"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02c-discovery-after.txt",
+      "beforeSha256": null,
+      "afterSha256": "8681e7be7fe0bddcdf63e65a917f2423336740d00347bd8bd1e84853864f2146"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/p02c-discovery-before.txt",
+      "beforeSha256": null,
+      "afterSha256": "da4410367e35ed5846c836dd19887a977e56ed5107eaf506af7c2408f369d00e"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/portability-selftests.txt",
+      "beforeSha256": null,
+      "afterSha256": "733d167f5eee897ab5318b42bd1701cc79aebe77ecf136381e41e24246b0a421"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/portability.txt",
+      "beforeSha256": null,
+      "afterSha256": "dcaa68b48822037eb2daa34231650e172906a168fa560c086fcd8ddc2faeddeb"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/secret-scan.txt",
+      "beforeSha256": null,
+      "afterSha256": "d78121c5f2780cf3aca39a23f194bff95a900f0331d3374d5c93fc782f7f6957"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/secret-selftests.txt",
+      "beforeSha256": null,
+      "afterSha256": "7b29ee1ff2df6a7ac602f53834ebc3174e03b0aca850ce603c32645fb5d4a68a"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/transcripts/stable.txt",
+      "beforeSha256": null,
+      "afterSha256": "e6ebb00370efc96f6937b7894aed8a2d7f9a26dd3b6c75dbfb9d42fef22745a1"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/proof/SBC/validation-summary.json",
+      "beforeSha256": null,
+      "afterSha256": "694e51701ad13d0595060c68ea4187b704074ddf6b0156633b360ee07e038a12"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/requirements.md",
+      "beforeSha256": null,
+      "afterSha256": "41f679fb497bfb37ae09aae3b69c431ce903e78debb5baf44f39e1831c7360ae"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/reviews/00-adjudication.md",
+      "beforeSha256": null,
+      "afterSha256": "435be6765de3a152527ef3a025e76c92f460989afb12d3fbb0e77dde37193c6e"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/reviews/closure.md",
+      "beforeSha256": null,
+      "afterSha256": "71576ca4ee111e3691eb00163dfc5ed8122ef5699f6c72ab3f7330b8420dc3ae"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/reviews/csharp-architecture-gate.md",
+      "beforeSha256": null,
+      "afterSha256": "78c06cef2ed7a0d83f5b89727ffd47641bdb8bda7b0b53ac6e52bddcbb2903da"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/reviews/input-closure.md",
+      "beforeSha256": null,
+      "afterSha256": "1c3aa7ba79de3324d75472fe8cff601b286c14d0ce57382cf9150e122e3d2d01"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/subbundles/02a-local-mutations/README.md",
+      "beforeSha256": null,
+      "afterSha256": "fe9233a5e1a1dc9f7f00ab7d3728dda6703aa6fcae8d2949d197160af0f6cb06"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/subbundles/02b-shared-coordination/README.md",
+      "beforeSha256": null,
+      "afterSha256": "0655934d6a997ff00f0907eb59e7fc809fe5b1d1aeee9f34391fb8c96596b1d6"
+    },
+    {
+      "path": "repo://codex/bundles/UI_Providers_02_Component_Seams_Bundle/subbundles/02c-closure/README.md",
+      "beforeSha256": null,
+      "afterSha256": "a3395b05b40f2a2712a3f9544ea477d59519cf3769abff94ee8f295b2c9e1929"
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+      "beforeSha256": "13e13bf2a419e0380f1430cd96d7f3fa4344b6b68d0e12b24c5555738b7e8589",
+      "afterSha256": "590038be6faad88ace53bd74e4ad1c936bbe25f89ff98d1ad3769ebd4e4b7b06"
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/ProviderApiResults.cs",
+      "beforeSha256": null,
+      "afterSha256": "80a5919761fcef08f97799185038165ab3a5a429613cd2a94c672b09d7da0a22"
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Models/Editors/EditorModels.cs",
+      "beforeSha256": "a245e2219a200644959062e1c08e258712d62d8f905f44fd8d3b7ef1381ca199",
+      "afterSha256": "649e0ace66e72051ef67ee067908956c2435cc1731790fa65d013df4e45b698d"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/DatabaseProviderProfileRegistry.cs",
+      "beforeSha256": "109e3682cc84f1f31cd000dab2cf048178c20dcf527f5badeb24d548113c1370",
+      "afterSha256": "0a2c09426021b516d71c760785cc4285c61abb90f2a77422a2dc519659e459c7"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderAdministrationService.cs",
+      "beforeSha256": "aeb8fb8874b66dce3d8d0c783b58c361951a86101a9e2ef841a14ffb1c71945c",
+      "afterSha256": "d1b750f6a84da71ab798a3873a506cd0fa9072c32dd04af315458ba498ca45b1"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderRuntimeAdministrationService.cs",
+      "beforeSha256": "a64db894eeb320e5e50f9e1eeaa2364b63e3a8f39f0e86fd6c50c7708e1df3b2",
+      "afterSha256": "aea13b727c3489edd12a2c32382f08684602dcf425c731a3fbee1ac613748167"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/ProviderMutationOutcome.cs",
+      "beforeSha256": null,
+      "afterSha256": "b6a27888525657b38786a1fddcc2b17998dd2368f5aa32672f95302cd40314c6"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/SharedProviderChange.cs",
+      "beforeSha256": null,
+      "afterSha256": "d73d717a96654dbf60aa389d085283c3d954fdddfdeb4a024948815d33ea36d1"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/SharedProviderManagement.cs",
+      "beforeSha256": "ca7b0277a7c7b5a37d74c9e4d7710a34037978633e7fe6ef7d6da8405550f6a7",
+      "afterSha256": "ffb5ecdb7fb2b92c0220c9605a73f6b0559414ff93371c3a7c7e1b921d3e5fca"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderProfile.cs",
+      "beforeSha256": "fd7c856802db85392b94e147e61abb9735f031e9eff7e042d82f09ab5a897330",
+      "afterSha256": "b12cc24752611aeb924f1b22d9ba50d6e5acb34075241cbd2281675160781ab3"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+      "beforeSha256": "71a6525298d385eb3cd75c05ff83e79e67c5135860338ef6149a67a531cc0cf0",
+      "afterSha256": "3cfe9e920079047be87ae80b5da8ea03ef388ab6e551f7960637722970f603c3"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs",
+      "beforeSha256": "2e76e14170cecb552e0b7872424021fcf2b44b3eb92cf682ee3c158a558f205c",
+      "afterSha256": "3e6b075ecac8a70312a00de99add37c309863eaddd24f4885534c03d1ca73663"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+      "beforeSha256": "e83710ef1eff3991900b1501ed46156a6a56f64d931e3fb1f3a02b63b43a7c73",
+      "afterSha256": "c9c74199b9bae6dacb4c23e0e7cd3a1112d5fee80e148a7f80b802683d1ec20a"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderPersistenceContracts.cs",
+      "beforeSha256": "366a8597175d30a9d35dd0355bf029f5ac85b247c73108e9635579f626dc788a",
+      "afterSha256": "145e2cdeaab850f1c4d740e897183486c276fb03963c1a68806703a353bc5a75"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderProfileDeletionPolicy.cs",
+      "beforeSha256": "afb5c84684475292735cee04c7f3956015cc006e42d0f23ce44c383566ba2309",
+      "afterSha256": "6e24120af568ffa86fb1e078655c33867dd75125e15096c2b15e6310e4ff8259"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderPublicationApplicationService.cs",
+      "beforeSha256": "ef83c6c4aeaf878ba0c313c924867ae51dff69ea5a65957ad35c12f163751ae5",
+      "afterSha256": "c9a9b9c9893c7b077d5230d7fae59f006dcd2ac2509d8c320997c38c759a6dc4"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderPublicationService.cs",
+      "beforeSha256": "e18283f7b95a226088476392f715c3883f55945527a76bd3974e166acf597497",
+      "afterSha256": "e272f62d5c9125afe9b6b879c977b314f9b0f5692abdf87155423fae272c8b78"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderReconciliationCoordinator.cs",
+      "beforeSha256": "1c08f5911525c5b3690d7124811907ba633d9435d9a2e642c5bdad055a07050b",
+      "afterSha256": "dfa35c946ba3051afaf116e3f0993a63c9b45aec3701d5a0b0aa566e57819915"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceService.cs",
+      "beforeSha256": "10e28fa64e9b1369448fb20e75540e611e1caab1bafd669f75e39816d9c28dcd",
+      "afterSha256": "4bcfeb63f544cd151a6cd963abe5fe5141fcb8d8fc4145ab2c1447160c3afd14"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceSyncService.cs",
+      "beforeSha256": "4284f92db290f81eeb50c6a44803edf0eeee33a6ac116cbeae684bd5964b2441",
+      "afterSha256": "ac7f42c1139834a3240cbca39ffc2081276cd9bf86a1435de20dd2eeb6e1cba2"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
+      "beforeSha256": "35f82951968468ec8c97ad04437ab034f2b196ba827e6e0379e82d65887fc6c0",
+      "afterSha256": "9b59af4a5fddcbf4268beb306dc180cfaa40cf0cb425db7fae54009999353b76"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
+      "beforeSha256": "5724987310526580fb354c218660370773aac30591d8167c8947f3e794cd1fbb",
+      "afterSha256": "a2dbe04ee21179bf2bd9383adc98d826e5f7b333354f2e369e93782110429455"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelThinkingEditor.razor",
+      "beforeSha256": "00040d95e11f8a72824361c770a8308f1fed0a26d2d20a3619e5baf18e8958c2",
+      "afterSha256": "73894fed0ec72580174996dd5cdec9511e93fa386c3339bda72f192efa60462d"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileEditorForm.razor",
+      "beforeSha256": "7f8b7c9745a2f9c5304d500f76ebf52b122ea7718207ec6eb9a1ae8a67629509",
+      "afterSha256": "a92ad5c672a61679f3b258b15877219e48ba2ca1f3427e21bcad8df6fe13ce63"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesSession.cs",
+      "beforeSha256": "5dba080079389a0bb1d4d1970f7db34c9200e4ef918168d7fabf4ed40170adfe",
+      "afterSha256": "dfadd95d74e614930cb42ee20b50ce20a8d87073d8b3438701de6c71b17c0cbb"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderLocalPublicationContent.razor",
+      "beforeSha256": "35f4450778e08770acda910f1fb8b9fe78cbce03a6e3a94e8ead0076e616e785",
+      "afterSha256": "d8098c4b869b1914505632e912e3398b5c0226c85ed661c79130bf38cd95cfe0"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor",
+      "beforeSha256": "5dd0a52384eda37a20be235b49ec054db4395aa2b36924f2259325755b081b82",
+      "afterSha256": "b69f541824a24770dc7d242333f7c625f15d9d951789c7df919af5382fc68c1d"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor.cs",
+      "beforeSha256": "a04dd4dc9fbf624971e05a3df0ac0fbcceec599d220529f74e37b906122c03e4",
+      "afterSha256": "d064aeb724693da50aff775e37ac441de2bb375f4342185853f2ad47814dfe6f"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderRefreshButton.razor",
+      "beforeSha256": "df791b005de11d0726577d182f9568730a8561434cb883578c1b28cf30767c6a",
+      "afterSha256": "5b9de1cc429db889daf275251ac329da8ccd850ab40eaad08a1603dba640dc85"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
+      "beforeSha256": "005dd702a33acbae692368ff45b0ea37bdc7bb79a26cb83e7cf2facc17be27ca",
+      "afterSha256": "9329b9c71a073ebc86f5d401e880a76f8cf26e2dc57edffd638896b047c2ebe6"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
+      "beforeSha256": "50226ea8f7e0750b0ab2d9e095df6d65ec523e7b83af2c84955a79f4530c2142",
+      "afterSha256": "a98adfeadcc70c832d6387248a5659d6b4b5f6f0644d0b097c32ef4351ceab05"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderCatalogProjectionCommitObserver.cs",
+      "beforeSha256": "95c7f78a131fa58d09241da55096e37ffdf8e886a253f3542e7d54e58554f3ad",
+      "afterSha256": "7a0df819fb6020a5c4b49970797d8ce5c33068f7273dfcb4e0d1b4ed5d287f70"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs",
+      "beforeSha256": "67a3ab26b20997d4a8422624c974ebfaae24ba16f7207fafa2fe5614a682d543",
+      "afterSha256": "1c00554b9ff3e13d3f2afe030311dc05f2b5fe25d324fef0090c65af6058d561"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorCommands.cs",
+      "beforeSha256": null,
+      "afterSha256": "afb9306b209943f3ed4777bb59247850bc50520e95f7bec9af320a110dd418aa"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorOperations.cs",
+      "beforeSha256": null,
+      "afterSha256": "5e0347764d3649727e259038ded97ffe9a161a8d4f7417cab5d0e7c16e13f99e"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorSubmission.cs",
+      "beforeSha256": null,
+      "afterSha256": "934b5210233517ea8acc8518a0928061e03863d7160eb4afaffb9a2fd3f9de67"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderProfilesReads.cs",
+      "beforeSha256": "0d240f08a42314383c0be8855fc32ecca7f083593c9e7d7323df23bef637ad02",
+      "afterSha256": "394f84ed8ae294a51881c642c03bf8bd7ef0ff44895840689cd6b306bf9d3019"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentEditorChildBoundaryTests.cs",
+      "beforeSha256": "df1679d9e6fc2f93cd54e5ffdf785b80d77b88702fef2bb85bddcdcfc2b0ec4b",
+      "afterSha256": "0536adb9164b2093fa939679011f1d703dd7772ec2e140b299f14de01a2c988a"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/ProviderMutationRegressionTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "af561f01d3457db125fba551e5a6f945c7e7bf3e515380d6a9809839e560f140"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/SharedProviderLifetimeRegressionTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "afd1621680f1e3222faced832d61330aae8bcf2ca1e5e8aa7f8126cd9c5b95a8"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/SharedProviderOwnedEffectsTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "287660e409d2e6dc8bb05c063105b9c2b070a3ce0e14be582c79efdc07d3ca54"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/SharedProviderPublicationPanelTests.cs",
+      "beforeSha256": "4b0f0f143165048c645607076773232079dfec8f099b49ff52f8f9fc753b5163",
+      "afterSha256": "f75acb1ec138ed73a7a4389381d24bb5e7a5e0179843c8f1b52a78b623f14abf"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/SharedProviderRefreshButtonTests.cs",
+      "beforeSha256": "1012d2b3c7c6b802c1785086ac8485bd79b2740b9c4fa2c7abd7b8bc99ab010e",
+      "afterSha256": "560b8c5342dd4d2ae2aa7cfeff9ef8797ab47f85f4c1b581dbda3e29fb9b2a7a"
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/ProviderApiOutcomeIntegrationTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "62d94a1b4406a427a579fb94d282da7c54bf6ff11f08dc919e4768762605ceb8"
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/ProviderMutationCommitIntegrationTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "2718043fda24fd5d02249df65d3809bf066c67176c9b320459e288153f635a40"
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimeProjectionIntegrationTests.cs",
+      "beforeSha256": "baf74e5be2195a4253fdfbb6462dd063b8c7ef37b6d06a9ed56f0b68d768a289",
+      "afterSha256": "dad563d88e074ef18a895612350be51335c42b5368c5ae669fb255dbcdc20e15"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderEditorOperationsTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "2515ddb567a58b4c53272369d524cba8d651d8f0e7b79ccfc82ca9df8138f0b7"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderEditorSubmissionTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "1bd094a2f10c5603cc34c69412c39e320817aef48b175d00fe475afcb5020b69"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderProfilesReadsTests.cs",
+      "beforeSha256": "ec2aa8798252799557c0494f5b00e40a8d6cd886ac706a83e290431b7f9654aa",
+      "afterSha256": "4a1fa059406f4682bad187d27efd682a4d2273fa0c7185e240985a0dfb324841"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderProfilesSessionTests.cs",
+      "beforeSha256": "a1dbf98a772cb11330f68025a9d08b4f5dcd7aaace0c3ae5b34a96b90e5da8a6",
+      "afterSha256": "bc48c7068fdfc7af78a528e339577ec9f67398829719f478a955eb18bb785e37"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderSharedReconciliationTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "20fd941183d92dd4211518d0536e4b804cb6138b7c9b71f5b1556bf537d7602b"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProviderBoundaryArchitectureGuardTests.cs",
+      "beforeSha256": "58bd03d8f08d615c42c3bc998b18ec64da3f710fb598bd88247ffe7a493fbeaa",
+      "afterSha256": "2c1c281fc1a413b2f3a7cc07a513ab1c14379eea8dbea64312b43597f665be76"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProviderCatalogProjectionFailureTests.cs",
+      "beforeSha256": "a23df2fee282c437d41b28282ff3b6c1c47abb9b73f4536813e623de5a4f83f0",
+      "afterSha256": "f962cc743db2485e91fd5f1df6d7c0512d720b5960a55039f508771282142641"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProviderFeatureMatrixTests.cs",
+      "beforeSha256": "1b7643a74f7394ddfc29b631aadbeb1af563fe95493f00afcd9e31e55eb51b60",
+      "afterSha256": "bf610b853a135c693b792c1e34996d0994f9ebc1aea77bec36521c0cf18457d8"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderArchitectureCharacterizationTests.cs",
+      "beforeSha256": "068c7c39dda307bbe572c4614515af3f00df58c5f96a3d5526bf9b418b8240cf",
+      "afterSha256": "e1e10792e76a9feef4caa6d320105e45fea0534fd2991ff6d451aa82dbb56077"
+    },
+    {
+      "path": "repo://tools/Validation/Portability/portability-risk-baseline.json",
+      "beforeSha256": "99f1c36b009f797dc78e4b8839338498a07673ae5f6bc0ece2caaf5506fe4ab2",
+      "afterSha256": "7d6c1550c5161ae8a67a23b13423cd4b2e4c90f19ce7d2ca643721572eded73b"
+    }
+  ]
+}

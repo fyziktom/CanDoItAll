@@ -1,0 +1,9 @@
+Run label: final source review
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: rg-equivalent scan of git diff + untracked production source for TODO|NotImplementedException|p02-browser|.mcp-state|fixture-private|P02 task branches
+Exit code: False
+{
+  "files": 37,
+  "findings": []
+}

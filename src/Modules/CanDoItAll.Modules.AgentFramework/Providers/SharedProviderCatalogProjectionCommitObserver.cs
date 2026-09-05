@@ -60,10 +60,9 @@ internal sealed class SharedProviderCatalogProjectionCommitObserver(
             var projectionException = new ProviderCatalogProjectionException(
                 providerId,
                 ProviderCatalogProjectionOperationKind.Upsert,
-                "Retry shared-provider synchronization to repair the catalog projection.",
+                "Reconcile the committed provider catalog projection without repeating the shared write.",
                 exception);
             logger.LogError(
-                projectionException,
                 "Shared-provider catalog projection failed after the canonical database commit. ProviderId={ProviderId} RepairAction={RepairAction}",
                 providerId,
                 projectionException.RepairAction);

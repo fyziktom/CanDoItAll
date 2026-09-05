@@ -9,6 +9,15 @@ public sealed class SharedProviderPublicationStore(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock)
 {
+    public async Task<SharedProviderPublicationWriteResult?> FindAsync(
+        Guid providerProfileId, CancellationToken cancellationToken = default) {
+        await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var publication = await db.Set<ProviderSharePublication>().AsNoTracking()
+            .SingleOrDefaultAsync(item => item.ProviderProfileId == providerProfileId, cancellationToken);
+        return publication is null ? null
+            : new(publication.Id, publication.PublicId, publication.IsPublished, publication.ConcurrencyToken);
+    }
+
     public async Task<SharedProviderPublicationWriteResult> GetOrCreateAsync(
         Guid providerProfileId,
         CancellationToken cancellationToken = default)
@@ -81,7 +90,7 @@ public sealed class SharedProviderPublicationStore(
             publication.ConcurrencyToken);
     }
 
-    private static SharedProviderPublicationId CreatePublicId(Guid providerProfileId)
+    internal static SharedProviderPublicationId CreatePublicId(Guid providerProfileId)
     {
         Guid value;
         do

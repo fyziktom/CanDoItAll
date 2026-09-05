@@ -32,7 +32,9 @@ public sealed record SharedProviderProfileSharingSnapshot(
     SharedProviderProfileOwnership Ownership,
     SharedProviderPublicationWriteResult? Publication,
     SharedProviderPublicationEligibility? Eligibility,
-    SharedProviderImportedProfileSnapshot? Import);
+    SharedProviderImportedProfileSnapshot? Import) {
+    public SharedProviderChange? Change { get; init; }
+}
 
 public sealed record SharedProviderSourceManagementSnapshot(
     SharedProviderSourceSnapshot Source,
@@ -70,7 +72,7 @@ public interface ISharedProviderManagementService
     Task<SharedProviderProfileSharingSnapshot> SetPublicationAsync(
         Guid providerProfileId,
         SharedProviderPublicationAction action,
-        Guid expectedConcurrencyToken,
+        Guid? expectedConcurrencyToken,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(

@@ -65,7 +65,7 @@ public sealed class SharedProviderManagementService(
                 profile.ConnectorPluginKey,
                 profile.ProviderKind),
             requiredSecretExists);
-        var publication = await publicationStore.GetOrCreateAsync(
+        var publication = await publicationStore.FindAsync(
             providerProfileId,
             cancellationToken);
         return new SharedProviderProfileSharingSnapshot(
@@ -79,16 +79,17 @@ public sealed class SharedProviderManagementService(
     public async Task<SharedProviderProfileSharingSnapshot> SetPublicationAsync(
         Guid providerProfileId,
         SharedProviderPublicationAction action,
-        Guid expectedConcurrencyToken,
+        Guid? expectedConcurrencyToken,
         CancellationToken cancellationToken = default)
     {
-        await publicationApplicationService.ChangeAsync(
+        var result = await publicationApplicationService.ChangeAsync(
             new SharedProviderPublicationChangeRequest(
                 providerProfileId,
                 action,
                 expectedConcurrencyToken),
             cancellationToken);
-        return await GetProfileSharingAsync(providerProfileId, cancellationToken);
+        return await ReadCommittedSharingAsync(providerProfileId,
+            result.Change ?? new(SharedProviderChangeKind.Publication, [providerProfileId]), cancellationToken);
     }
 
     public async Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(
@@ -196,8 +197,12 @@ public sealed class SharedProviderManagementService(
             import,
             profile,
             cancellationToken);
-        await NotifyProviderSavedAsync(profile.Id);
-        return await GetProfileSharingAsync(profile.Id, cancellationToken);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.ImportedSettings, [profile.Id],
+                retiredProviderProfileIds: [],
+                remoteOwnedFieldsChanged: false, catalogMembershipMayHaveChanged: false),
+            commitObservers);
+        return await ReadCommittedSharingAsync(profile.Id, change, cancellationToken);
     }
 
     public async Task<SharedProviderProfileSharingSnapshot> RetireImportedProfileAsync(
@@ -223,8 +228,21 @@ public sealed class SharedProviderManagementService(
             import,
             profile,
             cancellationToken);
-        await NotifyProviderSavedAsync(profile.Id);
-        return await GetProfileSharingAsync(profile.Id, cancellationToken);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.ImportRetirement, [profile.Id],
+                retiredProviderProfileIds: [profile.Id],
+                remoteOwnedFieldsChanged: false, catalogMembershipMayHaveChanged: true),
+            commitObservers);
+        return await ReadCommittedSharingAsync(profile.Id, change, cancellationToken);
+    }
+
+    private async Task<SharedProviderProfileSharingSnapshot> ReadCommittedSharingAsync(
+        Guid providerId, SharedProviderChange change, CancellationToken token) {
+        try {
+            return (await GetProfileSharingAsync(providerId, token)) with { Change = change };
+        } catch (Exception exception) {
+            throw new SharedProviderCommittedException(change, exception);
+        }
     }
 
     private static async Task<SharedProviderImportedProfileSnapshot?> LoadImportedProfileAsync(
@@ -355,13 +373,6 @@ public sealed class SharedProviderManagementService(
         }
     }
 
-    private async Task NotifyProviderSavedAsync(Guid providerProfileId)
-    {
-        foreach (var observer in commitObservers)
-        {
-            await observer.ProviderSavedAsync(providerProfileId, CancellationToken.None);
-        }
-    }
 
     private static string NormalizeAlias(string alias)
     {

@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -22,17 +23,10 @@ public sealed class ProviderCatalogProjectionException(
     ProviderCatalogProjectionOperationKind operationKind,
     string repairAction,
     Exception innerException) :
-    InvalidOperationException(
-        $"Canonical provider '{providerId:D}' committed successfully, but catalog projection '{operationKind}' failed. {repairAction}",
-        innerException)
-{
-    public Guid ProviderId { get; } = providerId;
-
-    public ProviderCatalogProjectionOperationKind OperationKind { get; } =
-        operationKind;
-
-    public bool CanonicalCommitSucceeded { get; } = true;
-
+    ProviderMutationCommittedException(
+        new(providerId, operationKind),
+        "The provider change is saved, but its catalog projection needs reconciliation.",
+        innerException) {
     public string RepairAction { get; } = repairAction;
 }
 
@@ -47,7 +41,7 @@ internal sealed class DatabaseProviderProfileRegistry(
     IEnumerable<IProviderProfileCommitObserver>
         providerProfileCommitObservers,
     ILogger<DatabaseProviderProfileRegistry> logger) :
-    IProviderProfileRegistry
+    IProviderProfileRegistry, IProviderCatalogReconciliation
 {
     public Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
         CancellationToken cancellationToken = default)
@@ -67,16 +61,32 @@ internal sealed class DatabaseProviderProfileRegistry(
             return providerProfileService.CreateEditor();
         }
 
-        var provider = await GetProviderAsync(providerId.Value, cancellationToken)
-            ?? throw new InvalidOperationException("Provider profile was not found.");
-        return providerProfileService.CreateEditor(provider);
+        var provider = await runtimeProfileLoader.LoadAsync(providerId.Value, cancellationToken)
+            ?? throw new KeyNotFoundException("Provider profile was not found.");
+        if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(provider.Profile.ConnectorPluginKey)) {
+            await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            if (await db.Set<SharedProviderImport>().AsNoTracking().AnyAsync(
+                import => import.ProviderProfileId == providerId &&
+                    import.SelectionState == SharedProviderSelectionState.Retired, cancellationToken)) {
+                throw new ProviderRuntimeProfileUnavailableException(providerId.Value);
+            }
+        }
+        var editor = providerProfileService.CreateEditor(provider.Profile);
+        editor.ExpectedConcurrencyToken = provider.ConfigurationRevision?.Value;
+        return editor;
     }
 
-    public async Task<Guid> SaveProviderAsync(
+    public Task<Guid> SaveProviderAsync(
         AgentFrameworkProviderProfileEditorModel model,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) => SaveProviderCoreAsync(model, null, cancellationToken);
+
+    private async Task<Guid> SaveProviderCoreAsync(
+        AgentFrameworkProviderProfileEditorModel model,
+        ProviderDiagnosticState? diagnostic,
+        CancellationToken cancellationToken) {
+
         ArgumentNullException.ThrowIfNull(model);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var capabilityProfile = providerProfileService.CreateProfile(model);
         var secretRecordId = ResolveSecretRecordIdForSave(model);
@@ -93,6 +103,11 @@ internal sealed class DatabaseProviderProfileRegistry(
         {
             throw new ProviderProfileValidationException(
                 SharedProviderProfileOwnershipPolicy.GenericSaveRejectionMessage);
+        }
+
+        if (model.ExpectedConcurrencyToken is { } expectedToken &&
+            (current is null || current.ConcurrencyToken != expectedToken)) {
+            throw new ProviderProfileConcurrencyException(model.Id ?? Guid.Empty);
         }
 
         var currentProfile = current is null
@@ -201,6 +216,10 @@ internal sealed class DatabaseProviderProfileRegistry(
         entity.SupportsToolCalling = capabilityProfile.SupportsTools;
         entity.SupportsStructuredOutput = featureMatrix.SupportsStructuredOutput;
         entity.SupportsVision = featureMatrix.SupportsVision;
+        if (diagnostic is not null) {
+            entity.LastHealthCheckAtUtc = diagnostic.CheckedAtUtc;
+            entity.LastHealthStatus = diagnostic.Status[..Math.Min(diagnostic.Status.Length, ProviderProfile.MaximumHealthStatusLength)];
+        }
         entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
             ProviderMetadata.BuildExtraSettingsJson(
                 capabilityProfile.ConfigurationJson,
@@ -218,20 +237,32 @@ internal sealed class DatabaseProviderProfileRegistry(
             capabilityProfile.IsPrivateProvider,
             capabilityProfile.ModelPrices);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await secretMutationScope.CommitAsync(cancellationToken);
-        await secretMutationScope.DisposeAsync();
-
-        await NotifyProviderSavedAsync(entity.Id);
-        await ProjectCatalogAsync(
-            entity.Id,
-            ProviderCatalogProjectionOperationKind.Upsert,
-            projectionCancellationToken =>
-                UpsertCatalogProvidersAsync(
-                    [providerMapper.Map(entity)],
-                    projectionCancellationToken));
-
-        return entity.Id;
+        cancellationToken.ThrowIfCancellationRequested();
+        var committed = false;
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            committed = dbContext.Database.CurrentTransaction is null;
+            await secretMutationScope.CommitAsync(cancellationToken);
+            committed = true;
+            await secretMutationScope.DisposeAsync();
+            await NotifyProviderSavedAsync(entity.Id);
+            await ProjectCatalogAsync(
+                entity.Id,
+                ProviderCatalogProjectionOperationKind.Upsert,
+                token => UpsertCatalogProvidersAsync([providerMapper.Map(entity)], token));
+            return entity.Id;
+        } catch (ProviderMutationCommittedException) {
+            throw;
+        } catch (Exception exception) when (committed) {
+            throw new ProviderMutationCommittedException(
+                new(entity.Id, ProviderCatalogProjectionOperationKind.Upsert, entity.ConcurrencyToken),
+                "The provider is saved, but a secondary update needs reconciliation.", exception);
+        } catch (Exception exception) when (exception is DbUpdateConcurrencyException ||
+            SerializableMutationScope.IsConflict(exception)) {
+            throw new ProviderProfileConcurrencyException(entity.Id, exception);
+        } catch (Exception exception) {
+            throw new ProviderMutationUnconfirmedException(exception);
+        }
     }
 
     public async Task DeleteProviderAsync(
@@ -251,10 +282,23 @@ internal sealed class DatabaseProviderProfileRegistry(
                     cancellationToken);
             }
             dbContext.Remove(provider);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            try {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            } catch (DbUpdateConcurrencyException exception) {
+                throw new ProviderProfileConcurrencyException(providerId, exception);
+            } catch (Exception exception) {
+                throw new ProviderMutationUnconfirmedException(exception);
+            }
         }
 
-        await NotifyProviderDeletedAsync(providerId);
+        try {
+            await NotifyProviderDeletedAsync(providerId);
+        } catch (Exception exception) {
+            throw new ProviderMutationCommittedException(
+                new(providerId, ProviderCatalogProjectionOperationKind.Delete),
+                "The provider is deleted, but a secondary update needs reconciliation.", exception);
+        }
         await ProjectCatalogAsync(
             providerId,
             ProviderCatalogProjectionOperationKind.Delete,
@@ -279,17 +323,44 @@ internal sealed class DatabaseProviderProfileRegistry(
     {
         ArgumentNullException.ThrowIfNull(update);
 
-        var current = await GetProviderAsync(providerId, cancellationToken)
+        var snapshot = await runtimeProfileLoader.LoadAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
-        var updated = update(current);
+        var updated = update(snapshot.Profile);
         var editor = providerProfileService.CreateEditor(updated);
+        editor.ExpectedConcurrencyToken = snapshot.ConfigurationRevision?.Value;
         editor.ConfigurationJson =
             ProviderMetadata.WriteThinkingEffortCapabilities(
                 editor.ConfigurationJson,
                 updated.ModelThinkingEffortCapabilities);
-        await SaveProviderAsync(editor, cancellationToken);
-        return (await GetProviderAsync(providerId, cancellationToken))
-            ?? throw new InvalidOperationException("Provider profile was not found after update.");
+        await SaveProviderCoreAsync(editor, new(updated.HealthStatus, updated.LastCheckedAtUtc), cancellationToken);
+        try {
+            return await GetProviderAsync(providerId, cancellationToken)
+                ?? throw new KeyNotFoundException("Provider profile was not found after update.");
+        } catch (Exception exception) {
+            throw new ProviderMutationCommittedException(
+                new(providerId, ProviderCatalogProjectionOperationKind.Upsert),
+                "The provider update is saved, but its refreshed state is unavailable.", exception);
+        }
+    }
+
+    private sealed record ProviderDiagnosticState(string Status, DateTimeOffset? CheckedAtUtc);
+
+    public async Task ReconcileAsync(Guid providerId, CancellationToken cancellationToken = default) {
+        cancellationToken.ThrowIfCancellationRequested();
+        var canonical = await GetProviderAsync(providerId, cancellationToken);
+        if (canonical is not null) {
+            await NotifyProviderSavedAsync(providerId);
+        } else {
+            await NotifyProviderDeletedAsync(providerId);
+        }
+        await store.UpdateCatalogAsync(catalog => catalog with {
+            Providers = catalog.Providers.Where(item => item.Id != providerId)
+                .Concat(canonical is null ? [] : new[] { canonical }).ToArray(),
+            Agents = canonical is null
+                ? catalog.Agents.Select(agent => agent.ProviderProfileId == providerId
+                    ? agent with { ProviderProfileId = null } : agent).ToArray()
+                : catalog.Agents
+        }, cancellationToken);
     }
 
     private async Task UpsertCatalogProvidersAsync(
@@ -352,9 +423,9 @@ internal sealed class DatabaseProviderProfileRegistry(
             var repairAction = operationKind switch
             {
                 ProviderCatalogProjectionOperationKind.Upsert =>
-                    $"Set the provider editor Id to '{providerId:D}' and retry SaveProviderAsync to upsert the catalog projection.",
+                    $"Call {nameof(IProviderCatalogReconciliation.ReconcileAsync)} for provider {providerId:D} to refresh the committed provider without replaying Save.",
                 ProviderCatalogProjectionOperationKind.Delete =>
-                    $"Retry DeleteProviderAsync for provider '{providerId:D}' to remove the catalog projection.",
+                    $"Call {nameof(IProviderCatalogReconciliation.ReconcileAsync)} for provider {providerId:D} to remove the stale projection without replaying Delete.",
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(operationKind),
                     operationKind,
@@ -367,7 +438,6 @@ internal sealed class DatabaseProviderProfileRegistry(
                     repairAction,
                     exception);
             logger.LogError(
-                projectionException,
                 "Provider catalog projection failed after the canonical database commit. ProviderId={ProviderId} OperationKind={OperationKind} CanonicalCommitSucceeded={CanonicalCommitSucceeded} RepairAction={RepairAction}",
                 projectionException.ProviderId,
                 projectionException.OperationKind,

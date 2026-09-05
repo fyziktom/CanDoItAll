@@ -1,0 +1,6 @@
+Run label: documentation
+Invariant: P02-STATIC
+Working directory: repo://
+Command: ./tools/Validation/Test-Documentation.ps1
+Exit code: 1
+ERROR: Generated or local-only tracked files match '\.(?:log|pyc|pid)$': 118 file(s); first is codex/bundles/UI_Agents_Component_Seams_Bundle/proof/SB01/transcripts/characterization-discovery.log

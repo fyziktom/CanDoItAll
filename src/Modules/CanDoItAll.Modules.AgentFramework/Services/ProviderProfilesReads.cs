@@ -32,8 +32,8 @@ public sealed class ProviderProfilesReads(
             return new(await administration.ListSecretsAsync(cancellationToken));
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
-        } catch (Exception exception) {
-            return new([], exception.Message);
+        } catch (Exception) {
+            return new([], "Secret metadata could not be loaded. Saved references are retained.");
         }
     }
 }

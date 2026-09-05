@@ -92,7 +92,7 @@
             System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.NumericOrdering));
     [Parameter, EditorRequired] public ProviderProfileEditorModel Model { get; set; } = default!;
     [Parameter] public ProviderProfile? Provider { get; set; }
-    [Parameter] public EventCallback Refreshed { get; set; }
+    [Parameter] public EventCallback<CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderChange> Refreshed { get; set; }
 
     private bool SourceManaged => Provider?.IsSourceManaged == true;
     private List<ThinkingRow> rows = [];

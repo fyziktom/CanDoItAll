@@ -49,6 +49,8 @@ public static class ProviderManagementServiceCollectionExtensions
         services.AddScoped<DatabaseProviderProfileRegistry>();
         services.AddScoped<IProviderProfileRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<DatabaseProviderProfileRegistry>());
+        services.AddScoped<IProviderCatalogReconciliation>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseProviderProfileRegistry>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             ISecretDeletionReferencePolicy,
             ProviderSecretDeletionReferencePolicy>());

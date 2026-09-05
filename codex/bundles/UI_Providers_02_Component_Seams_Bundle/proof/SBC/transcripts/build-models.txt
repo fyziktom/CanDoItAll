@@ -1,0 +1,18 @@
+Run label: p02-final-build-Models.log
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj --configuration Release /m:1
+Exit code: 0
+Captured final build summary (excerpt; full captured output SHA-256 1d4ce2e0060e0c90b9efdee433af5de5a1b1434108cac16fcea4ea17075beeb8):
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Release\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Release\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Infrastructure.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Infrastructure.Abstractions\bin\Release\net10.0\CanDoItAll.Infrastructure.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderHistory.Abstractions -> C:\repositories\CanDoItAll\src\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Release\net10.0\CanDoItAll.AgentFramework.Models.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:01.82

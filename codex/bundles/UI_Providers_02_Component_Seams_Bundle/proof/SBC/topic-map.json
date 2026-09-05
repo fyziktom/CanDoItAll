@@ -1,0 +1,241 @@
+[
+  {
+    "topic": 1,
+    "behavior": "Known first-save identity despite projection failure",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Canonical_commit_survives_secondary_failure_and_repair_never_replays_write",
+      "ProviderMutationRegressionTests.New_commit_projection_failure_retains_identity_without_another_write"
+    ]
+  },
+  {
+    "topic": 2,
+    "behavior": "Retry performs zero replay writes",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Canonical_commit_survives_secondary_failure_and_repair_never_replays_write",
+      "ProviderEditorOperationsTests.Known_commit_binds_identity_and_retry_only_reconciles"
+    ]
+  },
+  {
+    "topic": 3,
+    "behavior": "Commit observer failure retains identity",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Canonical_commit_survives_secondary_failure_and_repair_never_replays_write"
+    ]
+  },
+  {
+    "topic": 4,
+    "behavior": "Validation permits correction/retry",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Validation_rejection_is_precommit_and_correction_can_be_saved",
+      "ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft"
+    ]
+  },
+  {
+    "topic": 5,
+    "behavior": "Unknown write blocks blind replay",
+    "tests": [
+      "ProviderEditorOperationsTests.Unconfirmed_write_blocks_blind_replay"
+    ]
+  },
+  {
+    "topic": 6,
+    "behavior": "Pre-cancel creates no provider",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Owner_precancellation_does_not_create_a_provider"
+    ]
+  },
+  {
+    "topic": 7,
+    "behavior": "Later edits survive reconciliation",
+    "tests": [
+      "ProviderEditorOperationsTests.Later_draft_edits_survive_successful_save_reconciliation",
+      "ProviderMutationRegressionTests.Pending_save_owns_submission_and_preserves_later_edits"
+    ]
+  },
+  {
+    "topic": 8,
+    "behavior": "Selection/New/disposal fences delayed save",
+    "tests": [
+      "ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion",
+      "ProviderEditorOperationsTests.Late_previous_save_cannot_clear_new_target_busy_state"
+    ]
+  },
+  {
+    "topic": 9,
+    "behavior": "Delete commit survives projection failure",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Canonical_commit_survives_secondary_failure_and_repair_never_replays_write",
+      "ProviderEditorOperationsTests.Delete_commit_warning_keeps_deleted_target_and_retry_does_not_delete_again"
+    ]
+  },
+  {
+    "topic": 10,
+    "behavior": "Local health persists; import health does not",
+    "tests": [
+      "ProviderApiOutcomeIntegrationTests.Local_health_diagnostic_persists_the_health_update_and_new_revision",
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_imported_health_and_test_chat_are_allowed_sanitized_and_nonpersisting",
+      "ProviderApiOutcomeIntegrationTests.Local_health_failure_before_persistence_is_retryable_and_does_not_change_revision"
+    ]
+  },
+  {
+    "topic": 11,
+    "behavior": "Discovery cancellation/fencing retains edits",
+    "tests": [
+      "ProviderEditorOperationsTests.Discovery_does_not_apply_to_a_changed_draft",
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect"
+    ]
+  },
+  {
+    "topic": 12,
+    "behavior": "Submission public contract completeness",
+    "tests": [
+      "ProviderEditorSubmissionTests.Submission_preserves_every_public_property_and_owns_mutable_descendants"
+    ]
+  },
+  {
+    "topic": 13,
+    "behavior": "Existing unsaved local draft survives unrelated sync",
+    "tests": [
+      "SharedProviderOwnedEffectsTests.Unrelated_sync_preserves_raw_text_section_and_edit_context",
+      "ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft"
+    ]
+  },
+  {
+    "topic": 14,
+    "behavior": "Unsaved New survives every shared kind",
+    "tests": [
+      "ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft",
+      "SharedProviderOwnedEffectsTests.Unrelated_sync_preserves_raw_text_section_and_edit_context"
+    ]
+  },
+  {
+    "topic": 15,
+    "behavior": "Affected import reloads once",
+    "tests": [
+      "ProviderSharedReconciliationTests.Imported_editor_reloads_only_when_its_id_is_affected"
+    ]
+  },
+  {
+    "topic": 16,
+    "behavior": "Retired/missing/malformed selected import fails closed",
+    "tests": [
+      "ProviderSharedReconciliationTests.Retired_target_is_failed_without_selecting_another_provider",
+      "ProviderSharedReconciliationTests.Missing_or_malformed_selected_import_fails_closed"
+    ]
+  },
+  {
+    "topic": 17,
+    "behavior": "Unaffected import is retained",
+    "tests": [
+      "ProviderSharedReconciliationTests.Imported_editor_reloads_only_when_its_id_is_affected"
+    ]
+  },
+  {
+    "topic": 18,
+    "behavior": "A-to-B ignores late load success/failure",
+    "tests": [
+      "SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result"
+    ]
+  },
+  {
+    "topic": 19,
+    "behavior": "Stale A cannot mutate under B",
+    "tests": [
+      "SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result",
+      "SharedProviderOwnedEffectsTests.Sharing_mutation_for_A_cannot_publish_into_B"
+    ]
+  },
+  {
+    "topic": 20,
+    "behavior": "Sharing disposal owns load/mutation",
+    "tests": [
+      "SharedProviderLifetimeRegressionTests.Disposing_sharing_panel_cancels_its_pending_read",
+      "SharedProviderOwnedEffectsTests.Disposing_sharing_panel_cancels_pending_mutation_without_late_publication"
+    ]
+  },
+  {
+    "topic": 21,
+    "behavior": "Overlay close/disposal fences source save/test/sync",
+    "tests": [
+      "SharedProviderOwnedEffectsTests.Closing_or_disposing_overlay_cancels_owned_work_and_suppresses_late_callback",
+      "ProviderApiOutcomeIntegrationTests.Publication_secondary_failure_or_owner_cancellation_preserves_permanent_committed_identity",
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_source_observer_failure_returns_committed_write_identity_and_scope"
+    ]
+  },
+  {
+    "topic": 22,
+    "behavior": "Source URL and credential changes report actual IDs",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_source_configuration_and_enablement_report_every_affected_profile"
+    ]
+  },
+  {
+    "topic": 23,
+    "behavior": "Source enable changes report IDs and runtime state",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_source_configuration_and_enablement_report_every_affected_profile"
+    ]
+  },
+  {
+    "topic": 24,
+    "behavior": "Source failure/mismatch retains scope",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_source_failure_and_identity_mismatch_keep_the_affected_import_scope"
+    ]
+  },
+  {
+    "topic": 25,
+    "behavior": "Reconciliation exposes retirement/reactivation scope",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_reconciliation_reports_retirement_and_reactivation_despite_observer_failure"
+    ]
+  },
+  {
+    "topic": 26,
+    "behavior": "Alias/enable/retire retains committed receipt after observer error",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_import_mutation_observer_failure_retains_committed_scope"
+    ]
+  },
+  {
+    "topic": 27,
+    "behavior": "Generic imported Save/Delete backend rejects",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_api_enforces_import_save_delete_and_model_maintenance_ownership"
+    ]
+  },
+  {
+    "topic": 28,
+    "behavior": "Forbidden maintenance reaches zero diagnostics",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_source_managed_maintenance_is_rejected_before_any_diagnostic_call",
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect"
+    ]
+  },
+  {
+    "topic": 29,
+    "behavior": "Allowed sanitized imported health/test chat",
+    "tests": [
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_imported_health_and_test_chat_are_allowed_sanitized_and_nonpersisting"
+    ]
+  },
+  {
+    "topic": 30,
+    "behavior": "Publication identity and deletion matrix",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Opening_sharing_without_publishing_does_not_create_identity_or_block_delete",
+      "ProviderMutationCommitIntegrationTests.Seam_publication_identity_is_explicit_permanent_and_retained_after_unpublish",
+      "ProviderApiOutcomeIntegrationTests.Publication_secondary_failure_or_owner_cancellation_preserves_permanent_committed_identity"
+    ]
+  },
+  {
+    "topic": 31,
+    "behavior": "API stable sanitized results",
+    "tests": [
+      "ProviderMutationCommitIntegrationTests.Seam_api_returns_stable_concurrency_and_missing_target_errors",
+      "ProviderApiOutcomeIntegrationTests.Api_known_commit_preserves_success_payload_and_declares_pending_reconciliation",
+      "SharedProviderRuntimeProjectionIntegrationTests.Seam_api_enforces_import_save_delete_and_model_maintenance_ownership",
+      "ProviderApiOutcomeIntegrationTests.Api_local_health_diagnostic_failure_is_sanitized_and_does_not_persist"
+    ]
+  }
+]

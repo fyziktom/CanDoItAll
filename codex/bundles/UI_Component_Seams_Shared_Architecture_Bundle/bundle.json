@@ -8,7 +8,7 @@
   "revisedAt": "2026-09-05",
   "repository": "fyziktom/CanDoItAll",
   "observedBranch": "components-decoupling",
-  "observedCommit": "a249d77b175916d760e9f6c86633202a4ea3ae44",
+  "observedCommit": "7684f25854594f4a4b5486559890164aec382fb7",
   "observedCommitIsPin": false,
   "executable": false,
   "executionAuthorizedByCurrentRequest": false,
@@ -28,6 +28,10 @@
   "validationMethod": "manual semantic review plus links, JSON, input preservation and complete checksum manifest",
   "activeChildReferences": [
     "CDA-UI-SEAMS-AGENTS-01-v2",
-    "CDA-UI-SEAMS-PROVIDERS-01"
-  ]
+    "CDA-UI-SEAMS-PROVIDERS-01",
+    "CDA-UI-SEAMS-PROVIDERS-02",
+    "CDA-UI-SEAMS-CATALOG-01"
+  ],
+  "providerMutationChildStatus": "closed-with-historical-documentation-baseline-blocker",
+  "nextChildExecutionAuthorized": false
 }

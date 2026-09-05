@@ -5,7 +5,7 @@
 
 <Dialog IsOpen="true" Title="Shared provider connections"
         Subtitle="Connect another CanDoItAll instance and import its shared providers."
-        Size="ModalSize.Wide" OnClose="OnClose" TestId="shared-provider-connections-dialog">
+        Size="ModalSize.Wide" OnClose="CloseOverlayAsync" TestId="shared-provider-connections-dialog">
     <ChildContent>
         @if (isLoading) {
             <EmptyState Title="Loading connections" Description="Reading shared provider sources." />
@@ -129,7 +129,7 @@
         }
     </ChildContent>
     <Footer>
-        <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="OnClose" />
+        <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="CloseOverlayAsync" data-testid="shared-provider-connections-close" />
     </Footer>
 </Dialog>
 

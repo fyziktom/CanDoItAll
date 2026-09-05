@@ -74,3 +74,31 @@ Parent injections, descendants, triggered dialogs, controller constructors, publ
 assemblies, registrations, and assets all contribute to the boundary. Technical services
 such as JS/focus can remain where owned; direct EF and service location in target Razor
 are extraction targets. Every retained child operation must be named and scenario-tested.
+
+## Independent refresh and multiple authorities
+
+Catalog metadata refresh and selected-editor reconciliation are separate operations. An
+unrelated external change must preserve an editable draft, its EditContext, typed section
+and raw text fields. An affected authoritative read-only projection reloads by its retained
+identity. Retirement, missing identity or malformed projection fails closed; it does not
+silently select a different object. Unknown scope refreshes non-destructive metadata and
+exposes explicit stale/retry state.
+
+Child effects emit typed change scope from the producer: semantic operation, affected and
+retired identities, changed authority/field scope, membership impact, commit knowledge and
+secondary warning. An unqualified Changed event cannot support selective reconciliation.
+Do not infer known affected identities from the current UI selection.
+
+Document local intent, source configuration/trust, remote publication shape, cached catalog
+and materialized runtime projection as distinct authorities. Mutation eligibility belongs
+at the authoritative backend boundary before credential resolution, diagnostic maintenance
+or connector effects. Allowed read/diagnostic operations remain separately classified.
+Disabled controls are presentation, not enforcement.
+
+Read/render methods must not hide persistent lifecycle transitions. Create permanent
+public or audit identity through an explicit command; explain whether unpublishing,
+retirement and deletion differ. Never recycle public IDs or silently remove audit records.
+
+Bind a known first-save identity before any secondary read. A failed refresh cannot turn
+a saved object back into a New draft. Reconciliation retries projection/read work without
+replaying the authoritative write, preserving later edits while updating identity/version.

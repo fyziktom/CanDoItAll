@@ -203,7 +203,8 @@ public sealed class ProviderProfilesSessionTests {
         await selected;
         Assert.False(session.CanEdit);
         Assert.Equal(reads.Second.Id, session.State.ProviderId);
-        Assert.Contains("no longer", session.Error);
+        Assert.Equal(ProviderProfilesLoadState.Failed, session.EditorLoadState);
+        Assert.False(string.IsNullOrWhiteSpace(session.Error));
     }
 
     [Fact]
@@ -215,7 +216,8 @@ public sealed class ProviderProfilesSessionTests {
         await session.RefreshAsync();
         Assert.False(session.CanEdit);
         Assert.Equal(reads.First.Id, session.State.ProviderId);
-        Assert.Contains("no longer", session.Error);
+        Assert.Equal(ProviderProfilesLoadState.Failed, session.EditorLoadState);
+        Assert.False(string.IsNullOrWhiteSpace(session.Error));
     }
 
     [Fact]
@@ -239,7 +241,8 @@ public sealed class ProviderProfilesSessionTests {
         await session.RefreshAsync();
         Assert.False(session.CanEdit);
         Assert.Equal(reads.First.Id, session.State.ProviderId);
-        Assert.Contains("different editor identity", session.Error);
+        Assert.Equal(ProviderProfilesLoadState.Failed, session.EditorLoadState);
+        Assert.False(string.IsNullOrWhiteSpace(session.Error));
     }
 
     private static void Complete<T>(TaskCompletionSource<T> pending, T result, bool fails) {

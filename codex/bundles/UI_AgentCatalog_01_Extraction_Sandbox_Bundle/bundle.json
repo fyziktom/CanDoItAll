@@ -1,0 +1,20 @@
+{
+  "referenceId": "CDA-UI-SEAMS-CATALOG-01",
+  "name": "Catalog UI extraction, browser sandbox and measured iteration",
+  "shape": "compact-compatible",
+  "preparedAt": "2026-09-05",
+  "preparationStatus": "ready",
+  "executionStatus": "not-started",
+  "executionAuthorized": false,
+  "prerequisite": "CDA-UI-SEAMS-PROVIDERS-02",
+  "sharedArchitectureReference": "CDA-UI-SEAMS-BASE-v2",
+  "observedCommit": "7684f25854594f4a4b5486559890164aec382fb7",
+  "observedCommitIsPin": false,
+  "subbundles": [
+    "SB00",
+    "SB01",
+    "SB02",
+    "SB03"
+  ],
+  "measurementsExecuted": false
+}

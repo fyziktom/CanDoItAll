@@ -4,6 +4,12 @@
 @using CanDoItAll.SharedProviders.Abstractions
 
 <div class="shared-provider-management" data-testid="shared-provider-management">
+    @if (warning is not null) {
+        <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="shared-provider-warning">
+            @warning
+        </Alert>
+        <Button Text="Retry sharing read" Click="RetryAsync" Disabled="@isBusy" data-testid="shared-provider-retry" />
+    }
     @if (isLoading)
     {
         <EmptyState Eyebrow="Loading"
@@ -27,14 +33,14 @@
         else if (profileState.Ownership == SharedProviderProfileOwnership.Local)
         {
             <SharedProviderLocalPublicationContent State="profileState"
-                                                   IsBusy="isBusy"
+                                                   IsBusy="@(isBusy || mutationUnconfirmed)"
                                                    Publish="PublishAsync"
                                                    Unpublish="OpenUnpublishConfirmation" />
         }
         else if (profileState.Ownership == SharedProviderProfileOwnership.Imported)
         {
             <SharedProviderImportedProfileContent Import="profileState.Import!"
-                                                  IsBusy="isBusy"
+                                                  IsBusy="@(isBusy || mutationUnconfirmed)"
                                                   Save="SaveImportedProfileAsync"
                                                   Retire="OpenRetireConfirmation" />
         }

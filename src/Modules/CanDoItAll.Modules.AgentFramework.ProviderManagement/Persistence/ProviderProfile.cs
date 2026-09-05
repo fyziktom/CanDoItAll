@@ -7,6 +7,7 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class ProviderProfile : IHasConcurrencyToken
 {
+    internal const int MaximumHealthStatusLength = 120;
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public string Name { get; set; } = string.Empty;
@@ -55,7 +56,7 @@ internal sealed class ProviderProfileConfiguration : IEntityTypeConfiguration<Pr
         builder.Property(profile => profile.ConnectorPluginKey).HasMaxLength(160).IsRequired();
         builder.Property(profile => profile.ConfigSchemaVersion).HasMaxLength(40).IsRequired();
         builder.Property(profile => profile.DefaultModel).HasMaxLength(120);
-        builder.Property(profile => profile.LastHealthStatus).HasMaxLength(120);
+        builder.Property(profile => profile.LastHealthStatus).HasMaxLength(ProviderProfile.MaximumHealthStatusLength);
         builder.Property(profile => profile.ExtraSettingsJson).HasColumnType("TEXT");
         builder.Property(profile => profile.ConcurrencyToken).IsConcurrencyToken();
     }

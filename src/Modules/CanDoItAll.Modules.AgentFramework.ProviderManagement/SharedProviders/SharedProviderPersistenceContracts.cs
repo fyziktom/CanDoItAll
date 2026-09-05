@@ -12,7 +12,10 @@ public sealed record SharedProviderSourceWriteRequest(
 
 public sealed record SharedProviderSourceWriteResult(
     Guid Id,
-    Guid ConcurrencyToken);
+    Guid ConcurrencyToken) {
+    public SharedProviderChange? Change { get; init; }
+    public IReadOnlySet<Guid> AffectedProviderProfileIds => Change?.AffectedProviderProfileIds ?? FrozenSet<Guid>.Empty;
+}
 
 public sealed record SharedProviderSourceSnapshot(
     Guid Id,
@@ -29,13 +32,17 @@ public sealed record SharedProviderSourceSnapshot(
     string LastStatusMessage,
     Guid ConcurrencyToken);
 
-public sealed record SharedProviderSourceDeleteResult(Guid Id);
+public sealed record SharedProviderSourceDeleteResult(Guid Id) {
+    public SharedProviderChange? Change { get; init; }
+}
 
 public sealed record SharedProviderPublicationWriteResult(
     Guid Id,
     SharedProviderPublicationId PublicId,
     bool IsPublished,
-    Guid ConcurrencyToken);
+    Guid ConcurrencyToken) {
+    public SharedProviderChange? Change { get; init; }
+}
 
 public enum SharedProviderSourceFailureKind
 {
@@ -127,7 +134,12 @@ public sealed record SharedProviderReconciliationResult(
     IReadOnlyList<Guid> AffectedProviderProfileIds)
 {
     public IReadOnlyList<Guid> RetiredProviderProfileIds { get; init; } = [];
+    public SharedProviderChange? Change { get; init; }
 }
+
+public sealed record SharedProviderSourceTestReceipt(
+    SharedProviderCatalogIdentityAcceptance Acceptance,
+    SharedProviderChange Change);
 
 public enum SharedProviderSourceOperationOutcome
 {
@@ -152,8 +164,8 @@ public sealed record SharedProviderSourceOperationResult
         Outcome = outcome;
         Catalog = catalog;
         EntityTag = entityTag;
-        AffectedProviderProfileIds = Array.AsReadOnly(affectedProviderProfileIds.ToArray());
-        RetiredProviderProfileIds = Array.AsReadOnly(retiredProviderProfileIds.ToArray());
+        affectedIds = Array.AsReadOnly(affectedProviderProfileIds.ToArray());
+        retiredIds = Array.AsReadOnly(retiredProviderProfileIds.ToArray());
         Failure = failure;
     }
 
@@ -163,9 +175,11 @@ public sealed record SharedProviderSourceOperationResult
 
     public SharedProviderCatalogEntityTag? EntityTag { get; }
 
-    public IReadOnlyList<Guid> AffectedProviderProfileIds { get; }
-
-    public IReadOnlyList<Guid> RetiredProviderProfileIds { get; }
+    private readonly IReadOnlyList<Guid> affectedIds;
+    private readonly IReadOnlyList<Guid> retiredIds;
+    public SharedProviderChange? Change { get; init; }
+    public IReadOnlyList<Guid> AffectedProviderProfileIds => Change?.AffectedProviderProfileIds.Order().ToArray() ?? affectedIds;
+    public IReadOnlyList<Guid> RetiredProviderProfileIds => Change?.RetiredProviderProfileIds.Order().ToArray() ?? retiredIds;
 
     public SharedProviderFailure? Failure { get; }
 

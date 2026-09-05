@@ -1,0 +1,18 @@
+Run label: p02-followup-ui-build-final.log
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet build src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj --configuration Release --no-restore /m:1
+Exit code: 0
+Captured final build summary (excerpt; full captured output SHA-256 05221cd066b1c6a98ba883279b05be680cedc910e29b2a4fa4a715d2de31b6a8):
+  CanDoItAll.Processes.Persistence -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Persistence\bin\Release\net10.0\CanDoItAll.Processes.Persistence.dll
+  CanDoItAll.Components.Mermaid -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid\bin\Release\net10.0\CanDoItAll.Components.Mermaid.dll
+  CanDoItAll.FileTools.FileInteraction.Markdown -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Markdown\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Markdown.dll
+  CanDoItAll.FileTools.FileInteraction.Spreadsheet -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Spreadsheet\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Spreadsheet.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workbench\bin\Release\net10.0\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\bin\Release\net10.0\CanDoItAll.Modules.AgentFramework.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:19.06

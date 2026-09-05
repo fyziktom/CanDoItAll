@@ -125,7 +125,7 @@ internal sealed class RecordingSharedProviderManagementService(
     public Task<SharedProviderProfileSharingSnapshot> SetPublicationAsync(
         Guid providerProfileId,
         SharedProviderPublicationAction action,
-        Guid expectedConcurrencyToken,
+        Guid? expectedConcurrencyToken,
         CancellationToken cancellationToken = default)
     {
         PublicationAction = action;

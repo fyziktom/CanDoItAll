@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Net.Http.Json;
 using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Net;
@@ -1170,6 +1172,238 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         }
     }
 
+    [Fact]
+    public async Task Seam_source_configuration_and_enablement_report_every_affected_profile() {
+        var seed = await SeedGraphAsync();
+        var extra = CreateGraph(new Uri("https://scope.example.test/"), SharedProviderPurpose.Chat,
+            SharedProviderSourceStatus.Available, null);
+        extra.Import.SourceId = seed.SourceId;
+        extra.Profile.ApiKeySecretId = seed.SecretId;
+        await using (var db = await fixture.Factory.CreateDbContextAsync()) {
+            var sourceRow = await db.Set<SharedProviderSource>().SingleAsync(x => x.Id == seed.SourceId);
+            extra.Profile.BaseUrl = SharedProviderRoutes.ResolveOpenAiBase(new Uri(sourceRow.BaseUri)).AbsoluteUri;
+            db.AddRange(extra.Secret, extra.Profile, extra.Import);
+            await db.SaveChangesAsync();
+        }
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<SharedProviderSourceService>();
+        var source = await service.GetAsync(seed.SourceId);
+        var updated = await service.UpdateAsync(seed.SourceId, source.ConcurrencyToken,
+            new("Renamed source", new Uri("https://updated.example.test/"), extra.Secret.Id, true, false));
+        Assert.True(updated.AffectedProviderProfileIds.SetEquals([seed.ProfileId, extra.Profile.Id]));
+        Assert.False(updated.Change!.RemoteOwnedFieldsChanged);
+        Assert.Equal(SharedProviderChangeKind.SourceConfiguration, updated.Change.Kind);
+        Assert.Null(await scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSnapshotLoader>().LoadAsync(seed.ProfileId));
+        source = await service.GetAsync(seed.SourceId);
+        var trusted = await service.RecordSuccessfulCatalogTestAsync(source.Id, source.ConcurrencyToken,
+            source.RemoteInstanceId!.Value, SharedProviderCatalogEntityTag.FromRevision(seed.Publication.Revision));
+        Assert.True(trusted.Change.AffectedProviderProfileIds.SetEquals(updated.AffectedProviderProfileIds));
+        source = await service.GetAsync(seed.SourceId);
+        var disabled = await service.SetEnabledAsync(source.Id, source.ConcurrencyToken, false);
+        Assert.True(disabled.AffectedProviderProfileIds.SetEquals(updated.AffectedProviderProfileIds));
+        Assert.False((await LoadCanonicalAsync(seed.ProfileId)).Profile.IsEnabled);
+        var enabled = await service.SetEnabledAsync(source.Id, disabled.ConcurrencyToken, true);
+        Assert.True(enabled.AffectedProviderProfileIds.SetEquals(updated.AffectedProviderProfileIds));
+        var projection = (await LoadCanonicalAsync(seed.ProfileId)).Profile;
+        Assert.True(projection.IsEnabled);
+        Assert.Contains("updated.example.test", projection.BaseUrl, StringComparison.Ordinal);
+        var safeChange = JsonSerializer.Serialize(updated.Change);
+        Assert.DoesNotContain("updated.example.test", safeChange, StringComparison.Ordinal);
+        Assert.DoesNotContain(extra.Secret.Id.ToString(), safeChange, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Seam_source_failure_and_identity_mismatch_keep_the_affected_import_scope() {
+        var seed = await SeedGraphAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<SharedProviderSourceService>();
+        var failure = await service.RecordFailureAsync(seed.SourceId,
+            new(SharedProviderSourceFailureKind.Connectivity, 503, "The source is unavailable."));
+        Assert.Equal([seed.ProfileId], failure.AffectedProviderProfileIds);
+        Assert.False((await LoadCanonicalAsync(seed.ProfileId)).Profile.IsEnabled);
+        var source = await service.GetAsync(seed.SourceId);
+        var receipt = await service.RecordSuccessfulCatalogTestAsync(seed.SourceId, source.ConcurrencyToken,
+            new SharedProviderSourceInstanceId(Guid.NewGuid()),
+            SharedProviderCatalogEntityTag.FromRevision(seed.Publication.Revision));
+        Assert.Equal(SharedProviderCatalogIdentityAcceptance.IdentityMismatch, receipt.Acceptance);
+        Assert.Equal([seed.ProfileId], receipt.Change.AffectedProviderProfileIds);
+        Assert.Equal(SharedProviderCommitState.Committed, receipt.Change.CommitState);
+        Assert.False((await LoadCanonicalAsync(seed.ProfileId)).Profile.IsEnabled);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Seam_import_mutation_observer_failure_retains_committed_scope(bool retire) {
+        var seed = await SeedGraphAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var observers = scope.ServiceProvider.GetServices<IProviderProfileCommitObserver>().Append(new SeamFailingObserver()).ToArray();
+        var service = ActivatorUtilities.CreateInstance<SharedProviderManagementService>(scope.ServiceProvider,
+            (IEnumerable<IProviderProfileCommitObserver>)observers);
+        var state = await service.GetProfileSharingAsync(seed.ProfileId);
+        var import = state.Import!;
+        var result = retire
+            ? await service.RetireImportedProfileAsync(new(import.ImportId, seed.ProfileId,
+                import.ImportConcurrencyToken, import.ProviderConcurrencyToken))
+            : await service.UpdateImportedProfileAsync(new(import.ImportId, seed.ProfileId, "Locally renamed", false,
+                import.ImportConcurrencyToken, import.ProviderConcurrencyToken));
+        Assert.Equal(SharedProviderCommitState.Committed, result.Change!.CommitState);
+        Assert.Equal([seed.ProfileId], result.Change.AffectedProviderProfileIds);
+        Assert.NotNull(result.Change.Warning);
+        await using var db = await fixture.Factory.CreateDbContextAsync();
+        var profile = await db.Set<PersistedProviderProfile>().SingleAsync(x => x.Id == seed.ProfileId);
+        Assert.Equal(retire ? "Local shared alias" : "Locally renamed", profile.Name);
+        Assert.Equal(seed.SecretId, profile.ApiKeySecretId);
+        Assert.Equal(seed.Publication.DefaultModelId.Value, profile.DefaultModel);
+        if (retire) {
+            Assert.Equal([seed.ProfileId], result.Change.RetiredProviderProfileIds);
+            Assert.Equal(SharedProviderSelectionState.Retired, result.Import!.SelectionState);
+            await Assert.ThrowsAsync<ProviderRuntimeProfileUnavailableException>(() =>
+                scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>().GetProviderEditorAsync(seed.ProfileId));
+        }
+        await Assert.ThrowsAsync<SharedProviderProfileDeletionBlockedException>(() =>
+            scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>().DeleteProviderAsync(seed.ProfileId));
+    }
+
+    [Fact]
+    public async Task Seam_source_observer_failure_returns_committed_write_identity_and_scope() {
+        var seed = await SeedGraphAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = ActivatorUtilities.CreateInstance<SharedProviderSourceService>(scope.ServiceProvider,
+            (IEnumerable<IProviderProfileCommitObserver>)[new SeamFailingObserver()]);
+        var source = await service.GetAsync(seed.SourceId);
+        var result = await service.SetEnabledAsync(source.Id, source.ConcurrencyToken, false);
+        Assert.Equal(source.Id, result.Id);
+        Assert.Equal([seed.ProfileId], result.AffectedProviderProfileIds);
+        Assert.NotNull(result.Change!.Warning);
+        Assert.False((await service.GetAsync(source.Id)).IsEnabled);
+    }
+
+    [Fact]
+    public async Task Seam_reconciliation_reports_retirement_and_reactivation_despite_observer_failure() {
+        var seed = await SeedGraphAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var sourceService = scope.ServiceProvider.GetRequiredService<SharedProviderSourceService>();
+        var source = await sourceService.GetAsync(seed.SourceId);
+        var catalog = new SharedProviderCatalogDocument(SharedProviderProtocolVersion.Current,
+            source.RemoteInstanceId!.Value, seed.Publication.Revision,
+            new SharedProviderProtocolDescriptor(SharedProviderRoutes.OpenAiBase), [seed.Publication]);
+        catalog = catalog with { CatalogRevision = SharedProviderCanonicalRevision.ComputeCatalog(catalog) };
+        var coordinator = ActivatorUtilities.CreateInstance<SharedProviderReconciliationCoordinator>(scope.ServiceProvider,
+            (IEnumerable<IProviderProfileCommitObserver>)[new SeamFailingObserver()]);
+        var retired = await coordinator.ReconcileAsync(new(seed.SourceId, catalog,
+            SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision), new HashSet<SharedProviderPublicationId>(),
+            SharedProviderSelectionMode.Replace, source.ConcurrencyToken));
+        Assert.Equal([seed.ProfileId], retired.RetiredProviderProfileIds);
+        Assert.NotNull(retired.Change!.Warning);
+        source = await sourceService.GetAsync(seed.SourceId);
+        var reactivated = await coordinator.ReconcileAsync(new(seed.SourceId, catalog,
+            SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
+            new HashSet<SharedProviderPublicationId> { seed.Publication.PublicationId },
+            SharedProviderSelectionMode.Replace, source.ConcurrencyToken));
+        Assert.Equal([seed.ProfileId], reactivated.AffectedProviderProfileIds);
+        Assert.Empty(reactivated.RetiredProviderProfileIds);
+        Assert.NotNull(reactivated.Change!.Warning);
+        Assert.True((await LoadCanonicalAsync(seed.ProfileId)).Profile.IsEnabled);
+    }
+
+    [Fact]
+    public async Task Seam_source_managed_maintenance_is_rejected_before_any_diagnostic_call() {
+        var seed = await SeedGraphAsync();
+        await fixture.Services.GetRequiredService<IProviderRuntimeProfileSnapshotInitializer>().InitializeAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var diagnostics = DispatchProxy.Create<IProviderDiagnosticsService, SeamDiagnostics>();
+        var service = ActivatorUtilities.CreateInstance<ProviderRuntimeAdministrationService>(scope.ServiceProvider, diagnostics);
+        await Assert.ThrowsAsync<ProviderProfileValidationException>(() =>
+            service.CreateOrUpdateProviderModelAsync(seed.ProfileId, new("base", "target", "", 2048)));
+        Assert.Equal(0, ((SeamDiagnostics)(object)diagnostics).Calls);
+    }
+
+    [Fact]
+    public async Task Seam_imported_health_and_test_chat_are_allowed_sanitized_and_nonpersisting() {
+        var seed = await SeedGraphAsync();
+        await fixture.Services.GetRequiredService<IProviderRuntimeProfileSnapshotInitializer>().InitializeAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var diagnostics = DispatchProxy.Create<IProviderDiagnosticsService, SeamDiagnostics>();
+        var service = ActivatorUtilities.CreateInstance<ProviderRuntimeAdministrationService>(scope.ServiceProvider, diagnostics);
+        await using var db = await fixture.Factory.CreateDbContextAsync();
+        var before = (await db.Set<PersistedProviderProfile>().AsNoTracking().SingleAsync(x => x.Id == seed.ProfileId)).ConcurrencyToken;
+        var health = await service.TestProviderAsync(seed.ProfileId);
+        Assert.False(health.Success);
+        Assert.DoesNotContain("private.example.test", health.Summary, StringComparison.Ordinal);
+        var error = await Record.ExceptionAsync(() => service.RunProviderTestChatAsync(seed.ProfileId,
+            new(seed.Publication.DefaultModelId.Value, "", [], "test")));
+        Assert.NotNull(error);
+        Assert.DoesNotContain("private.example.test", error.Message, StringComparison.Ordinal);
+        Assert.Equal(2, ((SeamDiagnostics)(object)diagnostics).Calls);
+        Assert.Equal(before, (await db.Set<PersistedProviderProfile>().AsNoTracking().SingleAsync(x => x.Id == seed.ProfileId)).ConcurrencyToken);
+    }
+
+    [Fact]
+    public async Task Seam_api_enforces_import_save_delete_and_model_maintenance_ownership() {
+        var seed = await SeedGraphAsync();
+        await fixture.Services.GetRequiredService<IProviderRuntimeProfileSnapshotInitializer>().InitializeAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
+        var editor = await registry.GetProviderEditorAsync(seed.ProfileId);
+        editor.Name = "Forbidden overwrite";
+        var save = await fixture.Client.PostAsJsonAsync("/api/agents/providers", editor);
+        Assert.Equal(HttpStatusCode.BadRequest, save.StatusCode);
+        var delete = await fixture.Client.DeleteAsync($"/api/agents/providers/{seed.ProfileId:D}");
+        Assert.Equal(HttpStatusCode.Conflict, delete.StatusCode);
+        var maintenance = await fixture.Client.PostAsJsonAsync($"/api/agents/providers/{seed.ProfileId:D}/ollama-modelfile",
+            new ProviderModelMaintenanceEditorRequest("base", "target", "", 2048));
+        Assert.Equal(HttpStatusCode.BadRequest, maintenance.StatusCode);
+        foreach (var response in new[] { save, delete, maintenance }) {
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.DoesNotContain(seed.SecretId.ToString(), body, StringComparison.Ordinal);
+            Assert.DoesNotContain("central.example.test", body, StringComparison.Ordinal);
+        }
+        Assert.Equal("Local shared alias", (await registry.GetProviderEditorAsync(seed.ProfileId)).Name);
+    }
+
+    [Fact]
+    public async Task Seam_source_managed_draft_discovery_rejects_before_secret_or_connector_effect() {
+        var seed = await SeedGraphAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var secret = DispatchProxy.Create<ISecretRuntimeResolver, SeamSecretProbe>();
+        var service = ActivatorUtilities.CreateInstance<ProviderAdministrationService>(scope.ServiceProvider, secret);
+        var request = new CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileEditorModel {
+            Id = seed.ProfileId, Name = "Forbidden local discovery", ConnectorPluginKey = ProviderConnectorKeys.OpenAi,
+            ApiKeySecretId = seed.SecretId
+        };
+        request.Configuration.SetText(ProviderConnectorFieldKeys.BaseUrl, "https://connector.example.test/");
+        request.Configuration.SetText(ProviderConnectorFieldKeys.DefaultModel, "model");
+        var result = await service.RefreshProviderModelPricesAsync(request);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(0, ((SeamSecretProbe)(object)secret).Calls);
+    }
+
+    public class SeamSecretProbe : DispatchProxy {
+        public int Calls { get; private set; }
+        protected override object? Invoke(MethodInfo? method, object?[]? args) {
+            Calls++;
+            throw new IOException("Forbidden fixture secret resolution.");
+        }
+    }
+
+    private sealed class SeamFailingObserver : IProviderProfileCommitObserver {
+        public Task ProviderSavedAsync(Guid providerId, CancellationToken token = default) =>
+            Task.FromException(new IOException("Synthetic post-commit observer failure."));
+        public Task ProviderDeletedAsync(Guid providerId, CancellationToken token = default) => ProviderSavedAsync(providerId, token);
+    }
+
+    public class SeamDiagnostics : DispatchProxy {
+        public int Calls { get; private set; }
+        protected override object? Invoke(MethodInfo? method, object?[]? args) {
+            Calls++;
+            if (method?.Name == nameof(IProviderDiagnosticsService.TestProviderAsync)) {
+                return Task.FromResult(new ProviderHealthResult(false, "https://private.example.test/ diagnostic failure", ["remote-private-model"]));
+            }
+            throw new IOException("https://private.example.test/ diagnostic failure");
+        }
+    }
+
     private async Task<GraphSeed> SeedGraphAsync(
         Uri? sourceBaseUri = null,
         SharedProviderPurpose purpose = SharedProviderPurpose.Chat,
@@ -1695,6 +1929,7 @@ public sealed class SharedProviderRuntimeProjectionFixture : IAsyncLifetime
     private ApiTestHost? host;
 
     internal IServiceProvider Services => RequireHost().App.Services;
+    internal HttpClient Client => RequireHost().Client;
 
     internal IDbContextFactory<AppDbContext> Factory => Services
         .GetRequiredService<IDbContextFactory<AppDbContext>>();

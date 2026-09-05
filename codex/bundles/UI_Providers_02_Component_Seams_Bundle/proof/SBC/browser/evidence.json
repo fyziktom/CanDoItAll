@@ -1,0 +1,135 @@
+{
+  "run": "2026-09-05T19:12:04Z through 2026-09-05T19:47Z",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "runtime": "Full production Web, isolated PostgreSQL profile, real source protocol fixture, published DLL RunOnce",
+  "managedSession": "app_23e835dad5c346e080505bda0063c6cd",
+  "sameMachineSdk": "10.0.303; live sibling source mode",
+  "localDraft": {
+    "nameAndEndpointRetained": true,
+    "runtimeFieldsCompared": 9,
+    "allFieldsRetained": true,
+    "sameForm": true,
+    "modifiedMarkersRetained": true,
+    "rawSuggestedTextRetained": true,
+    "section": "Runtime"
+  },
+  "newDraftAfterSync": {
+    "sameForm": true,
+    "rawSuggestedTextRetained": true,
+    "notesRetained": true,
+    "section": "Runtime"
+  },
+  "import": {
+    "remoteConnectionControlsDisabled": 6,
+    "localAliasAndEnabledSaved": true,
+    "sourceDisableStatus": "SourceDisabled",
+    "sourceReenableStatus": "Available",
+    "retireStatus": "Retired",
+    "retireKeptTarget": true,
+    "retireRenderedEditorForm": false
+  },
+  "publication": {
+    "rowsBeforeOpeningSharing": 0,
+    "rowsAfterOpeningSharing": 0,
+    "neverPublishedDelete": "succeeded",
+    "firstPublishRows": 1,
+    "deleteWhilePublished": "rejected",
+    "unpublishRetainedPublicId": true,
+    "deleteAfterUnpublish": "rejected"
+  },
+  "normalFirstSave": {
+    "canonicalRowsForName": 1,
+    "editorCount": 1,
+    "sameForm": true
+  },
+  "projectionFailure": {
+    "injection": "exclusive handle to only task-owned workspace.json after editor load",
+    "canonicalRowsForName": 1,
+    "knownId": "5e64aaa9-f391-4f28-bdf3-ae7b7fee2c87",
+    "warningVisible": true,
+    "saveBlocked": true,
+    "retryAfterRelease": {
+      "sameCanonicalId": true,
+      "canonicalRowsForName": 1,
+      "canonicalNameUnchanged": true,
+      "laterUnsavedNameRetained": true,
+      "sameForm": true,
+      "saveEnabled": true
+    }
+  },
+  "console": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "screenshots": [
+    {
+      "path": "bundle://proof/SBC/browser/normal.png",
+      "sha256": "6ac019b927cbcc517cbd504f326dbc186bcd5709f919f2310577546a6f804984",
+      "bytes": 278129,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/overlay.png",
+      "sha256": "f210597ebdbfc4193d0d29b88f2a8e5ab7b5d2f2008dd4ec8654c9f22bd91e1a",
+      "bytes": 245368,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/catalog.png",
+      "sha256": "2abcc220c11230890836185dc762cea3f31b2f3ef5b07a8cbcc55035a04f5346",
+      "bytes": 142770,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/imported.png",
+      "sha256": "9a307a1185d40627e5ea70f5dab028c471a6fc85d10c9f749497f1ab7e0f95b2",
+      "bytes": 269095,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/source-dialog.png",
+      "sha256": "50e23e4397f9a6c5c8e4a2ec393e40ff96a36c11a61bef4d0d7775a45b130d6d",
+      "bytes": 180941,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/sharing.png",
+      "sha256": "65a69660fafe4c1b0061fe1c02a39833c99b2759437f2568485aa7de421b2559",
+      "bytes": 261225,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/source-disabled.png",
+      "sha256": "0a1cbd0c6970141c33b3d7ce2b1c555af6f1864e51efb1474a5052b194df4171",
+      "bytes": 261230,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/retired.png",
+      "sha256": "3438302a6c5b2ddffdcc634252d36cd13812575343296a067fbdbddc44902690",
+      "bytes": 208943,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/publication.png",
+      "sha256": "d1ce2ce03afc15aa549bc26753c79db7e348da4f7a569770a5ff2d9b04ce6ad1",
+      "bytes": 260323,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/first-save.png",
+      "sha256": "23a9b228d830bc4d83fb0bb0e2376e149cf6f1b8034478c6b31f0264f5aa5f65",
+      "bytes": 234311,
+      "inspected": true
+    },
+    {
+      "path": "bundle://proof/SBC/browser/committed-warning.png",
+      "sha256": "8df475fea545faa76f4a7ee028cc3a983c973738bce7222b07b3aafba1f041e9",
+      "bytes": 242929,
+      "inspected": true
+    }
+  ]
+}

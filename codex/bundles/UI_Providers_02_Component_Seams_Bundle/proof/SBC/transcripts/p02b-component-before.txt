@@ -1,0 +1,62 @@
+Run label: p02b-component-before
+Invariant: P02-LIFETIME
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~SharedProviderLifetimeRegressionTests' /m:1 --logger 'trx;LogFileName=p02b-component-before.trx' --results-directory .mcp-state/p02-results
+Exit code: 1
+Captured console output (verbatim):
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:07.81]     CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(failure: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(failure: True) [7 s]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(Boolean failure) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderLifetimeRegressionTests.cs:line 39
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(Boolean failure) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderLifetimeRegressionTests.cs:line 39
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:41.02]     CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(failure: False) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(failure: False) [33 s]
+  Chybová zpráva:
+   Bunit.Extensions.WaitForHelpers.WaitForFailedException : The assertion did not pass within the timeout period.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 1.
+Component render count: 10.
+Total render count across all components: 0.
+---- Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at Bunit.RenderedComponentWaitForHelperExtensions.WaitForAssertion[TComponent](IRenderedComponent`1 renderedComponent, Action assertion, Nullable`1 timeout) in /_/src/bunit/Extensions/WaitForHelpers/RenderedComponentWaitForHelperExtensions.WaitForState.cs:line 77
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(Boolean failure) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderLifetimeRegressionTests.cs:line 38
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Replacing_sharing_target_cancels_A_and_ignores_its_late_result(Boolean failure) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderLifetimeRegressionTests.cs:line 39
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.<>c__DisplayClass0_0.<Replacing_sharing_target_cancels_A_and_ignores_its_late_result>b__6() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderLifetimeRegressionTests.cs:line 38
+   at Bunit.Extensions.WaitForHelpers.WaitForAssertionHelper`1.<>c__DisplayClass6_0.<.ctor>b__0() in /_/src/bunit/Extensions/WaitForHelpers/WaitForAssertionHelper.cs:line 35
+   at Bunit.Extensions.WaitForHelpers.WaitForHelper`2.OnAfterRender(Object sender, EventArgs args) in /_/src/bunit/Extensions/WaitForHelpers/WaitForHelper.cs:line 173
+[xUnit.net 00:00:43.67]     CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Disposing_sharing_panel_cancels_its_pending_read [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Disposing_sharing_panel_cancels_its_pending_read [2 s]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Disposing_sharing_panel_cancels_its_pending_read() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderLifetimeRegressionTests.cs:line 56
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.Disposing_sharing_panel_cancels_its_pending_read() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderLifetimeRegressionTests.cs:line 56
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02b-component-before.trx
+
+Neúspěšné!  - Neúspěšné:     3, Úspěšné:     0, Přeskočeno:     0, Celkem:     3, Doba trvání: 43 s - CanDoItAll.Tests.Components.dll (net10.0)

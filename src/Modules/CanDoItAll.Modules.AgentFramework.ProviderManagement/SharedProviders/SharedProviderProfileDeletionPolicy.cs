@@ -44,7 +44,7 @@ public sealed class SharedProviderProfileDeletionBlockedException : InvalidOpera
                 "At least one known shared-provider reference is required.")
         };
 
-        return $"Provider profile '{providerProfileId:D}' cannot be deleted because it is referenced by {referenceDescription}. Retire or remove the reference first.";
+        return $"Provider profile '{providerProfileId:D}' cannot be deleted because it is referenced by {referenceDescription}. Unpublish or retire the provider. Permanent publication and import identities cannot be deleted.";
     }
 }
 

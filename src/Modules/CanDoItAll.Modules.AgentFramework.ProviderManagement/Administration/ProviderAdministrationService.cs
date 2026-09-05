@@ -343,6 +343,20 @@ internal sealed class ProviderAdministrationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var ownershipContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var persistedConnector = model.Id is { } providerId
+            ? await ownershipContext.Set<ProviderProfile>().AsNoTracking()
+                .Where(provider => provider.Id == providerId)
+                .Select(provider => provider.ConnectorPluginKey)
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
+        if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(model.ConnectorPluginKey)
+            || SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(persistedConnector)) {
+            return Result<ProviderModelPricingRefreshResult>.Failure(Error.Validation(
+                "Source-managed provider models must be refreshed through their shared source."));
+        }
 
         var configuredBaseUrl = model.Configuration.GetText(ProviderConnectorFieldKeys.BaseUrl);
         if (string.IsNullOrWhiteSpace(configuredBaseUrl))

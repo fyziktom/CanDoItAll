@@ -230,10 +230,13 @@ internal static class AgentsApi
 
         agents.MapGet("/providers/{providerId:guid}/editor", async (
                 Guid providerId,
+                HttpContext context,
                 IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await providerAdministration.GetProviderEditorAsync(providerId, cancellationToken)))
-            .WithName("GetAgentProviderEditor");
+            await ProviderApiResults.ExecuteAsync(context, async () =>
+                Results.Ok(await providerAdministration.GetProviderEditorAsync(providerId, cancellationToken))))
+            .WithName("GetAgentProviderEditor")
+            .ProducesApiErrors(StatusCodes.Status404NotFound, StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/providers", async (
                 ProviderProfileEditorModel request,
@@ -249,24 +252,35 @@ internal static class AgentsApi
             .Produces<Guid>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
+                StatusCodes.Status409Conflict,
+                StatusCodes.Status503ServiceUnavailable,
                 StatusCodes.Status500InternalServerError);
 
         agents.MapDelete("/providers/{providerId:guid}", async (
                 Guid providerId,
+                HttpContext context,
                 IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-        {
-            await providerAdministration.DeleteProviderAsync(providerId, cancellationToken);
-            return Results.Ok(new ApiAck(true));
-        })
-        .WithName("DeleteAgentProvider");
+            await ProviderApiResults.ExecuteAsync(context, async () => {
+                await providerAdministration.DeleteProviderAsync(providerId, cancellationToken);
+                return Results.Ok(new ApiAck(true));
+            }, _ => Results.Ok(new ApiAck(true))))
+        .WithName("DeleteAgentProvider")
+        .Produces<ApiAck>(StatusCodes.Status200OK)
+        .ProducesApiErrors(StatusCodes.Status409Conflict, StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/providers/{providerId:guid}/test", async (
                 Guid providerId,
+                HttpContext context,
                 IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await providerAdministration.TestProviderAsync(providerId, cancellationToken)))
-            .WithName("TestAgentProvider");
+            await ProviderApiResults.ExecuteAsync(context, async () =>
+                Results.Ok(await providerAdministration.TestProviderAsync(providerId, cancellationToken))))
+            .WithName("TestAgentProvider")
+            .Produces<ProviderHealthResult>(StatusCodes.Status200OK)
+            .Produces<ProviderCommittedApiResponse>(StatusCodes.Status202Accepted)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound,
+                StatusCodes.Status409Conflict, StatusCodes.Status502BadGateway, StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/providers/{providerId:guid}/test-chat", async (
                 Guid providerId,
@@ -281,6 +295,10 @@ internal static class AgentsApi
                     providerId,
                     ProviderHistoryRequestContext.WithCaller(request, context),
                     cancellationToken));
+            }
+            catch (KeyNotFoundException) {
+                return ApiEndpointResults.AgentFailure(context, StatusCodes.Status404NotFound,
+                    "The provider was not found.", ProviderApiResults.NotFoundCode);
             }
             catch (ProviderRuntimeProfileUnavailableException)
             {
@@ -298,10 +316,16 @@ internal static class AgentsApi
         agents.MapPost("/providers/{providerId:guid}/ollama-modelfile", async (
                 Guid providerId,
                 ProviderModelMaintenanceEditorRequest request,
+                HttpContext context,
                 IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await providerAdministration.CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken)))
-            .WithName("CreateAgentProviderModelMaintenance");
+            await ProviderApiResults.ExecuteAsync(context, async () =>
+                Results.Ok(await providerAdministration.CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken))))
+            .WithName("CreateAgentProviderModelMaintenance")
+            .Produces<ProviderModelMaintenanceEditorResult>(StatusCodes.Status200OK)
+            .Produces<ProviderCommittedApiResponse>(StatusCodes.Status202Accepted)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound,
+                StatusCodes.Status409Conflict, StatusCodes.Status503ServiceUnavailable);
     }
 
     private static void MapCapabilityEndpoints(RouteGroupBuilder agents)
@@ -922,27 +946,14 @@ internal static class AgentsApi
         }
     }
 
-    private static async Task<IResult> SaveProviderResultAsync(
+    private static Task<IResult> SaveProviderResultAsync(
         ProviderProfileEditorModel request,
         HttpContext context,
         IProviderRuntimeAdministrationService providerAdministration,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return Results.Ok(
-                await providerAdministration.SaveProviderAsync(
-                    request,
-                    cancellationToken));
-        }
-        catch (ProviderProfileValidationException)
-        {
-            return ApiEndpointResults.AgentValidationFailure(
-                context,
-                "The provider configuration is invalid.",
-                ApiEndpointResults.ProviderRequestInvalidCode);
-        }
-    }
+        CancellationToken cancellationToken) =>
+        ProviderApiResults.ExecuteAsync(context, async () =>
+            Results.Ok(await providerAdministration.SaveProviderAsync(request, cancellationToken)),
+            commit => Results.Ok(commit.ProviderId));
 
     private static async Task<IResult> GetAgentExecutionRunPartAsync<T>(
         Guid agentId,

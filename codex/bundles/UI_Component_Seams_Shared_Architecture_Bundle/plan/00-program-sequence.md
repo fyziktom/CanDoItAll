@@ -45,7 +45,7 @@ The owner's 2026-09-05 review supersedes the earlier sandbox-immediately-after-A
 5. Prepare PROVIDER-HISTORY-01 independently, covering typed queries, selection and profile-change lifetime.
 6. Then choose the next module hotspot. Do not combine provider history/shared backend/ProjectStructure into the provider-profile slice.
 
-The current request executes steps 1 and 2. Subsequent steps need their own concrete scope/proof; neither routing nor full editor extraction is implied.
+Step 3 is now closed by CDA-UI-SEAMS-PROVIDERS-02 with explicit historical repository documentation debt. Step 4 is prepared in [CDA-UI-SEAMS-CATALOG-01](../../UI_AgentCatalog_01_Extraction_Sandbox_Bundle/README.md) only; no extraction, sandbox or watch measurement was implemented. Execution needs separate authorization. Routing and full editor extraction remain separate.
 
 An earlier sandbox delivery from SB03 is possible only through an explicit coordinated
 scope handoff/frozen branch. Moving files concurrently with SB04–SB07 on the same checkout

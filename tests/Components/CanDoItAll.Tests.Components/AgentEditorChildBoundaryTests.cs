@@ -45,9 +45,9 @@ public sealed class AgentEditorChildBoundaryTests {
         Assert.Equal("Unsaved instructions", draft.Instructions);
         Assert.Equal(provider.Id, draft.ProviderProfileId);
         Assert.Equal(model, draft.Model);
-        Assert.Equal(fail ? 0 : 1, context.Services.GetRequiredService<AgentEditorReadFixture>().ProviderReads);
+        Assert.Equal(1, context.Services.GetRequiredService<AgentEditorReadFixture>().ProviderReads);
         Assert.Equal([proxy.Selected.RemotePublicationId], proxy.SynchronizedIds);
-        Assert.Contains(fail ? "Source unavailable" : "unsaved selections were preserved",
+        Assert.Contains(fail ? "could not be confirmed" : "unsaved selections were preserved",
             cut.Find("[data-testid='shared-provider-refresh-result']").TextContent);
     }
 

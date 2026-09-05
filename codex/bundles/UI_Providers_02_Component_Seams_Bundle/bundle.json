@@ -1,0 +1,21 @@
+{
+  "referenceId": "CDA-UI-SEAMS-PROVIDERS-02",
+  "name": "Provider mutations and shared coordination",
+  "shape": "compact-compatible",
+  "proofProfile": "Governed",
+  "executionStatus": "complete-with-repository-documentation-baseline-blocker",
+  "preparedAt": "2026-09-05",
+  "observedCommit": "7684f25854594f4a4b5486559890164aec382fb7",
+  "observedCommitIsPin": false,
+  "executionAuthorized": true,
+  "subbundles": [
+    "02a-local-mutations",
+    "02b-shared-coordination",
+    "02c-closure"
+  ],
+  "sharedArchitectureReference": "CDA-UI-SEAMS-BASE-v2",
+  "nextChildPreparationOnly": true,
+  "closedAt": "2026-09-05",
+  "providerValidation": "passed",
+  "preparedNextChild": "CDA-UI-SEAMS-CATALOG-01"
+}

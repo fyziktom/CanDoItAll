@@ -14,7 +14,7 @@ public enum SharedProviderPublicationAction
 public sealed record SharedProviderPublicationChangeRequest(
     Guid ProviderProfileId,
     SharedProviderPublicationAction Action,
-    Guid ExpectedConcurrencyToken);
+    Guid? ExpectedConcurrencyToken);
 
 public sealed class SharedProviderPublicationApplicationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
@@ -35,117 +35,81 @@ public sealed class SharedProviderPublicationApplicationService(
 
     public async Task<SharedProviderPublicationWriteResult> ChangeAsync(
         SharedProviderPublicationChangeRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.ProviderProfileId == Guid.Empty)
-        {
-            throw new ArgumentException(
-                "The provider profile id cannot be empty.",
-                nameof(request));
+        if (request.ProviderProfileId == Guid.Empty || request.ExpectedConcurrencyToken == Guid.Empty ||
+            !Enum.IsDefined(request.Action)) {
+            throw new ArgumentException("A valid provider, publication action and optional expected revision are required.", nameof(request));
         }
-
-        if (request.ExpectedConcurrencyToken == Guid.Empty)
-        {
-            throw new ArgumentException(
-                "The expected publication concurrency token cannot be empty.",
-                nameof(request));
-        }
-
-        if (!Enum.IsDefined(request.Action))
-        {
-            throw new ArgumentOutOfRangeException(nameof(request));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var profile = await dbContext.Set<ProviderProfile>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(
-                item => item.Id == request.ProviderProfileId,
-                cancellationToken) ??
-            throw new KeyNotFoundException(
-                $"Provider profile '{request.ProviderProfileId:D}' was not found.");
-        var publication = await dbContext.Set<ProviderSharePublication>()
-            .SingleOrDefaultAsync(
-                item => item.ProviderProfileId == request.ProviderProfileId,
-                cancellationToken) ??
-            throw new KeyNotFoundException(
-                $"Provider profile '{request.ProviderProfileId:D}' does not have a publication identity.");
-        if (publication.ConcurrencyToken != request.ExpectedConcurrencyToken)
-        {
-            throw new SharedProviderConcurrencyException(
-                nameof(ProviderSharePublication),
-                publication.Id);
-        }
-
-        var targetPublishedState = request.Action == SharedProviderPublicationAction.Publish;
-        if (targetPublishedState == publication.IsPublished)
-        {
-            return ToResult(publication);
-        }
-
-        if (targetPublishedState)
-        {
-            var requiredSecretExists = profile.ApiKeySecretId.HasValue &&
-                await dbContext.Set<SecretRecord>()
-                    .AsNoTracking()
-                    .AnyAsync(
-                        secret => secret.Id == profile.ApiKeySecretId.Value,
-                        cancellationToken);
-            var eligibility = eligibilityPolicy.Evaluate(
-                profile,
-                providerManifestCatalog.ResolveManifest(
-                    profile.ConnectorPluginKey,
-                    profile.ProviderKind),
-                requiredSecretExists);
-            if (!eligibility.IsEligible)
-            {
-                throw new SharedProviderPublicationEligibilityException(
-                    profile.Id,
-                    eligibility);
+        await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(
+            db, $"shared-provider-publication:{request.ProviderProfileId:D}", cancellationToken);
+        var profile = await db.Set<ProviderProfile>().AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == request.ProviderProfileId, cancellationToken)
+            ?? throw new KeyNotFoundException("The provider profile was not found.");
+        var publication = await db.Set<ProviderSharePublication>()
+            .SingleOrDefaultAsync(item => item.ProviderProfileId == request.ProviderProfileId, cancellationToken);
+        var publish = request.Action == SharedProviderPublicationAction.Publish;
+        if (publication is null) {
+            if (request.ExpectedConcurrencyToken.HasValue || !publish) {
+                throw new SharedProviderConcurrencyException(nameof(ProviderSharePublication), profile.Id);
+            }
+        } else {
+            if (publication.ConcurrencyToken != request.ExpectedConcurrencyToken) {
+                throw new SharedProviderConcurrencyException(nameof(ProviderSharePublication), publication.Id);
+            }
+            if (publication.IsPublished == publish) {
+                return ToResult(publication);
             }
         }
-
-        var changedAtUtc = clock.GetUtcNow();
-        if (targetPublishedState)
-        {
-            SharedProviderPublicationTransitions.Publish(publication, changedAtUtc);
+        if (publish) {
+            var secretExists = profile.ApiKeySecretId.HasValue &&
+                await db.Set<SecretRecord>().AsNoTracking().AnyAsync(
+                    secret => secret.Id == profile.ApiKeySecretId.Value, cancellationToken);
+            var eligibility = eligibilityPolicy.Evaluate(profile,
+                providerManifestCatalog.ResolveManifest(profile.ConnectorPluginKey, profile.ProviderKind), secretExists);
+            if (!eligibility.IsEligible) {
+                throw new SharedProviderPublicationEligibilityException(profile.Id, eligibility);
+            }
         }
-        else
-        {
-            SharedProviderPublicationTransitions.Unpublish(publication, changedAtUtc);
+        var now = clock.GetUtcNow();
+        if (publication is null) {
+            publication = SharedProviderPublicationTransitions.Create(profile.Id,
+                SharedProviderPublicationStore.CreatePublicId(profile.Id), now);
+            db.Add(publication);
         }
-
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
+        if (publish) {
+            SharedProviderPublicationTransitions.Publish(publication, now);
+        } else {
+            SharedProviderPublicationTransitions.Unpublish(publication, now);
         }
-        catch (DbUpdateConcurrencyException exception)
-        {
-            throw new SharedProviderConcurrencyException(
-                nameof(ProviderSharePublication),
-                publication.Id,
-                exception);
+        var change = new SharedProviderChange(SharedProviderChangeKind.Publication, [profile.Id]);
+        var committed = false;
+        try {
+            cancellationToken.ThrowIfCancellationRequested();
+            await db.SaveChangesAsync(cancellationToken);
+            committed = db.Database.CurrentTransaction is null;
+            await mutation.CommitAsync(cancellationToken);
+            committed = true;
+            await mutation.DisposeAsync();
+        } catch (Exception) when (committed) {
+            change = change with { Warning = "The publication is saved, but transaction cleanup needs attention." };
+        } catch (Exception exception) when (
+            exception is DbUpdateConcurrencyException || SerializableMutationScope.IsConflict(exception) ||
+            SharedProviderPersistenceConflictClassifier.IsPublicationProviderIdentityConflict(exception)) {
+            throw new SharedProviderConcurrencyException(nameof(ProviderSharePublication), profile.Id, exception);
         }
-
-        foreach (var observer in observers)
-        {
-            await observer.PublicationChangedAsync(profile.Id, CancellationToken.None);
+        foreach (var observer in observers) {
+            change = await SharedProviderCommitEffects.CompleteAsync(change,
+                () => observer.PublicationChangedAsync(profile.Id, CancellationToken.None));
         }
-
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                ActivityCategory,
-                targetPublishedState ? PublishActivityAction : UnpublishActivityAction,
-                targetPublishedState
-                    ? "Published provider profile"
-                    : "Unpublished provider profile",
-                profile.Name,
-                ArtifactKind: ActivityArtifactKind,
-                ArtifactId: publication.Id,
-                Route: ActivityRoute),
-            CancellationToken.None);
-        return ToResult(publication);
+        change = await SharedProviderCommitEffects.CompleteAsync(change, () => activityStream.RecordAsync(
+            new ActivityWriteRequest(ActivityCategory,
+                publish ? PublishActivityAction : UnpublishActivityAction,
+                publish ? "Published provider profile" : "Unpublished provider profile",
+                profile.Name, ArtifactKind: ActivityArtifactKind, ArtifactId: publication.Id, Route: ActivityRoute),
+            CancellationToken.None));
+        return ToResult(publication) with { Change = change };
     }
 
     private static SharedProviderPublicationWriteResult ToResult(

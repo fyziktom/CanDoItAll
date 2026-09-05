@@ -41,8 +41,8 @@ public sealed class SharedProviderSourceSyncService
         }
         catch (SharedProviderSourceCredentialException exception)
         {
-            await RecordFetchFailureAsync(source, exception.Failure, cancellationToken);
-            return SharedProviderSourceOperationResult.Failed(exception.Failure);
+            var change = await RecordFetchFailureAsync(source, exception.Failure, cancellationToken);
+            return SharedProviderSourceOperationResult.Failed(exception.Failure) with { Change = change };
         }
 
         var fetchResult = await catalogClient.FetchAsync(
@@ -74,8 +74,8 @@ public sealed class SharedProviderSourceSyncService
         }
         catch (SharedProviderSourceCredentialException exception)
         {
-            await RecordFetchFailureAsync(source, exception.Failure, cancellationToken);
-            return SharedProviderSourceOperationResult.Failed(exception.Failure);
+            var change = await RecordFetchFailureAsync(source, exception.Failure, cancellationToken);
+            return SharedProviderSourceOperationResult.Failed(exception.Failure) with { Change = change };
         }
 
         var currentSelection = await LoadSelectionStateAsync(
@@ -96,8 +96,8 @@ public sealed class SharedProviderSourceSyncService
             if (conditionalEntityTag is null || notModified.EntityTag != conditionalEntityTag)
             {
                 var failure = SharedProviderSourceOperationFailures.InvalidNotModified();
-                await RecordFetchFailureAsync(source, failure, cancellationToken);
-                return SharedProviderSourceOperationResult.Failed(failure);
+                var change = await RecordFetchFailureAsync(source, failure, cancellationToken);
+                return SharedProviderSourceOperationResult.Failed(failure) with { Change = change };
             }
 
             var latestSelection = await LoadSelectionStateAsync(
@@ -147,21 +147,21 @@ public sealed class SharedProviderSourceSyncService
                     succeeded.Catalog.SourceInstanceId,
                     succeeded.EntityTag,
                     cancellationToken);
-                if (acceptance == SharedProviderCatalogIdentityAcceptance.IdentityMismatch)
+                if (acceptance.Acceptance == SharedProviderCatalogIdentityAcceptance.IdentityMismatch)
                 {
                     var failure = SharedProviderSourceOperationFailures.IdentityMismatch();
-                    return SharedProviderSourceOperationResult.SourceIdentityMismatch(failure);
+                    return SharedProviderSourceOperationResult.SourceIdentityMismatch(failure) with { Change = acceptance.Change };
                 }
 
                 return SharedProviderSourceOperationResult.Succeeded(
                     succeeded.Catalog,
-                    succeeded.EntityTag);
+                    succeeded.EntityTag) with { Change = acceptance.Change };
             }
             case SharedProviderCatalogFetchResult.NotModified:
             {
                 var failure = SharedProviderSourceOperationFailures.UnexpectedNotModified();
-                await RecordFetchFailureAsync(source, failure, cancellationToken);
-                return SharedProviderSourceOperationResult.Failed(failure);
+                var change = await RecordFetchFailureAsync(source, failure, cancellationToken);
+                return SharedProviderSourceOperationResult.Failed(failure) with { Change = change };
             }
             case SharedProviderCatalogFetchResult.Failed failed:
                 return await PersistFetchFailureAsync(source, failed.Failure, cancellationToken);
@@ -195,14 +195,14 @@ public sealed class SharedProviderSourceSyncService
                         SharedProviderReconciliationOutcome.SourceIdentityMismatch)
                     {
                         var failure = SharedProviderSourceOperationFailures.IdentityMismatch();
-                        return SharedProviderSourceOperationResult.SourceIdentityMismatch(failure);
+                        return SharedProviderSourceOperationResult.SourceIdentityMismatch(failure) with { Change = reconciliation.Change };
                     }
 
                     return SharedProviderSourceOperationResult.Succeeded(
                         succeeded.Catalog,
                         succeeded.EntityTag,
                         reconciliation.AffectedProviderProfileIds,
-                        reconciliation.RetiredProviderProfileIds);
+                        reconciliation.RetiredProviderProfileIds) with { Change = reconciliation.Change };
                 }
                 catch (SharedProviderSelectionConflictException)
                 {
@@ -213,8 +213,8 @@ public sealed class SharedProviderSourceSyncService
             case SharedProviderCatalogFetchResult.NotModified:
             {
                 var failure = SharedProviderSourceOperationFailures.UnexpectedNotModified();
-                await RecordFetchFailureAsync(source, failure, cancellationToken);
-                return SharedProviderSourceOperationResult.Failed(failure);
+                var change = await RecordFetchFailureAsync(source, failure, cancellationToken);
+                return SharedProviderSourceOperationResult.Failed(failure) with { Change = change };
             }
             case SharedProviderCatalogFetchResult.Failed failed:
                 return await PersistFetchFailureAsync(source, failed.Failure, cancellationToken);
@@ -228,13 +228,13 @@ public sealed class SharedProviderSourceSyncService
         SharedProviderFailure failure,
         CancellationToken cancellationToken)
     {
-        await RecordFetchFailureAsync(source, failure, cancellationToken);
-        return failure.Code == SharedProviderCatalogFailureCodes.SourceIdentityMismatch
+        var change = await RecordFetchFailureAsync(source, failure, cancellationToken);
+        return (failure.Code == SharedProviderCatalogFailureCodes.SourceIdentityMismatch
             ? SharedProviderSourceOperationResult.SourceIdentityMismatch(failure)
-            : SharedProviderSourceOperationResult.Failed(failure);
+            : SharedProviderSourceOperationResult.Failed(failure)) with { Change = change };
     }
 
-    private Task RecordFetchFailureAsync(
+    private Task<SharedProviderChange> RecordFetchFailureAsync(
         SharedProviderSourceSnapshot source,
         SharedProviderFailure failure,
         CancellationToken cancellationToken)

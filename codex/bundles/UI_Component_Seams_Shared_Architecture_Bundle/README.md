@@ -5,7 +5,7 @@
 **Kind:** Non-executable architecture reference
 **Revision date:** 2026-09-05
 **Preparation status:** Revised; manual semantic validation recorded in reviews
-**Execution status:** Non-executable reference; the current owner request authorizes Agents SB09, Providers-01 and shared-rule updates through their child bundles
+**Execution status:** Non-executable reference; the current owner request authorizes Providers-02 implementation and, after its closure, preparation only of the catalog extraction/sandbox measurement child
 
 ## Purpose and authority
 
@@ -87,3 +87,5 @@ scaffolding would add no meaning. Validate those roles manually and verify links
 input preservation, and the complete checksum manifest.
 
 - [Lifecycle follow-up and provider sequence](reviews/03-lifecycle-and-provider-followup.md)
+
+- [Provider mutation and shared-authority feedback](reviews/04-provider-mutation-and-authority-feedback.md)

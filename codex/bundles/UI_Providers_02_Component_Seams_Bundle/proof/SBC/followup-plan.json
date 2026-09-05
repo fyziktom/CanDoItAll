@@ -1,0 +1,23 @@
+[
+  {
+    "suite": "Unit",
+    "expected": 19,
+    "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesReadsTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.|FullyQualifiedName=CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys"
+  },
+  {
+    "suite": "Components",
+    "expected": 2,
+    "filter": "FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft"
+  },
+  {
+    "suite": "Integration",
+    "expected": 9,
+    "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.|FullyQualifiedName~Seam_imported_health_and_test_chat_are_allowed_sanitized_and_nonpersisting"
+  },
+  {
+    "suite": "Integration",
+    "label": "history",
+    "expected": 1,
+    "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.ProviderHistoryRuntimeIntegrationTests.Scale_capture_and_cleanup_remain_bounded_under_concurrent_search"
+  }
+]

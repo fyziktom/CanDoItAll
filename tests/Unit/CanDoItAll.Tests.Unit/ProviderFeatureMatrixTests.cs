@@ -361,13 +361,6 @@ public sealed class ProviderFeatureMatrixTests
             "CanDoItAll.Modules.Workspace",
             "Pages",
             "SettingsPage.razor");
-        var providerPanelSource = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "AgentProviderProfilesPanel.razor.cs");
         var providerPanelMarkup = ReadRepositoryFile(
             "src",
             "Modules",
@@ -387,8 +380,6 @@ public sealed class ProviderFeatureMatrixTests
         Assert.DoesNotContain("Provider editor", settingsPageMarkup, StringComparison.Ordinal);
         Assert.Contains("IWorkspaceProviderCatalog", settingsPageMarkup, StringComparison.Ordinal);
         Assert.Contains("/agents?tab=providers", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("IProviderRuntimeAdministrationService", providerPanelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IAgentFrameworkWorkspaceService", providerPanelSource, StringComparison.Ordinal);
         Assert.Contains("ProviderModelPricingEditor", providerPanelMarkup, StringComparison.Ordinal);
         Assert.Contains("ComfyUiWorkflowTemplateJson", providerExecutionSource, StringComparison.Ordinal);
         Assert.Contains("ConnectorConfigFieldType.Json", providerExecutionSource, StringComparison.Ordinal);

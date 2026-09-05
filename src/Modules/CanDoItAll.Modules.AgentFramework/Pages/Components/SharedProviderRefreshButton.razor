@@ -2,6 +2,7 @@
 @using CanDoItAll.Modules.AgentFramework.ProviderManagement
 @using CanDoItAll.SharedProviders.Abstractions
 @inject ISharedProviderManagementService ManagementService
+@implements IDisposable
 
 <Stack GapScale="LayoutGap.Small">
     <Cluster>
@@ -15,33 +16,90 @@
 
 @code {
     [Parameter] public Guid ProviderId { get; set; }
-    [Parameter] public EventCallback Refreshed { get; set; }
+    [Parameter] public EventCallback<SharedProviderChange> Refreshed { get; set; }
+    private CancellationTokenSource owner = new();
+    private Guid target;
+    private long generation;
+    private bool disposed;
     private bool busy;
     private bool failed;
     private string? message;
 
+    protected override void OnParametersSet() {
+        if (target == ProviderId) {
+            return;
+        }
+        owner.Cancel();
+        owner.Dispose();
+        owner = new();
+        generation++;
+        target = ProviderId;
+        busy = false;
+        message = null;
+    }
+
+    private bool IsCurrent(long operation, CancellationToken token) =>
+        !disposed && operation == generation && !token.IsCancellationRequested;
+
     private async Task RefreshAsync() {
+        if (disposed || busy) {
+            return;
+        }
+        var operation = ++generation;
+        var token = owner.Token;
+        var providerId = target;
         busy = true;
         message = null;
+        SharedProviderChange? committed = null;
         try {
-            var sources = await ManagementService.ListSourcesAsync();
-            var source = sources.SingleOrDefault(item => item.Imports.Any(import => import.ProviderProfileId == ProviderId))
-                ?? throw new InvalidOperationException("The shared connection was not found. Open provider connections to inspect it.");
+            var sources = await ManagementService.ListSourcesAsync(token);
+            if (!IsCurrent(operation, token)) {
+                return;
+            }
+            var source = sources.SingleOrDefault(item => item.Imports.Any(import => import.ProviderProfileId == providerId))
+                ?? throw new KeyNotFoundException("The shared connection was not found.");
             var selected = source.Imports.Where(import => import.SelectionState == SharedProviderSelectionState.Selected)
                 .Select(import => import.RemotePublicationId).ToHashSet();
-            var result = await ManagementService.SynchronizeSourceAsync(source.Source.Id, selected);
-            failed = !result.IsSuccessful;
-            message = failed
-                ? result.Failure?.SanitizedMessage ?? $"Source synchronization failed: {result.Outcome}."
-                : "Shared models and thinking settings refreshed. Your unsaved selections were preserved.";
-            if (!failed) {
-                await Refreshed.InvokeAsync();
+            var result = await ManagementService.SynchronizeSourceAsync(source.Source.Id, selected, token);
+            committed = result.Change;
+            if (!IsCurrent(operation, token)) {
+                return;
             }
-        } catch (Exception exception) {
-            failed = true;
-            message = $"Shared provider refresh failed: {exception.Message}";
+            failed = !result.IsSuccessful;
+            message = result.Change?.Warning ?? (failed
+                ? result.Failure?.SanitizedMessage ?? "The shared source is unavailable."
+                : "Shared models and thinking settings refreshed. Your unsaved selections were preserved.");
+            if (result.Change is { } change) {
+                await Refreshed.InvokeAsync(change);
+            }
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (SharedProviderCommittedException exception) {
+            if (IsCurrent(operation, token)) {
+                failed = true;
+                message = exception.Change.Warning;
+                await Refreshed.InvokeAsync(exception.Change);
+            }
+        } catch (Exception) {
+            if (IsCurrent(operation, token)) {
+                failed = true;
+                if (committed is not null) {
+                    message = "The shared-provider change is saved, but its workspace refresh did not complete.";
+                    return;
+                }
+                message = "Shared provider refresh could not be confirmed. Verify the source state before retrying.";
+                await Refreshed.InvokeAsync(new(SharedProviderChangeKind.SourceAvailability, [],
+                    commitState: SharedProviderCommitState.Unconfirmed, unknownScope: true, warning: message));
+            }
         } finally {
-            busy = false;
+            if (IsCurrent(operation, token)) {
+                busy = false;
+            }
         }
+    }
+
+    public void Dispose() {
+        disposed = true;
+        owner.Cancel();
+        owner.Dispose();
     }
 }

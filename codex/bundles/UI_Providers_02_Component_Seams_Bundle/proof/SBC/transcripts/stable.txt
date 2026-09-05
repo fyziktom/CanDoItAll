@@ -1,0 +1,57 @@
+Run label: p02-stable
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore --filter 'Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true' /m:1 --logger 'trx;LogFilePrefix=p02-stable' --results-directory .mcp-state/p02-stable-results
+Exit code: 1 (all three observed failures have explicit narrow passing follow-ups)
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:10:20.71]     CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft(fail: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft(fail: True) [20 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 0
+Actual:   1
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.Shared_provider_refresh_retains_editor_draft(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentEditorChildBoundaryTests.cs:line 48
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-stable-results\p02-stable_net10.0_20260905151034.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:  1294, Přeskočeno:     0, Celkem:  1295, Doba trvání: 18 m 33 s - CanDoItAll.Tests.Components.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:05:49.04]     CanDoItAll.Tests.Integration.ProviderHistoryRuntimeIntegrationTests.Scale_capture_and_cleanup_remain_bounded_under_concurrent_search [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.ProviderHistoryRuntimeIntegrationTests.Scale_capture_and_cleanup_remain_bounded_under_concurrent_search [2 s]
+  Chybová zpráva:
+   Assert.InRange() Failure: Value not in range
+Range:  (0 - 25)
+Actual: 30,141200000000001
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.ProviderHistoryRuntimeIntegrationTests.Scale_capture_and_cleanup_remain_bounded_under_concurrent_search() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryRuntimeIntegrationTests.cs:line 34
+   at CanDoItAll.Tests.Integration.ProviderHistoryRuntimeIntegrationTests.Scale_capture_and_cleanup_remain_bounded_under_concurrent_search() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderHistoryRuntimeIntegrationTests.cs:line 72
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-stable-results\p02-stable_net10.0_20260905155621.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:  1345, Přeskočeno:     0, Celkem:  1346, Doba trvání: 45 m 44 s - CanDoItAll.Tests.Integration.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\tests\MAF\CanDoItAll.AgentFramework.Memory.Tests\bin\Release\net10.0\CanDoItAll.AgentFramework.Memory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-stable-results\p02-stable_net10.0_20260905155622.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    22, Přeskočeno:     0, Celkem:    22, Doba trvání: 234 ms - CanDoItAll.AgentFramework.Memory.Tests.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\bin\Release\net10.0\CanDoItAll.Memory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-stable-results\p02-stable_net10.0_20260905155631.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:   196, Přeskočeno:     0, Celkem:   196, Doba trvání: 7 s - CanDoItAll.Memory.Tests.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:01:05.80]     CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys [1 m 3 s]
+  Chybová zpráva:
+   Realistic provider key pattern found in tracked text files: .mcp-state\p02-stable-expected.json (OpenAI API key)
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SecretScanningTests.cs:line 32
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-stable-results\p02-stable_net10.0_20260905155803.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:  6902, Přeskočeno:     0, Celkem:  6903, Doba trvání: 1 m 29 s - CanDoItAll.Tests.Unit.dll (net10.0)

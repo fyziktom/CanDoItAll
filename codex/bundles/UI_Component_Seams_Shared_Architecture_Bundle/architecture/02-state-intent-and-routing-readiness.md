@@ -90,3 +90,16 @@ Initial task-slot ownership, latest accepted snapshot generation, and presentati
 Every directly opened nested dialog belongs to the actual editor/session lifetime. A token on a top-level dialog does not cascade to independently registered dialog references. Pass the captured session token to confirmations and wizards; prove both replacement and disposal remove only owned dialogs while preserving unrelated presentations.
 
 For an unrouted list/editor panel, one explicitly constructed session can own the typed semantic state and draft/read lifetime. A page store is not mandatory. Tree/child identities derive from that authority. Initial automatic selection cannot override an explicit New or selection made while loading. A catalog that removes a pending target must prevent its late editor result becoming editable.
+
+## Operation and target ownership
+
+Busy state, pending reconciliation and completion belong to a captured target session and
+operation generation. An older operation cannot clear a newer busy state or publish its
+notification. Capture an independent submission before the first await; reconciliation
+must distinguish edits made later from submitted values.
+
+Target-changing child components cancel prior loads, clear obsolete actionable snapshots,
+verify returned identity, and fence success and failure after each await. Overlay closure
+cancels only its owned requests and presentations. Apply the same fence in caller
+continuations that display notifications or open another presentation after a helper returns.
+Backend commit receipts remain valid even when their presentation owner disappears.

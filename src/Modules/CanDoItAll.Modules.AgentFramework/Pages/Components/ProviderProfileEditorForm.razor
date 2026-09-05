@@ -5,14 +5,14 @@
         <SecondaryActions>
             <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="Clear" />
             @if (HasSavedProvider && CanManage) {
-                <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@IsBusy" Click="Health" />
+                <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@(IsBusy || WritesBlocked)" Click="Health" />
             }
         </SecondaryActions>
         <PrimaryActions>
             @if (CanManage) {
                 <Button Text="Save provider"
                         Type="submit"
-                        Disabled="@IsBusy"
+                        Disabled="@(IsBusy || WritesBlocked)"
                         IsBusy="@IsBusy"
                         data-testid="providers-save" />
             }
@@ -21,7 +21,7 @@
             @if (HasSavedProvider && CanManage) {
                 <Button Text="Delete"
                         ButtonStyle="ButtonStyle.Danger"
-                        Disabled="@IsBusy"
+                        Disabled="@(IsBusy || WritesBlocked)"
                         Click="Delete" />
             }
         </DangerActions>
@@ -35,6 +35,7 @@
     [Parameter] public bool HasSavedProvider { get; set; }
     [Parameter] public bool CanManage { get; set; }
     [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public bool WritesBlocked { get; set; }
     [Parameter] public EventCallback Save { get; set; }
     [Parameter] public EventCallback Clear { get; set; }
     [Parameter] public EventCallback Health { get; set; }

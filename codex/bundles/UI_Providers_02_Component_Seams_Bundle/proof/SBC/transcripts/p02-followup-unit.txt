@@ -1,0 +1,11 @@
+Run label: p02-followup-unit
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesReadsTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.|FullyQualifiedName=CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys' /m:1 --logger 'trx;LogFileName=p02-followup-unit.trx' --results-directory .mcp-state/p02-results
+Exit code: 0
+Captured console output (verbatim):
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02-followup-unit.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    19, Přeskočeno:     0, Celkem:    19, Doba trvání: 19 s - CanDoItAll.Tests.Unit.dll (net10.0)

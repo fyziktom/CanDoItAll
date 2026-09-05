@@ -1,0 +1,4 @@
+101. [GET] https://localhost:7271/_blazor/initializers => [200] 
+102. [POST] https://localhost:7271/_blazor/negotiate?negotiateVersion=1 => [200] 
+
+Note: 105 static requests not shown, run with "static" option to see them.

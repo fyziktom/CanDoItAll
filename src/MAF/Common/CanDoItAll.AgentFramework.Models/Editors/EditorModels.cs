@@ -106,6 +106,7 @@ public interface IProviderModelPricingEditorModel
 public sealed class ProviderProfileEditorModel : IProviderModelPricingEditorModel
 {
     public Guid? Id { get; set; }
+    public Guid? ExpectedConcurrencyToken { get; set; }
     public string Name { get; set; } = string.Empty;
     public ProviderKind Kind { get; set; } = ProviderKind.OpenAi;
     public string BaseUrl { get; set; } = string.Empty;

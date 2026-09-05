@@ -66,10 +66,11 @@ public sealed class SharedProviderReconciliationCoordinator
 
             await SaveAndCommitAsync(dbContext, mutationScope, source.Id, cancellationToken);
             var affectedIds = imports.Select(import => import.ProviderProfileId).Distinct().ToArray();
-            await NotifySavedAsync(affectedIds);
+            var mismatch = await SharedProviderCommitEffects.NotifySavedAsync(
+                new(SharedProviderChangeKind.SourceAvailability, affectedIds, remoteOwnedFieldsChanged: false),
+                providerProfileCommitObservers);
             return new SharedProviderReconciliationResult(
-                SharedProviderReconciliationOutcome.SourceIdentityMismatch,
-                affectedIds);
+                SharedProviderReconciliationOutcome.SourceIdentityMismatch, affectedIds) { Change = mismatch };
         }
 
         var plan = SharedProviderReconciliationPlanner.Create(
@@ -88,6 +89,7 @@ public sealed class SharedProviderReconciliationCoordinator
             : await dbContext.Set<ProviderProfile>()
                 .Where(profile => existingProviderIds.Contains(profile.Id))
                 .ToDictionaryAsync(profile => profile.Id, cancellationToken);
+        var remoteFieldsApplied = false;
         var affectedProviderIds = new HashSet<Guid>();
         var retiredProviderIds = new HashSet<Guid>();
         foreach (var decision in plan.Decisions)
@@ -97,6 +99,7 @@ public sealed class SharedProviderReconciliationCoordinator
                 case SharedProviderReconciliationDecisionKind.Create:
                 {
                     var publication = decision.RemotePublication!;
+                    remoteFieldsApplied = true;
                     var createdProfile = CreateImportedProfile(source, publication);
                     var createdImport = SharedProviderImportTransitions.Create(
                         source.Id,
@@ -116,6 +119,7 @@ public sealed class SharedProviderReconciliationCoordinator
                         import,
                         SharedProviderRemotePublicationState.Create(publication),
                         now);
+                    remoteFieldsApplied = true;
                     ApplyRemoteOwnedProfileFields(
                         profilesById[import.ProviderProfileId],
                         source,
@@ -158,12 +162,16 @@ public sealed class SharedProviderReconciliationCoordinator
 
         await SaveAndCommitAsync(dbContext, mutationScope, source.Id, cancellationToken);
         var committedProviderIds = affectedProviderIds.Order().ToArray();
-        await NotifySavedAsync(committedProviderIds);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.Reconciliation, committedProviderIds, retiredProviderIds,
+                remoteOwnedFieldsChanged: remoteFieldsApplied, catalogMembershipMayHaveChanged: true),
+            providerProfileCommitObservers);
         return new SharedProviderReconciliationResult(
             SharedProviderReconciliationOutcome.Applied,
             committedProviderIds)
         {
-            RetiredProviderProfileIds = retiredProviderIds.Order().ToArray()
+            RetiredProviderProfileIds = retiredProviderIds.Order().ToArray(),
+            Change = change
         };
     }
 
@@ -223,14 +231,4 @@ public sealed class SharedProviderReconciliationCoordinator
         }
     }
 
-    private async Task NotifySavedAsync(IEnumerable<Guid> providerIds)
-    {
-        foreach (var providerId in providerIds)
-        {
-            foreach (var observer in providerProfileCommitObservers)
-            {
-                await observer.ProviderSavedAsync(providerId, CancellationToken.None);
-            }
-        }
-    }
 }

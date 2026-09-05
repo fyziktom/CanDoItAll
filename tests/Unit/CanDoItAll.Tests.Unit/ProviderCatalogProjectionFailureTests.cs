@@ -122,7 +122,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 upsertException,
                 providerId,
                 ProviderCatalogProjectionOperationKind.Upsert,
-                "SaveProviderAsync");
+                "ReconcileAsync");
             await using (var dbContext =
                 await dbContextFactory.CreateDbContextAsync())
             {
@@ -136,7 +136,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             }
 
             Assert.Equal(providerId, observer.SavedProviderId);
-            Assert.Same(upsertException, logger.LastException);
+            Assert.Null(logger.LastException);
             Assert.Contains(
                 "CanonicalCommitSucceeded=True",
                 logger.LastMessage,
@@ -150,7 +150,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 deleteException,
                 providerId,
                 ProviderCatalogProjectionOperationKind.Delete,
-                "DeleteProviderAsync");
+                "ReconcileAsync");
             await using (var dbContext =
                 await dbContextFactory.CreateDbContextAsync())
             {
@@ -160,7 +160,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             }
 
             Assert.Equal(providerId, observer.DeletedProviderId);
-            Assert.Same(deleteException, logger.LastException);
+            Assert.Null(logger.LastException);
         }
         finally
         {

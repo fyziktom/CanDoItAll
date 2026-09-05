@@ -1,0 +1,11 @@
+Run label: p02-final-Components
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentProviderProfilesPanelPricingTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderModelPricingEditorTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderRequestHistoryPanelTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SecretProviderSelectionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderOwnedEffectsTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.' /m:1 --logger 'trx;LogFileName=p02-final-Components.trx' --results-directory .mcp-state/p02-results
+Exit code: 0
+Captured console output (verbatim):
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02-final-Components.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    84, Přeskočeno:     0, Celkem:    84, Doba trvání: 2 m 24 s - CanDoItAll.Tests.Components.dll (net10.0)

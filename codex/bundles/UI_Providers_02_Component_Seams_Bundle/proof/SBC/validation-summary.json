@@ -1,0 +1,74 @@
+{
+  "branch": "components-decoupling",
+  "observedHead": "7684f25854594f4a4b5486559890164aec382fb7",
+  "uncommitted": true,
+  "providerStatus": "closed",
+  "repositoryMergeStatus": "documentation baseline blocker",
+  "owningCheckpoint": {
+    "Unit": 417,
+    "Components": 84,
+    "Integration": 256,
+    "failed": 0,
+    "skipped": 0
+  },
+  "finalFollowups": {
+    "Unit": 19,
+    "Components": 2,
+    "ProviderIntegration": 9,
+    "HistoryIntegration": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "stableCheckpoint": {
+    "discovered": 9707,
+    "executed": 9762,
+    "passed": 9759,
+    "failed": 3,
+    "skipped": 0,
+    "allObservedFailuresHavePassingNarrowFollowup": true,
+    "rerunBroad": false
+  },
+  "directBuilds": [
+    "Models",
+    "ProviderManagement",
+    "AgentFramework",
+    "Web"
+  ],
+  "directBuildErrors": 0,
+  "portability": {
+    "status": "PASS",
+    "reviewedExecutableFindings": 14251,
+    "writeBaselineInFinalEnforcement": false
+  },
+  "secretScan": {
+    "textFiles": 5739,
+    "unreadable": 0,
+    "historicalPatternMatches": 244,
+    "newFindings": 0,
+    "realisticProviderKeyRepositoryTest": "PASS"
+  },
+  "documentation": {
+    "status": "BLOCKED",
+    "unchangedHistoricalTrackedLogs": 118,
+    "newTrackedLogs": 0
+  },
+  "browser": {
+    "viewport": "1600x1000",
+    "status": "PASS",
+    "consoleErrors": 0,
+    "inspectedScreenshots": 11,
+    "runtime": "task-owned full-app PublishedDll fixture, stopped"
+  },
+  "architecture": {
+    "snapshot": "snap-20260905200636-831cc390",
+    "newProjectCycles": 0,
+    "preexistingCycles": 2,
+    "staticImpactConfidence": "Low; AllSuppliedSuites"
+  },
+  "nextChild": {
+    "reference": "CDA-UI-SEAMS-CATALOG-01",
+    "path": "codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle",
+    "preparedAfterProviderClosure": true,
+    "implementationStarted": false
+  }
+}

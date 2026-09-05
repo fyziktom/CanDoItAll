@@ -1,0 +1,21 @@
+Run label: p02b-read-before
+Invariant: P02-PUBLICATION
+Working directory: repo://
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~ProviderMutationCommitIntegrationTests' /m:1 --logger 'trx;LogFileName=p02b-read-before.trx' --results-directory .mcp-state/p02-results
+Exit code: 1
+Captured console output (verbatim):
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:12.25]     CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.Opening_sharing_without_publishing_does_not_create_identity_or_block_delete [FAIL]
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.Opening_sharing_without_publishing_does_not_create_identity_or_block_delete [294 ms]
+  Chybová zpráva:
+   Assert.Null() Failure: Value is not null
+Expected: null
+Actual:   SharedProviderPublicationWriteResult { Id = dfc543d3-8375-456d-af69-201fb9a36d8f, PublicId = dec24605-38fc-449e-8925-a7439db77669, IsPublished = False, ConcurrencyToken = 10a52e41-59f3-48c3-a3a2-e5b75a2d001c }
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.Opening_sharing_without_publishing_does_not_create_identity_or_block_delete() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderMutationCommitIntegrationTests.cs:line 108
+   at CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.Opening_sharing_without_publishing_does_not_create_identity_or_block_delete() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\ProviderMutationCommitIntegrationTests.cs:line 112
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02-results\p02b-read-before.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     7, Přeskočeno:     0, Celkem:     8, Doba trvání: 3 s - CanDoItAll.Tests.Integration.dll (net10.0)

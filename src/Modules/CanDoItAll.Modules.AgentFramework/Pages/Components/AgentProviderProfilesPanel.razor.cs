@@ -4,23 +4,15 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-using IProviderAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService;
-using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
-using ProviderConnectorFieldKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorFieldKeys;
 using ProviderConnectorKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys;
 using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
-using ProviderPricingRefreshResult = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderModelPricingRefreshResult;
 
 public partial class AgentProviderProfilesPanel : IDisposable {
     [Inject]
-    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
-
-    [Inject]
-    public IProviderAdministrationService ProviderAdministrationService { get; set; } = default!;
+    public IProviderEditorCommands Commands { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -37,13 +29,23 @@ public partial class AgentProviderProfilesPanel : IDisposable {
     private EditContext providerEditContext => session.EditContext;
     private IReadOnlyList<string> providerTagValues = [];
     private string providerSearch = string.Empty;
-    private string suggestedModelsText = string.Empty;
+    private string rawSuggestedModels = string.Empty;
+    private string suggestedModelsText {
+        get => rawSuggestedModels;
+        set {
+            rawSuggestedModels = value;
+            if (!SelectedProviderIsSourceManaged) {
+                providerModel.SuggestedModels = ParseLines(value).ToList();
+            }
+        }
+    }
     private int providerEditorTabIndex {
         get => ProviderEditorSections.IndexOf(session.State.Section);
         set => session.SelectSection(ProviderEditorSections.At(value).Section);
     }
     private bool isLoading => session.CatalogLoadState == ProviderProfilesLoadState.Loading;
-    private bool isBusy;
+    private ProviderEditorOperations operations = default!;
+    private bool isBusy => operations.IsBusy;
     private bool sharedConnectionsOpen {
         get => session.State.SharedConnectionsOpen;
         set => session.SetSharedConnectionsOpen(value);
@@ -85,10 +87,15 @@ public partial class AgentProviderProfilesPanel : IDisposable {
 
     protected override async Task OnInitializedAsync() {
         session = new(Reads);
+        operations = new(session, Commands);
         await LoadAsync();
     }
 
     private async Task LoadAsync() {
+        if (operations.HasPendingReconciliation) {
+            await RetryReconciliationAsync();
+            return;
+        }
         var applied = await session.RefreshAsync();
         if (session.CanEdit) {
             RefreshProviderTreeExpansionDefaults();
@@ -96,14 +103,6 @@ public partial class AgentProviderProfilesPanel : IDisposable {
                 SyncProviderEditorText();
             }
         }
-    }
-
-    private async Task<bool> RefreshCatalogAsync() {
-        if (!await session.RefreshCatalogAsync()) {
-            return false;
-        }
-        RefreshProviderTreeExpansionDefaults();
-        return true;
     }
 
     private Task HandleProviderTreeSelectAsync(string nodeId)
@@ -136,120 +135,59 @@ public partial class AgentProviderProfilesPanel : IDisposable {
         return true;
     }
 
-    private Task RefreshProvidersAfterSharedChangeAsync() => LoadAsync();
+    private long sharingRevision;
 
-    private async Task SaveProviderAsync()
-    {
-        if (!session.CanEdit || isBusy) {
-            return;
+    private async Task RefreshProvidersAfterSharedChangeAsync(ProviderManagement.SharedProviderChange change) {
+        var selectedId = session.State.ProviderId;
+        var replaced = await session.ReconcileSharedAsync(change);
+        if (replaced) {
+            SyncProviderEditorText();
         }
-        var version = session.SelectionVersion;
-        isBusy = true;
-        try
-        {
-            providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();
-            if (string.IsNullOrWhiteSpace(providerModel.DefaultModel) ||
-                (providerModel.SuggestedModels.Count > 0 &&
-                 !providerModel.SuggestedModels.Contains(providerModel.DefaultModel.Trim(), StringComparer.OrdinalIgnoreCase))) {
-                throw new ProviderProfileValidationException("Choose a default model from this provider's model catalog before saving.");
-            }
-            providerModel.Tags = providerTagValues.ToList();
-            var providerId = await ProviderRuntimeAdministrationService.SaveProviderAsync(providerModel);
-            if (!session.IsCurrentSelection(version) || !await RefreshCatalogAsync()
-                || !session.IsCurrentSelection(version)) {
-                return;
-            }
-            if (!await EditProviderAsync(providerId)) {
-                return;
-            }
-            NotificationService.Success("Provider saved", "Provider profile saved.");
+        if (selectedId.HasValue && session.State.ProviderId == selectedId &&
+            change.AffectedProviderProfileIds.Contains(selectedId.Value) &&
+            change.Kind is not (ProviderManagement.SharedProviderChangeKind.Publication or
+                ProviderManagement.SharedProviderChangeKind.ImportedSettings or
+                ProviderManagement.SharedProviderChangeKind.ImportRetirement)) {
+            sharingRevision++;
         }
-        catch (Exception exception) when (session.IsCurrentSelection(version))
-        {
-            NotificationService.Error("Provider save failed", exception.Message);
-        }
-        catch (Exception) when (!session.IsCurrentSelection(version)) {
-        }
-        finally
-        {
-            isBusy = false;
-        }
+        RefreshProviderTreeExpansionDefaults();
     }
 
-    private async Task TestProviderAsync(Guid providerId)
-    {
-        if (!session.CanEdit || isBusy) {
-            return;
-        }
-        var version = session.SelectionVersion;
-        isBusy = true;
-        try
-        {
-            var result = await ProviderRuntimeAdministrationService.TestProviderAsync(providerId);
-            if (!session.IsCurrentSelection(version) || !await RefreshCatalogAsync()
-                || !session.IsCurrentSelection(version)) {
-                return;
-            }
-            if (!await EditProviderAsync(providerId)) {
-                return;
-            }
-            if (result.Success)
-            {
-                NotificationService.Success("Provider health check passed", result.Summary);
-            }
-            else
-            {
-                NotificationService.Warning("Provider health check failed", result.Summary);
-            }
-        }
-        catch (Exception exception) when (session.IsCurrentSelection(version))
-        {
-            NotificationService.Error("Provider health check failed", exception.Message);
-        }
-        catch (Exception) when (!session.IsCurrentSelection(version)) {
-        }
-        finally
-        {
-            isBusy = false;
-        }
+    private async Task SaveProviderAsync() {
+        providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();
+        providerModel.Tags = providerTagValues.ToList();
+        PublishFeedback(await operations.SaveAsync());
+        RefreshProviderTreeExpansionDefaults();
     }
 
-    private async Task DeleteProviderAsync(Guid providerId)
-    {
-        if (!session.CanEdit || isBusy) {
+    private async Task TestProviderAsync(Guid providerId) {
+        PublishFeedback(await operations.CheckHealthAsync());
+    }
+
+    private async Task DeleteProviderAsync(Guid providerId) {
+        PublishFeedback(await operations.DeleteAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private async Task RetryReconciliationAsync() {
+        PublishFeedback(await operations.RetryReconciliationAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private void PublishFeedback(ProviderEditorFeedback? feedback) {
+        if (feedback is null) {
             return;
         }
-        var version = session.SelectionVersion;
-        isBusy = true;
-        try
-        {
-            await ProviderRuntimeAdministrationService.DeleteProviderAsync(providerId);
-            if (!session.IsCurrentSelection(version) || !await RefreshCatalogAsync()
-                || !session.IsCurrentSelection(version)) {
-                return;
-            }
-            if (providers.Count > 0)
-            {
-                if (!await EditProviderAsync(providers[0].Id)) {
-                    return;
-                }
-            }
-            else
-            {
-                await ResetProviderAsync();
-            }
-
-            NotificationService.Success("Provider deleted", "Provider profile deleted.");
-        }
-        catch (Exception exception) when (session.IsCurrentSelection(version))
-        {
-            NotificationService.Error("Provider delete failed", exception.Message);
-        }
-        catch (Exception) when (!session.IsCurrentSelection(version)) {
-        }
-        finally
-        {
-            isBusy = false;
+        switch (feedback.Kind) {
+            case ProviderFeedbackKind.Success:
+                NotificationService.Success(feedback.Title, feedback.Message);
+                break;
+            case ProviderFeedbackKind.Warning:
+                NotificationService.Warning(feedback.Title, feedback.Message);
+                break;
+            case ProviderFeedbackKind.Error:
+                NotificationService.Error(feedback.Title, feedback.Message);
+                break;
         }
     }
 
@@ -282,56 +220,11 @@ public partial class AgentProviderProfilesPanel : IDisposable {
     }
 
     private async Task RefreshProviderModelPricesAsync() {
-        if (!session.CanEdit || isBusy || SelectedProviderIsSourceManaged) {
-            return;
-        }
-        var version = session.SelectionVersion;
-        isBusy = true;
-        try {
-            var administrationModel = new ProviderManagement.ProviderProfileEditorModel {
-                Id = providerModel.Id,
-                Name = providerModel.Name,
-                ConnectorPluginKey = ProviderMetadata.ResolveConnectorPluginKey(providerModel, null),
-                ApiKeySecretId = ProviderMetadata.ResolveSecretRecordId(providerModel),
-                Configuration = ConnectorConfigState.FromJson(providerModel.ConfigurationJson),
-                IsPrivateProvider = providerModel.IsPrivateProvider,
-                ModelPrices = CloneModelPrices(providerModel.ModelPrices)
-            };
-            administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.BaseUrl, providerModel.BaseUrl);
-            administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.DefaultModel, providerModel.DefaultModel);
-            var result = await ProviderAdministrationService.RefreshProviderModelPricesAsync(administrationModel);
-            if (!session.IsCurrentSelection(version)) {
-                return;
-            }
-            if (!result.IsSuccess)
-            {
-                NotificationService.Warning(
-                    "Provider pricing was not loaded",
-                    string.Join(" ", result.Errors.Select(error => error.Message)));
-                return;
-            }
-
-            providerModel.ModelPrices = result.Value!.ModelPrices;
-            providerModel.SuggestedModels = result.Value.Models.ToList();
+        var feedback = await operations.DiscoverModelsAsync();
+        if (feedback?.Kind == ProviderFeedbackKind.Success) {
             SyncProviderEditorText();
-            if (!providerModel.SuggestedModels.Contains(providerModel.DefaultModel, StringComparer.OrdinalIgnoreCase)) {
-                providerModel.DefaultModel = string.Empty;
-                NotificationService.Warning("Provider models loaded",
-                    $"{result.Value.Message} Select a default model from the loaded catalog before saving.");
-            } else {
-                NotifyPricingRefresh(result.Value);
-            }
         }
-        catch (Exception exception) when (session.IsCurrentSelection(version))
-        {
-            NotificationService.Error("Provider pricing load failed", exception.Message);
-        }
-        catch (Exception) when (!session.IsCurrentSelection(version)) {
-        }
-        finally
-        {
-            isBusy = false;
-        }
+        PublishFeedback(feedback);
     }
 
     private Task HandleProviderTagsChangedAsync(IReadOnlyList<string> value)
@@ -409,37 +302,6 @@ public partial class AgentProviderProfilesPanel : IDisposable {
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
-
-    private static List<ProviderModelTokenPriceEditorModel> CloneModelPrices(
-        IEnumerable<ProviderModelTokenPriceEditorModel> prices)
-    {
-        return prices
-            .Select(price => new ProviderModelTokenPriceEditorModel
-            {
-                Model = price.Model,
-                InputPerMillionTokensUsd = price.InputPerMillionTokensUsd,
-                CachedInputPerMillionTokensUsd = price.CachedInputPerMillionTokensUsd,
-                OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd,
-                CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd,
-                LongContextThresholdTokens = price.LongContextThresholdTokens,
-                LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd,
-                LongContextCachedInputPerMillionTokensUsd = price.LongContextCachedInputPerMillionTokensUsd,
-                LongContextCacheWritePerMillionTokensUsd = price.LongContextCacheWritePerMillionTokensUsd,
-                LongContextOutputPerMillionTokensUsd = price.LongContextOutputPerMillionTokensUsd
-            })
-            .ToList();
-    }
-
-    private void NotifyPricingRefresh(ProviderPricingRefreshResult result)
-    {
-        if (result.ExplicitPriceCount > 0)
-        {
-            NotificationService.Success("Provider pricing loaded", result.Message);
-            return;
-        }
-
-        NotificationService.Info("Provider models loaded", result.Message);
     }
 
 }

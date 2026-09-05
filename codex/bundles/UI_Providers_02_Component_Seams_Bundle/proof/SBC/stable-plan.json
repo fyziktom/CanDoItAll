@@ -1,0 +1,12 @@
+{
+  "trigger": "Serialized editor concurrency metadata, scoped command composition and canonical/shared persistence outcome contracts",
+  "filter": "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+  "expectedDiscovery": {
+    "Unit": 6869,
+    "Components": 1295,
+    "Integration": 1341,
+    "Memory": 202
+  },
+  "expectedExecution": 9746,
+  "caseInventoryLocal": ".mcp-state/p02-stable-expected.json"
+}

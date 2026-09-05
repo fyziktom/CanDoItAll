@@ -1,0 +1,18 @@
+Run label: p02-stable-product-build.log
+Invariant: P02-CLOSURE
+Working directory: repo://
+Command: dotnet build CanDoItAll.slnx --configuration Release --no-restore /m:1
+Exit code: 0
+Captured final build summary (excerpt; full captured output SHA-256 746fcde3845767a7f97ac55629f41aabb4538d1b6580cb8da98f989ede4d12e8):
+  CanDoItAll.SharedProviders.TestUpstream -> C:\repositories\CanDoItAll\tests\Support\CanDoItAll.SharedProviders.TestUpstream\bin\Release\net10.0\CanDoItAll.SharedProviders.TestUpstream.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\tools\App\CanDoItAll.Manager\bin\Release\net10.0\CanDoItAll.Manager.dll
+  CanDoItAll.OpenAiContextProbe -> C:\repositories\CanDoItAll\tools\Diagnostics\CanDoItAll.OpenAiContextProbe\bin\Release\net10.0\CanDoItAll.OpenAiContextProbe.dll
+  CanDoItAll.ScenarioSeeder -> C:\repositories\CanDoItAll\tools\Seeding\CanDoItAll.ScenarioSeeder\bin\Release\net10.0\CanDoItAll.ScenarioSeeder.dll
+  CanDoItAll.SharedProviders.E2E -> C:\repositories\CanDoItAll\tools\SharedProviders\CanDoItAll.SharedProviders.E2E\bin\Release\net10.0\CanDoItAll.SharedProviders.E2E.dll
+  CanDoItAll.RpiValidationArtifacts -> C:\repositories\CanDoItAll\tools\Validation\CanDoItAll.RpiValidationArtifacts\bin\Release\net10.0\CanDoItAll.RpiValidationArtifacts.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:23.33

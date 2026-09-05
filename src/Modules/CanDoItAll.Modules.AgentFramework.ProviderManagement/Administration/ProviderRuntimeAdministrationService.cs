@@ -55,10 +55,13 @@ internal sealed class ProviderRuntimeAdministrationService(
                 provider,
                 cancellationToken);
         }
-        catch (Exception exception)
-            when (exception is not OperationCanceledException &&
-                IsSourceManagedProvider(provider))
-        {
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
+        catch (Exception exception) {
+            if (!IsSourceManagedProvider(provider)) {
+                throw new ProviderHealthDiagnosticException(exception);
+            }
             result = new ProviderHealthResult(
                 false,
                 ProviderFailureDisclosurePolicy.SelectMessage(
@@ -81,7 +84,9 @@ internal sealed class ProviderRuntimeAdministrationService(
             currentProvider => providerProfileService.ApplyHealthResult(
                 currentProvider,
                 result,
-                checkedAtUtc),
+                checkedAtUtc) with {
+                    HealthStatus = result.Success ? SharedProviderPublicHealthMapper.HealthyStatus : SharedProviderPublicHealthMapper.UnhealthyStatus
+                },
             cancellationToken);
         return result;
     }
@@ -122,6 +127,11 @@ internal sealed class ProviderRuntimeAdministrationService(
         var provider = await GetRequiredRuntimeProviderAsync(
             providerId,
             cancellationToken);
+        if (IsSourceManagedProvider(provider)) {
+            throw new ProviderProfileValidationException(
+                "Source-managed model maintenance is not supported. Manage remote models at their source.");
+        }
+
         EnsureProviderAvailable(provider);
 
         var result = await providerDiagnosticsService.CreateOrUpdateProviderModelAsync(
@@ -143,7 +153,7 @@ internal sealed class ProviderRuntimeAdministrationService(
         Guid providerId,
         CancellationToken cancellationToken)
         => await providerSource.GetProviderAsync(providerId, cancellationToken)
-            ?? throw new InvalidOperationException("Provider profile was not found.");
+            ?? throw new KeyNotFoundException("Provider profile was not found.");
 
     private static bool IsSourceManagedProvider(RuntimeProviderProfile provider)
         => ProviderFailureDisclosurePolicy.RequiresSanitization(provider);

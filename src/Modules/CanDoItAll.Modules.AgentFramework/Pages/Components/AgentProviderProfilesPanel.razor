@@ -66,6 +66,21 @@
     </DetailHeader>
 
     <DetailContent>
+        @if (operations.HasPendingReconciliation) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-reconciliation-pending">
+                The provider change is saved. Reconcile its current state before another write.
+                <Button Text="Reconcile saved change" Icon="refresh" Disabled="@isBusy"
+                        Click="RetryReconciliationAsync" data-testid="providers-reconcile" />
+            </Alert>
+        }
+        @if (operations.IsWriteUnconfirmed) {
+            <Alert AlertStyle="AlertStyle.Danger" data-testid="providers-write-unconfirmed">
+                The write outcome is unconfirmed. Verify the provider catalog before another write; Save will not replay it.
+            </Alert>
+        }
+        @if (session.MetadataWarning is { } metadataWarning) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-metadata-warning">@metadataWarning</Alert>
+        }
         @if (session.Error is { } error) {
             <Stack GapScale="LayoutGap.Medium" data-testid="providers-load-failed">
                 <Alert AlertStyle="AlertStyle.Danger">@error</Alert>
@@ -96,7 +111,7 @@
                                     case ProviderEditorSection.Connection:
 
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
-                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@operations.WritesBlocked"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
                                                        Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
                                                        Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
@@ -192,7 +207,7 @@
                                     case ProviderEditorSection.Prices:
 
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
-                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@operations.WritesBlocked"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
                                                        Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
                                                        Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
@@ -214,7 +229,7 @@
                                     case ProviderEditorSection.Runtime:
 
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
-                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@operations.WritesBlocked"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
                                                        Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
                                                        Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
@@ -275,7 +290,7 @@
                                     case ProviderEditorSection.Thinking:
 
                             <ProviderProfileEditorForm Context="providerEditContext" CanManage="@(!SelectedProviderIsSourceManaged)"
-                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@operations.WritesBlocked"
                                                        Save="SaveProviderAsync" Clear="ResetProviderAsync"
                                                        Health="@(() => TestProviderAsync(providerModel.Id!.Value))"
                                                        Delete="@(() => DeleteProviderAsync(providerModel.Id!.Value))">
@@ -286,7 +301,7 @@
                                         break;
                                     case ProviderEditorSection.Sharing:
 
-                            <SharedProviderManagementPanel ProviderProfileId="providerModel.Id"
+                            <SharedProviderManagementPanel Revision="sharingRevision" ProviderProfileId="providerModel.Id"
                                                            ProvidersChanged="RefreshProvidersAfterSharedChangeAsync" />
 
                                         break;

@@ -68,7 +68,9 @@ public sealed class SharedProviderSourceService
             clock.GetUtcNow());
         dbContext.Add(source);
         await dbContext.SaveChangesAsync(cancellationToken);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) {
+            Change = new(SharedProviderChangeKind.SourceConfiguration, [])
+        };
     }
 
     public async Task<SharedProviderSourceWriteResult> UpdateAsync(
@@ -100,8 +102,10 @@ public sealed class SharedProviderSourceService
             source,
             cancellationToken);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceConfiguration, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) { Change = change };
     }
 
     public async Task<SharedProviderSourceWriteResult> SetEnabledAsync(
@@ -130,8 +134,10 @@ public sealed class SharedProviderSourceService
             sourceId,
             cancellationToken);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceEnablement, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) { Change = change };
     }
 
     public async Task<SharedProviderSourceWriteResult> ResetTrustedIdentityAsync(
@@ -153,8 +159,10 @@ public sealed class SharedProviderSourceService
             sourceId,
             cancellationToken);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceConfiguration, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) { Change = change };
     }
 
     public async Task<SharedProviderSourceDeleteResult> DeleteAsync(
@@ -179,10 +187,12 @@ public sealed class SharedProviderSourceService
 
         dbContext.Remove(source);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        return new SharedProviderSourceDeleteResult(sourceId);
+        return new SharedProviderSourceDeleteResult(sourceId) {
+            Change = new(SharedProviderChangeKind.SourceDeleted, [])
+        };
     }
 
-    public async Task<SharedProviderCatalogIdentityAcceptance> RecordSuccessfulCatalogTestAsync(
+    public async Task<SharedProviderSourceTestReceipt> RecordSuccessfulCatalogTestAsync(
         Guid sourceId,
         Guid expectedConcurrencyToken,
         SharedProviderSourceInstanceId remoteInstanceId,
@@ -206,7 +216,7 @@ public sealed class SharedProviderSourceService
             remoteInstanceId,
             entityTag,
             now);
-        Guid[] affectedProviderIds = [];
+        var affectedProviderIds = imports.Select(import => import.ProviderProfileId).Distinct().ToArray();
         if (acceptance == SharedProviderCatalogIdentityAcceptance.IdentityMismatch)
         {
             foreach (var import in imports)
@@ -224,11 +234,13 @@ public sealed class SharedProviderSourceService
         }
 
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return acceptance;
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceAvailability, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new(acceptance, change);
     }
 
-    public Task RecordFailureAsync(
+    public Task<SharedProviderChange> RecordFailureAsync(
         Guid sourceId,
         SharedProviderSourceFailure failure,
         CancellationToken cancellationToken = default)
@@ -238,7 +250,7 @@ public sealed class SharedProviderSourceService
             failure,
             cancellationToken);
 
-    internal Task RecordFetchFailureAsync(
+    internal Task<SharedProviderChange> RecordFetchFailureAsync(
         Guid sourceId,
         Guid expectedConcurrencyToken,
         SharedProviderSourceFailure failure,
@@ -252,7 +264,7 @@ public sealed class SharedProviderSourceService
             cancellationToken);
     }
 
-    private async Task RecordFailureCoreAsync(
+    private async Task<SharedProviderChange> RecordFailureCoreAsync(
         Guid sourceId,
         Guid? expectedConcurrencyToken,
         SharedProviderSourceFailure failure,
@@ -310,9 +322,9 @@ public sealed class SharedProviderSourceService
         }
 
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(
-            imports.Select(import => import.ProviderProfileId),
-            CancellationToken.None);
+        return await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceAvailability, imports.Select(import => import.ProviderProfileId),
+                remoteOwnedFieldsChanged: false), providerProfileCommitObservers);
     }
 
     private Uri NormalizeBaseUri(SharedProviderSourceWriteRequest request)
@@ -434,19 +446,6 @@ public sealed class SharedProviderSourceService
                 nameof(SharedProviderSource),
                 sourceId,
                 exception);
-        }
-    }
-
-    private async Task NotifySavedAsync(
-        IEnumerable<Guid> providerIds,
-        CancellationToken cancellationToken)
-    {
-        foreach (var providerId in providerIds.Distinct().Order())
-        {
-            foreach (var observer in providerProfileCommitObservers)
-            {
-                await observer.ProviderSavedAsync(providerId, cancellationToken);
-            }
         }
     }
 
