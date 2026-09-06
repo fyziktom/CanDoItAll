@@ -1,0 +1,1382 @@
+{
+  "meaning": "SDK-reported update-apply duration, not browser-visible latency or an isolated build benchmark. Zero milliseconds is the SDK's resolution/reporting, not zero user latency.",
+  "samples": [
+    {
+      "trialId": "pre-razor-heading-1",
+      "host": "pre",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 13644.0815,
+      "sdkApplyMs": 4295,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 4295,
+          "sequence": 39954,
+          "timestampUtc": "2026-09-06T00:36:49.0536733+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-heading-2",
+      "host": "pre",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 10336.2748,
+      "sdkApplyMs": 2671,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 2671,
+          "sequence": 39968,
+          "timestampUtc": "2026-09-06T00:37:28.353542+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-heading-3",
+      "host": "pre",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11059.844,
+      "sdkApplyMs": 2428,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 2428,
+          "sequence": 39982,
+          "timestampUtc": "2026-09-06T00:38:14.5107859+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-empty-1",
+      "host": "pre",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11064.3276,
+      "sdkApplyMs": 1881,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1881,
+          "sequence": 39996,
+          "timestampUtc": "2026-09-06T00:40:36.7842967+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-empty-2",
+      "host": "pre",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 10361.3579,
+      "sdkApplyMs": 1894,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1894,
+          "sequence": 40010,
+          "timestampUtc": "2026-09-06T00:41:12.0217241+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-empty-3",
+      "host": "pre",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 9739.6989,
+      "sdkApplyMs": 1807,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1807,
+          "sequence": 40024,
+          "timestampUtc": "2026-09-06T00:42:01.0438669+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-action-1",
+      "host": "pre",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 10852.9997,
+      "sdkApplyMs": 1874,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1874,
+          "sequence": 40038,
+          "timestampUtc": "2026-09-06T00:42:36.8427002+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-action-2",
+      "host": "pre",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11973.0349,
+      "sdkApplyMs": 1935,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1935,
+          "sequence": 40052,
+          "timestampUtc": "2026-09-06T00:43:13.6053403+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-razor-action-3",
+      "host": "pre",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 9767.9367,
+      "sdkApplyMs": 1940,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1940,
+          "sequence": 40066,
+          "timestampUtc": "2026-09-06T00:43:50.179156+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-summary-1",
+      "host": "pre",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 10647.2564,
+      "sdkApplyMs": 1802,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1802,
+          "sequence": 40080,
+          "timestampUtc": "2026-09-06T00:44:38.021426+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-summary-2",
+      "host": "pre",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 8945.8456,
+      "sdkApplyMs": 1831,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1831,
+          "sequence": 40096,
+          "timestampUtc": "2026-09-06T00:45:15.5213543+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-summary-3",
+      "host": "pre",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 9580.5607,
+      "sdkApplyMs": 1536,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1536,
+          "sequence": 40110,
+          "timestampUtc": "2026-09-06T00:45:50.0611134+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-metadata-1",
+      "host": "pre",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 11207.764,
+      "sdkApplyMs": 1958,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1958,
+          "sequence": 40124,
+          "timestampUtc": "2026-09-06T00:46:24.8506594+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-metadata-2",
+      "host": "pre",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 11156.1428,
+      "sdkApplyMs": 1758,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1758,
+          "sequence": 40138,
+          "timestampUtc": "2026-09-06T00:47:20.7427788+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-metadata-3",
+      "host": "pre",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 9337.0413,
+      "sdkApplyMs": 1712,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1712,
+          "sequence": 40152,
+          "timestampUtc": "2026-09-06T00:47:57.5722041+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-team-title-1",
+      "host": "pre",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 32227.4515,
+      "sdkApplyMs": 2845,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 2845,
+          "sequence": 40166,
+          "timestampUtc": "2026-09-06T00:48:34.8401606+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-team-title-2",
+      "host": "pre",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 10298.1033,
+      "sdkApplyMs": 1951,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1951,
+          "sequence": 40180,
+          "timestampUtc": "2026-09-06T00:49:36.0954147+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-csharp-team-title-3",
+      "host": "pre",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 10024.4851,
+      "sdkApplyMs": 1889,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1889,
+          "sequence": 40194,
+          "timestampUtc": "2026-09-06T00:50:12.4394445+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-toolbar-v2-1",
+      "host": "pre",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 14878.6782,
+      "sdkApplyMs": 6122,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 6122,
+          "sequence": 40210,
+          "timestampUtc": "2026-09-06T00:57:06.8344963+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-toolbar-v2-2",
+      "host": "pre",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 14437.5134,
+      "sdkApplyMs": 5777,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 5777,
+          "sequence": 40216,
+          "timestampUtc": "2026-09-06T00:58:30.2001501+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-toolbar-v2-3",
+      "host": "pre",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 39059.3694,
+      "sdkApplyMs": 5848,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 5848,
+          "sequence": 40222,
+          "timestampUtc": "2026-09-06T00:59:23.4885786+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-spacing-v2-1",
+      "host": "pre",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 18206.7987,
+      "sdkApplyMs": 6092,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 6092,
+          "sequence": 40228,
+          "timestampUtc": "2026-09-06T01:00:45.9109591+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-spacing-v2-2",
+      "host": "pre",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 13527.2797,
+      "sdkApplyMs": 5952,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 5952,
+          "sequence": 40234,
+          "timestampUtc": "2026-09-06T01:01:42.4762097+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-spacing-v2-3",
+      "host": "pre",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 14560.6904,
+      "sdkApplyMs": 5677,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 5677,
+          "sequence": 40240,
+          "timestampUtc": "2026-09-06T01:02:52.9440852+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-tailwind-v2-1",
+      "host": "pre",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 10394.8335,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 40250,
+          "timestampUtc": "2026-09-06T01:03:43.757438+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-tailwind-v2-2",
+      "host": "pre",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 8157.1816,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 40267,
+          "timestampUtc": "2026-09-06T01:04:26.7847242+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "pre-css-tailwind-v2-3",
+      "host": "pre",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 8930.8073,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 40283,
+          "timestampUtc": "2026-09-06T01:05:31.3740514+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-heading-1",
+      "host": "post",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 15115.0866,
+      "sdkApplyMs": 4087,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 4087,
+          "sequence": 44141,
+          "timestampUtc": "2026-09-06T04:27:19.0920259+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-heading-2",
+      "host": "post",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 13020.8459,
+      "sdkApplyMs": 2584,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 2584,
+          "sequence": 44155,
+          "timestampUtc": "2026-09-06T04:28:05.8918635+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-heading-3",
+      "host": "post",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 12770.5086,
+      "sdkApplyMs": 2285,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 2285,
+          "sequence": 44169,
+          "timestampUtc": "2026-09-06T04:29:07.5537639+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-empty-1",
+      "host": "post",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11620.6173,
+      "sdkApplyMs": 1720,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1720,
+          "sequence": 44183,
+          "timestampUtc": "2026-09-06T04:29:51.2199558+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-empty-2",
+      "host": "post",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11333.0108,
+      "sdkApplyMs": 1859,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1859,
+          "sequence": 44197,
+          "timestampUtc": "2026-09-06T04:30:33.216271+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-empty-3",
+      "host": "post",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 12383.8114,
+      "sdkApplyMs": 1783,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1783,
+          "sequence": 44211,
+          "timestampUtc": "2026-09-06T04:31:14.9764304+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-action-1",
+      "host": "post",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 12408.7239,
+      "sdkApplyMs": 1894,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1894,
+          "sequence": 44225,
+          "timestampUtc": "2026-09-06T04:32:16.3658759+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-action-2",
+      "host": "post",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 12045.0706,
+      "sdkApplyMs": 1868,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1868,
+          "sequence": 44239,
+          "timestampUtc": "2026-09-06T04:33:01.3014758+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-razor-action-3",
+      "host": "post",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11782.3032,
+      "sdkApplyMs": 2026,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 2026,
+          "sequence": 44253,
+          "timestampUtc": "2026-09-06T04:33:44.6196346+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-summary-1",
+      "host": "post",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 12052.1376,
+      "sdkApplyMs": 1778,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1778,
+          "sequence": 44267,
+          "timestampUtc": "2026-09-06T04:34:28.9518816+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-summary-2",
+      "host": "post",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 11507.9064,
+      "sdkApplyMs": 1718,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1718,
+          "sequence": 44281,
+          "timestampUtc": "2026-09-06T04:35:12.0206332+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-summary-3",
+      "host": "post",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 12142.8214,
+      "sdkApplyMs": 1739,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1739,
+          "sequence": 44295,
+          "timestampUtc": "2026-09-06T04:35:54.8897008+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-metadata-1",
+      "host": "post",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 13225.5514,
+      "sdkApplyMs": 1699,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1699,
+          "sequence": 44309,
+          "timestampUtc": "2026-09-06T04:36:53.7687557+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-metadata-2",
+      "host": "post",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 12504.7958,
+      "sdkApplyMs": 1651,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1651,
+          "sequence": 44323,
+          "timestampUtc": "2026-09-06T04:37:38.1781196+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-metadata-3",
+      "host": "post",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 11248.1856,
+      "sdkApplyMs": 1641,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1641,
+          "sequence": 44337,
+          "timestampUtc": "2026-09-06T04:38:21.7842558+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-team-title-1",
+      "host": "post",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 11484.939,
+      "sdkApplyMs": 1704,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1704,
+          "sequence": 44351,
+          "timestampUtc": "2026-09-06T04:39:04.5021906+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-team-title-2",
+      "host": "post",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 11364.9817,
+      "sdkApplyMs": 1680,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1680,
+          "sequence": 44365,
+          "timestampUtc": "2026-09-06T04:39:47.6579108+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-csharp-team-title-3",
+      "host": "post",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 12891.3993,
+      "sdkApplyMs": 1655,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 1655,
+          "sequence": 44379,
+          "timestampUtc": "2026-09-06T04:40:31.1798342+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-toolbar-v2-1",
+      "host": "post",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 18328.2585,
+      "sdkApplyMs": 6919,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 6919,
+          "sequence": 44389,
+          "timestampUtc": "2026-09-06T04:42:19.3332297+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-toolbar-v2-2",
+      "host": "post",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 16345.9782,
+      "sdkApplyMs": 5874,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 5874,
+          "sequence": 44395,
+          "timestampUtc": "2026-09-06T04:43:27.0072164+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-toolbar-v2-3",
+      "host": "post",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 16380.9062,
+      "sdkApplyMs": 6392,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 6392,
+          "sequence": 44401,
+          "timestampUtc": "2026-09-06T04:44:30.3705881+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-spacing-v2-1",
+      "host": "post",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 15267.9896,
+      "sdkApplyMs": 5693,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 5693,
+          "sequence": 44407,
+          "timestampUtc": "2026-09-06T04:45:31.3889344+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-spacing-v2-2",
+      "host": "post",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 31288.0199,
+      "sdkApplyMs": 6453,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 6453,
+          "sequence": 44413,
+          "timestampUtc": "2026-09-06T04:46:32.1826273+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-spacing-v2-3",
+      "host": "post",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 15342.718,
+      "sdkApplyMs": 5981,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 5981,
+          "sequence": 44419,
+          "timestampUtc": "2026-09-06T04:47:49.1847197+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-tailwind-v2-1",
+      "host": "post",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 10734.627,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 44430,
+          "timestampUtc": "2026-09-06T04:48:46.7794339+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-tailwind-v2-2",
+      "host": "post",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 12601.2977,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 44446,
+          "timestampUtc": "2026-09-06T04:49:39.3137243+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "post-css-tailwind-v2-3",
+      "host": "post",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 12783.2274,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 44462,
+          "timestampUtc": "2026-09-06T04:50:34.3785189+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-heading-1",
+      "host": "sandbox",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 13587.7494,
+      "sdkApplyMs": 2392,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 2392,
+          "sequence": 888,
+          "timestampUtc": "2026-09-06T05:01:36.7650254+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-heading-2",
+      "host": "sandbox",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 16993.0749,
+      "sdkApplyMs": 406,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 406,
+          "sequence": 900,
+          "timestampUtc": "2026-09-06T05:02:36.6946094+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-heading-3",
+      "host": "sandbox",
+      "editId": "razor-heading",
+      "category": "Razor",
+      "observedEditToVisibleMs": 14644.4093,
+      "sdkApplyMs": 162,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 162,
+          "sequence": 911,
+          "timestampUtc": "2026-09-06T05:03:28.3721306+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-empty-1",
+      "host": "sandbox",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 15878.0482,
+      "sdkApplyMs": 170,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 170,
+          "sequence": 925,
+          "timestampUtc": "2026-09-06T05:04:16.8596522+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-empty-2",
+      "host": "sandbox",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11303.1433,
+      "sdkApplyMs": 159,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 159,
+          "sequence": 939,
+          "timestampUtc": "2026-09-06T05:05:03.5713098+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-empty-3",
+      "host": "sandbox",
+      "editId": "razor-empty",
+      "category": "Razor",
+      "observedEditToVisibleMs": 12416.7028,
+      "sdkApplyMs": 151,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 151,
+          "sequence": 953,
+          "timestampUtc": "2026-09-06T05:05:47.215478+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-action-1",
+      "host": "sandbox",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 18470.8302,
+      "sdkApplyMs": 169,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 169,
+          "sequence": 967,
+          "timestampUtc": "2026-09-06T05:06:47.5054585+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-action-2",
+      "host": "sandbox",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11058.5549,
+      "sdkApplyMs": 180,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 180,
+          "sequence": 981,
+          "timestampUtc": "2026-09-06T05:07:37.6118767+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-razor-action-3",
+      "host": "sandbox",
+      "editId": "razor-action",
+      "category": "Razor",
+      "observedEditToVisibleMs": 11408.2631,
+      "sdkApplyMs": 165,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 165,
+          "sequence": 995,
+          "timestampUtc": "2026-09-06T05:08:23.7168507+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-summary-1",
+      "host": "sandbox",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 12370.8029,
+      "sdkApplyMs": 129,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 129,
+          "sequence": 1009,
+          "timestampUtc": "2026-09-06T05:09:06.1949969+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-summary-2",
+      "host": "sandbox",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 17323.7237,
+      "sdkApplyMs": 31,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 31,
+          "sequence": 1023,
+          "timestampUtc": "2026-09-06T05:09:49.8366079+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-summary-3",
+      "host": "sandbox",
+      "editId": "csharp-summary",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 10991.6387,
+      "sdkApplyMs": 35,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 35,
+          "sequence": 1037,
+          "timestampUtc": "2026-09-06T05:10:39.5836336+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-metadata-1",
+      "host": "sandbox",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 32643.4659,
+      "sdkApplyMs": 24,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 24,
+          "sequence": 1051,
+          "timestampUtc": "2026-09-06T05:11:22.5606184+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-metadata-2",
+      "host": "sandbox",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 10754.4637,
+      "sdkApplyMs": 41,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 41,
+          "sequence": 1065,
+          "timestampUtc": "2026-09-06T05:12:30.4360433+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-metadata-3",
+      "host": "sandbox",
+      "editId": "csharp-metadata",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 12267.7554,
+      "sdkApplyMs": 36,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 36,
+          "sequence": 1079,
+          "timestampUtc": "2026-09-06T05:13:15.9146178+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-team-title-1",
+      "host": "sandbox",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 12455.0321,
+      "sdkApplyMs": 63,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 63,
+          "sequence": 1093,
+          "timestampUtc": "2026-09-06T05:14:01.5114597+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-team-title-2",
+      "host": "sandbox",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 11587.2814,
+      "sdkApplyMs": 45,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 45,
+          "sequence": 1107,
+          "timestampUtc": "2026-09-06T05:14:44.7225824+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-csharp-team-title-3",
+      "host": "sandbox",
+      "editId": "csharp-team-title",
+      "category": "CSharp",
+      "observedEditToVisibleMs": 10950.4214,
+      "sdkApplyMs": 38,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "C# and Razor",
+          "milliseconds": 38,
+          "sequence": 1121,
+          "timestampUtc": "2026-09-06T05:15:33.3743301+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-toolbar-v2-1",
+      "host": "sandbox",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 13340.4663,
+      "sdkApplyMs": 960,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 960,
+          "sequence": 1136,
+          "timestampUtc": "2026-09-06T05:16:49.8943285+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-toolbar-v2-2",
+      "host": "sandbox",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 11381.7544,
+      "sdkApplyMs": 557,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 557,
+          "sequence": 1142,
+          "timestampUtc": "2026-09-06T05:17:45.9586175+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-toolbar-v2-3",
+      "host": "sandbox",
+      "editId": "css-toolbar",
+      "category": "CSS",
+      "observedEditToVisibleMs": 11408.971,
+      "sdkApplyMs": 546,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 546,
+          "sequence": 1148,
+          "timestampUtc": "2026-09-06T05:18:38.6753286+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-spacing-v2-1",
+      "host": "sandbox",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 11908.6485,
+      "sdkApplyMs": 544,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 544,
+          "sequence": 1154,
+          "timestampUtc": "2026-09-06T05:19:33.2626061+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-spacing-v2-2",
+      "host": "sandbox",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 11347.8846,
+      "sdkApplyMs": 543,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 543,
+          "sequence": 1160,
+          "timestampUtc": "2026-09-06T05:20:25.9064079+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-spacing-v2-3",
+      "host": "sandbox",
+      "editId": "css-spacing",
+      "category": "CSS",
+      "observedEditToVisibleMs": 12199.9157,
+      "sdkApplyMs": 558,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 558,
+          "sequence": 1166,
+          "timestampUtc": "2026-09-06T05:21:36.0610938+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-tailwind-v2-1",
+      "host": "sandbox",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 11358.1581,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 1177,
+          "timestampUtc": "2026-09-06T05:22:31.3652374+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-tailwind-v2-2",
+      "host": "sandbox",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 11099.7549,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 1193,
+          "timestampUtc": "2026-09-06T05:23:28.5949143+00:00"
+        }
+      ]
+    },
+    {
+      "trialId": "sandbox-css-tailwind-v2-3",
+      "host": "sandbox",
+      "editId": "css-tailwind",
+      "category": "CSS",
+      "observedEditToVisibleMs": 10881.0342,
+      "sdkApplyMs": 0,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "Static asset",
+          "milliseconds": 0,
+          "sequence": 1209,
+          "timestampUtc": "2026-09-06T05:24:25.0146236+00:00"
+        }
+      ]
+    }
+  ]
+}

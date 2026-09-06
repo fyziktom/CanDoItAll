@@ -4,6 +4,8 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using Microsoft.AspNetCore.Mvc;
+using ProviderMutationAttempt = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMutationAttempt;
+using IProviderMutationVerification = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderMutationVerification;
 
 namespace CanDoItAll.Web.Api;
 
@@ -218,6 +220,23 @@ internal static class AgentsApi
 
     private static void MapProviderEndpoints(RouteGroupBuilder agents)
     {
+        agents.MapPost("/providers/mutations/verify", async (
+                ProviderMutationAttempt attempt,
+                HttpContext context,
+                IProviderMutationVerification verification,
+                CancellationToken cancellationToken) => {
+            if (attempt.ProviderId == Guid.Empty || attempt.AttemptId == Guid.Empty || !Enum.IsDefined(attempt.Kind)) {
+                return Results.BadRequest(new { Code = "agents.provider-receipt-invalid", Message = "The mutation receipt is invalid." });
+            }
+            var result = await verification.VerifyAsync(attempt, cancellationToken);
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(new ProviderVerificationApiResponse(result.ProviderId, result.Disposition,
+                result.ConcurrencyToken, false));
+        })
+            .WithName("VerifyAgentProviderMutation")
+            .Produces<ProviderVerificationApiResponse>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+
         agents.MapGet("/providers", async (
                 IProviderRuntimeAdministrationService providerAdministration,
                 CancellationToken cancellationToken) =>

@@ -1,0 +1,16 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Canonical_candidate_verification_distinguishes_committed_and_absent(committed: False)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Canonical_candidate_verification_distinguishes_committed_and_absent(committed: True)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Repeated_controlled_retry_cannot_create_second_provider
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: False, committed: False)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: False, committed: True)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: True, committed: False)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: True, committed: True)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Api_unconfirmed_write_returns_identity_and_non_retry_contract
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Api_unconfirmed_body_is_sanitized
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_create_has_stable_proposed_identity
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Update)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Enablement)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Delete)
+    CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Publication_conflict_explains_permanent_identity

@@ -1,0 +1,150 @@
+@namespace CanDoItAll.AgentFramework.Components
+<ConversationParticipantCard Participant="@participant"
+                             Layout="@ResolveLayout()"
+                             MaxVisibleTags="@MaxVisibleTags"
+                             Class="@Class"
+                             ShellTestId="@ShellTestId"
+                             SelectTestId="@ResolveSelectTestId()"
+                             Selected="@(_ => OnSelect.InvokeAsync())"
+                             DoubleClicked="@(_ => OnDoubleClick.InvokeAsync())"
+                             FavoriteToggled="@(_ => OnFavoriteToggle.InvokeAsync())"
+                             Actions="@Actions" />
+
+@code {
+    [Parameter, EditorRequired]
+    public AgentDefinition Agent { get; set; } = default!;
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public bool CenterContent { get; set; }
+
+    [Parameter]
+    public bool EnterpriseLayout { get; set; }
+
+    [Parameter]
+    public bool ShowStatusRibbon { get; set; }
+
+    [Parameter]
+    public bool ShowKindBadge { get; set; }
+
+    [Parameter]
+    public string KindLabel { get; set; } = "AI agent";
+
+    [Parameter]
+    public bool ShowSummary { get; set; } = true;
+
+    [Parameter]
+    public bool ShowWorkload { get; set; } = true;
+
+    [Parameter]
+    public bool ShowChatHistory { get; set; }
+
+    [Parameter]
+    public bool ShowCapabilityCount { get; set; } = true;
+
+    [Parameter]
+    public bool ShowUpdatedAt { get; set; } = true;
+
+    [Parameter]
+    public bool ShowTags { get; set; } = true;
+
+    [Parameter]
+    public int MaxVisibleTags { get; set; } = 3;
+
+    [Parameter]
+    public bool ShowFavorite { get; set; }
+
+    [Parameter]
+    public bool IsFavorite { get; set; }
+
+    [Parameter]
+    public bool FavoriteDisabled { get; set; }
+
+    [Parameter]
+    public bool ShowDetailsTooltip { get; set; }
+
+    [Parameter]
+    public bool IsPrivateProvider { get; set; }
+
+    [Parameter]
+    public string SelectedLabel { get; set; } = "Current agent";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? ShellTestId { get; set; }
+
+    [Parameter]
+    public string? SelectTestId { get; set; }
+
+    [Parameter]
+    public string FavoriteTestId { get; set; } = "agent-favorite-toggle";
+
+    [Parameter]
+    public EventCallback OnSelect { get; set; }
+
+    [Parameter]
+    public EventCallback OnDoubleClick { get; set; }
+
+    [Parameter]
+    public EventCallback OnFavoriteToggle { get; set; }
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    private ConversationParticipantPresentation participant = default!;
+
+    protected override void OnParametersSet()
+    {
+        participant = AgentParticipantPresentationMapper.MapCard(
+            Agent,
+            new(
+                IsSelected,
+                ShowStatusRibbon,
+                ShowKindBadge,
+                KindLabel,
+                ShowSummary,
+                ShowWorkload,
+                ShowChatHistory,
+                ShowCapabilityCount,
+                ShowUpdatedAt,
+                ShowTags,
+                ShowFavorite,
+                IsFavorite,
+                FavoriteDisabled,
+                FavoriteTestId,
+                ShowDetailsTooltip,
+                IsPrivateProvider,
+                SelectedLabel));
+    }
+
+    private ParticipantCardLayout ResolveLayout()
+    {
+        var layout = ParticipantCardLayout.Standard;
+        if (Compact)
+        {
+            layout |= ParticipantCardLayout.Compact;
+        }
+
+        if (CenterContent)
+        {
+            layout |= ParticipantCardLayout.Centered;
+        }
+
+        if (EnterpriseLayout)
+        {
+            layout |= ParticipantCardLayout.Enterprise;
+        }
+
+        return layout;
+    }
+
+    private string ResolveSelectTestId()
+        => string.IsNullOrWhiteSpace(SelectTestId) ? $"agent-card-{Agent.Id}" : SelectTestId;
+}

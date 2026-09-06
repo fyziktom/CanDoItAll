@@ -1,0 +1,49 @@
+{
+  "snapshotId": "snap-20260906025532-8cba401d",
+  "diagnostics": [
+    {
+      "code": "DI0002",
+      "severity": "Warning",
+      "message": "Service type could not be resolved for AddSingleton.",
+      "source": {
+        "path": "Program.cs",
+        "line": 8,
+        "column": 1
+      }
+    }
+  ],
+  "summary": {
+    "projectCount": 1,
+    "typeCount": 6,
+    "memberCount": 17,
+    "serviceRegistrationCount": 0,
+    "entityCount": 0,
+    "findingCount": 1,
+    "openQuestionCount": 1,
+    "diagnosticCount": 1
+  },
+  "cycles": [],
+  "findings": [
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-uisan-574f8f791475",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.UiSandbox.CatalogRuntimeStatus exposes 9 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-uisandbox-candoitall-53f2f3e655c2"
+      ],
+      "source": {
+        "path": "CatalogWatchState.cs",
+        "line": 29,
+        "column": 1,
+        "endLine": 37,
+        "endColumn": 31
+      }
+    }
+  ],
+  "blocking": false
+}

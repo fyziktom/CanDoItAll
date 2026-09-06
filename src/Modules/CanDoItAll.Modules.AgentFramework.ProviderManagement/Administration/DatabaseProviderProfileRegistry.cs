@@ -106,7 +106,7 @@ internal sealed class DatabaseProviderProfileRegistry(
         }
 
         if (model.ExpectedConcurrencyToken is { } expectedToken &&
-            (current is null || current.ConcurrencyToken != expectedToken)) {
+            (expectedToken == Guid.Empty ? current is not null : current is null || current.ConcurrencyToken != expectedToken)) {
             throw new ProviderProfileConcurrencyException(model.Id ?? Guid.Empty);
         }
 
@@ -238,6 +238,10 @@ internal sealed class DatabaseProviderProfileRegistry(
             capabilityProfile.ModelPrices);
 
         cancellationToken.ThrowIfCancellationRequested();
+        var attempt = ProviderMutationAttempt.Capture(model, entity.Id,
+            current is null ? ProviderMutationKind.Create : ProviderMutationKind.Update) with {
+            ExpectedConcurrencyToken = current?.ConcurrencyToken
+        };
         var committed = false;
         try {
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -261,7 +265,9 @@ internal sealed class DatabaseProviderProfileRegistry(
             SerializableMutationScope.IsConflict(exception)) {
             throw new ProviderProfileConcurrencyException(entity.Id, exception);
         } catch (Exception exception) {
-            throw new ProviderMutationUnconfirmedException(exception);
+            throw new ProviderMutationUnconfirmedException(attempt with {
+                IntendedConcurrencyToken = entity.ConcurrencyToken == Guid.Empty ? null : entity.ConcurrencyToken
+            }, exception);
         }
     }
 
@@ -288,7 +294,8 @@ internal sealed class DatabaseProviderProfileRegistry(
             } catch (DbUpdateConcurrencyException exception) {
                 throw new ProviderProfileConcurrencyException(providerId, exception);
             } catch (Exception exception) {
-                throw new ProviderMutationUnconfirmedException(exception);
+                throw new ProviderMutationUnconfirmedException(
+                    new(Guid.NewGuid(), providerId, ProviderMutationKind.Delete, provider.ConcurrencyToken), exception);
             }
         }
 

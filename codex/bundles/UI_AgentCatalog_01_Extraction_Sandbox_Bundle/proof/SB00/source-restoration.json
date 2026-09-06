@@ -1,0 +1,38 @@
+[
+  {
+    "path": "Tailwind/input.css",
+    "sha256": "b7bbdcc809ffc6c0b95ac5650541be3aec359aa0e088e2c7527d92bdb105934d"
+  },
+  {
+    "path": "Tailwind/package-lock.json",
+    "sha256": "cc8c6fe1f6bd9c513ec582638631e933be55b5cfa56d06cf1f547bcff9ae8688"
+  },
+  {
+    "path": "Tailwind/surfaces/admin.css",
+    "sha256": "9f3822d73cca0baa000077d0c9128c62f391c863819d958fef6bcd14d969d4ea"
+  },
+  {
+    "path": "global.json",
+    "sha256": "b132d105648c7dbe49f2c391fe0b9898027e470ddc7cfd4d7239af5df63401fa"
+  },
+  {
+    "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+    "sha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"
+  },
+  {
+    "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs",
+    "sha256": "c701b8d33a7ab1ac6549177538dbbef55e85d9b91776f8d625f44b1675d84792"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor",
+    "sha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+    "sha256": "acdd0299c2111828185d5422cd20ce9d8721d25349bf57ece45cac0a341d442c"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.css",
+    "sha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+  }
+]

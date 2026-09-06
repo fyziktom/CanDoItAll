@@ -1,0 +1,495 @@
+{
+  "snapshotId": "snap-20260906035002-22fb4e81",
+  "createdUtc": "2026-09-06T03:50:02.8278185+00:00",
+  "request": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+    "scopeProjectNames": [
+      "CanDoItAll.AgentFramework.Components",
+      "CanDoItAll.AgentFramework.UI",
+      "CanDoItAll.AgentFramework.UiSandbox",
+      "CanDoItAll.Modules.AgentFramework",
+      "CanDoItAll.Web"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": true,
+    "includePersistence": false,
+    "includeRisks": true,
+    "includeXmlDocs": true,
+    "includeMermaidExports": true
+  },
+  "hasBlockingErrors": false,
+  "solution": {
+    "name": "CanDoItAll",
+    "path": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+    "projectCount": 5,
+    "documentCount": 341
+  },
+  "projects": [
+    {
+      "projectId": "proj-candoitall-agentframework-components",
+      "name": "CanDoItAll.AgentFramework.Components",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-ui"
+      ],
+      "packageReferences": [
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.CanvasLib",
+        "Microsoft.AspNetCore.Components.Web"
+      ],
+      "documentCount": 15
+    },
+    {
+      "projectId": "proj-candoitall-agentframework-ui",
+      "name": "CanDoItAll.AgentFramework.UI",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [],
+      "packageReferences": [
+        "CanDoItAll.Components.BaseLib",
+        "Microsoft.AspNetCore.Components.Web"
+      ],
+      "documentCount": 8
+    },
+    {
+      "projectId": "proj-candoitall-agentframework-uisandbox",
+      "name": "CanDoItAll.AgentFramework.UiSandbox",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-ui"
+      ],
+      "packageReferences": [],
+      "documentCount": 8
+    },
+    {
+      "projectId": "proj-candoitall-modules-agentframework",
+      "name": "CanDoItAll.Modules.AgentFramework",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-agentframework-components",
+        "proj-candoitall-agentframework-ui"
+      ],
+      "packageReferences": [
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.Charts",
+        "CanDoItAll.Components.OverlayLib",
+        "Microsoft.AspNetCore.Components.Web"
+      ],
+      "documentCount": 197
+    },
+    {
+      "projectId": "proj-candoitall-web",
+      "name": "CanDoItAll.Web",
+      "path": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "projectReferences": [
+        "proj-candoitall-modules-agentframework"
+      ],
+      "packageReferences": [
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.CanvasLib",
+        "CanDoItAll.Components.Charts",
+        "CanDoItAll.Components.Gantt",
+        "CanDoItAll.Components.Mermaid",
+        "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "Microsoft.AspNetCore.OpenApi",
+        "Microsoft.EntityFrameworkCore.Design",
+        "Microsoft.EntityFrameworkCore.Relational",
+        "Microsoft.OpenApi",
+        "Swashbuckle.AspNetCore.SwaggerUI"
+      ],
+      "documentCount": 113
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "DEP0002",
+      "severity": "Warning",
+      "message": "Duplicate type display name detected: Microsoft.CodeAnalysis.EmbeddedAttribute."
+    },
+    {
+      "code": "DEP0002",
+      "severity": "Warning",
+      "message": "Duplicate type display name detected: Microsoft.Extensions.Validation.Embedded.ValidatableTypeAttribute."
+    },
+    {
+      "code": "DEP0002",
+      "severity": "Warning",
+      "message": "Duplicate type display name detected: Program."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 88,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 255,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 257,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 260,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 264,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 274,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 277,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 281,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 284,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 295,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 298,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 300,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 302,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 340,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 342,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 344,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 401,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 402,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 403,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 404,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0002",
+      "severity": "Warning",
+      "message": "Service type could not be resolved for AddSingleton.",
+      "source": {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.Pages was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Web was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Web.Api was truncated to 80 types."
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodeIds": [
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+      ],
+      "nodes": [
+        {
+          "name": "CanDoItAll.Modules.AgentFramework.Hosting",
+          "projectId": "proj-candoitall-modules-agentframework"
+        },
+        {
+          "name": "CanDoItAll.Modules.AgentFramework",
+          "projectId": "proj-candoitall-modules-agentframework"
+        }
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+      ],
+      "nodes": [
+        {
+          "name": "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+          "projectId": "proj-candoitall-modules-agentframework"
+        },
+        {
+          "name": "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder",
+          "projectId": "proj-candoitall-modules-agentframework"
+        }
+      ]
+    }
+  ],
+  "newBoundaryFindings": [
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-ui-ca-7f204e8f1e10",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.Components.AgentParticipantCardProjectionOptions exposes 18 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-ui-candoitall-agentf-39ec05ca4cb9"
+      ],
+      "source": {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
+        "line": 213,
+        "column": 1,
+        "endLine": 230,
+        "endColumn": 27
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-ui-ca-fece37635ffe",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.Components.AgentParticipantPresentationMapper exposes 14 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-ui-candoitall-agentf-11f0160aa75a"
+      ],
+      "source": {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
+        "line": 6,
+        "column": 1,
+        "endLine": 211,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-ui-ca-fd3abff5cfaf",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel exposes 45 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-ui-candoitall-agentf-9961e1e9d711"
+      ],
+      "source": {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 242,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-uisan-574f8f791475",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.UiSandbox.CatalogRuntimeStatus exposes 9 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-uisandbox-candoitall-53f2f3e655c2"
+      ],
+      "source": {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",
+        "line": 29,
+        "column": 1,
+        "endLine": 37,
+        "endColumn": 31
+      }
+    }
+  ],
+  "warningCount": 63,
+  "review": {
+    "blockingErrors": 0,
+    "newBoundaryWarningOrErrorCount": 0,
+    "scopeLimitation": "Project-reference facts are scoped; actual restore closures in SB01/SB02 independently prove external dependency boundaries.",
+    "knownDiagnostics": "Generated embedded attributes and separate Program entry points have duplicate display names across assemblies. The sandbox immutable instance registration is unresolved by the DI collector but builds and renders. Existing module factories are partially interpreted. Informational rendering member counts predate extraction; the runtime status is one external readiness protocol.",
+    "previousToolingLoadFailures": "The fresh root restore removed the two prior stale tooling-workspace load errors."
+  }
+}

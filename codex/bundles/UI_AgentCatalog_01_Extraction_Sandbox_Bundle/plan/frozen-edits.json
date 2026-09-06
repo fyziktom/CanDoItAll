@@ -1,0 +1,129 @@
+{
+  "edits": [
+    {
+      "id": "razor-heading",
+      "category": "Razor",
+      "beforePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
+      "old": ">Agent cards</h2>",
+      "new": ">Agent cards Â· Razor probe</h2>",
+      "fixture": "normal",
+      "selector": ".agent-catalog-panel__heading h2",
+      "before": "Agent cards",
+      "after": "Agent cards Â· Razor probe"
+    },
+    {
+      "id": "razor-empty",
+      "category": "Razor",
+      "beforePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
+      "old": "Title=\"No agents match the current team\"",
+      "new": "Title=\"No matching catalog agents Â· Razor probe\"",
+      "fixture": "empty",
+      "selector": "[data-testid=agents-catalog-results]",
+      "before": "No agents match the current team",
+      "after": "No matching catalog agents Â· Razor probe"
+    },
+    {
+      "id": "razor-action",
+      "category": "Razor",
+      "beforePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
+      "old": "Text=\"Open chat\"",
+      "new": "Text=\"Open chat Â· Razor probe\"",
+      "fixture": "normal",
+      "selector": "[data-testid=agents-hr-agent-open]",
+      "before": "Open chat",
+      "after": "Open chat Â· Razor probe"
+    },
+    {
+      "id": "csharp-summary",
+      "category": "CSharp",
+      "beforePath": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
+      "old": "\"No short summary is configured yet.\"",
+      "new": "\"Catalog summary probe.\"",
+      "fixture": "normal",
+      "selector": "[data-testid=agents-catalog-card-grid]",
+      "before": "No short summary is configured yet.",
+      "after": "Catalog summary probe."
+    },
+    {
+      "id": "csharp-metadata",
+      "category": "CSharp",
+      "beforePath": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
+      "old": "$\"{agent.Capabilities.Count} capabilities\"",
+      "new": "$\"{agent.Capabilities.Count} catalog capabilities\"",
+      "fixture": "normal",
+      "selector": "[data-testid=agents-catalog-card-grid]",
+      "before": "0 capabilities",
+      "after": "0 catalog capabilities"
+    },
+    {
+      "id": "csharp-team-title",
+      "category": "CSharp",
+      "beforePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
+      "old": "SelectedTeam is null ? \"All agents\" : SelectedTeam.Name",
+      "new": "SelectedTeam is null ? \"All catalog agents\" : SelectedTeam.Name",
+      "fixture": "normal",
+      "selector": ".agent-catalog-panel__section-title",
+      "before": "All agents",
+      "after": "All catalog agents"
+    },
+    {
+      "id": "css-toolbar",
+      "category": "CSS",
+      "beforePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.css",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css",
+      "old": "gap: 0.75rem 1rem;",
+      "new": "gap: 0.875rem 1.125rem;",
+      "fixture": "normal",
+      "selector": ".agent-catalog-panel__toolbar",
+      "property": "rowGap",
+      "before": 12,
+      "after": 14
+    },
+    {
+      "id": "css-spacing",
+      "category": "CSS",
+      "beforePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.css",
+      "afterPath": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css",
+      "old": "padding-right: 0.35rem;",
+      "new": "padding-right: 0.6rem;",
+      "fixture": "normal",
+      "selector": ".agent-catalog-panel__agent-scroll",
+      "property": "paddingRight",
+      "before": 5.6,
+      "after": 9.6
+    },
+    {
+      "id": "css-tailwind",
+      "category": "CSS",
+      "beforePath": "Tailwind/surfaces/admin.css",
+      "afterPath": "Tailwind/surfaces/admin.css",
+      "old": "tracking-[0.18em]",
+      "new": "tracking-[0.24em]",
+      "fixture": "theme-probe",
+      "selector": "[data-testid=catalog-theme-probe]",
+      "property": "letterSpacing",
+      "before": 2.16,
+      "after": 2.88
+    }
+  ],
+  "trialsPerEditPerHost": 3,
+  "hosts": [
+    "pre",
+    "post",
+    "sandbox"
+  ],
+  "timing": "One Python perf_counter_ns coordinator; t0 after fsync; t1 after browser predicate and two frames plus observed callback. Includes consistent tool/IPC/poll overhead. Cold includes managed launch dispatch, reported explicitly.",
+  "amendment": "Primary application Tailwind input has no catalog-specific semantic declaration. Theme case uses its existing cda-admin-kicker tracking declaration and a tiny visible DOM probe in the same position in all hosts, without replacing any real panel/card/tree. Probe is measurement chrome only.",
+  "coldTrialsPerHost": 3,
+  "readinessEvidence": "Clean calibration: raw dotnet watch Waiting for changes, Healthy runtime with confirmed PID/iteration/generation and no pending change, then interactive browser fixture. The manager WatchReady bit remains false due its initial pending-generation branch; do not treat this bit as a measurement event. Per-edit settled/revision plus real browser predicate remains mandatory. No watch-tool code changed.",
+  "tailwindOwnership": "Managed SourceWatch starts its own locked Tailwind companion. The redundant task-started watcher was stopped before all samples; only the managed companion is used.",
+  "sampleOrder": "Calibration outside primary ledger, then process-cold start 1, 27 warm trials, and process-cold starts 2 and 3 for each host. All attempted primary samples retained. Frozen before the first primary sample.",
+  "warmObservation": "After backend watch settles (500 ms poll, 750 ms quiet), check the existing browser for the exact predicate for 2 seconds. If absent, perform one explicit browser reload, restore fixture state, and assert for up to 30 seconds. Record the reload. Undo uses the same protocol and excludes the forward text. Primary edits are never retried or discarded.",
+  "cssProtocolV2": "Frozen after retaining pre-css-toolbar-1 as instrumentation-invalid. Raw watch reports Static asset changes applied without a managed hot-reload generation; the manager leaves pendingChange set. For all three hosts, CSS trials require the actual ready runtime and last confirmed visible undo before starting, then LogMatch Static asset changes applied after the starting cursor, then the same 2-second natural predicate / one explicit reload fallback / 30-second assertion. Record raw completion and unchanged generation; do not change manager code or flags. New CSS trial IDs include v2. Keep original invalid attempt in the ledger outside the comparable v2 distribution."
+}

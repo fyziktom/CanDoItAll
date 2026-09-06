@@ -1,0 +1,101 @@
+@page "/"
+@page "/agents"
+@inject AgentCatalogSnapshot Fixture
+
+<PageTitle>Agent catalog sandbox</PageTitle>
+
+<header class="catalog-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <h1 class="cda-title-xl">Agent catalog sandbox</h1>
+        <p>Real catalog components with local state and recorded intents.</p>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Normal" Click="@(() => Show(Scenario.Normal))" data-testid="sandbox-normal" />
+            <Button Text="Loading" Click="@(() => Show(Scenario.Loading))" data-testid="sandbox-loading" />
+            <Button Text="Empty" Click="@(() => Show(Scenario.Empty))" data-testid="sandbox-empty" />
+            <Button Text="Card states" Click="@(() => Show(Scenario.CardStates))" data-testid="sandbox-card-states" />
+            <Button Text="Avatar fallback" Click="@(() => Show(Scenario.AvatarFallback))" data-testid="sandbox-avatar-fallback" />
+            <Button Text="@(matchedLayout ? "Use flexible layout" : "Match desktop baseline")"
+                    Click="@(() => matchedLayout = !matchedLayout)"
+                    data-testid="sandbox-layout" />
+        </Cluster>
+        <output aria-live="polite" data-testid="sandbox-intent">@intentText</output>
+    </Stack>
+</header>
+
+<main class="@(matchedLayout ? "catalog-sandbox__frame catalog-sandbox__frame--matched" : "catalog-sandbox__frame")">
+    @if (scenario is Scenario.CardStates or Scenario.AvatarFallback) {
+        <SurfaceCard Class="catalog-sandbox__specimen">
+            <AgentSelectionCard Agent="@Specimen"
+                                IsSelected="true"
+                                ShowFavorite="true"
+                                IsFavorite="@favorite"
+                                OnFavoriteToggle="@(() => favorite = !favorite)"
+                                ShowStatusRibbon="true"
+                                ShowKindBadge="true"
+                                ShowDetailsTooltip="true"
+                                IsPrivateProvider="true"
+                                OnSelect="@(() => intentText = "Card selected")"
+                                OnDoubleClick="@(() => intentText = "Card opened")" />
+            @if (scenario == Scenario.AvatarFallback) {
+                <Cluster Gap="LayoutGap.Small">
+                    <Avatar FallbackText="CA" UseDefaultImageWhenMissing="false" Size="AvatarSize.Large" />
+                    <p>Seeded card avatar and explicit initials fallback.</p>
+                </Cluster>
+            }
+        </SurfaceCard>
+    }
+    else {
+        <AgentCatalogPanel Snapshot="@(scenario == Scenario.Empty ? AgentCatalogSnapshot.Empty : Fixture)"
+                           Selection="@selection"
+                           IsLoading="@(scenario == Scenario.Loading)"
+                           Intent="HandleIntent" />
+    }
+</main>
+
+<Tooltip />
+
+@code {
+    private enum Scenario {
+        Normal,
+        Loading,
+        Empty,
+        CardStates,
+        AvatarFallback
+    }
+
+    private Scenario scenario;
+    private AgentCatalogSelection selection = new(null, null);
+    private string intentText = "No intent yet.";
+    private bool matchedLayout = true;
+    private bool favorite;
+
+    private AgentDefinition Specimen => scenario == Scenario.AvatarFallback
+        ? Fixture.Agents[0] with { AvatarImageUrl = null }
+        : Fixture.Agents[0];
+
+    private void Show(Scenario value) {
+        scenario = value;
+        selection = new(null, null);
+        intentText = "No intent yet.";
+    }
+
+    private void HandleIntent(AgentCatalogIntent intent) {
+        selection = intent switch {
+            AgentCatalogIntent.SelectAgent select => selection with { AgentId = select.AgentId },
+            AgentCatalogIntent.SelectTeamMember select => selection with { AgentId = select.AgentId },
+            AgentCatalogIntent.SelectTeam select => selection with { TeamId = select.TeamId },
+            _ => selection
+        };
+        intentText = intent switch {
+            AgentCatalogIntent.SelectAgent select => $"Selected agent {select.AgentId}.",
+            AgentCatalogIntent.SelectTeamMember select => $"Selected team member {select.AgentId}.",
+            AgentCatalogIntent.SelectTeam select => $"Selected team {select.TeamId}.",
+            AgentCatalogIntent.OpenAgent open => $"Open agent editor: {open.AgentId?.ToString() ?? "New"}.",
+            AgentCatalogIntent.OpenTeam open => $"Open team editor: {open.TeamId?.ToString() ?? "New"}.",
+            AgentCatalogIntent.EditMembers edit => $"Edit team members: {edit.TeamId}.",
+            AgentCatalogIntent.DeleteTeam delete => $"Delete team: {delete.TeamId}.",
+            AgentCatalogIntent.OpenChat chat => $"Open chat: {chat.AgentId}.",
+            _ => throw new ArgumentOutOfRangeException(nameof(intent))
+        };
+    }
+}

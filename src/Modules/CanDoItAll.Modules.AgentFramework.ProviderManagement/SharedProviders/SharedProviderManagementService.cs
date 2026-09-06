@@ -108,6 +108,13 @@ public sealed class SharedProviderManagementService(
             .ToArray());
     }
 
+    public async Task<SharedProviderSourceVerificationResult> VerifySourceAsync(
+        SharedProviderSourceMutationAttempt attempt, CancellationToken cancellationToken = default) {
+        var sources = await ListSourcesAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return SharedProviderSourceVerification.Evaluate(attempt, sources);
+    }
+
     public Task<SharedProviderSourceWriteResult> SaveSourceAsync(
         SharedProviderSourceEditorRequest request,
         CancellationToken cancellationToken = default)
@@ -118,8 +125,8 @@ public sealed class SharedProviderManagementService(
             request.BaseUri,
             request.ApiTokenSecretId,
             request.IsEnabled,
-            request.AllowInsecurePrivateNetwork);
-        if (!request.Id.HasValue)
+            request.AllowInsecurePrivateNetwork, request.Id);
+        if (!request.Id.HasValue || !request.ExpectedConcurrencyToken.HasValue)
         {
             return sourceService.CreateAsync(writeRequest, cancellationToken);
         }

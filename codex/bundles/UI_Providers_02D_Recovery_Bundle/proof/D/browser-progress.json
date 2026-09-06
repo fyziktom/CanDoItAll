@@ -1,0 +1,18 @@
+{
+  "viewport": "1600x1000",
+  "host": "Real Web Program through WebApplicationFactory and Kestrel; isolated PostgreSQL; production UI/services; EF SavedChanges/TransactionCommitted fault injection in ignored fixture only",
+  "status": "in progress",
+  "localCandidate": "91a984a6-1762-4d72-8600-b1b0a2268d99",
+  "localUnconfirmed": "one canonical row, New draft stays unbound, save blocked, explicit verification shown",
+  "screenshotReview": {
+    "path": ".mcp-state/p02d-unconfirmed.jpg",
+    "readable": true,
+    "overlap": "No blocking overlap. Existing toast is below form fields; verification action is visible.",
+    "spacing": "Existing large desktop layout preserved.",
+    "scroll": "Existing page and catalog scroll owners retained."
+  },
+  "setupCorrections": [
+    "Wait for New and kind changes to render before entering dependent fields; changing provider kind intentionally clears model and endpoint. Initial invalid form attempts wrote no provider."
+  ],
+  "managedRuntime": "app_c7274eebb0474aff8e3c6dae4ad6d02e; pid 42444. Wrapper emits FixtureReady; manager remains Starting because its default 7271 health differs. Real 5271 health is HTTP200 and browser live; not watch measurement."
+}

@@ -1,0 +1,428 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Provider_management_is_an_inner_boundary_in_the_canonical_solution
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Provider_specific_agent_framework_source_is_workspace_free
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Workspace_retains_only_the_opaque_default_provider_preference
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Web_shared_provider_endpoints_are_workspace_free
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Agent_provider_editor_uses_only_provider_management_ports
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Workbench_has_no_legacy_provider_execution_stack
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Production_has_no_legacy_direct_inference_declaration
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Provider_ef_types_are_configured_only_from_provider_management
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Provider_physical_table_names_are_frozen
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.Production_host_registers_provider_management_exactly_once
+    CanDoItAll.Tests.Unit.ProviderBoundaryArchitectureGuardTests.User_facing_source_has_no_workspace_provider_ownership_language
+    CanDoItAll.Tests.Unit.ProviderManagementBoundaryTests.Provider_management_project_has_no_outer_feature_dependency
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Per_model_default_is_used_locally_and_published_without_freezing_client_inheritance
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Reset_removes_only_the_selected_override_and_recovers_discovery
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Shared_import_never_uses_local_override_to_guess_missing_source_metadata
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Default_outside_allowed_efforts_and_openai_boolean_controls_are_rejected
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_overrides_discovery_and_survives_health_refresh
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Manual_configuration_is_published_and_enforced_for_shared_model
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Explicit_unsupported_overrides_a_known_model_default
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"supported\",\"contr"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"unsupported\",\"con"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"supported\",\"contr"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"supported\",\"contr"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":\"unsupported\",\"con"···)
+    CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities(settings: "[{\"model\":\"x\",\"status\":0,\"controlMode\":\"e"···)
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Provider_management_owns_the_canonical_persisted_master
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Inner_provider_projects_do_not_reference_outer_feature_layers
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Source_project_reference_graph_has_no_cycles
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Production_provider_management_connector_registration_is_explicit
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Provider_administration_connectors_do_not_execute_inference
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Shared_provider_relay_stays_on_transport_and_MAF_capability_ports
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Azure_is_runtime_metadata_without_a_dedicated_connector_manifest
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Runtime_request_contracts_are_not_web_endpoint_parameters
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Persisted_to_runtime_mapping_stays_in_provider_management
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Composition_registers_provider_management_once_and_workspace_di_is_provider_free
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.Provider_management_component_is_owned_by_agent_framework_and_uses_provider_management
+    CanDoItAll.Tests.Unit.SharedProviderArchitectureCharacterizationTests.History_contracts_do_not_reference_outer_types
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.BufferedPayload_OwnershipAndLimitsRemainValid
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Published_metadata_survives_image_response_projection(metadata: "\"background\":\"opaque\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Published_metadata_survives_image_response_projection(metadata: "\"output_format\":\"png\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Published_metadata_survives_image_response_projection(metadata: "\"quality\":\"low\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Published_metadata_survives_image_response_projection(metadata: "\"size\":\"1024x1024\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Published_metadata_survives_image_response_projection(metadata: "\"usage\":{\"input_tokens\":10,\"output_tokens\":2"···)
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"background\":\"http://private.example\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"output_format\":42")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"quality\":\"secret\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"size\":\"http://private.example\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"upstream_url\":\"http://private.example\"")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"usage\":[]")
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"usage\":{\"input_tokens\":\"secret\",\"input_tok"···)
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"usage\":{\"input_tokens\":1,\"output_tokens\":2,"···)
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"usage\":{\"input_tokens\":-1,\"output_tokens\":2"···)
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"usage\":{\"input_tokens\":1,\"output_tokens\":2,"···)
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected(metadata: "\"usage\":{\"input_tokens\":1,\"output_tokens\":2,"···)
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Image_urls_remain_rejected_even_when_base64_is_present
+    CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Legacy_image_response_still_works_without_inventing_metadata
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.SharedThinkingEffort_Legacy_catalogs_remain_valid_and_new_metadata_is_revision_bound
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.MetadataPricesRoundTripExactlyAndEveryFieldParticipatesInRevision
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.NegativeOrIncompletePricesAndMissingPrivateFlagAreRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RoutesExposeOnlyTheVersionedCatalogAndSupportedOpenAiSubset
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RouteResolutionPreservesAReverseProxyBasePath
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogSerializationUsesTheFrozenPublicNamesAndStringValues
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogRoundTripPreservesTypedPublicIdentitiesAndCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownTopLevelMemberIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownNestedMemberIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnsupportedProtocolVersionIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.InvalidMissingOrIncoherentProtocolMembersAreRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.ModelRouteFromAnotherPublicationIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CanonicalRepresentationSortsInputsAndTracksPublicHealth
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.PublicContractsRejectSecretsInvalidDefaultsAndIncoherentPorts
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.AbstractionsAssemblyHasNoWebEfWorkspaceOrProviderSdkDependency
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SharedThinkingEffort_Publication_copies_support_default_and_main_suggestions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationDoesNotInventOpenAiModelsWithoutPersistedSuggestions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationModelSetMatchesSourceRuntimeMapper(connector: "provider.openai", kind: OpenAi, purpose: Chat)
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationModelSetMatchesSourceRuntimeMapper(connector: "provider.openai", kind: OpenAi, purpose: ImageGeneration)
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationModelSetMatchesSourceRuntimeMapper(connector: "provider.ollama.local", kind: Ollama, purpose: Chat)
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationRejectsConfiguredCatalogBeyondProtocolModelLimit
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationPricesMatchEffectiveSourcePricesWithoutPersistedPricing
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicModelLabelsPreserveSourceNamesAndRoutingIdsRemainOpaque
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ChatCompletionsPublicationDoesNotAdvertiseGpt56ThinkingEffort
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.EligibleChatProfileIntersectsTypedMetadataProfileAndRelayCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.DisabledProfileIsIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SyntheticImportedAndRuntimeFallbackProfilesAreIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnknownOrNonExecutionConnectorIsIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MissingRelayDescriptorIsIneligibleWithActionableReason
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MalformedMetadataMissingSecretOrInvalidModelsAreIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ImageProfileRequiresImageRelayAndAdvertisesOnlyImageCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnsupportedOptionalProfileCapabilitiesAreOmittedFromIntersection
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorExcludesUnpublishedAndIneligibleProfiles
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorCreatesStablePublicIdentitiesAndDistinctDuplicateModelRoutes
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorProducesCanonicalOrderingAndDeterministicRevisions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PrivateProfileChangesDoNotChangePublicRevisionOrEntityTag
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicProfileChangesChangePublicationAndCatalogRevisions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SerializedCatalogContainsNoPrivateProviderFieldsOrValues
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.RoutingIndexResolvesExactPublishedModelAndRejectsUnknownModel
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationPublishesAndUnpublishesWithPostCommitActivityAndInvalidation
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationRejectsIneligibleAndStaleRequestsWithoutPostCommitSideEffects
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.QueryCacheUsesPersistedStampAcrossInstancesAndRechecksCurrentEligibility
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_NewCatalog_CreatesOnlySelectedPublication
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_NewCatalog_IgnoresUnselectedPublication
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_UnchangedSelectedImport_IsNoOp
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_ChangedRevision_RefreshesExistingIdentity
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_TransientlyUnavailableImport_RefreshesOnReappearance
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_SelectedImportAbsent_MarksMissing
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_RetiredImportAbsent_DoesNotMarkMissing
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_ReplaceSelection_RetiresDeselectedImport
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_ReplaceSelection_ReactivatesRetiredImport
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_AdditiveSelection_DoesNotRetireUnmentionedImport
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_StaleUnknownSelection_ThrowsTypedConflict
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_RetiredAbsentSelection_ThrowsTypedConflict
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_PreservedSelectedAbsentPublication_IsAllowedAndMarkedMissing
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_DuplicatePersistedIdentity_Throws
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_Decisions_AreDeterministicallyOrdered
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_RemoteRefreshPrecedesRetirement
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.Plan_MissingReappearanceRefreshPrecedesReactivation
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.SourceSetEnabled_PreservesPinnedIdentityAndIsIdempotent
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.SourceCreation_AllowsLoopbackHttpButRequiresPrivateNetworkPolicy
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.SourceResetTrustedIdentity_ConnectionTestDoesNotSeedConditionalSync
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.SourceResetTrustedIdentity_RejectsBackwardTimestamp
+    CanDoItAll.Tests.Unit.SharedProviderReconciliationTests.SourceOperationResults_ExposeOnlyOutcomeAppropriatePayload
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Usage_extractor_preserves_observed_categories_without_inventing_missing_counts
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Function_tools_accept_optional_sdk_description_and_strict(description: "\"\"", strict: "null")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Function_tools_accept_optional_sdk_description_and_strict(description: "\"A function\"", strict: "false")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ChatCompletionsSupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"none\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"minimal\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"low\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"medium\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"high\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"xhigh\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "\"max\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_round_trips_documented_values(value: "null")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "[\"none\"]")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "{}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "true")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "1")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"NONE\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"bogus\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\" none \"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_rejects_invalid_or_duplicate_values(value: "\"none\",\"reasoning_effort\":\"high\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Chat_reasoning_effort_is_not_accepted_on_other_operations
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponsesSupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponsesReasoningReplay_AcceptsOfficialSchemaAndRejectsMalformedItems
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "none")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "low")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "high")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_reasoning_round_trips(effort: "max")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "\"high\"")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "{\"effort\":\"ultra\"}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "{\"effort\":2}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.SharedThinkingEffort_Responses_invalid_reasoning_is_rejected(value: "{\"effort\":\"low\",\"summary\":\"auto\"}")
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ImagesBase64SupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.UnknownMembers_AreRejectedOnEverySurface
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.MalformedDuplicateAndExcessivelyDeepJson_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BodyMessagesToolsSchemasAndImages_AreBoundedBeforeDispatch
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.InvalidGenerationNumbersEnumsAndConflicts_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BuiltInAndHostedTools_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.FunctionToolsAndToolChoice_RoundTripCanonically
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ParallelTools_RequireAdvertisedCapability
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.StructuredOutput_RequiresAdvertisedCapability
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: ChatCompletions)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_AcceptsGeneratedImageWithinRequestBudget(operation: Responses)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: ChatCompletions)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_PreservesExactRequestBudget(operation: Responses)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: ChatCompletions)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_DoesNotIncreaseTextFieldLimit(operation: Responses)
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.StoreFalse_IsAcceptedWhilePersistenceAndUnsupportedServerFeaturesAreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ChatStreamOptions_AcceptsIncludeUsageAndRejectsMalformedOrUnknownOptions
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.MalformedRoutingModelId_FailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.DuplicateUpstreamNames_RemainSeparatedByPublication
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.RelayTarget_RechecksPurposeOperationAndCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.RelayTarget_UsesOnlyStoredUriModelTimeoutAndCredential
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Registry_ContainsExactlyFiveProductionRowsAndNoSyntheticAdapter
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Registry_OpenAiChatSupportsVisionInput
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.TargetNormalization_PreservesBasePathAndRejectsCallerUriOrHeaders
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.UpstreamFailures_AreSanitizedAndRetryAfterIsBounded
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponseHeaderAllowlist_StripsUnsafeAndPrivateHeaders
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BufferedChatUsage_MapsCompletePartialAndUnavailableTruthfully
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponsesAndTerminalSseUsage_MapWithoutInventingZero
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.InvocationAuditTransition_StoresMetadataOnlyAndRecoversInterruptedFinalizationIdempotently
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.CreateMatchesTheFrozenStableVector
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.CreateRejectsOuterWhitespaceToPreserveExactModelIdentity
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.DuplicateModelNamesFromDifferentPublicationsRemainDistinct
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.UpstreamModelIdentityIsCaseSensitive
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.RoutingIdDoesNotRevealUpstreamModelOrInternalProfileId
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.TryParseReturnsOnlyPublicPublicationAndFullFingerprint
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.UnknownCodecVersionFailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.UppercasePublicationEncodingFailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.TruncatedOrNonBase64UrlFingerprintFailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.MatchesRequiresTheExactPublicationAndModel
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(isPrivate: True)
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(isPrivate: False)
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Legacy_snapshot_requires_resynchronization_instead_of_guessing_source_metadata
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ResponsesChat_MapsCanonicalEffectiveProfileWithoutSecretValue
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ChatCompletions_MapsHistoryModeAndPrivateNetworkPolicy
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ImageGeneration_MapsPurposeAndImageCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MultipleModels_PreservesCatalogAndUsesSafeCapabilityIntersection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_DegradedPublication_RemainsAvailableWithValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_LocalProfileDisabled_RetainsAliasAndDisabledIntent
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceDisabledRetainsProjection_ButNeverSynchronizedDoesNot
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceOffline_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_AuthorizationFailed_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceIdentityMismatch_RetainsOnlyPreviouslyValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_IncompatibleContract_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RetiredImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_UnpublishedImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RemoteUnavailableHealth_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingOrMismatchedRelationship_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_TamperedSnapshotOrDuplicatedImportFields_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ForgedDerivedProfileCaches_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Validate_retains_canonical_shape_for_operationally_disabled_graphs
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Validate_rejects_missing_and_malformed_graphs_without_effective_profiles
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Validate_avoids_effective_model_copy_allocations
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_CanonicalizesHostPortAndReverseProxyRoot
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsRelativeAndNonHttpSchemes
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsUserInfoQueryAndFragment
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsAmbiguousAndOverlongAddresses
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsPlainHttpPublicDestinationsEvenWhenPrivateAccessIsApproved
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_AllowsLoopbackHttpWithoutBroadPrivateApproval
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_PrivateHttpRequiresExplicitApproval
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_PrivateAndLoopbackHttpsRequireExplicitApproval
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PublicAddressPolicy_AcceptsOnlyGlobalUnicastDestinations
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.TrustedAddressPolicy_AllowsPrivateButNeverLinkLocalOrMulticast
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PrivateHttpConnectionPolicy_RejectsPublicDnsAndAllowsApprovedPrivateDns
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PublicConnectionPolicy_RejectsPrivateAndMixedDnsAnswers
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.ConnectionPolicy_RevalidatesEveryNewConnectionAgainstDnsRebinding
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.HandlerAndDependencyInjection_DisableRedirectsProxyCookiesAndUriLogging
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogRequest_UsesTypedRedactedCredentialAndPinnedIdentity
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_SendsCanonicalAuthenticatedRequestAndValidatesSuccess
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_HandlesConditionalNoOpAndSanitizedStatusFailures
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_RejectsInvalidBoundsContractIdentityAndMapsTimeouts
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.PublicationCreationDefaultsToUnpublishedAndKeepsPublicIdentitySeparate
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.PublicationCreationRejectsEmptyOrExposedProfileIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.PublicationTransitionsAreIdempotentAndPreserveStableIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceCreationCanonicalizesAddressAndDefaultsToNeverSynchronized
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceCreationRejectsUnsafeAddressOrMissingSecretReference
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceConfigurationEditPreservesPinnedIdentityAndInvalidatesConditionalCache
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.FirstSuccessfulCatalogPinsRemoteIdentityAndEntityTag
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.DifferentCatalogIdentityBlocksReconciliationAndPreservesTrustedPin
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceFailureKeepsTrustedIdentityAndConditionalEntityTag
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.ImportCreationSelectsAvailableRemotePublicationWithStableLocalProfile
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.AvailableReconciliationUpdatesRemoteFieldsWithoutChangingLocalIdentityOrIntent
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.AuthoritativeMissingPreservesImportAndLocalProviderIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.AuthoritativeUnpublishIsDistinctFromMissingAndRejectsTransientState
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.ReappearanceReconcilesExistingImportInsteadOfCreatingNewIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.TransientFailureNeverConvertsImportToAuthoritativeMissing
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.RetireAndReactivatePreserveRemoteAndLocalIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.InvocationShapeIsMetadataOnlyAndFinalizationIsTruthfulAndIdempotent
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.ServiceIdentityUsesOneStableRowAndTypedPublicIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.Relay_late_actual_completion_reconciles_cancellation_or_recovery(recovered: False)
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.Relay_late_actual_completion_reconciles_cancellation_or_recovery(recovered: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_commit_binds_identity_and_retry_only_reconciles(secondaryWarning: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_commit_binds_identity_and_retry_only_reconciles(secondaryWarning: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft(rejection: Rejected)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft(rejection: Conflict)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_write_blocks_blind_replay
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: False, fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: True, fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: False, fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: True, fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Late_previous_save_cannot_clear_new_target_busy_state
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Later_draft_edits_survive_successful_save_reconciliation
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Delete_commit_warning_keeps_deleted_target_and_retry_does_not_delete_again
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Health_reconciliation_does_not_replace_an_unsaved_local_draft
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Discovery_does_not_apply_to_a_changed_draft
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_first_save_exposes_stable_candidate_identity
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Selection_and_new_do_not_discard_unresolved_protection
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Verification_binds_committed_candidate_without_replaying_save
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Verified_absence_allows_same_candidate_controlled_retry
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Failed_verification_remains_unresolved(throws: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Failed_verification_remains_unresolved(throws: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Later_edits_and_edit_context_survive_verification
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Recreated_provider_owner_keeps_unresolved_attempt
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Candidate_conflict_after_absence_requires_verification_before_new_identity
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorSubmissionTests.Submission_preserves_every_public_property_and_owns_mutable_descendants
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorSubmissionTests.Reconciliation_preserves_later_edits_and_updates_only_identity_and_token
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesReadsTests.Secret_failure_is_explicit_partial_result_without_hiding_core_failure
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesReadsTests.Catalog_failure_propagates_as_core_failure
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesReadsTests.Owner_cancellation_is_not_a_secret_partial_failure
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesReadsTests.Editor_read_forwards_the_exact_target_and_owner_token
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Bootstrap_selects_first_provider_and_new_has_independent_defaults
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Sections_and_overlay_do_not_replace_the_draft_context(section: Connection, index: 0, label: "Connection")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Sections_and_overlay_do_not_replace_the_draft_context(section: Prices, index: 1, label: "Prices")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Sections_and_overlay_do_not_replace_the_draft_context(section: Runtime, index: 2, label: "Runtime")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Sections_and_overlay_do_not_replace_the_draft_context(section: Thinking, index: 3, label: "Thinking")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Sections_and_overlay_do_not_replace_the_draft_context(section: Sharing, index: 4, label: "Sharing")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Sections_and_overlay_do_not_replace_the_draft_context(section: History, index: 5, label: "History")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Replaced_editor_ignores_late_success_or_failure(fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Replaced_editor_ignores_late_success_or_failure(fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.New_during_initial_read_prevents_automatic_selection(fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.New_during_initial_read_prevents_automatic_selection(fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Latest_catalog_refresh_wins_and_stale_completion_cannot_restore_loading(fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Latest_catalog_refresh_wins_and_stale_completion_cannot_restore_loading(fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Disposal_cancels_target_and_ignores_uncooperative_completion(fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Disposal_cancels_target_and_ignores_uncooperative_completion(fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Core_failure_retains_target_and_retry_loads_it(catalogFails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Core_failure_retains_target_and_retry_loads_it(catalogFails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.New_cancels_pending_editor_without_replacing_the_new_draft(fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.New_cancels_pending_editor_without_replacing_the_new_draft(fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Catalog_removal_during_target_load_cannot_make_the_removed_provider_editable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Missing_target_does_not_silently_select_another_provider
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Secret_partial_failure_preserves_saved_reference_and_source_managed_state
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.Wrong_editor_identity_fails_closed
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: SourceConfiguration)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: SourceConfiguration)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: SourceEnablement)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: SourceEnablement)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: SourceAvailability)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: SourceAvailability)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: SourceDeleted)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: SourceDeleted)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: Reconciliation)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: Reconciliation)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: ImportedSettings)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: ImportedSettings)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: ImportRetirement)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: ImportRetirement)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: False, kind: Publication)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Every_unrelated_shared_change_preserves_existing_or_new_draft(newDraft: True, kind: Publication)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Imported_editor_reloads_only_when_its_id_is_affected(affected: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Imported_editor_reloads_only_when_its_id_is_affected(affected: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Retired_target_is_failed_without_selecting_another_provider
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Unknown_scope_keeps_the_draft_and_exposes_stale_state
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Missing_or_malformed_selected_import_fails_closed(malformed: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Missing_or_malformed_selected_import_fails_closed(malformed: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.Change_scope_owns_caller_collections
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.GetProviderAsync_does_not_resurrect_stale_catalog_entry_after_committed_delete
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.ListProvidersAsync_does_not_resurrect_stale_catalog_entry_after_committed_delete
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Projection_failures_report_committed_upsert_and_delete_with_repair_actions
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_persists_kind_and_defined_thinking_capabilities_through_database_mapping
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_round_trips_ollama_suggested_models_through_database_mapping
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_update_persists_discovered_thinking_capabilities_through_database_mapping
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_drops_discovered_capabilities_when_provider_identity_changes
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_rejects_malformed_configuration_without_mutating_stored_profile
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_rejects_non_http_url_for_real_connector_without_database_mutation
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_requires_explicit_secret_binding_for_real_connector
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_accepts_metadata_only_secret_and_projects_one_editor_source
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Optional_connector_secret_can_be_explicitly_unbound
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_responses_as_structured_output_and_native_tool_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.AudioCapabilityPolicyRejectsSourceProfilesAndPreservesPersonalProfiles
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_chat_completions_as_structured_output_with_maf_approval
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_azure_chat_completions_as_structured_output_with_maf_approval
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_as_structured_output_and_local_tool_bridge_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_vision_model_as_vision_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_uses_selected_model_instead_of_provider_suggestions
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_does_not_let_ollama_provider_wide_vision_metadata_override_text_model
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_configured_ollama_provider_as_vision_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_image_generation_provider_by_explicit_purpose
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_comfyui_as_private_image_provider_without_chat_tools
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Persisted_provider_registry_uses_feature_matrix_and_transport_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_is_authoritative_in_agent_framework_and_workspace_only_selects_default
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Agent_framework_provider_mapping_and_workflow_image_selection_do_not_fallback_to_chat_providers
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_does_not_expose_non_persisted_batch_controls
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Runtime_bootstrap_provider_uses_managed_openai_responses_defaults
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Long_usage_does_not_clamp_or_overflow
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Execution_price_snapshot_uses_exact_model_and_is_immutable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Explicit_free_intent_survives_editor_catalog_and_runtime_roundtrip
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Provider_reported_zero_remains_known_in_original_currency
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Missing_categories_remain_partial_and_legacy_zero_is_not_free
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Long_context_tariff_is_selected_per_attempt_and_reasoning_is_not_added_again
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Editor_private_flag_replaces_stale_configuration_and_survives_reload(initialValue: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Editor_private_flag_replaces_stale_configuration_and_survives_reload(initialValue: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_defaults_include_current_pricing_rows
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_defaults_include_exact_gpt_5_6_standard_and_long_context_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Ollama_defaults_are_private_and_non_zero
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_uncached_cached_and_output_tokens_separately
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_uses_long_context_rates_above_the_gpt_5_6_threshold
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_standard_context_cache_writes_separately
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_long_context_cache_writes_at_the_long_rate
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_applies_long_context_pricing_per_observation_not_to_aggregate_tokens
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Observation_cost_uses_total_tokens_when_reasoning_is_not_in_output_tokens
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Metric_cost_resolution_prices_cached_input_tokens_when_cost_is_not_persisted
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_counts_only_observed_usage_as_known_actual_cost
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_counts_observed_usage_across_runtime_repair_and_finalizer_phases
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Pricing_metadata_round_trips_without_breaking_flat_configuration_state
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Discovered_prices_override_same_model_and_remove_nonmembers_without_fabricating_unknown_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Known_defaults_enrich_existing_gpt_5_6_rows_without_overwriting_standard_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Authoritative_known_defaults_replace_stale_known_rows_and_preserve_custom_models
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Explicit_discovery_preserves_existing_optional_gpt_5_6_pricing_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Name_only_discovery_adds_known_gpt_5_6_default_but_does_not_price_unknown_models
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_pricing_discovery_reads_explicit_price_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_pricing_discovery_requires_secret
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Ollama_pricing_discovery_returns_model_names_without_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "empty-id")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "blank-name")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "blank-base-url")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "relative-base-url")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-user-info")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-query")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-fragment")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "malformed-configuration")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "non-object-configuration")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-kind")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-transport")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-purpose")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "incompatible-kind-transport")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_accepts_absolute_first_party_custom_scheme(baseUrl: "scenario://harness")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_accepts_absolute_first_party_custom_scheme(baseUrl: "process-mock://agents")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"connectorPluginKey\":\"provider.openai\",\"Conn"···, canonicalPropertyName: "connectorPluginKey")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"configSchemaVersion\":\"1\",\"ConfigSchemaVersi"···, canonicalPropertyName: "configSchemaVersion")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"secretRecordId\":\"72d10cca-63f7-4f6f-8055-938c"···, canonicalPropertyName: "secretRecordId")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"timeoutSeconds\":45,\"TimeoutSeconds\":90}", canonicalPropertyName: "timeoutSeconds")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"agentFrameworkProviderKind\":\"OpenAi\",\"Agent"···, canonicalPropertyName: "agentFrameworkProviderKind")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"providerTransport\":\"Responses\",\"ProviderTra"···, canonicalPropertyName: "providerTransport")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"providerPurpose\":\"Chat\",\"ProviderPurpose\":"···, canonicalPropertyName: "providerPurpose")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"suggestedModels\":[\"gemma4\"],\"SuggestedModel"···, canonicalPropertyName: "suggestedModels")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"tags\":[\"planning\"],\"Tags\":[\"brainstorming"···, canonicalPropertyName: "tags")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_writer_canonicalizes_single_case_insensitive_aliases
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":\"gptoss20b64k\"}")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":[null]}")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":[\"\"]}")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_secret_resolver_rejects_conflicting_explicit_sources
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_read_path_does_not_hide_corrupt_persisted_json
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Warm_reads_probe_revisions_without_full_profile_reload
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Same_process_commit_observer_publishes_new_revision_before_acquisition
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_revision_change_refreshes_from_database_and_ignores_catalog
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_delete_removes_provider_instead_of_serving_stale_lease
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Revision_probe_failure_faults_snapshot_and_never_serves_stale_lease
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Superseded_profile_rebuild_cannot_publish_old_data
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cancelled_initialization_remains_not_ready
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Committed_projection_failure_is_an_explicit_fault

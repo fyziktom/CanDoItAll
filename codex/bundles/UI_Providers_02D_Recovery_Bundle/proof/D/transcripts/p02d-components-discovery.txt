@@ -1,0 +1,13 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Unconfirmed_publish_retry_unlocks_authoritative_state
+    CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Failed_sharing_retry_remains_locked
+    CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Rejected_sharing_retry_clears_obsolete_warning
+    CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Stale_sharing_verification_cannot_unlock_other_target
+    CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Imported_settings_verification_reloads_tokens_without_replay
+    CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Source_create_has_stable_proposed_identity
+    CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Reopened_source_create_recovery_cannot_duplicate
+    CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Failed_source_verification_remains_visibly_unresolved
+    CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Classified_source_verification_clears_errors_and_unlocks
+    CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Source_verification_publishes_committed_change_once
+    CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Disposed_source_verification_emits_no_publication

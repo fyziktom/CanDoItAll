@@ -1,0 +1,59 @@
+{
+  "kind": "verbatim filtered log excerpt",
+  "sessionId": "app_27ff10fca28e4c8681f94698b8098ea7",
+  "entries": [
+    {
+      "sequence": 931,
+      "timestampUtc": "2026-09-06T02:10:56.551664+00:00",
+      "source": "ProcessStdErr",
+      "stream": "stderr",
+      "sessionVersion": 1,
+      "correlationId": "corr_43a3e0acfef74c0a89c5cc167d1db345",
+      "text": "dotnet watch : An unexpected error occurred: System.ArgumentException: The directory name 'C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\wwwroot\\css\\' does not exist. (Parameter 'path')"
+    },
+    {
+      "sequence": 932,
+      "timestampUtc": "2026-09-06T02:10:56.5520673+00:00",
+      "source": "ProcessStdErr",
+      "stream": "stderr",
+      "sessionVersion": 1,
+      "correlationId": "corr_43a3e0acfef74c0a89c5cc167d1db345",
+      "text": "   at System.IO.FileSystemWatcher.CheckPathValidity(String path)"
+    },
+    {
+      "sequence": 933,
+      "timestampUtc": "2026-09-06T02:10:56.5525093+00:00",
+      "source": "ProcessStdErr",
+      "stream": "stderr",
+      "sessionVersion": 1,
+      "correlationId": "corr_43a3e0acfef74c0a89c5cc167d1db345",
+      "text": "   at System.IO.FileSystemWatcher..ctor(String path)"
+    },
+    {
+      "sequence": 934,
+      "timestampUtc": "2026-09-06T02:10:56.5532016+00:00",
+      "source": "ProcessStdErr",
+      "stream": "stderr",
+      "sessionVersion": 1,
+      "correlationId": "corr_43a3e0acfef74c0a89c5cc167d1db345",
+      "text": "   at Microsoft.DotNet.Watch.EventBasedDirectoryWatcher.CreateFileSystemWatcher()"
+    },
+    {
+      "sequence": 935,
+      "timestampUtc": "2026-09-06T02:10:56.553668+00:00",
+      "source": "ProcessStdErr",
+      "stream": "stderr",
+      "sessionVersion": 1,
+      "correlationId": "corr_43a3e0acfef74c0a89c5cc167d1db345",
+      "text": "   at Microsoft.DotNet.Watch.EventBasedDirectoryWatcher..ctor(String watchedDirectory, ImmutableHashSet`1 watchedFileNames, Boolean includeSubdirectories)"
+    },
+    {
+      "sequence": 945,
+      "timestampUtc": "2026-09-06T02:10:56.6196417+00:00",
+      "source": "System",
+      "sessionVersion": 1,
+      "correlationId": "corr_43a3e0acfef74c0a89c5cc167d1db345",
+      "text": "Process 58024 exited with code 1."
+    }
+  ]
+}

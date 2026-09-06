@@ -1,0 +1,25 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_commit_binds_identity_and_retry_only_reconciles(secondaryWarning: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_commit_binds_identity_and_retry_only_reconciles(secondaryWarning: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft(rejection: Rejected)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft(rejection: Conflict)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_write_blocks_blind_replay
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: False, fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: True, fails: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: False, fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.New_or_disposal_cancels_pending_save_and_fences_late_completion(dispose: True, fails: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Late_previous_save_cannot_clear_new_target_busy_state
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Later_draft_edits_survive_successful_save_reconciliation
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Delete_commit_warning_keeps_deleted_target_and_retry_does_not_delete_again
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Health_reconciliation_does_not_replace_an_unsaved_local_draft
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Discovery_does_not_apply_to_a_changed_draft
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_first_save_exposes_stable_candidate_identity
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Selection_and_new_do_not_discard_unresolved_protection
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Verification_binds_committed_candidate_without_replaying_save
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Verified_absence_allows_same_candidate_controlled_retry
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Failed_verification_remains_unresolved(throws: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Failed_verification_remains_unresolved(throws: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Later_edits_and_edit_context_survive_verification
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Recreated_provider_owner_keeps_unresolved_attempt
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Candidate_conflict_after_absence_requires_verification_before_new_identity

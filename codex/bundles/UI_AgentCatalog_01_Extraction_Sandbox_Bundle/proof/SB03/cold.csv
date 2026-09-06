@@ -1,0 +1,10 @@
+host,trialId,editId,category,outcome,elapsedMs,mechanism
+pre,pre-cold-1,,,success,116724.2427,process-cold launch
+pre,pre-cold-2,,,success,135780.1291,process-cold launch
+pre,pre-cold-3,,,success,118233.9099,process-cold launch
+post,post-cold-1,,,success,131885.7605,process-cold launch
+post,post-cold-2,,,success,122103.8721,process-cold launch
+post,post-cold-3,,,success,121835.2343,process-cold launch
+sandbox,sandbox-cold-1,,,success,44259.1393,process-cold launch
+sandbox,sandbox-cold-2,,,success,70368.0195,process-cold launch
+sandbox,sandbox-cold-3,,,success,45045.6868,process-cold launch

@@ -1,5 +1,7 @@
 using System.Text.Json;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.AgentFramework.Models;
+using ProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -13,7 +15,31 @@ public sealed class ProviderEditorSubmission {
     }
 
     public static ProviderEditorSubmission Capture(ProviderProfileEditorModel draft) => new(draft);
-    public ProviderProfileEditorModel CreateRequest() => Copy(original);
+    public ProviderMutationAttempt? Attempt { get; private set; }
+
+    public static ProviderEditorSubmission CaptureForSave(ProviderProfileEditorModel draft) {
+        var result = Capture(draft);
+        var request = Copy(result.original);
+        var candidate = request.Id ?? Guid.NewGuid();
+        var kind = request.Id.HasValue ? ProviderMutationKind.Update : ProviderMutationKind.Create;
+        request.Id = candidate;
+        if (kind == ProviderMutationKind.Create) {
+            request.ExpectedConcurrencyToken = Guid.Empty;
+        }
+        result.Attempt = ProviderMutationAttempt.Capture(request, candidate, kind);
+        return result;
+    }
+
+    public ProviderProfileEditorModel CreateRequest() {
+        var request = Copy(original);
+        if (Attempt is { } attempt) {
+            request.Id = attempt.ProviderId;
+            if (attempt.IsCreate) {
+                request.ExpectedConcurrencyToken = Guid.Empty;
+            }
+        }
+        return request;
+    }
 
     public bool HasLaterEdits(ProviderProfileEditorModel draft) {
         var current = Copy(draft);

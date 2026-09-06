@@ -1,0 +1,100 @@
+{
+  "summary": {
+    "CanDoItAll.Tests.Components": {
+      "discoveredRows": 1307,
+      "expectedRuntimeCases": 1307
+    },
+    "CanDoItAll.Tests.Integration": {
+      "discoveredRows": 1360,
+      "expectedRuntimeCases": 1365
+    },
+    "CanDoItAll.AgentFramework.Memory.Tests": {
+      "discoveredRows": 22,
+      "expectedRuntimeCases": 22
+    },
+    "CanDoItAll.Memory.Tests": {
+      "discoveredRows": 180,
+      "expectedRuntimeCases": 196
+    },
+    "CanDoItAll.Tests.Unit": {
+      "discoveredRows": 6878,
+      "expectedRuntimeCases": 6912
+    }
+  },
+  "expectedExecution": 9802,
+  "expansions": [
+    {
+      "assembly": "CanDoItAll.Tests.Integration",
+      "method": "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects",
+      "discoveredRows": 1,
+      "priorRuntimeCases": 6
+    },
+    {
+      "assembly": "CanDoItAll.Memory.Tests",
+      "method": "CanDoItAll.Memory.Tests.Security.MemoryOperationAccessAuthorizerTests.Any_changed_ownership_dimension_is_denied",
+      "discoveredRows": 1,
+      "priorRuntimeCases": 9
+    },
+    {
+      "assembly": "CanDoItAll.Memory.Tests",
+      "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.No_provider_denial_is_consistent_for_all_handler_callers",
+      "discoveredRows": 1,
+      "priorRuntimeCases": 5
+    },
+    {
+      "assembly": "CanDoItAll.Memory.Tests",
+      "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.Capability_mismatch_denial_is_consistent_for_all_handler_callers",
+      "discoveredRows": 1,
+      "priorRuntimeCases": 5
+    },
+    {
+      "assembly": "CanDoItAll.Tests.Unit",
+      "method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+      "discoveredRows": 1,
+      "priorRuntimeCases": 21
+    },
+    {
+      "assembly": "CanDoItAll.Tests.Unit",
+      "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+      "discoveredRows": 1,
+      "priorRuntimeCases": 8
+    },
+    {
+      "assembly": "CanDoItAll.Tests.Unit",
+      "method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+      "discoveredRows": 1,
+      "priorRuntimeCases": 8
+    }
+  ],
+  "unchangedSource": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs",
+      "sha256": "7664880eafefbce1fdf56aaa413e31e49efdc7afd80f50d1ab5c3de1ab7ada02"
+    },
+    {
+      "path": "tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationAccessAuthorizerTests.cs",
+      "sha256": "aaaee90111dcb50c7cbd292e9ac58d8809ac5b0fca3b4921f5dc92f1905298ed"
+    },
+    {
+      "path": "tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationHandlerTests.cs",
+      "sha256": "17f5e033dec5a883579f80ee7a206b236621636959312afc7d63f9ed26ff069e"
+    },
+    {
+      "path": "tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationHandlerTests.cs",
+      "sha256": "17f5e033dec5a883579f80ee7a206b236621636959312afc7d63f9ed26ff069e"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessRuntimeToolPreflightServiceTests.cs",
+      "sha256": "3b5a8eb62f1338f041426dcd6bb6ff9c2cb7f3fc3029cd96bcfc98199858dfb6"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FloatingAgentChatArchitectureTests.cs",
+      "sha256": "0685274c44a20a32b7dc1a965baf7051442ea5083caf544fc55f26e85fac3699"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/MafFinalizerToolFactorySchemaCharacterizationTests.cs",
+      "sha256": "2a754a87e8bfae6431a2b21e550de8dc41e3e7afdf4c44bbd851e2c64cf51173"
+    }
+  ],
+  "sourceHistoryReference": "Providers-02 stable proof source, not the current branch pin"
+}

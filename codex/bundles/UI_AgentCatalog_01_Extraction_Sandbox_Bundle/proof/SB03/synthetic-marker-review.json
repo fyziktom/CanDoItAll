@@ -1,0 +1,28 @@
+{
+  "initialMarkerHypothesis": "The first review incorrectly attributed six remaining secret-assignment matches to synthetic marker formatting. A direct value-fingerprint/source check refuted that hypothesis.",
+  "actualFindings": [
+    {
+      "method": "ProtectApprovalArgumentsForAudit_does_not_trust_spoofed_managed_envelopes",
+      "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs",
+      "fingerprint": "918edad36ec8fafc",
+      "committedFixtureVerified": true
+    },
+    {
+      "method": "ProtectApprovalArgumentsForAudit_fails_closed_for_non_object_json",
+      "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs",
+      "fingerprint": "417cb8ee6410006e",
+      "committedFixtureVerified": true
+    },
+    {
+      "method": "Redaction_removes_secrets_from_json_string_values",
+      "source": "tests/Unit/CanDoItAll.Tests.Unit/WorkflowExecutorPolicyObservabilityTests.cs",
+      "fingerprint": "67d787b7fc04d1d7",
+      "committedFixtureVerified": true
+    }
+  ],
+  "action": "Fingerprint argument displays for the three verified unchanged security-test methods in readable inventories. Preserve original compressed discovery, plan and TRX; no test or scanner change.",
+  "currentReadableHashes": {
+    "stable-discovery-redacted.txt": "5bbfda6141dcd650d5691cf059e2e5716f0ee51ddd284e82586e12f5edeeb30e",
+    "catalog-final-stable-plan.json": "7fb381be90a86f0f17c7ab4f8855d9e80aade3e92a6cd608780d46d06c654be2"
+  }
+}

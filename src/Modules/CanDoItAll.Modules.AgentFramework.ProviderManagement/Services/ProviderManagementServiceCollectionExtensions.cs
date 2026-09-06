@@ -46,6 +46,7 @@ public static class ProviderManagementServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProviderProfileCommitObserver,
             AgentFrameworkProviderRuntimeSnapshotCommitObserver>());
+        services.AddScoped<IProviderMutationVerification, DatabaseProviderMutationVerification>();
         services.AddScoped<DatabaseProviderProfileRegistry>();
         services.AddScoped<IProviderProfileRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<DatabaseProviderProfileRegistry>());

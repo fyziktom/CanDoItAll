@@ -15,6 +15,8 @@ public static class AgentFrameworkUiServiceCollectionExtensions
         services.TryAddScoped<IAgentEditorReads, AgentEditorReads>();
         services.TryAddScoped<IProviderProfilesReads, ProviderProfilesReads>();
         services.TryAddScoped<IProviderEditorCommands, ProviderEditorCommands>();
+        services.TryAddScoped<ProviderEditorRecovery>();
+        services.TryAddScoped<SharedProviderRecovery>();
         services.TryAddScoped<IAgentEditorCommands, AgentEditorCommands>();
         services.TryAddScoped<IAgentEditorAccessQuery, AgentEditorAccessQuery>();
         services.TryAddScoped<IBoundAgentResourceQuery, BoundAgentResourceQuery>();

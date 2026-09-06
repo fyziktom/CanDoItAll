@@ -1,0 +1,10 @@
+{
+  "state": "Verified",
+  "inputSha256": "8e3c168fe6d1740c72ce2dd21975988f695faeab62e13150d0d8d482d77a76c3",
+  "outputSha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd",
+  "agents": 40,
+  "teams": 6,
+  "bytes": 202188,
+  "byteIdentical": true,
+  "secretReferences": 0
+}

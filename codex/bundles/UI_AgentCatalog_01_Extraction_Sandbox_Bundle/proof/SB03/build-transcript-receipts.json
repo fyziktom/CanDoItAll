@@ -1,0 +1,30 @@
+[
+  {
+    "source": ".mcp-state/catalog-final-root-restore.txt",
+    "artifact": "root-restore.txt.gz",
+    "sourceSha256": "d621cd6a6df479adb65a603abdd1ad0ad16decca6575f08a4d06f9a2b65bae9b",
+    "sourceBytes": 469,
+    "lossless": true
+  },
+  {
+    "source": ".mcp-state/catalog-final-root-build.txt",
+    "artifact": "root-build.txt.gz",
+    "sourceSha256": "7f3bbeee69a195e2e5e67c2143502169daec1cbdd0de543e48421c26ed6aa8e7",
+    "sourceBytes": 24307,
+    "lossless": true
+  },
+  {
+    "source": ".mcp-state/catalog-final-stable-restore.txt",
+    "artifact": "stable-restore.txt.gz",
+    "sourceSha256": "a1bb7816be083f96aa720836ba3d7771d6d9a29654e913817fcfbe07b62ecc2a",
+    "sourceBytes": 485,
+    "lossless": true
+  },
+  {
+    "source": ".mcp-state/catalog-final-stable-build.txt",
+    "artifact": "stable-build.txt.gz",
+    "sourceSha256": "1a1fccc6a20013baa9d1d9b000d59f1bd3913a1f2546cfbe7f00be48d1f08c3d",
+    "sourceBytes": 25592,
+    "lossless": true
+  }
+]

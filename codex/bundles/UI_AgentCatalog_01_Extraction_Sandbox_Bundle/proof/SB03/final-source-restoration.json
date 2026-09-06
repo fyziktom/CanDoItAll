@@ -1,0 +1,140 @@
+{
+  "utc": "2026-09-06T05:36:35.091785+00:00",
+  "allFrozenFilesRestored": true,
+  "files": [
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "expectedSha256": "cb744e9077e3c4e1cafc78275ad6d3450aa4e38a28b9367378ffb0c4b6ca19e6",
+      "actualSha256": "cb744e9077e3c4e1cafc78275ad6d3450aa4e38a28b9367378ffb0c4b6ca19e6"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor",
+      "expectedSha256": "719dd8b09a1cead7cca8df000bbc9e92e616ac0f374762980b56930ee8a94253",
+      "actualSha256": "719dd8b09a1cead7cca8df000bbc9e92e616ac0f374762980b56930ee8a94253"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Cards/AgentSelectionCard.razor",
+      "expectedSha256": "d4a11bcc64f3093a03bf11b2c65ef70aec79f630792b528be0038b7622d8c093",
+      "actualSha256": "d4a11bcc64f3093a03bf11b2c65ef70aec79f630792b528be0038b7622d8c093"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
+      "expectedSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+      "actualSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
+      "expectedSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+      "actualSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css",
+      "expectedSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478",
+      "actualSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogState.cs",
+      "expectedSha256": "2a1856984fabf5adb74123324c2c71f134e971c2ed930ac8bb9b7919910b8b30",
+      "actualSha256": "2a1856984fabf5adb74123324c2c71f134e971c2ed930ac8bb9b7919910b8b30"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
+      "expectedSha256": "be0d8bc473cc8a5d98da4f7793cbc6278da3a62a0d39fdd0b0d015cbb39ee86b",
+      "actualSha256": "be0d8bc473cc8a5d98da4f7793cbc6278da3a62a0d39fdd0b0d015cbb39ee86b"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "expectedSha256": "0f8abf8e77c0f6c20233fab55b71a7ce4a059a667ef28ac430ce3252cd6d78e6",
+      "actualSha256": "0f8abf8e77c0f6c20233fab55b71a7ce4a059a667ef28ac430ce3252cd6d78e6"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogFixture.cs",
+      "expectedSha256": "dd88616ea657c0162deda9b30c726f76faa7d454377e8030bd7bb74e5aad909e",
+      "actualSha256": "dd88616ea657c0162deda9b30c726f76faa7d454377e8030bd7bb74e5aad909e"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",
+      "expectedSha256": "42e2b6fd75416fb8bc2986d23dd8ab9be5e4865c0437413b135c1950d39c733f",
+      "actualSha256": "42e2b6fd75416fb8bc2986d23dd8ab9be5e4865c0437413b135c1950d39c733f"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+      "expectedSha256": "32aa88aeccf19a96ed9b3b79850768659744700f21454b1ff35b7c3648cfe17e",
+      "actualSha256": "32aa88aeccf19a96ed9b3b79850768659744700f21454b1ff35b7c3648cfe17e"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "expectedSha256": "fc1450db582f66152abaf5dfa3ea998804ed44d2f6e0ab9338bf719da9e733fb",
+      "actualSha256": "fc1450db582f66152abaf5dfa3ea998804ed44d2f6e0ab9338bf719da9e733fb"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/App.razor",
+      "expectedSha256": "6ac1324adc26ac61660a3ec8fa9c94c75617e41d3d47a804a44f0d57c3cdaa46",
+      "actualSha256": "6ac1324adc26ac61660a3ec8fa9c94c75617e41d3d47a804a44f0d57c3cdaa46"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+      "expectedSha256": "44443e8b83cd7dc888ab53f644c219c74050493f778647b3eee26a78b0fbf5c5",
+      "actualSha256": "44443e8b83cd7dc888ab53f644c219c74050493f778647b3eee26a78b0fbf5c5"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Routes.razor",
+      "expectedSha256": "53867db72f77e41e86832bc3639d0340d6abf3befa8219edd7246132c1d851ae",
+      "actualSha256": "53867db72f77e41e86832bc3639d0340d6abf3befa8219edd7246132c1d851ae"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor",
+      "expectedSha256": "346ec2ca59404dfd52d4d72aa79d36b74541a1f94081088bd667095cb16b6388",
+      "actualSha256": "346ec2ca59404dfd52d4d72aa79d36b74541a1f94081088bd667095cb16b6388"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json",
+      "expectedSha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd",
+      "actualSha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Properties/launchSettings.json",
+      "expectedSha256": "4608d7d67b084203441c2bd82c08c40e06f2c5eadee0956ac97c269498f68584",
+      "actualSha256": "4608d7d67b084203441c2bd82c08c40e06f2c5eadee0956ac97c269498f68584"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/sandbox.css",
+      "expectedSha256": "cfd27fc1ca3149d42587d88425e6fc146dff9110ec47f73405cf9fe247929349",
+      "actualSha256": "cfd27fc1ca3149d42587d88425e6fc146dff9110ec47f73405cf9fe247929349"
+    },
+    {
+      "path": "Tailwind/package-lock.json",
+      "expectedSha256": "cc8c6fe1f6bd9c513ec582638631e933be55b5cfa56d06cf1f547bcff9ae8688",
+      "actualSha256": "cc8c6fe1f6bd9c513ec582638631e933be55b5cfa56d06cf1f547bcff9ae8688"
+    },
+    {
+      "path": "Tailwind/input.css",
+      "expectedSha256": "b7bbdcc809ffc6c0b95ac5650541be3aec359aa0e088e2c7527d92bdb105934d",
+      "actualSha256": "b7bbdcc809ffc6c0b95ac5650541be3aec359aa0e088e2c7527d92bdb105934d"
+    },
+    {
+      "path": "Tailwind/surfaces/admin.css",
+      "expectedSha256": "9f3822d73cca0baa000077d0c9128c62f391c863819d958fef6bcd14d969d4ea",
+      "actualSha256": "9f3822d73cca0baa000077d0c9128c62f391c863819d958fef6bcd14d969d4ea"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+      "expectedSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+      "actualSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"
+    },
+    {
+      "path": "global.json",
+      "expectedSha256": "b132d105648c7dbe49f2c391fe0b9898027e470ddc7cfd4d7239af5df63401fa",
+      "actualSha256": "b132d105648c7dbe49f2c391fe0b9898027e470ddc7cfd4d7239af5df63401fa"
+    }
+  ],
+  "launchSettingsRestored": true,
+  "measurementPortsClosed": [
+    5291,
+    5391
+  ],
+  "ledgerSha256": "42e6eac056dceb88f11defa45c3b3981675fe570c12ea53fc949bc1fe15e2e98",
+  "ledgerRows": 93,
+  "ledgerLossless": true,
+  "rootSolutionSha256": "8d295fb60e28e558a0172e13cc05bb9ce42ef63a67e7d16019dbacf9d8696bf6"
+}

@@ -79,7 +79,7 @@ internal sealed class ProviderRuntimeAdministrationService(
         }
 
         var checkedAtUtc = DateTimeOffset.UtcNow;
-        await providerRegistry.UpdateProviderAsync(
+        await PersistUpdateAsync(() => providerRegistry.UpdateProviderAsync(
             providerId,
             currentProvider => providerProfileService.ApplyHealthResult(
                 currentProvider,
@@ -87,7 +87,7 @@ internal sealed class ProviderRuntimeAdministrationService(
                 checkedAtUtc) with {
                     HealthStatus = result.Success ? SharedProviderPublicHealthMapper.HealthyStatus : SharedProviderPublicHealthMapper.UnhealthyStatus
                 },
-            cancellationToken);
+            cancellationToken), ProviderMutationKind.HealthPersistence);
         return result;
     }
 
@@ -139,14 +139,22 @@ internal sealed class ProviderRuntimeAdministrationService(
             request,
             cancellationToken);
         var checkedAtUtc = DateTimeOffset.UtcNow;
-        await providerRegistry.UpdateProviderAsync(
+        await PersistUpdateAsync(() => providerRegistry.UpdateProviderAsync(
             providerId,
             currentProvider => providerProfileService.ApplyProviderModelMaintenanceResult(
                 currentProvider,
                 result,
                 checkedAtUtc),
-            cancellationToken);
+            cancellationToken), ProviderMutationKind.ModelMaintenancePersistence);
         return result;
+    }
+
+    private static async Task PersistUpdateAsync(Func<Task<RuntimeProviderProfile>> write, ProviderMutationKind kind) {
+        try {
+            await write();
+        } catch (ProviderMutationUnconfirmedException exception) {
+            throw new ProviderMutationUnconfirmedException(exception.Attempt with { Kind = kind }, exception);
+        }
     }
 
     private async Task<RuntimeProviderProfile> GetRequiredRuntimeProviderAsync(

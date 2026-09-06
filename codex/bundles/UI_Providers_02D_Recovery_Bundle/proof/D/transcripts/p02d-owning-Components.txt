@@ -1,0 +1,59 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:55.16]     CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "Prices") [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "Prices") [2 s]
+  Chybová zpráva:
+   Bunit.Rendering.UnknownEventHandlerIdException : There is no event handler with ID '105' associated with the 'onclick' event in the current render tree.
+
+This can happen, for example, when using `cut.FindAll()`, and calling event trigger methods on the found elements after a re-render of the render tree. The workaround is to use re-issue the `cut.FindAll()` call after each render of a component, this ensures you have the latest version of the render tree and DOM tree available in your test code.
+
+This can happen with code like this, `cut.Find("button").Click()`, where the buttons event handler can be removed between the time button is found with the Find method and the Click method is triggered. The workaround is to use wrap the Find and Click method calls in InvokeAsync, i.e. `cut.InvokeAsync(() => cut.Find("button").Click());`. This ensures that there are no changes to the DOM between Find method and the Click method calls.
+---- System.ArgumentException : There is no event handler associated with this event. EventId: '105'. (Parameter 'eventHandlerId')
+  Trasování zásobníku:
+     at Bunit.Rendering.BunitRenderer.DispatchEventAsync(UInt64 eventHandlerId, EventFieldInfo fieldInfo, EventArgs eventArgs, Boolean ignoreUnknownEventHandlers) in /_/src/bunit/Rendering/BunitRenderer.cs:line 201
+   at Bunit.TriggerEventDispatchExtensions.GetDispatchEventTasks(BunitRenderer renderer, IElement element, String eventName, EventArgs eventArgs) in /_/src/bunit/EventDispatchExtensions/TriggerEventDispatchExtensions.cs:line 135
+   at Microsoft.AspNetCore.Components.Rendering.RendererSynchronizationContext.<>c.<<InvokeAsync>b__10_0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(String label) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderProfilesSeamTests.cs:line 162
+   at CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(String label) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\ProviderProfilesSeamTests.cs:line 166
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.DispatchEventAsync(UInt64 eventHandlerId, EventFieldInfo fieldInfo, EventArgs eventArgs, Boolean waitForQuiescence)
+   at Bunit.Rendering.BunitRenderer.<>c__DisplayClass32_0.<DispatchEventAsync>b__0() in /_/src/bunit/Rendering/BunitRenderer.cs:line 182
+[xUnit.net 00:01:57.03]     CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(fail: False) [FAIL]
+[xUnit.net 00:01:57.03]     CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(fail: True) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(fail: False) [3 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Cannot provide a value for property 'Recovery' on type 'CanDoItAll.Modules.AgentFramework.Pages.Components.SharedProviderRefreshButton'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.SharedProviderRecovery'.
+  Trasování zásobníku:
+     at Microsoft.AspNetCore.Components.ComponentFactory.<>c__DisplayClass11_0.<CreatePropertyInjector>g__Initialize|1(IServiceProvider serviceProvider, IComponent component)
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext& diffContext, Int32 frameIndex)
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext& diffContext, Int32 newFrameIndex)
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception& renderFragmentException)
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()
+--- End of stack trace from previous location ---
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRefreshButtonTests.cs:line 21
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(fail: True) [1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Cannot provide a value for property 'Recovery' on type 'CanDoItAll.Modules.AgentFramework.Pages.Components.SharedProviderRefreshButton'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.SharedProviderRecovery'.
+  Trasování zásobníku:
+     at Microsoft.AspNetCore.Components.ComponentFactory.<>c__DisplayClass11_0.<CreatePropertyInjector>g__Initialize|1(IServiceProvider serviceProvider, IComponent component)
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext& diffContext, Int32 frameIndex)
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext& diffContext, Int32 newFrameIndex)
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception& renderFragmentException)
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()
+--- End of stack trace from previous location ---
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(Boolean fail) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRefreshButtonTests.cs:line 21
+   at InvokeStub_SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02d-results\owning-Components.trx
+
+Neúspěšné!  - Neúspěšné:     3, Úspěšné:    93, Přeskočeno:     0, Celkem:    96, Doba trvání: 2 m 41 s - CanDoItAll.Tests.Components.dll (net10.0)

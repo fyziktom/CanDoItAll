@@ -1,6 +1,8 @@
 # SB01: Rendering assembly
 
-Status: Planned; execution not authorized in the provider run. Proof tier: Governed. Owned requirements: C01/C02: real panel/card/mapper/contracts and compile-time boundary.
+Status: Closed; see [execution proof](../../proof/SB01/closure.md). Proof tier: Governed. Owned requirements: C01/C02: real panel/card/mapper/contracts and compile-time boundary.
 Prerequisites/reopen triggers: plan/00-sequence.md in this bundle. Source/dependency boundary: architecture/01-boundaries.md. UI/asset acceptance: architecture/02-assets-and-composition.md. Exact tests/current discovery and broad-gate rules: plan/01-validation.md. Host measurements/non-test checks: plan/02-measurements.md.
 
 Progress only when this unit's actual implementation/measurement evidence is recorded and reviewed; preparation is not passing execution. For Governed units supply portable manifests, source hashes, transcripts, semantic invariants and negative/invalid-trial evidence. A failure may be a valid measurement result, but missing or incomparable evidence cannot prove improvement. Do not implement the next sequential unit against a reopened prerequisite.
+
+Execution closure: SB01 is closed; see ../../proof/SB01/closure.md. Original preparation-only status above is historical.

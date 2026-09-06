@@ -1,0 +1,8 @@
+Working directory: repository root
+Command: python tools/Validation/Portability/test_scan_artifacts_for_secrets.py
+Exit: 0
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.347s
+
+OK

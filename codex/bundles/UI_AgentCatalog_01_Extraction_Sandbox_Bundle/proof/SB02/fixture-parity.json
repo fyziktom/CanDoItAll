@@ -1,0 +1,29 @@
+{
+  "baselineSnapshotSha256": "8e3c168fe6d1740c72ce2dd21975988f695faeab62e13150d0d8d482d77a76c3",
+  "renderProjectionSha256": "ba486571d3cd1dc28a36e09cb654c2147241dda3651079906ab271cbed1ac2ae",
+  "agents": 40,
+  "teams": 6,
+  "identicalRenderingFields": [
+    "id",
+    "name",
+    "roleTitle",
+    "summary",
+    "status",
+    "providerProfileId",
+    "model",
+    "workload",
+    "chatHistoryMode",
+    "templateKey",
+    "tags",
+    "updatedAtUtc",
+    "avatarImageUrl",
+    "capabilityCount"
+  ],
+  "removedUnusedFields": [
+    "instructions content",
+    "configurationJson content",
+    "allowed secret references",
+    "capability proof notes"
+  ],
+  "fixtureBytes": 202188
+}

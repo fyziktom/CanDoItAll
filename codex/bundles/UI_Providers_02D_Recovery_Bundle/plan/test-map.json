@@ -1,0 +1,466 @@
+{
+  "frozenBeforeImplementation": true,
+  "expectedTopics": 26,
+  "topics": [
+    {
+      "topic": 1,
+      "name": "Unconfirmed_first_save_exposes_stable_candidate_identity",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-Unit",
+          "testName": "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_first_save_exposes_stable_candidate_identity",
+          "outcome": "Passed",
+          "duration": "00:00:00.0036537"
+        }
+      ]
+    },
+    {
+      "topic": 2,
+      "name": "Verification_binds_committed_candidate_without_replaying_save",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-Unit",
+          "testName": "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Verification_binds_committed_candidate_without_replaying_save",
+          "outcome": "Passed",
+          "duration": "00:00:00.0047621"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Canonical_candidate_verification_distinguishes_committed_and_absent(committed: True)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0093556"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Canonical_candidate_verification_distinguishes_committed_and_absent(committed: False)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0106374"
+        }
+      ]
+    },
+    {
+      "topic": 3,
+      "name": "Verified_absence_allows_same_candidate_controlled_retry",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-Unit",
+          "testName": "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Verified_absence_allows_same_candidate_controlled_retry",
+          "outcome": "Passed",
+          "duration": "00:00:00.0031197"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Canonical_candidate_verification_distinguishes_committed_and_absent(committed: True)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0093556"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Canonical_candidate_verification_distinguishes_committed_and_absent(committed: False)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0106374"
+        }
+      ]
+    },
+    {
+      "topic": 4,
+      "name": "Failed_verification_remains_unresolved",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-Unit",
+          "testName": "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Failed_verification_remains_unresolved(throws: False)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0003148"
+        },
+        {
+          "run": "owning-Unit",
+          "testName": "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Failed_verification_remains_unresolved(throws: True)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0013956"
+        }
+      ]
+    },
+    {
+      "topic": 5,
+      "name": "Repeated_controlled_retry_cannot_create_second_provider",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Repeated_controlled_retry_cannot_create_second_provider",
+          "outcome": "Passed",
+          "duration": "00:00:00.2705805"
+        }
+      ]
+    },
+    {
+      "topic": 6,
+      "name": "Later_edits_and_edit_context_survive_verification",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-Unit",
+          "testName": "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Later_edits_and_edit_context_survive_verification",
+          "outcome": "Passed",
+          "duration": "00:00:00.0038635"
+        }
+      ]
+    },
+    {
+      "topic": 7,
+      "name": "Selection_and_new_do_not_discard_unresolved_protection",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-Unit",
+          "testName": "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Selection_and_new_do_not_discard_unresolved_protection",
+          "outcome": "Passed",
+          "duration": "00:00:00.0013590"
+        }
+      ]
+    },
+    {
+      "topic": 8,
+      "name": "Update_and_delete_verify_identity_and_revision_without_replay",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: True, committed: False)",
+          "outcome": "Passed",
+          "duration": "00:00:00.2459040"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: True, committed: True)",
+          "outcome": "Passed",
+          "duration": "00:00:00.2707708"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: False, committed: False)",
+          "outcome": "Passed",
+          "duration": "00:00:00.2283311"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Update_and_delete_verify_identity_and_revision_without_replay(delete: False, committed: True)",
+          "outcome": "Passed",
+          "duration": "00:00:00.2381344"
+        }
+      ]
+    },
+    {
+      "topic": 9,
+      "name": "Api_unconfirmed_write_returns_identity_and_non_retry_contract",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Api_unconfirmed_write_returns_identity_and_non_retry_contract",
+          "outcome": "Passed",
+          "duration": "00:00:00.2068954"
+        }
+      ]
+    },
+    {
+      "topic": 10,
+      "name": "Api_unconfirmed_body_is_sanitized",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Api_unconfirmed_body_is_sanitized",
+          "outcome": "Passed",
+          "duration": "00:00:00.0249675"
+        }
+      ]
+    },
+    {
+      "topic": 11,
+      "name": "Unconfirmed_publish_retry_unlocks_authoritative_state",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Unconfirmed_publish_retry_unlocks_authoritative_state",
+          "outcome": "Passed",
+          "duration": "00:00:02.4477584"
+        }
+      ]
+    },
+    {
+      "topic": 12,
+      "name": "Imported_settings_verification_reloads_tokens_without_replay",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Imported_settings_verification_reloads_tokens_without_replay",
+          "outcome": "Passed",
+          "duration": "00:00:02.2365086"
+        }
+      ]
+    },
+    {
+      "topic": 13,
+      "name": "Failed_sharing_retry_remains_locked",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Failed_sharing_retry_remains_locked",
+          "outcome": "Passed",
+          "duration": "00:00:02.3162966"
+        }
+      ]
+    },
+    {
+      "topic": 14,
+      "name": "Stale_sharing_verification_cannot_unlock_other_target",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Stale_sharing_verification_cannot_unlock_other_target",
+          "outcome": "Passed",
+          "duration": "00:00:02.4990796"
+        }
+      ]
+    },
+    {
+      "topic": 15,
+      "name": "Rejected_sharing_retry_clears_obsolete_warning",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Rejected_sharing_retry_clears_obsolete_warning",
+          "outcome": "Passed",
+          "duration": "00:00:02.2415096"
+        }
+      ]
+    },
+    {
+      "topic": 16,
+      "name": "Source_update_verification_classifies_canonical_state",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Enablement)",
+          "outcome": "Passed",
+          "duration": "00:00:00.1512415"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Delete)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0511223"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Update)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0538418"
+        }
+      ]
+    },
+    {
+      "topic": 17,
+      "name": "Source_enablement_verification_does_not_repeat_write",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Enablement)",
+          "outcome": "Passed",
+          "duration": "00:00:00.1512415"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Delete)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0511223"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Update)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0538418"
+        }
+      ]
+    },
+    {
+      "topic": 18,
+      "name": "Source_delete_verification_uses_authoritative_absence",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Enablement)",
+          "outcome": "Passed",
+          "duration": "00:00:00.1512415"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Delete)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0511223"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_existing_operation_verifies_exact_canonical_postcondition(kind: Update)",
+          "outcome": "Passed",
+          "duration": "00:00:00.0538418"
+        }
+      ]
+    },
+    {
+      "topic": 19,
+      "name": "Source_create_has_stable_proposed_identity",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Source_create_has_stable_proposed_identity",
+          "outcome": "Passed",
+          "duration": "00:00:02.4408412"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Source_create_has_stable_proposed_identity",
+          "outcome": "Passed",
+          "duration": "00:00:00.0859309"
+        }
+      ]
+    },
+    {
+      "topic": 20,
+      "name": "Reopened_source_create_recovery_cannot_duplicate",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Reopened_source_create_recovery_cannot_duplicate",
+          "outcome": "Passed",
+          "duration": "00:00:02.6683739"
+        }
+      ]
+    },
+    {
+      "topic": 21,
+      "name": "Failed_source_verification_remains_visibly_unresolved",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Failed_source_verification_remains_visibly_unresolved",
+          "outcome": "Passed",
+          "duration": "00:00:08.0564828"
+        }
+      ]
+    },
+    {
+      "topic": 22,
+      "name": "Classified_source_verification_clears_errors_and_unlocks",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Classified_source_verification_clears_errors_and_unlocks",
+          "outcome": "Passed",
+          "duration": "00:00:02.8732427"
+        }
+      ]
+    },
+    {
+      "topic": 23,
+      "name": "Source_verification_publishes_committed_change_once",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Source_verification_publishes_committed_change_once",
+          "outcome": "Passed",
+          "duration": "00:00:03.6642058"
+        }
+      ]
+    },
+    {
+      "topic": 24,
+      "name": "Disposed_source_verification_emits_no_publication",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "owning-components-final",
+          "testName": "CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Disposed_source_verification_emits_no_publication",
+          "outcome": "Passed",
+          "duration": "00:00:02.3587584"
+        }
+      ]
+    },
+    {
+      "topic": 25,
+      "name": "Publication_conflict_explains_permanent_identity",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Publication_conflict_explains_permanent_identity",
+          "outcome": "Passed",
+          "duration": "00:00:00.2552799"
+        }
+      ]
+    },
+    {
+      "topic": 26,
+      "name": "Import_and_source_conflicts_have_specific_remediation",
+      "status": "Solved",
+      "evidence": [
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Import_and_source_conflicts_have_specific_remediation(hasPublication: False)",
+          "outcome": "Passed",
+          "duration": "00:00:00.3463259"
+        },
+        {
+          "run": "recovery-api-final",
+          "testName": "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.Import_and_source_conflicts_have_specific_remediation(hasPublication: True)",
+          "outcome": "Passed",
+          "duration": "00:00:01.4459086"
+        }
+      ]
+    }
+  ],
+  "initialFailingFirst": {
+    "Unit": [
+      "Unconfirmed_first_save_exposes_stable_candidate_identity",
+      "Selection_and_new_do_not_discard_unresolved_protection"
+    ],
+    "Components": [
+      "Unconfirmed_publish_retry_unlocks_authoritative_state"
+    ]
+  },
+  "discoveryPolicy": "Freeze exact methods before implementation; discover every filter and record exact theory row counts before execution.",
+  "owning": "Reuse 02 owning filters then include 01 state/read tests for altered source; all builds direct.",
+  "broadGate": "Only named final persistence/composition/serialization invalidation checkpoint if required by actual impact; no repeated broad run.",
+  "browser": [
+    "local canonical verification",
+    "sharing Retry",
+    "source create recovery without duplicate",
+    "normal Save/Publish/import"
+  ],
+  "additionalDirectTests": [
+    "Canonical_read_failure_is_not_evidence_of_absence",
+    "Shared_refresh_respects_unresolved_source_attempt",
+    "Candidate_conflict_after_absence_requires_verification_before_new_identity"
+  ],
+  "amendments": [
+    "Source update/enablement/delete topics map to the three data rows of Source_existing_operation_verifies_exact_canonical_postcondition. Import/source remediation includes Import and Publication|Import rows. Added refresh-action lock regression before its production correction."
+  ]
+}

@@ -1,0 +1,8 @@
+Working directory: repository root
+Command: python tools/Validation/Portability/test_enforce_portability_baseline.py
+Exit: 0
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.006s
+
+OK

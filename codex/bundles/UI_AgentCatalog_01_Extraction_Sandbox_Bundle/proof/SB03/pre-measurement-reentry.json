@@ -1,0 +1,29 @@
+{
+  "utc": "2026-09-06T04:18:45.524640+00:00",
+  "branch": "components-decoupling",
+  "head": "e5a8d5c6b7ad19c99c805a76cde84b99d08d9eee",
+  "remoteHead": "e5a8d5c6b7ad19c99c805a76cde84b99d08d9eee",
+  "sdk": "10.0.303",
+  "siblings": {
+    "CanDoItAll.Components": {
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "branch": "codex/original-ui-refactoring-release",
+      "dirty": false
+    },
+    "CanDoItAll.FileTools": {
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "branch": "",
+      "dirty": false
+    },
+    "CanDoItAll.SharedInfo": {
+      "head": "00e6fe6389eba9a6bc3b2bb78e27fb10b7597292",
+      "branch": "main",
+      "dirty": false
+    },
+    "CanDoItAll.Mcp": {
+      "head": "abeaea463aa906bca2d83a1b608ff432dbc29d8d",
+      "branch": "main",
+      "dirty": false
+    }
+  }
+}

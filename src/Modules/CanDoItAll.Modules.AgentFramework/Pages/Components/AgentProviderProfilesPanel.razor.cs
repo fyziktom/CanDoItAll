@@ -14,6 +14,8 @@ public partial class AgentProviderProfilesPanel : IDisposable {
     [Inject]
     public IProviderEditorCommands Commands { get; set; } = default!;
 
+    [Inject] public ProviderEditorRecovery Recovery { get; set; } = default!;
+
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
@@ -86,7 +88,7 @@ public partial class AgentProviderProfilesPanel : IDisposable {
     public void Dispose() => session?.Dispose();
 
     protected override async Task OnInitializedAsync() {
-        session = new(Reads);
+        session = new(Reads, Recovery);
         operations = new(session, Commands);
         await LoadAsync();
     }
@@ -171,6 +173,16 @@ public partial class AgentProviderProfilesPanel : IDisposable {
 
     private async Task RetryReconciliationAsync() {
         PublishFeedback(await operations.RetryReconciliationAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private async Task VerifyUnconfirmedAsync() {
+        PublishFeedback(await operations.VerifyUnconfirmedAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private async Task RetryVerifiedAsync() {
+        PublishFeedback(await operations.RetryVerifiedAsync());
         RefreshProviderTreeExpansionDefaults();
     }
 

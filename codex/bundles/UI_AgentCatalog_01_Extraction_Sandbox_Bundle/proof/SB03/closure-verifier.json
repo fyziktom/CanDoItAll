@@ -1,0 +1,22 @@
+{
+  "result": "PASS - bounded catalog closure",
+  "checks": {
+    "completeMatrix": true,
+    "requiredWarmTrials": true,
+    "requiredColdTrials": true,
+    "noPrimaryFailures": true,
+    "stableExactInventoryPass": true,
+    "frozenRuntimeSourceRestored": true,
+    "providerClosurePreserved": true,
+    "bundleRequirementsSolved": true,
+    "liveSiblingsPreserved": true,
+    "port5291Closed": true,
+    "port5391Closed": true,
+    "port17299Closed": true,
+    "finalPortabilityPass": true,
+    "completeProposalSecretPass": true,
+    "historicalDocumentationUnchanged": true
+  },
+  "wholeRepositoryDocumentation": "FAILED - 118 unchanged historical artifacts; not waived",
+  "countMeaning": "Frozen user-required sample and test inventories, not architecture shape invariants."
+}

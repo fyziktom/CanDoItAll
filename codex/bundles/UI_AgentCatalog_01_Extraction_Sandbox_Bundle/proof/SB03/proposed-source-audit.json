@@ -1,0 +1,355 @@
+{
+  "head": "e5a8d5c6b7ad19c99c805a76cde84b99d08d9eee",
+  "paths": [
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+      "exists": true,
+      "sha256": "243a9bf5175c408334a0bc0a6de76fe4dd90b8df0d5af8ea6c6104c6172d3e67"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProviderApiResults.cs",
+      "exists": true,
+      "sha256": "5740a4c6249acfb4c2613f60a23efe08b347a1eb837367ebd13a9b627e488db1"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSelectionCard.razor",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "exists": true,
+      "sha256": "4f9c8c0985639660bc1f4867aeb98b28f8411375eae3d7df6708616c1d0b2b39"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/DatabaseProviderMutationVerification.cs",
+      "exists": true,
+      "sha256": "8a7bc7bc9cdd3ff10f81c2c9048ac12492b459c48b2ffba78714cb8e6699144a"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/DatabaseProviderProfileRegistry.cs",
+      "exists": true,
+      "sha256": "00f0578845307409b41e8fac3195cb4c4e90e6733dd4c413932193af6522f656"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderRuntimeAdministrationService.cs",
+      "exists": true,
+      "sha256": "d19b1ff90aa683d85fe3fca6c95c2cdbdbcfeedfc748978ab6b7f1b751b74330"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/ProviderMutationAttempt.cs",
+      "exists": true,
+      "sha256": "43792e1382351bc8ca4ec7733491d2203a3a694c67be1b5b1207bae7a02b94aa"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/ProviderMutationOutcome.cs",
+      "exists": true,
+      "sha256": "8f8b7a2a9aad1e05f955235e6f40d124e3c0db20392e51bba96ce05768775b7e"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/SharedProviderManagement.cs",
+      "exists": true,
+      "sha256": "8968c988d97ef96707683f5029d43e477159b064638f09ac0afdd3d375c3fd2e"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs",
+      "exists": true,
+      "sha256": "66b4cae624b7081ba34677b144fb464e161aecf44226176bc17c8210ac9f6d46"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+      "exists": true,
+      "sha256": "af72840b4f79b313b052ca7bf463b8dc6b19844f564fdaa33efe8426faa19ac4"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderPersistenceContracts.cs",
+      "exists": true,
+      "sha256": "e17e1e33dc93b9da0de30b7210c345b9e53c369ba1b34a1e7d1fe3dd3d94d093"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderProfileDeletionPolicy.cs",
+      "exists": true,
+      "sha256": "f5ad7607f47aec2af9ac78bac582e2c58f5aa989c7e2d315b2d0d41a30670d4d"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceService.cs",
+      "exists": true,
+      "sha256": "0133ad56dfb153444bf85ff14783b1990877c4031df8f6a2112b54510a73324d"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceVerification.cs",
+      "exists": true,
+      "sha256": "794c83f4287297f8a5dba433690369a5defaa492b099707e86b780634c69addd"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "exists": true,
+      "sha256": "03f50c9d5d6c1d94056a18158cd3eebb0414c44649dcc156393c9def6dda2f1f"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.css",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogState.cs",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
+      "exists": true,
+      "sha256": "b4590f9a53337dbf08137749478252336f3aec0b84672c70a8034cfdca2d1e9a"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
+      "exists": true,
+      "sha256": "62c8e3f202dac63c8d284a30b10ff9166e160dc1c2fe00b2a810e8a767c438b6"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesSession.cs",
+      "exists": true,
+      "sha256": "df270eff090fd06b36350a5445ed352eb4379613a2bb3c5d817bb89b3048e37e"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor",
+      "exists": true,
+      "sha256": "c33161597b40a4746f4ab921a30875205b9478e69cfccb2487e41e4a04c9ce53"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor.cs",
+      "exists": true,
+      "sha256": "2db627013f321e34cf4e82b43aa9aec0618a96912bb477c3ebd01626b290bbe8"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderRefreshButton.razor",
+      "exists": true,
+      "sha256": "4dd45069b2b730e68b571302984d7cd2217d07d74ca4d832b34de14f5037d208"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
+      "exists": true,
+      "sha256": "d55f809c821f26e7e3a27c51b73c731926d44aa2dd08b97e53935a9234372d32"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
+      "exists": true,
+      "sha256": "72854a732565e2f041d88261cba214ef28dc6bf2a6efed27370078bc61b96a97"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCatalogOperations.cs",
+      "exists": true,
+      "sha256": "6b36e93334d0af3483bcc8f2fe01cda88bb5b381b631d3b92b75ec9cef541808"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs",
+      "exists": true,
+      "sha256": "57eb37aae1e6ae833b9cfe4d676161541edbdc77301889cce13f3534dc857293"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorCommands.cs",
+      "exists": true,
+      "sha256": "a772a78861ae430d0704b4192d037a675c8537f0cb777a6557e9fff17f172d5e"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorOperations.cs",
+      "exists": true,
+      "sha256": "472e73dfd183c2c60c77fc3df65d477fcc12387db5bb82281b56787a99e355a9"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorRecovery.cs",
+      "exists": true,
+      "sha256": "ff8dcca15cdf402e7629336cacf196a99e1ed26727c67a452a1debb1ec5f352b"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorSubmission.cs",
+      "exists": true,
+      "sha256": "a7acfe4af2d6da874c26c100c64b279de460deb80c668d63fdea3d9d7c262a5f"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderRecovery.cs",
+      "exists": true,
+      "sha256": "fbd98c5fd6204b90195db20e9b1b31bcc2996c65d32e29c8533e1dd7d7e9f2da"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor",
+      "exists": true,
+      "sha256": "2193638576ac627720cec8323ab1ffa07589b75bb5445ea32cad003bfd2fbce2"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "exists": true,
+      "sha256": "0f8abf8e77c0f6c20233fab55b71a7ce4a059a667ef28ac430ce3252cd6d78e6"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogFixture.cs",
+      "exists": true,
+      "sha256": "dd88616ea657c0162deda9b30c726f76faa7d454377e8030bd7bb74e5aad909e"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",
+      "exists": true,
+      "sha256": "42e2b6fd75416fb8bc2986d23dd8ab9be5e4865c0437413b135c1950d39c733f"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/App.razor",
+      "exists": true,
+      "sha256": "6ac1324adc26ac61660a3ec8fa9c94c75617e41d3d47a804a44f0d57c3cdaa46"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+      "exists": true,
+      "sha256": "44443e8b83cd7dc888ab53f644c219c74050493f778647b3eee26a78b0fbf5c5"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Routes.razor",
+      "exists": true,
+      "sha256": "53867db72f77e41e86832bc3639d0340d6abf3befa8219edd7246132c1d851ae"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor",
+      "exists": true,
+      "sha256": "346ec2ca59404dfd52d4d72aa79d36b74541a1f94081088bd667095cb16b6388"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json",
+      "exists": true,
+      "sha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+      "exists": true,
+      "sha256": "32aa88aeccf19a96ed9b3b79850768659744700f21454b1ff35b7c3648cfe17e"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Properties/launchSettings.json",
+      "exists": true,
+      "sha256": "4608d7d67b084203441c2bd82c08c40e06f2c5eadee0956ac97c269498f68584"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "exists": true,
+      "sha256": "fc1450db582f66152abaf5dfa3ea998804ed44d2f6e0ab9338bf719da9e733fb"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/sandbox.css",
+      "exists": true,
+      "sha256": "cfd27fc1ca3149d42587d88425e6fc146dff9110ec47f73405cf9fe247929349"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "exists": true,
+      "sha256": "cb744e9077e3c4e1cafc78275ad6d3450aa4e38a28b9367378ffb0c4b6ca19e6"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Cards/AgentSelectionCard.razor",
+      "exists": true,
+      "sha256": "d4a11bcc64f3093a03bf11b2c65ef70aec79f630792b528be0038b7622d8c093"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
+      "exists": true,
+      "sha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
+      "exists": true,
+      "sha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css",
+      "exists": true,
+      "sha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogState.cs",
+      "exists": true,
+      "sha256": "2a1856984fabf5adb74123324c2c71f134e971c2ed930ac8bb9b7919910b8b30"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
+      "exists": true,
+      "sha256": "be0d8bc473cc8a5d98da4f7793cbc6278da3a62a0d39fdd0b0d015cbb39ee86b"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/README.md",
+      "exists": true,
+      "sha256": "4e2af38387c27ba028b10e5bc7b898ac3fc2861324e55065367d3022a82bfc9b"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor",
+      "exists": true,
+      "sha256": "719dd8b09a1cead7cca8df000bbc9e92e616ac0f374762980b56930ee8a94253"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCatalogBoundaryTests.cs",
+      "exists": true,
+      "sha256": "1582f9f7ae2c75edc623b3857ded164fe3bedd6c124bd80a59a528eee5cbefcf"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCatalogPanelTests.cs",
+      "exists": true,
+      "sha256": "74bf02ebfb3d1af3f12be98d06d5d0ec6204c9f7332451d937ea8093623fa9be"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEditorSessionTests.cs",
+      "exists": true,
+      "sha256": "e7d8eef9d357fee6ba4f2a64542e0556c1b3f025a7e36f4862f319fa77b8b3a0"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentSeamFinalizationTests.cs",
+      "exists": true,
+      "sha256": "b683c1d7c15a40666b2de40793bcf85f37a01776100dbf45357b84441a81e574"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProviderProfilesSeamTests.cs",
+      "exists": true,
+      "sha256": "c83700cfee2543ab656b097c629eec02135ab05741e2f2812d82caeca597f359"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderPublicationPanelTests.cs",
+      "exists": true,
+      "sha256": "bebed65e94e23eefc1f7089ae902ffa149df1f757a40c565ac2cea16af799916"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRecoveryTests.cs",
+      "exists": true,
+      "sha256": "2f1815412bbb62f8b78201aef5f0784cff94ecaa070410882c063151578b7ba8"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRefreshButtonTests.cs",
+      "exists": true,
+      "sha256": "a513b5a90a5af64e69ceaac69dba91e9f5c3278e21afc6c73e88c9dafe45eee6"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedSourceRecoveryTests.cs",
+      "exists": true,
+      "sha256": "009446cfe8b5ed485d32e7e2a15ce4a3e398233f9ee355a728acc0db227e2485"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProviderRecoveryIntegrationTests.cs",
+      "exists": true,
+      "sha256": "9406e2b824d5481a83d5b0dac99f79956683a380269c2c4d5a4cd07d11d211d6"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderEditorOperationsTests.cs",
+      "exists": true,
+      "sha256": "62b01ada606c90cd1a2e821f11052aaec9291c6f559d84690fe958ccf6307ba0"
+    }
+  ]
+}

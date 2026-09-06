@@ -1,0 +1,47 @@
+html,
+body {
+    min-height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}
+
+a {
+    color: inherit;
+}
+
+.catalog-sandbox__controls {
+    box-sizing: border-box;
+    min-height: 222.59375px;
+    padding: 24px max(24px, calc((100vw - 1350px) / 2));
+}
+
+.catalog-sandbox__frame {
+    margin: 0 24px 24px;
+}
+
+.catalog-sandbox__frame--matched {
+    width: calc(100vw - 181px);
+    margin-left: 125px;
+    margin-right: 56px;
+}
+
+.catalog-sandbox__specimen {
+    max-width: 360px;
+}
+
+@media (max-width: 1023px) {
+    .catalog-sandbox__frame--matched {
+        width: auto;
+        margin-inline: 24px;
+    }
+}

@@ -7,6 +7,15 @@
         Subtitle="Connect another CanDoItAll instance and import its shared providers."
         Size="ModalSize.Wide" OnClose="CloseOverlayAsync" TestId="shared-provider-connections-dialog">
     <ChildContent>
+        @if (Recovery.Source is { } unresolved) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-source-unresolved">
+                Source attempt @unresolved.SourceId requires verification before another operation.
+                <Button Text="Verify source attempt" Click="VerifySourceAsync" Disabled="@operationBusy" data-testid="shared-provider-source-verify" />
+                @if (Recovery.SourceRetryAllowed) {
+                    <Button Text="Retry verified source operation" Click="RetryVerifiedSourceAsync" Disabled="@operationBusy" data-testid="shared-provider-source-retry-verified" />
+                }
+            </Alert>
+        }
         @if (isLoading) {
             <EmptyState Title="Loading connections" Description="Reading shared provider sources." />
         } else if (!string.IsNullOrEmpty(loadError)) {
@@ -27,6 +36,7 @@
                         <Button Text="Add source"
                                 Icon="add_link"
                                 Size="ButtonSize.Small"
+                                Disabled="@isBusy"
                                 Click="OpenNewSourceDialog"
                                 data-testid="shared-provider-source-add" />
                         <Button Text="Refresh"
@@ -134,7 +144,7 @@
 </Dialog>
 
 <Dialog IsOpen="@sourceDialogOpen"
-        Title="@(sourceEditor.Id.HasValue ? "Edit shared provider source" : "Add shared provider source")"
+        Title="@(sourceEditor.ExpectedConcurrencyToken.HasValue ? "Edit shared provider source" : "Add shared provider source")"
         Eyebrow="Shared providers"
         Subtitle="Use the base URL of another CanDoItAll instance."
         Size="ModalSize.Medium"
@@ -194,7 +204,7 @@
                     Click="CloseSourceDialog" />
             <Button Text="Save source"
                     Disabled="@isBusy"
-                    IsBusy="@isBusy"
+                    IsBusy="@operationBusy"
                     Click="SaveSourceAsync"
                     data-testid="shared-provider-source-save" />
         </Cluster>
@@ -253,7 +263,7 @@
                     Click="CloseCatalogDialog" />
             <Button Text="Apply selection"
                     Disabled="@(isBusy || catalogSourceId == Guid.Empty)"
-                    IsBusy="@isBusy"
+                    IsBusy="@operationBusy"
                     Click="ApplyCatalogSelectionAsync"
                     data-testid="shared-provider-catalog-apply" />
         </Cluster>

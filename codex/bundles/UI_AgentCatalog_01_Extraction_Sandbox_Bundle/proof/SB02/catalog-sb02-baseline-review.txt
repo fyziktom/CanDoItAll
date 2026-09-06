@@ -1,0 +1,4 @@
+Wrote reviewed portability baseline with 14300 allowances: tools\Validation\Portability\portability-risk-baseline.json
+ExitCode: 0
+RESULT: PASS (14300 reviewed executable-source findings unchanged)
+ExitCode: 0

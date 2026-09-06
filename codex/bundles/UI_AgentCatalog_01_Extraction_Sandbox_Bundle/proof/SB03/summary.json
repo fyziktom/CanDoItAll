@@ -1,0 +1,559 @@
+{
+  "scope": "Observed edit-to-visible latency includes managed-tool and browser orchestration.",
+  "coldDefinition": "Process-cold with restored, previously compiled caches; not clean build.",
+  "completeMatrix": true,
+  "validationProblems": [],
+  "excludedButRetained": [
+    {
+      "trialId": "pre-css-toolbar-1",
+      "reason": "Retained incompatible pre-CSS manager-parser protocol"
+    },
+    {
+      "trialId": "sandbox-calibration-razor-heading-1",
+      "reason": "Calibration, outside primary hosts"
+    },
+    {
+      "trialId": "sandbox-calibration-css-tailwind-v2-1",
+      "reason": "Calibration, outside primary hosts"
+    }
+  ],
+  "primaryWarm": 81,
+  "primaryCold": 9,
+  "byEdit": {
+    "razor-heading": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 10336.2748,
+        "maximumMs": 13644.0815,
+        "rangeMs": 3307.806700000001,
+        "medianMs": 11059.844,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 12770.5086,
+        "maximumMs": 15115.0866,
+        "rangeMs": 2344.5780000000013,
+        "medianMs": 13020.8459,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 13587.7494,
+        "maximumMs": 16993.0749,
+        "rangeMs": 3405.325499999999,
+        "medianMs": 14644.4093,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "razor-empty": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 9739.6989,
+        "maximumMs": 11064.3276,
+        "rangeMs": 1324.6287000000011,
+        "medianMs": 10361.3579,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11333.0108,
+        "maximumMs": 12383.8114,
+        "rangeMs": 1050.8006000000005,
+        "medianMs": 11620.6173,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11303.1433,
+        "maximumMs": 15878.0482,
+        "rangeMs": 4574.9048999999995,
+        "medianMs": 12416.7028,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "razor-action": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 9767.9367,
+        "maximumMs": 11973.0349,
+        "rangeMs": 2205.0982000000004,
+        "medianMs": 10852.9997,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11782.3032,
+        "maximumMs": 12408.7239,
+        "rangeMs": 626.4207000000006,
+        "medianMs": 12045.0706,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11058.5549,
+        "maximumMs": 18470.8302,
+        "rangeMs": 7412.275300000001,
+        "medianMs": 11408.2631,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "csharp-summary": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 8945.8456,
+        "maximumMs": 10647.2564,
+        "rangeMs": 1701.4107999999997,
+        "medianMs": 9580.5607,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11507.9064,
+        "maximumMs": 12142.8214,
+        "rangeMs": 634.9150000000009,
+        "medianMs": 12052.1376,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 10991.6387,
+        "maximumMs": 17323.7237,
+        "rangeMs": 6332.084999999999,
+        "medianMs": 12370.8029,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "csharp-metadata": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 9337.0413,
+        "maximumMs": 11207.764,
+        "rangeMs": 1870.7226999999984,
+        "medianMs": 11156.1428,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11248.1856,
+        "maximumMs": 13225.5514,
+        "rangeMs": 1977.3657999999996,
+        "medianMs": 12504.7958,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 10754.4637,
+        "maximumMs": 32643.4659,
+        "rangeMs": 21889.0022,
+        "medianMs": 12267.7554,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "csharp-team-title": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 10024.4851,
+        "maximumMs": 32227.4515,
+        "rangeMs": 22202.966399999998,
+        "medianMs": 10298.1033,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11364.9817,
+        "maximumMs": 12891.3993,
+        "rangeMs": 1526.4175999999989,
+        "medianMs": 11484.939,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 10950.4214,
+        "maximumMs": 12455.0321,
+        "rangeMs": 1504.610700000001,
+        "medianMs": 11587.2814,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "css-toolbar": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 14437.5134,
+        "maximumMs": 39059.3694,
+        "rangeMs": 24621.856000000003,
+        "medianMs": 14878.6782,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 16345.9782,
+        "maximumMs": 18328.2585,
+        "rangeMs": 1982.2803000000004,
+        "medianMs": 16380.9062,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11381.7544,
+        "maximumMs": 13340.4663,
+        "rangeMs": 1958.7119000000002,
+        "medianMs": 11408.971,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "css-spacing": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 13527.2797,
+        "maximumMs": 18206.7987,
+        "rangeMs": 4679.519,
+        "medianMs": 14560.6904,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 15267.9896,
+        "maximumMs": 31288.0199,
+        "rangeMs": 16020.030299999999,
+        "medianMs": 15342.718,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 11347.8846,
+        "maximumMs": 12199.9157,
+        "rangeMs": 852.0311000000002,
+        "medianMs": 11908.6485,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    },
+    "css-tailwind": {
+      "pre": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 8157.1816,
+        "maximumMs": 10394.8335,
+        "rangeMs": 2237.6519000000008,
+        "medianMs": 8930.8073,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 10734.627,
+        "maximumMs": 12783.2274,
+        "rangeMs": 2048.6003999999994,
+        "medianMs": 12601.2977,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 3,
+        "success": 3,
+        "failures": 0,
+        "minimumMs": 10881.0342,
+        "maximumMs": 11358.1581,
+        "rangeMs": 477.1239000000005,
+        "medianMs": 11099.7549,
+        "mechanisms": {
+          "hot reload": 3
+        },
+        "failedTrials": []
+      }
+    }
+  },
+  "byCategory": {
+    "Razor": {
+      "pre": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 9739.6989,
+        "maximumMs": 13644.0815,
+        "rangeMs": 3904.382600000001,
+        "medianMs": 10852.9997,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 11333.0108,
+        "maximumMs": 15115.0866,
+        "rangeMs": 3782.0758000000005,
+        "medianMs": 12383.8114,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 11058.5549,
+        "maximumMs": 18470.8302,
+        "rangeMs": 7412.275300000001,
+        "medianMs": 13587.7494,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      }
+    },
+    "CSharp": {
+      "pre": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 8945.8456,
+        "maximumMs": 32227.4515,
+        "rangeMs": 23281.6059,
+        "medianMs": 10298.1033,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 11248.1856,
+        "maximumMs": 13225.5514,
+        "rangeMs": 1977.3657999999996,
+        "medianMs": 12052.1376,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 10754.4637,
+        "maximumMs": 32643.4659,
+        "rangeMs": 21889.0022,
+        "medianMs": 12267.7554,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      }
+    },
+    "CSS": {
+      "pre": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 8157.1816,
+        "maximumMs": 39059.3694,
+        "rangeMs": 30902.187800000003,
+        "medianMs": 14437.5134,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      },
+      "post": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 10734.627,
+        "maximumMs": 31288.0199,
+        "rangeMs": 20553.3929,
+        "medianMs": 15342.718,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      },
+      "sandbox": {
+        "samples": 9,
+        "success": 9,
+        "failures": 0,
+        "minimumMs": 10881.0342,
+        "maximumMs": 13340.4663,
+        "rangeMs": 2459.4321,
+        "medianMs": 11381.7544,
+        "mechanisms": {
+          "hot reload": 9
+        },
+        "failedTrials": []
+      }
+    }
+  },
+  "cold": {
+    "pre": {
+      "samples": 3,
+      "success": 3,
+      "failures": 0,
+      "minimumMs": 116724.2427,
+      "maximumMs": 135780.1291,
+      "rangeMs": 19055.88639999999,
+      "medianMs": 118233.9099,
+      "mechanisms": {
+        "process-cold launch": 3
+      },
+      "failedTrials": []
+    },
+    "post": {
+      "samples": 3,
+      "success": 3,
+      "failures": 0,
+      "minimumMs": 121835.2343,
+      "maximumMs": 131885.7605,
+      "rangeMs": 10050.526200000008,
+      "medianMs": 122103.8721,
+      "mechanisms": {
+        "process-cold launch": 3
+      },
+      "failedTrials": []
+    },
+    "sandbox": {
+      "samples": 3,
+      "success": 3,
+      "failures": 0,
+      "minimumMs": 44259.1393,
+      "maximumMs": 70368.0195,
+      "rangeMs": 26108.880199999992,
+      "medianMs": 45045.6868,
+      "mechanisms": {
+        "process-cold launch": 3
+      },
+      "failedTrials": []
+    }
+  }
+}

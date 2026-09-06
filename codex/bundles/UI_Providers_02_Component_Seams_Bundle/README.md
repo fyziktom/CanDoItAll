@@ -13,3 +13,5 @@ Compatible compact Governed bundle, manually validated by semantic role rather t
 Only after this provider closure, prepare the separate catalog extraction/sandbox/measurement child. No UI assembly, sandbox, routing, history refactor or dotnet-watch optimization was implemented.
 
 Next child prepared after this closure: [CDA-UI-SEAMS-CATALOG-01](../UI_AgentCatalog_01_Extraction_Sandbox_Bundle/README.md). It is ready for a separately authorized execution; no extraction/sandbox/measurement implementation was performed here.
+
+Follow-up: [PROVIDERS-02D canonical verification and recovery](../UI_Providers_02D_Recovery_Bundle/README.md). This is new evidence; the 02A/B/C closure and proof remain historical.

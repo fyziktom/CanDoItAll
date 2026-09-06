@@ -1,0 +1,21 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.95]     CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Selection_and_new_do_not_discard_unresolved_protection [FAIL]
+[xUnit.net 00:00:00.96]     CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_first_save_exposes_stable_candidate_identity [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Selection_and_new_do_not_discard_unresolved_protection [73 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 1
+Actual:   2
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Selection_and_new_do_not_discard_unresolved_protection() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentFramework\ProviderEditorOperationsTests.cs:line 226
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_first_save_exposes_stable_candidate_identity [1 ms]
+  Chybová zpráva:
+   Assert.NotNull() Failure: Value of type 'Nullable<Guid>' does not have a value
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_first_save_exposes_stable_candidate_identity() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentFramework\ProviderEditorOperationsTests.cs:line 207
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02d-results\red-unit.trx
+
+Neúspěšné!  - Neúspěšné:     2, Úspěšné:     0, Přeskočeno:     0, Celkem:     2, Doba trvání: 94 ms - CanDoItAll.Tests.Unit.dll (net10.0)

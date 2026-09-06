@@ -1,0 +1,183 @@
+{
+  "scope": "One final stable checkpoint for moved Razor assembly, root solution and transitive asset composition. Special lanes remain excluded by the frozen filter.",
+  "processExitCode": 0,
+  "discoveryRows": 9747,
+  "runtimeExpansionReview": "catalog-final-runtime-expansion-review.json",
+  "executed": 9802,
+  "passed": 9802,
+  "failed": 0,
+  "skipped": 0,
+  "transcriptSha256": "77383e33720d093447a73488bc9344bf97a55e0ab0bd9b20f1e73baee1486e51",
+  "assemblies": [
+    {
+      "assembly": "CanDoItAll.Tests.Components",
+      "originalFile": "lucys_LUCYSPOWER_2026-09-05_23_14_09_net10.0.trx",
+      "testRunId": "308893cd-6e52-462d-8909-32bd89940a12",
+      "times": {
+        "creation": "2026-09-05T23:14:09.6746174-04:00",
+        "queuing": "2026-09-05T23:14:09.6746178-04:00",
+        "start": "2026-09-05T23:14:08.2509329-04:00",
+        "finish": "2026-09-05T23:32:35.3093068-04:00"
+      },
+      "counters": {
+        "total": 1307,
+        "executed": 1307,
+        "passed": 1307,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "expectedExecutionCases": 1307,
+      "originalSha256": "b5e80995aa753de4ec0cb2f5b1f206cf4914c085532b19af187de7be2c75df77",
+      "originalBytes": 2051819,
+      "artifact": "CanDoItAll.Tests.Components.trx.gz",
+      "lossless": true
+    },
+    {
+      "assembly": "CanDoItAll.Tests.Integration",
+      "originalFile": "lucys_LUCYSPOWER_2026-09-05_23_32_49_net10.0.trx",
+      "testRunId": "b9f1c01f-5cec-4bf5-b0f1-22b3faf8a5fc",
+      "times": {
+        "creation": "2026-09-05T23:32:49.6043050-04:00",
+        "queuing": "2026-09-05T23:32:49.6043055-04:00",
+        "start": "2026-09-05T23:32:35.6810081-04:00",
+        "finish": "2026-09-06T00:18:51.2303461-04:00"
+      },
+      "counters": {
+        "total": 1365,
+        "executed": 1365,
+        "passed": 1365,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "expectedExecutionCases": 1365,
+      "originalSha256": "79adf3c1ec5e30e6a91ee6806ababe8c671693607b6ba23f49ba86d9a38f9b61",
+      "originalBytes": 76077625,
+      "artifact": "CanDoItAll.Tests.Integration.trx.gz",
+      "lossless": true
+    },
+    {
+      "assembly": "CanDoItAll.AgentFramework.Memory.Tests",
+      "originalFile": "lucys_LUCYSPOWER_2026-09-06_00_18_53_net10.0.trx",
+      "testRunId": "9c06d883-b755-489d-a886-8794da95121d",
+      "times": {
+        "creation": "2026-09-06T00:18:53.0718748-04:00",
+        "queuing": "2026-09-06T00:18:53.0718752-04:00",
+        "start": "2026-09-06T00:18:52.3809179-04:00",
+        "finish": "2026-09-06T00:18:53.2623131-04:00"
+      },
+      "counters": {
+        "total": 22,
+        "executed": 22,
+        "passed": 22,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "expectedExecutionCases": 22,
+      "originalSha256": "305a1c9165f37038cc5989af6f26fcc0e389a6752841aee0d2961adc49a03ae8",
+      "originalBytes": 36924,
+      "artifact": "CanDoItAll.AgentFramework.Memory.Tests.trx.gz",
+      "lossless": true
+    },
+    {
+      "assembly": "CanDoItAll.Memory.Tests",
+      "originalFile": "lucys_LUCYSPOWER_2026-09-06_00_18_54_net10.0.trx",
+      "testRunId": "90de1b5b-7ba7-4038-a6bd-bb4b5d03fcde",
+      "times": {
+        "creation": "2026-09-06T00:18:54.2003447-04:00",
+        "queuing": "2026-09-06T00:18:54.2003449-04:00",
+        "start": "2026-09-06T00:18:53.5116952-04:00",
+        "finish": "2026-09-06T00:19:06.5354923-04:00"
+      },
+      "counters": {
+        "total": 196,
+        "executed": 196,
+        "passed": 196,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "expectedExecutionCases": 196,
+      "originalSha256": "27b04981ecdb31241a91a29b6c5b1a61e66da876de61766993de7ada43e480c8",
+      "originalBytes": 289815,
+      "artifact": "CanDoItAll.Memory.Tests.trx.gz",
+      "lossless": true
+    },
+    {
+      "assembly": "CanDoItAll.Tests.Unit",
+      "originalFile": "lucys_LUCYSPOWER_2026-09-06_00_19_08_net10.0.trx",
+      "testRunId": "f6fc8050-14d4-4c5c-92bc-d612cda6b7ba",
+      "times": {
+        "creation": "2026-09-06T00:19:08.8105052-04:00",
+        "queuing": "2026-09-06T00:19:08.8105056-04:00",
+        "start": "2026-09-06T00:19:06.8354483-04:00",
+        "finish": "2026-09-06T00:21:10.6008869-04:00"
+      },
+      "counters": {
+        "total": 6912,
+        "executed": 6912,
+        "passed": 6912,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "inconclusive": 0,
+        "passedButRunAborted": 0,
+        "notRunnable": 0,
+        "notExecuted": 0,
+        "disconnected": 0,
+        "warning": 0,
+        "completed": 0,
+        "inProgress": 0,
+        "pending": 0
+      },
+      "expectedExecutionCases": 6912,
+      "originalSha256": "a4ac87c454e7dd5184b97ea7d9d32285ac29c3cc974ae5e02b1a486ab760cd54",
+      "originalBytes": 10608517,
+      "artifact": "CanDoItAll.Tests.Unit.trx.gz",
+      "lossless": true
+    }
+  ]
+}

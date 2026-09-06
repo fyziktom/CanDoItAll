@@ -1,0 +1,4 @@
+Working directory: repository root
+Command: python tools/Validation/Portability/enforce_portability_baseline.py --scan .mcp-state/p02d-portability-final.json --baseline tools/Validation/Portability/portability-risk-baseline.json
+Exit: 0
+RESULT: PASS (14251 reviewed executable-source findings unchanged)

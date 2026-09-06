@@ -4,11 +4,11 @@
   "shape": "compact-compatible",
   "preparedAt": "2026-09-05",
   "preparationStatus": "ready",
-  "executionStatus": "not-started",
-  "executionAuthorized": false,
-  "prerequisite": "CDA-UI-SEAMS-PROVIDERS-02",
+  "executionStatus": "closed",
+  "executionAuthorized": true,
+  "prerequisite": "CDA-UI-SEAMS-PROVIDERS-02D",
   "sharedArchitectureReference": "CDA-UI-SEAMS-BASE-v2",
-  "observedCommit": "7684f25854594f4a4b5486559890164aec382fb7",
+  "observedCommit": "e5a8d5c6b7ad19c99c805a76cde84b99d08d9eee",
   "observedCommitIsPin": false,
   "subbundles": [
     "SB00",
@@ -16,5 +16,14 @@
     "SB02",
     "SB03"
   ],
-  "measurementsExecuted": false
+  "measurementsExecuted": true,
+  "completedSubbundles": [
+    "SB00",
+    "SB01",
+    "SB02",
+    "SB03"
+  ],
+  "closedAt": "2026-09-06",
+  "closureReference": "reviews/closure.md",
+  "wholeRepositoryDocumentationStatus": "failed-historical-artifacts"
 }

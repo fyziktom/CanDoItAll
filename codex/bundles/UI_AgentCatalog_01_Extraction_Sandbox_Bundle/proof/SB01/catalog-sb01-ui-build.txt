@@ -1,0 +1,24 @@
+Command: dotnet build src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj --configuration Release /m:1 --nologo
+Started: 2026-09-06T01:28:47.0866722Z
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\UI\CanDoItAll.AgentFramework.UI\CanDoItAll.AgentFramework.UI.csproj (v 257 ms).
+  10 z 11 projektů jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Release\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Release\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Infrastructure.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Infrastructure.Abstractions\bin\Release\net10.0\CanDoItAll.Infrastructure.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderHistory.Abstractions -> C:\repositories\CanDoItAll\src\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Release\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common\bin\Release\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\bin\Release\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib\bin\Release\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Conversations.Components -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.Conversations.Components\bin\Release\net10.0\CanDoItAll.Conversations.Components.dll
+  CanDoItAll.AgentFramework.UI -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.AgentFramework.UI\bin\Release\net10.0\CanDoItAll.AgentFramework.UI.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:05.73
+ExitCode: 0
+Finished: 2026-09-06T01:28:53.1611429Z

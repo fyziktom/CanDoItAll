@@ -57,8 +57,23 @@ public sealed class SharedProviderSourceService
         CancellationToken cancellationToken = default)
     {
         var canonicalBaseUri = NormalizeBaseUri(request);
+        var proposedId = request.ProposedId ?? Guid.NewGuid();
+        ValidateSourceId(proposedId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await BeginMutationAsync(dbContext, proposedId, cancellationToken);
         await EnsureSecretExistsAsync(dbContext, request.ApiTokenSecretId, cancellationToken);
+        var existing = await dbContext.Set<SharedProviderSource>().AsNoTracking()
+            .SingleOrDefaultAsync(source => source.Id == proposedId, cancellationToken);
+        if (existing is not null) {
+            var expected = new SharedProviderSourceEditorRequest(proposedId, null, request.Name, canonicalBaseUri,
+                request.ApiTokenSecretId, request.IsEnabled, request.AllowInsecurePrivateNetwork);
+            if (!SharedProviderSourceVerification.Matches(CreateSnapshot(existing), expected)) {
+                throw new SharedProviderConcurrencyException(nameof(SharedProviderSource), proposedId);
+            }
+            return new(existing.Id, existing.ConcurrencyToken) {
+                Change = new(SharedProviderChangeKind.SourceConfiguration, [])
+            };
+        }
         var source = SharedProviderSourceTransitions.Create(
             request.Name,
             canonicalBaseUri.AbsoluteUri,
@@ -66,8 +81,9 @@ public sealed class SharedProviderSourceService
             request.AllowInsecurePrivateNetwork,
             request.IsEnabled,
             clock.GetUtcNow());
+        source.Id = proposedId;
         dbContext.Add(source);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAndCommitAsync(dbContext, mutation, proposedId, cancellationToken);
         return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) {
             Change = new(SharedProviderChangeKind.SourceConfiguration, [])
         };

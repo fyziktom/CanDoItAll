@@ -1,0 +1,26 @@
+[
+  {
+    "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor",
+    "to": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor"
+  },
+  {
+    "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+    "to": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs"
+  },
+  {
+    "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.css",
+    "to": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css"
+  },
+  {
+    "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogState.cs",
+    "to": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogState.cs"
+  },
+  {
+    "from": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSelectionCard.razor",
+    "to": "src/UI/CanDoItAll.AgentFramework.UI/Cards/AgentSelectionCard.razor"
+  },
+  {
+    "from": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs",
+    "to": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs"
+  }
+]

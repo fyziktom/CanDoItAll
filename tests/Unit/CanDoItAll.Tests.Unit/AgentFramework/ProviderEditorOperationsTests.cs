@@ -191,6 +191,194 @@ public sealed class ProviderEditorOperationsTests {
         Assert.DoesNotContain("remote", session.Draft.SuggestedModels);
     }
 
+    [Fact]
+    public async Task Unconfirmed_first_save_exposes_stable_candidate_identity() {
+        var reads = new Reads();
+        using var session = await NewSession(reads);
+        Guid? candidate = null;
+        var commands = new Commands(reads.Id) {
+            Save = (submission, _) => {
+                candidate = submission.CreateRequest().Id;
+                return Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Unconfirmed));
+            }
+        };
+        var operations = new ProviderEditorOperations(session, commands);
+        await operations.SaveAsync();
+        Assert.NotNull(candidate);
+        Assert.NotEqual(Guid.Empty, candidate);
+        Assert.Null(session.Draft.Id);
+        Assert.True(operations.IsWriteUnconfirmed);
+    }
+
+    [Fact]
+    public async Task Selection_and_new_do_not_discard_unresolved_protection() {
+        var reads = new Reads();
+        using var session = await NewSession(reads);
+        var commands = new Commands(reads.Id) {
+            Save = (_, _) => Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Unconfirmed))
+        };
+        var operations = new ProviderEditorOperations(session, commands);
+        await operations.SaveAsync();
+        await session.SelectAsync(reads.Id);
+        await session.NewAsync();
+        session.Draft.DefaultModel = "model";
+        await operations.SaveAsync();
+        Assert.Equal(1, commands.Writes);
+        Assert.True(operations.IsWriteUnconfirmed);
+    }
+
+    [Fact]
+    public async Task Verification_binds_committed_candidate_without_replaying_save() {
+        var reads = new Reads();
+        using var session = await NewSession(reads);
+        var commands = new Commands(reads.Id) {
+            Save = (submission, _) => {
+                reads.Id = submission.CreateRequest().Id!.Value;
+                return Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Unconfirmed));
+            },
+            Verify = (attempt, _) => Task.FromResult(new ProviderMutationVerification(
+                ProviderVerificationDisposition.Committed, attempt.ProviderId, reads.Token))
+        };
+        var operations = new ProviderEditorOperations(session, commands);
+        var context = session.EditContext;
+        await operations.SaveAsync();
+        Assert.Null(session.Draft.Id);
+        await operations.VerifyUnconfirmedAsync();
+        Assert.Equal(reads.Id, session.Draft.Id);
+        Assert.Equal(reads.Token, session.Draft.ExpectedConcurrencyToken);
+        Assert.Same(context, session.EditContext);
+        Assert.False(operations.WritesBlocked);
+        Assert.Equal(1, commands.Writes);
+        Assert.Equal(1, commands.Reconciliations);
+    }
+
+    [Fact]
+    public async Task Verified_absence_allows_same_candidate_controlled_retry() {
+        var reads = new Reads();
+        using var session = await NewSession(reads);
+        var ids = new List<Guid>();
+        var names = new List<string>();
+        var commands = new Commands(reads.Id) {
+            Save = (submission, _) => {
+                var request = submission.CreateRequest();
+                reads.Id = request.Id!.Value;
+                ids.Add(reads.Id);
+                names.Add(request.Name);
+                return Task.FromResult(new ProviderWriteResult(ids.Count == 1
+                    ? ProviderWriteDisposition.Unconfirmed : ProviderWriteDisposition.Committed, reads.Id));
+            },
+            Verify = (attempt, _) => Task.FromResult(new ProviderMutationVerification(
+                ProviderVerificationDisposition.DefinitelyNotCommitted, attempt.ProviderId))
+        };
+        var operations = new ProviderEditorOperations(session, commands);
+        var submittedName = session.Draft.Name;
+        await operations.SaveAsync();
+        session.Draft.Name = "Later unsaved name";
+        await operations.VerifyUnconfirmedAsync();
+        Assert.True(operations.HasVerifiedRetry);
+        Assert.Null(session.Draft.Id);
+        await operations.RetryVerifiedAsync();
+        await operations.RetryVerifiedAsync();
+        Assert.Equal(2, commands.Writes);
+        Assert.Equal(ids[0], ids[1]);
+        Assert.All(names, name => Assert.Equal(submittedName, name));
+        Assert.Equal("Later unsaved name", session.Draft.Name);
+        Assert.Equal(ids[0], session.Draft.Id);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Failed_verification_remains_unresolved(bool throws) {
+        var reads = new Reads();
+        using var session = await NewSession(reads);
+        var commands = new Commands(reads.Id) {
+            Save = (_, _) => Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Unconfirmed)),
+            Verify = (attempt, _) => throws
+                ? Task.FromException<ProviderMutationVerification>(new IOException("Synthetic unavailable canonical database."))
+                : Task.FromResult(new ProviderMutationVerification(ProviderVerificationDisposition.StillUnconfirmed, attempt.ProviderId))
+        };
+        var operations = new ProviderEditorOperations(session, commands);
+        await operations.SaveAsync();
+        await operations.VerifyUnconfirmedAsync();
+        await operations.SaveAsync();
+        Assert.True(operations.IsWriteUnconfirmed);
+        Assert.Equal(1, commands.Writes);
+        Assert.Null(session.Draft.Id);
+    }
+
+    [Fact]
+    public async Task Later_edits_and_edit_context_survive_verification() {
+        var reads = new Reads();
+        using var session = await NewSession(reads);
+        var verification = new TaskCompletionSource<ProviderMutationVerification>();
+        var commands = new Commands(reads.Id) {
+            Save = (submission, _) => {
+                reads.Id = submission.CreateRequest().Id!.Value;
+                return Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Unconfirmed));
+            },
+            Verify = (_, _) => verification.Task
+        };
+        var operations = new ProviderEditorOperations(session, commands);
+        var context = session.EditContext;
+        await operations.SaveAsync();
+        session.SelectSection(ProviderEditorSection.Runtime);
+        var pending = operations.VerifyUnconfirmedAsync();
+        session.Draft.Name = "Edited while verifying";
+        verification.SetResult(new(ProviderVerificationDisposition.Committed, reads.Id, reads.Token));
+        await pending;
+        Assert.Same(context, session.EditContext);
+        Assert.Equal("Edited while verifying", session.Draft.Name);
+        Assert.Equal(ProviderEditorSection.Runtime, session.State.Section);
+        Assert.Equal(reads.Id, session.Draft.Id);
+        Assert.Equal(1, commands.Writes);
+    }
+
+    [Fact]
+    public async Task Recreated_provider_owner_keeps_unresolved_attempt() {
+        var reads = new Reads();
+        var recovery = new ProviderEditorRecovery();
+        using var first = new ProviderProfilesSession(reads, recovery);
+        await first.RefreshAsync();
+        await first.NewAsync();
+        first.Draft.DefaultModel = "model";
+        var context = first.EditContext;
+        var commands = new Commands(reads.Id) {
+            Save = (_, _) => Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Unconfirmed))
+        };
+        await new ProviderEditorOperations(first, commands).SaveAsync();
+        first.Dispose();
+        using var reopened = new ProviderProfilesSession(reads, recovery);
+        await reopened.RefreshAsync();
+        await reopened.NewAsync();
+        var operations = new ProviderEditorOperations(reopened, commands);
+        Assert.Same(context, reopened.EditContext);
+        await operations.SaveAsync();
+        Assert.True(operations.IsWriteUnconfirmed);
+        Assert.Equal(1, commands.Writes);
+    }
+
+    [Fact]
+    public async Task Candidate_conflict_after_absence_requires_verification_before_new_identity() {
+        var reads = new Reads();
+        using var session = await NewSession(reads);
+        var commands = new Commands(reads.Id) {
+            Save = (_, _) => Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Unconfirmed)),
+            Verify = (attempt, _) => Task.FromResult(new ProviderMutationVerification(
+                ProviderVerificationDisposition.DefinitelyNotCommitted, attempt.ProviderId))
+        };
+        var operations = new ProviderEditorOperations(session, commands);
+        await operations.SaveAsync();
+        var candidate = operations.CandidateProviderId;
+        await operations.VerifyUnconfirmedAsync();
+        commands.Save = (_, _) => Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Conflict));
+        await operations.RetryVerifiedAsync();
+        await operations.SaveAsync();
+        Assert.Equal(2, commands.Writes);
+        Assert.True(operations.IsWriteUnconfirmed);
+        Assert.Equal(candidate, operations.CandidateProviderId);
+    }
+
     private static async Task<ProviderProfilesSession> NewSession(Reads reads) {
         var session = new ProviderProfilesSession(reads);
         await session.RefreshAsync();
@@ -200,7 +388,7 @@ public sealed class ProviderEditorOperationsTests {
     }
 
     private sealed class Reads : IProviderProfilesReads {
-        public Guid Id { get; } = Guid.NewGuid();
+        public Guid Id { get; set; } = Guid.NewGuid();
         public Guid Token { get; } = Guid.NewGuid();
         public bool FailEditor { get; set; }
         public Task<ProviderProfilesCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default)
@@ -213,6 +401,7 @@ public sealed class ProviderEditorOperationsTests {
     }
 
     private sealed class Commands(Guid providerId) : IProviderEditorCommands {
+        public Func<ProviderMutationAttempt, CancellationToken, Task<ProviderMutationVerification>>? Verify { get; set; }
         public int Writes { get; private set; }
         public int Deletes { get; private set; }
         public int Reconciliations { get; private set; }
@@ -231,6 +420,8 @@ public sealed class ProviderEditorOperationsTests {
             => Task.FromResult(new ProviderHealthCheckOutcome(new(true, "Healthy", []), sourceManaged ? null : new(ProviderWriteDisposition.Committed, id)));
         public Task<Result<ProviderModelPricingRefreshResult>> DiscoverModelsAsync(ProviderEditorSubmission submission, CancellationToken cancellationToken)
             => Discover!.Invoke(submission, cancellationToken);
+        public Task<ProviderMutationVerification> VerifyAsync(ProviderMutationAttempt attempt, CancellationToken cancellationToken)
+            => Verify?.Invoke(attempt, cancellationToken) ?? throw new InvalidOperationException("This test does not request verification.");
         public Task ReconcileAsync(Guid id, CancellationToken cancellationToken) {
             Reconciliations++;
             return Task.CompletedTask;

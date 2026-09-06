@@ -1,0 +1,4 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Unconfirmed_first_save_exposes_stable_candidate_identity
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Selection_and_new_do_not_discard_unresolved_protection

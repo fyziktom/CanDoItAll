@@ -148,6 +148,10 @@ internal sealed class RecordingSharedProviderManagementService(
         return Task.FromResult(Sources);
     }
 
+    public Task<SharedProviderSourceVerificationResult> VerifySourceAsync(
+        SharedProviderSourceMutationAttempt attempt, CancellationToken cancellationToken = default)
+        => Task.FromResult(SharedProviderSourceVerification.Evaluate(attempt, Sources));
+
     public Task<SharedProviderSourceWriteResult> SaveSourceAsync(
         SharedProviderSourceEditorRequest request,
         CancellationToken cancellationToken = default)

@@ -1,5 +1,6 @@
 using System.Reflection;
 using Bunit;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -17,6 +18,7 @@ public sealed class SharedProviderRefreshButtonTests {
         var proxy = (RefreshProxy)(object)service;
         proxy.Fail = fail;
         context.Services.AddSingleton(service);
+        context.Services.AddScoped<SharedProviderRecovery>();
         var notified = false;
         var cut = context.Render<SharedProviderRefreshButton>(p => p
             .Add(c => c.ProviderId, proxy.Selected.ProviderProfileId)

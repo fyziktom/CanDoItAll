@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using System.Text.Json.Serialization;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 namespace CanDoItAll.Web.Api;
@@ -8,6 +9,21 @@ public sealed record ProviderCommittedApiResponse(
     bool CanonicalCommitSucceeded,
     bool ReconciliationRequired,
     string Warning);
+
+public sealed record ProviderUnconfirmedApiResponse(
+    string Code,
+    Guid ProviderId,
+    ProviderMutationAttempt Attempt,
+    bool AutomaticReplaySafe,
+    string VerificationPath,
+    string Message);
+
+public sealed record ProviderVerificationApiResponse(
+    Guid ProviderId,
+    [property: JsonConverter(typeof(JsonStringEnumConverter<ProviderVerificationDisposition>))]
+    ProviderVerificationDisposition Outcome,
+    Guid? ConcurrencyToken,
+    bool AutomaticReplaySafe);
 
 internal static class ProviderApiResults {
     internal const string OutcomeHeader = "CDA-Provider-Outcome";
@@ -36,12 +52,18 @@ internal static class ProviderApiResults {
                 "The provider is not eligible for publication.", ApiEndpointResults.ProviderRequestInvalidCode);
         } catch (Exception exception) when (exception is ProviderProfileConcurrencyException or SharedProviderConcurrencyException) {
             return Failure(context, StatusCodes.Status409Conflict, "The provider state changed. Read its current revision before another write.", ConflictCode);
-        } catch (Exception exception) when (exception is SharedProviderProfileDeletionBlockedException or SharedProviderSourceDeletionBlockedException) {
+        } catch (SharedProviderProfileDeletionBlockedException exception) {
             return Failure(context, StatusCodes.Status409Conflict,
-                "Permanent publication or import history prevents deletion. Unpublish or retire the provider.", ReferenceConflictCode);
-        } catch (ProviderMutationUnconfirmedException) {
-            return Failure(context, StatusCodes.Status503ServiceUnavailable,
-                "The write could not be confirmed. Verify canonical state before repeating it.", UnconfirmedCode);
+                SharedProviderDeletionMessages.For(exception.ReferenceKinds), ReferenceConflictCode);
+        } catch (SharedProviderSourceDeletionBlockedException) {
+            return Failure(context, StatusCodes.Status409Conflict,
+                SharedProviderDeletionMessages.SourceWithImports, ReferenceConflictCode);
+        } catch (ProviderMutationUnconfirmedException exception) {
+            context.Response.Headers[OutcomeHeader] = "unconfirmed-verification-required";
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Conflict(new ProviderUnconfirmedApiResponse(UnconfirmedCode, exception.Attempt.ProviderId,
+                exception.Attempt, false, "/api/agents/providers/mutations/verify",
+                "The write outcome is unconfirmed. Do not automatically replay it. Verify this exact receipt."));
         } catch (KeyNotFoundException) {
             return Failure(context, StatusCodes.Status404NotFound, "The provider was not found.", NotFoundCode);
         } catch (ProviderHealthDiagnosticException) {

@@ -1,0 +1,13 @@
+{
+  "referenceId": "CDA-UI-SEAMS-PROVIDERS-02D",
+  "shape": "compact-compatible",
+  "executionStatus": "closed",
+  "proofTier": "Governed",
+  "parent": "CDA-UI-SEAMS-PROVIDERS-02",
+  "observedHead": "e5a8d5c6b7ad19c99c805a76cde84b99d08d9eee",
+  "observedHeadIsPin": false,
+  "nextChild": "CDA-UI-SEAMS-CATALOG-01",
+  "nextChildGate": "Provider acceptance passed; catalog SB00 must collect pre-extraction baseline before source movement",
+  "providerGate": "Pass",
+  "repositoryDocumentationGate": "Failed: unchanged historical tracked logs"
+}

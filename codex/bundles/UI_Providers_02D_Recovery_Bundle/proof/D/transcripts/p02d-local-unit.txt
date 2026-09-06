@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:01.22]     CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft(rejection: Conflict) [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft(rejection: Conflict) [1 ms]
+  Chybová zpráva:
+   Assert.False() Failure
+Expected: False
+Actual:   True
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Known_rejection_preserves_correctable_draft(ProviderWriteDisposition rejection) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentFramework\ProviderEditorOperationsTests.cs:line 51
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02d-results\local-unit-final.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:    22, Přeskočeno:     0, Celkem:    23, Doba trvání: 140 ms - CanDoItAll.Tests.Unit.dll (net10.0)

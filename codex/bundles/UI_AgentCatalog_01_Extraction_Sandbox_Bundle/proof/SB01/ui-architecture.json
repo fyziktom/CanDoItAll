@@ -1,0 +1,35 @@
+{
+  "snapshotId": "snap-20260906013724-f3a7755a",
+  "hasBlockingErrors": false,
+  "summary": {
+    "projectCount": 1,
+    "typeCount": 16,
+    "memberCount": 103,
+    "serviceRegistrationCount": 0,
+    "entityCount": 0,
+    "findingCount": 3,
+    "openQuestionCount": 0,
+    "diagnosticCount": 0
+  },
+  "cycles": [],
+  "findings": [
+    {
+      "title": "Type with many members",
+      "severity": "Info"
+    },
+    {
+      "title": "Type with many members",
+      "severity": "Info"
+    },
+    {
+      "title": "Type with many members",
+      "severity": "Info"
+    }
+  ],
+  "projects": [
+    {
+      "name": "CanDoItAll.AgentFramework.UI",
+      "path": "CanDoItAll.AgentFramework.UI.csproj"
+    }
+  ]
+}

@@ -78,6 +78,10 @@ public interface ISharedProviderManagementService
     Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(
         CancellationToken cancellationToken = default);
 
+    Task<SharedProviderSourceVerificationResult> VerifySourceAsync(
+        SharedProviderSourceMutationAttempt attempt,
+        CancellationToken cancellationToken = default);
+
     Task<SharedProviderSourceWriteResult> SaveSourceAsync(
         SharedProviderSourceEditorRequest request,
         CancellationToken cancellationToken = default);

@@ -89,3 +89,7 @@ input preservation, and the complete checksum manifest.
 - [Lifecycle follow-up and provider sequence](reviews/03-lifecycle-and-provider-followup.md)
 
 - [Provider mutation and shared-authority feedback](reviews/04-provider-mutation-and-authority-feedback.md)
+
+- [Unconfirmed verification feedback](reviews/05-unconfirmed-verification-feedback.md)
+
+[Catalog extraction and asset evidence feedback](reviews/06-catalog-extraction-asset-feedback.md) records generalized lessons proven by the first real rendering extraction and browser sandbox. Performance claims remain gated by its measurement phase.

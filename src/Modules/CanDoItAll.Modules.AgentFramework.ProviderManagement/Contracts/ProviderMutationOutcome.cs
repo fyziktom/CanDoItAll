@@ -15,8 +15,10 @@ public class ProviderMutationCommittedException(
     public bool CanonicalCommitSucceeded => true;
 }
 
-public sealed class ProviderMutationUnconfirmedException(Exception innerException)
-    : Exception("The provider write could not be confirmed. Refresh and verify the canonical state before another write.", innerException);
+public sealed class ProviderMutationUnconfirmedException(ProviderMutationAttempt attempt, Exception innerException)
+    : Exception("The provider write could not be confirmed. Verify this exact attempt before another write.", innerException) {
+    public ProviderMutationAttempt Attempt { get; } = attempt;
+}
 
 public sealed class ProviderProfileConcurrencyException(Guid providerId, Exception? innerException = null)
     : Exception("The provider changed after it was read. Reload it before saving again.", innerException) {

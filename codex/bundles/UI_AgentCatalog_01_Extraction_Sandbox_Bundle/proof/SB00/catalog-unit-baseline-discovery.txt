@@ -1,0 +1,8 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Signal_queue_coalesces_duplicate_paths_without_losing_generation_or_kind
+    CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Signal_queue_preserves_both_rename_paths_and_poll_recovery
+    CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Fingerprint_detects_content_change_without_a_watcher_signal
+    CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Fingerprint_ignores_generated_output_changes
+    CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Linux_case_distinct_source_paths_remain_distinct
+    CanDoItAll.Tests.Unit.Infrastructure.TailwindSourceMonitoringTests.Linux_path_policy_does_not_ignore_case_distinct_segments_or_extensions

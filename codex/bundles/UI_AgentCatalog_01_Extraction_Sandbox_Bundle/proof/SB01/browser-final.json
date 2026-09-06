@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "### Result\n{\"selected\":\"true\",\"cards\":40,\"rect\":{\"x\":125,\"y\":222.59375,\"width\":1419,\"height\":810.59375,\"top\":222.59375,\"right\":1544,\"bottom\":1033.1875,\"left\":125}}\n### Ran Playwright code\n```js\nawait (async(page)=>{await page.locator('[data-testid=agents-details-dialog]').getByRole('button',{name:'Close',exact:true}).first().click();await page.evaluate(()=>{let e=document.querySelector('.agent-catalog-panel');while(e){e.scrollTop=0;e=e.parentElement;}});return {selected:await page.locator('[data-testid=agents-catalog-card-grid] .agent-selection-card__select').first().getAttribute('aria-pressed'),cards:await page.locator('[data-testid=agents-catalog-card-grid]').evaluate(e=>e.children.length),rect:await page.locator('.agent-catalog-panel').evaluate(e=>e.getBoundingClientRect().toJSON())};})(page);\n```"
+    }
+  ]
+}

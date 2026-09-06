@@ -1,0 +1,62 @@
+Commands: portability self-tests, secret-scanner self-tests, complete proposed-source scan (including untracked), final no-write enforcement
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.013s
+
+OK
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.440s
+
+OK
+Scanned files: 5678
+Findings: 32235
+JSON: C:\repositories\CanDoItAll\.mcp-state\catalog-sb01-portability.json
+CSV: C:\repositories\CanDoItAll\.mcp-state\catalog-sb01-portability.csv
+Markdown: C:\repositories\CanDoItAll\.mcp-state\catalog-sb01-portability.md
+RESULT: PASS
+RESULT: FAIL (portability-sensitive executable source changed)
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [absolute-path-field] 3701783cf5e1df9e count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [absolute-path-field] 5ac42dab327a897c count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [absolute-path-field] 927056f706a2a7b5 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [absolute-path-field] 97b26f607bcf67fd count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [absolute-path-field] a0b75884525e6ecf count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] 9d487ee1ec5ab315 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] b0663370a79f24c5 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] bec2203828750c75 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] d63fd27eb424de36 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] d959b249feb507f8 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] e50030caf4dea20b count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] e5086de51d56d5d0 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [mcp] e94432c1e3508bde count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [secret-provider] 16bd40ede1efbd99 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [secret-provider] 4815238d87ae602b count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [secret-provider] dd52f597c61b3395 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] 012a10562417012a count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] 25a51c2f2b74cd4d count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] 33ff7197c5b9e02e count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] 57fe83eb2b84d371 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] 9e6e55b4c02765cc count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] e32a93c865de6936 count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] e3d179f325e9e94c count=1
+ADDED: src/App/CanDoItAll.Web/Properties/launchSettings.json [windows-path] e87c38b74c42b387 count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs [case-policy] 162ca07054224aef count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs [case-policy] 2af93883bc508b09 count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs [case-policy] 2c12e57f9218f7c0 count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs [case-policy] 4c4cda1fda2441f1 count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs [case-policy] 9305a508b65f3149 count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs [case-policy] 9756feb534c1092f count=2
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs [case-policy] 9f598a733c82e454 count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs [case-policy] 6f62d6c2db6a6d16 count=1
+ADDED: src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs [case-policy] 808586fe02f600e8 count=1
+STALE: src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs [case-policy] 6a67c5e3cec539af count=1
+STALE: src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs [case-policy] 9e377322ffc5d8c0 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs [case-policy] 381ac25f6b9f82f2 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs [case-policy] 66cbafdb7cdff25d count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs [case-policy] 70f0f8b801a385eb count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs [case-policy] 8395272724dc69bd count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs [case-policy] 860bcb2b975241b0 count=2
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs [case-policy] e122c961d77398c1 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs [case-policy] ffccc68c19df26c2 count=1
+Review the source change, then refresh the baseline explicitly with --write-baseline.
+ExitCode: 1

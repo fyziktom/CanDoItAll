@@ -75,7 +75,15 @@
         }
         @if (operations.IsWriteUnconfirmed) {
             <Alert AlertStyle="AlertStyle.Danger" data-testid="providers-write-unconfirmed">
-                The write outcome is unconfirmed. Verify the provider catalog before another write; Save will not replay it.
+                The write outcome is unconfirmed. Verify this exact provider attempt before another write.
+                <Button Text="Verify provider write" Icon="refresh" Disabled="@isBusy"
+                        Click="VerifyUnconfirmedAsync" data-testid="providers-verify" />
+            </Alert>
+        }
+        @if (operations.HasVerifiedRetry) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-verified-absent">
+                The write was not committed. A controlled retry retains the same identity and submission.
+                <Button Text="Retry verified write" Disabled="@isBusy" Click="RetryVerifiedAsync" data-testid="providers-retry-verified" />
             </Alert>
         }
         @if (session.MetadataWarning is { } metadataWarning) {

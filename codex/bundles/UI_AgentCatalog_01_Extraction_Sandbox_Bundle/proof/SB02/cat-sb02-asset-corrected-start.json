@@ -1,0 +1,51 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"tool\":\"candoitall_app_start\",\"timestampUtc\":\"2026-09-06T02:47:44.072501+00:00\",\"correlationId\":\"corr_749c0b487ded420280dad06eec29f7b9\",\"data\":{\"sessionId\":\"app_4919e11b95f844f68ff5cd59b13fc53a\",\"correlationId\":\"corr_e5f1b2b0aae449eab0e2a0e5e40353fe\",\"reused\":false,\"mode\":\"WatchRun\",\"state\":\"Healthy\",\"sessionVersion\":1,\"projectPath\":\"C:\\\\repositories\\\\CanDoItAll\\\\src\\\\Sandboxes\\\\CanDoItAll.AgentFramework.UiSandbox\\\\CanDoItAll.AgentFramework.UiSandbox.csproj\",\"observedUrls\":[],\"initialCursor\":861,\"lastKnownPid\":31924,\"watch\":{\"state\":\"WaitingForChanges\",\"summary\":\"Ready\",\"pendingChange\":false,\"watcherPid\":31924,\"runtimePid\":16388,\"expectedWatchIteration\":1,\"confirmedWatchIteration\":1,\"lastHotReloadOutcome\":\"None\",\"lastActivitySequence\":856,\"lastActivityUtc\":\"2026-09-06T02:47:32.801754+00:00\",\"expectedHotReloadGeneration\":0,\"confirmedHotReloadGeneration\":0,\"isReadyForHotReload\":false},\"logicalAppId\":\"catalog-sandbox-measurement\",\"laneKind\":\"SourceWatch\",\"revision\":{\"kind\":\"WatchGeneration\",\"value\":\"catalog-sandbox-measurement:1:g0\",\"observedUtc\":\"2026-09-06T02:47:32.801754+00:00\",\"isConfirmed\":true},\"launchType\":\"Project\"},\"warnings\":[]}"
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "candoitall_app_start",
+    "timestampUtc": "2026-09-06T02:47:44.072501+00:00",
+    "correlationId": "corr_749c0b487ded420280dad06eec29f7b9",
+    "data": {
+      "sessionId": "app_4919e11b95f844f68ff5cd59b13fc53a",
+      "correlationId": "corr_e5f1b2b0aae449eab0e2a0e5e40353fe",
+      "reused": false,
+      "mode": "WatchRun",
+      "state": "Healthy",
+      "sessionVersion": 1,
+      "projectPath": "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "observedUrls": [],
+      "initialCursor": 861,
+      "lastKnownPid": 31924,
+      "watch": {
+        "state": "WaitingForChanges",
+        "summary": "Ready",
+        "pendingChange": false,
+        "watcherPid": 31924,
+        "runtimePid": 16388,
+        "expectedWatchIteration": 1,
+        "confirmedWatchIteration": 1,
+        "lastHotReloadOutcome": "None",
+        "lastActivitySequence": 856,
+        "lastActivityUtc": "2026-09-06T02:47:32.801754+00:00",
+        "expectedHotReloadGeneration": 0,
+        "confirmedHotReloadGeneration": 0,
+        "isReadyForHotReload": false
+      },
+      "logicalAppId": "catalog-sandbox-measurement",
+      "laneKind": "SourceWatch",
+      "revision": {
+        "kind": "WatchGeneration",
+        "value": "catalog-sandbox-measurement:1:g0",
+        "observedUtc": "2026-09-06T02:47:32.801754+00:00",
+        "isConfirmed": true
+      },
+      "launchType": "Project"
+    },
+    "warnings": []
+  }
+}

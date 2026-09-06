@@ -1,0 +1,44 @@
+{
+  "snapshotId": "snap-20260905233626-af2806c3",
+  "blocking": false,
+  "projects": [
+    {
+      "name": "CanDoItAll.AgentFramework.Components",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj"
+    },
+    {
+      "name": "CanDoItAll.Conversations.Components",
+      "path": "src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj"
+    },
+    {
+      "name": "CanDoItAll.Modules.AgentFramework",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj"
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodeIds": [
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+      ]
+    }
+  ],
+  "summary": {
+    "projectCount": 3,
+    "typeCount": 583,
+    "memberCount": 5942,
+    "serviceRegistrationCount": 55,
+    "entityCount": 0,
+    "findingCount": 219,
+    "openQuestionCount": 20,
+    "diagnosticCount": 22
+  }
+}

@@ -10,6 +10,8 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     [Inject]
     public ISharedProviderManagementService ManagementService { get; set; } = default!;
 
+    [Inject] public SharedProviderRecovery Recovery { get; set; } = default!;
+
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
@@ -32,16 +34,20 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     private string loadError = string.Empty;
     private bool isLoading;
     private bool operationBusy;
-    private bool mutationUnconfirmed;
+    private bool mutationUnconfirmed => Recovery.Source is not null;
     private bool isBusy => operationBusy || mutationUnconfirmed;
     private readonly CancellationTokenSource lifetime = new();
+    private CancellationToken ownerToken;
     private long generation;
     private long readGeneration;
     private bool disposed;
     private bool sourceDialogOpen;
     private bool catalogDialogOpen;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    protected override Task OnInitializedAsync() {
+        ownerToken = lifetime.Token;
+        return LoadAsync();
+    }
 
     private async Task LoadAsync() {
         if (disposed) {
@@ -51,11 +57,11 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         isLoading = true;
         loadError = string.Empty;
         try {
-            var result = await ManagementService.ListSourcesAsync(lifetime.Token);
+            var result = await ManagementService.ListSourcesAsync(ownerToken);
             if (!disposed && read == readGeneration) {
                 sources = result;
             }
-        } catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+        } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
         } catch (Exception) {
             if (!disposed && read == readGeneration) {
                 loadError = "Shared-provider connections could not be loaded.";
@@ -80,6 +86,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         }
         disposed = true;
         lifetime.Cancel();
+        lifetime.Dispose();
         sourceDialogOpen = false;
         catalogDialogOpen = false;
     }
@@ -89,6 +96,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             return;
         }
         sourceEditor = new SharedProviderSourceEditorModel {
+            Id = Guid.NewGuid(),
             IsEnabled = true,
             ApiTokenSecretId = Secrets.Count == 1 ? Secrets[0].Id : Guid.Empty
         };
@@ -139,41 +147,58 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         var request = new SharedProviderSourceEditorRequest(
             sourceEditor.Id, sourceEditor.ExpectedConcurrencyToken, sourceEditor.Name, baseUri,
             sourceEditor.ApiTokenSecretId, sourceEditor.IsEnabled, sourceEditor.AllowInsecurePrivateNetwork);
-        await RunSourceMutationAsync(async token => {
-            var result = await ManagementService.SaveSourceAsync(request, token);
+        var attempt = new SharedProviderSourceMutationAttempt(request.Id!.Value,
+            request.ExpectedConcurrencyToken.HasValue ? SharedProviderSourceMutationKind.Update : SharedProviderSourceMutationKind.Create,
+            sources.SingleOrDefault(source => source.Source.Id == request.Id), request);
+        await SaveSourceAttemptAsync(attempt);
+    }
+
+    private Task SaveSourceAttemptAsync(SharedProviderSourceMutationAttempt attempt, bool controlledRetry = false) =>
+        RunSourceMutationAsync(async token => {
+            var result = await ManagementService.SaveSourceAsync(attempt.Request!, token);
             if (!disposed) {
                 sourceEditor.Id = result.Id;
                 sourceEditor.ExpectedConcurrencyToken = result.ConcurrencyToken;
                 sourceDialogOpen = false;
+                sourceDialogError = string.Empty;
             }
             return result.Change;
-        }, "Source saved");
+        }, "Source saved", attempt, controlledRetry);
+
+    private Task ToggleSourceAsync(SharedProviderSourceSnapshot source) {
+        var attempt = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Enablement,
+            sources.Single(item => item.Source.Id == source.Id), intendedEnabled: !source.IsEnabled);
+        return RunSourceMutationAsync(async token =>
+            (await ManagementService.SetSourceEnabledAsync(source.Id, source.ConcurrencyToken, !source.IsEnabled, token)).Change,
+            source.IsEnabled ? "Source disabled" : "Source enabled", attempt);
     }
 
-    private Task ToggleSourceAsync(SharedProviderSourceSnapshot source) =>
-        RunSourceMutationAsync(async token =>
-            (await ManagementService.SetSourceEnabledAsync(source.Id, source.ConcurrencyToken, !source.IsEnabled, token)).Change,
-            source.IsEnabled ? "Source disabled" : "Source enabled");
-
-    private Task DeleteSourceAsync(SharedProviderSourceSnapshot source) =>
-        RunSourceMutationAsync(async token =>
-            (await ManagementService.DeleteSourceAsync(source.Id, source.ConcurrencyToken, token)).Change, "Source deleted");
+    private Task DeleteSourceAsync(SharedProviderSourceSnapshot source) {
+        var attempt = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Delete,
+            sources.Single(item => item.Source.Id == source.Id));
+        return RunSourceMutationAsync(async token =>
+            (await ManagementService.DeleteSourceAsync(source.Id, source.ConcurrencyToken, token)).Change, "Source deleted", attempt);
+    }
 
     private async Task RunSourceMutationAsync(
-        Func<CancellationToken, Task<SharedProviderChange?>> mutation, string successTitle) {
-        if (disposed || isBusy) {
+        Func<CancellationToken, Task<SharedProviderChange?>> mutation, string successTitle,
+        SharedProviderSourceMutationAttempt attempt, bool controlledRetry = false) {
+        if (disposed || operationBusy || (mutationUnconfirmed && !controlledRetry)) {
             return;
         }
+        Recovery.BeginSource(attempt);
         var operation = ++generation;
         operationBusy = true;
         SharedProviderChange? committed = null;
         try {
-            var change = await mutation(lifetime.Token);
+            var change = await mutation(ownerToken);
             committed = change;
+            Recovery.RecordCommit(attempt.AttemptId, change);
             if (!IsCurrent(operation)) {
                 return;
             }
-            await PublishChangeAsync(change, operation);
+            Recovery.CompleteSource(attempt);
+            await PublishChangeAsync(change, operation, attempt.AttemptId);
             if (!IsCurrent(operation)) {
                 return;
             }
@@ -185,13 +210,16 @@ public partial class SharedProviderSourcesDialog : IDisposable {
                     NotificationService.Success(successTitle, "The authoritative source state was saved.");
                 }
             }
-        } catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+        } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
         } catch (Exception exception) {
+            if (exception is SharedProviderCommittedException saved) {
+                Recovery.RecordCommit(attempt.AttemptId, saved.Change);
+            }
             if (IsCurrent(operation)) {
                 if (committed is not null) {
                     loadError = "The shared-provider change is saved, but its workspace refresh did not complete.";
                 } else {
-                    await HandleOperationFailureAsync(exception, operation);
+                    await HandleOperationFailureAsync(exception, operation, attempt);
                 }
             }
         } finally {
@@ -201,21 +229,25 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         }
     }
 
-    private async Task PublishChangeAsync(SharedProviderChange? change, long operation) {
-        if (change is not null && IsCurrent(operation)) {
+    private async Task PublishChangeAsync(SharedProviderChange? change, long operation, Guid? attemptId = null) {
+        if (change is not null && IsCurrent(operation) && (!attemptId.HasValue || Recovery.ClaimPublication(attemptId.Value))) {
             await ProvidersChanged.InvokeAsync(change);
         }
     }
 
-    private async Task HandleOperationFailureAsync(Exception exception, long operation) {
+    private async Task HandleOperationFailureAsync(Exception exception, long operation, SharedProviderSourceMutationAttempt attempt) {
         if (exception is SharedProviderCommittedException committed) {
+            Recovery.RecordCommit(attempt.AttemptId, committed.Change);
+            Recovery.CompleteSource(attempt);
             loadError = committed.Change.Warning!;
-            await PublishChangeAsync(committed.Change, operation);
+            await PublishChangeAsync(committed.Change, operation, attempt.AttemptId);
             return;
         }
-        var rejected = exception is SharedProviderConcurrencyException or SharedProviderSourceDeletionBlockedException
-            or ArgumentException or KeyNotFoundException;
-        mutationUnconfirmed = !rejected;
+        var rejected = exception is SharedProviderSourceDeletionBlockedException or ArgumentException or KeyNotFoundException ||
+            (exception is SharedProviderConcurrencyException && attempt.Kind != SharedProviderSourceMutationKind.Create);
+        if (rejected) {
+            Recovery.CompleteSource(attempt);
+        }
         var message = rejected ? "The source change was rejected. Reload current source state and correct the request."
             : "The source outcome is unconfirmed. Verify its state before repeating the operation.";
         loadError = message;
@@ -230,7 +262,8 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     private async Task TestSourceAsync(Guid sourceId) {
         var operation = generation + 1;
         var result = await RunSourceOperationAsync(
-            token => ManagementService.TestSourceAsync(sourceId, token));
+            token => ManagementService.TestSourceAsync(sourceId, token),
+            new(sourceId, SharedProviderSourceMutationKind.Test, sources.Single(item => item.Source.Id == sourceId)));
         if (!IsCurrent(operation)) {
             return;
         }
@@ -244,7 +277,8 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     private async Task DiscoverSourceAsync(SharedProviderSourceManagementSnapshot source) {
         var operation = generation + 1;
         var result = await RunSourceOperationAsync(
-            token => ManagementService.TestSourceAsync(source.Source.Id, token));
+            token => ManagementService.TestSourceAsync(source.Source.Id, token),
+            new(source.Source.Id, SharedProviderSourceMutationKind.Test, source));
         if (!IsCurrent(operation)) {
             return;
         }
@@ -270,7 +304,8 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             .Select(import => import.RemotePublicationId)
             .ToHashSet();
         var result = await RunSourceOperationAsync(
-            token => ManagementService.SynchronizeSourceAsync(source.Source.Id, selected, token));
+            token => ManagementService.SynchronizeSourceAsync(source.Source.Id, selected, token),
+            new(source.Source.Id, SharedProviderSourceMutationKind.Synchronize, source, selection: selected));
         if (!IsCurrent(operation)) {
             return;
         }
@@ -288,7 +323,9 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         var result = await RunSourceOperationAsync(
             token => ManagementService.SynchronizeSourceAsync(
                 catalogSourceId,
-                selectedPublicationIds.ToHashSet(), token));
+                selectedPublicationIds.ToHashSet(), token),
+            new(catalogSourceId, SharedProviderSourceMutationKind.Synchronize,
+                sources.Single(item => item.Source.Id == catalogSourceId), selection: selectedPublicationIds));
         if (!IsCurrent(operation)) {
             return;
         }
@@ -301,20 +338,24 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     }
 
     private async Task<SharedProviderSourceOperationResult?> RunSourceOperationAsync(
-        Func<CancellationToken, Task<SharedProviderSourceOperationResult>> run) {
-        if (disposed || isBusy) {
+        Func<CancellationToken, Task<SharedProviderSourceOperationResult>> run,
+        SharedProviderSourceMutationAttempt attempt, bool controlledRetry = false) {
+        if (disposed || operationBusy || (mutationUnconfirmed && !controlledRetry)) {
             return null;
         }
+        Recovery.BeginSource(attempt);
         var operation = ++generation;
         operationBusy = true;
         SharedProviderChange? committed = null;
         try {
-            var result = await run(lifetime.Token);
+            var result = await run(ownerToken);
             committed = result.Change;
+            Recovery.RecordCommit(attempt.AttemptId, result.Change);
             if (!IsCurrent(operation)) {
                 return null;
             }
-            await PublishChangeAsync(result.Change, operation);
+            Recovery.CompleteSource(attempt);
+            await PublishChangeAsync(result.Change, operation, attempt.AttemptId);
             if (!IsCurrent(operation)) {
                 return null;
             }
@@ -330,14 +371,17 @@ public partial class SharedProviderSourcesDialog : IDisposable {
                     result.Failure?.SanitizedMessage ?? FormatStatus(result.Outcome));
             }
             return result;
-        } catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+        } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
             return null;
         } catch (Exception exception) {
+            if (exception is SharedProviderCommittedException saved) {
+                Recovery.RecordCommit(attempt.AttemptId, saved.Change);
+            }
             if (IsCurrent(operation)) {
                 if (committed is not null) {
                     loadError = "The shared-provider change is saved, but its workspace refresh did not complete.";
                 } else {
-                    await HandleOperationFailureAsync(exception, operation);
+                    await HandleOperationFailureAsync(exception, operation, attempt);
                 }
             }
             return null;
@@ -345,6 +389,75 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             if (IsCurrent(operation)) {
                 operationBusy = false;
             }
+        }
+    }
+
+    private async Task VerifySourceAsync() {
+        if (disposed || operationBusy || Recovery.Source is not { } attempt) {
+            return;
+        }
+        var operation = ++generation;
+        operationBusy = true;
+        try {
+            var result = await ManagementService.VerifySourceAsync(attempt, ownerToken);
+            if (!IsCurrent(operation) || result.SourceId != attempt.SourceId || Recovery.Source?.AttemptId != attempt.AttemptId) {
+                return;
+            }
+            sources = result.Sources;
+            if (result.Disposition == ProviderVerificationDisposition.StillUnconfirmed) {
+                loadError = "The exact source attempt is still unconfirmed. Verification did not repeat it. Retain this attempt and retry verification when canonical state is available.";
+                return;
+            }
+            loadError = string.Empty;
+            sourceDialogError = string.Empty;
+            if (result.Disposition == ProviderVerificationDisposition.DefinitelyNotCommitted) {
+                Recovery.AllowSourceRetry(attempt);
+                return;
+            }
+            var change = Recovery.KnownChange(attempt.AttemptId) ?? result.Change;
+            Recovery.CompleteSource(attempt);
+            sourceDialogOpen = false;
+            await PublishChangeAsync(change, operation, attempt.AttemptId);
+        } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
+        } catch (Exception) {
+            if (IsCurrent(operation)) {
+                loadError = "Canonical source verification failed. This attempt remains blocked; no source write was repeated.";
+            }
+        } finally {
+            if (IsCurrent(operation)) {
+                operationBusy = false;
+            }
+        }
+    }
+
+    private async Task RetryVerifiedSourceAsync() {
+        if (disposed || operationBusy || !Recovery.SourceRetryAllowed || Recovery.Source is not { } attempt) {
+            return;
+        }
+        switch (attempt.Kind) {
+            case SharedProviderSourceMutationKind.Create:
+            case SharedProviderSourceMutationKind.Update:
+                await SaveSourceAttemptAsync(attempt, controlledRetry: true);
+                break;
+            case SharedProviderSourceMutationKind.Enablement:
+                await RunSourceMutationAsync(async token =>
+                    (await ManagementService.SetSourceEnabledAsync(attempt.SourceId,
+                        attempt.Before!.Source.ConcurrencyToken, attempt.IntendedEnabled!.Value, token)).Change,
+                    "Source updated", attempt, controlledRetry: true);
+                break;
+            case SharedProviderSourceMutationKind.Delete:
+                await RunSourceMutationAsync(async token =>
+                    (await ManagementService.DeleteSourceAsync(attempt.SourceId, attempt.Before!.Source.ConcurrencyToken, token)).Change,
+                    "Source deleted", attempt, controlledRetry: true);
+                break;
+            case SharedProviderSourceMutationKind.Test:
+                await RunSourceOperationAsync(token => ManagementService.TestSourceAsync(attempt.SourceId, token),
+                    attempt, controlledRetry: true);
+                break;
+            case SharedProviderSourceMutationKind.Synchronize:
+                await RunSourceOperationAsync(token => ManagementService.SynchronizeSourceAsync(attempt.SourceId, attempt.Selection, token),
+                    attempt, controlledRetry: true);
+                break;
         }
     }
 

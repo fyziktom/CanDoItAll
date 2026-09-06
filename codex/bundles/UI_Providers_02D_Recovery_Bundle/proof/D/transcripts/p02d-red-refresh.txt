@@ -1,0 +1,15 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:07.38]     CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Shared_refresh_respects_unresolved_source_attempt [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Shared_refresh_respects_unresolved_source_attempt [7 s]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Shared_refresh_respects_unresolved_source_attempt() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedSourceRecoveryTests.cs:line 128
+   at CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.Shared_refresh_respects_unresolved_source_attempt() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedSourceRecoveryTests.cs:line 130
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02d-results\red-refresh-lock.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 7 s - CanDoItAll.Tests.Components.dll (net10.0)

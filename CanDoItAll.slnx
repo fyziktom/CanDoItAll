@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/src/Sandboxes/">
+    <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj" />
+  </Folder>
   <Folder Name="/src/App/">
     <Project Path="src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" />
     <Project Path="src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
@@ -31,6 +34,7 @@
     <Project Path="src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory/CanDoItAll.Memory.Drivers.CognitiveMemory.csproj" />
   </Folder>
   <Folder Name="/src/UI/">
+    <Project Path="src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj" />

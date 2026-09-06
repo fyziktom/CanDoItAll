@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:07.46]     CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Unconfirmed_publish_retry_unlocks_authoritative_state [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Unconfirmed_publish_retry_unlocks_authoritative_state [7 s]
+  Chybová zpráva:
+   Assert.Empty() Failure: Collection was not empty
+Collection: [HtmlDivElement { AccessKey = "", AccessKeyLabel = "", AssignedSlot = null, BaseUri = "about:blank", BaseUrl = about:blank, ··· }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Unconfirmed_publish_retry_unlocks_authoritative_state() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRecoveryTests.cs:line 19
+   at CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.Unconfirmed_publish_retry_unlocks_authoritative_state() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\SharedProviderRecoveryTests.cs:line 21
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02d-results\red-components.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 7 s - CanDoItAll.Tests.Components.dll (net10.0)

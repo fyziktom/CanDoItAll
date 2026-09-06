@@ -6,7 +6,8 @@ using ProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProf
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-public sealed class ProviderProfilesSession(IProviderProfilesReads reads) : IDisposable {
+public sealed class ProviderProfilesSession(IProviderProfilesReads reads, ProviderEditorRecovery? recovery = null) : IDisposable {
+    public ProviderEditorRecovery Recovery { get; } = recovery ?? new();
     private CancellationTokenSource? catalogRead;
     private CancellationTokenSource? editorRead;
     private long catalogGeneration;
@@ -111,7 +112,11 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads) : IDis
         State = State with { ProviderId = providerId };
         EditorError = null;
         if (providerId is null) {
-            EditContext = new(CreateNewProviderEditor());
+            var unresolved = Recovery.Find(null);
+            EditContext = unresolved?.Context ?? new(CreateNewProviderEditor());
+            if (unresolved is not null) {
+                State = State with { Section = unresolved.Section };
+            }
             EditorLoadState = ProviderProfilesLoadState.Ready;
             return true;
         }
@@ -148,6 +153,16 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads) : IDis
             }
         }
         return false;
+    }
+
+    public void ResumeNewAttempt(ProviderUnresolvedAttempt attempt) {
+        if (State.ProviderId is not null || !attempt.Attempt.IsCreate) {
+            throw new InvalidOperationException("Only a pending New provider can resume its draft.");
+        }
+        if (!ReferenceEquals(EditContext, attempt.Context)) {
+            EditContext = attempt.Context;
+            State = State with { Section = attempt.Section };
+        }
     }
 
     public void BindCommittedIdentity(Guid providerId, Guid? concurrencyToken) {
@@ -230,6 +245,7 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads) : IDis
         }
         disposed = true;
         targetLifetime.Cancel();
+        targetLifetime.Dispose();
         catalogRead?.Cancel();
         editorRead?.Cancel();
     }

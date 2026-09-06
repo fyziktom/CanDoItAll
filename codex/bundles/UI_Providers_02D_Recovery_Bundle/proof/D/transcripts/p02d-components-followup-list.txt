@@ -1,0 +1,10 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "Connection")
+    CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "Prices")
+    CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "Runtime")
+    CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "Thinking")
+    CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "Sharing")
+    CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.Typed_section_order_renders_the_expected_section_and_preserves_context(label: "History")
+    CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(fail: False)
+    CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.Refresh_preserves_selected_imports_and_emits_explicit_scope(fail: True)

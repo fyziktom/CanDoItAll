@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "tool": "candoitall_app_stop",
+  "timestampUtc": "2026-09-06T01:18:58.3313925+00:00",
+  "correlationId": "corr_6fbe7532083c4077b9c340db6aaf2fcd",
+  "data": {
+    "sessionId": "app_1b4a5ebce6ef4f65aa0fcc7fd4d8d08a",
+    "correlationId": "corr_7f834b9d47c34fbab057c98432ee07c6",
+    "stopped": true,
+    "finalState": "Stopped",
+    "graceful": false,
+    "killedPids": [
+      54792
+    ],
+    "finalCursor": 40614
+  },
+  "warnings": []
+}

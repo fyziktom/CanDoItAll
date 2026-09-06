@@ -39,7 +39,8 @@
         }
         else if (profileState.Ownership == SharedProviderProfileOwnership.Imported)
         {
-            <SharedProviderImportedProfileContent Import="profileState.Import!"
+            <SharedProviderImportedProfileContent @key="(profileState.Import!.ImportId, profileState.Import.ImportConcurrencyToken)"
+                                                  Import="profileState.Import!"
                                                   IsBusy="@(isBusy || mutationUnconfirmed)"
                                                   Save="SaveImportedProfileAsync"
                                                   Retire="OpenRetireConfirmation" />

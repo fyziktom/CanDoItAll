@@ -1,11 +1,13 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 public partial class SharedProviderManagementPanel : IDisposable {
     [Inject] public ISharedProviderManagementService ManagementService { get; set; } = default!;
+    [Inject] public SharedProviderRecovery Recovery { get; set; } = default!;
     [Inject] public NotificationService NotificationService { get; set; } = default!;
     [Parameter] public Guid? ProviderProfileId { get; set; }
     [Parameter] public long Revision { get; set; }
@@ -19,7 +21,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
     private bool disposed;
     private bool isLoading;
     private bool isBusy;
-    private bool mutationUnconfirmed;
+    private bool mutationUnconfirmed => Recovery.FindTarget(ProviderProfileId) is not null;
     private string? warning;
     private string confirmationTitle = string.Empty;
     private string confirmationMessage = string.Empty;
@@ -39,8 +41,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
         generation++;
         profileState = null;
         isBusy = false;
-        mutationUnconfirmed = false;
-        warning = null;
+        warning = mutationUnconfirmed ? "A sharing attempt needs canonical verification before another change." : null;
         CloseConfirmationDialog();
         await LoadAsync(generation, owner.Token);
     }
@@ -48,10 +49,12 @@ public partial class SharedProviderManagementPanel : IDisposable {
     private bool IsCurrent(long operation, CancellationToken token) =>
         !disposed && operation == generation && !token.IsCancellationRequested;
 
-    private async Task LoadAsync(long operation, CancellationToken token) {
+    private async Task LoadAsync(long operation, CancellationToken token, bool verify = false) {
+        var targetId = ProviderProfileId;
+        var unresolved = Recovery.FindTarget(targetId);
         isLoading = true;
         try {
-            var state = ProviderProfileId is { } id
+            var state = targetId is { } id
                 ? await ManagementService.GetProfileSharingAsync(id, token) : null;
             if (!IsCurrent(operation, token)) {
                 return;
@@ -60,6 +63,15 @@ public partial class SharedProviderManagementPanel : IDisposable {
                 throw new InvalidOperationException("The sharing response has a different provider identity.");
             }
             profileState = state;
+            if (verify && state is not null && state.ProviderProfileId == targetId) {
+                warning = null;
+                if (unresolved is not null && Recovery.CompleteTarget(unresolved)) {
+                    var change = Recovery.KnownChange(unresolved.AttemptId) ?? VerifiedChange(unresolved, state);
+                    if (change is not null && Recovery.ClaimPublication(unresolved.AttemptId)) {
+                        await ProvidersChanged.InvokeAsync(change);
+                    }
+                }
+            }
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (Exception) {
             if (IsCurrent(operation, token)) {
@@ -77,7 +89,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
         if (owner is null || disposed || isBusy) {
             return;
         }
-        await LoadAsync(++generation, owner.Token);
+        await LoadAsync(++generation, owner.Token, verify: true);
     }
 
     private Task PublishAsync() => ChangePublicationAsync(SharedProviderPublicationAction.Publish);
@@ -87,7 +99,8 @@ public partial class SharedProviderManagementPanel : IDisposable {
             return Task.CompletedTask;
         }
         return RunMutationAsync(token => ManagementService.SetPublicationAsync(
-            state.ProviderProfileId, action, state.Publication?.ConcurrencyToken, token), "Publication updated");
+            state.ProviderProfileId, action, state.Publication?.ConcurrencyToken, token), "Publication updated",
+            action == SharedProviderPublicationAction.Publish ? SharedProviderTargetMutationKind.Publish : SharedProviderTargetMutationKind.Unpublish);
     }
 
     private Task SaveImportedProfileAsync(SharedProviderImportedProfileEditModel model) {
@@ -96,7 +109,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
         }
         var request = new SharedProviderImportedProfileUpdateRequest(import.ImportId, import.ProviderProfileId,
             model.LocalAlias, model.IsEnabled, import.ImportConcurrencyToken, import.ProviderConcurrencyToken);
-        return RunMutationAsync(token => ManagementService.UpdateImportedProfileAsync(request, token), "Imported provider updated");
+        return RunMutationAsync(token => ManagementService.UpdateImportedProfileAsync(request, token), "Imported provider updated", SharedProviderTargetMutationKind.ImportedSettings);
     }
 
     private Task RetireImportedProfileAsync() {
@@ -105,15 +118,16 @@ public partial class SharedProviderManagementPanel : IDisposable {
         }
         var request = new SharedProviderImportedProfileRetireRequest(import.ImportId, import.ProviderProfileId,
             import.ImportConcurrencyToken, import.ProviderConcurrencyToken);
-        return RunMutationAsync(token => ManagementService.RetireImportedProfileAsync(request, token), "Imported provider retired");
+        return RunMutationAsync(token => ManagementService.RetireImportedProfileAsync(request, token), "Imported provider retired", SharedProviderTargetMutationKind.Retirement);
     }
 
     private async Task RunMutationAsync(
-        Func<CancellationToken, Task<SharedProviderProfileSharingSnapshot>> mutation, string title) {
+        Func<CancellationToken, Task<SharedProviderProfileSharingSnapshot>> mutation, string title, SharedProviderTargetMutationKind kind) {
         if (disposed || owner is null || isBusy || isLoading || mutationUnconfirmed ||
             profileState?.ProviderProfileId != ProviderProfileId) {
             return;
         }
+        var attempt = Recovery.BeginTarget(ProviderProfileId!.Value, kind, profileState!);
         var operation = ++generation;
         var token = owner.Token;
         isBusy = true;
@@ -122,14 +136,16 @@ public partial class SharedProviderManagementPanel : IDisposable {
         try {
             var result = await mutation(token);
             committed = result.Change;
+            Recovery.RecordCommit(attempt.AttemptId, result.Change);
             if (!IsCurrent(operation, token)) {
                 return;
             }
             if (result.ProviderProfileId != ProviderProfileId) {
                 throw new InvalidOperationException("The sharing response has a different provider identity.");
             }
+            Recovery.CompleteTarget(attempt);
             profileState = result;
-            if (result.Change is { } change) {
+            if (result.Change is { } change && Recovery.ClaimPublication(attempt.AttemptId)) {
                 warning = change.Warning;
                 await ProvidersChanged.InvokeAsync(change);
             }
@@ -141,10 +157,14 @@ public partial class SharedProviderManagementPanel : IDisposable {
                 }
             }
         } catch (SharedProviderCommittedException exception) {
+            Recovery.RecordCommit(attempt.AttemptId, exception.Change);
             if (IsCurrent(operation, token)) {
                 warning = exception.Change.Warning;
                 profileState = null;
-                await ProvidersChanged.InvokeAsync(exception.Change);
+                Recovery.CompleteTarget(attempt);
+                if (Recovery.ClaimPublication(attempt.AttemptId)) {
+                    await ProvidersChanged.InvokeAsync(exception.Change);
+                }
             }
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (Exception exception) {
@@ -155,7 +175,9 @@ public partial class SharedProviderManagementPanel : IDisposable {
                 }
                 var rejected = exception is SharedProviderConcurrencyException or SharedProviderPublicationEligibilityException
                     or ArgumentException or KeyNotFoundException;
-                mutationUnconfirmed = !rejected;
+                if (rejected) {
+                    Recovery.CompleteTarget(attempt);
+                }
                 warning = rejected
                     ? "The sharing change was rejected. Retry loading the current state before another change."
                     : "The sharing write is unconfirmed. Verify the authoritative state before another change.";
@@ -197,10 +219,29 @@ public partial class SharedProviderManagementPanel : IDisposable {
     }
 
     public void Dispose() {
+        if (disposed) {
+            return;
+        }
         disposed = true;
         owner?.Cancel();
         owner?.Dispose();
         CloseConfirmationDialog();
+    }
+
+    private static SharedProviderChange? VerifiedChange(
+        SharedProviderTargetAttempt attempt, SharedProviderProfileSharingSnapshot current) {
+        var before = attempt.Before;
+        if (attempt.Kind is SharedProviderTargetMutationKind.Publish or SharedProviderTargetMutationKind.Unpublish) {
+            return before.Publication?.ConcurrencyToken != current.Publication?.ConcurrencyToken
+                ? new(SharedProviderChangeKind.Publication, [attempt.ProviderId]) : null;
+        }
+        if (before.Import?.ImportConcurrencyToken == current.Import?.ImportConcurrencyToken &&
+            before.Import?.ProviderConcurrencyToken == current.Import?.ProviderConcurrencyToken) {
+            return null;
+        }
+        var retired = current.Import?.SelectionState == SharedProviderSelectionState.Retired;
+        return new(retired ? SharedProviderChangeKind.ImportRetirement : SharedProviderChangeKind.ImportedSettings,
+            [attempt.ProviderId], retired ? [attempt.ProviderId] : [], catalogMembershipMayHaveChanged: retired);
     }
 
     private enum ConfirmationAction { None, Unpublish, RetireImport }

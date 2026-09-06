@@ -8,7 +8,8 @@ public sealed record SharedProviderSourceWriteRequest(
     Uri BaseUri,
     Guid ApiTokenSecretId,
     bool IsEnabled,
-    bool AllowInsecurePrivateNetwork);
+    bool AllowInsecurePrivateNetwork,
+    Guid? ProposedId = null);
 
 public sealed record SharedProviderSourceWriteResult(
     Guid Id,

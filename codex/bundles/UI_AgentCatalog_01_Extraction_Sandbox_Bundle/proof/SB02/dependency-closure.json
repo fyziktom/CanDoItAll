@@ -1,0 +1,16 @@
+{
+  "projects": [
+    "CanDoItAll.AgentFramework.Capabilities.Abstractions/1.0.0",
+    "CanDoItAll.AgentFramework.Models/1.0.0",
+    "CanDoItAll.AgentFramework.ProviderHistory.Abstractions/1.0.0",
+    "CanDoItAll.AgentFramework.UI/1.0.0",
+    "CanDoItAll.Components.BaseLib/0.3.0",
+    "CanDoItAll.Components.Common/0.3.0",
+    "CanDoItAll.Components.OverlayLib/0.3.0",
+    "CanDoItAll.Conversations.Components/1.0.0",
+    "CanDoItAll.Infrastructure.Abstractions/1.0.0",
+    "CanDoItAll.Memory.Abstractions/1.0.0",
+    "CanDoItAll.SharedKernel/1.0.0"
+  ],
+  "forbidden": []
+}

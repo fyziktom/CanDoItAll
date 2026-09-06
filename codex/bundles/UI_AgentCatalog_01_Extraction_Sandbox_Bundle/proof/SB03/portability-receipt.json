@@ -1,0 +1,16 @@
+{
+  "scanCommand": "python tools/Validation/Portability/scan_portability.py --repo-root . --output .mcp-state/catalog-final-portability --include-untracked",
+  "scanSha256": "ae1e66e6b37ef35e465bc0b2319d7735deb94ad28757a939d79a56b3ad26ac91",
+  "scannedFiles": 5746,
+  "allFindings": 34451,
+  "enforcementCommand": "python tools/Validation/Portability/enforce_portability_baseline.py --scan .mcp-state/catalog-final-portability --baseline tools/Validation/Portability/portability-risk-baseline.json",
+  "enforcementExitCode": 0,
+  "reviewedExecutableFindings": 14300,
+  "baselineWritten": false,
+  "selfTests": {
+    "test_enforce_portability_baseline.py": 6,
+    "test_scan_artifacts_for_secrets.py": 4
+  },
+  "receiptKind": "Derived from actual interactive tool execution; not a synthetic console transcript.",
+  "initialEnforcementPathError": "The scan writes JSON at the exact --output filename; enforcement was corrected to that path without repeating the scan."
+}

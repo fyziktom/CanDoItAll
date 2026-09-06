@@ -1,0 +1,29 @@
+{
+  "utc": "2026-09-06T05:54:07.991014+00:00",
+  "portability": {
+    "result": "PASS",
+    "reviewedExecutableFindings": 14300,
+    "baselineWritten": false,
+    "scanSha256": "817fa0f27540d7319cf3b9ab26f34366f6e0725679db8365c3c5fed47b5a43eb",
+    "selfTestsPassed": [
+      6,
+      4
+    ]
+  },
+  "secrets": {
+    "result": "PASS",
+    "textFiles": 5926,
+    "historicalFindings": 244,
+    "newFindings": 0,
+    "unreadable": 0,
+    "fullScanSha256": "5f124abb6fd41e7ec2087348e982a9983583dd776cf03184e83fc061049112fc"
+  },
+  "documentation": {
+    "result": "FAILED - historical debt only",
+    "newFindings": 0,
+    "historicalTrackedArtifacts": 118,
+    "allByteIdenticalToHead": true,
+    "sourceReview": "documentation-origin-review.json"
+  },
+  "mergeReadiness": "Not an unconditional whole-repository merge gate; historical documentation debt remains."
+}

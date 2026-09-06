@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Catalog;
 using System.Reflection;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;

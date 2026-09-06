@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "### Result\n{\"dialogText\":\"TECHNICAL TEAM\\nNew agent team\\n\\nCreate or rename an AgentFramework team for filtering and process delivery.\\n\\nclose\\nClose\\nIcon\\ngroups\\nwidgets\\nChoose icon\\nName\\nDescription\\nclose\\nCancel\\ncheck\\nSave team\",\"buttons\":[\"close\\n                                    Close\",\"widgetsChoose icon\",\"closeCancel\",\"checkSave team\"],\"uiStyles\":[\"_content/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.u7b30i5wbz.bundle.scp.css\"]}\n### Ran Playwright code\n```js\nawait (async(page)=>{const search=page.locator('[data-testid=agents-catalog-search]');await search.fill('catalog-fixture');await page.waitForFunction(()=>document.querySelector('[data-testid=agents-catalog-card-grid]')?.children.length===12);await search.fill('');await page.waitForFunction(()=>document.querySelector('[data-testid=agents-catalog-card-grid]')?.children.length===40);await page.locator('[data-testid=agents-team-new]').click();const dialog=page.locator('[data-testid=agents-team-details-dialog-shell]');await dialog.waitFor({state:'visible',timeout:15000});return {dialogText:await dialog.innerText(),buttons:await dialog.getByRole('button').allTextContents(),uiStyles:await page.evaluate(()=>[...document.styleSheets].flatMap(s=>{try{return [...s.cssRules].filter(r=>r.href?.includes('AgentFramework.UI')).map(r=>r.href);}catch{return [];}}))};})(page);\n```"
+    }
+  ]
+}

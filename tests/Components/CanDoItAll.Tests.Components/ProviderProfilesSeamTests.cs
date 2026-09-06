@@ -159,9 +159,9 @@ public sealed class ProviderProfilesSeamTests {
         cut.Find("[data-testid='providers-name-input']").Change("Unsaved across sections");
         Assert.Equal(new[] { "Connection", "Prices", "Runtime", "Thinking", "Sharing", "History" },
             cut.FindAll("button[role='tab']").Select(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim()));
-        await cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == label).ClickAsync();
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == label).Click());
         cut.WaitForAssertion(() => Assert.Equal("true", cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == label).GetAttribute("aria-selected")));
-        await cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == "Connection").ClickAsync();
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == "Connection").Click());
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
         Assert.Equal("Unsaved across sections", ((ProviderProfileEditorModel)context.Model).Name);
     }

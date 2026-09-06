@@ -1,0 +1,256 @@
+tests\Components\CanDoItAll.Tests.Components\AgentCatalogPanelTests.cs
+<Stack Class="agent-catalog-panel"
+       GapScale="LayoutGap.Large">
+    <div class="agent-catalog-panel__hero">
+        <div class="agent-catalog-panel__toolbar">
+            <div class="agent-catalog-panel__heading">
+                <p class="cda-eyebrow">Technical agents</p>
+                <h2 class="cda-title-xl">Agent cards</h2>
+            </div>
+            <div class="agent-catalog-panel__toolbar-controls">
+                <StatusBadge Tone="info" Text="@(isLoading ? "Loading..." : $"{FilteredAgents.Count} of {agents.Count} agent(s)")" />
+                <Button Text="New team"
+                        Icon="groups"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenNewTeamDialogAsync"
+                        data-testid="agents-team-new" />
+                <Button Text="New agent"
+                        Icon="add"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenNewAgentDialogAsync"
+                        data-testid="agents-catalog-new" />
+                <div class="agent-catalog-panel__search" role="search">
+                    <input @bind="agentSearch"
+                           @bind:event="oninput"
+                           class="cda-input agent-catalog-panel__search-input"
+                           placeholder="Search agents"
+                           data-testid="agents-catalog-search" />
+                    <TooltipTarget Text="Reset agent search"
+                                   Position="TooltipPosition.Bottom"
+                                   Duration="@((TimeSpan?)null)"
+                                   TestId="agents-catalog-reset-tooltip">
+                        <Button Icon="restart_alt"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ResetAgentSearch"
+                                aria-label="Reset agent search"
+                                data-testid="agents-catalog-reset" />
+                    </TooltipTarget>
+                </div>
+                @if (SelectedTeam is not null)
+                {
+                    <StatusBadge Tone="info" Text="@SelectedTeam.Name" />
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <SurfaceCard Soft="true">
+            <p class="cda-eyebrow">Loading catalog</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-950">Loading technical agents</h3>
+            <p class="mt-3 text-sm leading-6 text-slate-600">
+                AgentFramework is loading the technical runtime catalog before the roster is rendered.
+            </p>
+        </SurfaceCard>
+    }
+    else if (agents.Count == 0)
+    {
+        <EmptyState Eyebrow="No technical agents"
+                    Title="Create the first technical agent"
+                    Description="Technical agents define runtime prompts, provider bindings, and tool-ready execution policy." />
+    }
+    else
+    {
+        <Grid Gap="LayoutGap.Large"
+              ColumnTemplateLg="minmax(17rem,0.65fr) minmax(0,1.75fr)"
+              Class="agent-catalog-panel__workspace"
+              data-testid="agents-catalog-workspace">
+            <section class="agent-catalog-panel__team-panel" data-testid="agents-team-panel">
+                <Split Breakpoint="LayoutBreakpoint.None"
+                       Gap="LayoutGap.Small"
+                       AlignItems="AlignItems.Center"
+                       data-testid="agents-team-header">
+                    <Cluster Gap="LayoutGap.XSmall"
+                             AlignItems="AlignItems.Center"
+                             Wrap="FlexWrap.NoWrap">
+                        <p class="cda-eyebrow">Teams</p>
+                        <h3 class="agent-catalog-panel__section-title">@TeamPanelTitle</h3>
+                    </Cluster>
+                    <StatusBadge Tone="info" Text="@teams.Count.ToString()" />
+                </Split>
+
+                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="agent-catalog-panel__team-actions">
+.agent-catalog-panel {
+    min-width: 0;
+}
+
+.agent-catalog-panel__hero {
+    border-bottom: 1px solid rgb(226 232 240);
+    padding-bottom: 0.85rem;
+}
+
+.agent-catalog-panel__toolbar {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem 1rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.agent-catalog-panel__heading {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.agent-catalog-panel__toolbar-controls {
+    align-items: center;
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.agent-catalog-panel__search {
+    align-items: center;
+    display: flex;
+    flex: 1 1 14rem;
+    gap: 0.5rem;
+    max-width: 36rem;
+    min-width: min(100%, 12rem);
+}
+
+.agent-catalog-panel__search-input {
+    flex: 1 1 14rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.agent-catalog-panel__grid {
+    align-items: stretch;
+}
+
+.agent-catalog-panel__workspace {
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.agent-catalog-panel__team-panel {
+    align-content: start;
+    align-self: start;
+    background: rgb(248 250 252);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+    padding: 1rem;
+    width: 100%;
+}
+
+.agent-catalog-panel__team-actions {
+    border-bottom: 1px solid rgb(226 232 240);
+    padding-bottom: 0.9rem;
+}
+
+.agent-catalog-panel__section-title {
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-catalog-panel__agent-results {
+    min-width: 0;
+    width: 100%;
+}
+
+.agent-catalog-panel__agent-scroll {
+    --agent-catalog-card-row-height: 15rem;
+
+    max-height: min(calc((var(--agent-catalog-card-row-height) * 3) + 2rem), calc(100vh - 17rem));
+    min-width: 0;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+}
+
+@media (min-width: 1024px) {
+    .agent-catalog-panel__team-panel {
+        max-height: 46rem;
+        overflow: auto;
+        position: sticky;
+        top: 1rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .agent-catalog-panel__toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .agent-catalog-panel__toolbar-controls {
+        justify-content: flex-start;
+    }
+
+    .agent-catalog-panel__search {
+        max-width: none;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .agent-catalog-panel__agent-scroll {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+}
+[
+  {
+    "path": "Tailwind/input.css",
+    "sha256": "b7bbdcc809ffc6c0b95ac5650541be3aec359aa0e088e2c7527d92bdb105934d"
+  },
+  {
+    "path": "Tailwind/package-lock.json",
+    "sha256": "cc8c6fe1f6bd9c513ec582638631e933be55b5cfa56d06cf1f547bcff9ae8688"
+  },
+  {
+    "path": "Tailwind/surfaces/admin.css",
+    "sha256": "9f3822d73cca0baa000077d0c9128c62f391c863819d958fef6bcd14d969d4ea"
+  },
+  {
+    "path": "global.json",
+    "sha256": "b132d105648c7dbe49f2c391fe0b9898027e470ddc7cfd4d7239af5df63401fa"
+  },
+  {
+    "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+    "sha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"
+  },
+  {
+    "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs",
+    "sha256": "c701b8d33a7ab1ac6549177538dbbef55e85d9b91776f8d625f44b1675d84792"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor",
+    "sha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.cs",
+    "sha256": "acdd0299c2111828185d5422cd20ce9d8721d25349bf57ece45cac0a341d442c"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogPanel.razor.css",
+    "sha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+  }
+]
+e5a8d5c6b7ad19c99c805a76cde84b99d08d9eee	refs/heads/components-decoupling
+

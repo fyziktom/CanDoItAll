@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.96]     CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Candidate_conflict_after_absence_requires_verification_before_new_identity [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Candidate_conflict_after_absence_requires_verification_before_new_identity [78 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   3
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.Candidate_conflict_after_absence_requires_verification_before_new_identity() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentFramework\ProviderEditorOperationsTests.cs:line 375
+--- End of stack trace from previous location ---
+Soubor výsledků: C:\repositories\CanDoItAll\.mcp-state\p02d-results\red-retry-race.trx
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 90 ms - CanDoItAll.Tests.Unit.dll (net10.0)

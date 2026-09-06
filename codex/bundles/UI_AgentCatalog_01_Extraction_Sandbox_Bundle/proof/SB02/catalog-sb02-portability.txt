@@ -1,0 +1,26 @@
+Command: python tools/Validation/Portability/scan_portability.py --repo-root . --output .mcp-state/catalog-sb02-portability.json
+Scanned files: 5720
+Findings: 32894
+JSON: C:\repositories\CanDoItAll\.mcp-state\catalog-sb02-portability.json
+CSV: C:\repositories\CanDoItAll\.mcp-state\catalog-sb02-portability.csv
+Markdown: C:\repositories\CanDoItAll\.mcp-state\catalog-sb02-portability.md
+RESULT: PASS
+ExitCode: 0
+Command: python tools/Validation/Portability/enforce_portability_baseline.py --scan .mcp-state/catalog-sb02-portability.json --baseline tools/Validation/Portability/portability-risk-baseline.json
+RESULT: FAIL (portability-sensitive executable source changed)
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs [environment] 8c1e82c9994dd7ba count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs [mcp] 38345d9d36f861a6 count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs [mcp] afaede9afe0ab802 count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs [mcp] df3edd5e2d8ef98d count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json [mcp] 5a10389e12c760b3 count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json [mcp] 63e27787d06a82d4 count=9
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json [mcp] b9704df57ed835de count=10
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json [mcp] d345eb21f05e5102 count=10
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json [mcp] f9f6006f9e2821a7 count=2
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json [shell-elevation] 7c7b2d25e6f149e1 count=9
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md [external-tool] 2f74a8d388f2caef count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md [mcp] 441d1bc436b3fa76 count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md [shell-elevation] e5e525f72f458dc1 count=1
+ADDED: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md [windows-executable] 3124f268ecbb158b count=1
+Review the source change, then refresh the baseline explicitly with --write-baseline.
+ExitCode: 1
