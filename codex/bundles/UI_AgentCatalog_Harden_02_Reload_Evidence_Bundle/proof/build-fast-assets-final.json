@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "dotnet",
+    "build",
+    "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+    "--configuration",
+    "Release",
+    "/m:1",
+    "-p:CatalogAssetMode=Fast",
+    "-v:minimal"
+  ],
+  "startUtc": "2026-09-06T17:31:34.561913+00:00",
+  "endUtc": "2026-09-06T17:31:38.034540+00:00",
+  "exitCode": 0,
+  "invalidation": "Fast Tailwind output regenerated after source/context update; validate final Release static assets."
+}

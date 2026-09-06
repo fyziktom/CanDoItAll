@@ -1,0 +1,48 @@
+[
+  {
+    "label": "fast",
+    "argv": [
+      "dotnet",
+      "build",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "--configuration",
+      "Release",
+      "/m:1",
+      "-v:minimal",
+      "-p:CatalogAssetMode=Fast"
+    ],
+    "startUtc": "2026-09-06T17:04:55.444014+00:00",
+    "endUtc": "2026-09-06T17:04:59.068760+00:00",
+    "exitCode": 0
+  },
+  {
+    "label": "ui",
+    "argv": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "--configuration",
+      "Release",
+      "/m:1",
+      "-v:minimal"
+    ],
+    "startUtc": "2026-09-06T17:04:59.069761+00:00",
+    "endUtc": "2026-09-06T17:05:02.294406+00:00",
+    "exitCode": 0
+  },
+  {
+    "label": "unit",
+    "argv": [
+      "dotnet",
+      "build",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "--configuration",
+      "Release",
+      "/m:1",
+      "-v:minimal"
+    ],
+    "startUtc": "2026-09-06T17:05:02.295391+00:00",
+    "endUtc": "2026-09-06T17:06:03.566481+00:00",
+    "exitCode": 0
+  }
+]

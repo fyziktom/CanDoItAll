@@ -1,0 +1,45 @@
+{
+  "expected": 30,
+  "commands": [
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCatalogBoundaryTests",
+        "/m:1",
+        "--list-tests"
+      ],
+      "startUtc": "2026-09-06T17:08:41.287935+00:00",
+      "endUtc": "2026-09-06T17:08:42.820823+00:00",
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCatalogBoundaryTests",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=catalog-owning.trx",
+        "--results-directory",
+        ".mcp-state\\catalog-harden-02"
+      ],
+      "startUtc": "2026-09-06T17:08:42.821827+00:00",
+      "endUtc": "2026-09-06T17:09:41.574911+00:00",
+      "exitCode": 0
+    }
+  ],
+  "actual": 30
+}

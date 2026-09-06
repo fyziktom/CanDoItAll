@@ -1,0 +1,14 @@
+{
+  "src/App/CanDoItAll.Web/wwwroot/css/output.css": {
+    "bytes": 115598,
+    "sha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"
+  },
+  "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css": {
+    "bytes": 12591,
+    "sha256": "4cb57723231fa6eb972fe834367ac21f3c663decef61bc0cf2f27899b11d0bac"
+  },
+  "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json": {
+    "bytes": 202188,
+    "sha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd"
+  }
+}

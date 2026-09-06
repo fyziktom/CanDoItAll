@@ -65,3 +65,9 @@ This host references only the lightweight UI project and renders the real AgentC
 Loading, empty and card states use the same components. Avatar fallback demonstrates the card's seeded image and BaseLib's explicit initials mode. A broken image URL is not the Avatar missing-value fallback contract.
 
 The original extraction and managed observation results remain in `codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle`. Fresh direct local comparison belongs to `codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle`. It separates SDK update time from local edit-to-visible latency and retains failures. A small project graph or reduced CSS size alone is not a performance result.
+
+## Reload context
+
+The development specimen accepts `scenario=normal|loading|empty|card-states|avatar-fallback`, `layout=matched|flexible`, and optional `agentId`/`teamId` query values on `/agents`. IDs must exist in the embedded fixture. Invalid values normalize to Normal/Matched or no selection. Controls replace the current history entry; a browser reload restores that context. Search text, favorite toggles and recorded intent text remain transient.
+
+For a reproducible normal specimen, start at `/agents?scenario=normal&layout=matched`. This query belongs only to the sandbox and does not change production routing.

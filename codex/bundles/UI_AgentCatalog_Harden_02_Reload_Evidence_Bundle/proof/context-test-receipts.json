@@ -1,0 +1,45 @@
+{
+  "expected": 18,
+  "actual": 18,
+  "commands": [
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CatalogSandboxContextTests|FullyQualifiedName~CatalogAssetModeTests",
+        "/m:1",
+        "--list-tests"
+      ],
+      "startUtc": "2026-09-06T17:06:46.685285+00:00",
+      "endUtc": "2026-09-06T17:06:48.631364+00:00",
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CatalogSandboxContextTests|FullyQualifiedName~CatalogAssetModeTests",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=context-Unit.trx",
+        "--results-directory",
+        ".mcp-state\\catalog-harden-02"
+      ],
+      "startUtc": "2026-09-06T17:06:48.632366+00:00",
+      "endUtc": "2026-09-06T17:06:50.795692+00:00",
+      "exitCode": 0
+    }
+  ]
+}

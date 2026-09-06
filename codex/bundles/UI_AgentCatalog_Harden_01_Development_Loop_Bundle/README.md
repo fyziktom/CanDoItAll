@@ -7,3 +7,5 @@ Read [closure](reviews/closure.md), [measured distributions](proof/direct-result
 This compact compatible bundle preserves its entry inventory, adjudication, requirements, ordered execution, original proof and manifest. No historical proof was rewritten. Parity retains production theme bytes; Fast owns a bounded local output. The real rendering boundary is unchanged. No next feature bundle, Manager optimization or routing implementation is included. Historical documentation debt remains separate; no merge-readiness claim.
 
 Evidence-retention correction: [2026-09-06 erratum](reviews/evidence-retention-erratum.md).
+
+Browser-event classification correction: [2026-09-06 erratum](reviews/refresh-classification-erratum.md).

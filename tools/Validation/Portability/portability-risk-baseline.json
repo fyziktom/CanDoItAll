@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-06T14:29:59.782657+00:00",
+  "generated_utc": "2026-09-06T17:26:47.310484+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14297,
+  "allowance_count": 14298,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -69414,6 +69414,12 @@
       "category": "process-domain",
       "source_fingerprint": "e4dd4340df4f9223108ccccd707561eaf7f3f643ec73ecb6349a23226b68c408",
       "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogSandboxContext.cs",
+      "category": "case-policy",
+      "source_fingerprint": "8a4f044725dd136771198fed6678c1a1da91844cda678951be083a46fb621dd0",
+      "count": 1
     },
     {
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",

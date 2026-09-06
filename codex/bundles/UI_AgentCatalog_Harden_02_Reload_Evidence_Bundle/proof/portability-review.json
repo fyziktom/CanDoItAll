@@ -1,0 +1,11 @@
+{
+  "category": "case-policy",
+  "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogSandboxContext.cs",
+  "fingerprint": "8a4f044725dd136771198fed6678c1a1da91844cda678951be083a46fb621dd0",
+  "decision": "Intentional external query token comparison; no filesystem or platform identity involved.",
+  "baselineDelta": {
+    "added": 1,
+    "stale": 0
+  },
+  "finalEnforcement": "PASS 14298 unchanged"
+}

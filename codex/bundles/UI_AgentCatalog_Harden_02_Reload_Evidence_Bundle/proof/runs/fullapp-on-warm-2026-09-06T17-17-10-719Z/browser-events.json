@@ -1,0 +1,118 @@
+[
+  {
+    "ns": "348683173627900",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "348694669929900",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "348694670543300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "348694670698300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "348694980471400",
+    "kind": "enhanced-response",
+    "status": 200,
+    "allowed": true,
+    "html": true
+  },
+  {
+    "ns": "348694991744900",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "348694992957400",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "348698587956900",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "348698588345600",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "348698588427000",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "348698789084500",
+    "kind": "enhanced-response",
+    "status": 200,
+    "allowed": true,
+    "html": true
+  },
+  {
+    "ns": "348698796207600",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "348698797091100",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "348702643444300",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "348702643775900",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "348702643832100",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "348702857037200",
+    "kind": "enhanced-response",
+    "status": 200,
+    "allowed": true,
+    "html": true
+  },
+  {
+    "ns": "348702863614100",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "348702864276200",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "348705755478200",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "348705755923800",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "348705755967300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "348705984457200",
+    "kind": "enhanced-response",
+    "status": 200,
+    "allowed": true,
+    "html": true
+  },
+  {
+    "ns": "348705990793200",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "348705991339800",
+    "kind": "enhancednavigationend"
+  }
+]

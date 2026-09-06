@@ -1,0 +1,515 @@
+[
+  {
+    "id": "fast-off-warm-2026-09-06T17-14-02-045Z",
+    "group": "diagnostic",
+    "protocol": "ef14b34388202d4c5bab70662e5c87b51e9beb0fb29d677ab2c8a10c2e50e844",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 29072,
+        "sha256": "e137bd0cb216f387f8fdaf8612cd547bdd1b9de5f180dd757b4731f0d29a69ab",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 50656,
+        "sha256": "8eafadca9e0e7fd099f92a060151d1225f0d69c280093ed0fa3dce89aba57e87",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 718,
+        "sha256": "2163100e91652508a0435ed356071507e4522d39be41f2e4a930102b9e93cc97",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fast-off-warm-2026-09-06T17-21-27-892Z",
+    "group": "diagnostic",
+    "protocol": "1e4505a61a59c47c146b47b7591ed68cd2004e2f38c3a8909c74656362cec55a",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 29073,
+        "sha256": "66c1eac443d8b54cb54702cf81422df762ea3e5a34bb15144a17486770f0977b",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 50772,
+        "sha256": "e47d62feda591c1d33a97152804af926ba559a0b726537e395b6b43afd83d50f",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 735,
+        "sha256": "58017c1c0dcf9549086068aaa0aa3e5dd7b9f18ede4ba54b6325aa3eedf923c3",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fast-on-acceptance-2026-09-06T17-07-39-000Z",
+    "group": "browser",
+    "protocol": "195b11f9805d83094ffb3a24dfb9d55da92f5c9d6bd89a7c6d6fda77cde3534b",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "avatar.jpeg",
+        "bytes": 59640,
+        "sha256": "21acafa5f66fd48764b70db6c13642009de020ea46958d5ccdd221928bee0467",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "card-states.jpeg",
+        "bytes": 54652,
+        "sha256": "c9517445eaee7f88e3519fa2710ef6bdd2965314f21af853dd0e04be2e9db3ff",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 12093,
+        "sha256": "e69e6af95694e6321d1a1fcde7e7b05ad66446acf71938439b792bd694c08bed",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "empty.jpeg",
+        "bytes": 50057,
+        "sha256": "2f63fe8a6033b0e3c1dd2fcfa19f4dbd2ef333359d7f619753da3bf12e5a0a1c",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 19904,
+        "sha256": "bf7b93d1cd6f1ab2f6c1558b2a056ce46e6b0be6900e071d1fe4cb934f0109f9",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "loading.jpeg",
+        "bytes": 49678,
+        "sha256": "31215e4febad18547964fd7a451dacfde3cbc16394ab21a9c072c6462b048799",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "normal.jpeg",
+        "bytes": 186450,
+        "sha256": "a4c77cd46a98b5c025d6853909318aae3bc2a8978ae9fc495b6b6d518dc16bc9",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "restored-selection.jpeg",
+        "bytes": 174351,
+        "sha256": "5ef0acbce147eac876669c48bfa0373105cde9120a7cb54cb30d6e272a880d68",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 628,
+        "sha256": "d4185b0d70e674736ade0960ef3a0b2d7b88f70ec4970b80cf337f2dfd34cc6b",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tooltip.jpeg",
+        "bytes": 190408,
+        "sha256": "3524a137802fd59d7c8b7768e791f64ac3ba1712aca60e8f7bf8dc67bec5d522",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fast-on-warm-2026-09-06T17-13-36-213Z",
+    "group": "diagnostic",
+    "protocol": "ef14b34388202d4c5bab70662e5c87b51e9beb0fb29d677ab2c8a10c2e50e844",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 30588,
+        "sha256": "c03ea339c1b64e962ad0aecd6a4d14d0313f233368b7144bea4947293d58efea",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 53197,
+        "sha256": "4d9fbbffcc191ec631e20b997e7e133413cf635e1c94b9d670677be3489cb0b8",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 720,
+        "sha256": "4d9b63281eaceef7484d3dc7d9bc1d42628b6a6352dfc9d0805cf497e8ef8b56",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fast-on-warm-2026-09-06T17-20-56-184Z",
+    "group": "diagnostic",
+    "protocol": "1e4505a61a59c47c146b47b7591ed68cd2004e2f38c3a8909c74656362cec55a",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 30588,
+        "sha256": "d233dd528b9434f368a64387e66301813e2e6bf69b94e30a0b8f259d4e1dc5b4",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 53309,
+        "sha256": "7aec1a6f1c23bf8b8b7d2c59e4dd217fdde08787be71b6f6f56ffc5cb50a7215",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 734,
+        "sha256": "c6776bb32ed0b417fab7036f95d2bf9bfe70f981218e23b5efa3d812fcddd42b",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fullapp-off-warm-2026-09-06T17-11-27-233Z",
+    "group": "diagnostic",
+    "protocol": "ef14b34388202d4c5bab70662e5c87b51e9beb0fb29d677ab2c8a10c2e50e844",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 99754,
+        "sha256": "eb8480fb9d07b1a2e0b5795697fe00b0f68e4e7efa15ceb2f3691fb41be15acb",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 154687,
+        "sha256": "431658ec0dad9207662bc4710ebfe3c1955acf68365a89ec1ad98f34aaa9a000",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 1167,
+        "sha256": "a4668419f75be5d6487c3d86ef16829fa6dc1d7fbefc9c6d083fb0cce332ce0b",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fullapp-off-warm-2026-09-06T17-18-31-227Z",
+    "group": "diagnostic",
+    "protocol": "1e4505a61a59c47c146b47b7591ed68cd2004e2f38c3a8909c74656362cec55a",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 99754,
+        "sha256": "4c36308f58f69a94cc67ea0b58a50a6b0162715e8bea07beb7e32a8ac477c734",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 154912,
+        "sha256": "213d9ff03cf300db8e7be9a286723b6d64c2791de958d8b67dff5ab083648c3c",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 1196,
+        "sha256": "72f6acfe10d3cc8d56db67b6076c8ec40f6a71b1116ad24e89089b75acf2aacb",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fullapp-on-warm-2026-09-06T17-09-46-317Z",
+    "group": "diagnostic",
+    "protocol": "ef14b34388202d4c5bab70662e5c87b51e9beb0fb29d677ab2c8a10c2e50e844",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 101081,
+        "sha256": "f9f47c2c13f3e9555ae2fd41799bcf7aeca8751042a8cfa06e14fcfc248a7bf4",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 161058,
+        "sha256": "c9436e76f147fa2edbfaae43fe4272754cbbf31cfc7199152348564284136ae4",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 1660,
+        "sha256": "84ab01df5c7806889e742bef9d2f689b3a96ec99602f3b81566b26f072050b31",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "fullapp-on-warm-2026-09-06T17-17-10-719Z",
+    "group": "diagnostic",
+    "protocol": "1e4505a61a59c47c146b47b7591ed68cd2004e2f38c3a8909c74656362cec55a",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 101081,
+        "sha256": "c1d287091dab90ca64e09665d101a175eb5c8434aa9180c5b37b3f3fd5d61eef",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 157043,
+        "sha256": "5e67798fa46751dc0273c80941bdbb1e9813b009630cfbe81008f858d672fbf3",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 1173,
+        "sha256": "dccf8555d3c772e431becd4a221fb85d3ccdfac419c90179f64c801db5eb8bbb",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "parity-off-warm-2026-09-06T17-13-10-902Z",
+    "group": "diagnostic",
+    "protocol": "ef14b34388202d4c5bab70662e5c87b51e9beb0fb29d677ab2c8a10c2e50e844",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 29088,
+        "sha256": "737be5f419a83646f971238a3c9d319b9960a151ab33f5347569eaeeabaf984b",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 50222,
+        "sha256": "cde855aeaccb8dd6840f3a36d1ef332c87df1bbc5cb7620b2e1b529c54f7edef",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 622,
+        "sha256": "3516ca64605d5a8df45ccafddc1a91cc224e8ff25cd73720a61f28ddc6ded318",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "parity-off-warm-2026-09-06T17-20-25-165Z",
+    "group": "diagnostic",
+    "protocol": "1e4505a61a59c47c146b47b7591ed68cd2004e2f38c3a8909c74656362cec55a",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 29088,
+        "sha256": "46345af4f841776f3ae7442d9e7c56a4fd002eb6446f391508d7739fd3692db3",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 50335,
+        "sha256": "ca29f99e14cb5422bc98807fc53474ebd475fc56bfdf92233c2637badc80323a",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 637,
+        "sha256": "4fbb7243993505247e43bea8146c357b7b1cad2b6bd3e87815916a6f1ffda078",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "parity-on-acceptance-2026-09-06T17-06-51-072Z",
+    "group": "browser",
+    "protocol": "195b11f9805d83094ffb3a24dfb9d55da92f5c9d6bd89a7c6d6fda77cde3534b",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "avatar.jpeg",
+        "bytes": 59639,
+        "sha256": "dd8c41e701a4f2bd15079e257cf74bd41c6dcd979711edb5fb872d3330cea744",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "card-states.jpeg",
+        "bytes": 54668,
+        "sha256": "8587d13a454ec5c30dd97dc9189bf19f0be55d775a79b6743fd8d56e197f5bfd",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 12108,
+        "sha256": "d92bca00f2bff512899fdaa8196e14dd3141b422d24c06a4216bc4878a811d15",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "empty.jpeg",
+        "bytes": 50097,
+        "sha256": "421d5c15ae0a3dc23dcc3fcd0f556583e9da16ed3cc00561bceedf152835331a",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 19376,
+        "sha256": "17a630704165f459db66d7fb9e3f73b2a8364f5e3c233ef546b5a2a4ad90732a",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "loading.jpeg",
+        "bytes": 49680,
+        "sha256": "e9f2cd8aa6ad5ef43d903fe52e65b6f84c8ed388ba591f2ceafac453a6cde3aa",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "normal.jpeg",
+        "bytes": 186450,
+        "sha256": "a4c77cd46a98b5c025d6853909318aae3bc2a8978ae9fc495b6b6d518dc16bc9",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "restored-selection.jpeg",
+        "bytes": 174351,
+        "sha256": "5ef0acbce147eac876669c48bfa0373105cde9120a7cb54cb30d6e272a880d68",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 532,
+        "sha256": "9ffb8746ca2d8efd47446b89114b229f4b189c8348cc70e92066a60f2434e9c8",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tooltip.jpeg",
+        "bytes": 190408,
+        "sha256": "3524a137802fd59d7c8b7768e791f64ac3ba1712aca60e8f7bf8dc67bec5d522",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "parity-on-context-2026-09-06T17-01-56-220Z",
+    "group": "browser",
+    "protocol": "f7b42e4ca669e6a27cdc24b05ba570da2a468080d1fdf3044f11ee3d92ca6708",
+    "complete": false,
+    "failures": [
+      {
+        "utc": "2026-09-06T17:02:27.931Z",
+        "kind": "failed",
+        "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('agent-favorite-toggle') to be visible\u001b[22m\n"
+      }
+    ],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 12168,
+        "sha256": "567cf41172afe6a66ee411dd92d4f29d0fab47772e9c20bbf07461d8074c1cd9",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 20533,
+        "sha256": "12c85c5b3e5b2f7fbac266e1abfeb9470bfac67b1986a56fc8cf85c52888a58c",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "failed-controls.json",
+        "bytes": 7694,
+        "sha256": "18a60c6be8c3461a34742816e834e403a5a006fa7441b2d05b6cc07583623223",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "failed-dom.txt",
+        "bytes": 13322,
+        "sha256": "19775309863402d698f6cc50b2f0aa96236686e54338d1e4a734d2061dffca3f",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "failed.jpeg",
+        "bytes": 167142,
+        "sha256": "fd69b83d8cbd95a45dcd1667508dcd20ee242a24caa6c214066733dbaa2919aa",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 656,
+        "sha256": "15ce803eeb6edd605a8565d0197b8c9a583641179fe8fc8b83a6f34c2ef2d078",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "parity-on-warm-2026-09-06T17-12-45-165Z",
+    "group": "diagnostic",
+    "protocol": "ef14b34388202d4c5bab70662e5c87b51e9beb0fb29d677ab2c8a10c2e50e844",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 30603,
+        "sha256": "28415b443b81937c826c4694d3e08fe34984524ff821942a693812cbbceb362f",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 52760,
+        "sha256": "905adfd1b033211ad928b2f7d1a0424d73b4afc37c40290f3c89ff15252e9ccb",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 622,
+        "sha256": "fb5eec290ade420ed09dcf8235e0f4fdaa9b80a50a569a6f12a85906e9c59a4d",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  },
+  {
+    "id": "parity-on-warm-2026-09-06T17-19-53-647Z",
+    "group": "diagnostic",
+    "protocol": "1e4505a61a59c47c146b47b7591ed68cd2004e2f38c3a8909c74656362cec55a",
+    "complete": true,
+    "failures": [],
+    "transients": [
+      {
+        "file": "dotnet-watch.txt",
+        "bytes": 31031,
+        "sha256": "13fb1b5a6cf964e8d42fe461dc75215697f88d74f3dbe8fc1ea394efb4226815",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "events.json",
+        "bytes": 53815,
+        "sha256": "64c79a32a197047b963d304f023acfdeab978edfe1216ab38f24948ccabacec3",
+        "retention": "transient local artifact; no branch link"
+      },
+      {
+        "file": "tailwind.txt",
+        "bytes": 634,
+        "sha256": "c0464afddeef5c5e8f983611c03058a65f1577fbb3c35710bb9bf1e5b8b1a33d",
+        "retention": "transient local artifact; no branch link"
+      }
+    ]
+  }
+]

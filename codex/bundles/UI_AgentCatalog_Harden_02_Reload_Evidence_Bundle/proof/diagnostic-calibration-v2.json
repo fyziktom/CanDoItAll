@@ -1,0 +1,938 @@
+[
+  {
+    "utc": "2026-09-06T17:14:23.985Z",
+    "kind": "warm",
+    "host": "fast",
+    "editId": "razor-heading",
+    "category": "Razor",
+    "repetition": 1,
+    "classification": "hot-reload",
+    "success": true,
+    "refresh": "off",
+    "documentBefore": {
+      "id": "aa04af90-730d-4ea5-97a4-53fb984e83f5",
+      "timeOrigin": 1788714854896.2
+    },
+    "documentAfter": {
+      "id": "aa04af90-730d-4ea5-97a4-53fb984e83f5",
+      "timeOrigin": 1788714854896.2
+    },
+    "browserEvents": [],
+    "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "patchSha256": "9288e8d0a28e70a6609546b742637043f224e5773c9d1b1439512074c70c1ece",
+    "flushNs": "348460245771500",
+    "firstVisibleNs": "348461612510800",
+    "firstVisibleMs": 1366.7393,
+    "visibleNs": "348461646667200",
+    "elapsedMs": 1400.8957,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 44360,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-off-warm-2026-09-06T17-14-02-045Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 44360,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-off-warm-2026-09-06T17-14-02-045Z"
+    },
+    "navigationCount": 0,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 105,
+        "text": "dotnet watch : C# and Razor changes applied in 1291ms.",
+        "ns": "348461609120100",
+        "milliseconds": 1291
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 140,
+        "ns": "348462131234100",
+        "text": "dotnet watch : C# and Razor changes applied in 455ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:14:25.201Z",
+    "kind": "warm",
+    "host": "fast",
+    "editId": "csharp-team-title",
+    "category": "CSharp",
+    "repetition": 1,
+    "classification": "hot-reload",
+    "success": true,
+    "refresh": "off",
+    "documentBefore": {
+      "id": "aa04af90-730d-4ea5-97a4-53fb984e83f5",
+      "timeOrigin": 1788714854896.2
+    },
+    "documentAfter": {
+      "id": "aa04af90-730d-4ea5-97a4-53fb984e83f5",
+      "timeOrigin": 1788714854896.2
+    },
+    "browserEvents": [],
+    "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "patchSha256": "7c65e324b26defd5b51fb74d1e5a8435feb4a482746a5426404a9346f27d5d7c",
+    "flushNs": "348462958841400",
+    "firstVisibleNs": "348463195340000",
+    "firstVisibleMs": 236.4986,
+    "visibleNs": "348463228880500",
+    "elapsedMs": 270.0391,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 44360,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-off-warm-2026-09-06T17-14-02-045Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 44360,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-off-warm-2026-09-06T17-14-02-045Z"
+    },
+    "navigationCount": 0,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 175,
+        "text": "dotnet watch : C# and Razor changes applied in 155ms.",
+        "ns": "348463179068600",
+        "milliseconds": 155
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 209,
+        "ns": "348463342968500",
+        "text": "dotnet watch : C# and Razor changes applied in 61ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:13:58.636Z",
+    "kind": "warm",
+    "host": "fast",
+    "editId": "razor-heading",
+    "category": "Razor",
+    "repetition": 1,
+    "classification": "enhanced-navigation",
+    "success": true,
+    "refresh": "on",
+    "documentBefore": {
+      "id": "841baa14-851c-463c-83c4-824c939a1d8c",
+      "timeOrigin": 1788714829478.5
+    },
+    "documentAfter": {
+      "id": "841baa14-851c-463c-83c4-824c939a1d8c",
+      "timeOrigin": 1788714829478.5
+    },
+    "browserEvents": [
+      {
+        "ns": "348436137652600",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "348436138804700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "348436139125600",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "348436168085900",
+        "kind": "enhanced-response",
+        "status": 200,
+        "allowed": true,
+        "html": true
+      },
+      {
+        "ns": "348436172667600",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "348436173552200",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "patchSha256": "9288e8d0a28e70a6609546b742637043f224e5773c9d1b1439512074c70c1ece",
+    "flushNs": "348434807165400",
+    "firstVisibleNs": "348436129780200",
+    "firstVisibleMs": 1322.6148,
+    "visibleNs": "348436213209800",
+    "elapsedMs": 1406.0444,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 28712,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-on-warm-2026-09-06T17-13-36-213Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 28712,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-on-warm-2026-09-06T17-13-36-213Z"
+    },
+    "navigationCount": 1,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 109,
+        "text": "dotnet watch : C# and Razor changes applied in 1276ms.",
+        "ns": "348436137369100",
+        "milliseconds": 1276
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 146,
+        "ns": "348436746641400",
+        "text": "dotnet watch : C# and Razor changes applied in 474ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:13:59.903Z",
+    "kind": "warm",
+    "host": "fast",
+    "editId": "csharp-team-title",
+    "category": "CSharp",
+    "repetition": 1,
+    "classification": "enhanced-navigation",
+    "success": true,
+    "refresh": "on",
+    "documentBefore": {
+      "id": "841baa14-851c-463c-83c4-824c939a1d8c",
+      "timeOrigin": 1788714829478.5
+    },
+    "documentAfter": {
+      "id": "841baa14-851c-463c-83c4-824c939a1d8c",
+      "timeOrigin": 1788714829478.5
+    },
+    "browserEvents": [
+      {
+        "ns": "348437836273500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "348437836448200",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "348437836474100",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "348437850307900",
+        "kind": "enhanced-response",
+        "status": 200,
+        "allowed": true,
+        "html": true
+      },
+      {
+        "ns": "348437853685300",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "348437854321200",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "patchSha256": "7c65e324b26defd5b51fb74d1e5a8435feb4a482746a5426404a9346f27d5d7c",
+    "flushNs": "348437626116300",
+    "firstVisibleNs": "348437880329700",
+    "firstVisibleMs": 254.2134,
+    "visibleNs": "348437914142600",
+    "elapsedMs": 288.0263,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 28712,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-on-warm-2026-09-06T17-13-36-213Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 28712,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-on-warm-2026-09-06T17-13-36-213Z"
+    },
+    "navigationCount": 1,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 183,
+        "text": "dotnet watch : C# and Razor changes applied in 173ms.",
+        "ns": "348437835629800",
+        "milliseconds": 173
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 219,
+        "ns": "348438045006900",
+        "text": "dotnet watch : C# and Razor changes applied in 55ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:12:38.540Z",
+    "kind": "warm",
+    "host": "fullapp",
+    "editId": "razor-heading",
+    "category": "Razor",
+    "repetition": 1,
+    "classification": "hot-reload",
+    "success": true,
+    "refresh": "off",
+    "documentBefore": {
+      "id": "126942ad-6f35-417d-9a5c-33a624279072",
+      "timeOrigin": 1788714743273.6
+    },
+    "documentAfter": {
+      "id": "126942ad-6f35-417d-9a5c-33a624279072",
+      "timeOrigin": 1788714743273.6
+    },
+    "browserEvents": [],
+    "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "patchSha256": "9288e8d0a28e70a6609546b742637043f224e5773c9d1b1439512074c70c1ece",
+    "flushNs": "348350909980300",
+    "firstVisibleNs": "348353000577700",
+    "firstVisibleMs": 2090.5974,
+    "visibleNs": "348354115829100",
+    "elapsedMs": 3205.8488,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 39240,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-off-warm-2026-09-06T17-11-27-233Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 39240,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-off-warm-2026-09-06T17-11-27-233Z"
+    },
+    "navigationCount": 0,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 392,
+        "text": "dotnet watch : C# and Razor changes applied in 3130ms.",
+        "ns": "348354109065400",
+        "milliseconds": 3130
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 429,
+        "ns": "348356683301100",
+        "text": "dotnet watch : C# and Razor changes applied in 2387ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:12:43.123Z",
+    "kind": "warm",
+    "host": "fullapp",
+    "editId": "csharp-team-title",
+    "category": "CSharp",
+    "repetition": 1,
+    "classification": "hot-reload",
+    "success": true,
+    "refresh": "off",
+    "documentBefore": {
+      "id": "126942ad-6f35-417d-9a5c-33a624279072",
+      "timeOrigin": 1788714743273.6
+    },
+    "documentAfter": {
+      "id": "126942ad-6f35-417d-9a5c-33a624279072",
+      "timeOrigin": 1788714743273.6
+    },
+    "browserEvents": [],
+    "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "patchSha256": "7c65e324b26defd5b51fb74d1e5a8435feb4a482746a5426404a9346f27d5d7c",
+    "flushNs": "348357621180600",
+    "firstVisibleNs": "348358217461400",
+    "firstVisibleMs": 596.2808,
+    "visibleNs": "348359350600600",
+    "elapsedMs": 1729.42,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 39240,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-off-warm-2026-09-06T17-11-27-233Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 39240,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-off-warm-2026-09-06T17-11-27-233Z"
+    },
+    "navigationCount": 0,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 466,
+        "text": "dotnet watch : C# and Razor changes applied in 1633ms.",
+        "ns": "348359297419100",
+        "milliseconds": 1633
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 503,
+        "ns": "348361237970300",
+        "text": "dotnet watch : C# and Razor changes applied in 1741ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:11:20.559Z",
+    "kind": "warm",
+    "host": "fullapp",
+    "editId": "razor-heading",
+    "category": "Razor",
+    "repetition": 1,
+    "classification": "enhanced-navigation",
+    "success": true,
+    "refresh": "on",
+    "documentBefore": {
+      "id": "5fa1ee62-cd1d-4904-920b-c6cd5150f8bc",
+      "timeOrigin": 1788714666144.4
+    },
+    "documentAfter": {
+      "id": "5fa1ee62-cd1d-4904-920b-c6cd5150f8bc",
+      "timeOrigin": 1788714666144.4
+    },
+    "browserEvents": [
+      {
+        "ns": "348276352128300",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "348276352576800",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "348276353217800",
+        "kind": "enhancednavigationstart"
+      }
+    ],
+    "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "patchSha256": "9288e8d0a28e70a6609546b742637043f224e5773c9d1b1439512074c70c1ece",
+    "flushNs": "348273270117500",
+    "firstVisibleNs": "348275253867400",
+    "firstVisibleMs": 1983.7499,
+    "visibleNs": "348276387719000",
+    "elapsedMs": 3117.6015,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 30640,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-on-warm-2026-09-06T17-09-46-317Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 30640,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-on-warm-2026-09-06T17-09-46-317Z"
+    },
+    "navigationCount": 1,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 432,
+        "text": "dotnet watch : C# and Razor changes applied in 2966ms.",
+        "ns": "348276351567600",
+        "milliseconds": 2966
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 471,
+        "ns": "348278691247200",
+        "text": "dotnet watch : C# and Razor changes applied in 2179ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:11:25.208Z",
+    "kind": "warm",
+    "host": "fullapp",
+    "editId": "csharp-team-title",
+    "category": "CSharp",
+    "repetition": 1,
+    "classification": "enhanced-navigation",
+    "success": true,
+    "refresh": "on",
+    "documentBefore": {
+      "id": "5fa1ee62-cd1d-4904-920b-c6cd5150f8bc",
+      "timeOrigin": 1788714666144.4
+    },
+    "documentAfter": {
+      "id": "5fa1ee62-cd1d-4904-920b-c6cd5150f8bc",
+      "timeOrigin": 1788714666144.4
+    },
+    "browserEvents": [
+      {
+        "ns": "348281512418100",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "348281512608900",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "348281512636200",
+        "kind": "enhancednavigationstart"
+      }
+    ],
+    "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "patchSha256": "7c65e324b26defd5b51fb74d1e5a8435feb4a482746a5426404a9346f27d5d7c",
+    "flushNs": "348279647151100",
+    "firstVisibleNs": "348280369390200",
+    "firstVisibleMs": 722.2391,
+    "visibleNs": "348281568933300",
+    "elapsedMs": 1921.7822,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 30640,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-on-warm-2026-09-06T17-09-46-317Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 30640,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-on-warm-2026-09-06T17-09-46-317Z"
+    },
+    "navigationCount": 1,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 510,
+        "text": "dotnet watch : C# and Razor changes applied in 1829ms.",
+        "ns": "348281511590700",
+        "milliseconds": 1829
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 549,
+        "ns": "348283360370300",
+        "text": "dotnet watch : C# and Razor changes applied in 1611ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:13:32.871Z",
+    "kind": "warm",
+    "host": "parity",
+    "editId": "razor-heading",
+    "category": "Razor",
+    "repetition": 1,
+    "classification": "hot-reload",
+    "success": true,
+    "refresh": "off",
+    "documentBefore": {
+      "id": "733d1c50-031a-4b00-907b-9e64b3f9dd16",
+      "timeOrigin": 1788714803678.6
+    },
+    "documentAfter": {
+      "id": "733d1c50-031a-4b00-907b-9e64b3f9dd16",
+      "timeOrigin": 1788714803678.6
+    },
+    "browserEvents": [],
+    "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "patchSha256": "9288e8d0a28e70a6609546b742637043f224e5773c9d1b1439512074c70c1ece",
+    "flushNs": "348408993452300",
+    "firstVisibleNs": "348410364071500",
+    "firstVisibleMs": 1370.6192,
+    "visibleNs": "348410398504600",
+    "elapsedMs": 1405.0523,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 43652,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-off-warm-2026-09-06T17-13-10-902Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 43652,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-off-warm-2026-09-06T17-13-10-902Z"
+    },
+    "navigationCount": 0,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 101,
+        "text": "dotnet watch : C# and Razor changes applied in 1291ms.",
+        "ns": "348410356580000",
+        "milliseconds": 1291
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 136,
+        "ns": "348410971215200",
+        "text": "dotnet watch : C# and Razor changes applied in 513ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:13:34.121Z",
+    "kind": "warm",
+    "host": "parity",
+    "editId": "csharp-team-title",
+    "category": "CSharp",
+    "repetition": 1,
+    "classification": "hot-reload",
+    "success": true,
+    "refresh": "off",
+    "documentBefore": {
+      "id": "733d1c50-031a-4b00-907b-9e64b3f9dd16",
+      "timeOrigin": 1788714803678.6
+    },
+    "documentAfter": {
+      "id": "733d1c50-031a-4b00-907b-9e64b3f9dd16",
+      "timeOrigin": 1788714803678.6
+    },
+    "browserEvents": [],
+    "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "patchSha256": "7c65e324b26defd5b51fb74d1e5a8435feb4a482746a5426404a9346f27d5d7c",
+    "flushNs": "348411853137100",
+    "firstVisibleNs": "348412097388200",
+    "firstVisibleMs": 244.2511,
+    "visibleNs": "348412130686300",
+    "elapsedMs": 277.5492,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 43652,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-off-warm-2026-09-06T17-13-10-902Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 43652,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-off-warm-2026-09-06T17-13-10-902Z"
+    },
+    "navigationCount": 0,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 171,
+        "text": "dotnet watch : C# and Razor changes applied in 147ms.",
+        "ns": "348412036878600",
+        "milliseconds": 147
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 205,
+        "ns": "348412268895100",
+        "text": "dotnet watch : C# and Razor changes applied in 63ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:13:07.589Z",
+    "kind": "warm",
+    "host": "parity",
+    "editId": "razor-heading",
+    "category": "Razor",
+    "repetition": 1,
+    "classification": "enhanced-navigation",
+    "success": true,
+    "refresh": "on",
+    "documentBefore": {
+      "id": "984e40f7-1f0d-4c2b-941e-946b76a01523",
+      "timeOrigin": 1788714778446.1
+    },
+    "documentAfter": {
+      "id": "984e40f7-1f0d-4c2b-941e-946b76a01523",
+      "timeOrigin": 1788714778446.1
+    },
+    "browserEvents": [
+      {
+        "ns": "348385106755500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "348385107321800",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "348385107490000",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "348385133337700",
+        "kind": "enhanced-response",
+        "status": 200,
+        "allowed": true,
+        "html": true
+      },
+      {
+        "ns": "348385138471600",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "348385139179600",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "patchSha256": "9288e8d0a28e70a6609546b742637043f224e5773c9d1b1439512074c70c1ece",
+    "flushNs": "348383780327400",
+    "firstVisibleNs": "348385098893500",
+    "firstVisibleMs": 1318.5661,
+    "visibleNs": "348385182238800",
+    "elapsedMs": 1401.9114,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 31176,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-on-warm-2026-09-06T17-12-45-165Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 31176,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-on-warm-2026-09-06T17-12-45-165Z"
+    },
+    "navigationCount": 1,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 105,
+        "text": "dotnet watch : C# and Razor changes applied in 1237ms.",
+        "ns": "348385105717400",
+        "milliseconds": 1237
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 142,
+        "ns": "348385694886400",
+        "text": "dotnet watch : C# and Razor changes applied in 461ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+    "undoDatabaseConfirmations": 0
+  },
+  {
+    "utc": "2026-09-06T17:13:08.871Z",
+    "kind": "warm",
+    "host": "parity",
+    "editId": "csharp-team-title",
+    "category": "CSharp",
+    "repetition": 1,
+    "classification": "enhanced-navigation",
+    "success": true,
+    "refresh": "on",
+    "documentBefore": {
+      "id": "984e40f7-1f0d-4c2b-941e-946b76a01523",
+      "timeOrigin": 1788714778446.1
+    },
+    "documentAfter": {
+      "id": "984e40f7-1f0d-4c2b-941e-946b76a01523",
+      "timeOrigin": 1788714778446.1
+    },
+    "browserEvents": [
+      {
+        "ns": "348386770085600",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "348386770284700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "348386770422600",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "348386785210600",
+        "kind": "enhanced-response",
+        "status": 200,
+        "allowed": true,
+        "html": true
+      },
+      {
+        "ns": "348386789779600",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "348386790415000",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "patchSha256": "7c65e324b26defd5b51fb74d1e5a8435feb4a482746a5426404a9346f27d5d7c",
+    "flushNs": "348386576924700",
+    "firstVisibleNs": "348386848865600",
+    "firstVisibleMs": 271.9409,
+    "visibleNs": "348386882169300",
+    "elapsedMs": 305.2446,
+    "ready": {
+      "isReady": true,
+      "runtimePid": 31176,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-on-warm-2026-09-06T17-12-45-165Z"
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 31176,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-on-warm-2026-09-06T17-12-45-165Z"
+    },
+    "navigationCount": 1,
+    "databaseConfirmations": 0,
+    "sdkEvents": [
+      {
+        "sequence": 179,
+        "text": "dotnet watch : C# and Razor changes applied in 173ms.",
+        "ns": "348386769427400",
+        "milliseconds": 173
+      }
+    ],
+    "undoSdkEvents": [
+      {
+        "label": "dotnet-watch",
+        "sequence": 215,
+        "ns": "348386985136700",
+        "text": "dotnet watch : C# and Razor changes applied in 54ms."
+      }
+    ],
+    "undoVisible": true,
+    "undoSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+    "undoDatabaseConfirmations": 0
+  }
+]

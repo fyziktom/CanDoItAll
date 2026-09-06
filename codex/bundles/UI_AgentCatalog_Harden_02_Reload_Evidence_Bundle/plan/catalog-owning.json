@@ -1,0 +1,14 @@
+{
+  "classes": [
+    {
+      "testClass": "AgentCatalogPanelTests",
+      "expected": 10
+    },
+    {
+      "testClass": "AgentCatalogBoundaryTests",
+      "expected": 20
+    }
+  ],
+  "filter": "FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCatalogBoundaryTests",
+  "expectedDiscovery": 30
+}

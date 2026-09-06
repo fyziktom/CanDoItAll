@@ -1,6 +1,7 @@
 @page "/"
 @page "/agents"
 @inject AgentCatalogSnapshot Fixture
+@inject NavigationManager Navigation
 
 <PageTitle>Agent catalog sandbox</PageTitle>
 
@@ -9,13 +10,13 @@
         <h1 class="cda-title-xl">Agent catalog sandbox</h1>
         <p>Real catalog components with local state and recorded intents.</p>
         <Cluster Gap="LayoutGap.Small">
-            <Button Text="Normal" Click="@(() => Show(Scenario.Normal))" data-testid="sandbox-normal" />
-            <Button Text="Loading" Click="@(() => Show(Scenario.Loading))" data-testid="sandbox-loading" />
-            <Button Text="Empty" Click="@(() => Show(Scenario.Empty))" data-testid="sandbox-empty" />
-            <Button Text="Card states" Click="@(() => Show(Scenario.CardStates))" data-testid="sandbox-card-states" />
-            <Button Text="Avatar fallback" Click="@(() => Show(Scenario.AvatarFallback))" data-testid="sandbox-avatar-fallback" />
+            <Button Text="Normal" Click="@(() => Show(CatalogSandboxScenario.Normal))" data-testid="sandbox-normal" />
+            <Button Text="Loading" Click="@(() => Show(CatalogSandboxScenario.Loading))" data-testid="sandbox-loading" />
+            <Button Text="Empty" Click="@(() => Show(CatalogSandboxScenario.Empty))" data-testid="sandbox-empty" />
+            <Button Text="Card states" Click="@(() => Show(CatalogSandboxScenario.CardStates))" data-testid="sandbox-card-states" />
+            <Button Text="Avatar fallback" Click="@(() => Show(CatalogSandboxScenario.AvatarFallback))" data-testid="sandbox-avatar-fallback" />
             <Button Text="@(matchedLayout ? "Use flexible layout" : "Match desktop baseline")"
-                    Click="@(() => matchedLayout = !matchedLayout)"
+                    Click="@(() => SetContext(context with { Layout = matchedLayout ? CatalogSandboxLayout.Flexible : CatalogSandboxLayout.Matched }))"
                     data-testid="sandbox-layout" />
         </Cluster>
         <output aria-live="polite" data-testid="sandbox-intent">@intentText</output>
@@ -23,7 +24,7 @@
 </header>
 
 <main class="@(matchedLayout ? "catalog-sandbox__frame catalog-sandbox__frame--matched" : "catalog-sandbox__frame")">
-    @if (scenario is Scenario.CardStates or Scenario.AvatarFallback) {
+    @if (scenario is CatalogSandboxScenario.CardStates or CatalogSandboxScenario.AvatarFallback) {
         <SurfaceCard Class="catalog-sandbox__specimen">
             <AgentSelectionCard Agent="@Specimen"
                                 IsSelected="true"
@@ -36,7 +37,7 @@
                                 IsPrivateProvider="true"
                                 OnSelect="@(() => intentText = "Card selected")"
                                 OnDoubleClick="@(() => intentText = "Card opened")" />
-            @if (scenario == Scenario.AvatarFallback) {
+            @if (scenario == CatalogSandboxScenario.AvatarFallback) {
                 <Cluster Gap="LayoutGap.Small">
                     <Avatar FallbackText="CA" UseDefaultImageWhenMissing="false" Size="AvatarSize.Large" />
                     <p>Seeded card avatar and explicit initials fallback.</p>
@@ -45,9 +46,9 @@
         </SurfaceCard>
     }
     else {
-        <AgentCatalogPanel Snapshot="@(scenario == Scenario.Empty ? AgentCatalogSnapshot.Empty : Fixture)"
+        <AgentCatalogPanel Snapshot="@(scenario == CatalogSandboxScenario.Empty ? AgentCatalogSnapshot.Empty : Fixture)"
                            Selection="@selection"
-                           IsLoading="@(scenario == Scenario.Loading)"
+                           IsLoading="@(scenario == CatalogSandboxScenario.Loading)"
                            Intent="HandleIntent" />
     }
 </main>
@@ -55,37 +56,63 @@
 <Tooltip />
 
 @code {
-    private enum Scenario {
-        Normal,
-        Loading,
-        Empty,
-        CardStates,
-        AvatarFallback
-    }
+    [SupplyParameterFromQuery(Name = "scenario")]
+    public string? ScenarioQuery { get; set; }
 
-    private Scenario scenario;
-    private AgentCatalogSelection selection = new(null, null);
+    [SupplyParameterFromQuery(Name = "layout")]
+    public string? LayoutQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "agentId")]
+    public string? AgentQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "teamId")]
+    public string? TeamQuery { get; set; }
+
+    private CatalogSandboxContext context = new();
+    private CatalogSandboxScenario scenario => context.Scenario;
+    private AgentCatalogSelection selection => context.Selection;
+    private bool matchedLayout => context.Layout == CatalogSandboxLayout.Matched;
     private string intentText = "No intent yet.";
-    private bool matchedLayout = true;
     private bool favorite;
 
-    private AgentDefinition Specimen => scenario == Scenario.AvatarFallback
+    private AgentDefinition Specimen => scenario == CatalogSandboxScenario.AvatarFallback
         ? Fixture.Agents[0] with { AvatarImageUrl = null }
         : Fixture.Agents[0];
 
-    private void Show(Scenario value) {
-        scenario = value;
-        selection = new(null, null);
+    protected override void OnParametersSet() {
+        context = CatalogSandboxContext.Parse(ScenarioQuery, LayoutQuery, AgentQuery, TeamQuery, Fixture);
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender) {
+        ReplaceQuery();
+        return Task.CompletedTask;
+    }
+
+    private void SetContext(CatalogSandboxContext value) {
+        context = value.Normalize(Fixture);
+        ReplaceQuery();
+    }
+
+    private void ReplaceQuery() {
+        var uri = Navigation.GetUriWithQueryParameters(context.ToQuery());
+        if (!string.Equals(uri, Navigation.Uri, StringComparison.Ordinal)) {
+            Navigation.NavigateTo(uri, replace: true);
+        }
+    }
+
+    private void Show(CatalogSandboxScenario value) {
+        SetContext(context with { Scenario = value, AgentId = null, TeamId = null });
         intentText = "No intent yet.";
     }
 
     private void HandleIntent(AgentCatalogIntent intent) {
-        selection = intent switch {
+        var nextSelection = intent switch {
             AgentCatalogIntent.SelectAgent select => selection with { AgentId = select.AgentId },
             AgentCatalogIntent.SelectTeamMember select => selection with { AgentId = select.AgentId },
             AgentCatalogIntent.SelectTeam select => selection with { TeamId = select.TeamId },
             _ => selection
         };
+        SetContext(context with { AgentId = nextSelection.AgentId, TeamId = nextSelection.TeamId });
         intentText = intent switch {
             AgentCatalogIntent.SelectAgent select => $"Selected agent {select.AgentId}.",
             AgentCatalogIntent.SelectTeamMember select => $"Selected team member {select.AgentId}.",

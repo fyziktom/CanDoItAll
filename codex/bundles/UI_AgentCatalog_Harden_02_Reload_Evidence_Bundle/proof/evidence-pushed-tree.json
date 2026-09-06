@@ -1,0 +1,20 @@
+{
+  "source": "HEAD",
+  "bundles": [
+    {
+      "bundle": "UI_Providers_02E_Verification_Delivery_Hardening_Bundle",
+      "manifestEntries": 50,
+      "trackedCoveredFiles": 50,
+      "relativeLinks": 10
+    },
+    {
+      "bundle": "UI_AgentCatalog_Harden_01_Development_Loop_Bundle",
+      "manifestEntries": 137,
+      "trackedCoveredFiles": 137,
+      "relativeLinks": 12
+    }
+  ],
+  "errors": [],
+  "result": "PASS",
+  "hashContract": "SHA-256 of exact Git blob bytes; historical proof uses -text to preserve original bytes."
+}

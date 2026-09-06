@@ -1,0 +1,602 @@
+[
+  {
+    "run": "fast-off-warm-2026-09-06T17-14-02-045Z",
+    "utc": "2026-09-06T17:14:22.022Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 44360,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-off-warm-2026-09-06T17-14-02-045Z"
+    },
+    "themeSha256": "4cb57723231fa6eb972fe834367ac21f3c663decef61bc0cf2f27899b11d0bac",
+    "themeBytes": 12591,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/catalog-fast.gpqq5zbc8m.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "fast-off-warm-2026-09-06T17-21-27-892Z",
+    "utc": "2026-09-06T17:21:53.801Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 29660,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-off-warm-2026-09-06T17-21-27-892Z"
+    },
+    "themeSha256": "4cb57723231fa6eb972fe834367ac21f3c663decef61bc0cf2f27899b11d0bac",
+    "themeBytes": 12591,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/catalog-fast.gpqq5zbc8m.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "fast-on-acceptance-2026-09-06T17-07-39-000Z",
+    "utc": "2026-09-06T17:07:59.397Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 54456,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-on-acceptance-2026-09-06T17-07-39-000Z"
+    },
+    "themeSha256": "4cb57723231fa6eb972fe834367ac21f3c663decef61bc0cf2f27899b11d0bac",
+    "themeBytes": 12591,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/catalog-fast.gpqq5zbc8m.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "fast-on-acceptance-2026-09-06T17-07-39-000Z",
+    "utc": "2026-09-06T17:08:00.388Z",
+    "kind": "acceptance-complete",
+    "assertions": [
+      "real selection and New intents",
+      "tooltip",
+      "icon/font",
+      "card/tree scroll and actions",
+      "utility classes",
+      "loading",
+      "empty",
+      "avatar fallback"
+    ],
+    "utilities": {
+      "margin": "4px",
+      "weight": "600",
+      "size": "18px"
+    }
+  },
+  {
+    "run": "fast-on-acceptance-2026-09-06T17-07-39-000Z",
+    "utc": "2026-09-06T17:08:01.464Z",
+    "kind": "context-acceptance",
+    "cases": [
+      "Explicit_card_scenario_and_flexible_layout_survive_reload",
+      "loading_restores_after_reload",
+      "empty_restores_after_reload",
+      "avatar-fallback_restores_after_reload",
+      "card-states_restores_after_reload",
+      "normal_restores_after_reload",
+      "Selection_team_and_matched_layout_restore_without_history_growth",
+      "Invalid_query_normalizes_to_safe_fixture_context"
+    ],
+    "historyLengthBefore": 3,
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "teamId": "a935df33-9d3c-9251-becd-0a6944eebb7b"
+  },
+  {
+    "run": "fast-on-warm-2026-09-06T17-13-36-213Z",
+    "utc": "2026-09-06T17:13:56.594Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 28712,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-on-warm-2026-09-06T17-13-36-213Z"
+    },
+    "themeSha256": "4cb57723231fa6eb972fe834367ac21f3c663decef61bc0cf2f27899b11d0bac",
+    "themeBytes": 12591,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/catalog-fast.gpqq5zbc8m.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "fast-on-warm-2026-09-06T17-20-56-184Z",
+    "utc": "2026-09-06T17:21:15.997Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 28240,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Fast",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fast-on-warm-2026-09-06T17-20-56-184Z"
+    },
+    "themeSha256": "4cb57723231fa6eb972fe834367ac21f3c663decef61bc0cf2f27899b11d0bac",
+    "themeBytes": 12591,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/catalog-fast.gpqq5zbc8m.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "fullapp-off-warm-2026-09-06T17-11-27-233Z",
+    "utc": "2026-09-06T17:12:32.620Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 39240,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-off-warm-2026-09-06T17-11-27-233Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/_content/CanDoItAll.Components.OverlayLib/css/overlay-window.42eyac2n1s.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/shell/01-layout-and-shell.4z3rxss95c.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/chrome/02-toolbar-and-windows.qmxtrkjell.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/panels/03-help-settings-and-preview.acgtf36bm8.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/scene/04-scene-and-nodes.81ya5g3kg0.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/overlays/05-overlays-and-composer.sqdkmxia1v.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/responsive/06-motion-and-responsive.1rnhfb4ydr.css",
+      "/_content/CanDoItAll.Components.Gantt/CanDoItAll.Components.Gantt.o1hmgxaptg.bundle.scp.css",
+      "/_content/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.awui2q7sr6.bundle.scp.css",
+      "/_content/CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.vh246f5lxj.bundle.scp.css",
+      "/_content/Blazor-ApexCharts/css/apexcharts.css",
+      "/app.va7jr9gend.css",
+      "/_content/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.r6vgpe8hc3.bundle.scp.css",
+      "/CanDoItAll.Web.n79ymyextu.styles.css"
+    ]
+  },
+  {
+    "run": "fullapp-off-warm-2026-09-06T17-18-31-227Z",
+    "utc": "2026-09-06T17:19:35.836Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 46472,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-off-warm-2026-09-06T17-18-31-227Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/_content/CanDoItAll.Components.OverlayLib/css/overlay-window.42eyac2n1s.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/shell/01-layout-and-shell.4z3rxss95c.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/chrome/02-toolbar-and-windows.qmxtrkjell.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/panels/03-help-settings-and-preview.acgtf36bm8.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/scene/04-scene-and-nodes.81ya5g3kg0.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/overlays/05-overlays-and-composer.sqdkmxia1v.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/responsive/06-motion-and-responsive.1rnhfb4ydr.css",
+      "/_content/CanDoItAll.Components.Gantt/CanDoItAll.Components.Gantt.o1hmgxaptg.bundle.scp.css",
+      "/_content/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.awui2q7sr6.bundle.scp.css",
+      "/_content/CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.vh246f5lxj.bundle.scp.css",
+      "/_content/Blazor-ApexCharts/css/apexcharts.css",
+      "/app.va7jr9gend.css",
+      "/_content/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.r6vgpe8hc3.bundle.scp.css",
+      "/CanDoItAll.Web.n79ymyextu.styles.css"
+    ]
+  },
+  {
+    "run": "fullapp-on-warm-2026-09-06T17-09-46-317Z",
+    "utc": "2026-09-06T17:11:15.000Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 30640,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-on-warm-2026-09-06T17-09-46-317Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/_content/CanDoItAll.Components.OverlayLib/css/overlay-window.42eyac2n1s.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/shell/01-layout-and-shell.4z3rxss95c.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/chrome/02-toolbar-and-windows.qmxtrkjell.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/panels/03-help-settings-and-preview.acgtf36bm8.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/scene/04-scene-and-nodes.81ya5g3kg0.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/overlays/05-overlays-and-composer.sqdkmxia1v.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/responsive/06-motion-and-responsive.1rnhfb4ydr.css",
+      "/_content/CanDoItAll.Components.Gantt/CanDoItAll.Components.Gantt.o1hmgxaptg.bundle.scp.css",
+      "/_content/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.awui2q7sr6.bundle.scp.css",
+      "/_content/CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.vh246f5lxj.bundle.scp.css",
+      "/_content/Blazor-ApexCharts/css/apexcharts.css",
+      "/app.va7jr9gend.css",
+      "/_content/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.r6vgpe8hc3.bundle.scp.css",
+      "/CanDoItAll.Web.n79ymyextu.styles.css"
+    ]
+  },
+  {
+    "run": "fullapp-on-warm-2026-09-06T17-17-10-719Z",
+    "utc": "2026-09-06T17:18:13.172Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 13436,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Production",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "fullapp-on-warm-2026-09-06T17-17-10-719Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/_content/CanDoItAll.Components.OverlayLib/css/overlay-window.42eyac2n1s.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/shell/01-layout-and-shell.4z3rxss95c.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/chrome/02-toolbar-and-windows.qmxtrkjell.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/panels/03-help-settings-and-preview.acgtf36bm8.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/scene/04-scene-and-nodes.81ya5g3kg0.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/overlays/05-overlays-and-composer.sqdkmxia1v.css",
+      "/_content/CanDoItAll.Components.CanvasLib/css/workbench/responsive/06-motion-and-responsive.1rnhfb4ydr.css",
+      "/_content/CanDoItAll.Components.Gantt/CanDoItAll.Components.Gantt.o1hmgxaptg.bundle.scp.css",
+      "/_content/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.awui2q7sr6.bundle.scp.css",
+      "/_content/CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.vh246f5lxj.bundle.scp.css",
+      "/_content/Blazor-ApexCharts/css/apexcharts.css",
+      "/app.va7jr9gend.css",
+      "/_content/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.r6vgpe8hc3.bundle.scp.css",
+      "/CanDoItAll.Web.n79ymyextu.styles.css"
+    ]
+  },
+  {
+    "run": "parity-off-warm-2026-09-06T17-13-10-902Z",
+    "utc": "2026-09-06T17:13:30.769Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 43652,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-off-warm-2026-09-06T17-13-10-902Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "parity-off-warm-2026-09-06T17-20-25-165Z",
+    "utc": "2026-09-06T17:20:45.018Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 20108,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-off-warm-2026-09-06T17-20-25-165Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "parity-on-acceptance-2026-09-06T17-06-51-072Z",
+    "utc": "2026-09-06T17:07:10.937Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 42336,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-on-acceptance-2026-09-06T17-06-51-072Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "parity-on-acceptance-2026-09-06T17-06-51-072Z",
+    "utc": "2026-09-06T17:07:11.960Z",
+    "kind": "acceptance-complete",
+    "assertions": [
+      "real selection and New intents",
+      "tooltip",
+      "icon/font",
+      "card/tree scroll and actions",
+      "utility classes",
+      "loading",
+      "empty",
+      "avatar fallback"
+    ],
+    "utilities": {
+      "margin": "4px",
+      "weight": "600",
+      "size": "18px"
+    }
+  },
+  {
+    "run": "parity-on-acceptance-2026-09-06T17-06-51-072Z",
+    "utc": "2026-09-06T17:07:13.144Z",
+    "kind": "context-acceptance",
+    "cases": [
+      "Explicit_card_scenario_and_flexible_layout_survive_reload",
+      "loading_restores_after_reload",
+      "empty_restores_after_reload",
+      "avatar-fallback_restores_after_reload",
+      "card-states_restores_after_reload",
+      "normal_restores_after_reload",
+      "Selection_team_and_matched_layout_restore_without_history_growth",
+      "Invalid_query_normalizes_to_safe_fixture_context"
+    ],
+    "historyLengthBefore": 3,
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "teamId": "a935df33-9d3c-9251-becd-0a6944eebb7b"
+  },
+  {
+    "run": "parity-on-warm-2026-09-06T17-12-45-165Z",
+    "utc": "2026-09-06T17:13:05.556Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 31176,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-on-warm-2026-09-06T17-12-45-165Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  },
+  {
+    "run": "parity-on-warm-2026-09-06T17-19-53-647Z",
+    "utc": "2026-09-06T17:20:14.007Z",
+    "kind": "asset-acceptance",
+    "status": {
+      "isReady": true,
+      "runtimePid": 5032,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Parity",
+      "ownerKind": "DirectCatalogBenchmark",
+      "ownerId": "parity-on-warm-2026-09-06T17-19-53-647Z"
+    },
+    "themeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "themeBytes": 115598,
+    "styles": {
+      "toolbarDisplay": "flex",
+      "rowGap": "12px",
+      "cardOverflow": "auto",
+      "treeOverflow": "auto",
+      "titleSize": "20px",
+      "titleWeight": "600",
+      "actionInViewport": true,
+      "iconsLoaded": true,
+      "avatarImages": 40
+    },
+    "links": [
+      "/_content/CanDoItAll.Components.BaseLib/css/material-symbols.1q99zeu3a8.css",
+      "/_content/CanDoItAll.Components.BaseLib/css/output.hu38anclg2.css",
+      "/css/output.lholqr4sh7.css",
+      "/sandbox.n6qlbckil9.css",
+      "/CanDoItAll.AgentFramework.UiSandbox.hpxuj0cydk.styles.css"
+    ]
+  }
+]

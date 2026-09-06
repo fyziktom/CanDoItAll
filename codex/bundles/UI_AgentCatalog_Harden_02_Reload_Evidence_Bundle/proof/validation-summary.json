@@ -1,0 +1,68 @@
+{
+  "utc": "2026-09-06T17:32:50.174082+00:00",
+  "sourceHead": "d7e811f222ae754164683cb8cd2268a83140ed18",
+  "builds": {
+    "UI": "PASS 0 warnings/errors",
+    "Parity": "PASS 0 warnings/errors",
+    "FastFinalAssets": "PASS 0 warnings/errors",
+    "Unit": "PASS 0 warnings/errors"
+  },
+  "tests": {
+    "Unit": {
+      "expected": 18,
+      "discovered": 18,
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Components": {
+      "expected": 30,
+      "discovered": 30,
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "browser": {
+    "viewport": [
+      1600,
+      1000
+    ],
+    "modes": [
+      "Parity",
+      "Fast"
+    ],
+    "contextChecksPerMode": 8,
+    "existingRealComponentAssetAcceptance": "PASS",
+    "failingFirstContextFailures": 1,
+    "diagnosticCalibrationEdits": 12,
+    "settledDiagnosticEdits": 12,
+    "settledDiagnosticUndos": 12,
+    "settledFailures": 0,
+    "documentReloads": 0,
+    "processRestarts": 0
+  },
+  "portability": {
+    "fullProposedSource": true,
+    "reviewedAddition": 1,
+    "finalEnforcement": "PASS 14298 unchanged",
+    "selfTests": 6
+  },
+  "secret": {
+    "completeProposedGitText": "0 added/removed matches",
+    "completeArtifactText": "0 findings; gzip and UTF-16 included",
+    "selfTests": 4
+  },
+  "documentation": {
+    "result": "existing grouped failure",
+    "historicalTrackedLogs": 118,
+    "newTrackedLogs": 0
+  },
+  "scope": {
+    "productionRoutingChanged": false,
+    "projectGraphChanged": false,
+    "managerChanged": false,
+    "siblingsChanged": false,
+    "capabilitiesSourceStarted": false
+  }
+}

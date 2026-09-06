@@ -1,0 +1,5 @@
+# Observation refinement
+
+The first new six-lane pass (v2) observed managed apply plus RefreshBrowser/enhancednavigationstart with a stable document identity at its initial final predicate. That exposed ambiguity in the predecessor harness: `framenavigated` alone includes same-document navigation. It also exposed a limitation in v2: its final predicate could precede enhanced navigation completion. The first pass remains retained as calibration, not discarded or merged with the successor observations.
+
+V3 adds a bounded navigation-settlement barrier before classification and before undo: a completed enhanced navigation or new document, a short quiet interval, and a repeated visible predicate. Suppressed lanes also receive the minimum observation interval. One additional repetition per lane is authorized by the bounded one-or-two repetition diagnostic scope. No source patch or original 27-cycle value changed. Startup is not measured. The new interval makes these diagnostic elapsed values unsuitable as replacement performance numbers.

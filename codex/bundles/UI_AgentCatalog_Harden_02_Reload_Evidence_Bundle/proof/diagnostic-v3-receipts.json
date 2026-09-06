@@ -1,0 +1,116 @@
+[
+  {
+    "host": "fullapp",
+    "refresh": "on",
+    "argv": [
+      "node",
+      "codex\\bundles\\UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle\\tools\\direct-diagnostic.cjs",
+      "--host",
+      "fullapp",
+      "--phase",
+      "warm",
+      "--refresh",
+      "on",
+      "--playwright-module",
+      "C:/Users/lucys/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright"
+    ],
+    "startUtc": "2026-09-06T17:17:10.469651+00:00",
+    "endUtc": "2026-09-06T17:18:30.976612+00:00",
+    "exitCode": 0
+  },
+  {
+    "host": "fullapp",
+    "refresh": "off",
+    "argv": [
+      "node",
+      "codex\\bundles\\UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle\\tools\\direct-diagnostic.cjs",
+      "--host",
+      "fullapp",
+      "--phase",
+      "warm",
+      "--refresh",
+      "off",
+      "--playwright-module",
+      "C:/Users/lucys/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright"
+    ],
+    "startUtc": "2026-09-06T17:18:30.977597+00:00",
+    "endUtc": "2026-09-06T17:19:53.408843+00:00",
+    "exitCode": 0
+  },
+  {
+    "host": "parity",
+    "refresh": "on",
+    "argv": [
+      "node",
+      "codex\\bundles\\UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle\\tools\\direct-diagnostic.cjs",
+      "--host",
+      "parity",
+      "--phase",
+      "warm",
+      "--refresh",
+      "on",
+      "--playwright-module",
+      "C:/Users/lucys/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright"
+    ],
+    "startUtc": "2026-09-06T17:19:53.410841+00:00",
+    "endUtc": "2026-09-06T17:20:24.914251+00:00",
+    "exitCode": 0
+  },
+  {
+    "host": "parity",
+    "refresh": "off",
+    "argv": [
+      "node",
+      "codex\\bundles\\UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle\\tools\\direct-diagnostic.cjs",
+      "--host",
+      "parity",
+      "--phase",
+      "warm",
+      "--refresh",
+      "off",
+      "--playwright-module",
+      "C:/Users/lucys/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright"
+    ],
+    "startUtc": "2026-09-06T17:20:24.915252+00:00",
+    "endUtc": "2026-09-06T17:20:55.924392+00:00",
+    "exitCode": 0
+  },
+  {
+    "host": "fast",
+    "refresh": "on",
+    "argv": [
+      "node",
+      "codex\\bundles\\UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle\\tools\\direct-diagnostic.cjs",
+      "--host",
+      "fast",
+      "--phase",
+      "warm",
+      "--refresh",
+      "on",
+      "--playwright-module",
+      "C:/Users/lucys/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright"
+    ],
+    "startUtc": "2026-09-06T17:20:55.925896+00:00",
+    "endUtc": "2026-09-06T17:21:27.181708+00:00",
+    "exitCode": 0
+  },
+  {
+    "host": "fast",
+    "refresh": "off",
+    "argv": [
+      "node",
+      "codex\\bundles\\UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle\\tools\\direct-diagnostic.cjs",
+      "--host",
+      "fast",
+      "--phase",
+      "warm",
+      "--refresh",
+      "off",
+      "--playwright-module",
+      "C:/Users/lucys/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright"
+    ],
+    "startUtc": "2026-09-06T17:21:27.631033+00:00",
+    "endUtc": "2026-09-06T17:22:04.770885+00:00",
+    "exitCode": 0
+  }
+]

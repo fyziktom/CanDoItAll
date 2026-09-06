@@ -1,0 +1,11 @@
+# SDK and framework attribution, before diagnostic execution
+
+Installed SDK: 10.0.303. Its VMR revision maps to the SDK v10.0.303 source; the installed embedded browser script, normalized to LF, matches source Git blob e03aaeb5d477178031a3eda20a76604268b8bedc. Source research was read-only.
+
+The [SDK apply coordinator](https://github.com/dotnet/sdk/blob/v10.0.303/src/Dotnet.Watch/HotReloadClient/HotReloadClients.cs#L129) awaits managed clients before sending RefreshBrowser. The acknowledgment proves managed delta application, not finished browser rendering: the [Blazor renderer callback](https://github.com/dotnet/aspnetcore/blob/v10.0.11/src/Components/Components/src/RenderTree/Renderer.cs#L183) dispatches asynchronous rendering.
+
+The [SDK browser script](https://github.com/dotnet/sdk/blob/v10.0.303/src/Dotnet.Watch/Web.Middleware/WebSocketScriptInjection.js) distinguishes Reload (document reload), RefreshBrowser (call the Blazor hook when available), and UpdateStaticFile (CSS link refresh, document reload for other files). For InteractiveServer using blazor.web.js, [hotReloadApplied](https://github.com/dotnet/aspnetcore/blob/v10.0.11/src/Components/Web.JS/src/Boot.Web.ts#L43) initiates enhanced navigation. Its [navigation handler](https://github.com/dotnet/aspnetcore/blob/v10.0.11/src/Components/Web.JS/src/Services/NavigationEnhancement.ts#L200) can fall back to a full document load if the destination lacks the required response header or content support. A RefreshBrowser event can therefore lead indirectly to a document replacement without an SDK Reload or process restart.
+
+[Refresh suppression](https://github.com/dotnet/sdk/blob/v10.0.303/src/Dotnet.Watch/Watch/AppModels/WebApplicationAppModel.cs#L28) disables browser middleware but leaves server managed Hot Reload enabled. It also removes automatic CSS refresh. Disabling it is a diagnostic variable, not an assumed optimization.
+
+The successor harness records recognized SDK message kinds only, enhanced-navigation events and sanitized response classes, document identity/time origin, managed generation and process identity, SDK apply receipts, and actual final UI predicates. It retains no WebSocket URLs or SignalR payloads. Six lanes use one Razor and one C# edit plus byte-exact undo; startup is readiness, not a new cold measurement. Existing 27-cycle results remain untouched.
