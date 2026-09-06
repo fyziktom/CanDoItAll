@@ -1,0 +1,390 @@
+{
+  "snapshotId": "snap-20260906215047-e662dc8b",
+  "scope": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+    "scopeProjectNames": [
+      "CanDoItAll.AgentFramework.Core",
+      "CanDoItAll.Modules.AgentFramework"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": true,
+    "includePersistence": true,
+    "includeRisks": true,
+    "includeXmlDocs": false,
+    "includeMermaidExports": true
+  },
+  "solution": {
+    "name": "CanDoItAll.Modules.AgentFramework",
+    "path": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+    "projectCount": 2,
+    "documentCount": 384
+  },
+  "diagnostics": [
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Core was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Core was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.Pages was truncated to 80 types."
+    }
+  ],
+  "findings": [
+    {
+      "findingId": "finding-file-size-doc-services-capabilitysetup-agentcapabil-70887bf1bfe4",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "Services/CapabilitySetup/AgentCapabilitySetupFlowService.Common.cs has 398 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-services-capabilitysetup-agentcapabilitysetupflowse-b5c0da566fb8"
+      ],
+      "source": {
+        "path": "Services/CapabilitySetup/AgentCapabilitySetupFlowService.Common.cs"
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-agentframework-core-72f613e006ac",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.AgentFramework.Core.CapabilityProofReceipt exposes 17 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-agentframework-core-candoitall-agen-f34a39ded490"
+      ],
+      "source": {
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs",
+        "line": 13,
+        "column": 1,
+        "endLine": 75,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-767f52c28020",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentCapabilityAssignmentAttempt exposes 11 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-1385058b778c"
+      ],
+      "source": {
+        "path": "Services/AgentCapabilityAssignmentAttempt.cs",
+        "line": 8,
+        "column": 1,
+        "endLine": 47,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-ee966ca77493",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentCapabilityOperationState exposes 12 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a19018009d41"
+      ],
+      "source": {
+        "path": "Services/AgentCapabilityCommands.cs",
+        "line": 14,
+        "column": 1,
+        "endLine": 21,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-604c6a82d75a",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentCapabilityOperationStatus exposes 11 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-93e67205271a"
+      ],
+      "source": {
+        "path": "Services/AgentCapabilityCommands.cs",
+        "line": 9,
+        "column": 1,
+        "endLine": 12,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-79cf59147207",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentCapabilityOperations exposes 15 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-eb31efa5448d"
+      ],
+      "source": {
+        "path": "Services/AgentCapabilityOperations.cs",
+        "line": 6,
+        "column": 1,
+        "endLine": 163,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-1e2679b11ed1",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentCapabilitySetupFlowService exposes 54 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-de56a0634c50"
+      ],
+      "source": {
+        "path": "Services/CapabilitySetup/AgentCapabilitySetupFlowService.Access.cs",
+        "line": 9,
+        "column": 1,
+        "endLine": 184,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-ead00ac5aff6",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.AgentCapabilitySetupFlowService.McpCapabilityConfigurationModel exposes 17 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-d22680098312"
+      ],
+      "source": {
+        "path": "Services/CapabilitySetup/AgentCapabilitySetupFlowService.Models.cs",
+        "line": 65,
+        "column": 5,
+        "endLine": 100,
+        "endColumn": 6
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-1bdb02ad7d67",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.CapabilityCuratorAgentCapabilityKeys exposes 11 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-15ce5fd536a5"
+      ],
+      "source": {
+        "path": "AgentTools/CapabilityCurator/CapabilityCuratorAgentCapabilityKeys.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 35,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-ab2a422f37c0",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.HrAgentCapabilityKeys exposes 18 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-f99574d1358f"
+      ],
+      "source": {
+        "path": "AgentTools/Hr/HrAgentCapabilityKeys.cs",
+        "line": 6,
+        "column": 1,
+        "endLine": 49,
+        "endColumn": 2
+      }
+    },
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-f8b6b35582b2",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.WorkflowCuratorAgentCapabilityKeys exposes 10 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-d9f5eeb7b990"
+      ],
+      "source": {
+        "path": "AgentTools/WorkflowCurator/WorkflowCuratorAgentCapabilityKeys.cs",
+        "line": 6,
+        "column": 1,
+        "endLine": 32,
+        "endColumn": 2
+      }
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodeIds": [
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+        "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+      ]
+    }
+  ]
+}

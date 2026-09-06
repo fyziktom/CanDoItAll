@@ -1,0 +1,134 @@
+{
+  "preparedUtc": "2026-09-06T22:42:52.551266+00:00",
+  "baselineKind": "Preparation source after Capabilities-02; NOT a pre-extraction watch baseline.",
+  "branch": "components-decoupling",
+  "entryHead": "d066d367d6abc147e046bee1308ea5f702e65cfd",
+  "sdkObserved": "10.0.303",
+  "siblings": {
+    "Components": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+    "FileTools": "7c7453c6583365ae5bd63f8fc6efc4a776e15818"
+  },
+  "ownerInput": "codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/inputs/02-execution-request.txt",
+  "ownerInputSha256": "17cabcc768a4bd0b5aae36cd035a402fdaf3927ba120151d5741bbfc44082bd6",
+  "source": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "ebdc1f33eed490f31241552846d3887d4124c1459cdbfbf0c77ee29ac62c9679"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "sha256": "9bed637691cdd8aa667ebd31a1ac2f52b0db388ba589b5f0d03ff08661a71730"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs",
+      "sha256": "94d73a53732257741be6ea1fcd82ba0be3fcc303b7e185b4beb2f554de949be5"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor",
+      "sha256": "831c96e8b14744d9eb90bf80ae41b2b9ed364fd45b76441e8e176a3d2f6a2750"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "sha256": "089452ca2eed47fd8705dec414ff07edfbedb711871a1663ca0ecd79fb7aec26"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
+      "sha256": "ad0b5b003c4be3a87a6478ccb5895422eb358b2ad20adb834bd8988af568e706"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs",
+      "sha256": "3a8c65cb0186440ed7fe878a36e9841ba537a261b08810c7ba63ef17abb0c577"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilityCuratorLaunch.cs",
+      "sha256": "7e2dbdabf6facad374e59b22d7359218f23d7c316ec9bcd6440256c27dd96357"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor",
+      "sha256": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "sha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "sha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "sha256": "4f9c8c0985639660bc1f4867aeb98b28f8411375eae3d7df6708616c1d0b2b39"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "sha256": "cb744e9077e3c4e1cafc78275ad6d3450aa4e38a28b9367378ffb0c4b6ca19e6"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj",
+      "sha256": "3d29e4a1e1449146896127845f133fe3e195e76be95dc439afa0cc8a45a9390a"
+    },
+    {
+      "path": "src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+      "sha256": "2c82dae7a6492e5dc0d99b6b5a5d1c89a4702b892f71757981e46302949d6115"
+    },
+    {
+      "path": "src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CapabilityEnums.cs",
+      "sha256": "e578f65a05d23ddad749ab6c3d64ae5be2b7dda63e517b4ecae2bcf990f8cad8"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "sha256": "0a4c8fa9926e423b101dc3aa9a11b75e242c9bdd299eaf4fe3cdf80488d88f93"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogSandboxContext.cs",
+      "sha256": "3f40ade23a88a9ac37012c8360b4db4334c276b3b7c1c4f93ab45d49bf7452b5"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",
+      "sha256": "2359317856807e5d093e6c8da616936b74f3a4abf299cab30519b1f57ff81b89"
+    },
+    {
+      "path": "Tailwind/catalog-fast.css",
+      "sha256": "245f91bbcddf079a7b99559cf8ae5ce0b39d005feee0ec50567501acc35409ef"
+    },
+    {
+      "path": "global.json",
+      "sha256": "b132d105648c7dbe49f2c391fe0b9898027e470ddc7cfd4d7239af5df63401fa"
+    }
+  ],
+  "renderedTags": {
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor": [
+      "AgentAvatarActionButton",
+      "AgentCapabilityList",
+      "Button",
+      "Cluster",
+      "CompactStat",
+      "CompactStatStrip",
+      "DetailContent",
+      "DetailHeader",
+      "EmptyState",
+      "FilterBar",
+      "FormSection",
+      "Grid",
+      "InputSelect",
+      "InputText",
+      "ListContent",
+      "ListDetailShell",
+      "ListHeader",
+      "ListPanelHeader",
+      "Stack",
+      "StatusBadge",
+      "SurfaceCard",
+      "TagEditor",
+      "TreeView"
+    ],
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor": [
+      "ActionCard",
+      "Button",
+      "Cluster",
+      "Grid",
+      "Stack",
+      "StatusBadge"
+    ]
+  }
+}

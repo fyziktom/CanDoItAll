@@ -1,0 +1,82 @@
+[
+  {
+    "project": "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+    "command": [
+      "dotnet",
+      "build",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1"
+    ],
+    "startedUtc": "2026-09-06T22:05:55.216448+00:00",
+    "endedUtc": "2026-09-06T22:05:57.648002+00:00",
+    "exitCode": 0,
+    "output": "final-build-1.txt"
+  },
+  {
+    "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+    "command": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1"
+    ],
+    "startedUtc": "2026-09-06T22:05:57.649000+00:00",
+    "endedUtc": "2026-09-06T22:06:11.716977+00:00",
+    "exitCode": 0,
+    "output": "final-build-2.txt"
+  },
+  {
+    "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "command": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1"
+    ],
+    "startedUtc": "2026-09-06T22:06:11.717310+00:00",
+    "endedUtc": "2026-09-06T22:06:29.440530+00:00",
+    "exitCode": 0,
+    "output": "final-build-3.txt"
+  },
+  {
+    "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+    "command": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1"
+    ],
+    "startedUtc": "2026-09-06T22:06:29.440530+00:00",
+    "endedUtc": "2026-09-06T22:06:31.739446+00:00",
+    "exitCode": 0,
+    "output": "final-build-4.txt"
+  },
+  {
+    "project": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+    "command": [
+      "dotnet",
+      "build",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1"
+    ],
+    "startedUtc": "2026-09-06T22:06:31.740445+00:00",
+    "endedUtc": "2026-09-06T22:06:35.987295+00:00",
+    "exitCode": 0,
+    "output": "final-build-5.txt"
+  }
+]

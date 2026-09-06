@@ -1,0 +1,743 @@
+{
+  "topics": [
+    {
+      "id": 1,
+      "name": "Assignment_intent_does_not_change_visible_authoritative_set_before_commit",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesMutationTests.Assignment_intent_does_not_change_visible_authoritative_set_before_commit",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Rejected_assignment_leaves_authoritative_attachment_unchanged",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesMutationTests.Rejected_assignment_leaves_authoritative_attachment_unchanged",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Validation_rejection_allows_corrected_new_intent",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Validation_rejection_allows_corrected_new_intent",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Validation_rejection_allows_correction_without_catalog_write",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Concurrency_conflict_does_not_overwrite_remote_assignment",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Concurrency_conflict_does_not_overwrite_remote_assignment",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Known_commit_with_projection_warning_reconciles_without_second_save",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Known_commit_with_projection_warning_reconciles_without_second_save(cancellation: False)",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Known_commit_with_projection_warning_reconciles_without_second_save(cancellation: True)",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Catalog_commit_then_index_failure_is_verified_without_second_save",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Catalog_commit_then_index_failure_is_verified_without_second_save",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Unconfirmed_assignment_blocks_blind_replay",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Unconfirmed_assignment_blocks_blind_replay_and_survives_target_reentry",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesReadLifecycleTests.Assignment_failure_keeps_authoritative_attachment_and_requires_verification",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Verification_finds_desired_set_and_reconciles_without_save",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Verification_finds_desired_set_and_reconciles_without_save",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesMutationTests.Unknown_verification_finds_desired_state_without_replaying_save",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Exact_before_state_allows_only_deliberate_same-submission_retry",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Exact_before_state_allows_only_deliberate_same_submission_retry",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Intervening_authoritative_set_is_classified_as_superseded",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Intervening_authoritative_set_requires_explicit_adoption",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Failed_canonical_read_remains_unconfirmed",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Failed_canonical_read_remains_unconfirmed",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Wrong_identity_or_older_revision_is_insufficient_evidence",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "Later_local_filter_and_rule_draft_survive_reconciliation",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Raw_preview_draft_and_filter_survive_assignment_reconciliation",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesSurfaceTests.Snapshot_refresh_preserves_local_filters",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 13,
+      "name": "A_to_B_to_A_cannot_start_second_A_assignment",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesMutationTests.A_to_B_to_A_cannot_start_second_A_assignment",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 14,
+      "name": "Two_rapid_assignment_intents_start_one_write",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Two_rapid_intents_start_one_write_while_B_can_run_independently",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "Late_A_commit_cannot_replace_B",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesMutationTests.Late_A_commit_cannot_replace_B",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "name": "Old_A_finally_cannot_clear_newer_A_or_B_operation",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Stale_completion_cannot_remove_a_newer_attempt",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityAssignmentTests.Two_rapid_intents_start_one_write_while_B_can_run_independently",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "name": "Target_reentry_or_component_reconstruction_does_not_enable_blind_replay",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesMutationTests.Target_reentry_or_component_reconstruction_does_not_enable_blind_replay",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Cancellation_before_dispatch_performs_zero_writes",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Cancellation_before_dispatch_performs_zero_writes",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "name": "Cancellation_after_dispatch_is_not_assumed_rollback",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Cancellation_after_dispatch_is_not_assumed_rollback",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Verification_captures_agent_capability_and_provider_input_fingerprint",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Successful_diagnostic_persists_agent_and_catalog_proof_once",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Changed_provider_inputs_supersede_captured_diagnostic",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Input_change_inside_locked_write_callback_supersedes_diagnostic",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "name": "Detached_capability_during_diagnostic_does_not_persist_stale_proof",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Detached_capability_during_diagnostic_does_not_persist_stale_proof",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "name": "Changed_capability_definition_during_diagnostic_does_not_persist_proof",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Changed_capability_definition_during_diagnostic_does_not_persist_proof",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "name": "Changed_agent_permissions_or_provider_inputs_supersede_diagnostic",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Changed_agent_permissions_supersede_diagnostic_without_advancing_timestamp",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Changed_provider_inputs_supersede_captured_diagnostic",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Registered_database_runtime_revision_change_supersedes_inline_proof",
+          "receipt": "proof/tests/sb02-runtime-revision-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "name": "Missing_agent_after_diagnostic_does_not_update_global_proof",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Missing_agent_after_diagnostic_does_not_update_global_proof",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "name": "Missing_attachment_does_not_advance_agent_UpdatedAtUtc",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Detached_capability_during_diagnostic_does_not_persist_stale_proof",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Unattached_or_precanceled_diagnostic_performs_no_observation_or_write",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "name": "Successful_diagnostic_persists_agent_and_catalog_proof_once",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Successful_diagnostic_persists_agent_and_catalog_proof_once",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "name": "Proof_reconciliation_never_repeats_diagnostic",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Proof_recovery_reconciles_canonical_evidence_without_another_diagnostic",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "name": "Proof_commit_then_index_failure_is_canonically_verified",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Proof_commit_then_index_failure_is_canonically_verified_without_diagnostic_replay",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "name": "Failed_proof_verification_remains_unconfirmed_without_replay",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Failed_proof_verification_remains_unconfirmed_without_replay",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "name": "Late_A_verification_cannot_publish_under_B",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Late_A_verification_cannot_publish_under_B",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "name": "A_to_B_to_A_cannot_duplicate_same_verification",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.A_to_B_to_A_cannot_duplicate_proof_or_overlap_assignment",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "name": "Safe_inline_or_loopback_fixture_performs_no_arbitrary_external_effect",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Successful_diagnostic_persists_agent_and_catalog_proof_once",
+          "receipt": "proof/tests/sb02-gate-integration-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Registered_database_runtime_revision_change_supersedes_inline_proof",
+          "receipt": "proof/tests/sb02-runtime-revision-2-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "reason": "Real CapabilityProofService uses a custom inline skill with isolated file workspace. The SQL/runtime case changes the registered provider revision but sends no provider request."
+    },
+    {
+      "id": 33,
+      "name": "Superseded_preview_is_canceled_or_ignored",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Old_preview_finally_cannot_clear_new_busy_state",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Preview_receives_owner_cancellation_token",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "name": "Preview_receives_owner_cancellation_token",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Preview_receives_owner_cancellation_token",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "name": "Old_preview_finally_cannot_clear_new_busy_state",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Old_preview_finally_cannot_clear_new_busy_state",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "name": "Preview_draft_and_filters_survive_assignment_refresh",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Raw_preview_draft_and_filter_survive_assignment_reconciliation",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "name": "Selection_change_does_not_create_duplicate_setup_wizard",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Global_dialog_result_refreshes_current_selection_and_prevents_duplicate_ownership",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 38,
+      "name": "Panel_disposal_closes_owned_details_and_setup_overlays",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"mcp\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"skill\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"tool\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_details_overlay_and_preserves_unrelated_dialog",
+          "receipt": "proof/tests/sb02-details-ownership-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 39,
+      "name": "Nested_owned_dialogs_close_with_owner",
+      "status": "not-applicable-audited",
+      "evidence": [],
+      "reason": "The current details/setup rendered subtrees contain no nested DialogService.OpenAsync references. Direct owned overlays and child I/O are covered by topics 38/40/42; no global CloseAll or fictitious nested test is used. See reviews/SB02.md."
+    },
+    {
+      "id": 40,
+      "name": "Unrelated_overlay_survives_panel_disposal",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"mcp\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"skill\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"tool\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_details_overlay_and_preserves_unrelated_dialog",
+          "receipt": "proof/tests/sb02-details-ownership-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 41,
+      "name": "Global_capability_dialog_result_refreshes_current_selection",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Global_dialog_result_refreshes_current_selection_and_prevents_duplicate_ownership",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "name": "Late_dialog_result_cannot_refresh_removed_or_stale_owner",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Details_owned_read_is_canceled_and_late_failure_is_silent",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"mcp\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"skill\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"tool\")",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "name": "Exact_curator_identity_is_required",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesHostTests.Exact_managed_curator_can_be_launched",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentPanelSelectionFailClosedTests.Capabilities_panel_opens_the_exact_managed_capability_curator",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 44,
+      "name": "Spoofed_curator_remains_disabled",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesHostTests.Spoofed_curator_remains_disabled",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentPanelSelectionFailClosedTests.Capabilities_panel_does_not_enable_a_spoofed_capability_curator",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "name": "Curator_launch_is_single_flight_across_selection_changes",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Curator_launch_is_single_flight_across_selection_changes",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 46,
+      "name": "A_to_B_to_A_cannot_create_second_curator_chat",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Curator_launch_is_single_flight_across_selection_changes",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 47,
+      "name": "Known_chat_creation_is_not_reported_as_canceled_rollback",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Curator_known_chat_survives_owner_disposal_without_late_notification",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatCoordinatorTests.StartNewChatAsync_attaches_the_exact_created_session_and_preserves_catalog",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        }
+      ],
+      "browser": "proof/browser/browser-summary.json"
+    },
+    {
+      "id": 48,
+      "name": "Stale_or_disposed_owner_emits_no_late_notification",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Curator_known_chat_survives_owner_disposal_without_late_notification",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesRecoveryEffectsTests.Curator_unconfirmed_launch_survives_component_reconstruction_without_replay",
+          "receipt": "proof/tests/sb02-gate-components-2-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "name": "Curator_backend_authorization_remains_enforced",
+      "status": "passed",
+      "evidence": [
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.CapabilityCuratorAgentRuntimeToolProviderTests.Provider_fails_closed_for_identity_spoofs_and_reauthorizes_each_invocation",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.CapabilityCuratorAgentRuntimeToolProviderTests.Hr_actor_can_create_custom_inline_skill_and_verify_only_after_assignment",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        },
+        {
+          "case": "CanDoItAll.Tests.Unit.AgentFramework.CapabilityCuratorAgentRuntimeToolProviderTests.Assignment_editor_update_and_verify_preserve_unrelated_assignments_and_protect_privilege",
+          "receipt": "proof/tests/sb02-gate-unit-summary.json",
+          "outcome": "Passed"
+        }
+      ]
+    }
+  ],
+  "evidenceScope": "Current execution: exact discovered tests; 125 distinct owning cases, no skips. Counts describe these runs and are not architecture invariants."
+}

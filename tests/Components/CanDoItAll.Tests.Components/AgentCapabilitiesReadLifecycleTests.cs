@@ -61,7 +61,7 @@ public sealed class AgentCapabilitiesReadLifecycleTests {
     }
 
     [Fact]
-    public async Task Assignment_failure_keeps_uncommitted_local_attachment() {
+    public async Task Assignment_failure_keeps_authoritative_attachment_and_requires_verification() {
         using var fixture = new AgentCapabilitiesHostFixture();
         fixture.Workspace.Save = _ => Task.FromException<Guid>(new InvalidOperationException("Characterized assignment rejection."));
         var cut = fixture.Render(fixture.Alpha.Id);
@@ -69,7 +69,8 @@ public sealed class AgentCapabilitiesReadLifecycleTests {
         await cut.Find("[data-testid='agents-capability-toggle']").ClickAsync();
         cut.WaitForAssertion(() => {
             Assert.Equal(1, fixture.Workspace.SaveCalls);
-            Assert.Contains("Attached", cut.Find("[data-testid='agents-capability-card']").TextContent);
+            Assert.Empty(cut.FindComponent<AgentCapabilitiesSurface>().Instance.Snapshot.SelectedCapabilityIds);
+            Assert.NotNull(cut.Find("[data-testid='agents-capability-recover']"));
             Assert.Empty(fixture.Alpha.Capabilities);
         });
     }
@@ -115,16 +116,21 @@ public class CapabilitiesWorkspaceProxy : DispatchProxy {
     public IReadOnlyList<CapabilityCatalogItem> Capabilities { get; set; } = [];
     public Func<Guid, CancellationToken, Task<AgentEditorModel>>? ReadEditor { get; set; }
     public Func<AgentEditorModel, Task<Guid>>? Save { get; set; }
+    public Func<Guid, Guid, CancellationToken, Task>? VerifyOperation { get; set; }
+    public Func<Guid, CancellationToken, Task<CapabilityEditorModel>>? ReadCapability { get; set; }
+    public bool CatalogReadFails { get; set; }
     public int SaveCalls { get; private set; }
     public int VerifyCalls { get; private set; }
     public CancellationToken LastReadToken { get; private set; }
 
     protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch {
-        nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => Task.FromResult(Agents),
+        nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => CatalogReadFails ? Task.FromException<IReadOnlyList<AgentDefinition>>(new IOException("Catalog unavailable")) : Task.FromResult(Agents),
         nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) => Task.FromResult(Capabilities),
         nameof(IAgentFrameworkWorkspaceService.GetAgentEditorAsync) => Read(Assert.IsType<Guid>(args![0]), Assert.IsType<CancellationToken>(args[1])),
         nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) => SaveDraft(Assert.IsType<AgentEditorModel>(args![0])),
-        nameof(IAgentFrameworkWorkspaceService.VerifyCapabilityAsync) => Verify(),
+        nameof(IAgentFrameworkWorkspaceService.VerifyCapabilityAsync) => Verify((Guid)args![0]!, (Guid)args[1]!, (CancellationToken)args[2]!),
+        nameof(IAgentFrameworkWorkspaceService.GetCapabilityEditorAsync) => ReadCapability?.Invoke((Guid)args![0]!, (CancellationToken)args[1]!)
+            ?? Task.FromResult(CapabilityEditorModel.FromDefinition(Capabilities.Single(item => item.Id == (Guid)args![0]!))),
         _ => throw new InvalidOperationException($"Unexpected workspace call: {method?.Name}")
     };
 
@@ -138,9 +144,9 @@ public class CapabilitiesWorkspaceProxy : DispatchProxy {
         return Save?.Invoke(model) ?? Task.FromResult(model.Id!.Value);
     }
 
-    private Task Verify() {
+    private Task Verify(Guid agentId, Guid capabilityId, CancellationToken token) {
         VerifyCalls++;
-        return Task.CompletedTask;
+        return VerifyOperation?.Invoke(agentId, capabilityId, token) ?? Task.CompletedTask;
     }
 }
 

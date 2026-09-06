@@ -1,0 +1,78 @@
+apps
+CanDoItAll local delivery workbench
+chevron_right
+dashboard
+folder_open
+forum
+groups
+smart_toy
+account_tree
+account_tree
+monitor_heart
+psychology
+inventory_2
+extension
+library_books
+expand_less
+smart_toy
+Chats
+settings
+Settings
+health_and_safety
+Runtime capabilities
+storage
+Switch Database
+Dashboard
+push_pin
+Agents
+i
+
+DATABASE STARTUP
+
+Continue with the active database to load the workspace
+
+The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+
+STARTUP
+Database profiles
+
+Continue with the resolved runtime database or activate another saved PostgreSQL profile for the next restart.
+
+close
+Close
+
+CURRENT RUNTIME PROFILE
+
+Configured PostgreSQL override
+
+PostgreSQL
+PostgreSQL connection
+Config lock
+
+RUNTIME TARGET
+
+127.0.0.1:5432/cditall_capa02_browser_df9c5fcef75b4023ac71fa3260ef7d0e
+
+content_copy
+content copy
+
+WORKSPACE ROOT
+
+C:\repositories\CanDoItAll\.mcp-state\capa02-browser-data\28ddea38544542159075cf2708c2c070\profiles\capa02-browser\workspace
+
+content_copy
+content copy
+
+Selection source: Explicit startup override
+
+Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
+
+NO SAVED PROFILES
+
+Create the first PostgreSQL profile
+
+Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab.
+
+Continue
+Open Data Sources
+Running now

@@ -1,0 +1,5 @@
+Independent overlay
+close
+Close
+This overlay belongs to the fixture, not the capabilities panel.
+Remove capabilities panel

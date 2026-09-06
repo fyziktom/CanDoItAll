@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -10,10 +11,16 @@ using McpSetupTestResult = CanDoItAll.AgentFramework.Mcp.Abstractions.McpSetupTe
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class CapabilitySetupWizardDialog
+public partial class CapabilitySetupWizardDialog : IDisposable
 {
     private const long MaxSkillUploadBytes = 1_048_576;
     private const int LastWizardStep = 2;
+
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenRegistration ownerRegistration;
+    private bool disposed;
+    private bool IsCurrent => !disposed && !lifetime.IsCancellationRequested;
 
     [Parameter]
     public CapabilityKind InitialKind { get; set; } = CapabilityKind.McpServer;
@@ -54,6 +61,7 @@ public partial class CapabilitySetupWizardDialog
 
     protected override void OnInitialized()
     {
+        ownerRegistration = OwnerCancellationToken.Register(lifetime.Cancel);
         editorModel = new CapabilityEditorModel
         {
             Kind = InitialKind is CapabilityKind.Skill or CapabilityKind.McpServer
@@ -131,14 +139,21 @@ public partial class CapabilitySetupWizardDialog
 
     private async Task UploadSkillAsync(InputFileChangeEventArgs args)
     {
+        if (!IsCurrent || isBusy) {
+            return;
+        }
+        isBusy = true;
         var file = args.File;
         uploadedSkillFileName = file.Name;
 
         try
         {
-            await using var stream = file.OpenReadStream(MaxSkillUploadBytes);
+            await using var stream = file.OpenReadStream(MaxSkillUploadBytes, lifetime.Token);
             using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            var content = await reader.ReadToEndAsync();
+            var content = await reader.ReadToEndAsync(lifetime.Token);
+            if (!IsCurrent) {
+                return;
+            }
             skillInputMode = CapabilityWizardSkillInputMode.Upload;
             skillState.SkillSource = "inline";
             skillState.InlineInstructions = content;
@@ -154,9 +169,15 @@ public partial class CapabilitySetupWizardDialog
 
             NotificationService.Success("Skill file loaded", "SKILL.md content was loaded into the inline skill draft.");
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrent) {
+        }
+        catch (Exception)
         {
-            NotificationService.Error("Skill file upload failed", exception.Message);
+            NotificationService.Error("Skill file upload failed", "The file could not be read.");
+        } finally {
+            if (IsCurrent) {
+                isBusy = false;
+            }
         }
     }
 
@@ -181,7 +202,7 @@ public partial class CapabilitySetupWizardDialog
 
     private async Task CreateAsync()
     {
-        if (isBusy)
+        if (!IsCurrent || isBusy)
         {
             return;
         }
@@ -196,12 +217,19 @@ public partial class CapabilitySetupWizardDialog
                 return;
             }
 
-            var capabilityId = await WorkspaceService.SaveCapabilityAsync(editorModel);
+            var submission = JsonSerializer.Deserialize<CapabilityEditorModel>(JsonSerializer.SerializeToUtf8Bytes(editorModel))!;
+            var capabilityId = await WorkspaceService.SaveCapabilityAsync(submission, CancellationToken.None);
+            if (!IsCurrent) {
+                return;
+            }
+            editorModel.Id = capabilityId;
             NotificationService.Success("Capability created", "Capability was added to the catalog.");
             if (DialogReference is not null)
             {
                 await DialogReference.CloseAsync(new CapabilityDetailsDialogResult(capabilityId));
             }
+        }
+        catch (Exception) when (!IsCurrent) {
         }
         catch (Exception exception)
         {
@@ -209,7 +237,9 @@ public partial class CapabilitySetupWizardDialog
         }
         finally
         {
-            isBusy = false;
+            if (IsCurrent) {
+                isBusy = false;
+            }
         }
     }
 
@@ -409,8 +439,10 @@ public partial class CapabilitySetupWizardDialog
         };
     }
 
-    private Task CancelAsync()
-        => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    private Task CancelAsync() {
+        Dispose();
+        return DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    }
 
     private void ApplyToolIdentityDefaults()
     {
@@ -468,5 +500,14 @@ public partial class CapabilitySetupWizardDialog
         FilePath,
         Inline,
         Upload
+    }
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        ownerRegistration.Dispose();
+        lifetime.Cancel();
+        lifetime.Dispose();
     }
 }

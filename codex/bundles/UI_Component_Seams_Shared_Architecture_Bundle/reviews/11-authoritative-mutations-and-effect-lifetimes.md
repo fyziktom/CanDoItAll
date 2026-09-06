@@ -1,0 +1,14 @@
+# Authoritative mutation and effect lifetime feedback
+
+Proven by [Capabilities-02](../../UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/reviews/architecture-exit.md) and its real persistence, browser and public-seam tests. Historical predecessor proof is unchanged.
+
+1. A controlled view displays authoritative mutation state unless the product explicitly defines a reversible optimistic model. Capture an independent immutable intent before awaiting persistence; rejection must not leave an uncommitted selection visible.
+2. Recovery needs target plus stable attempt identity. Current presentation generation can hide an operation but cannot resolve it. Canonical verification compares exact identity, revision and submitted pre/postconditions; present desired state does not prove historical causation. Unchanged precondition permits deliberate same-request retry; intervening state requires explicit adoption. Reconciliation never repeats the write.
+3. Cancellation before dispatch and cancellation after dispatch have different evidentiary meaning. The latter is not rollback. Keep known commit information before secondary reads and retain unresolved attempts for the explicitly chosen owner lifetime.
+4. Diagnostic observation and persistence of diagnostic evidence are separate stages. Capture relevant semantic inputs, revalidate after observation and again at the actual write boundary, and suppress proof publication when an entity, attachment, permissions or observed configuration changed. Verification of persistence must not rerun the diagnostic.
+5. Independently stored authorities require an explicit consistency limit. A refreshed revision plus a last-observed check is optimistic fencing, not a distributed transaction. Document that limit rather than inventing a guarantee.
+6. Match lifetime to semantic ownership. Selection previews are target/request scoped; global catalog overlays are panel scoped; unresolved attempts or non-idempotent admission may need circuit retention. Old completions cannot clear newer busy/result state. Cancel owned reads and individual overlays without closing unrelated UI.
+7. Keep non-idempotent creation observed once dispatched. A disappeared view suppresses late presentation but cannot assert that a created external/application object disappeared. Preserve known identity; unknown creation must not invite blind replay.
+8. Browser tests must isolate the claimed lifetime. Navigation-driven global cleanup does not prove an individual component closed only its own overlays. Exercise actual component removal with an independently owned overlay and inspect both.
+
+These rules define ownership and evidence. They do not prescribe feature-specific classes, a universal mutation framework, an outbox, a component count or a new project for every concern.

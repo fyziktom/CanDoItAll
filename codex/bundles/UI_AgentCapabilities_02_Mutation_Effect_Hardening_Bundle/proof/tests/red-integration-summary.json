@@ -1,0 +1,108 @@
+{
+  "expected": 3,
+  "discovered": [
+    "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Detached_capability_during_diagnostic_does_not_persist_stale_proof",
+    "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Changed_capability_definition_during_diagnostic_does_not_persist_proof",
+    "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Missing_agent_after_diagnostic_does_not_update_global_proof"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CapabilityVerificationRaceIntegrationTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-06T20:15:58.463606+00:00",
+      "finishedUtc": "2026-09-06T20:15:59.940251+00:00",
+      "output": "red-integration-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CapabilityVerificationRaceIntegrationTests",
+        "--logger",
+        "trx;LogFileName=red-integration.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\capa02"
+      ],
+      "exit": 1,
+      "startedUtc": "2026-09-06T20:15:59.940251+00:00",
+      "finishedUtc": "2026-09-06T20:16:05.087226+00:00",
+      "output": "red-integration-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "3",
+    "executed": "3",
+    "passed": "0",
+    "failed": "3",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "4325b38e-36ee-446f-b394-578ec371e5f7",
+      "testId": "a2ee84d9-8352-80bc-0f39-4750976087fc",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Missing_agent_after_diagnostic_does_not_update_global_proof",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.9852086",
+      "startTime": "2026-09-06T16:16:03.0147525-04:00",
+      "endTime": "2026-09-06T16:16:03.9899263-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4325b38e-36ee-446f-b394-578ec371e5f7"
+    },
+    {
+      "executionId": "57c88f30-505e-40b0-937f-fd06feb84c06",
+      "testId": "7dfd8018-3035-6a72-6013-80b8905c8d6f",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Changed_capability_definition_during_diagnostic_does_not_persist_proof",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.9836694",
+      "startTime": "2026-09-06T16:16:03.9914477-04:00",
+      "endTime": "2026-09-06T16:16:04.9739492-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "57c88f30-505e-40b0-937f-fd06feb84c06"
+    },
+    {
+      "executionId": "58089a1d-b7b6-41e1-8272-c52073753a60",
+      "testId": "de18c850-a302-1f74-4b14-35350c0a2dfe",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.Detached_capability_during_diagnostic_does_not_persist_stale_proof",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.5760836",
+      "startTime": "2026-09-06T16:16:01.4111711-04:00",
+      "endTime": "2026-09-06T16:16:03.0027651-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "58089a1d-b7b6-41e1-8272-c52073753a60"
+    }
+  ]
+}

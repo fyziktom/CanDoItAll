@@ -1,0 +1,328 @@
+{
+  "tool": "code_analytics_dashboard_get",
+  "queriedUtc": "2026-09-06T22:15:39.7579293+00:00",
+  "snapshotId": "snap-20260906215047-e662dc8b",
+  "createdUtc": "2026-09-06T21:50:47.137067+00:00",
+  "scope": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+    "scopeProjectNames": [
+      "CanDoItAll.AgentFramework.Core",
+      "CanDoItAll.Modules.AgentFramework"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": true,
+    "includePersistence": true,
+    "includeRisks": true,
+    "includeXmlDocs": false,
+    "includeMermaidExports": true
+  },
+  "diagnostics": [
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 88,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 255,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 257,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 260,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 264,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 274,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 277,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 281,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 284,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 295,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 298,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 300,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 302,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 340,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 342,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 344,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 401,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 402,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 403,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 404,
+        "column": 9
+      }
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Core was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.AgentFramework.Core was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.Pages was truncated to 80 types."
+    }
+  ],
+  "topFindings": [
+    {
+      "findingId": "finding-file-size-doc-maf-common-candoitall-agentframework-f2e2108a723d",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentExternalProvisioningService.cs has 585 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-maf-common-candoitall-agentframework-core-agents-ag-9f909926ea91"
+      ],
+      "source": {
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentExternalProvisioningService.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-maf-common-candoitall-agentframework-8c05a2b553de",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityProofService.Rules.cs has 447 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-maf-common-candoitall-agentframework-core-capabilit-df477c542a9d"
+      ],
+      "source": {
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityProofService.Rules.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-maf-common-candoitall-agentframework-22b36e6225d3",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs has 669 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-maf-common-candoitall-agentframework-core-catalog-a-6ed3b56dbedb"
+      ],
+      "source": {
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-maf-common-candoitall-agentframework-1ae46d447ef4",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentChatContextRegistry.cs has 1025 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-maf-common-candoitall-agentframework-core-context-a-3ecee1188c2c"
+      ],
+      "source": {
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentChatContextRegistry.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-maf-common-candoitall-agentframework-f237e3c3505c",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentTurnContextMetadata.cs has 369 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-maf-common-candoitall-agentframework-core-context-a-3aade58769dc"
+      ],
+      "source": {
+        "path": "../../MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentTurnContextMetadata.cs"
+      }
+    }
+  ]
+}

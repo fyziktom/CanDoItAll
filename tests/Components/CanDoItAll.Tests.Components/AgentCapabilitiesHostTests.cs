@@ -152,7 +152,7 @@ public class CapabilityEffectsProxy : DispatchProxy {
         if (method?.Name == nameof(IAgentChatLauncher.StartNewChatAsync)) {
             owner.StartedAgentId = Assert.IsType<Guid>(args![0]);
             owner.ChatCalls++;
-            return Task.FromResult<ActiveAgentChat>(null!);
+            return Task.FromResult(CapabilityLifetimeEffects.Chat());
         }
 
         if (method?.Name == nameof(IAgentCapabilitySetupFlowService.PreviewAccessAsync)) {

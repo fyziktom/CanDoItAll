@@ -1,0 +1,34 @@
+{
+  "capturedUtc": "2026-09-06T22:25:40.290060+00:00",
+  "meaning": "Exit asset inventory. This is not a pre-extraction timing baseline. For tracked assets, equality with HEAD proves no edit in this child.",
+  "assets": [
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/app.css",
+      "sha256": "4915fb83fd6591e4ab1f658357e06c768d01a82bac5dfeeacb97dad2bc69c92d",
+      "bytes": 8885,
+      "trackedHeadAvailable": true,
+      "sameTextAsHead": true
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+      "sha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+      "bytes": 115598,
+      "trackedHeadAvailable": true,
+      "sameTextAsHead": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "sha256": "089452ca2eed47fd8705dec414ff07edfbedb711871a1663ca0ecd79fb7aec26",
+      "bytes": 1970,
+      "trackedHeadAvailable": true,
+      "sameTextAsHead": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "sha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49",
+      "bytes": 1246,
+      "trackedHeadAvailable": true,
+      "sameTextAsHead": true
+    }
+  ]
+}

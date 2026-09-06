@@ -1,0 +1,922 @@
+You are Codex GPT-6 Astra running at xhigh reasoning effort.
+
+Act as a senior .NET 10 / Blazor architect, concurrency and persistence
+reviewer, mutation-recovery designer, and UI lifecycle engineer.
+
+Repository:
+    fyziktom/CanDoItAll
+
+Branch:
+    components-decoupling
+
+The remotely observed branch head at prompt preparation time was:
+
+    d066d367d6abc147e046bee1308ea5f702e65cfd
+    Separate capability state and rendering; prepare mutation hardening
+
+This is an observation, not a pin.
+
+Rediscover the actual local branch, remote branch, HEAD, working-tree state,
+live sibling revisions, generated assets, and current bundle state before
+editing. Do not reset, clean, overwrite, or discard unrelated work.
+
+Do not merge, rebase, squash, rewrite history, or perform branch cleanup.
+
+All source-code comments and bundle documentation must be in English.
+
+======================================================================
+MISSION
+======================================================================
+
+Review, strengthen, and then implement the already prepared bundle:
+
+    codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle
+
+Reference:
+
+    CDA-UI-SEAMS-AGENT-CAPABILITIES-02
+
+Execute its subbundles sequentially:
+
+    SB00 -> SB01 -> SB02 -> SB03
+
+The prepared bundle is a starting point, not immutable authority. Update its
+requirements, architecture, test map, subbundle descriptions, validation
+plan, and manifest before production implementation where current source
+evidence requires stronger or more precise behavior.
+
+After AGENT-CAPABILITIES-02 closes, prepare but do not implement:
+
+    CDA-UI-SEAMS-AGENT-CAPABILITIES-03
+
+Its purpose will be lightweight UI extraction plus capabilities scenarios in
+the existing Agent Framework UI sandbox.
+
+Do not implement Capabilities 03 in this run.
+
+Do not ask for clarification. Independently inspect current source and choose
+the smallest correct architecture. Record any product-semantic decision and
+uncertainty explicitly.
+
+======================================================================
+ACCEPTED PREDECESSORS — DO NOT REDESIGN
+======================================================================
+
+Treat these as accepted unless a direct failing-first regression proves a
+narrow defect:
+
+- CDA-UI-SEAMS-PROVIDERS-02F
+- CDA-UI-SEAMS-CATALOG-HARDEN-02
+- CDA-UI-SEAMS-AGENT-CAPABILITIES-01
+- CDA-UI-SEAMS-BASE-v2
+
+Preserve:
+
+- explicit SharedProviderChangeDelivery receiver acknowledgement;
+- single-flight receiver reconciliation;
+- circuit-scoped provider delivery recovery;
+- catalog Parity/Fast modes;
+- catalog sandbox query-state restoration;
+- direct dotnet-watch evidence distinctions;
+- AgentCapabilitiesPanel as the single effect host;
+- AgentCapabilitiesSession as the accepted-selection/read owner;
+- AgentCapabilitiesSurface as a service-free controlled rendering surface;
+- the existing AgentsHomePage requested-agent contract;
+- local search, tags, filters, tree expansion, and access-rule draft in the
+  controlled surface;
+- no production routing or project movement in Capabilities 02.
+
+Do not rerun provider or catalog work merely because it is nearby. Run their
+focused regressions only if an actually shared production contract is
+changed.
+
+======================================================================
+READ BEFORE EDITING
+======================================================================
+
+Read at minimum:
+
+Shared architecture and predecessors:
+
+- codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/
+- codex/bundles/UI_Providers_02F_Explicit_Acknowledgement_Bundle/
+- codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle/
+- codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/
+- codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/
+- docs/testing.md
+- repository architecture, portability, documentation, and secret rules
+
+Capabilities UI:
+
+- AgentCapabilitiesPanel.razor
+- AgentCapabilitiesPanel.razor.cs
+- AgentCapabilitiesSurface.razor
+- AgentCapabilitiesSurface.razor.cs
+- AgentCapabilitiesState.cs
+- AgentCapabilitiesSession.cs
+- AgentCapabilitiesReads.cs
+- AgentCapabilityList.razor
+- AgentCapabilityList.razor.cs
+- AgentsHomePage.razor and its code-behind
+- AgentPanelSelectionFailClosedTests
+- AgentCapabilitiesSessionTests
+- all Capabilities-01 component and browser proof
+
+Agent persistence and outcomes:
+
+- AgentEditorModel and AgentDefinition
+- AgentEditorDraftPolicy
+- AgentEditorCommands
+- AgentCatalogConcurrencyException
+- AgentEditorValidationException
+- AgentDirectoryProjectionSynchronizationException
+- IAgentFrameworkWorkspaceService
+- CurrentProfileAgentFrameworkWorkspaceService
+- AgentFrameworkWorkspaceCatalogService.Agents.cs
+- AgentDefinitionFactory
+- ISandboxWorkspaceCatalogStore
+- FileSandboxWorkspaceStore
+- FileSandboxWorkspaceJsonStore
+- workspace index persistence and recovery
+- production workspace/store registrations
+
+Verification:
+
+- AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs
+- ICapabilityProofService
+- CapabilityProofService and every partial/rule implementation
+- provider lookup and provider runtime/profile revision sources
+- CapabilityEditorConcurrency
+- CapabilityVerificationResult
+- current API endpoint and every consumer of VerifyCapabilityAsync
+
+Effects:
+
+- IAgentCapabilitySetupFlowService
+- AgentCapabilitySetupFlowService
+- CapabilityDetailsDialog and all nested dialogs/effects
+- CapabilitySetupWizardDialog and all nested dialogs/effects
+- DialogService cancellation/ownership semantics
+- IAgentChatLauncher and its production implementations
+- chat creation/admission identity and commit behavior
+
+======================================================================
+FIRST: ADJUDICATE THESE FINDINGS
+======================================================================
+
+Before implementation, independently confirm, modify, or reject each finding
+against current source and real production composition.
+
+1. Capabilities-01 correctly established a service-free controlled surface
+   and a cancellable stale-safe read session.
+
+2. The current assignment handler mutates
+   session.Draft.SelectedCapabilityIds before SaveAgentAsync has produced a
+   known commit.
+
+3. A validation rejection or optimistic concurrency conflict therefore leaves
+   an uncommitted assignment visible in the current UI.
+
+4. CurrentProfileAgentFrameworkWorkspaceService performs canonical agent save
+   first and CRM/HR projection/reference-data work afterward.
+   AgentDirectoryProjectionSynchronizationException therefore proves a known
+   agent commit.
+
+5. Core SaveAgentAsync checks AgentEditorModel.ExpectedUpdatedAtUtc against
+   the current AgentDefinition. This is the existing optimistic concurrency
+   boundary.
+
+6. FileSandboxWorkspaceStore writes the catalog and subsequently writes the
+   workspace index. An exception or cancellation between those stages may
+   leave the desired catalog content committed while the caller observes an
+   exception.
+
+7. OperationCanceledException after persistence dispatch is not, by itself,
+   proof that no assignment was committed.
+
+8. The current capability host catches assignment exceptions generically and
+   does not distinguish:
+   - validation rejection;
+   - concurrency conflict;
+   - known canonical commit with secondary warning;
+   - genuinely unconfirmed result;
+   - pre-dispatch owner cancellation.
+
+9. Assignment and verification busy ownership currently depends primarily on
+   session.Generation.
+
+10. A sequence A operation -> select B -> select A can therefore make the old
+    A operation invisible to current busy state and permit another operation
+    for A before the first one has resolved.
+
+11. The current surface must continue to display authoritative selected
+    capability IDs. Pending intent may be shown separately, but must not be
+    presented as committed state.
+
+12. Core VerifyCapabilityAsync reads agent/capability/provider, performs the
+    diagnostic, and later updates a newly loaded current catalog without
+    revalidating that the diagnostic inputs are still current.
+
+13. If the capability is detached while the diagnostic is running, the
+    current implementation can still update the global capability proof and
+    can update the agent timestamp despite finding no matching attachment in
+    the current agent capability list.
+
+14. Capability proof can include filesystem and HTTP observations.
+    Reconciliation must not repeat the diagnostic merely to discover whether
+    proof persistence committed.
+
+15. Current VerifyCapabilityAsync exposes no typed distinction between:
+    diagnostic performed, proof persisted, proof persistence superseded,
+    proof persistence committed with warning, and proof persistence
+    unconfirmed.
+
+16. Access preview is target-scoped and supports cancellation in its service
+    contract, but the current host does not pass a cancellation token.
+
+17. Capability details and setup wizard mutate the global capability catalog,
+    not only the currently selected agent. Their natural owner is the
+    panel/workspace lifetime, not automatically the selected-agent lifetime.
+
+18. Curator launch is a panel-level fixed-agent effect. Tying its visible busy
+    state only to selected-agent generation can permit a second launch after
+    an unrelated target change while the first launch remains in progress.
+
+19. StartNewChatAsync is potentially non-idempotent. Cancellation or owner
+    replacement after chat creation must not be reported as rollback or
+    trigger blind replay.
+
+20. AgentCapabilityList is service-free but remains in
+    CanDoItAll.AgentFramework.Components. That project already references
+    CanDoItAll.AgentFramework.UI, so a future reverse reference would create a
+    cycle.
+
+Record this adjudication in the Capabilities-02 bundle before implementation.
+
+======================================================================
+SB00 — ACTUAL COMMIT AND EFFECT MODEL
+======================================================================
+
+Strengthen and execute SB00 before production changes.
+
+Trace and record the exact stages of assignment:
+
+1. UI intent captured.
+2. Immutable assignment request created.
+3. Core validation/concurrency check.
+4. Catalog content written atomically.
+5. Workspace index written or recovered.
+6. Core SaveAgentAsync returns.
+7. Current-profile CRM/HR projection and reference-data invalidation.
+8. Authoritative editor/catalog reconciliation.
+
+For every exception and cancellation position, classify only what can be
+proved:
+
+- definitely not dispatched;
+- known rejected;
+- known conflict;
+- known catalog commit;
+- known commit with secondary warning;
+- genuinely unconfirmed.
+
+Do not treat cancellation as rollback merely because the thrown type is
+OperationCanceledException.
+
+Trace verification separately:
+
+1. semantic inputs captured;
+2. diagnostic begins;
+3. diagnostic completes;
+4. current inputs revalidated;
+5. proof persistence begins;
+6. catalog content persists;
+7. index or secondary work completes;
+8. authoritative proof state is reread.
+
+Do not assume assignment and verification have the same outcome model merely
+because both touch the catalog.
+
+Freeze failing-first tests for confirmed defects before implementing SB01 or
+SB02.
+
+======================================================================
+SB01 — ASSIGNMENT SUBMISSION, OUTCOMES, AND RECOVERY
+======================================================================
+
+Create one narrow capability-assignment operation boundary.
+
+Do not inject the complete IAgentFrameworkWorkspaceService into the rendering
+surface. The host may use a focused command/verification abstraction backed
+by existing production services.
+
+Do not reuse the broad IAgentEditorCommands interface directly if doing so
+pulls unrelated editor normalization, deletion, storage, or provider concerns
+into capability assignment. Reuse its proven outcome mapping only where the
+semantics truly match.
+
+----------------------------------------------------------------------
+Immutable assignment attempt
+----------------------------------------------------------------------
+
+Capture before the first asynchronous boundary:
+
+- AttemptId;
+- AgentId;
+- ExpectedUpdatedAtUtc;
+- exact immutable before capability-ID set;
+- exact immutable desired capability-ID set;
+- capability ID that initiated the user intent;
+- immutable independent AgentEditorModel request;
+- request/submission fingerprint where useful.
+
+Use AgentEditorDraftPolicy.Copy or an equivalent complete public-contract copy
+only after confirming it has no unwanted normalization side effects.
+
+Do not pass the live session.Draft into asynchronous persistence.
+
+The user intent is a desired set captured at click time, not a deferred
+“toggle whatever state exists later”.
+
+----------------------------------------------------------------------
+Authoritative presentation
+----------------------------------------------------------------------
+
+Do not mutate session.Draft.SelectedCapabilityIds before a known commit.
+
+Until commit is known, the surface displays the authoritative before set.
+
+A typed pending indicator may identify:
+
+- capability being assigned or removed;
+- operation target;
+- verification required;
+- reconciliation required.
+
+It must not visually claim that the canonical assignment already changed.
+
+----------------------------------------------------------------------
+Assignment outcomes
+----------------------------------------------------------------------
+
+Use a capability-specific typed result that distinguishes at least:
+
+- Rejected validation;
+- Optimistic conflict;
+- Committed;
+- Committed with secondary warning;
+- Definitely not committed after canonical verification;
+- Desired current state satisfied after canonical verification;
+- Superseded/intervening authoritative state;
+- Still unconfirmed;
+- Canceled before dispatch.
+
+Do not mechanically copy provider type names or create a universal mutation
+framework.
+
+Map AgentDirectoryProjectionSynchronizationException to known commit plus
+warning.
+
+Map AgentCatalogConcurrencyException to conflict.
+
+Map AgentEditorValidationException to known rejection.
+
+Unknown exceptions and cancellation after persistence dispatch require
+canonical verification unless a lower layer proves the commit state.
+
+----------------------------------------------------------------------
+Canonical verification
+----------------------------------------------------------------------
+
+Verification of an assignment attempt must only read canonical state. It must
+never call SaveAgentAsync.
+
+Classify using AgentId, ExpectedUpdatedAtUtc, before set, and desired set.
+
+At minimum:
+
+1. Current exact desired set with a compatible authoritative revision:
+   - desired state is satisfied;
+   - reconcile the current editor;
+   - do not claim historical causation beyond available evidence;
+   - never replay Save.
+
+2. Exact unchanged before set and exact unchanged expected revision:
+   - definitely not applied;
+   - permit only a deliberate controlled retry using the same immutable
+     submission and expected revision;
+   - do not auto-retry.
+
+3. Current revision or capability set represents another intervening state:
+   - classify as Superseded/Intervening rather than pretending the original
+     write succeeded or failed;
+   - show the canonical current state;
+   - require an explicit user decision to adopt current state or create a new
+     intent using the new revision;
+   - never replay the old request automatically.
+
+4. Read failure, wrong identity, malformed state, or insufficient evidence:
+   - remain unconfirmed;
+   - keep blind replay blocked.
+
+A resolved attempt must not remain in recovery bookkeeping. A stale completion
+must not clear a newer attempt.
+
+Evaluate whether unresolved assignment recovery must outlive the current
+component instance within the same circuit. If component reconstruction
+otherwise loses an unresolved submission and permits blind replay, use one
+small scoped attempt coordinator. Do not introduce durable storage or copy the
+provider recovery hierarchy mechanically.
+
+----------------------------------------------------------------------
+Operation ownership
+----------------------------------------------------------------------
+
+Assignment ownership must include stable AgentId and AttemptId, not only the
+current session generation.
+
+Required behavior:
+
+- only one assignment write per agent may be active;
+- switching A -> B -> A cannot start a second A assignment while the first A
+  attempt is unresolved;
+- an A result cannot update B;
+- a stale A finally block cannot clear B or a newer A operation;
+- two rapid clicks cannot start two writes before Blazor rerenders;
+- a B assignment may run independently only when the design explicitly
+  supports and tests per-target concurrency.
+
+Known commit followed by failed reconciliation exposes Retry reconciliation,
+not Retry assignment. Reconciliation performs zero additional writes.
+
+======================================================================
+SB02 — VERIFICATION, PREVIEW, DIALOGS, AND CURATOR
+======================================================================
+
+Do not create one generic effect controller. Model each lifetime according to
+its actual semantic owner.
+
+----------------------------------------------------------------------
+Capability verification
+----------------------------------------------------------------------
+
+Strengthen the verification boundary so a diagnostic result cannot be
+persisted against inputs that changed while the diagnostic was running.
+
+Capture a semantic input fingerprint sufficient for the proof rule, including
+as applicable:
+
+- AgentId;
+- agent UpdatedAtUtc;
+- exact current attachment identity and assignment metadata;
+- capability definition fingerprint;
+- capability kind/key/configuration/endpoint relevant to proof;
+- provider identity and the provider fields or revision used by proof;
+- operation/attempt identity.
+
+After the diagnostic completes and before persistence:
+
+- reload or atomically inspect current authoritative inputs;
+- verify that the agent still exists;
+- verify that the capability still exists;
+- verify that it remains attached to that agent;
+- verify that relevant capability, agent, permission, and provider inputs have
+  not changed.
+
+If inputs changed:
+
+- do not persist the stale diagnostic;
+- do not update the agent timestamp;
+- return an explicit Superseded result;
+- do not automatically repeat the diagnostic.
+
+The persistence update must not update an agent timestamp when no matching
+attachment exists.
+
+Expose typed verification execution state sufficient to distinguish:
+
+- diagnostic rejected before execution;
+- diagnostic performed and proof committed;
+- diagnostic performed but persistence superseded;
+- proof commit known with secondary warning;
+- proof persistence unconfirmed;
+- owner/UI publication canceled after the diagnostic.
+
+If proof persistence becomes unconfirmed, canonical verification must use a
+stable proof identity such as checked timestamp plus semantic result
+fingerprint. It must never rerun the HTTP/filesystem/tool diagnostic.
+
+Preserve compatibility for existing IAgentFrameworkWorkspaceService and API
+consumers. A new typed operation may sit behind the existing Task-returning
+compatibility facade when appropriate. Do not break all workspace test doubles
+without a justified migration plan.
+
+Use inline skills, controlled temporary files, or controlled loopback
+endpoints for tests. Never invoke arbitrary external tools, MCP processes, or
+real external provider endpoints.
+
+----------------------------------------------------------------------
+Access preview
+----------------------------------------------------------------------
+
+Access preview is selected-target scoped and latest-wins.
+
+- Capture the typed rule draft and immutable selected capability IDs.
+- Pass the supported cancellation token.
+- Cancel or supersede the prior preview when selection or draft execution is
+  replaced.
+- A late A preview cannot render or notify under B.
+- An old finally block cannot clear the newer preview busy state.
+- Preview does not enter write-recovery state because it is read-only.
+- Preserve local raw rule draft across authoritative assignment refresh.
+
+----------------------------------------------------------------------
+Capability details and setup wizard
+----------------------------------------------------------------------
+
+Classify both as panel/workspace-level capability-catalog overlays unless
+current source proves a narrower owner.
+
+- Do not bind their existence solely to selected-agent generation.
+- Prevent duplicate wizard/detail ownership across target changes.
+- Own direct and nested overlays through the correct panel lifetime.
+- Panel disposal closes only owned overlays.
+- Never call global CloseAll.
+- Preserve unrelated dialogs.
+- If a global capability mutation commits while selected agent changes,
+  refresh the catalog against the current accepted selection.
+- If the current agent disappeared, fail closed.
+- A stale dialog result cannot overwrite a newer catalog/session.
+- Do not describe cancellation after a committed capability save as rollback.
+
+Audit every nested DialogService.OpenAsync call, not only the first dialog
+reference.
+
+----------------------------------------------------------------------
+Capability Curator
+----------------------------------------------------------------------
+
+Curator launch is panel-scoped, not selected-agent scoped.
+
+- Keep exact AgentId + TemplateKey + active + non-template + tool-permission
+  checks.
+- Preserve backend authorization.
+- Make launch single-flight across agent selection changes.
+- A -> B -> A cannot enable a second launch while the first is unresolved.
+- Determine the real chat creation/admission commit boundary.
+- Pass cancellation only where the launcher contract can interpret it safely.
+- Cancellation or component disposal after chat creation is not rollback.
+- Never blindly replay StartNewChatAsync.
+- A stale component may suppress notification, but cannot claim the chat was
+  not created.
+- Retain or surface a known created ActiveAgentChat according to existing
+  application behavior.
+
+----------------------------------------------------------------------
+Typed presentation state
+----------------------------------------------------------------------
+
+Extend AgentCapabilitiesSnapshot only with capability-feature state that the
+surface must render, such as:
+
+- pending assignment;
+- assignment warning/conflict/unconfirmed state;
+- reconciliation availability;
+- verification state;
+- verification warning/superseded state;
+- preview state;
+- panel-level overlay/curator busy state.
+
+Keep the surface service-free.
+
+Do not move effect services or mutable editor models into the surface.
+
+Preserve local:
+
+- search;
+- tag filters;
+- assignment filter;
+- kind filter;
+- tree expansion;
+- raw access-rule draft.
+
+======================================================================
+REQUIRED TEST TOPICS
+======================================================================
+
+Update the prepared validation plan before implementation. Preserve useful
+planned tests and add missing cases.
+
+Do not create test-count architecture invariants.
+
+----------------------------------------------------------------------
+Assignment
+----------------------------------------------------------------------
+
+At minimum prove:
+
+1. Assignment_intent_does_not_change_visible_authoritative_set_before_commit
+2. Rejected_assignment_leaves_authoritative_attachment_unchanged
+3. Validation_rejection_allows_corrected_new_intent
+4. Concurrency_conflict_does_not_overwrite_remote_assignment
+5. Known_commit_with_projection_warning_reconciles_without_second_save
+6. Catalog_commit_then_index_failure_is_verified_without_second_save
+7. Unconfirmed_assignment_blocks_blind_replay
+8. Verification_finds_desired_set_and_reconciles_without_save
+9. Exact_before_state_allows_only_deliberate_same-submission_retry
+10. Intervening_authoritative_set_is_classified_as_superseded
+11. Failed_canonical_read_remains_unconfirmed
+12. Later_local_filter_and_rule_draft_survive_reconciliation
+13. A_to_B_to_A_cannot_start_second_A_assignment
+14. Two_rapid_assignment_intents_start_one_write
+15. Late_A_commit_cannot_replace_B
+16. Old_A_finally_cannot_clear_newer_A_or_B_operation
+17. Target_reentry_or_component_reconstruction_does_not_enable_blind_replay
+18. Cancellation_before_dispatch_performs_zero_writes
+19. Cancellation_after_dispatch_is_not_assumed_rollback
+
+Use real FileSandboxWorkspaceStore and current-profile projection fixtures for
+commit-boundary claims. A fake returning a desired outcome is insufficient.
+
+----------------------------------------------------------------------
+Verification
+----------------------------------------------------------------------
+
+At minimum prove:
+
+20. Verification_captures_agent_capability_and_provider_input_fingerprint
+21. Detached_capability_during_diagnostic_does_not_persist_stale_proof
+22. Changed_capability_definition_during_diagnostic_does_not_persist_proof
+23. Changed_agent_permissions_or_provider_inputs_supersede_diagnostic
+24. Missing_agent_after_diagnostic_does_not_update_global_proof
+25. Missing_attachment_does_not_advance_agent_UpdatedAtUtc
+26. Successful_diagnostic_persists_agent_and_catalog_proof_once
+27. Proof_reconciliation_never_repeats_diagnostic
+28. Proof_commit_then_index_failure_is_canonically_verified
+29. Failed_proof_verification_remains_unconfirmed_without_replay
+30. Late_A_verification_cannot_publish_under_B
+31. A_to_B_to_A_cannot_duplicate_same_verification
+32. Safe_inline_or_loopback_fixture_performs_no_arbitrary_external_effect
+
+----------------------------------------------------------------------
+Preview and overlays
+----------------------------------------------------------------------
+
+At minimum prove:
+
+33. Superseded_preview_is_canceled_or_ignored
+34. Preview_receives_owner_cancellation_token
+35. Old_preview_finally_cannot_clear_new_busy_state
+36. Preview_draft_and_filters_survive_assignment_refresh
+37. Selection_change_does_not_create_duplicate_setup_wizard
+38. Panel_disposal_closes_owned_details_and_setup_overlays
+39. Nested_owned_dialogs_close_with_owner
+40. Unrelated_overlay_survives_panel_disposal
+41. Global_capability_dialog_result_refreshes_current_selection
+42. Late_dialog_result_cannot_refresh_removed_or_stale_owner
+
+----------------------------------------------------------------------
+Curator
+----------------------------------------------------------------------
+
+At minimum prove:
+
+43. Exact_curator_identity_is_required
+44. Spoofed_curator_remains_disabled
+45. Curator_launch_is_single_flight_across_selection_changes
+46. A_to_B_to_A_cannot_create_second_curator_chat
+47. Known_chat_creation_is_not_reported_as_canceled_rollback
+48. Stale_or_disposed_owner_emits_no_late_notification
+49. Curator_backend_authorization_remains_enforced
+
+----------------------------------------------------------------------
+Boundary regression
+----------------------------------------------------------------------
+
+Also retain:
+
+- service-free AgentCapabilitiesSurface;
+- immutable presentation collections;
+- missing requested target fail-closed behavior;
+- A/B read race fencing;
+- selected-agent and access-state callbacks;
+- existing filter/count/layout behavior;
+- all three setup kinds;
+- production details dialog path;
+- no private-field reflection;
+- no uninitialized production objects;
+- no exact file/interface/partial count assertions.
+
+======================================================================
+VALIDATION
+======================================================================
+
+Follow docs/testing.md and actual invalidation.
+
+Directly build every changed production project, including when affected:
+
+- CanDoItAll.AgentFramework.Models
+- CanDoItAll.AgentFramework.Core
+- CanDoItAll.AgentFramework.Persistence
+- CanDoItAll.Modules.AgentFramework
+- CanDoItAll.AgentFramework.UI
+- CanDoItAll.AgentFramework.Components
+- CanDoItAll.Web
+
+Build affected test projects before listing and executing tests.
+
+Run exact Unit, Components, Integration, and API selections for:
+
+- Capabilities-01 regression;
+- assignment outcomes and persistence;
+- verification input fencing and proof persistence;
+- preview/dialog/curator lifetime;
+- current-profile projection;
+- FileSandboxWorkspaceStore catalog/index recovery;
+- API compatibility if the workspace verification contract changes.
+
+Use failing-first evidence for confirmed defects.
+
+Run a real isolated browser scenario at 1600x1000 covering:
+
+- authoritative assignment display while write is pending;
+- rejection/conflict;
+- known commit with failed reconciliation and read-only Retry;
+- unknown assignment verification;
+- A -> B -> A during delayed assignment;
+- safe capability verification;
+- verification superseded by a changed capability or assignment;
+- preview supersession;
+- details and all three setup kinds;
+- panel disposal with unrelated overlay;
+- Curator launch across selection change.
+
+Do not invoke arbitrary real external endpoints.
+
+Run architecture, portability, documentation, and secret gates according to
+repository policy.
+
+Retain compact manifest-checked proof. Do not repeat the earlier mistake of
+referencing ignored or absent proof files.
+
+A whole-repository stable test run is required only when actual public/common
+contract invalidation justifies it. Record the reason either way.
+
+======================================================================
+SHARED ARCHITECTURE FEEDBACK
+======================================================================
+
+After implementation evidence exists, add only genuinely generalized lessons
+to the shared architecture bundle.
+
+Candidate lessons include:
+
+- controlled views should display authoritative mutation state unless an
+  explicit reversible optimistic model exists;
+
+- operation ownership is defined by semantic target, not merely the current
+  component generation;
+
+- cancellation after persistence dispatch is not proof of rollback;
+
+- diagnostics and persistence of diagnostic evidence are separate stages;
+
+- stale diagnostic inputs must be fenced before evidence is persisted;
+
+- global overlay/effect lifetime must not be tied accidentally to a selected
+  entity;
+
+- target-scoped, panel-scoped, and circuit-scoped operations require different
+  lifetime policies.
+
+Do not make provider-specific or capability-specific class names universal
+rules. Do not rewrite historical proof.
+
+======================================================================
+NEXT CHILD — PREPARE ONLY
+======================================================================
+
+Only after AGENT-CAPABILITIES-02 closes, prepare but do not implement:
+
+Bundle path:
+
+    codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle
+
+Reference:
+
+    CDA-UI-SEAMS-AGENT-CAPABILITIES-03
+
+Its planned scope must include:
+
+1. A pre-move dependency and direct-watch baseline.
+
+2. Moving, not copying, the real service-free capabilities rendering boundary
+   into CanDoItAll.AgentFramework.UI.
+
+3. Moving AgentCapabilityList and its real CSS/assets out of
+   CanDoItAll.AgentFramework.Components when required to avoid the existing
+   reverse-reference cycle.
+
+4. Updating both known real consumers:
+   - AgentCapabilitiesSurface;
+   - AgentDetailsDialog.
+
+5. Keeping in the module:
+   - AgentCapabilitiesPanel effect host;
+   - AgentCapabilitiesSession;
+   - reads;
+   - assignment/verification operations;
+   - dialogs;
+   - notifications;
+   - chat launcher;
+   - persistence and runtime services.
+
+6. Reviewing the pure capability access enum dependencies. Do not pull broad
+   Core/runtime projects into the lightweight UI assembly merely for enum
+   convenience.
+
+7. Extending the existing CanDoItAll.AgentFramework.UiSandbox rather than
+   automatically creating another sandbox project.
+
+8. Adding an explicit capabilities specimen to sandbox query state, while
+   retaining the catalog specimen.
+
+9. Representative scenarios:
+   - loading;
+   - failed;
+   - missing target;
+   - no agents;
+   - no capabilities;
+   - selected agent;
+   - assigned/unassigned;
+   - all supported kinds and proof states;
+   - long names and tags;
+   - local filters and raw preview draft;
+   - assignment pending;
+   - committed warning/reconciliation;
+   - unconfirmed/superseded mutation;
+   - verification pending and superseded;
+   - curator available/unavailable.
+
+10. Updating Fast Tailwind roots only from an audited rendered-source closure.
+
+11. Parity/Fast browser evidence and reproducible direct dotnet-watch
+    measurement after physical extraction.
+
+12. A baseline collected before any source move.
+
+Do not implement this child in the current run.
+
+Do not prepare Simple Chats work yet. Its Definition Catalog remains the
+likely next feature after capabilities extraction and sandbox proof.
+
+======================================================================
+OUT OF SCOPE
+======================================================================
+
+Do not implement:
+
+- production routing or bookmarkability;
+- Manager changes;
+- provider history refactoring;
+- provider architecture redesign;
+- catalog sandbox redesign;
+- physical capabilities extraction in Capabilities 02;
+- capabilities sandbox scenarios before Capabilities 03;
+- AgentChatPanel refactoring;
+- Simple Chats refactoring;
+- ProjectStructurePage work;
+- visual redesign;
+- sibling Components or FileTools edits;
+- a generic mutation framework;
+- a general event bus or durable outbox;
+- merge preparation or history cleanup.
+
+======================================================================
+FINAL REPORT
+======================================================================
+
+Report:
+
+1. Actual entry and final branch/HEAD.
+2. Dirty-state handling and sibling revisions.
+3. Changes made to the prepared Capabilities-02 bundle before implementation.
+4. Adjudication of every listed finding.
+5. Actual catalog/index/projection commit boundaries.
+6. Assignment attempt and canonical verification model.
+7. Treatment of cancellation before and after persistence dispatch.
+8. Verification diagnostic/input-fingerprint/persistence model.
+9. Target-, panel-, and circuit-scoped lifetime decisions.
+10. Dialog and Curator ownership decisions.
+11. Responsibilities retained by the effect host.
+12. Proof that the controlled surface remains service-free.
+13. Exact builds, test discovery, tests, browser scenarios, failures, and
+    retained negative evidence.
+14. Any unresolved limitation.
+15. Shared architecture feedback added.
+16. Route readiness, sandbox readiness, extraction readiness, and actual
+    bookmarkability as separate verdicts.
+17. Path and reference ID of the prepared but unimplemented
+    AGENT-CAPABILITIES-03 bundle.
+
+Do not claim repository merge readiness.

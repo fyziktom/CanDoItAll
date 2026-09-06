@@ -1,0 +1,31 @@
+import collections, importlib.util, json, pathlib, subprocess, datetime
+root=pathlib.Path.cwd()
+spec=importlib.util.spec_from_file_location('scanner',root/'tools/Validation/Portability/scan_artifacts_for_secrets.py')
+scanner=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(scanner)
+paths=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z']).decode().split('\0')
+old=dict()
+proc=subprocess.Popen(['git','cat-file','--batch'],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+def read_head(path):
+    proc.stdin.write(('HEAD:'+path+'\n').encode()); proc.stdin.flush()
+    header=proc.stdout.readline().decode().rstrip()
+    if header.endswith(' missing'): return b''
+    size=int(header.split()[-1]); data=proc.stdout.read(size);proc.stdout.read(1);return data
+def findings(data):
+    try: text=data.decode('utf-8-sig')
+    except UnicodeError: return None
+    if '\0' in text:return None
+    return collections.Counter((name,scanner.fingerprint(m.group(group))) for name,pattern,group in scanner.RULES for m in pattern.finditer(text) if not scanner.is_placeholder(m.group(group)))
+added=[];removed=[];total=0;scanned=0;binary=0
+for path in sorted(set(filter(None,paths))):
+    p=root/path
+    if not p.is_file():continue
+    current=findings(p.read_bytes())
+    if current is None: binary+=1;continue
+    scanned+=1;total+=sum(current.values());prior=findings(read_head(path)) or collections.Counter()
+    for (rule,fp),count in (current-prior).items():added.append(dict(path=path,rule=rule,fingerprint=fp,count=count))
+    for (rule,fp),count in (prior-current).items():removed.append(dict(path=path,rule=rule,fingerprint=fp,count=count))
+proc.stdin.close();proc.wait()
+report=dict(utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),baseline=subprocess.check_output(['git','rev-parse','HEAD']).decode().strip(),scope='All proposed Git text, tracked plus untracked, all suffixes, without size truncation',textFiles=scanned,binaryFiles=binary,totalMatches=total,added=added,removed=removed)
+(root/'.mcp-state/capa02/source-secret-scan.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
+print(json.dumps({k:report[k] for k in ['scope','textFiles','binaryFiles','totalMatches','added','removed']}))

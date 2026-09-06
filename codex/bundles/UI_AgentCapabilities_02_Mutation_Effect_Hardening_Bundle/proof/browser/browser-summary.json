@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "browserVersion": "149.0.7827.55",
+  "steps": [
+    "Rejected assignment leaves authoritative attachments unchanged and permits a corrected intent.",
+    "Pending A -> B -> A retains one immutable attempt and original raw inputs; current A reconciliation performs no additional write.",
+    "Known commit with failed editor refresh keeps a reconciliation action; retry performs zero writes.",
+    "Unconfirmed assignment survives target reentry and resolves through canonical reads without replay.",
+    "Changed capability inputs supersede a held inline diagnostic without proof publication; explicit later verification runs exactly once.",
+    "Preview cancellation follows selection; late preview cannot replace B or erase the raw rule draft.",
+    "Real details and tool, MCP and skill setup overlays render and close through owned references.",
+    "A real non-navigation removal of the production panel closes its setup overlay while preserving the independent dialog.",
+    "Curator remains single-flight across A -> B -> A and the real launcher creates one stable managed chat."
+  ],
+  "initial": {
+    "alphaId": "a35800b2-d89f-412d-a532-c594d53b65a0",
+    "betaId": "615bd1dc-dbc9-4c06-982a-46d44404769d",
+    "capabilityId": "554ab0bb-260b-4b6a-bfb8-88277ab8d938",
+    "assigned": false,
+    "proof": "NotRun",
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false,
+    "assignmentCalls": 0,
+    "diagnosticCalls": 0,
+    "previewCalls": 0,
+    "curatorCalls": 0,
+    "chatSessionId": null,
+    "failEditorRead": false
+  },
+  "final": {
+    "alphaId": "a35800b2-d89f-412d-a532-c594d53b65a0",
+    "betaId": "615bd1dc-dbc9-4c06-982a-46d44404769d",
+    "capabilityId": "554ab0bb-260b-4b6a-bfb8-88277ab8d938",
+    "assigned": true,
+    "proof": "Verified",
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false,
+    "assignmentCalls": 5,
+    "diagnosticCalls": 2,
+    "previewCalls": 2,
+    "curatorCalls": 1,
+    "chatSessionId": "6b56af14-8c08-4ef8-96fd-2f6cee32b572",
+    "failEditorRead": false
+  },
+  "pageErrors": []
+}

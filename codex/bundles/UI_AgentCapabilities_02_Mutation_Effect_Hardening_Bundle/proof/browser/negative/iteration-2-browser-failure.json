@@ -1,0 +1,13 @@
+{
+  "steps": [
+    "Rejected assignment leaves authoritative attachments unchanged and permits a corrected intent.",
+    "Pending A -> B -> A retains one immutable attempt and original raw inputs; current A reconciliation performs no additional write.",
+    "Known commit with failed editor refresh keeps a reconciliation action; retry performs zero writes.",
+    "Unconfirmed assignment survives target reentry and resolves through canonical reads without replay.",
+    "Changed capability inputs supersede a held inline diagnostic without proof publication; explicit later verification runs exactly once.",
+    "Preview cancellation follows selection; late preview cannot replace B or erase the raw rule draft.",
+    "Real details and tool, MCP and skill setup overlays render and close through owned references."
+  ],
+  "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('fixture-owned-remove') to be visible\u001b[22m\n",
+  "pageErrors": []
+}

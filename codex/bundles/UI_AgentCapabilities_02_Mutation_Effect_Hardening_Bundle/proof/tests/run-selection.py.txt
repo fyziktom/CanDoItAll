@@ -1,0 +1,23 @@
+import sys, subprocess, pathlib, json, re, datetime, xml.etree.ElementTree as E
+root=pathlib.Path.cwd(); out=root/'.mcp-state/capa02'
+name, project, selector, expected=sys.argv[1:]; expected=int(expected)
+base=['dotnet','test',project,'-c','Release','--no-build','--no-restore','--filter',selector]
+records=[]
+def run(args, filename):
+ start=datetime.datetime.now(datetime.timezone.utc)
+ with (out/filename).open('w',encoding='utf-8') as log:
+  result=subprocess.run(args,stdout=log,stderr=subprocess.STDOUT,text=True)
+ records.append({'command':args,'exit':result.returncode,'startedUtc':start.isoformat(),'finishedUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'output':filename})
+ return result.returncode
+code=run(base+['--list-tests'],name+'-discovery.txt')
+text=(out/(name+'-discovery.txt')).read_text(encoding='utf-8')
+names=[line.strip() for line in text.splitlines() if line.strip().startswith('CanDoItAll.Tests.')]
+if code or len(names)!=expected:
+ print('INVALID DISCOVERY',code,len(names),'expected',expected); print(text[-2000:]); sys.exit(2)
+print('Confirmed discovery',expected,flush=True)
+code=run(base+['--logger','trx;LogFileName='+name+'.trx','--results-directory',str(out)],name+'-result.txt')
+ns={'t':'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+trx=E.parse(out/(name+'.trx'))
+result={'expected':expected,'discovered':names,'commands':records,'counters':trx.find('.//t:Counters',ns).attrib,'cases':[dict(x.attrib) for x in trx.findall('.//t:UnitTestResult',ns)]}
+(out/(name+'-summary.json')).write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')
+print(json.dumps(result['counters'])); print('Exit',code); sys.exit(code)

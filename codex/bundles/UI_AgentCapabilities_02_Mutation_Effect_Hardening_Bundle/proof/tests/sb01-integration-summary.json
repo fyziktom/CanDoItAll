@@ -1,0 +1,164 @@
+{
+  "expected": 7,
+  "discovered": [
+    "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Catalog_commit_then_index_failure_is_verified_without_second_save",
+    "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Concurrency_conflict_does_not_overwrite_remote_assignment",
+    "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Validation_rejection_allows_correction_without_catalog_write",
+    "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Cancellation_before_dispatch_performs_zero_writes",
+    "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Cancellation_after_dispatch_is_not_assumed_rollback",
+    "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Known_commit_with_projection_warning_reconciles_without_second_save(cancellation: False)",
+    "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Known_commit_with_projection_warning_reconciles_without_second_save(cancellation: True)"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilityMutationBoundaryTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-06T20:29:44.764986+00:00",
+      "finishedUtc": "2026-09-06T20:29:46.496929+00:00",
+      "output": "sb01-integration-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilityMutationBoundaryTests",
+        "--logger",
+        "trx;LogFileName=sb01-integration.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\capa02"
+      ],
+      "exit": 1,
+      "startedUtc": "2026-09-06T20:29:46.496929+00:00",
+      "finishedUtc": "2026-09-06T20:30:06.948407+00:00",
+      "output": "sb01-integration-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "7",
+    "executed": "7",
+    "passed": "4",
+    "failed": "3",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "0b6077a0-0435-47df-b2c2-b4e2f3359837",
+      "testId": "11477ee7-fefc-b94e-f3d4-f3e6cb9a43f9",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Cancellation_after_dispatch_is_not_assumed_rollback",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.6956355",
+      "startTime": "2026-09-06T16:29:49.3705131-04:00",
+      "endTime": "2026-09-06T16:29:50.0661858-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0b6077a0-0435-47df-b2c2-b4e2f3359837"
+    },
+    {
+      "executionId": "50d55d72-9529-4e60-a283-9b272f286fb1",
+      "testId": "496ac49e-7124-3ae0-06b1-322dc6146ecd",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Known_commit_with_projection_warning_reconciles_without_second_save(cancellation: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.0971238",
+      "startTime": "2026-09-06T16:30:00.0887978-04:00",
+      "endTime": "2026-09-06T16:30:05.1853318-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "50d55d72-9529-4e60-a283-9b272f286fb1"
+    },
+    {
+      "executionId": "5136a3e0-c1c1-4662-9ee8-7b00a3831e39",
+      "testId": "8f1fd89a-7083-22ab-c6a7-4d62a75d80b8",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Catalog_commit_then_index_failure_is_verified_without_second_save",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.4521842",
+      "startTime": "2026-09-06T16:30:05.7717769-04:00",
+      "endTime": "2026-09-06T16:30:06.2233702-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5136a3e0-c1c1-4662-9ee8-7b00a3831e39"
+    },
+    {
+      "executionId": "333e4c52-3822-459b-9033-90c70d1bd1ba",
+      "testId": "b12dc51c-5838-7521-7bff-9f8fbfb51e17",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Validation_rejection_allows_correction_without_catalog_write",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.5846165",
+      "startTime": "2026-09-06T16:30:05.1861661-04:00",
+      "endTime": "2026-09-06T16:30:05.7707135-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "333e4c52-3822-459b-9033-90c70d1bd1ba"
+    },
+    {
+      "executionId": "59bd486a-8f25-46fc-9c06-3bd4e9ed03e2",
+      "testId": "e08ba971-3912-cff8-304f-0d4cba55bf7a",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Cancellation_before_dispatch_performs_zero_writes",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.2230344",
+      "startTime": "2026-09-06T16:29:48.1310559-04:00",
+      "endTime": "2026-09-06T16:29:49.3623107-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "59bd486a-8f25-46fc-9c06-3bd4e9ed03e2"
+    },
+    {
+      "executionId": "c5cf09cc-169d-4294-b5d6-d83b21ca66bb",
+      "testId": "70c265f7-acda-7e0b-405b-4a0719d9648f",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Concurrency_conflict_does_not_overwrite_remote_assignment",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.5696452",
+      "startTime": "2026-09-06T16:30:06.2242515-04:00",
+      "endTime": "2026-09-06T16:30:06.7934719-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c5cf09cc-169d-4294-b5d6-d83b21ca66bb"
+    },
+    {
+      "executionId": "4246e436-2514-43c9-bee4-6a04ae8a5c70",
+      "testId": "5f536e5c-7e06-8460-158f-60903890ed5a",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.Known_commit_with_projection_warning_reconciles_without_second_save(cancellation: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.0216687",
+      "startTime": "2026-09-06T16:29:50.0708836-04:00",
+      "endTime": "2026-09-06T16:30:00.0878938-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4246e436-2514-43c9-bee4-6a04ae8a5c70"
+    }
+  ]
+}

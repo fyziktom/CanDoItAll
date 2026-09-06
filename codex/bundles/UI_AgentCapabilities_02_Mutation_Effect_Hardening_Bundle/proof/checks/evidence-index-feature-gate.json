@@ -1,0 +1,20 @@
+{
+  "source": "index",
+  "bundles": [
+    {
+      "bundle": "UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle",
+      "manifestEntries": 215,
+      "trackedCoveredFiles": 215,
+      "relativeLinks": 22
+    },
+    {
+      "bundle": "UI_Component_Seams_Shared_Architecture_Bundle",
+      "manifestEntries": 36,
+      "trackedCoveredFiles": 36,
+      "relativeLinks": 39
+    }
+  ],
+  "errors": [],
+  "result": "PASS",
+  "hashContract": "SHA-256 of exact Git blob bytes; historical proof uses -text to preserve original bytes."
+}

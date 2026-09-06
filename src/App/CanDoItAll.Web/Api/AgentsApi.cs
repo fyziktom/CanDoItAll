@@ -385,8 +385,16 @@ internal static class AgentsApi
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
         {
-            await workspaceService.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
-            return Results.Ok(new ApiAck(true));
+            try {
+                await workspaceService.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
+                return Results.Ok(new ApiAck(true));
+            } catch (CapabilityVerificationException exception) {
+                return Results.Json(new CapabilityVerificationApiResponse(agentId, capabilityId,
+                    exception.Outcome.Disposition, exception.Outcome.Receipt?.AttemptId,
+                    exception.Outcome.Receipt?.CheckedAtUtc, AutomaticReplaySafe: false),
+                    statusCode: exception.Outcome.Disposition == CapabilityVerificationDisposition.Rejected
+                        ? StatusCodes.Status400BadRequest : StatusCodes.Status409Conflict);
+            }
         })
         .WithName("VerifyAgentCapability");
 

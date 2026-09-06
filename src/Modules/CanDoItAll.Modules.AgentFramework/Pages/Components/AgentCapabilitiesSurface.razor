@@ -67,6 +67,9 @@
                 </div>
             }
 
+            @if (Snapshot.CuratorLaunchStatus == CapabilityCuratorLaunchStatus.Unconfirmed) {
+                <p role="status" data-testid="agents-capability-curator-unconfirmed">Chat creation is unconfirmed. Inspect managed chats before starting another conversation; this launch will not be replayed.</p>
+            }
             <Cluster Gap="LayoutGap.Small"
                      Wrap="FlexWrap.Wrap"
                      JustifyContent="JustifyContent.End"
@@ -106,6 +109,28 @@
 
     <DetailContent>
         <Stack GapScale="LayoutGap.Large">
+            @if (Snapshot.Operation is { } operation) {
+                <SurfaceCard Soft="true" data-testid="agents-capability-operation">
+                    <Stack GapScale="LayoutGap.Small">
+                        <p role="status">@operation.Message</p>
+                        <Cluster Gap="LayoutGap.Small">
+                            @if (operation.CanVerify || operation.CanReconcile) {
+                                <Button Text="@(operation.CanVerify ? "Verify outcome" : "Retry reconciliation")"
+                                        Click="@(() => Emit(new AgentCapabilitiesIntent.RecoverOperation()))"
+                                        data-testid="agents-capability-recover" />
+                            }
+                            @if (operation.CanRetry) {
+                                <Button Text="Retry same assignment" Click="@(() => Emit(new AgentCapabilitiesIntent.RetryAssignment()))"
+                                        data-testid="agents-capability-retry-assignment" />
+                            }
+                            @if (operation.CanAdopt) {
+                                <Button Text="Adopt current state" Click="@(() => Emit(new AgentCapabilitiesIntent.AdoptCurrent()))"
+                                        data-testid="agents-capability-adopt" />
+                            }
+                        </Cluster>
+                    </Stack>
+                </SurfaceCard>
+            }
             @if (LoadState == AgentCapabilitiesLoadState.Loading) {
                 <Stack data-testid="agents-capability-loading">
                     <EmptyState Eyebrow="Loading capabilities"

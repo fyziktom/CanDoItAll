@@ -1,0 +1,136 @@
+{
+  "expected": 5,
+  "discovered": [
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Preview_receives_owner_cancellation_token",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"tool\")",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"mcp\")",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"skill\")",
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Curator_launch_is_single_flight_across_selection_changes"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilitiesEffectsTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-06T21:01:16.648418+00:00",
+      "finishedUtc": "2026-09-06T21:01:18.131679+00:00",
+      "output": "sb02-red-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilitiesEffectsTests",
+        "--logger",
+        "trx;LogFileName=sb02-red.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\capa02"
+      ],
+      "exit": 1,
+      "startedUtc": "2026-09-06T21:01:18.132679+00:00",
+      "finishedUtc": "2026-09-06T21:01:20.399282+00:00",
+      "output": "sb02-red-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "5",
+    "executed": "5",
+    "passed": "0",
+    "failed": "5",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "b5fccf38-4522-4723-828a-5ed1fbf5d6e6",
+      "testId": "1aaa88a5-70d3-8b39-0c35-dfebb22b26e3",
+      "testName": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"mcp\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0143130",
+      "startTime": "2026-09-06T17:01:20.1998685-04:00",
+      "endTime": "2026-09-06T17:01:20.2142641-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b5fccf38-4522-4723-828a-5ed1fbf5d6e6"
+    },
+    {
+      "executionId": "7523a92e-c75d-40ce-8f50-0f67e365aa64",
+      "testId": "67edef21-5bec-3baa-a16f-e98c6236ec4b",
+      "testName": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"tool\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0168146",
+      "startTime": "2026-09-06T17:01:20.2147442-04:00",
+      "endTime": "2026-09-06T17:01:20.2315974-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7523a92e-c75d-40ce-8f50-0f67e365aa64"
+    },
+    {
+      "executionId": "af25aa01-03e4-47a5-94e4-fd712c9420b0",
+      "testId": "024c3697-5d96-cd51-7558-38300d1d4c98",
+      "testName": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Preview_receives_owner_cancellation_token",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0569987",
+      "startTime": "2026-09-06T17:01:20.1210346-04:00",
+      "endTime": "2026-09-06T17:01:20.1675927-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "af25aa01-03e4-47a5-94e4-fd712c9420b0"
+    },
+    {
+      "executionId": "da4dcd80-7b67-419e-bf81-bfa88f1f5637",
+      "testId": "08fb1535-326b-aa9c-6d70-bdfd10e85ba3",
+      "testName": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_setup_overlay_and_preserves_unrelated_dialog(kind: \"skill\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0313266",
+      "startTime": "2026-09-06T17:01:20.1685761-04:00",
+      "endTime": "2026-09-06T17:01:20.1994100-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "da4dcd80-7b67-419e-bf81-bfa88f1f5637"
+    },
+    {
+      "executionId": "168c0a78-9f81-4cc1-8c51-aa6e10f082af",
+      "testId": "5943a54d-db51-8005-6565-5386912b6154",
+      "testName": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Curator_launch_is_single_flight_across_selection_changes",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.4874993",
+      "startTime": "2026-09-06T17:01:19.6081246-04:00",
+      "endTime": "2026-09-06T17:01:20.1091500-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "168c0a78-9f81-4cc1-8c51-aa6e10f082af"
+    }
+  ]
+}

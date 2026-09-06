@@ -1,0 +1,7 @@
+# Preserved owner scope
+
+The full governing request is preserved in [Capabilities-02 execution input](../../UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/inputs/02-execution-request.txt). This child implements only its NEXT CHILD section after separate authorization. Its input checksum is recorded in the inventory. Read the complete input at SB00; this summary does not override it.
+
+Required: pre-move dependency/direct-watch baseline; move the real service-free rendering boundary into existing UI; move AgentCapabilityList and actual CSS to avoid reverse-reference cycles; update Surface and AgentDetailsDialog; keep host/session/reads/commands/proof/dialogs/chat/persistence in Module/Core; audit pure access enums; extend existing sandbox/query state with capabilities while retaining catalog; cover normal/empty/failure/missing/long-content/kind/proof/filter/draft/mutation/recovery/Curator states; audit Fast roots; measure Parity/Fast direct watch after extraction.
+
+Forbidden: production routing/bookmarkability, visual redesign, Manager, provider history/redesign, Simple Chats preparation or implementation, other editor extraction, sibling edits, generic mutation infrastructure, merge/rebase/squash/history rewrite or cleanup. Source comments and bundle prose remain English. Do not turn the Capabilities-02 isolated browser fixture into the product sandbox or relabel its startup as a watch baseline.

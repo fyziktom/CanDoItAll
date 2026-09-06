@@ -18,3 +18,7 @@ The preserved raw request covers three workstreams; this child owns only its nex
 | C02-12 | Direct builds, failing-first, exact discovery, canonical fixtures, portability/secrets, live siblings and honest retained evidence | each phase/SB03 |
 
 No blanket InvalidOperationException -> safe rejection. No automatic replay of a possibly performed diagnostic or non-idempotent write. No global CloseAll, outbox, universal effect controller, provider-registry redesign or new first-create identity system: assignment edits an existing stable agent ID. Preserve previous provider/publication semantics.
+
+## Current execution request supersedes preparation shorthand
+
+The complete [execution request](inputs/02-execution-request.txt) is governing. All 20 adjudications and 49 required behavioral topics are retained. C02-02 means authoritative-before presentation, not a mutate-and-rollback implementation. C02-05 separates assignment from diagnostics and proof persistence. C02-07/08 are panel scoped; preview is target scoped; unresolved write/proof and launch attempts require circuit retention. Known commit wins over cancellation. No blind write or diagnostic replay. C02-10 now authorizes preparation of Capabilities-03 only after this child closes.

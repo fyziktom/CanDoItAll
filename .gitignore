@@ -123,3 +123,6 @@ src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css
 # Compact capabilities seam proof.
 !codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/
 !codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/**
+
+!codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/**

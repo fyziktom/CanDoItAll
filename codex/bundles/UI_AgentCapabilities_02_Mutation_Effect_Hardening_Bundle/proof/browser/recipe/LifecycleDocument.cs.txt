@@ -1,0 +1,57 @@
+using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
+
+[Route("/fixture/lifecycle")]
+public sealed class LifecycleDocument : ComponentBase {
+    protected override void BuildRenderTree(RenderTreeBuilder builder) {
+        builder.OpenElement(0, "html");
+        builder.OpenElement(1, "head");
+        builder.AddMarkupContent(2, """
+            <meta charset="utf-8"><base href="/">
+            <link rel="stylesheet" href="/_content/CanDoItAll.Components.BaseLib/css/material-symbols.css">
+            <link rel="stylesheet" href="/_content/CanDoItAll.Components.BaseLib/css/output.css">
+            <link rel="stylesheet" href="/css/output.css">
+            <link rel="stylesheet" href="/app.css">
+            <link rel="stylesheet" href="/CanDoItAll.Web.styles.css">
+            <link rel="stylesheet" href="/_content/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.bundle.scp.css">
+            """);
+        builder.CloseElement();
+        builder.OpenElement(3, "body");
+        builder.OpenComponent<LifecycleProbe>(4);
+        builder.AddComponentRenderMode(new InteractiveServerRenderMode(prerender: false));
+        builder.CloseComponent();
+        builder.OpenElement(5, "script");
+        builder.AddAttribute(6, "src", "/_framework/blazor.web.js");
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.CloseElement();
+    }
+}
+
+public sealed class LifecycleProbe : ComponentBase, IDisposable {
+    [Inject] private DialogService Dialogs { get; set; } = default!;
+    [Inject] private FixtureControl Control { get; set; } = default!;
+    private bool visible = true;
+    protected override void OnInitialized() => Control.OpenUnrelated = () => InvokeAsync(OpenUnrelated);
+    private Task OpenUnrelated() => Dialogs.OpenAsync("Independent overlay", _ => builder => {
+        builder.AddContent(0, "This overlay belongs to the fixture, not the capabilities panel.");
+        builder.OpenComponent<Button>(1);
+        builder.AddAttribute(2, "Text", "Remove capabilities panel");
+        builder.AddAttribute(3, "Click", EventCallback.Factory.Create(this, () => visible = false));
+        builder.AddAttribute(4, "data-testid", "fixture-owned-remove");
+        builder.CloseComponent();
+    });
+    protected override void BuildRenderTree(RenderTreeBuilder builder) {
+        if (visible) {
+            builder.OpenComponent<AgentCapabilitiesPanel>(0);
+            builder.AddAttribute(1, "PreferredAgentId", Control.AlphaId);
+            builder.CloseComponent();
+        }
+        builder.OpenComponent<DialogHost>(2);
+        builder.CloseComponent();
+    }
+    public void Dispose() => Control.OpenUnrelated = null;
+}

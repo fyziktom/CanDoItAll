@@ -1,0 +1,80 @@
+{
+  "expected": 1,
+  "discovered": [
+    "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Registered_database_runtime_revision_change_supersedes_inline_proof"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CapabilityProofPublicationIntegrationTests.Registered_database_runtime_revision_change_supersedes_inline_proof",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-06T21:40:22.701981+00:00",
+      "finishedUtc": "2026-09-06T21:40:24.194846+00:00",
+      "output": "sb02-runtime-revision-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CapabilityProofPublicationIntegrationTests.Registered_database_runtime_revision_change_supersedes_inline_proof",
+        "--logger",
+        "trx;LogFileName=sb02-runtime-revision.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\capa02"
+      ],
+      "exit": 1,
+      "startedUtc": "2026-09-06T21:40:24.194846+00:00",
+      "finishedUtc": "2026-09-06T21:40:36.173731+00:00",
+      "output": "sb02-runtime-revision-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "1",
+    "executed": "1",
+    "passed": "0",
+    "failed": "1",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "26767e83-9fc4-4d09-b24a-fbd0046b0d2e",
+      "testId": "688ba48f-c198-19e8-cbe4-a6e0aa4229da",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.Registered_database_runtime_revision_change_supersedes_inline_proof",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.3468585",
+      "startTime": "2026-09-06T17:40:25.6335137-04:00",
+      "endTime": "2026-09-06T17:40:35.9966976-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "26767e83-9fc4-4d09-b24a-fbd0046b0d2e"
+    }
+  ]
+}

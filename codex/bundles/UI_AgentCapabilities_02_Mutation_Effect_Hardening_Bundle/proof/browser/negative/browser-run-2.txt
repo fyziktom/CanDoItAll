@@ -1,0 +1,10 @@
+locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByTestId('fixture-owned-remove') to be visible
+
+    at C:\repositories\CanDoItAll\.mcp-state\capa02\browser-acceptance.cjs:163:55 {
+  log: [
+    "  - waiting for getByTestId('fixture-owned-remove') to be visible"
+  ],
+  name: 'TimeoutError'
+}

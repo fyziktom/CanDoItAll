@@ -1,0 +1,7 @@
+{
+  "command": "git diff --cached --check",
+  "exitCode": 2,
+  "findingLines": 9836,
+  "outsideProof": [],
+  "decision": "Original proof bytes are preserved. CRLF evidence produces whitespace diagnostics under the current Git settings; no whitespace validation setting is changed. This is not a passing whole-diff whitespace check."
+}

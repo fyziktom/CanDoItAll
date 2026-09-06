@@ -1,0 +1,12 @@
+RESULT: FAIL (portability-sensitive executable source changed)
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs [mcp] 0881ed567105e000 count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs [mcp] 0d0df0fc818dd142 count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs [mcp] 821a530e32615663 count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs [mcp] 2d168067c558ffb5 count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs [mcp] a74d09a59c455736 count=1
+ADDED: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs [mcp] da0db2f7aa5202a9 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs [mcp] 4526d22a1e7941d8 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs [mcp] 53e658e761469b7d count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs [mcp] 0fa78932610fee25 count=1
+STALE: src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs [mcp] 5ba1393d8ff02447 count=1
+Review the source change, then refresh the baseline explicitly with --write-baseline.

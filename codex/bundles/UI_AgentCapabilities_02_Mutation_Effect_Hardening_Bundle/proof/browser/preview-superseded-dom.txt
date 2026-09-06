@@ -1,0 +1,229 @@
+apps
+CanDoItAll local delivery workbench
+chevron_right
+dashboard
+folder_open
+forum
+groups
+smart_toy
+account_tree
+account_tree
+monitor_heart
+psychology
+inventory_2
+extension
+library_books
+expand_less
+smart_toy
+Chats
+settings
+Settings
+health_and_safety
+Runtime capabilities
+storage
+Switch Database
+Dashboard
+push_pin
+Agents
+i
+
+AGENTFRAMEWORK
+
+Integrated technical agent runtime
+
+This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.
+
+30 technical agents
+6 providers
+30 bound resources
+127 capabilities
+0 active runs
+0 failed runs
+?
+groups
+GROUPS
+account_tree
+FLOW
+account_tree
+FLOW
+Overview
+Agents30
+Simple Chats
+Providers6
+Request history
+Voice
+Floating chat
+Chat
+Capabilities127
+Governance0
+Diagnostics0
+sync
+CLOUD SYNC
+Agents
+30 AGENT(S)
+
+Select the technical agent whose runtime capabilities you want to inspect, assign, or verify.
+
+expand_more
+support_agent
+Agents
+30
+person
+.NET Application Developer
+43
+person
+.NET QA Review Lead
+29
+person
+.NET Runtime Failure Analyst
+26
+person
+.NET Solution Architect
+21
+person
+Blazor Application Developer
+43
+person
+Business Strategist
+12
+person
+CAPA02 Alpha
+1
+person
+CAPA02 Beta
+0
+person
+Capability Curator Agent
+9
+person
+Code Review Lead
+12
+person
+Delivery Manager
+10
+person
+Delivery QA Observer
+27
+person
+Financial Strategist
+24
+person
+HR Agent
+22
+person
+HR Staffing Manager
+7
+person
+JavaScript Application Developer
+29
+person
+JavaScript QA Review Lead
+17
+person
+JavaScript Solution Architect
+19
+person
+Mail Triage Analyst
+9
+person
+Marketing Specialist
+13
+person
+Portfolio Architect
+22
+person
+Programming Workspace Analyst
+44
+person
+Prompts Curator Agent
+6
+person
+Release Readiness Manager
+11
+person
+Research Deep Dive Analyst
+18
+person
+Scheduler Agent
+4
+person
+Security Reviewer
+16
+person
+Spreadsheet Analyst
+15
+person
+UI Review Lead
+18
+person
+Workflow Curator Agent
+13
+
+CAPABILITY ASSIGNMENT
+
+CAPA02 Beta
+0 attached
+1 shown
+31 skills
+91 tools
+1 MCP servers
+1 verified
+build
+New tool
+hub
+New MCP
+psychology
+New skill
+Access preview
+
+Validate one capability access rule against the selected agent capability set before changing runtime policy templates.
+
+Effect
+Deny
+Allow
+Require
+Scope
+UI preview
+Agent default
+Workflow definition
+Workflow node
+Process definition
+Process step
+Selector
+All
+Kind
+Capability key
+Tag
+Operation classification
+Runtime tool name
+MCP server key
+MCP tool name
+Implementation key
+Value
+MCP server key
+Reason
+policy
+Preview access
+All
+Assigned
+Not Assigned
+All
+MCP
+Skill
+Tool
+Reset
+1 matching capability(s)
+Skill
+Verified
+Available
+CAPA02 Inline inspection
+
+Changed while a controlled inline diagnostic was held.
+
+inline:capa02-browser
+
+capa02-fixture
+Assign
+Verify
+Details
+Inspection. No model configured.

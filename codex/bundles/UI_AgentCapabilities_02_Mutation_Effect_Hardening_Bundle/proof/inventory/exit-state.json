@@ -1,0 +1,47 @@
+{
+  "utc": "2026-09-06T22:43:39.656996+00:00",
+  "branch": "components-decoupling",
+  "head": "d066d367d6abc147e046bee1308ea5f702e65cfd",
+  "remote": "d066d367d6abc147e046bee1308ea5f702e65cfd\trefs/heads/components-decoupling",
+  "siblings": [
+    {
+      "repository": "CanDoItAll.Components",
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "status": ""
+    },
+    {
+      "repository": "CanDoItAll.FileTools",
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "status": ""
+    }
+  ],
+  "proposedSource": [
+    "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+    "src/App/CanDoItAll.Web/Api/CapabilityVerificationApiResponse.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.razor.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityAssignmentAttempt.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityOperations.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilityCuratorLaunch.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesEffectsTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesHostTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesMutationTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesReadLifecycleTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesRecoveryEffectsTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentPanelSelectionFailClosedTests.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/AgentCapabilityMutationBoundaryTests.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/CapabilityProofPublicationIntegrationTests.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationApiIntegrationTests.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationRaceIntegrationTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilityAssignmentTests.cs",
+    "tools/Validation/Portability/portability-risk-baseline.json"
+  ]
+}

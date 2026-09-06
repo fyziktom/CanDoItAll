@@ -10,3 +10,5 @@
 *.nupkg binary
 *.snupkg binary
 *.xlsx binary
+
+codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/** -text

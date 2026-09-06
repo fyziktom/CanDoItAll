@@ -101,3 +101,5 @@ Follow-up: [explicit assets and direct observation](reviews/08-explicit-assets-a
 [Explicit acknowledgement and retained evidence](reviews/09-explicit-acknowledgement-and-retained-evidence.md).
 
 [Second stateful rendering archetype](reviews/10-second-archetype-state-read-seam.md).
+
+[Authoritative mutations and effect lifetimes](reviews/11-authoritative-mutations-and-effect-lifetimes.md).

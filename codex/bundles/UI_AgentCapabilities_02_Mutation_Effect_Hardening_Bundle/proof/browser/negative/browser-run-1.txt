@@ -1,0 +1,20 @@
+locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByTestId('agents-capability-search')
+    - locator resolved to <input value="" placeholder="Search capabilities" data-testid="agents-capability-search" class="cda-input agent-capabilities-panel__filter-input"/>
+    - fill("CAPA02 Inline inspection")
+  - attempting fill action
+    - waiting for element to be visible, enabled and editable
+  - element was detached from the DOM, retrying
+
+    at C:\repositories\CanDoItAll\.mcp-state\capa02\browser-acceptance.cjs:47:24 {
+  log: [
+    "  - waiting for getByTestId('agents-capability-search')",
+    '    - locator resolved to <input value="" placeholder="Search capabilities" data-testid="agents-capability-search" class="cda-input agent-capabilities-panel__filter-input"/>',
+    '    - fill("CAPA02 Inline inspection")',
+    '  - attempting fill action',
+    '    - waiting for element to be visible, enabled and editable',
+    '  - element was detached from the DOM, retrying'
+  ],
+  name: 'TimeoutError'
+}

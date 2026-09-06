@@ -102,3 +102,7 @@ retirement and deletion differ. Never recycle public IDs or silently remove audi
 Bind a known first-save identity before any secondary read. A failed refresh cannot turn
 a saved object back into a New draft. Reconciliation retries projection/read work without
 replaying the authoritative write, preserving later edits while updating identity/version.
+
+## Diagnostic publication and semantic effect ownership
+
+Controlled mutation presentation, exact canonical recovery, diagnostic input fencing and target/panel/circuit lifetime distinctions are now proven by the [mutation/effect feedback](../reviews/11-authoritative-mutations-and-effect-lifetimes.md). Apply those rules at the actual producer boundary. A view generation alone cannot resolve an in-flight attempt, cancellation after dispatch cannot prove rollback, and a successful diagnostic does not prove its evidence was persisted. Cross-authority revision checks must state their real consistency limit.

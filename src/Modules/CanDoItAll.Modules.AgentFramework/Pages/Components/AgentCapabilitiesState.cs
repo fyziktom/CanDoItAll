@@ -42,10 +42,12 @@ public sealed record AgentCapabilitiesSnapshot(
         CapabilityCuratorAgentIdentity.DefaultDisplayName, CapabilityCuratorAgentIdentity.DefaultAvatarImageUrl, false));
 
     public string? LoadError { get; init; }
+    public AgentCapabilityOperationState? Operation { get; init; }
     public AgentCapabilityPreview? Preview { get; init; }
     public bool IsBusy { get; init; }
     public bool IsAccessPreviewBusy { get; init; }
     public bool IsOpeningCurator { get; init; }
+    public CapabilityCuratorLaunchStatus CuratorLaunchStatus { get; init; }
     public bool IsOpeningWizard { get; init; }
 }
 
@@ -60,4 +62,7 @@ public abstract record AgentCapabilitiesIntent {
     public sealed record PreviewAccess(AgentCapabilityAccessDraft Draft) : AgentCapabilitiesIntent;
     public sealed record OpenCurator : AgentCapabilitiesIntent;
     public sealed record RetryLoad : AgentCapabilitiesIntent;
+    public sealed record RecoverOperation : AgentCapabilitiesIntent;
+    public sealed record RetryAssignment : AgentCapabilitiesIntent;
+    public sealed record AdoptCurrent : AgentCapabilitiesIntent;
 }

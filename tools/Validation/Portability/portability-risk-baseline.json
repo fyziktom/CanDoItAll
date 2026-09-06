@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-06T18:35:22.611026+00:00",
+  "generated_utc": "2026-09-06T22:18:02.823452+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14300,
+  "allowance_count": 14302,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -42760,6 +42760,18 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
       "category": "mcp",
+      "source_fingerprint": "0881ed567105e000c380aac4e5fa889a147eb69c7bf61bcce2d61b9523a2c228",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+      "category": "mcp",
+      "source_fingerprint": "0d0df0fc818dd1428b2817529f1fd5f8143629661aa125c675494293fa34dde4",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+      "category": "mcp",
       "source_fingerprint": "21ab64505439e55f4435942496365d5f3e0f292a417731a559c846f3f5dc52bc",
       "count": 1
     },
@@ -42784,18 +42796,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
       "category": "mcp",
-      "source_fingerprint": "4526d22a1e7941d8d539b79eae4eaf7dddf5ec585e20c07c07cab241dee59b51",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "53e658e761469b7d035f52739c3e4062272d2f571ab9bc282ab476cd91ff8a3e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
-      "category": "mcp",
       "source_fingerprint": "5d44260eb199d7d4bb470212260233311edd75687e89869214670765511ee00f",
       "count": 1
     },
@@ -42803,6 +42803,12 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
       "category": "mcp",
       "source_fingerprint": "78147e9248233d765b2be325e945f796ef7dd120bca9900d119f9071d495cd2e",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+      "category": "mcp",
+      "source_fingerprint": "821a530e326156639533470b41f547f8403721ac313a6a262fcdbf2703cc023a",
       "count": 1
     },
     {
@@ -42868,7 +42874,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
       "category": "mcp",
-      "source_fingerprint": "0fa78932610fee2556cb0e787a1cde4e6a502d95aacaa56831e09fbca2522c07",
+      "source_fingerprint": "2d168067c558ffb52110482cc79126e3c0493b75d902ccb09e513158af8fa42e",
       "count": 1
     },
     {
@@ -42886,13 +42892,13 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
       "category": "mcp",
-      "source_fingerprint": "5ba1393d8ff0244738c1d7bcee3c2c1bf031b2c65b4e020d278486977ddcecf7",
+      "source_fingerprint": "60e243c0095e78e28a2ac9eeccb0ee3281168f81991371bdc17ff38dae574b78",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
       "category": "mcp",
-      "source_fingerprint": "60e243c0095e78e28a2ac9eeccb0ee3281168f81991371bdc17ff38dae574b78",
+      "source_fingerprint": "a74d09a59c455736b74c4d6f7805cb83b767feee86b8666bef3a9946a8dc6195",
       "count": 1
     },
     {
@@ -42905,6 +42911,12 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
       "category": "mcp",
       "source_fingerprint": "c973740facc5f5a1a077b646e3d77262b02fd27860167de8cd000154258266db",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
+      "category": "mcp",
+      "source_fingerprint": "da0db2f7aa5202a98e1d0b005ef3a9b8edf64638c6428818b8e46a9a2487c04d",
       "count": 1
     },
     {

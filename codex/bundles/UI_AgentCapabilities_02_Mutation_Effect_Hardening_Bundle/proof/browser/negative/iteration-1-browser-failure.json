@@ -1,0 +1,5 @@
+{
+  "steps": [],
+  "error": "locator.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('agents-capability-search')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" placeholder=\"Search capabilities\" data-testid=\"agents-capability-search\" class=\"cda-input agent-capabilities-panel__filter-input\"/>\u001b[22m\n\u001b[2m    - fill(\"CAPA02 Inline inspection\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n",
+  "pageErrors": []
+}

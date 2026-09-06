@@ -1,0 +1,108 @@
+{
+  "expected": 3,
+  "discovered": [
+    "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests.Verification_failure_preserves_target_identity_and_blocks_automatic_diagnostic_replay(disposition: Superseded)",
+    "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests.Verification_failure_preserves_target_identity_and_blocks_automatic_diagnostic_replay(disposition: Unconfirmed)",
+    "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests.Verification_success_retains_existing_ack_contract"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CapabilityVerificationApiIntegrationTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-06T21:16:07.316282+00:00",
+      "finishedUtc": "2026-09-06T21:16:08.781574+00:00",
+      "output": "sb02-api-red-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CapabilityVerificationApiIntegrationTests",
+        "--logger",
+        "trx;LogFileName=sb02-api-red.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\capa02"
+      ],
+      "exit": 1,
+      "startedUtc": "2026-09-06T21:16:08.781574+00:00",
+      "finishedUtc": "2026-09-06T21:16:28.823359+00:00",
+      "output": "sb02-api-red-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "3",
+    "executed": "3",
+    "passed": "1",
+    "failed": "2",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "c1242aa9-9768-4395-8ebe-55679118ff3c",
+      "testId": "f4222ee2-40de-abbe-cffc-6d43de8a8390",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests.Verification_failure_preserves_target_identity_and_blocks_automatic_diagnostic_replay(disposition: Unconfirmed)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:09.4302946",
+      "startTime": "2026-09-06T17:16:10.1913431-04:00",
+      "endTime": "2026-09-06T17:16:19.6318331-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c1242aa9-9768-4395-8ebe-55679118ff3c"
+    },
+    {
+      "executionId": "feca3248-2318-47da-99f3-389e8f6df2f5",
+      "testId": "f6b2bbd5-f6e9-bbe0-35c7-c50b8ea74d69",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests.Verification_success_retains_existing_ack_contract",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.2560596",
+      "startTime": "2026-09-06T17:16:24.3892268-04:00",
+      "endTime": "2026-09-06T17:16:28.6436071-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "feca3248-2318-47da-99f3-389e8f6df2f5"
+    },
+    {
+      "executionId": "7eda5980-0995-4e73-b951-640a00ed7735",
+      "testId": "3f75ad7b-57ad-b493-110f-22b755540198",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests.Verification_failure_preserves_target_identity_and_blocks_automatic_diagnostic_replay(disposition: Superseded)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.7531032",
+      "startTime": "2026-09-06T17:16:19.6481267-04:00",
+      "endTime": "2026-09-06T17:16:24.3860309-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7eda5980-0995-4e73-b951-640a00ed7735"
+    }
+  ]
+}

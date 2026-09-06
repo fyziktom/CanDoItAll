@@ -1,0 +1,80 @@
+{
+  "expected": 1,
+  "discovered": [
+    "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_details_overlay_and_preserves_unrelated_dialog"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_details_overlay_and_preserves_unrelated_dialog",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-06T21:46:16.318866+00:00",
+      "finishedUtc": "2026-09-06T21:46:17.838018+00:00",
+      "output": "sb02-details-ownership-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_details_overlay_and_preserves_unrelated_dialog",
+        "--logger",
+        "trx;LogFileName=sb02-details-ownership.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\capa02"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-06T21:46:17.838018+00:00",
+      "finishedUtc": "2026-09-06T21:46:19.851505+00:00",
+      "output": "sb02-details-ownership-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "1",
+    "executed": "1",
+    "passed": "1",
+    "failed": "0",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "0119b92f-bd24-4970-9c16-474d3f700612",
+      "testId": "87841ad4-f6ef-4307-e16f-7b291a7270ed",
+      "testName": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesEffectsTests.Panel_disposal_closes_owned_details_overlay_and_preserves_unrelated_dialog",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.4384700",
+      "startTime": "2026-09-06T17:46:19.2524690-04:00",
+      "endTime": "2026-09-06T17:46:19.6988399-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0119b92f-bd24-4970-9c16-474d3f700612"
+    }
+  ]
+}
