@@ -1,0 +1,50 @@
+{
+  "suite": "Integration",
+  "expectedDiscovery": 53,
+  "commands": [
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.SharedProviderSourceSyncIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.",
+        "/m:1",
+        "--list-tests"
+      ],
+      "cwd": ".",
+      "startUtc": "2026-09-06T16:38:36.201784+00:00",
+      "endUtc": "2026-09-06T16:38:37.697336+00:00",
+      "exitCode": 0,
+      "artifact": "owning-list-Integration.txt"
+    },
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.SharedProviderSourceSyncIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=owning-Integration.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\p02f"
+      ],
+      "cwd": ".",
+      "startUtc": "2026-09-06T16:38:37.697336+00:00",
+      "endUtc": "2026-09-06T16:39:36.949249+00:00",
+      "exitCode": 0,
+      "artifact": "owning-test-Integration.txt"
+    }
+  ],
+  "actualDiscovery": 53
+}

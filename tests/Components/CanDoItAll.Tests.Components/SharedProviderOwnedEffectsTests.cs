@@ -65,7 +65,10 @@ public sealed class SharedProviderOwnedEffectsTests {
         var unrelated = harness.Context.Render<Dialog>(p => p.Add(x => x.IsOpen, true).Add(x => x.TestId, "unrelated-dialog"));
         var cut = harness.Context.Render<SharedProviderSourcesDialog>(p => p
             .Add(x => x.Secrets, [new SecretListItem(proxy.SecretId, "Fixture credential", SecretKind.Token, "workspace", DateTimeOffset.UtcNow)])
-            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => changes.Add(delivery.Change)));
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => {
+                changes.Add(delivery.Change);
+                return Task.CompletedTask;
+            })));
         Task running;
         if (action == SourceAction.Save) {
             await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
@@ -100,7 +103,10 @@ public sealed class SharedProviderOwnedEffectsTests {
         var changes = new List<SharedProviderChange>();
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, first)
-            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => changes.Add(delivery.Change)));
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => {
+                changes.Add(delivery.Change);
+                return Task.CompletedTask;
+            })));
         var operation = cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         cut.WaitForAssertion(() => Assert.Equal(first, proxy.WrittenId));
         cut.Render(p => p.Add(x => x.ProviderProfileId, second));
@@ -126,7 +132,10 @@ public sealed class SharedProviderOwnedEffectsTests {
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         var id = Guid.NewGuid();
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, id)
-            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => changes.Add(delivery.Change)));
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => {
+                changes.Add(delivery.Change);
+                return Task.CompletedTask;
+            })));
         var operation = cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         cut.WaitForAssertion(() => Assert.Equal(id, proxy.WrittenId));
         await cut.InvokeAsync(() => cut.Instance.Dispose());

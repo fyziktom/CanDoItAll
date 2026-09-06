@@ -1,0 +1,7 @@
+# H00 retention review
+
+The failing-first index validator reported 160 failures on the unmodified index: ignored historical proof and working-file/Git line-ending checksum differences. After precise bundle exceptions and byte-preserving proof attributes, both predecessors and the new provider follow-up passed with zero missing entries, checksum differences, or unresolved relative Markdown links. Every original predecessor artifact survived and matched its entry manifest. Original entry manifests are preserved under inventory.
+
+The retained predecessor proof sets contain 28 provider files (1,328,218 bytes) and 113 catalog files (3,870,546 bytes). This bounded set includes compact summaries, compressed original execution/portability receipts, run ledgers and referenced images. No raw transient workspace tree was added. Existing historical execution values and exclusions were not changed. Maintained documentation is normalized to Git LF; original proof keeps its exact bytes. Source hashes in historical receipts, and the Providers02F validation receipt, explicitly describe working-file bytes at execution; artifact manifests describe Git blob bytes.
+
+The complete proposed Git text scan found no added or removed secret matches (245 existing matches, 6,096 readable text files at this checkpoint). Historical binary proof is not claimed as covered by that text scan; compressed text receives a separate artifact audit at closure. The ordinary evidence checkpoint commit/push is required before H02 closes. No merge or history operation is part of this work.

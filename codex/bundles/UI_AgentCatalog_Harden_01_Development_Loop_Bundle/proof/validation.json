@@ -1,0 +1,95 @@
+{
+  "tests": [
+    {
+      "receipt": "final-catalog-unit.trx",
+      "counters": {
+        "total": "5",
+        "executed": "5",
+        "passed": "5",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "catalog-components.trx",
+      "counters": {
+        "total": "30",
+        "executed": "30",
+        "passed": "30",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    }
+  ],
+  "directReleaseBuilds": [
+    "CanDoItAll.AgentFramework.UI",
+    "CanDoItAll.AgentFramework.UiSandbox (Parity)",
+    "CanDoItAll.AgentFramework.UiSandbox (Fast)",
+    "CanDoItAll.Tests.Unit"
+  ],
+  "consumerBuilds": "Fresh ProviderManagement/module/Web Release builds from the prerequisite remain valid; no dependent production source changes after that checkpoint. Catalog source undo hashes match the entry boundary.",
+  "negativeBuilds": [
+    "Fast succeeds with production CSS absent",
+    "Missing Fast CSS fails explicitly"
+  ],
+  "browserModes": [
+    "parity-acceptance-2026-09-06T13-31-25-331Z",
+    "fast-acceptance-2026-09-06T13-31-08-341Z"
+  ],
+  "primaryWarmRuns": [
+    "fullapp-warm-2026-09-06T14-08-54-847Z",
+    "parity-warm-2026-09-06T14-12-43-509Z",
+    "fast-warm-2026-09-06T14-13-57-238Z"
+  ],
+  "primaryWarmCycles": 27,
+  "sourceMovement": false,
+  "staticGate": {
+    "result": "PASS",
+    "scanFiles": 5814,
+    "scanFindings": 34471,
+    "reviewedProtectedFindings": 14297,
+    "baselineReview": "reviews/portability-review.md",
+    "finalEnforcementWithoutWrite": true,
+    "scannerSelftests": [
+      6,
+      4
+    ],
+    "rawArtifactsAllText": {
+      "textFiles": 178,
+      "binaryImages": 31,
+      "findings": 0
+    },
+    "documentation": "Only 118 pre-existing tracked logs; byte-identical to HEAD; no new debt",
+    "sourceSecrets": {
+      "textFiles": 6008,
+      "existingMatches": 245,
+      "added": 0,
+      "removed": 0,
+      "receipt": "proof/source-secret-scan-final.json"
+    }
+  },
+  "architectureSnapshot": "snap-20260906141738-a1331b34",
+  "closureUtc": "2026-09-06T14:36:28.418346+00:00"
+}

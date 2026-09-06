@@ -1,0 +1,50 @@
+{
+  "suite": "Components",
+  "expectedDiscovery": 81,
+  "commands": [
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderOwnedEffectsTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryReconstructionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderDeliveryHardeningTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryAcknowledgementTests.",
+        "/m:1",
+        "--list-tests"
+      ],
+      "cwd": ".",
+      "startUtc": "2026-09-06T16:35:30.272345+00:00",
+      "endUtc": "2026-09-06T16:35:31.804527+00:00",
+      "exitCode": 0,
+      "artifact": "owning-list-Components.txt"
+    },
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderOwnedEffectsTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryReconstructionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderDeliveryHardeningTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryAcknowledgementTests.",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=owning-Components.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\p02f"
+      ],
+      "cwd": ".",
+      "startUtc": "2026-09-06T16:35:31.804527+00:00",
+      "endUtc": "2026-09-06T16:38:36.200782+00:00",
+      "exitCode": 0,
+      "artifact": "owning-test-Components.txt"
+    }
+  ],
+  "actualDiscovery": 81
+}

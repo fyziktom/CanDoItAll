@@ -1,0 +1,87 @@
+{
+  "protocol": "direct-local-v1",
+  "hosts": [
+    "fullapp",
+    "parity",
+    "fast"
+  ],
+  "successfulRepetitionsPerEdit": 3,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "timeoutMs": 60000,
+  "readyTimeoutMs": 300000,
+  "clock": "process.hrtime.bigint, source fsync completed -> local browser predicate and two animation frames",
+  "edits": [
+    {
+      "id": "razor-heading",
+      "category": "Razor",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
+      "old": ">Agent cards</h2>",
+      "replacement": ">Agent cards - direct probe</h2>",
+      "selector": ".agent-catalog-panel__heading h2",
+      "before": "Agent cards",
+      "after": "Agent cards - direct probe",
+      "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+    },
+    {
+      "id": "csharp-team-title",
+      "category": "CSharp",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
+      "old": "SelectedTeam is null ? \"All agents\" : SelectedTeam.Name",
+      "replacement": "SelectedTeam is null ? \"All catalog agents\" : SelectedTeam.Name",
+      "selector": ".agent-catalog-panel__section-title",
+      "before": "All agents",
+      "after": "All catalog agents",
+      "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517"
+    },
+    {
+      "id": "css-toolbar",
+      "category": "CSS",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css",
+      "old": "gap: 0.75rem 1rem;",
+      "replacement": "gap: 0.875rem 1.125rem;",
+      "selector": ".agent-catalog-panel__toolbar",
+      "property": "rowGap",
+      "before": 12,
+      "after": 14,
+      "sourceSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+    }
+  ],
+  "classification": [
+    "hot-reload",
+    "browser-reload",
+    "restart",
+    "timeout",
+    "missing-sdk-event",
+    "fallback",
+    "harness-failure"
+  ],
+  "sourceRestoration": "Refuse concurrent file changes; byte-for-byte fsync undo, visible baseline and final SHA256.",
+  "css": "Real isolated catalog CSS edit with the appropriate Tailwind companion in each lane; not a Tailwind-only compile benchmark.",
+  "oldProof": "Historical SB03 unchanged; no numerical comparison to its managed observation loop.",
+  "environment": {
+    "sdk": "10.0.303",
+    "node": "v24.19.0",
+    "playwright": "1.61.1",
+    "browser": "149.0.7827.55",
+    "platform": "win32",
+    "refresh": "enabled in every lane",
+    "laneOrder": [
+      "fullapp",
+      "parity",
+      "fast"
+    ],
+    "watchOptions": [
+      "--verbose",
+      "--non-interactive",
+      "--property:CatalogAssetMode=<mode>"
+    ],
+    "productionThemeSha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32",
+    "fastThemeSha256": "467c0efc54aa3d07a7abe5fd88f2c49d0293421a4dcd25f5d91d51bf5a34f5ff",
+    "fixtureSha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd"
+  },
+  "frozenUtc": "2026-09-06T13:33:06.858931+00:00",
+  "harnessSha256": "bea51ec12a0d5f4fad3687f05f450e30bddc21bf974f380e6cb2edbba02f2464"
+}

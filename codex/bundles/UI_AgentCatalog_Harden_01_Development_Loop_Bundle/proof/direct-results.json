@@ -1,0 +1,332 @@
+{
+  "protocol": "direct-local-v7-confirmed-final-visible",
+  "runs": [
+    {
+      "host": "fullapp",
+      "runId": "fullapp-warm-2026-09-06T14-08-54-847Z",
+      "planSha256": "a1a9ee307ad20116ea62c7892a96d1c58ed2cb904deb3974ef28333553ca3a41",
+      "harnessSha256": "ab2c3e4b7913def496d2e87beba515df67b9effd84bd3400e9512c049615aaa4"
+    },
+    {
+      "host": "parity",
+      "runId": "parity-warm-2026-09-06T14-12-43-509Z",
+      "planSha256": "a1a9ee307ad20116ea62c7892a96d1c58ed2cb904deb3974ef28333553ca3a41",
+      "harnessSha256": "ab2c3e4b7913def496d2e87beba515df67b9effd84bd3400e9512c049615aaa4"
+    },
+    {
+      "host": "fast",
+      "runId": "fast-warm-2026-09-06T14-13-57-238Z",
+      "planSha256": "a1a9ee307ad20116ea62c7892a96d1c58ed2cb904deb3974ef28333553ca3a41",
+      "harnessSha256": "ab2c3e4b7913def496d2e87beba515df67b9effd84bd3400e9512c049615aaa4"
+    }
+  ],
+  "rows": [
+    {
+      "host": "fullapp",
+      "edit": "Razor",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 0,
+        "browser-reload": 3,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 2918,
+        "max": 4220,
+        "range": 1302,
+        "median": 3291
+      },
+      "visibleMs": {
+        "min": 2994.9767,
+        "max": 4362.3184,
+        "range": 1367.3417,
+        "median": 3393.2657
+      },
+      "firstVisibleMs": {
+        "min": 1496.1295,
+        "max": 2779.3473,
+        "range": 1283.2178,
+        "median": 1525.8158
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+    },
+    {
+      "host": "fullapp",
+      "edit": "CSharp",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 0,
+        "browser-reload": 3,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 1497,
+        "max": 1939,
+        "range": 442,
+        "median": 1518
+      },
+      "visibleMs": {
+        "min": 1616.3081,
+        "max": 2046.3185,
+        "range": 430.0104000000001,
+        "median": 1646.4645
+      },
+      "firstVisibleMs": {
+        "min": 128.8922,
+        "max": 297.0375,
+        "range": 168.14530000000002,
+        "median": 166.3004
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517"
+    },
+    {
+      "host": "fullapp",
+      "edit": "CSS",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 3,
+        "browser-reload": 0,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 6584,
+        "max": 8662,
+        "range": 2078,
+        "median": 6770
+      },
+      "visibleMs": {
+        "min": 6929.4056,
+        "max": 9013.3879,
+        "range": 2083.9822999999997,
+        "median": 7076.4518
+      },
+      "firstVisibleMs": {
+        "min": 6895.7934,
+        "max": 8980.7642,
+        "range": 2084.9708,
+        "median": 7043.4443
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+    },
+    {
+      "host": "parity",
+      "edit": "Razor",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 0,
+        "browser-reload": 3,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 659,
+        "max": 2424,
+        "range": 1765,
+        "median": 839
+      },
+      "visibleMs": {
+        "min": 817.1439,
+        "max": 2567.2873,
+        "range": 1750.1434,
+        "median": 962.0517
+      },
+      "firstVisibleMs": {
+        "min": 783.3396,
+        "max": 2532.1059,
+        "range": 1748.7663,
+        "median": 929.5852
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+    },
+    {
+      "host": "parity",
+      "edit": "CSharp",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 0,
+        "browser-reload": 3,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 82,
+        "max": 166,
+        "range": 84,
+        "median": 97
+      },
+      "visibleMs": {
+        "min": 177.5038,
+        "max": 242.4815,
+        "range": 64.9777,
+        "median": 238.3896
+      },
+      "firstVisibleMs": {
+        "min": 143.4509,
+        "max": 210.3647,
+        "range": 66.91380000000001,
+        "median": 204.4912
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517"
+    },
+    {
+      "host": "parity",
+      "edit": "CSS",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 3,
+        "browser-reload": 0,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 951,
+        "max": 1245,
+        "range": 294,
+        "median": 963
+      },
+      "visibleMs": {
+        "min": 1106.0386,
+        "max": 1507.2291,
+        "range": 401.19049999999993,
+        "median": 1202.1527
+      },
+      "firstVisibleMs": {
+        "min": 1072.965,
+        "max": 1478.2093,
+        "range": 405.24430000000007,
+        "median": 1169.9141
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+    },
+    {
+      "host": "fast",
+      "edit": "Razor",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 0,
+        "browser-reload": 3,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 522,
+        "max": 2053,
+        "range": 1531,
+        "median": 696
+      },
+      "visibleMs": {
+        "min": 599.8093,
+        "max": 2186.9096,
+        "range": 1587.1003,
+        "median": 787.8533
+      },
+      "firstVisibleMs": {
+        "min": 566.1356,
+        "max": 2153.5631,
+        "range": 1587.4274999999998,
+        "median": 754.6813
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897"
+    },
+    {
+      "host": "fast",
+      "edit": "CSharp",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 0,
+        "browser-reload": 3,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 71,
+        "max": 171,
+        "range": 100,
+        "median": 88
+      },
+      "visibleMs": {
+        "min": 168.1048,
+        "max": 234.3133,
+        "range": 66.20849999999999,
+        "median": 171.4441
+      },
+      "firstVisibleMs": {
+        "min": 133.154,
+        "max": 200.0894,
+        "range": 66.93540000000002,
+        "median": 137.967
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517"
+    },
+    {
+      "host": "fast",
+      "edit": "CSS",
+      "successes": 3,
+      "classifications": {
+        "hot-reload": 3,
+        "browser-reload": 0,
+        "restart": 0,
+        "timeout": 0,
+        "missing-sdk-event": 0,
+        "fallback": 0,
+        "harness-failure": 0
+      },
+      "sdkMs": {
+        "min": 812,
+        "max": 1114,
+        "range": 302,
+        "median": 814
+      },
+      "visibleMs": {
+        "min": 1017.2661,
+        "max": 1332.1501,
+        "range": 314.884,
+        "median": 1029.4388
+      },
+      "firstVisibleMs": {
+        "min": 987.7817,
+        "max": 1299.2266,
+        "range": 311.44489999999996,
+        "median": 995.5144
+      },
+      "databaseConfirmations": 0,
+      "sourceSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478"
+    }
+  ],
+  "primarySuccesses": 27
+}

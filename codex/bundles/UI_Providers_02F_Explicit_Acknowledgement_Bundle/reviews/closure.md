@@ -1,0 +1,11 @@
+# Providers-02F closure
+
+Closed: PASS. F00 failing-first, F01 two-owner repair and F02 affected validation executed in order. [All 22 entry adjudications](adjudication.md) remain visible; findings 1-8 are owned by this provider child, 9-16 proceed to CatalogHarden02, 17-22 proceed to Capabilities01 after both prerequisite closures.
+
+Receiver acknowledgement is required. Callback return without ReconcileAsync cannot release an attempt. A failed callback remains pending. Completed receiver work followed by sender failure/teardown remains acknowledged in the circuit; a valid later owner finishes cleanup without calling the receiver again. Concurrent ReconcileAsync callers share the same task and outcome; successful completion never repeats, failed/canceled work permits explicit retry. No thread lock crosses await and no disposable synchronizer or general event framework was added.
+
+Fresh exact discovery and passes: 121 Unit, 81 Components, 53 Integration/API; 255 total, zero failed/skipped. Original red executions: 4/12 Unit failed and 2/2 Components failed before production edits. Real AgentProviderProfilesPanel callback failure/retry preserves unsaved draft/raw text/EditContext and performs one source operation. Direct Release module and Web, plus all three test assemblies pass. Exact filters, result names, counters, commands and original compressed outputs are in [validation](../evidence/validation.json) and [owning plan](../plan/owning.json).
+
+Full proposed-source portability passes unchanged 14,297-entry baseline; 6+4 tool tests pass. Complete proposed Git text adds no secret matches. Documentation validator still reports the same 118 historical tracked logs; no added log or changed log content. Architecture and every producer/receiver audit pass. No browser rerun was needed for this two-file contract correction: public rendered owner/callback paths supply the required UI regression proof; prior browser proof is historical.
+
+Local/remote entry: components-decoupling at 796b3dd71fdf4db8a2d236747c63d5fdecdcdbc3. Live sibling revisions and production CSS hashes remain unchanged. Recovery remains circuit scoped; no distributed durable receipt or mutation replay. Provider closure authorizes CatalogHarden02 now, not Capabilities production before the catalog gate.

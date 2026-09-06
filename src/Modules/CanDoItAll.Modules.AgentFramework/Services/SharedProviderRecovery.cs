@@ -129,10 +129,9 @@ public sealed class SharedProviderRecovery {
                 await callback(delivery);
             }
             lock (gate) {
-                if (!isCurrent() || deliveries.GetValueOrDefault(attemptId) != delivery) {
+                if (!delivery.IsAcknowledged || !isCurrent() || deliveries.GetValueOrDefault(attemptId) != delivery) {
                     return SharedProviderDeliveryDisposition.Pending;
                 }
-                delivery.Acknowledge();
                 deliveries.Remove(attemptId);
                 complete();
                 return SharedProviderDeliveryDisposition.Acknowledged;

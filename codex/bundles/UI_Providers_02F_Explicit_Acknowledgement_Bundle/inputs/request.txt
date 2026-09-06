@@ -1,0 +1,977 @@
+You are Codex GPT-6 Astra running at xhigh reasoning effort.
+
+Act as a senior .NET 10 / Blazor architect, asynchronous-state reviewer,
+test-governance reviewer, and developer-experience engineer.
+
+Repository:
+    fyziktom/CanDoItAll
+
+Branch:
+    components-decoupling
+
+The remotely observed branch head at prompt preparation time was:
+
+    796b3dd71fdf4db8a2d236747c63d5fdecdcdbc3
+    providers phase4 and capabilities
+
+This is an observation, not a pin.
+
+Rediscover the actual local branch, remote branch, HEAD, working-tree status,
+live sibling revisions, generated asset state, and ignored proof state before
+editing. Do not reset, clean, overwrite, or discard unrelated work.
+
+Do not merge, rebase, squash, rewrite history, or perform branch cleanup.
+
+All source-code comments and bundle documentation must be in English.
+
+======================================================================
+MISSION AND AUTHORIZATION
+======================================================================
+
+This prompt authorizes preparation and implementation of three strictly
+ordered workstreams:
+
+1. CDA-UI-SEAMS-PROVIDERS-02F
+   Explicit receiver acknowledgement and delivery-contract hardening.
+
+2. CDA-UI-SEAMS-CATALOG-HARDEN-02
+   Committed-evidence integrity, browser-refresh investigation, and
+   reload-resilient sandbox context.
+
+3. CDA-UI-SEAMS-AGENT-CAPABILITIES-01
+   AgentCapabilities state/read and controlled-rendering seam, in place.
+
+Workstream 1 must close before Workstream 2 production or bundle amendments
+are considered closed.
+
+Workstreams 1 and 2 must both close before Workstream 3 production changes
+begin.
+
+Do not implement AGENT-CAPABILITIES-02 in this run. After
+AGENT-CAPABILITIES-01 closure, prepare AGENT-CAPABILITIES-02 as a separate
+next-child bundle only.
+
+Suggested bundle locations and references:
+
+1.
+    codex/bundles/UI_Providers_02F_Explicit_Acknowledgement_Bundle
+    Reference: CDA-UI-SEAMS-PROVIDERS-02F
+    Parent: CDA-UI-SEAMS-PROVIDERS-02E
+
+2.
+    codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle
+    Reference: CDA-UI-SEAMS-CATALOG-HARDEN-02
+    Parent: CDA-UI-SEAMS-CATALOG-HARDEN-01
+
+3.
+    codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle
+    Reference: CDA-UI-SEAMS-AGENT-CAPABILITIES-01
+    Parent architecture: CDA-UI-SEAMS-BASE-v2
+
+Equivalent names are acceptable only when an exact collision already exists.
+Record the chosen names and references.
+
+Prepare each bundle before implementing its production work. Record
+pre-implementation adjudication against actual source.
+
+======================================================================
+AUTHORITATIVE REFERENCES
+======================================================================
+
+Read and follow:
+
+- codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/
+  - README.md
+  - plan/01-child-bundle-contract.md
+  - reviews/05-unconfirmed-verification-feedback.md
+  - reviews/06-catalog-extraction-asset-feedback.md
+  - reviews/07-verification-postconditions-and-delivery.md
+  - reviews/08-explicit-assets-and-direct-observation.md
+
+- codex/bundles/UI_Providers_02D_Recovery_Bundle/
+
+- codex/bundles/UI_Providers_02E_Verification_Delivery_Hardening_Bundle/
+
+- codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle/
+
+- codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle/
+
+- docs/testing.md
+- repository portability, secret, architecture, and documentation rules
+
+Historical proof is historical. Do not relabel an old execution as a new one.
+
+======================================================================
+ENTRY ADJUDICATION
+======================================================================
+
+Before editing, independently confirm, modify, or reject each finding.
+
+A. Provider/shared-provider findings
+
+1. SharedProviderSourceVerification now correctly uses exact selected-set
+   equality for Synchronize and retains source revision/time/status evidence.
+
+2. SharedProviderTargetAttempt now captures exact publication, imported
+   settings, and retirement postconditions.
+
+3. SharedProviderChangeDelivery exposes ReconcileAsync and an
+   IsAcknowledged state.
+
+4. SharedProviderRecovery.DeliverAsync currently invokes the receiver
+   callback and then unconditionally calls delivery.Acknowledge when the
+   callback returns and the sender is still current.
+
+5. Consequently, a receiver callback that returns Task.CompletedTask without
+   calling delivery.ReconcileAsync is currently treated as an acknowledged
+   reconciliation.
+
+6. SharedDeliveryLifecycleTests currently codifies that behavior by expecting
+   a no-op receiver callback to acknowledge and release the attempt.
+
+7. Current known production receivers normally call
+   SharedProviderChangeDelivery.ReconcileAsync, but the delivery contract
+   itself does not enforce this requirement.
+
+8. ReconcileAsync currently uses a Boolean acknowledgement and is not
+   explicitly single-flight if a receiver invokes the same delivery
+   concurrently.
+
+B. Bundle evidence findings
+
+9. The root .gitignore contains a general proof/ ignore rule.
+
+10. The pushed Git trees of both new bundles currently contain no proof
+    directory:
+
+    - UI_Providers_02E_Verification_Delivery_Hardening_Bundle
+    - UI_AgentCatalog_Harden_01_Development_Loop_Bundle
+
+11. Their MANIFEST, README, requirements, and closure documents reference
+    proof files that are not present in the pushed Git tree.
+
+12. Therefore source changes and closure claims can be reviewed, but exact
+    validation and measurement files cannot currently be independently read
+    from the branch.
+
+C. Catalog development-loop findings
+
+13. Parity and Fast asset modes are correctly separated and Fast owns a
+    sandbox-local generated CSS output.
+
+14. The direct benchmark launches local dotnet watch, local Tailwind, and a
+    local browser with a monotonic harness clock.
+
+15. The closure reports 18 browser reloads and nine static hot updates among
+    27 successful edit/undo cycles.
+
+16. Catalog sandbox scenario, layout, and selection are currently local
+    component fields and reset after browser reload.
+
+D. Capabilities findings
+
+17. AgentCapabilitiesPanel directly owns:
+    - agent and capability reads;
+    - selected agent and AgentEditorModel;
+    - capability assignment mutation;
+    - capability verification;
+    - access preview;
+    - details and setup dialogs;
+    - Capability Curator chat launch;
+    - local filter and tree state;
+    - access-state callbacks.
+
+18. It directly injects:
+    - IAgentFrameworkWorkspaceService;
+    - IAgentCapabilitySetupFlowService;
+    - IAgentChatLauncher;
+    - NotificationService;
+    - DialogService.
+
+19. AgentsHomePage already owns the route-level requested agent ID and receives
+    SelectedAgentChanged and ContextAccessStateChanged.
+
+20. AgentCapabilityList is already a controlled, service-free rendering child,
+    but it currently belongs to the broad AgentFramework.Components project.
+
+21. AgentFramework.Components already references
+    CanDoItAll.AgentFramework.UI. Therefore a future extraction must not make
+    AgentFramework.UI reference AgentFramework.Components and create a project
+    cycle.
+
+22. The current capability assignment handler mutates
+    selectedAgentEditor.SelectedCapabilityIds before SaveAgentAsync. A failed
+    save may therefore leave an uncommitted assignment displayed locally.
+    This must be characterized for AGENT-CAPABILITIES-02, not silently changed
+    in AGENT-CAPABILITIES-01 unless it blocks the state/read seam.
+
+Record the adjudication before implementation.
+
+======================================================================
+WORKSTREAM 1 — PROVIDERS-02F
+======================================================================
+
+Goal:
+
+Make receiver acknowledgement an enforced semantic contract rather than a
+convention, without replaying provider/shared-provider mutations and without
+introducing a generic event bus or durable outbox.
+
+----------------------------------------------------------------------
+1.1 Enforce explicit reconciliation acknowledgement
+----------------------------------------------------------------------
+
+Required behavior:
+
+- Returning successfully from the delivery callback is not sufficient by
+  itself.
+
+- SharedProviderRecovery may classify a delivery as Acknowledged only when
+  SharedProviderChangeDelivery.IsAcknowledged is true after receiver
+  processing.
+
+- A callback that returns without calling ReconcileAsync leaves the delivery
+  Pending.
+
+- A callback that throws before acknowledgement leaves the delivery Pending.
+
+- A callback that completes ReconcileAsync and then throws leaves the
+  delivery envelope receiver-acknowledged but sender-pending. A later correct
+  owner may complete sender bookkeeping without running reconciliation again.
+
+- If ReconcileAsync completed but the sender component became stale or was
+  torn down, the acknowledged receiver state must survive in the circuit.
+  A later valid owner finishes delivery cleanup without rerunning the
+  receiver effect.
+
+- A wrong target/source or stale generation cannot acknowledge or complete
+  another attempt.
+
+- No delivery retry may repeat Publish, Unpublish, imported-settings update,
+  retirement, source write, source test, or source synchronization.
+
+Update the current test that expects `_ => Task.CompletedTask` to acknowledge.
+That callback must now produce Pending.
+
+Add direct tests equivalent to:
+
+- Callback_return_without_receiver_ack_keeps_delivery_pending
+- Callback_exception_before_ack_keeps_delivery_pending
+- Reconcile_ack_then_callback_exception_does_not_repeat_reconciliation
+- Reconcile_ack_survives_sender_teardown
+- Correct_owner_can_finalize_already_acknowledged_delivery
+- Wrong_owner_cannot_finalize_acknowledged_delivery
+- Successful_ack_releases_attempt_and_delivery_once
+- Delivery_retry_never_replays_backend_mutation
+
+----------------------------------------------------------------------
+1.2 Make receiver reconciliation single-flight
+----------------------------------------------------------------------
+
+Harden SharedProviderChangeDelivery.ReconcileAsync so that:
+
+- the reconciliation delegate runs at most once successfully per envelope;
+- concurrent calls do not run the delegate in parallel;
+- a second call after successful acknowledgement returns without rerunning;
+- a failed reconciliation remains retryable;
+- an in-progress reconciliation has defined behavior;
+- no thread-blocking lock is held across await;
+- the type does not become a generic application event framework.
+
+Use an asynchronous single-flight mechanism or a small explicit state
+machine. Avoid SemaphoreSlim proliferation unless it is the simplest bounded
+solution.
+
+Add concurrency-focused tests.
+
+----------------------------------------------------------------------
+1.3 Audit every delivery producer and receiver
+----------------------------------------------------------------------
+
+Inspect at minimum:
+
+- SharedProviderChangeDelivery
+- SharedProviderRecovery
+- SharedProviderManagementPanel
+- SharedProviderSourcesDialog
+- SharedProviderRefreshButton
+- AgentProviderProfilesPanel
+- AgentDetailsDialog
+- ProviderModelThinkingEditor
+- all EventCallback<SharedProviderChangeDelivery> consumers
+- all related component tests
+
+Every committed-change receiver must either:
+
+- call delivery.ReconcileAsync around its complete idempotent parent
+  reconciliation; or
+- explicitly remain unacknowledged.
+
+Merely reading `delivery.Change` and returning is forbidden for a committed
+delivery.
+
+Advisory Unconfirmed/UnknownScope callbacks do not represent a known commit.
+Keep them clearly separated from retained committed delivery semantics.
+
+----------------------------------------------------------------------
+1.4 Preserve existing provider guarantees
+----------------------------------------------------------------------
+
+Do not redesign:
+
+- exact shared-source selected-set verification;
+- exact target postconditions;
+- stable provider/source candidate IDs;
+- canonical verification;
+- controlled retry;
+- source-managed ownership;
+- permanent publication identity;
+- API unconfirmed-write contract;
+- provider draft preservation;
+- circuit-scoped recovery limitation.
+
+----------------------------------------------------------------------
+1.5 PROVIDERS-02F gate
+----------------------------------------------------------------------
+
+Build direct affected production projects.
+
+Run focused Unit, Components, and Integration selections covering:
+
+- delivery state machine;
+- real parent reconciliation;
+- component reconstruction;
+- source and target delivery retry;
+- existing Provider 02D and 02E recovery owners.
+
+Use a real component receiver for at least one callback-failure/retry case.
+
+No whole-solution test estate is required unless actual public-contract
+invalidation justifies it.
+
+Do not begin Workstream 2 until this gate passes.
+
+======================================================================
+WORKSTREAM 2 — CATALOG-HARDEN-02
+======================================================================
+
+Goal:
+
+Repair branch-visible evidence integrity and make the sandbox usable through
+the browser reload behavior observed by the direct benchmark.
+
+----------------------------------------------------------------------
+2.1 Repair pushed bundle evidence integrity
+----------------------------------------------------------------------
+
+Inspect:
+
+- root .gitignore;
+- git check-ignore output;
+- git ls-files;
+- git ls-tree for both bundle directories;
+- both bundle MANIFEST files;
+- every Markdown link in both bundles;
+- any ignored local proof files still available in the current workspace;
+- .mcp-state evidence referenced by the original runs.
+
+Do not fabricate historical proof.
+
+For each of these bundles:
+
+- CDA-UI-SEAMS-PROVIDERS-02E
+- CDA-UI-SEAMS-CATALOG-HARDEN-01
+
+choose and implement a compact tracked-proof policy.
+
+At minimum, the pushed tree must contain the compact evidence necessary to
+support its closure claims, such as:
+
+Provider 02E:
+- validation summary;
+- semantic test map;
+- browser summary;
+- source/architecture review;
+- exact executed command/filter/count receipts;
+- selected representative screenshots when referenced.
+
+Catalog Harden 01:
+- direct results JSON or CSV;
+- readable result table;
+- measurement review;
+- run index;
+- browser acceptance summary;
+- validation summary;
+- asset hash summary;
+- compact failure/exclusion record.
+
+Raw multi-megabyte TRX, complete console logs, and every screenshot do not
+need to be tracked merely to satisfy a filename list. They may remain
+transient only when:
+
+- closure wording clearly identifies them as transient/external;
+- compact tracked receipts describe commands, filters, counts, hashes, and
+  limitations honestly;
+- no Markdown link points to a nonexistent file;
+- no MANIFEST entry names a nonexistent file.
+
+If original ignored evidence still exists and hashes match the manifest,
+selectively retain useful compact files. If it no longer exists, rerun only
+the bounded validation or measurement needed to regenerate honest proof.
+Never reconstruct measured values from prose.
+
+Add bundle-local validation tooling that verifies:
+
+- every MANIFEST entry exists;
+- every tracked bundle file that should be covered is represented;
+- checksums match;
+- relative Markdown links resolve;
+- closure evidence links exist in the Git index/tree;
+- no proof claim points only to an ignored local path.
+
+Do not add product tests tied to temporary bundle filenames, counts, or
+directory shape.
+
+Prefer precise bundle-specific ignore exceptions over globally unignoring all
+proof directories.
+
+----------------------------------------------------------------------
+2.2 Preserve Parity and Fast modes
+----------------------------------------------------------------------
+
+Do not redesign the working asset implementation.
+
+Preserve:
+
+- Parity as production-theme mode;
+- Fast as sandbox-local generated theme;
+- separate bin/obj paths;
+- compiled mode validation;
+- DOM and runtime-probe mode identity;
+- Fast prohibition on production CSS fallback or overwrite;
+- live Components and FileTools checkouts;
+- bounded Fast Tailwind roots;
+- existing direct commands.
+
+Re-run focused mode/build/browser tests after evidence changes only when
+actual executable files changed.
+
+----------------------------------------------------------------------
+2.3 Investigate browser reload classification
+----------------------------------------------------------------------
+
+The prior closure reports:
+
+- 18 browser reloads;
+- nine static hot updates;
+- zero process restarts/failures in the comparable cohort.
+
+Perform a small diagnostic, not another large statistical benchmark.
+
+Determine for representative Razor and C# edits:
+
+- whether the reload is initiated by dotnet-watch browser refresh;
+- whether the edit is genuinely applied through managed Hot Reload before
+  reload;
+- whether disabling browser refresh leaves a correct visible update;
+- whether a rude edit or unsupported component update requires reload;
+- whether Fast and Parity differ;
+- whether the full app differs from the sandbox.
+
+Do not overwrite the previous 27-cycle result.
+
+A bounded diagnostic of one or two repetitions per relevant case is enough.
+Retain negative results.
+
+Do not change the default launch behavior merely to improve numbers. Disable
+browser refresh by default only when public browser evidence proves the
+representative edits remain correct.
+
+----------------------------------------------------------------------
+2.4 Preserve sandbox context across reload
+----------------------------------------------------------------------
+
+Implement development-only reload-resilient sandbox context.
+
+This is not production bookmarkability.
+
+At minimum preserve:
+
+- selected sandbox specimen/scenario;
+- matched versus flexible layout;
+- selected catalog agent ID;
+- selected team ID where applicable.
+
+Prefer explicit sandbox query state, for example:
+
+    /agents?scenario=card-states&layout=matched&agentId=...
+
+Requirements:
+
+- parse and normalize invalid values safely;
+- never accept an ID absent from the embedded fixture;
+- use replace-history semantics for transient sandbox controls;
+- do not pollute browser history on every click;
+- do not change AgentsHomePage production routing;
+- do not introduce a shared production navigation framework;
+- the state must restore after an actual browser reload;
+- it must remain optional and have a stable default;
+- loading, empty, card-state, avatar, and normal scenarios must still work;
+- benchmark predicates must explicitly reset or request their intended
+  scenario rather than rely on implicit local state.
+
+Add browser tests that reload the page and prove restoration.
+
+----------------------------------------------------------------------
+2.5 CATALOG-HARDEN-02 gate
+----------------------------------------------------------------------
+
+The gate requires:
+
+- both predecessor bundles have internally consistent pushed evidence;
+- no broken relative link;
+- no MANIFEST entry for an absent file;
+- no fabricated historical data;
+- explicit provider delivery acknowledgement is already green;
+- Parity and Fast builds remain green;
+- production CSS hash is unchanged by Fast work;
+- sandbox scenario context survives real browser reload;
+- direct diagnostic honestly classifies refresh behavior;
+- no Manager change;
+- no production routing change;
+- no new feature extraction.
+
+Only after this gate passes begin Workstream 3.
+
+======================================================================
+WORKSTREAM 3 — AGENT-CAPABILITIES-01
+======================================================================
+
+Goal:
+
+Create the first in-place state/read and controlled-rendering seam for
+AgentCapabilitiesPanel while preserving current user behavior and without
+moving components to another project yet.
+
+This is the second UI archetype after AgentCatalog:
+
+- AgentCatalog proved a controlled catalog extraction.
+- AgentCapabilities must prove separation of a stateful feature surface from
+  reads and effects without creating wrapper proliferation.
+
+----------------------------------------------------------------------
+3.1 Current ownership to preserve
+----------------------------------------------------------------------
+
+AgentsHomePage remains the semantic owner of the requested agent identity
+through the existing contract:
+
+- PreferredAgentId;
+- SelectedAgentChanged;
+- ContextAccessStateChanged.
+
+Do not implement production URL changes.
+
+The capability feature must continue to:
+
+- select the exact requested agent;
+- fail closed when the requested agent does not exist;
+- select the current or first agent when there is no explicit request,
+  according to current behavior;
+- publish loading, ready, and failed access states;
+- reject spoofed Capability Curator identity;
+- preserve existing visible labels and actions.
+
+----------------------------------------------------------------------
+3.2 Create one justified effect-host/rendering seam
+----------------------------------------------------------------------
+
+Create one service-free controlled rendering surface inside the existing
+AgentFramework module.
+
+Exact names are implementation judgment. A reasonable shape is:
+
+    AgentCapabilitiesPanel or AgentCapabilitiesHost
+        owns reads/effects/session
+
+        -> AgentCapabilitiesSurface
+           owns rendering and local presentation state
+
+Do not create:
+
+- a container/view/presenter/controller pyramid;
+- a generic component base class;
+- an interface per event;
+- a service bag;
+- a new project;
+- a compatibility wrapper plus multiple redundant surfaces.
+
+At closure, there should be exactly one clearly identified effect host and
+one clearly identified controlled rendering surface. This is an
+architectural responsibility rule, not a filename/count test.
+
+The controlled surface must not inject:
+
+- IAgentFrameworkWorkspaceService;
+- IAgentCapabilitySetupFlowService;
+- IAgentChatLauncher;
+- DialogService;
+- NotificationService;
+- persistence or runtime services.
+
+It receives typed immutable state and emits typed intents/callbacks.
+
+----------------------------------------------------------------------
+3.3 Typed state and intent model
+----------------------------------------------------------------------
+
+Introduce a bounded typed model equivalent to:
+
+- AgentCapabilitiesSnapshot
+  - available non-template agents;
+  - capability catalog;
+  - selected agent presentation;
+  - selected capability IDs;
+  - Capability Curator presentation/readiness;
+  - current access-preview presentation where applicable.
+
+- AgentCapabilitiesSelection
+  - selected agent ID.
+
+- AgentCapabilitiesLoadState
+  - Loading;
+  - Ready;
+  - Failed.
+
+- AgentCapabilitiesIntent
+  - select agent;
+  - assign/remove capability;
+  - verify capability;
+  - open capability details;
+  - create Tool;
+  - create MCP server;
+  - create Skill;
+  - preview access;
+  - open Capability Curator chat.
+
+The exact split may differ when justified, but semantic state must have one
+owner and the rendering surface must be service-free.
+
+Keep purely local presentation state in the rendering surface:
+
+- search draft;
+- tag filters;
+- assignment filter;
+- capability type filter;
+- expanded tree nodes;
+- local access-rule form draft;
+- purely visual dialog/edit selection if no route or effect significance is
+  involved.
+
+The effect host owns:
+
+- loading data;
+- selected-agent read lifecycle;
+- command dispatch;
+- authoritative post-effect refresh;
+- dialog opening;
+- notifications;
+- Capability Curator launch;
+- cancellation and stale-result fencing.
+
+----------------------------------------------------------------------
+3.4 Narrow read boundary and session
+----------------------------------------------------------------------
+
+Introduce a cohesive read boundary, for example IAgentCapabilitiesReads,
+backed by the existing workspace service.
+
+Do not expose the full IAgentFrameworkWorkspaceService to the rendering
+surface.
+
+The read/session owner must support:
+
+- initial catalog load;
+- selected-agent assignment read;
+- requested selection;
+- A -> B selection race;
+- A -> missing;
+- missing initial requested ID;
+- refresh after an effect;
+- disposal;
+- cancellation;
+- stale success and stale failure suppression;
+- explicit Loading, Ready, and Failed state.
+
+A failed selected-agent read must not show data from a prior agent under the
+new agent identity.
+
+Do not store a second independent semantic selected-agent ID in both page,
+host, session, and surface. Temporary generation bookkeeping is allowed;
+multiple authoritative selection stores are not.
+
+----------------------------------------------------------------------
+3.5 Existing effects remain behavior-compatible
+----------------------------------------------------------------------
+
+AGENT-CAPABILITIES-01 is not the mutation-hardening phase.
+
+The effect host may continue to use the existing services for:
+
+- capability assignment;
+- verification;
+- access preview;
+- details dialog;
+- setup wizard;
+- curator chat.
+
+However:
+
+- the controlled surface emits typed intent rather than calling those
+  services;
+- effects must not run in the rendering surface;
+- authoritative state refresh must flow back through the host/session;
+- stale effects must not publish into a different selected agent;
+- do not silently redesign save, verification, or access-policy semantics.
+
+Characterize and record, but do not necessarily fix in this child:
+
+- assignment mutates AgentEditorModel before Save;
+- rollback behavior on failed Save;
+- unknown/committed mutation outcomes;
+- dialog ownership and cancellation;
+- verification effect lifetime;
+- access preview cancellation;
+- curator launch lifetime.
+
+These become explicit input to AGENT-CAPABILITIES-02.
+
+If a currently unsafe behavior makes the state/read seam impossible, record
+the minimal correction and its failing-first proof rather than hiding it.
+
+----------------------------------------------------------------------
+3.6 Future extraction boundary
+----------------------------------------------------------------------
+
+Do not physically move files in this child.
+
+Record future extraction blockers:
+
+- AgentCapabilityList currently belongs to
+  CanDoItAll.AgentFramework.Components;
+
+- AgentFramework.Components already references
+  CanDoItAll.AgentFramework.UI;
+
+- therefore AgentFramework.UI must not later reference
+  AgentFramework.Components and create a project cycle;
+
+- AgentCapabilityList appears service-free and model-based, so it is a
+  potential future move candidate into AgentFramework.UI, subject to full
+  consumer and asset analysis;
+
+- access-preview DTOs and effect services must remain outside the lightweight
+  rendering project unless converted to presentation contracts.
+
+Do not make the project move now.
+
+----------------------------------------------------------------------
+3.7 Required AGENT-CAPABILITIES-01 tests
+----------------------------------------------------------------------
+
+Create a frozen behavior matrix and map each topic to an executable test.
+
+Controlled surface:
+
+- Renders_loading_without_services
+- Renders_no_agents_without_services
+- Renders_selected_agent_and_capabilities_without_services
+- Renders_no_capabilities_state
+- Emits_select_agent_intent
+- Emits_assignment_intent
+- Emits_verification_intent
+- Emits_details_intent
+- Emits_each_create_kind_intent
+- Emits_access_preview_intent_with_typed_draft
+- Emits_curator_intent_only_when_ready
+- Search_and_filter_state_remains_local
+- Snapshot_refresh_preserves_local_filters
+- Selected_capability_state_is_controlled_by_parent_snapshot
+
+Host/session:
+
+- Initial_requested_agent_loads_exact_target
+- Missing_initial_requested_agent_fails_closed
+- Valid_selection_then_missing_request_clears_authoritative_selection
+- Late_A_read_cannot_replace_B
+- Late_A_failure_cannot_fail_B
+- Disposal_cancels_owned_reads
+- Refresh_preserves_current_valid_selection
+- Refresh_missing_selected_agent_fails_closed
+- SelectedAgentChanged_matches_the_authoritative_selection
+- ContextAccessStateChanged_deduplicates_equivalent_state
+- Exact_managed_curator_can_be_launched
+- Spoofed_curator_remains_disabled
+
+Compatibility:
+
+- existing visible capability counts and filters remain;
+- existing access-preview rendering remains;
+- existing details/setup dialogs still open through the host;
+- existing assignment and verification paths still invoke their production
+  services once;
+- no private-field reflection;
+- no uninitialized production service objects;
+- no test asserting number of classes, files, interfaces, or partials.
+
+At least one test must render the controlled surface with no feature service
+registrations.
+
+----------------------------------------------------------------------
+3.8 AGENT-CAPABILITIES-01 validation
+----------------------------------------------------------------------
+
+Build directly:
+
+- CanDoItAll.Modules.AgentFramework;
+- affected UI/component projects;
+- affected test projects;
+- CanDoItAll.Web when production composition changed.
+
+Run focused:
+
+- AgentCapabilities tests;
+- AgentPanelSelectionFailClosedTests capability cases;
+- AgentCapabilityList tests;
+- exact curator identity tests;
+- affected AgentsHomePage/component consumers.
+
+Run a real browser scenario at the repository-standard desktop viewport:
+
+- open Agents -> Capabilities;
+- select an agent;
+- filter capabilities;
+- assign or remove through the existing path;
+- run verification through the existing path;
+- run access preview;
+- open and close capability details;
+- open and close setup wizard;
+- validate exact Capability Curator availability;
+- change selection during a delayed read and confirm stale state does not
+  appear.
+
+Do not perform a broad stable estate without an actual invalidation reason.
+
+Run architecture, portability, and secret scans on proposed source.
+
+The child closes only when:
+
+- the rendering surface is service-free;
+- semantic selection has one owner;
+- read lifecycle is cancellable and stale-safe;
+- current behavior remains;
+- no project or routing change occurred;
+- future mutation defects are explicitly handed off rather than hidden.
+
+======================================================================
+NEXT CHILD — PREPARE ONLY
+======================================================================
+
+After AGENT-CAPABILITIES-01 closes, prepare but do not implement:
+
+    CDA-UI-SEAMS-AGENT-CAPABILITIES-02
+
+Its analysis must cover:
+
+- immutable assignment submission;
+- failed-save rollback;
+- optimistic concurrency and unknown outcomes;
+- assignment and verification operation generation;
+- authoritative refresh;
+- access-preview lifetime;
+- details/setup dialog ownership;
+- Capability Curator launch cancellation;
+- post-effect reconciliation;
+- future extraction and capability sandbox scenarios.
+
+Do not prepare AGENT-CAPABILITIES-03 extraction yet unless the 02 analysis
+shows a stable rendering boundary.
+
+======================================================================
+SHARED ARCHITECTURE FEEDBACK
+======================================================================
+
+After actual proof, add only generalized successor lessons to the shared
+architecture bundle.
+
+Candidates:
+
+- explicit acknowledgement must be enforced by the delivery contract, not
+  inferred from callback return;
+
+- tracked evidence, MANIFEST, and closure links must describe the same
+  committed artifact set;
+
+- ignored local proof cannot be described as retained branch proof;
+
+- a development sandbox may persist its own specimen state across browser
+  refresh without implementing product routing;
+
+- a second UI archetype should prove one effect host and one service-free
+  controlled surface without turning the first pilot into a universal class
+  template.
+
+Do not rewrite historical proof. Add a successor review or an explicit
+erratum where necessary.
+
+Update MANIFEST only for files actually present.
+
+======================================================================
+OUT OF SCOPE
+======================================================================
+
+Do not implement:
+
+- production routing or bookmarkability;
+- Manager changes;
+- provider history refactoring;
+- another provider editor extraction;
+- AgentChatPanel refactoring;
+- Simple Chats refactoring;
+- physical AgentCapabilities extraction;
+- a new capabilities sandbox specimen;
+- AGENT-CAPABILITIES-02 production changes;
+- database schema changes unless an independently proven blocker requires
+  them;
+- a general outbox/event bus;
+- sibling Components or FileTools edits;
+- visual redesign;
+- merge preparation or history cleanup.
+
+======================================================================
+FINAL REPORT
+======================================================================
+
+Report separately:
+
+1. Actual entry and final branch/HEAD.
+2. Dirty-state handling and sibling revisions.
+3. Adjudication of every finding.
+4. PROVIDERS-02F design and explicit acknowledgement semantics.
+5. Every audited delivery producer and receiver.
+6. Evidence files that are now actually present in the Git tree.
+7. Missing historical evidence that could not honestly be reconstructed.
+8. MANIFEST and Markdown-link verification results.
+9. Browser-refresh diagnostic results.
+10. Sandbox reload-state design and browser proof.
+11. AgentCapabilities state, read, rendering, intent, and lifetime owners.
+12. Responsibilities removed from the rendering surface.
+13. Responsibilities intentionally retained in the effect host.
+14. Exact builds, tests, discovery, browser scenarios, and failures.
+15. Remaining limitations and defects assigned to AGENT-CAPABILITIES-02.
+16. Route readiness, sandbox readiness, extraction readiness, and actual
+    bookmarkability as separate verdicts.
+17. Path and reference ID of the prepared but unimplemented
+    AGENT-CAPABILITIES-02 bundle.
+
+Do not claim repository merge readiness.

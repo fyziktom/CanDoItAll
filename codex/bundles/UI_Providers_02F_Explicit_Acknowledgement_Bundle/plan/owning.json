@@ -1,0 +1,53 @@
+{
+  "Unit": {
+    "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "classes": {
+      "CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryLifecycleTests": 11,
+      "CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests": 23,
+      "CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests": 23,
+      "CanDoItAll.Tests.Unit.AgentFramework.SharedTargetVerificationTests": 17,
+      "CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests": 23,
+      "CanDoItAll.Tests.Unit.AgentFramework.ProviderVerificationHardeningTests": 12,
+      "CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests": 12
+    },
+    "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryLifecycleTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedTargetVerificationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderVerificationHardeningTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests.",
+    "expectedDiscovery": 121,
+    "invalidation": "Explicit receiver acknowledgement affects delivery/verification and rendered consumers. Registry/API semantics unchanged; direct canonical recovery and commit contracts are regression gates."
+  },
+  "Components": {
+    "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+    "classes": {
+      "CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests": 16,
+      "CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests": 6,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedProviderOwnedEffectsTests": 11,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryReconstructionTests": 5,
+      "CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests": 4,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests": 3,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests": 5,
+      "CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests": 4,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests": 2,
+      "CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests": 3,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests": 7,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests": 4,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests": 3,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedProviderDeliveryHardeningTests": 2,
+      "CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests": 4,
+      "CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryAcknowledgementTests": 2
+    },
+    "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderProfilesSeamTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderOwnedEffectsTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryReconstructionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentEditorChildBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderRecoveryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderModelThinkingEditorTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderRefreshButtonTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderMutationRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedSourceRecoveryTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderLifetimeRegressionTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedProviderDeliveryHardeningTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderCatalogRefreshTests.|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryAcknowledgementTests.",
+    "expectedDiscovery": 81,
+    "invalidation": "Explicit receiver acknowledgement affects delivery/verification and rendered consumers. Registry/API semantics unchanged; direct canonical recovery and commit contracts are regression gates."
+  },
+  "Integration": {
+    "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "classes": {
+      "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests": 19,
+      "CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests": 10,
+      "CanDoItAll.Tests.Integration.SharedProviders.SharedProviderSourceSyncIntegrationTests": 16,
+      "CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests": 8
+    },
+    "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.SharedProviderSourceSyncIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.",
+    "expectedDiscovery": 53,
+    "invalidation": "Explicit receiver acknowledgement affects delivery/verification and rendered consumers. Registry/API semantics unchanged; direct canonical recovery and commit contracts are regression gates."
+  }
+}

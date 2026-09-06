@@ -1,0 +1,232 @@
+[
+  {
+    "run": "fast-acceptance-2026-09-06T13-21-58-862Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "Runtime readiness timeout."
+  },
+  {
+    "run": "fast-acceptance-2026-09-06T13-27-13-324Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "Owned process exited before readiness."
+  },
+  {
+    "run": "fast-acceptance-2026-09-06T13-28-30-324Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "Expected values to be strictly equal:\n\n'false' !== 'true'\n"
+  },
+  {
+    "run": "fast-acceptance-2026-09-06T13-31-08-341Z",
+    "cohort": "acceptance",
+    "complete": true,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": null
+  },
+  {
+    "run": "fast-warm-2026-09-06T14-13-57-238Z",
+    "cohort": "primary",
+    "complete": true,
+    "warmSamples": 9,
+    "successfulVisibleSamples": 9,
+    "completeCycles": 9,
+    "failedCycles": 0,
+    "failure": null
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T13-33-07-149Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 1,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 1,
+    "failure": "Trial failed; retained explicitly. Review before collecting a replacement run."
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T13-40-19-960Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "locator.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('agents-catalog-search')\u001b[22m\n"
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T13-48-49-787Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "page.evaluate: TypeError: Cannot read properties of null (reading 'getBoundingClientRect')\n    at eval (eval at evaluate (:303:30), <anonymous>:7:25)\n    at UtilityScript.evaluate (<anonymous>:305:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T13-51-34-278Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "Owned process exited before readiness."
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T13-52-54-045Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 1,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 1,
+    "failure": "Trial failed; retained explicitly. Review before collecting a replacement run."
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T13-56-12-117Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "page.waitForFunction: Timeout 30000ms exceeded."
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T14-00-30-009Z",
+    "cohort": "calibration",
+    "complete": true,
+    "warmSamples": 9,
+    "successfulVisibleSamples": 9,
+    "completeCycles": 9,
+    "failedCycles": 0,
+    "failure": null
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T14-04-46-402Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 6,
+    "successfulVisibleSamples": 6,
+    "completeCycles": 5,
+    "failedCycles": 1,
+    "failure": "Trial failed; retained explicitly. Review before collecting a replacement run."
+  },
+  {
+    "run": "fullapp-warm-2026-09-06T14-08-54-847Z",
+    "cohort": "primary",
+    "complete": true,
+    "warmSamples": 9,
+    "successfulVisibleSamples": 9,
+    "completeCycles": 9,
+    "failedCycles": 0,
+    "failure": null
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-08-58-599Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "Owned process exited before readiness."
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-11-03-191Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "Owned process exited before readiness."
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-12-45-277Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "browserType.launch: Executable doesn't exist at C:\\Users\\lucys\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1243\\chrome-headless-shell-win64\\chrome-headless-shell.exe\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551 Looks like Playwright was just installed or updated.       \u2551\n\u2551 Please run the following command to download new browsers: \u2551\n\u2551                                                            \u2551\n\u2551     npx playwright install                                 \u2551\n\u2551                                                            \u2551\n\u2551 <3 Playwright Team                                         \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d"
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-15-13-474Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "page.waitForFunction: Timeout 30000ms exceeded."
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-16-48-655Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "page.waitForFunction: Timeout 30000ms exceeded."
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-18-21-233Z",
+    "cohort": "calibration",
+    "complete": false,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": "locator.hover: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('agents-catalog-reset-tooltip')\u001b[22m\n"
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-20-21-658Z",
+    "cohort": "calibration",
+    "complete": true,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": null
+  },
+  {
+    "run": "parity-acceptance-2026-09-06T13-31-25-331Z",
+    "cohort": "acceptance",
+    "complete": true,
+    "warmSamples": 0,
+    "successfulVisibleSamples": 0,
+    "completeCycles": 0,
+    "failedCycles": 0,
+    "failure": null
+  },
+  {
+    "run": "parity-warm-2026-09-06T14-12-43-509Z",
+    "cohort": "primary",
+    "complete": true,
+    "warmSamples": 9,
+    "successfulVisibleSamples": 9,
+    "completeCycles": 9,
+    "failedCycles": 0,
+    "failure": null
+  }
+]

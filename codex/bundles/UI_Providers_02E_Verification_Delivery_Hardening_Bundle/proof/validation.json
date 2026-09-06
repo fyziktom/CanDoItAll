@@ -1,0 +1,367 @@
+{
+  "utc": "2026-09-06T12:53:15.071199+00:00",
+  "head": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "tests": [
+    {
+      "name": "red-unit",
+      "counters": {
+        "total": "4",
+        "executed": "4",
+        "passed": "0",
+        "failed": "4",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "start": {
+        "creation": "2026-09-06T07:51:10.2605947-04:00",
+        "queuing": "2026-09-06T07:51:10.2605950-04:00",
+        "start": "2026-09-06T07:51:08.9644596-04:00",
+        "finish": "2026-09-06T07:51:10.2656509-04:00"
+      },
+      "originalSha256": "7ea0fc28c35e2e19a8a9d50c76cc47bb3a18be73c94de4bfd8b1fca83f8bdb29",
+      "artifact": "proof/original-red-unit.trx.gz",
+      "artifactSha256": "365f76d61584c09f9fcb52c02ea4772ef6b644cc4c8ab8788b0c41616eda8da2"
+    },
+    {
+      "name": "red-components",
+      "counters": {
+        "total": "2",
+        "executed": "2",
+        "passed": "0",
+        "failed": "2",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "start": {
+        "creation": "2026-09-06T07:52:48.2540814-04:00",
+        "queuing": "2026-09-06T07:52:48.2540816-04:00",
+        "start": "2026-09-06T07:52:38.1511422-04:00",
+        "finish": "2026-09-06T07:52:52.4334935-04:00"
+      },
+      "originalSha256": "7406070d40b36566395c9e7d02819309cad690f28970d18854fda11ad3942e06",
+      "artifact": "proof/original-red-components.trx.gz",
+      "artifactSha256": "4a048f6752676205b60a2f72b062e5ae2e2017cd6ff97c914ba5ef26e1ac2207"
+    },
+    {
+      "name": "owning-Unit",
+      "counters": {
+        "total": "466",
+        "executed": "466",
+        "passed": "466",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "start": {
+        "creation": "2026-09-06T08:27:49.8281574-04:00",
+        "queuing": "2026-09-06T08:27:49.8281576-04:00",
+        "start": "2026-09-06T08:27:48.0989424-04:00",
+        "finish": "2026-09-06T08:28:09.0973689-04:00"
+      },
+      "originalSha256": "f503e198e6047372985a3dfd5cc98170abf95069e19b7110582c088da7c0fb1c",
+      "artifact": "proof/original-owning-Unit.trx.gz",
+      "artifactSha256": "f9b69cbcdac3186a5f47de6df6011baa1bc0410042dd53efa9d1c332c7e6cedc"
+    },
+    {
+      "name": "owning-Components",
+      "counters": {
+        "total": "107",
+        "executed": "107",
+        "passed": "107",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "start": {
+        "creation": "2026-09-06T08:28:24.7573113-04:00",
+        "queuing": "2026-09-06T08:28:24.7573116-04:00",
+        "start": "2026-09-06T08:28:11.0085101-04:00",
+        "finish": "2026-09-06T08:32:02.2738877-04:00"
+      },
+      "originalSha256": "4900fd5876c9f5dcce88af5487c7dcd6433422c91310a195c3d074631fdb4143",
+      "artifact": "proof/original-owning-Components.trx.gz",
+      "artifactSha256": "cfc822ac86a3e14fa438ed966d46a1f1a8deded235c01540863b25736bcdc663"
+    },
+    {
+      "name": "owning-Integration",
+      "counters": {
+        "total": "277",
+        "executed": "277",
+        "passed": "277",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "start": {
+        "creation": "2026-09-06T08:32:05.0292275-04:00",
+        "queuing": "2026-09-06T08:32:05.0292279-04:00",
+        "start": "2026-09-06T08:32:03.1575495-04:00",
+        "finish": "2026-09-06T08:37:42.6578377-04:00"
+      },
+      "originalSha256": "91e0d0298a4227e5cffabf3af0bc0939cf3d8b87cde0e1a001e69bd1f8e7bfdc",
+      "artifact": "proof/original-owning-Integration.trx.gz",
+      "artifactSha256": "bb42831a3ff67d1b03d49a7786e4cafadbc23fc91ed0e4e85be5880070565a93"
+    }
+  ],
+  "transcripts": [
+    {
+      "path": "proof/original-red-unit.txt.gz",
+      "originalSha256": "2c185c4dff15f57821ee10c11515d309dacce64637362f41af22924e5feab6bc"
+    },
+    {
+      "path": "proof/original-red-components.txt.gz",
+      "originalSha256": "b24318d5dd9cb21f3739f5c63e3384d6af55996a91a08cf64203aec85776d6df"
+    },
+    {
+      "path": "proof/original-owning-Unit.txt.gz",
+      "originalSha256": "3180fff99bb1beb5c9ae010919428cdbf0c389d4aa1a1e50b4e29bed6c65c53b"
+    },
+    {
+      "path": "proof/original-owning-Components.txt.gz",
+      "originalSha256": "e50a910f6492081b5e946398fe3c86cab1383d23cc09b1d8949cd8056e3cc567"
+    },
+    {
+      "path": "proof/original-owning-Integration.txt.gz",
+      "originalSha256": "3c98236ceb227259d1647cc5f791ceb05adf34d2eed8d0f9935154980da769dd"
+    },
+    {
+      "path": "proof/original-final-build-ProviderManagement.txt.gz",
+      "originalSha256": "38e70aeb757b81508889d21c4f680922dcf14198465bb07d7dd3e98a6898e521"
+    },
+    {
+      "path": "proof/original-final-build-Web.txt.gz",
+      "originalSha256": "4dc338a513d3ff469761829c9c7ecbcdb7f1def14a8ad33d688575e615a8c5d7"
+    },
+    {
+      "path": "proof/original-final-build-Unit.txt.gz",
+      "originalSha256": "38a709a8c0d8d31700a7ed25896bd1258c1d07f6b962a6541659d3c7f33c621a"
+    },
+    {
+      "path": "proof/original-final-build-Components.txt.gz",
+      "originalSha256": "190435025594907b4f25ca7957c8813c34659190405081b3f6141efb81f703bd"
+    },
+    {
+      "path": "proof/original-final-build-Integration.txt.gz",
+      "originalSha256": "5c525df30706eaa4a47878f9fdfe34f0a2b6d24b323266fe0e241ad962ff6f20"
+    },
+    {
+      "path": "proof/original-final-list-Unit.txt.gz",
+      "originalSha256": "aea8c16e7eee77ed151474db401b75bf7abf4c547f0aec70014fbfb56a0107a7"
+    },
+    {
+      "path": "proof/original-final-list-Components.txt.gz",
+      "originalSha256": "40992bcb5964bea3285b13b4541bf4db9d7f21c953ebfae570c70b63ca82b646"
+    },
+    {
+      "path": "proof/original-final-list-Integration.txt.gz",
+      "originalSha256": "0343b178602d21ae0010f0c1cb3c7d7213114aee9930fb635446d4dc30bd50e8"
+    }
+  ],
+  "owningPlan": "plan/owning-plan.json",
+  "focusedNewCases": {
+    "Unit": 40,
+    "Components": 7,
+    "Integration": 2
+  },
+  "owning": {
+    "Unit": 466,
+    "Components": 107,
+    "Integration": 277
+  },
+  "portability": {
+    "scannedFiles": 5797,
+    "findings": 34472,
+    "reviewedExecutableFindings": 14300,
+    "enforcement": "PASS",
+    "baselineChanges": 0,
+    "selfTests": [
+      6,
+      4
+    ]
+  },
+  "documentation": {
+    "result": "blocked by unchanged historical tracked artifacts",
+    "count": 118,
+    "allHistoricalBytesUnchanged": true,
+    "newDebt": 0
+  },
+  "source": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderLocalAliasPolicy.cs",
+      "sha256": "a4e8febc57d4b40b8bb120c66a6eaf3c9b220f40f340bbfab648e6fda37407af"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+      "sha256": "54845f856f2207776bf7104b31be35792354dada49f30b8af126aa0fffe747b7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceVerification.cs",
+      "sha256": "0efa16aba819de68ede9fb1e9214c781cbb96762b2c7c8b320b3b6aa4828d863"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
+      "sha256": "ad0b5b003c4be3a87a6478ccb5895422eb358b2ad20adb834bd8988af568e706"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+      "sha256": "1742cad0dead7a301dd2f1ab1eb97b86b44cb610ece114dadd74c84a95c68955"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
+      "sha256": "d338a559307b06bb091e121a26c506c6d6640731ae0e973718f173e8ef7a852b"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelThinkingEditor.razor",
+      "sha256": "a2a436ead26a4a77f113a8e9fb9ee01ecb00993ff671801a4bd653279921f1dd"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesSession.cs",
+      "sha256": "db948954639629c972a9aa4f1ff025b6acfe930640d9ad428c627159e78fb6bf"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor",
+      "sha256": "4d496a006c4e07871f196238b06d2b3c2b8fbf6be55491056153b679cc9936e2"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor.cs",
+      "sha256": "cfbfc8ed66ecbd91f88466cc4545a41dabae6eb725ae54c0e33b119bab66fe35"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderRefreshButton.razor",
+      "sha256": "52a1c3c685c6327c52dc2c34f3d662d50a52a18efc0ef3ca8544498ac583d41f"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
+      "sha256": "d8e9d6febd2bdd411101fe7a94fe51a14a2c8369b84f362504f4e524532c60f7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
+      "sha256": "b82a3f54977943da21607b45605586e0c8270b51a188d09df3f195b8b7ffdb79"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorRecovery.cs",
+      "sha256": "d7305ccec34e8ea8dc725a98aeef6eb87dc914c159969441d4b67a578feff466"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderChangeDelivery.cs",
+      "sha256": "b4db305d2982a49fa6518b67ec6a47652c85c153a3391ed37e76a7cd3fae0781"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderRecovery.cs",
+      "sha256": "208531ad6cc35912a917763bcae51d9e48326887698413990d3ccb5169fac6e0"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderTargetVerification.cs",
+      "sha256": "25a7e1e60736847efbbbf3c8597a26509c5a90ce0f45aee389920cef64d942fe"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedDeliveryReconstructionTests.cs",
+      "sha256": "cf283fb5338d93dc40b6a37abce787bb14bb71354f856b8baa0a3eeced5ea0d6"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderDeliveryHardeningTests.cs",
+      "sha256": "85bec77ad166c3c2a53252cf6d473ad0be163e511d3e9faf960b4ef9cc00dd77"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderOwnedEffectsTests.cs",
+      "sha256": "e6a553d8556e9c72ea809cd4c3281d404e870e5e8409485966f3aaf2cde98d8b"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderPublicationPanelTests.cs",
+      "sha256": "aa5e88a3bac57c09e67e1fcb36b3c6d1ec3afbab48a2ea8553ce9233a399b1b2"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRecoveryTests.cs",
+      "sha256": "d3f38f2596199e3321dd36bfd735ffeed87353a75d819d724a7fa478c20da9d4"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRefreshButtonTests.cs",
+      "sha256": "785ffe993327854e1660b97072899f114e12bab44b7811789a4b8f5143be1014"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedSourceRecoveryTests.cs",
+      "sha256": "e8055b88a19bd39620c211edd02e33d115d2843e8b742e1aac912de74dcc169e"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProviderRecoveryIntegrationTests.cs",
+      "sha256": "3bf9947f900388ec7c4e5a5a884212c01f38c542920f62f1f174c312259060b2"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderSharedReconciliationTests.cs",
+      "sha256": "cfad417ba31fba7173e322478c91a93bbb57199f257387b14a3f331d613f0aa1"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderVerificationHardeningTests.cs",
+      "sha256": "41fcd8b386925a7064e3d969c93ae065d37221c69671d5b20a4cc33fd42aec1c"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/SharedDeliveryLifecycleTests.cs",
+      "sha256": "8f394f0c31f81ebe20336953dfaef5bf5341f629dcc6b21c2fb72253b0a4f20c"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/SharedTargetVerificationTests.cs",
+      "sha256": "fdfc6874c769019da0dede561d467b33decc6977fb343cb0c6c4f7a05b2abf81"
+    }
+  ],
+  "fixtureSources": [
+    {
+      "path": ".mcp-state/p02e-browser-fixture/Program.cs",
+      "sha256": "55425e2e2898b3c6ef7d3b6ef520fb3d76c82066a54da0d750e80353138d2f28"
+    },
+    {
+      "path": ".mcp-state/p02e-browser-fixture/ProviderRecoveryBrowser.csproj",
+      "sha256": "527634d5f4faeff797e1bb95d0821bc853fde822be3144ebcac7307060f15adf"
+    }
+  ],
+  "postTestEdits": "EOF whitespace only in three production files; no semantic changes after owning build/test."
+}

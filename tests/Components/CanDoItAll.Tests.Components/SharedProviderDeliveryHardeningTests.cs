@@ -34,9 +34,9 @@ public sealed class SharedProviderDeliveryHardeningTests {
             services.AddSingleton<ISharedProviderManagementService>(service));
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p
             .Add(x => x.ProviderProfileId, id)
-            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery _) => {
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => {
                 callbacks++;
-                return callbacks == 1 ? Task.FromException(new IOException("Synthetic callback interruption.")) : Task.CompletedTask;
+                return callbacks == 1 ? Task.FromException(new IOException("Synthetic callback interruption.")) : delivery.ReconcileAsync(() => Task.CompletedTask);
             }));
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();

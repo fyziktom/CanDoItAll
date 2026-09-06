@@ -1,0 +1,280 @@
+{
+  "utc": "2026-09-06T16:41:32.241684+00:00",
+  "entryHead": "796b3dd71fdf4db8a2d236747c63d5fdecdcdbc3",
+  "configuration": "Release",
+  "liveSiblingSourceMode": true,
+  "tests": [
+    {
+      "run": "red-unit",
+      "counters": {
+        "total": "12",
+        "executed": "12",
+        "passed": "8",
+        "failed": "4",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "times": {
+        "creation": "2026-09-06T12:28:58.8395350-04:00",
+        "queuing": "2026-09-06T12:28:58.8395354-04:00",
+        "start": "2026-09-06T12:28:57.5461671-04:00",
+        "finish": "2026-09-06T12:28:58.8750615-04:00"
+      },
+      "originalSha256": "5fecc966ec071566b092b48a257cc67046e2ff88e9bbb1e7128d6547650c4630",
+      "artifact": "red-unit.trx.gz",
+      "failedNames": [
+        "CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests.Failed_concurrent_reconciliation_is_shared_and_explicit_retry_can_succeed",
+        "CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests.Concurrent_reconciliation_joins_one_in_flight_delegate",
+        "CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests.Delivery_retry_never_replays_backend_mutation",
+        "CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests.Callback_return_without_receiver_ack_keeps_delivery_pending"
+      ]
+    },
+    {
+      "run": "red-components",
+      "counters": {
+        "total": "2",
+        "executed": "2",
+        "passed": "0",
+        "failed": "2",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "times": {
+        "creation": "2026-09-06T12:30:23.5042204-04:00",
+        "queuing": "2026-09-06T12:30:23.5042207-04:00",
+        "start": "2026-09-06T12:30:13.6391909-04:00",
+        "finish": "2026-09-06T12:30:27.3408756-04:00"
+      },
+      "originalSha256": "33ff1741ad4096b9910c2a5daeb0084adbec723447f267b67032274277487ecf",
+      "artifact": "red-components.trx.gz",
+      "failedNames": [
+        "CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryAcknowledgementTests.No_op_receiver_keeps_known_target_delivery_pending",
+        "CanDoItAll.Tests.Components.AgentFramework.SharedDeliveryAcknowledgementTests.No_op_receiver_keeps_known_source_delivery_pending"
+      ]
+    },
+    {
+      "run": "owning-Unit",
+      "counters": {
+        "total": "121",
+        "executed": "121",
+        "passed": "121",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "times": {
+        "creation": "2026-09-06T12:35:30.0813967-04:00",
+        "queuing": "2026-09-06T12:35:30.0813970-04:00",
+        "start": "2026-09-06T12:35:28.6490615-04:00",
+        "finish": "2026-09-06T12:35:30.1915324-04:00"
+      },
+      "originalSha256": "88ed4c2fe4e9e4bb7ada4c63b0a6d55bb82aa31466ba48510ebe45e854ee61f3",
+      "artifact": "owning-Unit.trx.gz",
+      "failedNames": []
+    },
+    {
+      "run": "owning-Components",
+      "counters": {
+        "total": "81",
+        "executed": "81",
+        "passed": "81",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "times": {
+        "creation": "2026-09-06T12:35:40.7582241-04:00",
+        "queuing": "2026-09-06T12:35:40.7582244-04:00",
+        "start": "2026-09-06T12:35:32.5159917-04:00",
+        "finish": "2026-09-06T12:38:36.1350552-04:00"
+      },
+      "originalSha256": "ff01362384f2dda1b15ae13c466a69f30c58b9a6e7f37e1a9f434edb32a57ecd",
+      "artifact": "owning-Components.trx.gz",
+      "failedNames": []
+    },
+    {
+      "run": "owning-Integration",
+      "counters": {
+        "total": "53",
+        "executed": "53",
+        "passed": "53",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "times": {
+        "creation": "2026-09-06T12:38:49.5302064-04:00",
+        "queuing": "2026-09-06T12:38:49.5302068-04:00",
+        "start": "2026-09-06T12:38:38.3859789-04:00",
+        "finish": "2026-09-06T12:39:36.8704294-04:00"
+      },
+      "originalSha256": "2510bff404b3f5f4a151f26eaa2bd2503eb7a272d3050a80a98762c0eebe677a",
+      "artifact": "owning-Integration.trx.gz",
+      "failedNames": []
+    }
+  ],
+  "owningPlan": "../plan/owning.json",
+  "builds": [
+    {
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "argv": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "--configuration",
+        "Release",
+        "/m:1",
+        "--nologo"
+      ],
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0
+    },
+    {
+      "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "argv": [
+        "dotnet",
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "--configuration",
+        "Release",
+        "/m:1",
+        "--nologo"
+      ],
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0
+    }
+  ],
+  "testAssembliesBuilt": [
+    "Unit",
+    "Components",
+    "Integration"
+  ],
+  "portability": {
+    "result": "PASS",
+    "protectedFindings": 14297,
+    "baselineChanged": false,
+    "selfTests": [
+      6,
+      4
+    ]
+  },
+  "secretScan": {
+    "added": 0,
+    "removed": 0,
+    "textFiles": 6022
+  },
+  "documentation": {
+    "exitCode": 1,
+    "reason": "118 historical tracked log files; no Git diff in these logs; no new log added"
+  },
+  "productionFiles": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderChangeDelivery.cs",
+      "beforeSha256": "b4db305d2982a49fa6518b67ec6a47652c85c153a3391ed37e76a7cd3fae0781",
+      "afterSha256": "2a89971f5e09da933816521c1fb7fad910609379b9068492b0fa9ff35a2e0b82"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderRecovery.cs",
+      "beforeSha256": "208531ad6cc35912a917763bcae51d9e48326887698413990d3ccb5169fac6e0",
+      "afterSha256": "a2757d81d4c08e355755b284bea8ad370ed4d9b75cef4d3cbbfd1cc820a81948"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedDeliveryReconstructionTests.cs",
+      "beforeSha256": "f779230a201ba75f5b1d8524ac4498ba49435e085b6ff312b78aa859df389d01",
+      "afterSha256": "437e2cfbb3d6ebdf09f92533f17dbd65d9f9a92a5548332858286e46314efc6a"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderDeliveryHardeningTests.cs",
+      "beforeSha256": "85bec77ad166c3c2a53252cf6d473ad0be163e511d3e9faf960b4ef9cc00dd77",
+      "afterSha256": "8b1eafca9c83a7c227f41fbaec09f3d29d3f3f59e7460dd4d25b03ae984c2a57"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderOwnedEffectsTests.cs",
+      "beforeSha256": "e6a553d8556e9c72ea809cd4c3281d404e870e5e8409485966f3aaf2cde98d8b",
+      "afterSha256": "cad58cae11e3f45ebe9c16c4374546eaf2d3df09772471867d44ec7ae720032b"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRecoveryTests.cs",
+      "beforeSha256": "d3f38f2596199e3321dd36bfd735ffeed87353a75d819d724a7fa478c20da9d4",
+      "afterSha256": "655c13330f17a3f76013ba2b16f9055901823d40e72da1ef92420575f9a08ffb"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRefreshButtonTests.cs",
+      "beforeSha256": "785ffe993327854e1660b97072899f114e12bab44b7811789a4b8f5143be1014",
+      "afterSha256": "7d88bc502b9efddc96de145316968729c03a981362d93c7fe68b429b121d05b4"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedSourceRecoveryTests.cs",
+      "beforeSha256": "e8055b88a19bd39620c211edd02e33d115d2843e8b742e1aac912de74dcc169e",
+      "afterSha256": "8055de5570e2f35195b91f4f3e68d1a2fa686fc9466c50ccb7512d056eaa7a40"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/SharedDeliveryLifecycleTests.cs",
+      "beforeSha256": "8f394f0c31f81ebe20336953dfaef5bf5341f629dcc6b21c2fb72253b0a4f20c",
+      "afterSha256": "a8a995af8cb360c6f1df2a93302339f312c1e1a31abb0626c2341d4684126856"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedDeliveryAcknowledgementTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "0454e9320e886f873b851e94074a6a3216d95996728f7bb34381b2ceef60cf77"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/SharedDeliveryAcknowledgementTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "01cb2acf4f6205cfe3259f733cf5eda94aff76340fe42625c3b5df9297b12d6c"
+    }
+  ],
+  "scope": "Bounded in-circuit delivery contract. No provider registry, source verification, schema, API, ownership, candidate identity or publication lifecycle redesign."
+}

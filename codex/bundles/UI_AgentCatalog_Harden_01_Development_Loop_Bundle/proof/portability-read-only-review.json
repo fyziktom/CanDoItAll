@@ -1,0 +1,42 @@
+{
+  "baselineNotModified": true,
+  "patternsAndPolicyUnchanged": true,
+  "oldAllowances": 14300,
+  "newAllowances": 14297,
+  "added": [
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "category": "external-tool",
+      "source_fingerprint": "a5ea14dc81de75fafccc9868df41e228dabeae8e63aff655c7df3f6b0eb118ca",
+      "count": 1
+    }
+  ],
+  "removed": [
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "category": "external-tool",
+      "source_fingerprint": "2f74a8d388f2caefbe5587cd2a714dc6e60dcf0b51e101c9099d08c214d17af2",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "category": "mcp",
+      "source_fingerprint": "441d1bc436b3fa76dadcdc9818c8fc55c7ced455885b2d5c54685aa8a296c29a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "e5e525f72f458dc1e48be70e2eafecff6e014aef6f3112e342545d92135582cc",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "3124f268ecbb158b5aa0fe2a7a454ff7e71a01c501adec6c0c55c853b6a07a8b",
+      "count": 1
+    }
+  ],
+  "proofArtifactAllowances": 0,
+  "review": "The only new protected fingerprint is the README sentence documenting live FileTools and a portable 1600x1000 viewport. Removed entries refer to obsolete MCP/Windows/elevation workflow documentation. No executable source, guard, scanner pattern or proof-artifact allowance is introduced. Official protected_counter excludes codex/ entirely."
+}

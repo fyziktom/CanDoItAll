@@ -1,0 +1,632 @@
+[
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-21-58-862Z/ledger.jsonl",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-21-58-862Z/ledger.jsonl",
+    "sourceBytes": 1608,
+    "sourceSha256": "330448a9b4d557b3c1edf86d242cef9ba04297da20213f500f918a0c33a46ff4",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-21-58-862Z/events.json",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-21-58-862Z/events.json.gz",
+    "sourceBytes": 8806,
+    "sourceSha256": "dc1fcddf521b089d70a9ceacbf1c87a6e2a991534ffecd4bc0ffd7d2740f639d",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-27-13-324Z/ledger.jsonl",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-27-13-324Z/ledger.jsonl",
+    "sourceBytes": 1632,
+    "sourceSha256": "e440b02cf2fadfbec91bfc8ddd508103ba25397c69708554bcb8116bd68fc0b1",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-27-13-324Z/events.json",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-27-13-324Z/events.json.gz",
+    "sourceBytes": 21342,
+    "sourceSha256": "836060068dfa343da3249a3e9054edb0c34fa1abfee62cfa8456b15f861845f4",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-28-30-324Z/ledger.jsonl",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-28-30-324Z/ledger.jsonl",
+    "sourceBytes": 2941,
+    "sourceSha256": "59605c4eaeed2b4595b3e1999fbac338a504ba21366c942092bfc988798febd1",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-28-30-324Z/events.json",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-28-30-324Z/events.json.gz",
+    "sourceBytes": 19593,
+    "sourceSha256": "4eedebffa8816550f2a05f1f0851b055bb31c1c4cc3303b2e4f8ba88224b16b8",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-28-30-324Z/failed-dom.txt",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-28-30-324Z/failed-dom.txt.gz",
+    "sourceBytes": 486,
+    "sourceSha256": "8d50247c13a815970699fb8e94efa97460ed59bf5ffb79b5943bd6680206b13e",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/ledger.jsonl",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-31-08-341Z/ledger.jsonl",
+    "sourceBytes": 3271,
+    "sourceSha256": "d0a9e0d318a0976f0ad1230de8b386ebbe022bbb87ab569a37e981dfb519a828",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/events.json",
+    "target": "proof/runs/fast-acceptance-2026-09-06T13-31-08-341Z/events.json.gz",
+    "sourceBytes": 19701,
+    "sourceSha256": "0dea5a47919244e3b19d32c80583f2780387c3e63c60a9c8af2bee1b0765d44e",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/avatar.jpeg",
+    "target": "proof/browser/fast/avatar.jpeg",
+    "sourceBytes": 59095,
+    "sourceSha256": "69ba17e4595b5ffd4bfff4a866d6592bd331c8b044774501357795296bcba4db",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/card-states.jpeg",
+    "target": "proof/browser/fast/card-states.jpeg",
+    "sourceBytes": 52968,
+    "sourceSha256": "27e251c24da2d8338068259d87e4d4856144e45567bfc8743938d5ba8dbcb9f3",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/empty.jpeg",
+    "target": "proof/browser/fast/empty.jpeg",
+    "sourceBytes": 50110,
+    "sourceSha256": "38f2ce59f49e202bb3b8957668e2872ac3f67ea2fb59bbe30ab864965a1db5de",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/loading.jpeg",
+    "target": "proof/browser/fast/loading.jpeg",
+    "sourceBytes": 49678,
+    "sourceSha256": "31215e4febad18547964fd7a451dacfde3cbc16394ab21a9c072c6462b048799",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/normal.jpeg",
+    "target": "proof/browser/fast/normal.jpeg",
+    "sourceBytes": 186450,
+    "sourceSha256": "a4c77cd46a98b5c025d6853909318aae3bc2a8978ae9fc495b6b6d518dc16bc9",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-acceptance-2026-09-06T13-31-08-341Z/tooltip.jpeg",
+    "target": "proof/browser/fast/tooltip.jpeg",
+    "sourceBytes": 191441,
+    "sourceSha256": "78525389eb34faea5f77777716ffe5154a3609fd0099ef691d2edfa8124c9d24",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-warm-2026-09-06T14-13-57-238Z/ledger.jsonl",
+    "target": "proof/runs/fast-warm-2026-09-06T14-13-57-238Z/ledger.jsonl",
+    "sourceBytes": 14828,
+    "sourceSha256": "fadc23da1a5f2194a9d380c0c7f2f4bb0f9954339147d41691ec4824edc0f55c",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-warm-2026-09-06T14-13-57-238Z/events.json",
+    "target": "proof/runs/fast-warm-2026-09-06T14-13-57-238Z/events.json.gz",
+    "sourceBytes": 134289,
+    "sourceSha256": "2d92b2b6ec12be75cf7b8f17e69f939836f9e732ece1ea084d53f5ea91ee1d17",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-33-07-149Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-33-07-149Z/ledger.jsonl",
+    "sourceBytes": 4718,
+    "sourceSha256": "dc410ab2f8b7f2c83cc371ecbd37c28a2b41cda66a9f6c3e9cb0796fd929fbe2",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-33-07-149Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-33-07-149Z/events.json.gz",
+    "sourceBytes": 145132,
+    "sourceSha256": "fcaf807a619e13525faec242c92146256b055bb0f8ba26feb8bf9250df151115",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-33-07-149Z/failed-dom.txt",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-33-07-149Z/failed-dom.txt.gz",
+    "sourceBytes": 1519,
+    "sourceSha256": "1251ec9aeb6ffe324fff794c3b1f286f7a85ba64f21bd35c69430c5738193430",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-40-19-960Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-40-19-960Z/ledger.jsonl",
+    "sourceBytes": 1629,
+    "sourceSha256": "411c844f05b1bcd2c5ffc1106b6d5e37dbd1b55e3bd41f432bf9303b365b7b89",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-40-19-960Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-40-19-960Z/events.json.gz",
+    "sourceBytes": 123670,
+    "sourceSha256": "7b019fb0056ff27a1ef2818b0df3583caebf3dfc4f0d586b2c2fdbe02893d945",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-40-19-960Z/failed-dom.txt",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-40-19-960Z/failed-dom.txt.gz",
+    "sourceBytes": 1519,
+    "sourceSha256": "1251ec9aeb6ffe324fff794c3b1f286f7a85ba64f21bd35c69430c5738193430",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-48-49-787Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-48-49-787Z/ledger.jsonl",
+    "sourceBytes": 2301,
+    "sourceSha256": "26b560e68c2c69ea628c3d9bff8b344e6d9d4804c850c6cd93e850b13e44c243",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-48-49-787Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-48-49-787Z/events.json.gz",
+    "sourceBytes": 123439,
+    "sourceSha256": "4982122eb37b9bf3751189a7a86bb882c96eb537df6dd0d6f676e0d41aeab391",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-48-49-787Z/failed-dom.txt",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-48-49-787Z/failed-dom.txt.gz",
+    "sourceBytes": 1519,
+    "sourceSha256": "1251ec9aeb6ffe324fff794c3b1f286f7a85ba64f21bd35c69430c5738193430",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-51-34-278Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-51-34-278Z/ledger.jsonl",
+    "sourceBytes": 1625,
+    "sourceSha256": "a0c1d331118e9b03803cd40d74a868ab2dbc8fec4d98e554f6c8fbbdf698c5e3",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-51-34-278Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-51-34-278Z/events.json.gz",
+    "sourceBytes": 28737,
+    "sourceSha256": "5af3679b9335b5388a3df99a2831ac8b262a634ce003ef192b2191720d5eb782",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-52-54-045Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-52-54-045Z/ledger.jsonl",
+    "sourceBytes": 5090,
+    "sourceSha256": "64eb2de1e7445c2725d322b950ff9f91a438b4c4c1887d00b9f6721844567d8e",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-52-54-045Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-52-54-045Z/events.json.gz",
+    "sourceBytes": 133815,
+    "sourceSha256": "c69c3c3ea37adcb97227230eefb72ea6d651230f745bfbb50377c4b8763ec5f4",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-52-54-045Z/failed-dom.txt",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-52-54-045Z/failed-dom.txt.gz",
+    "sourceBytes": 14095,
+    "sourceSha256": "763ed4be5f59bc64b2c38b81387b4e8dac0834b788ad9704aa40dd319241cb92",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-56-12-117Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-56-12-117Z/ledger.jsonl",
+    "sourceBytes": 1732,
+    "sourceSha256": "a5187204058e8b09f457c9be61f479ee4757022cbecb57bf77b15c447a442a18",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-56-12-117Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-56-12-117Z/events.json.gz",
+    "sourceBytes": 124000,
+    "sourceSha256": "128cf56ecf8562e95dd23e7dd16c208a30fb9de0445bfede8ba1f0bbb1ef1a25",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T13-56-12-117Z/failed-dom.txt",
+    "target": "proof/runs/fullapp-warm-2026-09-06T13-56-12-117Z/failed-dom.txt.gz",
+    "sourceBytes": 1519,
+    "sourceSha256": "1251ec9aeb6ffe324fff794c3b1f286f7a85ba64f21bd35c69430c5738193430",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T14-00-30-009Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T14-00-30-009Z/ledger.jsonl",
+    "sourceBytes": 15664,
+    "sourceSha256": "1695fe471b9ebdb7e4bb218701f3077701ea235c6db12045b25a5aa411f53e95",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T14-00-30-009Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T14-00-30-009Z/events.json.gz",
+    "sourceBytes": 236134,
+    "sourceSha256": "8c12f97cf738f5c45e9dd8518c5f3365a1651e17b7aaca811d17f765704758b1",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T14-04-46-402Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T14-04-46-402Z/ledger.jsonl",
+    "sourceBytes": 11980,
+    "sourceSha256": "533fd4fa4a71ff579d5d5beaa3e33f7ac861bf06f8b6f750566e9fc9d4e0671f",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T14-04-46-402Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T14-04-46-402Z/events.json.gz",
+    "sourceBytes": 220017,
+    "sourceSha256": "278de9ad1e2f58f78c216e420239ef2908255d79909241922123c3a0c3ea535f",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T14-04-46-402Z/failed-dom.txt",
+    "target": "proof/runs/fullapp-warm-2026-09-06T14-04-46-402Z/failed-dom.txt.gz",
+    "sourceBytes": 14165,
+    "sourceSha256": "00b6032df4a4caee8acc352622e845fae39d84faf40192411b0ba956abb73006",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T14-08-54-847Z/ledger.jsonl",
+    "target": "proof/runs/fullapp-warm-2026-09-06T14-08-54-847Z/ledger.jsonl",
+    "sourceBytes": 16223,
+    "sourceSha256": "ecc3ce3e4d10a7b6fcb03342bf927b4b938c63f4df29fff2048b02edd5950514",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fullapp-warm-2026-09-06T14-08-54-847Z/events.json",
+    "target": "proof/runs/fullapp-warm-2026-09-06T14-08-54-847Z/events.json.gz",
+    "sourceBytes": 236354,
+    "sourceSha256": "4c7ed34094d64e4291c828de1b7bf5a2b482c97538f9f14552015a2fb992e4bd",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-08-58-599Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-08-58-599Z/ledger.jsonl",
+    "sourceBytes": 1555,
+    "sourceSha256": "c634e16d030e5bfa953e0e46773c6ba2070b8f6ca7296be669172d650617d9e3",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-08-58-599Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-08-58-599Z/events.json.gz",
+    "sourceBytes": 218,
+    "sourceSha256": "33939e3d5277141d7e8e000176839422886a8b9c07d3d07a61714e5c0d3b5994",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-11-03-191Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-11-03-191Z/ledger.jsonl",
+    "sourceBytes": 1555,
+    "sourceSha256": "1962474d85a3be4a18c79418a757e42f318075212e80ca722365053606fbc2ec",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-11-03-191Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-11-03-191Z/events.json.gz",
+    "sourceBytes": 503,
+    "sourceSha256": "d0340ec706b756a4b10177cf3b13d8d34795f7b5978e0c7901fe01cb0e370f5a",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-12-45-277Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-12-45-277Z/ledger.jsonl",
+    "sourceBytes": 2510,
+    "sourceSha256": "c9e97716353e94f252b4c3ede3c764cb9053b78bba0f08abb86b5d2533ccd637",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-12-45-277Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-12-45-277Z/events.json.gz",
+    "sourceBytes": 7017,
+    "sourceSha256": "d83e004e7784bfc2143196a2af3001e15f6307f4905454d271503d157a4620a4",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-15-13-474Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-15-13-474Z/ledger.jsonl",
+    "sourceBytes": 1592,
+    "sourceSha256": "0532278ff2a47e5a12e6437bdf2c168bd6f3abb01cfe4529394dc5ab4d7cb10a",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-15-13-474Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-15-13-474Z/events.json.gz",
+    "sourceBytes": 6252,
+    "sourceSha256": "2b6947b5d1c5796dce27ec3d2ac26f5ca48b69a93df603e8391b354d2fca6034",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-16-48-655Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-16-48-655Z/ledger.jsonl",
+    "sourceBytes": 1592,
+    "sourceSha256": "5f782474891c8cbbc68970868022cbc2983e471c0320fc586325e1cc98abd117",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-16-48-655Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-16-48-655Z/events.json.gz",
+    "sourceBytes": 6252,
+    "sourceSha256": "5d02e50bed583fe05225af863852cd3d16e504ef297ca721763169c826f8d39c",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-16-48-655Z/failed-dom.txt",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-16-48-655Z/failed-dom.txt.gz",
+    "sourceBytes": 13322,
+    "sourceSha256": "19775309863402d698f6cc50b2f0aa96236686e54338d1e4a734d2061dffca3f",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-18-21-233Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-18-21-233Z/ledger.jsonl",
+    "sourceBytes": 2970,
+    "sourceSha256": "c2da2729296f5d503026d4ef056e40021c9cd75952948d4b6307f1743d04a9b7",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-18-21-233Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-18-21-233Z/events.json.gz",
+    "sourceBytes": 6252,
+    "sourceSha256": "93fc4a8fede214dbf8d25cf71140196bbb9ebbbee67b75eb42cef343abfbf48d",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-18-21-233Z/failed-dom.txt",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-18-21-233Z/failed-dom.txt.gz",
+    "sourceBytes": 13340,
+    "sourceSha256": "c5b3e9e1d76415bd1267194b6d9acd5a1f2c5f37ba51b884ea9ad9395a0dcf68",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-20-21-658Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-20-21-658Z/ledger.jsonl",
+    "sourceBytes": 3228,
+    "sourceSha256": "da5e86f0ced911242f2bd5fffc7a32f6976f40dd616d78c020fe37112eac5065",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-20-21-658Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-20-21-658Z/events.json.gz",
+    "sourceBytes": 6252,
+    "sourceSha256": "cf62ddcd7f0fe0e86ac67e23f3bf13c2132d560365957d0cfaa9a5d3eba8edc6",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/ledger.jsonl",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-31-25-331Z/ledger.jsonl",
+    "sourceBytes": 3237,
+    "sourceSha256": "48569616c6775ae0bba7936bd2e7ae36881116c17e4eadc0894d10345fc97673",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/events.json",
+    "target": "proof/runs/parity-acceptance-2026-09-06T13-31-25-331Z/events.json.gz",
+    "sourceBytes": 19276,
+    "sourceSha256": "ba89316e551fd46ad69c676a4eb86e63c03b7fa0c5ab513eac5cd04cb7d0074b",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/avatar.jpeg",
+    "target": "proof/browser/parity/avatar.jpeg",
+    "sourceBytes": 59616,
+    "sourceSha256": "6bd210d7f7f10e46e200c6591d2b6f6e581f2ef6a9220647893fd31a943429f6",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/card-states.jpeg",
+    "target": "proof/browser/parity/card-states.jpeg",
+    "sourceBytes": 53002,
+    "sourceSha256": "b1b51fc452373cd47ca00616185c0473d2689499df9d7e5ea83b121b229bf4b3",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/empty.jpeg",
+    "target": "proof/browser/parity/empty.jpeg",
+    "sourceBytes": 50097,
+    "sourceSha256": "421d5c15ae0a3dc23dcc3fcd0f556583e9da16ed3cc00561bceedf152835331a",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/loading.jpeg",
+    "target": "proof/browser/parity/loading.jpeg",
+    "sourceBytes": 49680,
+    "sourceSha256": "e9f2cd8aa6ad5ef43d903fe52e65b6f84c8ed388ba591f2ceafac453a6cde3aa",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/normal.jpeg",
+    "target": "proof/browser/parity/normal.jpeg",
+    "sourceBytes": 186450,
+    "sourceSha256": "a4c77cd46a98b5c025d6853909318aae3bc2a8978ae9fc495b6b6d518dc16bc9",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-acceptance-2026-09-06T13-31-25-331Z/tooltip.jpeg",
+    "target": "proof/browser/parity/tooltip.jpeg",
+    "sourceBytes": 190459,
+    "sourceSha256": "bda42c737e758f2b692a9c3fa71e1ee95f1485a1458cf69fc2c8723f7e8531e5",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-warm-2026-09-06T14-12-43-509Z/ledger.jsonl",
+    "target": "proof/runs/parity-warm-2026-09-06T14-12-43-509Z/ledger.jsonl",
+    "sourceBytes": 14889,
+    "sourceSha256": "dda89082d7705f759e6f71e873a4feb576b54dd16228d4c8d638525824beb699",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/parity-warm-2026-09-06T14-12-43-509Z/events.json",
+    "target": "proof/runs/parity-warm-2026-09-06T14-12-43-509Z/events.json.gz",
+    "sourceBytes": 132469,
+    "sourceSha256": "da14f57d402563d33ba62c20f3e9e52eae85194583b41450938e551036e1dd9d",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-build-ui.txt",
+    "target": "proof/validation/final-build-ui.txt.gz",
+    "sourceBytes": 2042,
+    "sourceSha256": "823aacd7524071dbad6d2a7577ce91fabbae503708b753230fb02b8a59bc1a06",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-build-parity.txt",
+    "target": "proof/validation/final-build-parity.txt.gz",
+    "sourceBytes": 2228,
+    "sourceSha256": "204ca57145a632ea451438bd23d2d4628d573e58a9ff98effd803ecb58ddc869",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-build-fast.txt",
+    "target": "proof/validation/final-build-fast.txt.gz",
+    "sourceBytes": 2226,
+    "sourceSha256": "cb97e898f2f3f78052e7d9f9ef6bdda9d825bc141382a024bc40e09a4fa99453",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-build-unit.txt",
+    "target": "proof/validation/final-build-unit.txt.gz",
+    "sourceBytes": 23942,
+    "sourceSha256": "886b8a6128d0378870bdd1ae156a661e26226f31c8c8a8041bfaf08dc263b73c",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/fast-without-parity.txt",
+    "target": "proof/validation/fast-without-parity.txt.gz",
+    "sourceBytes": 2270,
+    "sourceSha256": "f1bd022e2b59001df720866e748d1e94a849fba9ff2636b1aa193c522372d56a",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/missing-fast.txt",
+    "target": "proof/validation/missing-fast.txt.gz",
+    "sourceBytes": 286,
+    "sourceSha256": "7992b535e706f4ae59c17f58d651bfba2d3f498b0441abe4d324820910d1b4f3",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-catalog-unit.trx",
+    "target": "proof/validation/final-catalog-unit.trx.gz",
+    "sourceBytes": 8840,
+    "sourceSha256": "c3344bca59bb93dbe63ead1980d2d3966881f56ea1bd6685fc63a02ffbed60de",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/catalog-components.trx",
+    "target": "proof/validation/catalog-components.trx.gz",
+    "sourceBytes": 48169,
+    "sourceSha256": "ae3ce47eb606940e3d731fb96f9df6b7b8a886a81786cdad0772b64350f35a88",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/list-unit.txt",
+    "target": "proof/validation/list-unit.txt.gz",
+    "sourceBytes": 794,
+    "sourceSha256": "c93b09fae04e939d283c358f0f16d0b6c64955c45b1bbd07d69dd26690ecd0d7",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/list-components.txt",
+    "target": "proof/validation/list-components.txt.gz",
+    "sourceBytes": 4604,
+    "sourceSha256": "1e5328b5cb7fdb553f625d2c81ef7766a9378211436e6adef274777eacc1f428",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-test-unit.txt",
+    "target": "proof/validation/final-test-unit.txt.gz",
+    "sourceBytes": 423,
+    "sourceSha256": "eae2236fe5fe23e644513388df3e990a46e2f2c7a02bbc7d3375e19e7823b4dd",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/test-components.txt",
+    "target": "proof/validation/test-components.txt.gz",
+    "sourceBytes": 515,
+    "sourceSha256": "765d65ccd8ac522aadbe67eb4d7312818fdfe55c31579f8f8b840c963a37ff3d",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-css-rebuild.txt",
+    "target": "proof/validation/final-css-rebuild.txt.gz",
+    "sourceBytes": 268,
+    "sourceSha256": "6f891d0eb384cf492e5130a5f1a1736bdf467373689572c06151361e321ea0b1",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/final-assets.json",
+    "target": "proof/final-assets.json",
+    "sourceBytes": 278,
+    "sourceSha256": "c31c4f56b974e2dbc11a168454e79bc667c49c0609b3fc234c5738d418806dcb",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/artifact-secret-scan.json",
+    "target": "proof/artifact-secret-scan.json",
+    "sourceBytes": 7583,
+    "sourceSha256": "59979aa75f348fc7e4d5b0b6e691934e35ac252dfa9481e5146925c8295194e8",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/artifact-secret-scan-all-text.json",
+    "target": "proof/artifact-secret-scan-all-text.json",
+    "sourceBytes": 2189,
+    "sourceSha256": "5c07b87068d0ae0a611a02a16ac70ed5c96aedf6f1fe0697939893e69b5f1099",
+    "compression": "original bytes"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/documentation.txt",
+    "target": "proof/validation/documentation.txt.gz",
+    "sourceBytes": 197,
+    "sourceSha256": "2d737410e2892a1e50565eacb86fbc64deb03d572629467a669130916eccb06a",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/portability-enforce-before-review.txt",
+    "target": "proof/validation/portability-enforce-before-review.txt.gz",
+    "sourceBytes": 693,
+    "sourceSha256": "335c7d521d1b6e9be8c377666702ff2548ff3f727e01890f97895037ad9b7ad0",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/portability-final-enforce.txt",
+    "target": "proof/validation/portability-final-enforce.txt.gz",
+    "sourceBytes": 68,
+    "sourceSha256": "97e71d24f4163470eb2b37e31fc89e094485995aa4fedd2dc852902785061491",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/portability-final-scan.txt",
+    "target": "proof/validation/portability-final-scan.txt.gz",
+    "sourceBytes": 301,
+    "sourceSha256": "c5fff5af5ca3eaccd132c7bb03072279f8b214157fb48e0e7e0aae3b60fe4898",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/portability-final.json",
+    "target": "proof/validation/portability-final.json.gz",
+    "sourceBytes": 22820218,
+    "sourceSha256": "9dbdc823c1213e7ee1467bd0456ef4f8f8bcb7bddfb58839bf28d58d09618998",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/portability-selftests.txt",
+    "target": "proof/validation/portability-selftests.txt.gz",
+    "sourceBytes": 109,
+    "sourceSha256": "ef8b6be13eafed5769f5b4675184f06f6051ede8eae5340b294b1d2938fb3569",
+    "compression": "gzip lossless"
+  },
+  {
+    "source": ".mcp-state/catalog-harden/secret-selftests.txt",
+    "target": "proof/validation/secret-selftests.txt.gz",
+    "sourceBytes": 107,
+    "sourceSha256": "fcc307e48d7264257d6c9e750f761e2ba641ecbcaa3f23ab407bb7df06a76acb",
+    "compression": "gzip lossless"
+  }
+]

@@ -7,3 +7,5 @@ Read [adjudication](reviews/adjudication.md), [architecture](architecture.md), [
 Scope: exact source and target verification, acknowledged callback delivery, generation ownership and terminal cleanup. Registry/API/publication identity contracts remain accepted. Recovery remains circuit-scoped. The successor is CDA-UI-SEAMS-CATALOG-HARDEN-01, now authorized to enter H00.
 
 See [rollback and limitations](rollback.md).
+
+Evidence-retention correction: [2026-09-06 erratum](reviews/evidence-retention-erratum.md).

@@ -9,10 +9,10 @@ public sealed class SharedDeliveryLifecycleTests {
         var recovery = new SharedProviderRecovery();
         var attempt = Begin(recovery);
         var calls = 0;
-        var result = await recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, _ => {
+        var result = await recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, delivery => delivery.ReconcileAsync(() => {
             calls++;
             return Task.CompletedTask;
-        });
+        }));
         Assert.Equal(SharedProviderDeliveryDisposition.Acknowledged, result);
         Assert.Null(recovery.FindTarget(attempt.ProviderId));
         Assert.Null(recovery.PendingDelivery(attempt.AttemptId));
@@ -29,14 +29,14 @@ public sealed class SharedDeliveryLifecycleTests {
         var attempt = Begin(recovery);
         var pending = new TaskCompletionSource();
         var calls = 0;
-        var first = recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, _ => {
+        var first = recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, delivery => delivery.ReconcileAsync(() => {
             calls++;
             return pending.Task;
-        });
-        var second = await recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, _ => {
+        }));
+        var second = await recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, delivery => delivery.ReconcileAsync(() => {
             calls++;
             return Task.CompletedTask;
-        });
+        }));
         Assert.Equal(SharedProviderDeliveryDisposition.InProgress, second);
         Assert.Equal(1, calls);
         pending.SetResult();
@@ -74,7 +74,7 @@ public sealed class SharedDeliveryLifecycleTests {
         Assert.Same(attempt, recovery.FindTarget(attempt.ProviderId));
         Assert.False(recovery.CompleteTarget(attempt));
         Assert.Equal(SharedProviderDeliveryDisposition.Acknowledged,
-            await recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, _ => Task.CompletedTask));
+            await recovery.DeliverTargetAsync(attempt, attempt.ProviderId, () => true, delivery => delivery.ReconcileAsync(() => Task.CompletedTask)));
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public sealed class SharedDeliveryLifecycleTests {
     public async Task Stale_shared_completion_cannot_clear_newer_attempt() {
         var recovery = new SharedProviderRecovery();
         var old = Begin(recovery);
-        await recovery.DeliverTargetAsync(old, old.ProviderId, () => true, _ => Task.CompletedTask);
+        await recovery.DeliverTargetAsync(old, old.ProviderId, () => true, delivery => delivery.ReconcileAsync(() => Task.CompletedTask));
         var current = recovery.BeginTarget(old.ProviderId, SharedProviderTargetMutationKind.Publish, old.Before);
         Assert.False(recovery.CompleteTarget(old));
         recovery.RecordCommit(old.AttemptId, new(SharedProviderChangeKind.Publication, [old.ProviderId]));
@@ -136,7 +136,7 @@ public sealed class SharedDeliveryLifecycleTests {
         recovery.BeginSource(old);
         recovery.RecordCommit(old.AttemptId, new(SharedProviderChangeKind.SourceDeleted, []));
         Assert.Equal(SharedProviderDeliveryDisposition.Acknowledged,
-            await recovery.DeliverSourceAsync(old, old.SourceId, () => true, _ => Task.CompletedTask));
+            await recovery.DeliverSourceAsync(old, old.SourceId, () => true, delivery => delivery.ReconcileAsync(() => Task.CompletedTask)));
         Assert.Null(recovery.Source);
         Assert.Null(recovery.PendingDelivery(old.AttemptId));
         var current = new SharedProviderSourceMutationAttempt(old.SourceId, SharedProviderSourceMutationKind.Create);

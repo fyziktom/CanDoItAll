@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.Reflection;
 using Bunit;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -12,7 +13,8 @@ public sealed class SharedProviderRecoveryTests {
         var service = DispatchProxy.Create<ISharedProviderManagementService, SharingProxy>();
         var proxy = (SharingProxy)(object)service;
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id));
+        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id)
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         Assert.NotEmpty(cut.FindAll("[data-testid='shared-provider-warning']"));
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
@@ -26,7 +28,8 @@ public sealed class SharedProviderRecoveryTests {
         var service = DispatchProxy.Create<ISharedProviderManagementService, SharingProxy>();
         var proxy = (SharingProxy)(object)service;
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id));
+        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id)
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         proxy.Read = (_, _) => Task.FromException<SharedProviderProfileSharingSnapshot>(new IOException("Unavailable canonical read."));
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
@@ -44,7 +47,8 @@ public sealed class SharedProviderRecoveryTests {
         var proxy = (SharingProxy)(object)service;
         proxy.Reject = true;
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id));
+        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id)
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         Assert.NotEmpty(cut.FindAll("[data-testid='shared-provider-warning']"));
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
@@ -59,7 +63,8 @@ public sealed class SharedProviderRecoveryTests {
         var second = Guid.NewGuid();
         var pending = new TaskCompletionSource<SharedProviderProfileSharingSnapshot>();
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id));
+        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id)
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         proxy.Read = (id, _) => id == proxy.Id ? pending.Task : Task.FromResult(proxy.State(id));
         var retry = cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
@@ -81,7 +86,8 @@ public sealed class SharedProviderRecoveryTests {
         var proxy = (SharingProxy)(object)service;
         proxy.Imported = true;
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
-        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id));
+        var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id)
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
         cut.WaitForElement("[data-testid='shared-provider-import-alias']").Change("Submitted alias");
         await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();

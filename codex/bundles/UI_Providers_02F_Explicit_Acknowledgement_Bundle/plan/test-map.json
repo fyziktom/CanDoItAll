@@ -1,0 +1,25 @@
+{
+  "frozenBeforeProduction": true,
+  "newUnitClass": "SharedDeliveryAcknowledgementTests",
+  "expectedNewUnitCases": 12,
+  "names": [
+    "Callback_return_without_receiver_ack_keeps_delivery_pending",
+    "Callback_exception_before_ack_keeps_delivery_pending",
+    "Reconcile_ack_then_callback_exception_does_not_repeat_reconciliation",
+    "Reconcile_ack_survives_sender_teardown",
+    "Correct_owner_can_finalize_already_acknowledged_delivery",
+    "Wrong_owner_cannot_finalize_acknowledged_delivery",
+    "Successful_ack_releases_attempt_and_delivery_once",
+    "Delivery_retry_never_replays_backend_mutation",
+    "Concurrent_reconciliation_joins_one_in_flight_delegate",
+    "Failed_concurrent_reconciliation_is_shared_and_explicit_retry_can_succeed",
+    "Acknowledged_reconciliation_never_repeats_delegate",
+    "Canceled_reconciliation_remains_retryable"
+  ],
+  "existingDirect": "SharedDeliveryLifecycleTests (11 cases); SharedDeliveryReconstructionTests (5 cases, including real provider-panel receiver)",
+  "componentNew": [
+    "No_op_receiver_keeps_known_target_delivery_pending",
+    "No_op_receiver_keeps_known_source_delivery_pending"
+  ],
+  "expectedNewComponents": 2
+}

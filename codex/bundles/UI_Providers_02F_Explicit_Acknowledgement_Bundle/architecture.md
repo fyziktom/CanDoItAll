@@ -1,0 +1,11 @@
+# Bounded architecture and lifetime decision
+
+The module envelope owns receiver completion; the circuit recovery owner owns sender delivery and attempt cleanup. Keep both existing types and all project references. Remove the coordinator ability to acknowledge on behalf of the receiver. Only a completed ReconcileAsync can acknowledge. A no-op or failed callback remains pending. Receiver completion followed by callback failure/stale sender remains retained; a valid owner can finish bookkeeping without a second callback. Wrong target/source/generation cannot finalize.
+
+One task-completion source per active envelope reconciliation provides asynchronous single flight. Concurrent callers join that exact task/outcome. Completion marks acknowledgement under a short object lock; no lock crosses await. Failure/cancellation releases the in-flight task for a later explicit retry. Later calls after success skip the delegate. This is narrower than a generic event bus, durable journal or queue and requires no disposable semaphore.
+
+Production receivers: provider workspace wraps its entire shared reconciliation and throws when incomplete; agent editor wraps a lifetime-checked provider reread; ThinkingEditor forwards unchanged. Management, Sources and RefreshButton record known commits before UI lifetime checks and deliver via recovery. Unknown advisory callbacks remain unretained and are not committed delivery receipts. Audit every consumer and fix test callbacks that intend to acknowledge.
+
+Testability: pure envelope/coordinator tests require no UI or runtime; real AgentProviderProfilesPanel source-sync callback failure/retry proves production receiving and draft preservation. Preserve exact source/target canonical postconditions, candidate identities, registry/API/publication, circuit scope and no mutation replay. No partial or project expansion; UI layout, labels and desktop scroll owners unchanged.
+
+Checkpoint F00: failing-first no-op/concurrency; F01: minimal production fix and explicit receiver tests; F02: direct module/Web builds, exact provider recovery owners, real parent component proof, portability/secrets and source audit. Any change to persistence or cross-module API reopens scope; no whole-estate trigger exists.

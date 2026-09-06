@@ -1,0 +1,7 @@
+{"utc":"2026-09-06T13:11:03.200Z","kind":"process-start","label":"tailwind","pid":59276,"command":"C:\\Program Files\\nodejs\\node.exe","argv":["C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs","-i","C:\\repositories\\CanDoItAll\\Tailwind\\input.css","-o","C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css","--watch=always"]}
+{"utc":"2026-09-06T13:11:03.208Z","kind":"process-start","label":"dotnet-watch","pid":23608,"command":"dotnet","argv":["watch","--non-interactive","--project","src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox","--no-launch-profile","-p:CatalogAssetMode=Parity"]}
+{"utc":"2026-09-06T13:11:03.359Z","kind":"protocol","runId":"parity-acceptance-2026-09-06T13-11-03-191Z","planSha256":"835922ef87b9b1c23f01995163f9f70b286dc1a83f6e6e9b56a774f47dd346fb","host":"parity","phase":"acceptance","mode":"Parity","sdk":"10.0.303","node":"v24.19.0","platform":"win32","watchPid":23608,"productionCssBefore":"c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"}
+{"utc":"2026-09-06T13:11:03.484Z","kind":"process-exit","label":"dotnet-watch","pid":23608,"code":1,"signal":null}
+{"utc":"2026-09-06T13:11:03.872Z","kind":"failed","error":"Owned process exited before readiness."}
+{"utc":"2026-09-06T13:11:04.221Z","kind":"stopped","ownedPids":[59276,23608],"productionCssSha256":"c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"}
+{"utc":"2026-09-06T13:11:04.227Z","kind":"process-exit","label":"tailwind","pid":59276,"code":1,"signal":null}

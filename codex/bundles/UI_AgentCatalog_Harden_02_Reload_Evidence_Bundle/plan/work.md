@@ -1,0 +1,9 @@
+# Ordered work and validation
+
+H00: retain original artifact bytes after matching entry manifests, add precise ignores/attributes and explicit errata, validate Git index/tree and Markdown links. Failing-first validation must expose missing Git proof before repair. No timing is reconstructed from prose. Add ordinary commits/pushes of the reviewed task-owned diff so remote evidence can be verified; no merge/history/branch cleanup.
+
+H01: frozen CatalogSandboxContextTests cover default, explicit scenario/layout/agent/team, invalid enum tokens, unknown IDs, round trip and scenario transitions. Expected discovery is frozen from named cases before execution. Use query state only in the sandbox; no production routing change. Direct build UI and sandbox both Parity/Fast, then Unit assembly; existing CatalogAssetModeTests (5 cases) and catalog rendering consumers remain required after executable changes. Browser reload acceptance exercises every scenario, both layouts and agent/team restoration, invalid query normalization and replace-history length.
+
+H02: bounded six-lane diagnostic (three hosts, refresh enabled/disabled), one Razor and one C# edit/undo per lane. Freeze patches and predicates before execution. Startup is a prerequisite, not a cold measurement. Retain failures and classify managed apply, SDK message, browser reload or unsupported update. Compare Parity/Fast/fullapp without altering old measurements. Inspect normal, alternate scenario and tooltip screenshots. Verify both mode identities and unchanged production CSS.
+
+Final architecture, complete proposed-source portability/secrets and documentation checks. No broad stable estate: sandbox-only navigation and bundle metadata do not invalidate unrelated product features. Any library/setup/production routing change reopens scope. Capabilities production waits until this gate and Providers02F are closed.

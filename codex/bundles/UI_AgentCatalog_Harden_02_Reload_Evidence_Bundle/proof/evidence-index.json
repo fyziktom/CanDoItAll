@@ -1,0 +1,32 @@
+{
+  "source": "index",
+  "bundles": [
+    {
+      "bundle": "UI_Providers_02E_Verification_Delivery_Hardening_Bundle",
+      "manifestEntries": 50,
+      "trackedCoveredFiles": 50,
+      "relativeLinks": 10
+    },
+    {
+      "bundle": "UI_AgentCatalog_Harden_01_Development_Loop_Bundle",
+      "manifestEntries": 137,
+      "trackedCoveredFiles": 137,
+      "relativeLinks": 12
+    },
+    {
+      "bundle": "UI_Providers_02F_Explicit_Acknowledgement_Bundle",
+      "manifestEntries": 47,
+      "trackedCoveredFiles": 47,
+      "relativeLinks": 16
+    },
+    {
+      "bundle": "UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle",
+      "manifestEntries": 10,
+      "trackedCoveredFiles": 10,
+      "relativeLinks": 6
+    }
+  ],
+  "errors": [],
+  "result": "PASS",
+  "hashContract": "SHA-256 of exact Git blob bytes; historical proof uses -text to preserve original bytes."
+}

@@ -1,0 +1,42 @@
+{
+  "snapshotId": "snap-20260906162426-338a2e58",
+  "projectCount": 1,
+  "documents": 199,
+  "types": 530,
+  "members": 5597,
+  "diagnostics": [
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.Pages was truncated to 80 types."
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodes": [
+        "CanDoItAll.Modules.AgentFramework.Hosting",
+        "CanDoItAll.Modules.AgentFramework"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodes": [
+        "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+        "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+      ]
+    }
+  ],
+  "dependencyCount": 506,
+  "limitation": "Single-project snapshot does not evaluate the transitive MSBuild graph; direct project/reference inventory remains required."
+}

@@ -21,7 +21,7 @@ public sealed class SharedDeliveryReconstructionTests {
         var calls = 0;
         Task Callback(SharedProviderChangeDelivery delivery) {
             calls++;
-            return calls == 1 ? Task.FromException(new IOException("Synthetic interrupted receiver.")) : Task.CompletedTask;
+            return calls == 1 ? Task.FromException(new IOException("Synthetic interrupted receiver.")) : delivery.ReconcileAsync(() => Task.CompletedTask);
         }
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         IRenderedComponent<SharedProviderSourcesDialog> Render() => harness.Context.Render<SharedProviderSourcesDialog>(
@@ -54,7 +54,7 @@ public sealed class SharedDeliveryReconstructionTests {
         var calls = 0;
         Task Callback(SharedProviderChangeDelivery delivery) {
             calls++;
-            return calls == 1 ? Task.FromException(new IOException("Synthetic interrupted receiver.")) : Task.CompletedTask;
+            return calls == 1 ? Task.FromException(new IOException("Synthetic interrupted receiver.")) : delivery.ReconcileAsync(() => Task.CompletedTask);
         }
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<ISharedProviderManagementService>(service));
         IRenderedComponent<SharedProviderManagementPanel> Render() => harness.Context.Render<SharedProviderManagementPanel>(

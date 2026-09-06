@@ -1,0 +1,8 @@
+{"utc":"2026-09-06T13:56:12.127Z","kind":"process-start","label":"tailwind","pid":54584,"command":"C:\\Program Files\\nodejs\\node.exe","argv":["C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs","-i","C:\\repositories\\CanDoItAll\\Tailwind\\input.css","-o","C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css","--watch=always"]}
+{"utc":"2026-09-06T13:56:12.134Z","kind":"process-start","label":"dotnet-watch","pid":46912,"command":"dotnet","argv":["watch","--verbose","--non-interactive","--project","src/App/CanDoItAll.Web","--no-launch-profile","--property:CatalogAssetMode=Parity"]}
+{"utc":"2026-09-06T13:56:12.265Z","kind":"protocol","runId":"fullapp-warm-2026-09-06T13-56-12-117Z","planSha256":"dc13a1b519222840edac47c7be380eb76e5231922ec54c77ab8b813997154e56","harnessSha256":"d63c2cd049518d9d5af13fd7f5eb1779a85635a972be5fb8a9d8ffac956ecb36","host":"fullapp","phase":"warm","mode":"Production","sdk":"10.0.303","node":"v24.19.0","platform":"win32","watchPid":46912,"productionCssBefore":"c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"}
+{"utc":"2026-09-06T13:57:48.579Z","kind":"interactive-readiness","attempts":2,"filteredCards":12}
+{"utc":"2026-09-06T13:58:18.699Z","kind":"failed","error":"page.waitForFunction: Timeout 30000ms exceeded."}
+{"utc":"2026-09-06T13:58:19.469Z","kind":"stopped","ownedPids":[54584,46912],"productionCssSha256":"c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"}
+{"utc":"2026-09-06T13:58:19.471Z","kind":"process-exit","label":"dotnet-watch","pid":46912,"code":1,"signal":null}
+{"utc":"2026-09-06T13:58:19.472Z","kind":"process-exit","label":"tailwind","pid":54584,"code":1,"signal":null}

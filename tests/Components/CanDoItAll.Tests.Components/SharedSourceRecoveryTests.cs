@@ -143,7 +143,10 @@ public sealed class SharedSourceRecoveryTests {
         List<SharedProviderChange>? changes = null) =>
         harness.Context.Render<SharedProviderSourcesDialog>(p => p
             .Add(component => component.Secrets, [new SecretListItem(proxy.SecretId, "Fixture credential", SecretKind.Token, "workspace", DateTimeOffset.UtcNow)])
-            .Add(component => component.ProvidersChanged, (SharedProviderChangeDelivery delivery) => changes?.Add(delivery.Change)));
+            .Add(component => component.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => {
+                changes?.Add(delivery.Change);
+                return Task.CompletedTask;
+            })));
 
     private static async Task StartCreateAsync(IRenderedComponent<SharedProviderSourcesDialog> cut) {
         await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();

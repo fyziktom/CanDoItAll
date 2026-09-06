@@ -1,0 +1,50 @@
+{
+  "suite": "Unit",
+  "expectedDiscovery": 121,
+  "commands": [
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryLifecycleTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedTargetVerificationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderVerificationHardeningTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests.",
+        "/m:1",
+        "--list-tests"
+      ],
+      "cwd": ".",
+      "startUtc": "2026-09-06T16:35:25.793694+00:00",
+      "endUtc": "2026-09-06T16:35:27.927949+00:00",
+      "exitCode": 0,
+      "artifact": "owning-list-Unit.txt"
+    },
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryLifecycleTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderSharedReconciliationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderProfilesSessionTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedTargetVerificationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderEditorOperationsTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderVerificationHardeningTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.SharedDeliveryAcknowledgementTests.",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=owning-Unit.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\p02f"
+      ],
+      "cwd": ".",
+      "startUtc": "2026-09-06T16:35:27.928949+00:00",
+      "endUtc": "2026-09-06T16:35:30.270760+00:00",
+      "exitCode": 0,
+      "artifact": "owning-test-Unit.txt"
+    }
+  ],
+  "actualDiscovery": 121
+}

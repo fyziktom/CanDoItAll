@@ -1,0 +1,7 @@
+# Focused validation and progression
+
+Frozen new behavior inventory: [test map](test-map.json). Red runs discover and execute the 12 new Unit cases and two rendered no-op target/source cases before production changes. Existing lifecycle fixtures will be corrected to explicitly acknowledge when that is their intent; no-op remains a negative case.
+
+Direct Release module and Web builds, then refreshed Unit/Components/Integration assemblies. Exact owning filters are frozen in a JSON plan before discovery: delivery, target/source verification, local recovery and provider shared reconciliation; rendered reconstruction, management/source/refresh and real parent consumers; database-backed ProviderRecoveryIntegrationTests plus provider commit/API contracts. Read existing inventory before freezing counts. Discovery mismatches must be reconciled before execution. No broad stable estate: neither schema nor root graph nor unrelated composition changes.
+
+Complete proposed-source portability, scanner self-tests, secret comparison and documentation debt review before closure. Preserve live clean Components/FileTools and production CSS bytes. Tests changing source owners invalidate only those owner selections. Evidence-only amendments do not invalidate test executions. Rollback is revert this child's source/test diff, retaining known pending attempts until a circuit ends; no database rollback or hidden backend replay.
