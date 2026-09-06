@@ -1,0 +1,50 @@
+{
+  "source": "index",
+  "bundles": [
+    {
+      "bundle": "UI_Providers_02E_Verification_Delivery_Hardening_Bundle",
+      "manifestEntries": 50,
+      "trackedCoveredFiles": 50,
+      "relativeLinks": 10
+    },
+    {
+      "bundle": "UI_AgentCatalog_Harden_01_Development_Loop_Bundle",
+      "manifestEntries": 138,
+      "trackedCoveredFiles": 138,
+      "relativeLinks": 14
+    },
+    {
+      "bundle": "UI_Providers_02F_Explicit_Acknowledgement_Bundle",
+      "manifestEntries": 47,
+      "trackedCoveredFiles": 47,
+      "relativeLinks": 16
+    },
+    {
+      "bundle": "UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle",
+      "manifestEntries": 85,
+      "trackedCoveredFiles": 85,
+      "relativeLinks": 13
+    },
+    {
+      "bundle": "UI_AgentCapabilities_01_State_Read_Seams_Bundle",
+      "manifestEntries": 76,
+      "trackedCoveredFiles": 76,
+      "relativeLinks": 20
+    },
+    {
+      "bundle": "UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle",
+      "manifestEntries": 13,
+      "trackedCoveredFiles": 13,
+      "relativeLinks": 14
+    },
+    {
+      "bundle": "UI_Component_Seams_Shared_Architecture_Bundle",
+      "manifestEntries": 35,
+      "trackedCoveredFiles": 35,
+      "relativeLinks": 36
+    }
+  ],
+  "errors": [],
+  "result": "PASS",
+  "hashContract": "SHA-256 of exact Git blob bytes; historical proof uses -text to preserve original bytes."
+}

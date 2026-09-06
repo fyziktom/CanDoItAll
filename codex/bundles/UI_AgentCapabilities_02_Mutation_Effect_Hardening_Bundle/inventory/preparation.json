@@ -1,0 +1,40 @@
+{
+  "preparedUtc": "2026-09-06T18:48:25.383554+00:00",
+  "headDuringPreparation": "97939362ec76412730702d209eb12b05b03d6572",
+  "capabilities01EvidenceIndex": "PASS: 73 entries / 18 relative links before this child was created",
+  "status": "PREPARED ONLY",
+  "source": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+      "sha256": "751dad236e413795e4cfd0b8828814406f21b2c7d2bb5d97e463b41a9bf585d0"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSession.cs",
+      "sha256": "a4a137c11a0c0827f376dddbb9a26bc8fdc5968c8c47cfdaf6e3b303c8d2c5e7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "sha256": "9bed637691cdd8aa667ebd31a1ac2f52b0db388ba589b5f0d03ff08661a71730"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs",
+      "sha256": "02431be5b55aa36a78ecaabc78d855034ee4c8e8dbb19724cb387054c7f0f2d2"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
+      "sha256": "5ee8930687da02fbbccc949c011f79e767c7c0eccc99d1168c93aea98a0c8904"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+      "sha256": "ac252efc45e6b6576dbdf53501df67921970f40fa82efce8f6e41e09567780c3"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+      "sha256": "eec080b7abfa8cb156df1550efa4bdd3d83e77438ef79002bd38b735a681780f"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+      "sha256": "f359ecc67a0c486b8e7ce8788daf06beb616b2d5cafd03058d33c6f87f8ed7be"
+    }
+  ]
+}

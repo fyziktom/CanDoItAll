@@ -1,0 +1,361 @@
+{
+  "snapshot": "snap-20260906162426-338a2e58",
+  "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCapabilitiesPanel",
+  "source": {
+    "path": "Pages/Components/AgentCapabilitiesPanel.razor.cs",
+    "line": 9,
+    "column": 1,
+    "endLine": 650,
+    "endColumn": 2
+  },
+  "members": [
+    {
+      "name": "BuildAgentTreeNodeId(System.Guid)",
+      "kind": "Method",
+      "line": 626
+    },
+    {
+      "name": "HandleAgentTreeSelectAsync(string)",
+      "kind": "Method",
+      "line": 222
+    },
+    {
+      "name": "HandleAgentTreeToggleAsync(string)",
+      "kind": "Method",
+      "line": 233
+    },
+    {
+      "name": "HandleCapabilityTagFiltersChangedAsync(System.Collections.Generic.IReadOnlyList<string>)",
+      "kind": "Method",
+      "line": 462
+    },
+    {
+      "name": "LoadAsync()",
+      "kind": "Method",
+      "line": 169
+    },
+    {
+      "name": "MatchesAssignmentFilter(CanDoItAll.AgentFramework.Models.CapabilityCatalogItem)",
+      "kind": "Method",
+      "line": 557
+    },
+    {
+      "name": "MatchesCapabilitySearch(CanDoItAll.AgentFramework.Models.CapabilityCatalogItem)",
+      "kind": "Method",
+      "line": 532
+    },
+    {
+      "name": "MatchesCapabilityTagFilters(CanDoItAll.AgentFramework.Models.CapabilityCatalogItem)",
+      "kind": "Method",
+      "line": 546
+    },
+    {
+      "name": "MatchesTypeFilter(CanDoItAll.AgentFramework.Models.CapabilityCatalogItem)",
+      "kind": "Method",
+      "line": 568
+    },
+    {
+      "name": "OnInitializedAsync()",
+      "kind": "Method",
+      "line": 133
+    },
+    {
+      "name": "OnParametersSetAsync()",
+      "kind": "Method",
+      "line": 138
+    },
+    {
+      "name": "OpenCapabilityCuratorAsync()",
+      "kind": "Method",
+      "line": 426
+    },
+    {
+      "name": "OpenCapabilityDetailsDialogAsync(System.Guid)",
+      "kind": "Method",
+      "line": 349
+    },
+    {
+      "name": "OpenCapabilityWizardAsync(CanDoItAll.AgentFramework.Models.CapabilityKind)",
+      "kind": "Method",
+      "line": 383
+    },
+    {
+      "name": "PreviewAccessAsync()",
+      "kind": "Method",
+      "line": 476
+    },
+    {
+      "name": "PublishAccessStateAsync(CanDoItAll.AgentFramework.Models.AgentChatContextAccessState)",
+      "kind": "Method",
+      "line": 278
+    },
+    {
+      "name": "ReloadCapabilitiesAsync()",
+      "kind": "Method",
+      "line": 450
+    },
+    {
+      "name": "ResetCapabilityFilters()",
+      "kind": "Method",
+      "line": 468
+    },
+    {
+      "name": "ResolveAgentMeta(CanDoItAll.AgentFramework.Models.AgentDefinition)",
+      "kind": "Method",
+      "line": 609
+    },
+    {
+      "name": "ResolveAssignedCount(System.Guid)",
+      "kind": "Method",
+      "line": 579
+    },
+    {
+      "name": "ResolveCapabilityWizardTitle(CanDoItAll.AgentFramework.Models.CapabilityKind)",
+      "kind": "Method",
+      "line": 616
+    },
+    {
+      "name": "SelectAgentAsync(System.Guid)",
+      "kind": "Method",
+      "line": 243
+    },
+    {
+      "name": "SetMessage(string, string, string)",
+      "kind": "Method",
+      "line": 590
+    },
+    {
+      "name": "ToggleCapabilityAsync(System.Guid)",
+      "kind": "Method",
+      "line": 289
+    },
+    {
+      "name": "TryParseAgentTreeNodeId(string, out System.Guid)",
+      "kind": "Method",
+      "line": 629
+    },
+    {
+      "name": "VerifyCapabilityAsync(System.Guid)",
+      "kind": "Method",
+      "line": 324
+    },
+    {
+      "name": "AgentChatLauncher",
+      "kind": "Property",
+      "line": 29
+    },
+    {
+      "name": "AgentTreeNodes",
+      "kind": "Property",
+      "line": 81
+    },
+    {
+      "name": "AvailableCapabilityTags",
+      "kind": "Property",
+      "line": 126
+    },
+    {
+      "name": "CanOpenCapabilityCurator",
+      "kind": "Property",
+      "line": 72
+    },
+    {
+      "name": "CapabilityCuratorAgent",
+      "kind": "Property",
+      "line": 64
+    },
+    {
+      "name": "CapabilityCuratorAvatarImageUrl",
+      "kind": "Property",
+      "line": 69
+    },
+    {
+      "name": "CapabilityCuratorDisplayName",
+      "kind": "Property",
+      "line": 66
+    },
+    {
+      "name": "CapabilitySetupFlowService",
+      "kind": "Property",
+      "line": 26
+    },
+    {
+      "name": "ContextAccessStateChanged",
+      "kind": "Property",
+      "line": 20
+    },
+    {
+      "name": "DialogService",
+      "kind": "Property",
+      "line": 35
+    },
+    {
+      "name": "FilteredCapabilities",
+      "kind": "Property",
+      "line": 116
+    },
+    {
+      "name": "NotificationService",
+      "kind": "Property",
+      "line": 32
+    },
+    {
+      "name": "PreferredAgentId",
+      "kind": "Property",
+      "line": 14
+    },
+    {
+      "name": "SelectedAgentChanged",
+      "kind": "Property",
+      "line": 17
+    },
+    {
+      "name": "WorkspaceService",
+      "kind": "Property",
+      "line": 23
+    },
+    {
+      "name": "AgentRootTreeNodeId",
+      "kind": "Field",
+      "line": 11
+    },
+    {
+      "name": "AgentTreeNodePrefix",
+      "kind": "Field",
+      "line": 12
+    },
+    {
+      "name": "accessPreviewResult",
+      "kind": "Field",
+      "line": 54
+    },
+    {
+      "name": "accessRuleEffect",
+      "kind": "Field",
+      "line": 48
+    },
+    {
+      "name": "accessRuleReason",
+      "kind": "Field",
+      "line": 53
+    },
+    {
+      "name": "accessRuleScope",
+      "kind": "Field",
+      "line": 49
+    },
+    {
+      "name": "accessRuleSelectorKind",
+      "kind": "Field",
+      "line": 50
+    },
+    {
+      "name": "accessRuleSelectorServerKey",
+      "kind": "Field",
+      "line": 52
+    },
+    {
+      "name": "accessRuleSelectorValue",
+      "kind": "Field",
+      "line": 51
+    },
+    {
+      "name": "agents",
+      "kind": "Field",
+      "line": 39
+    },
+    {
+      "name": "appliedPreferredAgentId",
+      "kind": "Field",
+      "line": 59
+    },
+    {
+      "name": "assignmentFilter",
+      "kind": "Field",
+      "line": 46
+    },
+    {
+      "name": "capabilities",
+      "kind": "Field",
+      "line": 40
+    },
+    {
+      "name": "capabilitySearch",
+      "kind": "Field",
+      "line": 45
+    },
+    {
+      "name": "capabilityTagFilters",
+      "kind": "Field",
+      "line": 44
+    },
+    {
+      "name": "expandedAgentTreeNodeIds",
+      "kind": "Field",
+      "line": 38
+    },
+    {
+      "name": "isAccessPreviewBusy",
+      "kind": "Field",
+      "line": 56
+    },
+    {
+      "name": "isBusy",
+      "kind": "Field",
+      "line": 55
+    },
+    {
+      "name": "isOpeningCapabilityCurator",
+      "kind": "Field",
+      "line": 61
+    },
+    {
+      "name": "isOpeningCapabilityWizard",
+      "kind": "Field",
+      "line": 62
+    },
+    {
+      "name": "preferredAgentApplied",
+      "kind": "Field",
+      "line": 60
+    },
+    {
+      "name": "publishedAccessState",
+      "kind": "Field",
+      "line": 58
+    },
+    {
+      "name": "selectedAgent",
+      "kind": "Field",
+      "line": 41
+    },
+    {
+      "name": "selectedAgentEditor",
+      "kind": "Field",
+      "line": 42
+    },
+    {
+      "name": "selectedAgentId",
+      "kind": "Field",
+      "line": 43
+    },
+    {
+      "name": "selectionGeneration",
+      "kind": "Field",
+      "line": 57
+    },
+    {
+      "name": "typeFilter",
+      "kind": "Field",
+      "line": 47
+    }
+  ],
+  "referenceCount": 18,
+  "referenceLimit": 12,
+  "limitations": "Scoped module snapshot; includes self references and generated Razor. Exact page/component consumers and MSBuild project direction were also read directly.",
+  "existingCycles": [
+    "Hosting/module aggregation",
+    "image runtime tool provider nested builder"
+  ],
+  "sourceChangedSinceSnapshot": false
+}

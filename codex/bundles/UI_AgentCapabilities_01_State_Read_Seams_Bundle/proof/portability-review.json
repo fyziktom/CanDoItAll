@@ -1,0 +1,160 @@
+{
+  "addedReviewed": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 58,
+      "category": "mcp",
+      "source_fingerprint": "c2dfb90f34c85c45ce60badc2f1d737dd8d269a1a31b0c83e69fa0b6f12b52a4",
+      "evidence_excerpt": "<CompactStat Label=\"MCP servers\""
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 59,
+      "category": "mcp",
+      "source_fingerprint": "762b406f79e911e95abdb6906fa86c2425a5cb89d71114c2c1c16234a20d0ecd",
+      "evidence_excerpt": "Value=\"@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()\""
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 89,
+      "category": "mcp",
+      "source_fingerprint": "b971480b62c35a104872f87fe4330168a6e479420a5e4abdeb6bb2056cde423c",
+      "evidence_excerpt": "<Button Text=\"New MCP\""
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 94,
+      "category": "mcp",
+      "source_fingerprint": "2462245531e0b250a080840508b8872d88150db91fe273abc6e9aba4c97b162d",
+      "evidence_excerpt": "Click=\"@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))\""
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 95,
+      "category": "mcp",
+      "source_fingerprint": "c5d7451c8d9d1780b50161922c1c6780aeed2b7ad97a77d1febaa2b727154d17",
+      "evidence_excerpt": "data-testid=\"agents-capability-new-mcp\" />"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 133,
+      "category": "mcp",
+      "source_fingerprint": "639f756f1ef90f81315c1d78a66edba7b13ece62a9ac23fd3116e7afaf0233d3",
+      "evidence_excerpt": "Description=\"Add a skill, tool, or MCP server before assigning it to this agent.\" />"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 173,
+      "category": "mcp",
+      "source_fingerprint": "7d6060d2f431be8f32f26902c193941b414dc82194f1f12be9d2d01a18f01521",
+      "evidence_excerpt": "<option value=\"@SelectorKind.McpServerKey\">MCP server key</option>"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 174,
+      "category": "mcp",
+      "source_fingerprint": "7d2fdcbfaa21e8c3f2b624d3e8c3dc20f1a6f2792cccb44ca2e8df1d2da7f2a5",
+      "evidence_excerpt": "<option value=\"@SelectorKind.McpToolName\">MCP tool name</option>"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 185,
+      "category": "mcp",
+      "source_fingerprint": "0ef3faec70b5859b82484a7be08a61c0962255a48ebddd87360401029b344e55",
+      "evidence_excerpt": "<label class=\"cda-field-label\">MCP server key</label>"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "line": 269,
+      "category": "mcp",
+      "source_fingerprint": "99ed9438e0a2695037e7dcf83627f5c27fb881b5a203fcc4affe52d4702a9cc0",
+      "evidence_excerpt": "<option value=\"@CapabilityTypeFilter.Mcp\">MCP</option>"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 77,
+      "category": "case-policy",
+      "source_fingerprint": "466498f76a86aa56f460ffb0d9f2ef0408555d51b5a7350a6326ef3d4e1f6877",
+      "evidence_excerpt": ".OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 100,
+      "category": "case-policy",
+      "source_fingerprint": "746890df0cf9f55e844713672d51b927e4d4ae1d4ee2fa791ada34177d59e62f",
+      "evidence_excerpt": ".ThenBy(capability => capability.Name, StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 106,
+      "category": "case-policy",
+      "source_fingerprint": "d70dcafaab4114a3b75374bbb816b70400b9ba23956e248a683629f23f10317e",
+      "evidence_excerpt": ".Distinct(StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 107,
+      "category": "case-policy",
+      "source_fingerprint": "f6e62c33c7461d565fb2db1df00c93c9b438d46dfc51ebedc45dcf777c2171eb",
+      "evidence_excerpt": ".OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 144,
+      "category": "case-policy",
+      "source_fingerprint": "7a452ba16e1a311f15c3466985fb77dead626316653b73b937bd54a9f8ab7a7e",
+      "evidence_excerpt": "return capability.Name.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 145,
+      "category": "case-policy",
+      "source_fingerprint": "137b3dc4374cc8f3e3338e5739465eaa855eaf7f1a6f091ba4ac2c4e8b4055a3",
+      "evidence_excerpt": "capability.Key.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 146,
+      "category": "case-policy",
+      "source_fingerprint": "7008451ec11d8fe96ffa2f93a0bba7faf4f585d03a3eef992593f287a808795d",
+      "evidence_excerpt": "capability.Description.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 147,
+      "category": "case-policy",
+      "source_fingerprint": "a76df2b45d7c83fd71642d088453859e53ca7a1a93d5dc65721a1f0bfdb02934",
+      "evidence_excerpt": "capability.EndpointOrPath.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 148,
+      "category": "case-policy",
+      "source_fingerprint": "1156df16a1fb8845d7d5dd9d3b95663feb9a306d11ed775a72c051ca4f4f490c",
+      "evidence_excerpt": "capability.Tags.Any(tag => tag.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase));"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 157,
+      "category": "case-policy",
+      "source_fingerprint": "4931cfa53a19f28dc7ff1e85bc72fab44ee30251cdf6ef0b692a80f5c689a662",
+      "evidence_excerpt": "capability.Tags.Any(tag => string.Equals(tag, filter, StringComparison.OrdinalIgnoreCase)));"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 171,
+      "category": "mcp",
+      "source_fingerprint": "9732c20f08378ece53d6520224401cd51e25e67adca41f96df81efbac132f282",
+      "evidence_excerpt": "CapabilityTypeFilter.Mcp => capability.Kind == CapabilityKind.McpServer,"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "line": 201,
+      "category": "mcp",
+      "source_fingerprint": "ced284cd5a5cf55b30f3eb48359fc8fdb98c2688bbd6b0c0d5f365ed3099cd81",
+      "evidence_excerpt": "Mcp,"
+    }
+  ],
+  "staleCount": 20,
+  "disposition": "Twelve MCP matches are unchanged visible labels, selector enum values and pure kind predicates. Ten case-policy matches deliberately compare/sort user-facing display names, text and tags with OrdinalIgnoreCase; endpoint text is searched, never treated as authority/path equality. Twenty stale matches are replaced host rendering/filter responsibilities. Two additional tag sort/dedup occurrences support separate effect tag suggestions and surface presentation. No process/path/runtime portability behavior changed."
+}

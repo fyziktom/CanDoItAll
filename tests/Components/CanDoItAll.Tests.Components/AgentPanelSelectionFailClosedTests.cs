@@ -153,6 +153,7 @@ public sealed class AgentPanelSelectionFailClosedTests
     private static BunitContext CreateChatTestContext(WorkspaceServiceProxy workspace)
     {
         var context = CreateBaseTestContext(workspace.Service);
+        context.Services.AddSingleton<IAgentCapabilitiesReads, AgentCapabilitiesReads>();
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentVoiceService, UnexpectedCallProxy>());
         context.Services.AddSingleton(
@@ -171,6 +172,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         IAgentChatLauncher? launcher = null)
     {
         var context = CreateBaseTestContext(workspace.Service);
+        context.Services.AddSingleton<IAgentCapabilitiesReads, AgentCapabilitiesReads>();
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentCapabilitySetupFlowService, UnexpectedCallProxy>());
         context.Services.AddSingleton(

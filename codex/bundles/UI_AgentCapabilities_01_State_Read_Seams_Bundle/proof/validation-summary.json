@@ -1,0 +1,126 @@
+{
+  "status": "CLOSED",
+  "closedUtc": "2026-09-06T18:39:42.359508+00:00",
+  "entrySha": "97939362ec76412730702d209eb12b05b03d6572",
+  "source": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor",
+      "sha256": "831c96e8b14744d9eb90bf80ae41b2b9ed364fd45b76441e8e176a3d2f6a2750"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+      "sha256": "751dad236e413795e4cfd0b8828814406f21b2c7d2bb5d97e463b41a9bf585d0"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "sha256": "089452ca2eed47fd8705dec414ff07edfbedb711871a1663ca0ecd79fb7aec26"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSession.cs",
+      "sha256": "a4a137c11a0c0827f376dddbb9a26bc8fdc5968c8c47cfdaf6e3b303c8d2c5e7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs",
+      "sha256": "42680a7cae2d32b3352b70a07c24a63477121840bdfd2c018058b2ab162cc2a2"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "6ace3f678e904a853336413b72ac0f583748c313aa9bc2cdb8492b23ab5f7de5"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "sha256": "9bed637691cdd8aa667ebd31a1ac2f52b0db388ba589b5f0d03ff08661a71730"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilitiesReads.cs",
+      "sha256": "1cdedd3de967913b6c0667a2ba6e455b67b639f9071c8a900c94a8d0f039d085"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs",
+      "sha256": "73e58e3e9f2b46aff94e1c4468c52366da553a9612dd4625c111abaf2c2d77a4"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesHostTests.cs",
+      "sha256": "0a510d47503ee4501bd19302e61a6ac6f06641cac147492104cb12354eebb706"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesReadLifecycleTests.cs",
+      "sha256": "4f0dd4d4368e396bcce4a19f0001614667065aebc74bca32dffaac29822184cc"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesSurfaceTests.cs",
+      "sha256": "a3801758ee6498fe694edf73686fcaacb7d99898c6d06a706d477d196a70f55d"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentPanelSelectionFailClosedTests.cs",
+      "sha256": "c6c3f06a8fb6b04e2b0373468b89f8fd4505c96e536c38c7a65d2f4e139067bb"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilitiesSessionTests.cs",
+      "sha256": "5b9ebf9886cdd0a831bd5e908f9e3e7769582e53b02be58e39616a1d2250fa02"
+    }
+  ],
+  "tests": {
+    "unit": {
+      "total": "13",
+      "executed": "13",
+      "passed": "13",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "components": {
+      "total": "46",
+      "executed": "46",
+      "passed": "46",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    }
+  },
+  "newCases": 42,
+  "owningExistingCases": 17,
+  "directBuildProjects": [
+    "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+    "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+    "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj"
+  ],
+  "directBuildExitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "browser": "PASS: real full-app, isolated PostgreSQL, 1600x1000, nine inspected states, zero page errors",
+  "portability": "PASS: 14300 reviewed protected findings; 22 additions/20 stale UI relocations, 6 scanner tests",
+  "secrets": "No new complete-source findings; zero artifact findings, 4 scanner tests",
+  "documentation": "Existing one grouped finding: 118 historical tracked log files; no new .log proof",
+  "broaderStableGate": "Not run: no broad contract invalidation; exact existing page and capability consumers ran",
+  "productProjectAndRoutingChanges": false,
+  "siblingChanges": false
+}

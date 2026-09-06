@@ -1,0 +1,32 @@
+[
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:23:38.531042+00:00",
+    "endUtc": "2026-09-06T18:23:54.626849+00:00",
+    "exitCode": 0
+  },
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "src/MAF/Common/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:23:54.627933+00:00",
+    "endUtc": "2026-09-06T18:23:54.846814+00:00",
+    "exitCode": 1
+  }
+]

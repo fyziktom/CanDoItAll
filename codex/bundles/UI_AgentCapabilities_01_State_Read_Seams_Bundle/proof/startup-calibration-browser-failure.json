@@ -1,0 +1,7 @@
+{
+  "steps": [
+    "Exact requested selection, local search/type filters and managed curator availability"
+  ],
+  "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('agents-capability-toggle')\u001b[22m\n",
+  "pageErrors": []
+}

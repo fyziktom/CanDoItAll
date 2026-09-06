@@ -1,0 +1,17 @@
+{
+  "frozenUtc": "2026-09-06T18:19:21.947558+00:00",
+  "selections": [
+    {
+      "name": "unit",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "FullyQualifiedName~AgentCapabilitiesSessionTests|FullyQualifiedName~CapabilityCuratorAgentRuntimeToolProviderTests.Provider_fails_closed_for_identity_spoofs_and_reauthorizes_each_invocation",
+      "expected": 13
+    },
+    {
+      "name": "components",
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "filter": "FullyQualifiedName~AgentCapabilitiesReadLifecycleTests|FullyQualifiedName~AgentCapabilitiesSurfaceTests|FullyQualifiedName~AgentCapabilitiesHostTests|FullyQualifiedName~AgentPanelSelectionFailClosedTests.Capabilities_panel_|FullyQualifiedName~AgentCapabilityListTests|FullyQualifiedName~CapabilitySetupFlowServiceTests|FullyQualifiedName~AgentsHomePageTests",
+      "expected": 46
+    }
+  ]
+}

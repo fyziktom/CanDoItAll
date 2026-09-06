@@ -1,0 +1,22 @@
+[
+  {
+    "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesReadLifecycleTests.Pending_target_read_does_not_render_the_previous_editor",
+    "outcome": "Failed",
+    "message": "Assert.DoesNotContain() Failure: Sub-string found\r\n         \u2193 (pos 0)\r\nString: \"Alpha read fixture\"\r\nFound:  \"Alpha read fixture\""
+  },
+  {
+    "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesReadLifecycleTests.Assignment_failure_keeps_uncommitted_local_attachment",
+    "outcome": "Passed",
+    "message": null
+  },
+  {
+    "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesReadLifecycleTests.Disposing_panel_cancels_the_owned_read",
+    "outcome": "Failed",
+    "message": "Assert.True() Failure\r\nExpected: True\r\nActual:   False"
+  },
+  {
+    "name": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesReadLifecycleTests.Late_read_failure_does_not_break_the_new_target",
+    "outcome": "Failed",
+    "message": "System.InvalidOperationException : Late fixture read failure."
+  }
+]

@@ -1,0 +1,9 @@
+# Reproduce the full-app browser acceptance
+
+The helpers are validation-only. They do not add a product project, production delay endpoint, or capabilities sandbox. Use the repository SDK and live sibling source mode. The fixture creates its own isolated PostgreSQL profile through Tests.Support and seeds two agents plus an inline skill. Its public read decorator deliberately lets one completed canonical read finish late so stale-result suppression can be observed. Only the fixture has loopback arm/release/state/stop controls.
+
+From the repository root, copy browser-fixture.cs.txt to .mcp-state/capa01-browser-fixture/Program.cs and browser-fixture.csproj.txt to .mcp-state/capa01-browser-fixture/CapabilitiesBrowser.csproj. Build that project with dotnet build -c Release -m:1 /nr:false. Run its DLL with the absolute repository root as the last argument. When starting it in PowerShell, use Start-Process -WindowStyle Hidden and redirect stdout/stderr into ignored task output. Verify ports 5273 and 17301 are free before starting.
+
+Set CAPA_PLAYWRIGHT to the installed Playwright module directory (executed version 1.61.1, Chromium 149.0.7827.55). Run node with browser-acceptance.cjs and an existing ignored output directory. It confirms the isolated startup profile via Continue, uses 1600x1000, checks canonical fixture state, and retains failures. POST the fixture stop endpoint after acceptance; it releases any delayed read and disposes the full app and test environment. Do not reuse a personal database or copy connection strings into proof.
+
+The executed helper source, project recipe, compact results, nine inspected screenshots and DOM extracts are retained. Raw full console/TRX data stays ignored except compressed focused receipts/build logs explicitly included in proof. This is functional browser validation; there are no capability performance or hot-reload measurements.

@@ -1,0 +1,9 @@
+# Pre-implementation adjudication
+
+Entry findings 1–16 are adjudicated by the completed provider and catalog children. [The full 22-finding entry review](../../UI_Providers_02F_Explicit_Acknowledgement_Bundle/reviews/adjudication.md) remains the initial record; the catalog classification correction is a successor finding, not a rewritten measurement.
+
+17–18 confirmed: the panel owns the listed reads, effects, mutable editor, selection, local filters and access callbacks, with the five named injected services. 19 confirmed: AgentsHomePage already owns requested identity and consumes the existing selection/access callbacks. 20 confirmed: AgentCapabilityList is a controlled rendering child. 21 confirmed: Components already references UI, so a reverse edge would cycle. 22 confirmed: assignment modifies SelectedCapabilityIds before awaiting Save and catch does not roll it back. This is characterized and deferred to child 02.
+
+Additional read defects: selected editor A remains present while B reads; stale read failure is rethrown even after another target is current; no disposal token owns the reads. These must be corrected to establish the requested state/read seam. Missing IDs already fail closed and that behavior remains. Exact curator identity checks remain authoritative and are not replaced by display-name matching.
+
+Read-only browser fixture planning reuses the existing WebApplicationFactory/Kestrel pattern from earlier provider validation. A disposable ignored validation host may compose the real Web app and a delayed read adapter; it adds no product project, production route or capabilities sandbox. The adapter must delegate actual reads and hold only their completion to prove A-to-B stale fencing. The normal mutation/preview/dialog paths remain real production composition.

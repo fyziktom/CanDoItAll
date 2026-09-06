@@ -119,3 +119,7 @@ src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css
 !codex/bundles/UI_Providers_02F_Explicit_Acknowledgement_Bundle/evidence/**
 !codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle/proof/
 !codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle/proof/**
+
+# Compact capabilities seam proof.
+!codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/**

@@ -1,0 +1,84 @@
+apps
+CanDoItAll local delivery workbench
+chevron_right
+dashboard
+folder_open
+forum
+groups
+smart_toy
+account_tree
+account_tree
+monitor_heart
+psychology
+inventory_2
+extension
+library_books
+expand_less
+smart_toy
+Chats
+settings
+Settings
+health_and_safety
+Runtime capabilities
+storage
+Switch Database
+i
+
+AGENTFRAMEWORK
+
+Integrated technical agent runtime
+
+This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.
+
+... technical agents
+... providers
+... bound resources
+... capabilities
+... active runs
+... failed runs
+?
+groups
+GROUPS
+account_tree
+FLOW
+account_tree
+FLOW
+Overview
+Agents...
+Simple Chats
+Providers...
+Request history
+Voice
+Floating chat
+Chat
+Capabilities...
+Governance...
+Diagnostics...
+sync
+CLOUD SYNC
+Agents
+0 AGENT(S)
+
+Select the technical agent whose runtime capabilities you want to inspect, assign, or verify.
+
+NO AGENTS
+
+Create a technical agent first
+
+Capability assignment only makes sense after the technical runtime catalog exists.
+
+CAPABILITY ASSIGNMENT
+
+Loading capabilities
+build
+New tool
+hub
+New MCP
+psychology
+New skill
+
+LOADING CAPABILITIES
+
+Loading selected capability assignments
+
+The current target is loading. Actions will be available when its editor is ready.

@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Capabilities.Templates;
 using CanDoItAll.AgentFramework.Models;
@@ -6,279 +8,81 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class AgentCapabilitiesPanel
-{
-    private const string AgentRootTreeNodeId = "capabilities:agents";
-    private const string AgentTreeNodePrefix = "capabilities:agent:";
+public partial class AgentCapabilitiesPanel : IDisposable {
+    [Parameter] public Guid? PreferredAgentId { get; set; }
+    [Parameter] public EventCallback<AgentDefinition?> SelectedAgentChanged { get; set; }
+    [Parameter] public EventCallback<AgentChatContextAccessState> ContextAccessStateChanged { get; set; }
+    [Inject] public IAgentCapabilitiesReads Reads { get; set; } = default!;
+    [Inject] public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+    [Inject] public IAgentCapabilitySetupFlowService CapabilitySetupFlowService { get; set; } = default!;
+    [Inject] public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
+    [Inject] public NotificationService NotificationService { get; set; } = default!;
+    [Inject] public DialogService DialogService { get; set; } = default!;
 
-    [Parameter]
-    public Guid? PreferredAgentId { get; set; }
-
-    [Parameter]
-    public EventCallback<AgentDefinition?> SelectedAgentChanged { get; set; }
-
-    [Parameter]
-    public EventCallback<AgentChatContextAccessState> ContextAccessStateChanged { get; set; }
-
-    [Inject]
-    public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
-
-    [Inject]
-    public IAgentCapabilitySetupFlowService CapabilitySetupFlowService { get; set; } = default!;
-
-    [Inject]
-    public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
-
-    [Inject]
-    public NotificationService NotificationService { get; set; } = default!;
-
-    [Inject]
-    public DialogService DialogService { get; set; } = default!;
-
-    private readonly HashSet<string> expandedAgentTreeNodeIds = [AgentRootTreeNodeId];
-    private IReadOnlyList<AgentDefinition> agents = [];
-    private IReadOnlyList<CapabilityCatalogItem> capabilities = [];
-    private AgentDefinition? selectedAgent;
-    private AgentEditorModel? selectedAgentEditor;
-    private Guid? selectedAgentId;
-    private IReadOnlyList<string> capabilityTagFilters = [];
-    private string capabilitySearch = string.Empty;
-    private CapabilityAssignmentFilter assignmentFilter = CapabilityAssignmentFilter.All;
-    private CapabilityTypeFilter typeFilter = CapabilityTypeFilter.All;
-    private string accessRuleEffect = "deny";
-    private string accessRuleScope = "uiPreview";
-    private string accessRuleSelectorKind = "operationClassification";
-    private string accessRuleSelectorValue = "externalAction";
-    private string accessRuleSelectorServerKey = string.Empty;
-    private string accessRuleReason = "UI preview denies matching capabilities.";
-    private CapabilityAccessPreviewResult? accessPreviewResult;
-    private bool isBusy;
-    private bool isAccessPreviewBusy;
-    private long selectionGeneration;
+    private AgentCapabilitiesSession session = default!;
     private AgentChatContextAccessState? publishedAccessState;
+    private AgentDefinition? publishedAgent;
+    private bool hasPublishedAgent;
     private Guid? appliedPreferredAgentId;
     private bool preferredAgentApplied;
-    private bool isOpeningCapabilityCurator;
-    private bool isOpeningCapabilityWizard;
+    private long? busyGeneration;
+    private long? previewGeneration;
+    private long? previewBusyGeneration;
+    private long? curatorGeneration;
+    private long? wizardGeneration;
+    private AgentCapabilityPreview? preview;
 
-    private AgentDefinition? CapabilityCuratorAgent => agents.FirstOrDefault(CapabilityCuratorAgentIdentity.Matches);
+    private AgentCapabilitiesSnapshot Snapshot => session.Snapshot with {
+        IsBusy = busyGeneration == session.Generation,
+        IsAccessPreviewBusy = previewBusyGeneration == session.Generation,
+        IsOpeningCurator = curatorGeneration == session.Generation,
+        IsOpeningWizard = wizardGeneration == session.Generation,
+        Preview = previewGeneration == session.Generation ? preview : null
+    };
 
-    private string CapabilityCuratorDisplayName =>
-        CapabilityCuratorAgent?.Name ?? CapabilityCuratorAgentIdentity.DefaultDisplayName;
+    protected override void OnInitialized() => session = new(Reads);
 
-    private string CapabilityCuratorAvatarImageUrl =>
-        CapabilityCuratorAgent?.AvatarImageUrl ?? CapabilityCuratorAgentIdentity.DefaultAvatarImageUrl;
-
-    private bool CanOpenCapabilityCurator =>
-        !isBusy &&
-        !isOpeningCapabilityCurator &&
-        publishedAccessState == AgentChatContextAccessState.Ready &&
-        CapabilityCuratorAgent is { Status: AgentLifecycleStatus.Active } curator &&
-        !curator.IsTemplate &&
-        curator.Permissions.CanUseTools &&
-        CapabilityCuratorAgentIdentity.Matches(curator);
-
-    private IReadOnlyList<TreeViewNode> AgentTreeNodes
-    {
-        get
-        {
-            var selectedId = selectedAgentId;
-            return
-            [
-                new TreeViewNode
-                {
-                    Id = AgentRootTreeNodeId,
-                    Text = "Agents",
-                    Icon = "support_agent",
-                    BadgeText = agents.Count.ToString(),
-                    IsExpanded = expandedAgentTreeNodeIds.Contains(AgentRootTreeNodeId),
-                    IsSelectable = false,
-                    DataTestId = "agents-capability-tree-root",
-                    ChildrenDataTestId = "agents-capability-tree-root-children",
-                    Children = agents
-                        .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
-                        .Select(agent => new TreeViewNode
-                        {
-                            Id = BuildAgentTreeNodeId(agent.Id),
-                            Text = agent.Name,
-                            Icon = "person",
-                            Tooltip = $"{agent.RoleTitle}. {ResolveAgentMeta(agent)}.",
-                            BadgeText = ResolveAssignedCount(agent.Id).ToString(),
-                            IsSelected = selectedId == agent.Id,
-                            DataTestId = "agents-capability-tree-agent"
-                        })
-                        .ToArray()
-                }
-            ];
-        }
-    }
-
-    private IReadOnlyList<CapabilityCatalogItem> FilteredCapabilities => capabilities
-        .Where(MatchesCapabilitySearch)
-        .Where(MatchesCapabilityTagFilters)
-        .Where(MatchesAssignmentFilter)
-        .Where(MatchesTypeFilter)
-        .OrderByDescending(capability => selectedAgentEditor?.SelectedCapabilityIds.Contains(capability.Id) == true)
-        .ThenBy(capability => capability.Kind)
-        .ThenBy(capability => capability.Name, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    private IReadOnlyList<string> AvailableCapabilityTags => capabilities
-        .SelectMany(capability => capability.Tags)
-        .Where(tag => !string.IsNullOrWhiteSpace(tag))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadAsync();
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (preferredAgentApplied && appliedPreferredAgentId == PreferredAgentId)
-        {
-            return;
+    protected override Task OnParametersSetAsync() {
+        if (preferredAgentApplied && appliedPreferredAgentId == PreferredAgentId) {
+            return Task.CompletedTask;
         }
 
+        var initial = !preferredAgentApplied;
         preferredAgentApplied = true;
         appliedPreferredAgentId = PreferredAgentId;
-        if (PreferredAgentId.HasValue &&
-            agents.All(item => item.Id != PreferredAgentId.Value))
-        {
-            Interlocked.Increment(ref selectionGeneration);
-            selectedAgentId = null;
-            selectedAgent = null;
-            selectedAgentEditor = null;
-            await SelectedAgentChanged.InvokeAsync(null);
-            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
-            return;
+        if (!initial && hasPublishedAgent && PreferredAgentId == publishedAgent?.Id) {
+            return Task.CompletedTask;
         }
 
-        var agentId = PreferredAgentId ??
-                      (selectedAgentId.HasValue && agents.Any(item => item.Id == selectedAgentId.Value)
-                          ? selectedAgentId.Value
-                          : agents.FirstOrDefault()?.Id);
-        if (agentId.HasValue)
-        {
-            await SelectAgentAsync(agentId.Value);
-        }
+        return RunReadAsync(() => initial ? session.LoadAsync(PreferredAgentId) : session.SelectAsync(PreferredAgentId));
     }
 
-    private async Task LoadAsync()
-    {
+    private async Task<bool> RunReadAsync(Func<Task<bool>> read, Action<long>? started = null) {
+        var pending = read();
+        var generation = session.Generation;
+        started?.Invoke(generation);
         await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
-        try
-        {
-            agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-            capabilities = await WorkspaceService.ListCapabilitiesAsync();
-            preferredAgentApplied = true;
-            appliedPreferredAgentId = PreferredAgentId;
-        }
-        catch
-        {
-            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
-            throw;
+        var applied = await pending;
+        if (!applied || !session.IsCurrent(generation)) {
+            return false;
         }
 
-        expandedAgentTreeNodeIds.Add(AgentRootTreeNodeId);
-        if (agents.Count == 0)
-        {
-            selectedAgent = null;
-            selectedAgentEditor = null;
-            selectedAgentId = null;
-            await SelectedAgentChanged.InvokeAsync(null);
-            await PublishAccessStateAsync(
-                PreferredAgentId.HasValue
-                    ? AgentChatContextAccessState.Failed
-                    : AgentChatContextAccessState.Ready);
-            return;
-        }
-
-        if (PreferredAgentId.HasValue &&
-            agents.All(item => item.Id != PreferredAgentId.Value))
-        {
-            Interlocked.Increment(ref selectionGeneration);
-            selectedAgent = null;
-            selectedAgentEditor = null;
-            selectedAgentId = null;
-            await SelectedAgentChanged.InvokeAsync(null);
-            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
-            return;
-        }
-
-        var initialAgentId = PreferredAgentId.HasValue &&
-                             agents.Any(item => item.Id == PreferredAgentId.Value)
-            ? PreferredAgentId.Value
-            : selectedAgentId is { } currentAgentId &&
-              agents.Any(item => item.Id == currentAgentId)
-                ? currentAgentId
-                : agents[0].Id;
-
-        await SelectAgentAsync(initialAgentId);
-    }
-
-    private Task HandleAgentTreeSelectAsync(string nodeId)
-    {
-        if (TryParseAgentTreeNodeId(nodeId, out var agentId) &&
-            agents.Any(item => item.Id == agentId))
-        {
-            return SelectAgentAsync(agentId);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private Task HandleAgentTreeToggleAsync(string nodeId)
-    {
-        if (!expandedAgentTreeNodeIds.Add(nodeId))
-        {
-            expandedAgentTreeNodeIds.Remove(nodeId);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private async Task SelectAgentAsync(Guid agentId)
-    {
-        var generation = Interlocked.Increment(ref selectionGeneration);
-        await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
-        var agent = agents.FirstOrDefault(item => item.Id == agentId);
-        AgentEditorModel editor;
-        try
-        {
-            editor = await WorkspaceService.GetAgentEditorAsync(agentId);
-        }
-        catch
-        {
-            if (generation == Volatile.Read(ref selectionGeneration))
-            {
-                await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
+        if (!hasPublishedAgent || !ReferenceEquals(publishedAgent, session.SelectedAgent)) {
+            hasPublishedAgent = true;
+            publishedAgent = session.SelectedAgent;
+            await SelectedAgentChanged.InvokeAsync(publishedAgent);
+            if (!session.IsCurrent(generation)) {
+                return false;
             }
-
-            throw;
         }
 
-        if (generation != Volatile.Read(ref selectionGeneration))
-        {
-            return;
-        }
-
-        selectedAgentId = agentId;
-        selectedAgent = agent;
-        selectedAgentEditor = editor;
-        await SelectedAgentChanged.InvokeAsync(agent);
-        await PublishAccessStateAsync(
-            agent is null
-                ? AgentChatContextAccessState.Failed
-                : AgentChatContextAccessState.Ready);
+        await PublishAccessStateAsync(session.LoadState == AgentCapabilitiesLoadState.Ready
+            ? AgentChatContextAccessState.Ready : AgentChatContextAccessState.Failed);
+        return session.IsCurrent(generation);
     }
 
-    private async Task PublishAccessStateAsync(AgentChatContextAccessState state)
-    {
-        if (publishedAccessState == state)
-        {
+    private async Task PublishAccessStateAsync(AgentChatContextAccessState state) {
+        if (publishedAccessState == state) {
             return;
         }
 
@@ -286,81 +90,93 @@ public partial class AgentCapabilitiesPanel
         await ContextAccessStateChanged.InvokeAsync(state);
     }
 
-    private async Task ToggleCapabilityAsync(Guid capabilityId)
-    {
-        if (selectedAgentEditor is null || !selectedAgentId.HasValue)
-        {
+    private Task HandleIntentAsync(AgentCapabilitiesIntent intent) => intent switch {
+        AgentCapabilitiesIntent.SelectAgent selected => RunReadAsync(() => session.SelectAsync(selected.AgentId)),
+        AgentCapabilitiesIntent.ToggleAssignment assignment => ToggleCapabilityAsync(assignment.CapabilityId),
+        AgentCapabilitiesIntent.VerifyCapability verification => VerifyCapabilityAsync(verification.CapabilityId),
+        AgentCapabilitiesIntent.OpenDetails details => OpenCapabilityDetailsDialogAsync(details.CapabilityId),
+        AgentCapabilitiesIntent.CreateCapability create => OpenCapabilityWizardAsync(create.Kind),
+        AgentCapabilitiesIntent.PreviewAccess access => PreviewAccessAsync(access.Draft),
+        AgentCapabilitiesIntent.OpenCurator => OpenCapabilityCuratorAsync(),
+        AgentCapabilitiesIntent.RetryLoad => RunReadAsync(session.RefreshAsync),
+        _ => throw new ArgumentOutOfRangeException(nameof(intent))
+    };
+
+    private async Task ToggleCapabilityAsync(Guid capabilityId) {
+        if (session.Draft is not { } draft || Snapshot.IsBusy) {
             return;
         }
 
-        isBusy = true;
-        try
-        {
-            var selectedCapabilityIds = selectedAgentEditor.SelectedCapabilityIds.ToList();
-            if (selectedCapabilityIds.Contains(capabilityId))
-            {
-                selectedCapabilityIds.Remove(capabilityId);
-            }
-            else
-            {
-                selectedCapabilityIds.Add(capabilityId);
+        var owner = session.Generation;
+        busyGeneration = owner;
+        try {
+            var ids = draft.SelectedCapabilityIds.ToList();
+            if (!ids.Remove(capabilityId)) {
+                ids.Add(capabilityId);
             }
 
-            selectedAgentEditor.SelectedCapabilityIds = selectedCapabilityIds;
-            await WorkspaceService.SaveAgentAsync(selectedAgentEditor);
-            await LoadAsync();
-            SetMessage("Ready", "success", "Capability assignment updated.");
-        }
-        catch (Exception exception)
-        {
-            SetMessage("Attention", "danger", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
+            draft.SelectedCapabilityIds = ids;
+            await WorkspaceService.SaveAgentAsync(draft);
+            if (session.IsCurrent(owner) && await RunReadAsync(session.RefreshAsync, next => {
+                owner = next;
+                busyGeneration = next;
+            })) {
+                NotificationService.Success("Ready", "Capability assignment updated.");
+            }
+        } catch (Exception exception) when (session.IsCurrent(owner)) {
+            NotificationService.Error("Attention", exception.Message);
+        } catch (Exception) when (!session.IsCurrent(owner)) {
+        } finally {
+            if (busyGeneration == owner) {
+                busyGeneration = null;
+            }
         }
     }
 
-    private async Task VerifyCapabilityAsync(Guid capabilityId)
-    {
-        if (!selectedAgentId.HasValue)
-        {
+    private async Task VerifyCapabilityAsync(Guid capabilityId) {
+        if (session.Selection.AgentId is not { } agentId || Snapshot.IsBusy) {
             return;
         }
 
-        isBusy = true;
-        try
-        {
-            await WorkspaceService.VerifyCapabilityAsync(selectedAgentId.Value, capabilityId);
-            capabilities = await WorkspaceService.ListCapabilitiesAsync();
-            selectedAgentEditor = await WorkspaceService.GetAgentEditorAsync(selectedAgentId.Value);
-            SetMessage("Ready", "success", "Capability verification completed.");
-        }
-        catch (Exception exception)
-        {
-            SetMessage("Attention", "danger", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
+        var owner = session.Generation;
+        busyGeneration = owner;
+        try {
+            await WorkspaceService.VerifyCapabilityAsync(agentId, capabilityId);
+            if (session.IsCurrent(owner) && await RunReadAsync(session.RefreshAsync, next => {
+                owner = next;
+                busyGeneration = next;
+            })) {
+                NotificationService.Success("Ready", "Capability verification completed.");
+            }
+        } catch (Exception exception) when (session.IsCurrent(owner)) {
+            NotificationService.Error("Attention", exception.Message);
+        } catch (Exception) when (!session.IsCurrent(owner)) {
+        } finally {
+            if (busyGeneration == owner) {
+                busyGeneration = null;
+            }
         }
     }
 
-    private async Task OpenCapabilityDetailsDialogAsync(Guid capabilityId)
-    {
-        var capability = capabilities.FirstOrDefault(item => item.Id == capabilityId);
-        try
-        {
-            accessPreviewResult = null;
+    private IReadOnlyList<string> AvailableCapabilityTags => session.Snapshot.Capabilities
+        .SelectMany(capability => capability.Tags)
+        .Where(tag => !string.IsNullOrWhiteSpace(tag))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    private async Task OpenCapabilityDetailsDialogAsync(Guid capabilityId) {
+        var owner = session.Generation;
+        var capability = session.Snapshot.Capabilities.FirstOrDefault(item => item.Id == capabilityId);
+        try {
+            preview = null;
             var result = await DialogService.OpenAsync<CapabilityDetailsDialog>(
                 capability?.Name ?? "Capability details",
-                new Dictionary<string, object?>
-                {
+                new Dictionary<string, object?> {
                     [nameof(CapabilityDetailsDialog.CapabilityId)] = capabilityId,
                     [nameof(CapabilityDetailsDialog.TagSuggestions)] = AvailableCapabilityTags
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     Eyebrow = "Capability metadata",
                     Subtitle = "Inspect and edit capability tags, identity, and type-specific configuration.",
                     Size = ModalSize.Wide,
@@ -368,37 +184,34 @@ public partial class AgentCapabilitiesPanel
                     AriaLabel = "Capability details",
                     TestId = "agents-capability-details-dialog"
                 });
-
-            if (result is CapabilityDetailsDialogResult)
-            {
-                await ReloadCapabilitiesAsync();
+            if (session.IsCurrent(owner) && result is CapabilityDetailsDialogResult) {
+                await RunReadAsync(session.RefreshAsync);
             }
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) when (session.IsCurrent(owner)) {
             NotificationService.Error("Capability dialog failed", exception.Message);
+        } catch (Exception) when (!session.IsCurrent(owner)) {
         }
     }
 
-    private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind)
-    {
-        if (isBusy || isOpeningCapabilityWizard)
-        {
+    private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind) {
+        if (Snapshot.IsBusy || Snapshot.IsOpeningWizard) {
             return;
         }
 
-        isOpeningCapabilityWizard = true;
-        try
-        {
+        var owner = session.Generation;
+        wizardGeneration = owner;
+        try {
             var result = await DialogService.OpenAsync<CapabilitySetupWizardDialog>(
-                ResolveCapabilityWizardTitle(initialKind),
-                new Dictionary<string, object?>
-                {
+                initialKind switch {
+                    CapabilityKind.McpServer => "New MCP server",
+                    CapabilityKind.Tool => "New tool",
+                    _ => "New skill"
+                },
+                new Dictionary<string, object?> {
                     [nameof(CapabilitySetupWizardDialog.InitialKind)] = initialKind,
                     [nameof(CapabilitySetupWizardDialog.TagSuggestions)] = AvailableCapabilityTags
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     Eyebrow = "Capability setup",
                     Subtitle = "Create a skill, tool, or MCP capability for assignment to technical agents.",
                     Size = ModalSize.Wide,
@@ -406,245 +219,103 @@ public partial class AgentCapabilitiesPanel
                     AriaLabel = "Capability setup wizard",
                     TestId = "agents-capability-setup-dialog"
                 });
-
-            if (result is CapabilityDetailsDialogResult)
-            {
-                await ReloadCapabilitiesAsync();
-                SetMessage("Ready", "success", "Capability created.");
+            if (session.IsCurrent(owner) && result is CapabilityDetailsDialogResult &&
+                await RunReadAsync(session.RefreshAsync, next => {
+                    owner = next;
+                    wizardGeneration = next;
+                })) {
+                NotificationService.Success("Ready", "Capability created.");
             }
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) when (session.IsCurrent(owner)) {
             NotificationService.Error("Capability wizard failed", exception.Message);
-        }
-        finally
-        {
-            isOpeningCapabilityWizard = false;
-        }
-    }
-
-    private async Task OpenCapabilityCuratorAsync()
-    {
-        var curator = CapabilityCuratorAgent;
-        if (!CanOpenCapabilityCurator || curator is null)
-        {
-            return;
-        }
-
-        isOpeningCapabilityCurator = true;
-        try
-        {
-            await AgentChatLauncher.StartNewChatAsync(curator.Id);
-            NotificationService.Success("Capability Curator ready", "Opened a new managed capability chat.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Unable to open Capability Curator", exception.Message);
-        }
-        finally
-        {
-            isOpeningCapabilityCurator = false;
-        }
-    }
-
-    private async Task ReloadCapabilitiesAsync()
-    {
-        capabilities = await WorkspaceService.ListCapabilitiesAsync();
-        accessPreviewResult = null;
-        if (selectedAgentId.HasValue)
-        {
-            selectedAgentEditor = await WorkspaceService.GetAgentEditorAsync(selectedAgentId.Value);
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private Task HandleCapabilityTagFiltersChangedAsync(IReadOnlyList<string> value)
-    {
-        capabilityTagFilters = value;
-        return Task.CompletedTask;
-    }
-
-    private void ResetCapabilityFilters()
-    {
-        capabilitySearch = string.Empty;
-        capabilityTagFilters = [];
-        assignmentFilter = CapabilityAssignmentFilter.All;
-        typeFilter = CapabilityTypeFilter.All;
-    }
-
-    private async Task PreviewAccessAsync()
-    {
-        if (isAccessPreviewBusy)
-        {
-            return;
-        }
-
-        isAccessPreviewBusy = true;
-        try
-        {
-            var policy = new CapabilityAccessPolicyTemplateDto
-            {
-                DefaultEffect = "inherit",
-                Rules =
-                [
-                    new CapabilityAccessRuleTemplateDto
-                    {
-                        Id = "ui-preview-rule",
-                        Effect = accessRuleEffect,
-                        Scope = accessRuleScope,
-                        Selector = new CapabilitySelectorTemplateDto
-                        {
-                            Kind = accessRuleSelectorKind,
-                            Value = accessRuleSelectorValue,
-                            ServerKey = accessRuleSelectorServerKey
-                        },
-                        Reason = accessRuleReason
-                    }
-                ]
-            };
-
-            accessPreviewResult = await CapabilitySetupFlowService.PreviewAccessAsync(new CapabilityAccessPreviewRequest
-            {
-                CapabilityIds = selectedAgentEditor?.SelectedCapabilityIds ?? [],
-                Policy = policy
-            });
-
-            if (accessPreviewResult.ValidationResult.IsValid)
-            {
-                NotificationService.Success("Access preview ready", "Capability access policy preview completed.");
+        } catch (Exception) when (!session.IsCurrent(owner)) {
+        } finally {
+            if (wizardGeneration == owner) {
+                wizardGeneration = null;
             }
-            else
-            {
+        }
+    }
+
+    private async Task OpenCapabilityCuratorAsync() {
+        if (!Snapshot.Curator.CanLaunch || Snapshot.IsBusy || Snapshot.IsOpeningCurator) {
+            return;
+        }
+
+        var owner = session.Generation;
+        curatorGeneration = owner;
+        try {
+            await AgentChatLauncher.StartNewChatAsync(CapabilityCuratorAgentIdentity.AgentId);
+            if (session.IsCurrent(owner)) {
+                NotificationService.Success("Capability Curator ready", "Opened a new managed capability chat.");
+            }
+        } catch (Exception exception) when (session.IsCurrent(owner)) {
+            NotificationService.Error("Unable to open Capability Curator", exception.Message);
+        } catch (Exception) when (!session.IsCurrent(owner)) {
+        } finally {
+            if (curatorGeneration == owner) {
+                curatorGeneration = null;
+            }
+        }
+    }
+
+    private async Task PreviewAccessAsync(AgentCapabilityAccessDraft draft) {
+        if (Snapshot.IsAccessPreviewBusy) {
+            return;
+        }
+
+        var owner = session.Generation;
+        previewBusyGeneration = owner;
+        try {
+            var result = await CapabilitySetupFlowService.PreviewAccessAsync(new CapabilityAccessPreviewRequest {
+                CapabilityIds = session.Snapshot.SelectedCapabilityIds,
+                Policy = new CapabilityAccessPolicyTemplateDto {
+                    DefaultEffect = "inherit",
+                    Rules = [new CapabilityAccessRuleTemplateDto {
+                        Id = "ui-preview-rule",
+                        Effect = ProtocolToken(draft.Effect),
+                        Scope = ProtocolToken(draft.Scope),
+                        Selector = new CapabilitySelectorTemplateDto {
+                            Kind = ProtocolToken(draft.Selector),
+                            Value = draft.Value,
+                            ServerKey = draft.ServerKey
+                        },
+                        Reason = draft.Reason
+                    }]
+                }
+            });
+            if (!session.IsCurrent(owner)) {
+                return;
+            }
+
+            previewGeneration = owner;
+            preview = new(result.ValidationResult.IsValid, result.EffectiveSet.AllowedCapabilities.Count,
+                result.EffectiveSet.Diagnostics.Count,
+                result.ValidationResult.Issues.Take(4).Select(issue =>
+                    new AgentCapabilityNotice(issue.FieldPath, issue.Message, issue.RepairHint)).ToImmutableArray(),
+                result.EffectiveSet.Diagnostics.Take(4).Select(diagnostic =>
+                    new AgentCapabilityNotice(diagnostic.Identity.Key.Value, diagnostic.Reason, diagnostic.RepairHint)).ToImmutableArray());
+            if (preview.IsValid) {
+                NotificationService.Success("Access preview ready", "Capability access policy preview completed.");
+            } else {
                 NotificationService.Warning("Access preview has validation issues", "Review the policy diagnostics.");
             }
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) when (session.IsCurrent(owner)) {
             NotificationService.Error("Access preview failed", exception.Message);
-        }
-        finally
-        {
-            isAccessPreviewBusy = false;
-        }
-    }
-
-    private bool MatchesCapabilitySearch(CapabilityCatalogItem capability)
-    {
-        if (string.IsNullOrWhiteSpace(capabilitySearch))
-        {
-            return true;
-        }
-
-        return capability.Name.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||
-               capability.Key.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||
-               capability.Description.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||
-               capability.EndpointOrPath.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||
-               capability.Tags.Any(tag => tag.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool MatchesCapabilityTagFilters(CapabilityCatalogItem capability)
-    {
-        if (capabilityTagFilters.Count == 0)
-        {
-            return true;
-        }
-
-        return capabilityTagFilters.All(filter =>
-            capability.Tags.Any(tag => string.Equals(tag, filter, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    private bool MatchesAssignmentFilter(CapabilityCatalogItem capability)
-    {
-        var isAssigned = selectedAgentEditor?.SelectedCapabilityIds.Contains(capability.Id) == true;
-        return assignmentFilter switch
-        {
-            CapabilityAssignmentFilter.Assigned => isAssigned,
-            CapabilityAssignmentFilter.NotAssigned => !isAssigned,
-            _ => true
-        };
-    }
-
-    private bool MatchesTypeFilter(CapabilityCatalogItem capability)
-    {
-        return typeFilter switch
-        {
-            CapabilityTypeFilter.Mcp => capability.Kind == CapabilityKind.McpServer,
-            CapabilityTypeFilter.Skill => capability.Kind == CapabilityKind.Skill,
-            CapabilityTypeFilter.Tool => capability.Kind == CapabilityKind.Tool,
-            _ => true
-        };
-    }
-
-    private int ResolveAssignedCount(Guid agentId)
-    {
-        if (selectedAgentId == agentId && selectedAgentEditor is not null)
-        {
-            return selectedAgentEditor.SelectedCapabilityIds.Count;
-        }
-
-        var agent = agents.FirstOrDefault(item => item.Id == agentId);
-        return agent?.Capabilities.Count ?? 0;
-    }
-
-    private void SetMessage(string label, string tone, string value)
-    {
-        switch (tone)
-        {
-            case "success":
-                NotificationService.Success(label, value);
-                break;
-            case "warning":
-                NotificationService.Warning(label, value);
-                break;
-            case "danger":
-                NotificationService.Error(label, value);
-                break;
-            default:
-                NotificationService.Info(label, value);
-                break;
+        } catch (Exception) when (!session.IsCurrent(owner)) {
+        } finally {
+            if (previewBusyGeneration == owner) {
+                previewBusyGeneration = null;
+            }
         }
     }
 
-    private static string ResolveAgentMeta(AgentDefinition agent)
-    {
-        return string.IsNullOrWhiteSpace(agent.Model)
-            ? "No model configured"
-            : agent.Model;
+    private static string ProtocolToken<T>(T value) where T : struct, Enum {
+        if (!Enum.IsDefined(value)) {
+            throw new ArgumentOutOfRangeException(nameof(value));
+        }
+
+        return JsonNamingPolicy.CamelCase.ConvertName(value.ToString());
     }
 
-    private static string ResolveCapabilityWizardTitle(CapabilityKind kind)
-    {
-        return kind switch
-        {
-            CapabilityKind.McpServer => "New MCP server",
-            CapabilityKind.Tool => "New tool",
-            _ => "New skill"
-        };
-    }
-
-    private static string BuildAgentTreeNodeId(Guid agentId)
-        => $"{AgentTreeNodePrefix}{agentId:N}";
-
-    private static bool TryParseAgentTreeNodeId(string nodeId, out Guid agentId)
-    {
-        agentId = Guid.Empty;
-        return nodeId.StartsWith(AgentTreeNodePrefix, StringComparison.Ordinal) &&
-               Guid.TryParseExact(nodeId[AgentTreeNodePrefix.Length..], "N", out agentId);
-    }
-
-    private enum CapabilityAssignmentFilter
-    {
-        All,
-        Assigned,
-        NotAssigned
-    }
-
-    private enum CapabilityTypeFilter
-    {
-        All,
-        Mcp,
-        Skill,
-        Tool
-    }
+    public void Dispose() => session.Dispose();
 }

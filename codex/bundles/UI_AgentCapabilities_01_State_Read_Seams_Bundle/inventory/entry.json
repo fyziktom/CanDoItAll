@@ -1,0 +1,21 @@
+{
+  "utc": "2026-09-06T17:48:45.970475+00:00",
+  "branch": "components-decoupling",
+  "head": "97939362ec76412730702d209eb12b05b03d6572",
+  "remote": "97939362ec76412730702d209eb12b05b03d6572",
+  "workingTree": "clean after preceding checkpoint",
+  "providerGate": "Providers02F closed: 255 focused passes",
+  "catalogGate": "Harden02 closed and pushed: 48 focused passes, both mode browsers, 12 settled edits plus 12 undos",
+  "components": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+  "fileTools": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+  "codeAnalyticsSnapshot": "snap-20260906162426-338a2e58",
+  "snapshotReuse": "Capabilities source unchanged since this scoped module snapshot; exact owner/members/references reread.",
+  "sourceHashes": {
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor": "bbdc16cf33bdd530381d8b31686461d9f15e2199d7140debc8649ae81867e9d5",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs": "04ae479489c792cee741345417764a9de4082036837e4a1380f367f7c414f22e",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css": "090b0a37bf680691cecc082706afd73a723086db68e64a308dd61815e4b4ebdc",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkUiServiceCollectionExtensions.cs": "57eb37aae1e6ae833b9cfe4d676161541edbdc77301889cce13f3534dc857293"
+  }
+}

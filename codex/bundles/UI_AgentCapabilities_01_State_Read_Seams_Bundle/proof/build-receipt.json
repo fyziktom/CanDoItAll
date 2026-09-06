@@ -1,0 +1,98 @@
+[
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:25:22.086981+00:00",
+    "endUtc": "2026-09-06T18:25:36.073709+00:00",
+    "exitCode": 0,
+    "consoleSha256": "2277a77b418ca11c6aa50ed419b1796c10e5cb1880be8bb8eb2a25bb8e08f2a6"
+  },
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:25:36.074695+00:00",
+    "endUtc": "2026-09-06T18:25:38.303401+00:00",
+    "exitCode": 0,
+    "consoleSha256": "dbc5f3f12a14de0d95bd453107f7687d32c76bff1d725a5308934377c6717c74"
+  },
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:25:38.304387+00:00",
+    "endUtc": "2026-09-06T18:25:42.083915+00:00",
+    "exitCode": 0,
+    "consoleSha256": "be18fd913238d4452ca20a0aa0f5adf925199f0cebabbed9eb9c337754be5e65"
+  },
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:25:42.084978+00:00",
+    "endUtc": "2026-09-06T18:26:00.376843+00:00",
+    "exitCode": 0,
+    "consoleSha256": "25a9a6b9e227f8a8b9f0038b145fce79994f7a85c7d0dfd0ff3a03e6d8bc1c1b"
+  },
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:26:00.376843+00:00",
+    "endUtc": "2026-09-06T18:26:24.785990+00:00",
+    "exitCode": 0,
+    "consoleSha256": "ae0d5a0d3961872a289381f24a7d9805cb90d22f10351ad9699ad0d8abbe44b3"
+  },
+  {
+    "argv": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-m:1",
+      "/nr:false"
+    ],
+    "startUtc": "2026-09-06T18:26:24.786988+00:00",
+    "endUtc": "2026-09-06T18:26:45.873386+00:00",
+    "exitCode": 0,
+    "consoleSha256": "ebb9fd083d93f4eb4a16a414ec636cf5b19bb4687b8cf79f4bb00b16aaa02850"
+  }
+]

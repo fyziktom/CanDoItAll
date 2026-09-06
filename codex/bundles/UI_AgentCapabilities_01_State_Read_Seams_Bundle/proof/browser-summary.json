@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "steps": [
+    "Exact requested selection, local search/type filters and managed curator availability",
+    "Assignment and verification through production services; authoritative proof; preserved filter; access preview",
+    "Details and all three real setup dialogs opened and closed",
+    "Pending A clears prior editor; B supersedes A, cancels owner token, suppresses late A and preserves filters",
+    "Missing requested identity fails closed and Retry keeps the missing target"
+  ],
+  "state": {
+    "alphaId": "7ff74cea-4e24-443d-a979-d578ac797397",
+    "betaId": "b28c9fa9-caa4-4299-9673-415fc89c324a",
+    "capabilityId": "9f255e98-0484-4a7e-9f57-5e21fb568bc4",
+    "assigned": false,
+    "proof": "NotRun",
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false
+  },
+  "finalCanonical": {
+    "alphaId": "7ff74cea-4e24-443d-a979-d578ac797397",
+    "betaId": "b28c9fa9-caa4-4299-9673-415fc89c324a",
+    "capabilityId": "9f255e98-0484-4a7e-9f57-5e21fb568bc4",
+    "assigned": false,
+    "proof": "Verified",
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": true
+  },
+  "browserVersion": "149.0.7827.55",
+  "pageErrors": []
+}

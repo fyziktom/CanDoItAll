@@ -1,0 +1,45 @@
+{
+  "expectedDiscovery": 4,
+  "commands": [
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilitiesReadLifecycleTests",
+        "/m:1",
+        "--list-tests"
+      ],
+      "startUtc": "2026-09-06T17:53:47.413399+00:00",
+      "endUtc": "2026-09-06T17:53:48.858038+00:00",
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentCapabilitiesReadLifecycleTests",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=red.trx",
+        "--results-directory",
+        ".mcp-state\\capa01"
+      ],
+      "startUtc": "2026-09-06T17:53:48.858038+00:00",
+      "endUtc": "2026-09-06T17:53:50.841185+00:00",
+      "exitCode": 1
+    }
+  ],
+  "actualDiscovery": 4
+}

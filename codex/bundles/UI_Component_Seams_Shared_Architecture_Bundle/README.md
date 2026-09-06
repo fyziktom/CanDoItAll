@@ -97,3 +97,7 @@ input preservation, and the complete checksum manifest.
 [Verification postconditions and acknowledged delivery](reviews/07-verification-postconditions-and-delivery.md) records the proven provider follow-up lessons.
 
 Follow-up: [explicit assets and direct observation](reviews/08-explicit-assets-and-direct-observation.md).
+
+[Explicit acknowledgement and retained evidence](reviews/09-explicit-acknowledgement-and-retained-evidence.md).
+
+[Second stateful rendering archetype](reviews/10-second-archetype-state-read-seam.md).

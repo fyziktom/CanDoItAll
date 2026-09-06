@@ -1,0 +1,130 @@
+using System.Text.Json;
+using CanDoItAll.Tests.Support;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
+
+internal static class BrowserEntry {
+    public static async Task Main(string[] args) {
+        var repository = Path.GetFullPath(args[^1]);
+        await using var environment = CanDoItAllTestEnvironment.CreateUnder(Path.Combine(repository, ".mcp-state"), "capa01-browser-data");
+        var database = environment.CreatePostgreSqlProfile("capa01-browser");
+        var overrides = new Dictionary<string, string?> {
+            ["Api:Authorization:Enabled"] = "false",
+            ["ApiAccess:Authorization:Enabled"] = "false",
+            ["WebHost:HttpsRedirectionEnabled"] = "false",
+            ["Logging:LogLevel:Default"] = "Warning"
+        };
+        await using var services = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            database, "CanDoItAll.Web", TestSchemaBootstrapModules.Full, overrides);
+        await using var scope = services.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var capabilityId = await workspace.SaveCapabilityAsync(new CapabilityEditorModel {
+            Kind = CapabilityKind.Skill,
+            Key = "capa01-browser-inline",
+            Name = "CAPA01 Inline inspection",
+            Description = "Isolated in-place seam browser fixture.",
+            EndpointOrPath = "inline:capa01-browser",
+            ConfigurationJson = """{"inlineSkill":{"instructions":"Inspect the isolated fixture without external effects."}}""",
+            Tags = ["capa01-fixture"]
+        });
+        var alphaId = await workspace.SaveAgentAsync(new AgentEditorModel {
+            Name = "CAPA01 Alpha", RoleTitle = "Inspection", Instructions = "Inspect the isolated fixture.",
+            Summary = "Read lifecycle fixture"
+        });
+        var betaId = await workspace.SaveAgentAsync(new AgentEditorModel {
+            Name = "CAPA01 Beta", RoleTitle = "Inspection", Instructions = "Inspect the isolated fixture.",
+            Summary = "Read lifecycle fixture"
+        });
+        var curator = (await workspace.ListAgentsAsync(false)).FirstOrDefault(CapabilityCuratorAgentIdentity.Matches);
+        var delay = new ReadDelay();
+        var stop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [], ContentRootPath = repository });
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls("http://127.0.0.1:17301");
+        await using var control = builder.Build();
+        control.MapGet("/fixture/state", async () => {
+            var alpha = await workspace.GetAgentEditorAsync(alphaId);
+            var capability = (await workspace.ListCapabilitiesAsync()).Single(item => item.Id == capabilityId);
+            return Results.Json(new {
+                alphaId, betaId, capabilityId,
+                assigned = alpha.SelectedCapabilityIds.Contains(capabilityId), proof = capability.ProofStatus.ToString(),
+                curatorAvailable = curator is { Status: AgentLifecycleStatus.Active, IsTemplate: false } && curator.Permissions.CanUseTools,
+                delay.Held, delay.Cancelled
+            });
+        });
+        control.MapPost("/fixture/arm", () => { delay.Arm(alphaId); return Results.Ok(); });
+        control.MapPost("/fixture/release", () => { delay.Release(); return Results.Ok(); });
+        control.MapPost("/fixture/stop", () => { stop.TrySetResult(); return Results.Ok(); });
+        await control.StartAsync();
+        foreach (var variable in database.CreateEnvironmentVariables(overrides)) {
+            Environment.SetEnvironmentVariable(variable.Key, variable.Value);
+        }
+
+        await using var application = new BrowserApplication(repository, delay);
+        application.UseKestrel(5273);
+        using var client = application.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        Console.WriteLine(JsonSerializer.Serialize(new { state = "FixtureReady", alphaId, betaId, capabilityId }));
+        await stop.Task;
+        delay.Release();
+        await control.StopAsync();
+    }
+}
+
+internal sealed class BrowserApplication(string repository, ReadDelay delay) : WebApplicationFactory<Program> {
+    protected override void ConfigureWebHost(IWebHostBuilder builder) {
+        builder.UseEnvironment("Development");
+        builder.UseContentRoot(Path.Combine(repository, "src", "App", "CanDoItAll.Web"));
+        builder.ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
+        builder.ConfigureServices(services => services.AddScoped<IAgentCapabilitiesReads>(provider =>
+            new DelayedReads(new AgentCapabilitiesReads(provider.GetRequiredService<IAgentFrameworkWorkspaceService>()), delay)));
+    }
+}
+
+internal sealed class DelayedReads(IAgentCapabilitiesReads inner, ReadDelay delay) : IAgentCapabilitiesReads {
+    public Task<AgentCapabilitiesCatalog> LoadCatalogAsync(CancellationToken cancellationToken) => inner.LoadCatalogAsync(cancellationToken);
+    public async Task<AgentEditorModel> ReadEditorAsync(Guid agentId, CancellationToken cancellationToken) {
+        var result = await inner.ReadEditorAsync(agentId, cancellationToken);
+        await delay.HoldAsync(agentId, cancellationToken);
+        return result;
+    }
+}
+
+internal sealed class ReadDelay {
+    private readonly object gate = new();
+    private Guid? target;
+    private TaskCompletionSource? completion;
+    private CancellationToken owner;
+    public bool Held { get; private set; }
+    public bool Cancelled => owner.IsCancellationRequested;
+    public void Arm(Guid agentId) {
+        lock (gate) {
+            target = agentId;
+            Held = false;
+            owner = default;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
+    public Task HoldAsync(Guid agentId, CancellationToken token) {
+        lock (gate) {
+            if (target != agentId) {
+                return Task.CompletedTask;
+            }
+
+            target = null;
+            Held = true;
+            owner = token;
+            return completion!.Task;
+        }
+    }
+
+    public void Release() {
+        lock (gate) {
+            Held = false;
+            completion?.TrySetResult();
+        }
+    }
+}
