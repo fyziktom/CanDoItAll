@@ -151,6 +151,17 @@ Sublinks are listed as `link` — Title, in the same order the route tables in
 nav destination — it's included because it's still part of that item's route family and
 determines what "opening" that item actually navigates to.
 
+**Gap found while filling this in:** the current app's Workflows surface is bigger than
+`navigation-proposal.md` documents. Today `/agents/workflows` is one page with five
+in-memory tabs (no query-string binding, so none of this is a real URL today): Dashboard,
+Workflows (catalog), Editor, History, Analytics. The proposal only names catalog/detail
+/design/runs routes — Dashboard and Analytics aren't in it at all. Mapped into this
+table: Dashboard becomes what `/workflows` itself is (a catalog root with an activity
+summary, not a separate route); History is already Execution's Workflow runs item
+(today's tab just merges run timeline, artifacts, and pending requests into one view);
+Analytics has no home in either doc and is added below as its own Execution row, since
+it's reporting built from run data, not a reusable definition.
+
 <table>
 <thead>
 <tr><th>Group</th><th>Title</th><th>Link</th><th>Sublinks</th></tr>
@@ -192,13 +203,15 @@ determines what "opening" that item actually navigates to.
 <code>/crm-hr/assignments/{assignmentId}</code> — Assignment detail<br>
 <code>/crm-hr/staffing-requests/{requestId}</code> — Staffing request detail
 </td></tr>
-<tr><td rowspan="4">Execution</td><td>Process runs</td><td><code>/processes/runs</code></td><td>
+<tr><td rowspan="5">Execution</td><td>Process runs</td><td><code>/processes/runs</code></td><td>
 <code>/processes/runs/{runId}</code> — Run detail
 </td></tr>
 <tr><td>Workflow runs</td><td><code>/workflows/runs</code> <em>(proposed aggregate)</em></td><td>
 <code>/workflows/{workflowId}/runs</code> — Runs for one workflow (exists today)<br>
-<code>/workflows/runs/{runId}</code> — Run detail
+<code>/workflows/runs/{runId}</code> — Run detail<br>
+<em>replaces today's monolithic "History" tab on `/agents/workflows` — timeline, artifacts, and pending human-in-loop requests stay part of the run detail</em>
 </td></tr>
+<tr><td>Workflow analytics</td><td><em>(proposed — today the "Analytics" tab on `/agents/workflows`, backed by `WorkflowAnalyticsQueryService`)</em></td><td>—</td></tr>
 <tr><td>Agent sessions</td><td><em>(proposed cross-agent view)</em></td><td>
 <code>/agents/{agentId}/chats</code> — Per-agent chat sessions (exists today)<br>
 <code>/agents/chats</code> — General/simple chat workspace (exists today)
@@ -217,7 +230,7 @@ determines what "opening" that item actually navigates to.
 <code>/agents/capabilities</code> — Capability catalog<br>
 <code>/agents/diagnostics</code> — Diagnostics
 </td></tr>
-<tr><td>Workflows</td><td><code>/workflows</code></td><td>
+<tr><td>Workflows</td><td><code>/workflows</code> <em>(catalog root; absorbs today's "Dashboard" tab — `WorkflowOverviewPanel` — as the landing view)</em></td><td>
 <code>/workflows/{workflowId}</code> — Overview<br>
 <code>/workflows/{workflowId}/design</code> — Designer
 </td></tr>
