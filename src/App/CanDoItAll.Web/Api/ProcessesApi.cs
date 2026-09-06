@@ -14,6 +14,7 @@ internal static class ProcessesApi
             .WithTags("Processes")
             .DisableAntiforgery();
         processes.MapProcessRunRecordsApi();
+        processes.MapProcessDefinitionsApi();
 
         processes.MapGet("/contract", () => Results.Ok(new ProcessApiContractResponse(
             [
@@ -31,10 +32,15 @@ internal static class ProcessesApi
                 "GET /api/processes/runs/{runId}/graph",
                 "GET /api/processes/runs/{runId}/history",
                 "GET /api/processes/events/stream",
-                "GET /api/processes/runs/{runId}/events/stream"
+                "GET /api/processes/runs/{runId}/events/stream",
+                "GET /api/processes/definitions",
+                "GET /api/processes/definitions/{definitionKey}",
+                "GET /api/processes/definitions/{definitionKey}/roles",
+                "GET /api/processes/definitions/{definitionKey}/steps"
             ],
             "Runtime/core/dispatch remain generic. Module adapters resolve CanDoItAll agent execution through process driver strategies.")))
-            .WithName("GetProcessesApiContract");
+            .WithName("GetProcessesApiContract")
+            .Produces<ProcessApiContractResponse>(StatusCodes.Status200OK);
 
         processes.MapPost("/launch/check", async (
                 ProcessLaunchApiRequest request,

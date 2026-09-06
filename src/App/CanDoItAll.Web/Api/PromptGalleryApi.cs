@@ -16,7 +16,9 @@ internal static class PromptGalleryApi
                 IPromptGalleryService gallery,
                 CancellationToken cancellationToken) =>
             await ExecuteAsync(async () => Results.Ok(await gallery.SearchAsync(query.ToDomain(), cancellationToken))))
-            .WithName("SearchPromptGalleryItems");
+            .WithName("SearchPromptGalleryItems")
+            .Produces<PromptGalleryPage<PromptGallerySearchItem>>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapGet("/items/{promptId:guid}", async (
                 Guid promptId,
@@ -25,7 +27,9 @@ internal static class PromptGalleryApi
             ApiEndpointResults.FromResult(
                 await gallery.GetItemAsync(promptId, cancellationToken),
                 "prompts.gallery.not-found"))
-            .WithName("GetPromptGalleryItem");
+            .WithName("GetPromptGalleryItem")
+            .Produces<PromptGalleryItemDetails>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapPost("/items", async (
                 PromptGalleryDraft? request,
@@ -36,7 +40,9 @@ internal static class PromptGalleryApi
                 : ApiEndpointResults.FromResult(
                     await gallery.SaveDraftAsync(request, cancellationToken),
                     "prompts.gallery.not-found"))
-            .WithName("SavePromptGalleryDraft");
+            .WithName("SavePromptGalleryDraft")
+            .Produces<PromptDraftSaveReceipt>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapPost("/items/{promptId:guid}/versions", async (
                 Guid promptId,
@@ -48,7 +54,9 @@ internal static class PromptGalleryApi
                 : ApiEndpointResults.FromResult(
                     await gallery.CreateVersionAsync(promptId, request, cancellationToken),
                     "prompts.gallery.not-found"))
-            .WithName("CreatePromptGalleryVersion");
+            .WithName("CreatePromptGalleryVersion")
+            .Produces<PromptVersionSnapshot>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapGet("/items/{promptId:guid}/versions/{versionId:guid}", async (
                 Guid promptId,
@@ -66,7 +74,9 @@ internal static class PromptGalleryApi
 
             return ApiEndpointResults.FromResult(result, "prompts.version.not-found");
         })
-        .WithName("GetPromptGalleryVersion");
+        .WithName("GetPromptGalleryVersion")
+        .Produces<PromptVersionSnapshot>(StatusCodes.Status200OK)
+        .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapPost("/items/{promptId:guid}/archive", async (
                 Guid promptId,
@@ -78,7 +88,9 @@ internal static class PromptGalleryApi
                 : ApiEndpointResults.FromResult(
                     await gallery.ArchiveAsync(promptId, request.Archived, cancellationToken),
                     "prompts.gallery.not-found"))
-            .WithName("ArchivePromptGalleryItem");
+            .WithName("ArchivePromptGalleryItem")
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapPost("/items/{promptId:guid}/favorite", async (
                 Guid promptId,
@@ -90,7 +102,9 @@ internal static class PromptGalleryApi
                 : ApiEndpointResults.FromResult(
                     await gallery.SetFavoriteAsync(promptId, request.Favorite, cancellationToken),
                     "prompts.gallery.not-found"))
-            .WithName("SetPromptGalleryFavorite");
+            .WithName("SetPromptGalleryFavorite")
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapPost("/compatibility/evaluate", async (
                 PromptGalleryCompatibilityApiRequest? request,
@@ -104,7 +118,9 @@ internal static class PromptGalleryApi
                         request.Context,
                         cancellationToken),
                     "prompts.gallery.not-found"))
-            .WithName("EvaluatePromptGalleryCompatibility");
+            .WithName("EvaluatePromptGalleryCompatibility")
+            .Produces<PromptCompatibilityResult>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapPost("/warning-suppressions", async (
                 PromptGalleryWarningSuppressionApiRequest? request,
@@ -120,7 +136,9 @@ internal static class PromptGalleryApi
                         request.Suppressed,
                         cancellationToken),
                     "prompts.gallery.not-found"))
-            .WithName("SetPromptGalleryWarningSuppression");
+            .WithName("SetPromptGalleryWarningSuppression")
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         prompts.MapGet("/projection", async (
                 IPromptGalleryProjectionCoordinator projection,

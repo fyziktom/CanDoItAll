@@ -55,7 +55,8 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapGet("/access/status", (IApiTokenService tokenService) =>
                 Results.Ok(tokenService.GetStatus()))
             .AllowAnonymous()
-            .WithName("GetApiAccessStatus");
+            .WithName("GetApiAccessStatus")
+            .Produces<ApiAccessStatus>(StatusCodes.Status200OK);
 
         var issueTokenEndpoint = group.MapPost("/access/tokens", (
                 ApiTokenIssueRequest request,
@@ -70,7 +71,9 @@ public static class ApiEndpointRouteBuilderExtensions
                     return ApiEndpointResults.BadRequest(exception.Message, "api.token-invalid");
                 }
             })
-            .WithName("IssueApiToken");
+            .WithName("IssueApiToken")
+            .Produces<ApiTokenIssueResult>(StatusCodes.Status200OK)
+            .ProducesApiErrors();
         if (options.Authorization.Enabled)
         {
             issueTokenEndpoint.RequireAuthorization(ApiAuthorizationPolicies.IssueTokens);

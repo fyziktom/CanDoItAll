@@ -490,7 +490,8 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeProgressAsync(projectId, request, agent, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<int>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/progress", async (
             Guid projectId,
@@ -514,7 +515,8 @@ public static class ProjectStructureAgentApi
                     new ProjectStructureProgressBatchInput([nodeId], request.ProgressMode, request.ProgressPercent, request.LeaseToken),
                     agent,
                     cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<int>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/markers", async (
             Guid projectId,
@@ -533,7 +535,8 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodeMarkerAsync(projectId, request, agent, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<int>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/markers", async (
             Guid projectId,
@@ -553,7 +556,8 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.ChangeNodeMarkerAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<int>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/priorities", async (
             Guid projectId,
@@ -572,7 +576,8 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.UpdateNodePriorityAsync(projectId, request, agent, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<int>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/priority", async (
             Guid projectId,
@@ -596,7 +601,8 @@ public static class ProjectStructureAgentApi
                     new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken),
                     agent,
                     cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<int>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/move", async (
             Guid projectId,
@@ -617,9 +623,10 @@ public static class ProjectStructureAgentApi
                 async (agent, cancellationToken) =>
                 {
                     await agentService.MoveNodeAsync(projectId, request, agent, cancellationToken);
-                    return new { Ok = true };
+                    return new ProjectStructureAcknowledgement(true);
                 },
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureAcknowledgement>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/recompose", async (
             Guid projectId,
@@ -913,7 +920,8 @@ public static class ProjectStructureAgentApi
                     request,
                     agent,
                     cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureDeletionResult>();
 
         group.MapGet("/projects/{projectId:guid}/deletion-completion-notices", async (
             Guid projectId,
@@ -976,7 +984,8 @@ public static class ProjectStructureAgentApi
                     request,
                     agent,
                     cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureDeletionResult>();
 
         group.MapPost("/projects/{projectId:guid}/approvals/request", async (
             Guid projectId,
@@ -1689,4 +1698,12 @@ public static class ProjectStructureAgentApi
     private sealed record ProjectStructureReadSourceRejectionDetails(
         ProjectStructureReadSource RequestedSource,
         ProjectStructureReadSource SupportedSource);
+
+    /// <summary>
+    /// Response shape for endpoints whose only meaningful result is success, so
+    /// <c>Microsoft.AspNetCore.OpenApi</c> (which infers schemas from the delegate's declared
+    /// return type, not the runtime value) has a named type to describe instead of an anonymous
+    /// one, which can't be spelled in a <c>.Produces&lt;T&gt;()</c> call.
+    /// </summary>
+    private sealed record ProjectStructureAcknowledgement(bool Ok);
 }

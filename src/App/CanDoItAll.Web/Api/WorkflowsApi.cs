@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.SharedKernel;
 using System.Security.Claims;
 using System.Text.Json;
@@ -28,6 +29,8 @@ internal static class WorkflowsApi
                 "POST /api/workflows/settings",
                 "GET /api/workflows/runtime-backends",
                 "GET /api/workflows/executor-catalog",
+                "GET /api/workflows/templates",
+                "POST /api/workflows/templates/{templateKey}/drafts",
                 "GET /api/workflows/definitions",
                 "GET /api/workflows/definitions?externalNamespace={namespace}&externalKey={key}",
                 "GET /api/workflows/definitions/by-template-key/{templateKey}",
@@ -93,14 +96,101 @@ internal static class WorkflowsApi
                 IWorkflowExecutorRuntimeAvailabilityCatalog executorCatalog,
                 CancellationToken cancellationToken) =>
             Results.Ok(await executorCatalog.ListExecutorsAsync(cancellationToken)))
-            .WithName("ListWorkflowExecutorCatalog");
+            .WithName("ListWorkflowExecutorCatalog")
+            .Produces<IReadOnlyList<WorkflowExecutorDescriptor>>(StatusCodes.Status200OK);
+
+        workflows.MapGet("/templates", (WorkflowTemplatePackLoader templatePackLoader) =>
+        {
+            var pack = templatePackLoader.Load();
+            return Results.Ok(pack.Workflows.Select(template => new WorkflowTemplateCatalogItem(
+                template.Key,
+                template.Name,
+                template.Description,
+                template.Graph.Nodes.Count,
+                template.Graph.Edges.Count,
+                pack.CreateInputParameters(template).Count,
+                pack.RuntimePolicy.PreferredBackend,
+                BuildTemplateFlowShape(template))).ToArray());
+        })
+        .WithName("ListWorkflowTemplates")
+        .Produces<WorkflowTemplateCatalogItem[]>(StatusCodes.Status200OK);
+
+        workflows.MapPost("/templates/{templateKey}/drafts", async (
+                string templateKey,
+                WorkflowTemplatePackLoader templatePackLoader,
+                IWorkflowCatalogService catalogService,
+                IWorkflowComponentLibraryService componentLibrary,
+                CancellationToken cancellationToken) =>
+        {
+            var pack = templatePackLoader.Load();
+            var template = pack.Workflows.FirstOrDefault(item =>
+                string.Equals(item.Key, templateKey, StringComparison.OrdinalIgnoreCase));
+            if (template is null)
+            {
+                return ApiEndpointResults.NotFound("Workflow template was not found.", "workflows.template-not-found");
+            }
+
+            var definitions = await catalogService.ListDefinitionsAsync(cancellationToken);
+            var draftName = ResolveTemplateDraftName(template.Name, definitions);
+            var providerOptions = await componentLibrary.ListProviderOptionsAsync(cancellationToken);
+            var provider = providerOptions.FirstOrDefault(option => option.IsEnabled && option.SupportsStructuredOutput &&
+                               option.ModelOptions.Contains(ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparer.OrdinalIgnoreCase))
+                           ?? providerOptions.FirstOrDefault(option => option.IsEnabled && option.SupportsStructuredOutput)
+                           ?? providerOptions.FirstOrDefault(option => option.IsEnabled);
+            var model = provider?.ModelOptions.FirstOrDefault(option =>
+                            string.Equals(option, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.OrdinalIgnoreCase))
+                        ?? provider?.DefaultModel
+                        ?? ManagedSeedProviderFallbacks.OpenAiDefaultModel;
+            var component = await componentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
+                Id: null,
+                Name: $"Draft LLM: {draftName}",
+                ProviderProfileId: provider?.ProviderProfileId,
+                Model: model,
+                Modality: WorkflowModality.Text,
+                ModelSettings: pack.CreateModelSettings(),
+                Instructions: pack.CreateComponentInstructions(template),
+                InputShape: pack.JsonShape,
+                ResultShape: pack.JsonShape,
+                Permissions: AgentPermissionsPolicy.Default with
+                {
+                    CanUseTools = false,
+                    CanAskOtherAgents = false,
+                    CanEscalateToHuman = false,
+                    RequiresApprovalForExternalCalls = false
+                }), cancellationToken);
+            var definition = pack.CreateDefinition(template, component) with
+            {
+                Name = draftName,
+                Description = template.Description,
+                Status = WorkflowLifecycleStatus.Draft,
+                RuntimePolicy = pack.RuntimePolicy,
+                InputParameters = pack.CreateInputParameters(template)
+            };
+            var saved = await catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+                Id: null,
+                ExpectedVersionId: null,
+                Name: definition.Name,
+                Description: definition.Description,
+                Status: definition.Status,
+                Graph: definition.Graph,
+                RuntimePolicy: definition.RuntimePolicy)
+            {
+                InputParameters = definition.InputParameters
+            }, cancellationToken);
+            return Results.Ok(saved);
+        })
+        .WithName("AddWorkflowTemplateToDrafts")
+        .Produces<WorkflowDefinition>(StatusCodes.Status200OK)
+        .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapGet("/definitions/{workflowId:guid}", async (
                 Guid workflowId,
                 IWorkflowCatalogService catalogService,
                 CancellationToken cancellationToken) =>
             await GetDefinitionResultAsync(workflowId, versionId: null, catalogService, cancellationToken))
-            .WithName("GetWorkflowDefinition");
+            .WithName("GetWorkflowDefinition")
+            .Produces<WorkflowDefinitionDetail>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapGet("/definitions/{workflowId:guid}/versions/{versionId:guid}", async (
                 Guid workflowId,
@@ -108,7 +198,9 @@ internal static class WorkflowsApi
                 IWorkflowCatalogService catalogService,
                 CancellationToken cancellationToken) =>
             await GetDefinitionResultAsync(workflowId, versionId, catalogService, cancellationToken))
-            .WithName("GetWorkflowDefinitionVersion");
+            .WithName("GetWorkflowDefinitionVersion")
+            .Produces<WorkflowDefinitionDetail>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapGet("/definitions/{workflowId:guid}/export", async (
                 Guid workflowId,
@@ -131,14 +223,20 @@ internal static class WorkflowsApi
                 IWorkflowCatalogService catalogService,
                 CancellationToken cancellationToken) =>
             await ToApiResultAsync(() => catalogService.SaveDefinitionAsync(request, cancellationToken)))
-            .WithName("SaveWorkflowDefinition");
+            .WithName("SaveWorkflowDefinition")
+            .Produces<WorkflowDefinition>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest)
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapPost("/definitions/import", async (
                 WorkflowDefinitionImportRequest request,
                 IWorkflowCatalogService catalogService,
                 CancellationToken cancellationToken) =>
             await ToApiResultAsync(() => catalogService.ImportDefinitionAsync(request, cancellationToken)))
-            .WithName("ImportWorkflowDefinition");
+            .WithName("ImportWorkflowDefinition")
+            .Produces<WorkflowDefinition>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest)
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapPost("/definitions/{workflowId:guid}/publish", async (
                 Guid workflowId,
@@ -199,26 +297,31 @@ internal static class WorkflowsApi
                 ? ApiEndpointResults.NotFound("Workflow definition was not found.", "workflows.definition-not-found")
                 : Results.Ok(detail.Validation);
         })
-        .WithName("ValidateSavedWorkflowDefinition");
+        .WithName("ValidateSavedWorkflowDefinition")
+        .Produces<WorkflowValidationResult>(StatusCodes.Status200OK)
+        .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapPost("/validate", async (
                 WorkflowDefinition request,
                 IWorkflowCatalogService catalogService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await catalogService.ValidateDefinitionAsync(request, cancellationToken)))
-            .WithName("ValidateDraftWorkflowDefinition");
+            .WithName("ValidateDraftWorkflowDefinition")
+            .Produces<WorkflowValidationResult>(StatusCodes.Status200OK);
 
         workflows.MapGet("/provider-options", async (
                 IWorkflowComponentLibraryService componentLibrary,
                 CancellationToken cancellationToken) =>
             Results.Ok(await componentLibrary.ListProviderOptionsAsync(cancellationToken)))
-            .WithName("ListWorkflowProviderOptions");
+            .WithName("ListWorkflowProviderOptions")
+            .Produces<IReadOnlyList<WorkflowProviderOption>>(StatusCodes.Status200OK);
 
         workflows.MapGet("/components", async (
                 IWorkflowComponentLibraryService componentLibrary,
                 CancellationToken cancellationToken) =>
             Results.Ok(await componentLibrary.ListComponentsAsync(cancellationToken)))
-            .WithName("ListWorkflowComponents");
+            .WithName("ListWorkflowComponents")
+            .Produces<IReadOnlyList<LlmCallComponent>>(StatusCodes.Status200OK);
 
         workflows.MapGet("/components/{componentId:guid}", async (
                 Guid componentId,
@@ -230,14 +333,19 @@ internal static class WorkflowsApi
                 ? ApiEndpointResults.NotFound("Workflow component was not found.", "workflows.component-not-found")
                 : Results.Ok(component);
         })
-        .WithName("GetWorkflowComponent");
+        .WithName("GetWorkflowComponent")
+        .Produces<LlmCallComponent>(StatusCodes.Status200OK)
+        .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapPost("/components", async (
                 LlmCallComponentSaveRequest request,
                 IWorkflowComponentLibraryService componentLibrary,
                 CancellationToken cancellationToken) =>
             await ToApiResultAsync(() => componentLibrary.SaveComponentAsync(request, cancellationToken)))
-            .WithName("SaveWorkflowComponent");
+            .WithName("SaveWorkflowComponent")
+            .Produces<LlmCallComponent>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest)
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapDelete("/components/{componentId:guid}", async (
                 Guid componentId,
@@ -247,7 +355,8 @@ internal static class WorkflowsApi
             await componentLibrary.DeleteComponentAsync(new WorkflowComponentId(componentId), cancellationToken);
             return Results.Ok(new ApiAck(true));
         })
-        .WithName("DeleteWorkflowComponent");
+        .WithName("DeleteWorkflowComponent")
+        .Produces<ApiAck>(StatusCodes.Status200OK);
 
         workflows.MapPost("/test-runs", async (
                 WorkflowTestRunRequest request,
@@ -259,7 +368,9 @@ internal static class WorkflowsApi
                 ? Results.Ok(result)
                 : Results.BadRequest(result);
         })
-        .WithName("RunWorkflowTest");
+        .WithName("RunWorkflowTest")
+        .Produces<WorkflowTestRunResult>(StatusCodes.Status200OK)
+        .Produces<WorkflowTestRunResult>(StatusCodes.Status400BadRequest);
 
         workflows.MapGet("/runs", async (
                 [AsParameters] WorkflowRunListApiQuery query,
@@ -814,6 +925,42 @@ internal static class WorkflowsApi
             return ApiEndpointResults.NotFound(exception.Message, "workflows.resource-not-found");
         }
     }
+
+    private static string BuildTemplateFlowShape(WorkflowTemplateDefinition template)
+        => template.Graph.Nodes.Count == 0
+            ? "No nodes"
+            : string.Join(", ", template.Graph.Nodes
+                .GroupBy(node => string.IsNullOrWhiteSpace(node.Kind) ? "Unknown" : node.Kind)
+                .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(group => $"{group.Count()} {group.Key}"));
+
+    private static string ResolveTemplateDraftName(
+        string templateName,
+        IReadOnlyList<WorkflowCatalogItem> definitions)
+    {
+        var baseName = templateName.Trim();
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            throw new InvalidOperationException("Workflow template name is required before it can be added to drafts.");
+        }
+
+        var names = definitions.Select(definition => definition.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!names.Contains(baseName))
+        {
+            return baseName;
+        }
+
+        for (var index = 1; index <= 999; index++)
+        {
+            var candidate = $"{index:00} {baseName}";
+            if (!names.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException($"No available draft name remains for template '{baseName}'.");
+    }
 }
 
 internal sealed record WorkflowExternalRequestResponseApiRequest(string ResponseJson);
@@ -821,6 +968,16 @@ internal sealed record WorkflowExternalRequestResponseApiRequest(string Response
 internal sealed record WorkflowApiContractResponse(
     IReadOnlyList<string> Endpoints,
     string BoundarySummary);
+
+internal sealed record WorkflowTemplateCatalogItem(
+    string Key,
+    string Name,
+    string Description,
+    int NodeCount,
+    int EdgeCount,
+    int InputCount,
+    WorkflowRuntimeBackendKind PreferredBackend,
+    string FlowShape);
 
 internal sealed class WorkflowRunListApiQuery
 {

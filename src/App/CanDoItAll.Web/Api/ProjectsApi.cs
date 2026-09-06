@@ -13,26 +13,30 @@ internal static class ProjectsApi
                 ProjectsService projectsService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await projectsService.ListAsync(cancellationToken)))
-            .WithName("ListProjects");
+            .WithName("ListProjects")
+            .Produces<IReadOnlyList<ProjectSummary>>(StatusCodes.Status200OK);
 
         projects.MapGet("/access-list", async (
                 ProjectsService projectsService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await projectsService.ListAccessListAsync(cancellationToken)))
-            .WithName("ListProjectAccessItems");
+            .WithName("ListProjectAccessItems")
+            .Produces<IReadOnlyList<ProjectAccessListItem>>(StatusCodes.Status200OK);
 
         projects.MapGet("/hierarchy-links", async (
                 ProjectsService projectsService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await projectsService.ListHierarchyLinksAsync(cancellationToken)))
-            .WithName("ListProjectHierarchyLinks");
+            .WithName("ListProjectHierarchyLinks")
+            .Produces<IReadOnlyList<ProjectHierarchyLinkSummary>>(StatusCodes.Status200OK);
 
         projects.MapGet("/{projectId:guid}", async (
                 Guid projectId,
                 ProjectsService projectsService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await projectsService.GetAsync(projectId, cancellationToken)))
-            .WithName("GetProjectEditor");
+            .WithName("GetProjectEditor")
+            .Produces<ProjectEditorModel>(StatusCodes.Status200OK);
 
         projects.MapPost("/", async (
                 ProjectEditorModel request,
@@ -42,6 +46,8 @@ internal static class ProjectsApi
                 await projectsService.SaveAsync(request, cancellationToken),
                 ProjectErrorCodes.NotFound))
             .WithName("SaveProject")
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest)
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         projects.MapDelete("/{projectId:guid}", async (
@@ -138,7 +144,8 @@ internal static class ProjectsApi
                 ProjectsService projectsService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await projectsService.GetHierarchyAsync(projectId, cancellationToken)))
-            .WithName("GetProjectHierarchy");
+            .WithName("GetProjectHierarchy")
+            .Produces<ProjectHierarchySnapshot>(StatusCodes.Status200OK);
 
         projects.MapPost("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", async (
                 Guid parentProjectId,
@@ -149,7 +156,9 @@ internal static class ProjectsApi
                 parentProjectId,
                 childProjectId,
                 cancellationToken)))
-            .WithName("AttachProjectSubproject");
+            .WithName("AttachProjectSubproject")
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest);
 
         projects.MapDelete("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", async (
                 Guid parentProjectId,
@@ -160,7 +169,9 @@ internal static class ProjectsApi
                 parentProjectId,
                 childProjectId,
                 cancellationToken)))
-            .WithName("DetachProjectSubproject");
+            .WithName("DetachProjectSubproject")
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest);
 
         projects.MapPost("/{childProjectId:guid}/reconnect-subproject", async (
                 Guid childProjectId,
@@ -172,7 +183,9 @@ internal static class ProjectsApi
                 request.CurrentParentProjectId,
                 request.NewParentProjectId,
                 cancellationToken)))
-            .WithName("ReconnectProjectSubproject");
+            .WithName("ReconnectProjectSubproject")
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest);
 
         return group;
     }

@@ -882,9 +882,20 @@ if (app.Environment.IsDevelopment())
 
 app.MapProjectStructureAgentApi();
 app.MapCanDoItAllApi();
+app.MapGet("/api/settings/workspace", async (WorkspaceService workspaceService) =>
+        Results.Ok(await workspaceService.GetSettingsAsync()))
+    .Produces<WorkspaceSettingsModel>(StatusCodes.Status200OK);
+app.MapPut("/api/settings/workspace", async (
+    WorkspaceSettingsModel settings,
+    WorkspaceService workspaceService) =>
+{
+    await workspaceService.SaveSettingsAsync(settings);
+    return Results.Ok(await workspaceService.GetSettingsAsync());
+}).Produces<WorkspaceSettingsModel>(StatusCodes.Status200OK);
 app.MapGet("/api/runtime/capabilities", (
     IHostCapabilitySnapshotProvider hostCapabilities) =>
-        Results.Ok(hostCapabilities.GetSnapshot()));
+        Results.Ok(hostCapabilities.GetSnapshot()))
+    .Produces<HostCapabilitySnapshot>(StatusCodes.Status200OK);
 app.MapGet("/api/runtime/operations", (
     IRuntimeDeploymentSupportProvider deploymentSupport,
     IRuntimeReadinessService readiness,
