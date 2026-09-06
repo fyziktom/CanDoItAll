@@ -184,7 +184,7 @@ public sealed class SharedProviderManagementService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var alias = NormalizeAlias(request.LocalAlias);
+        var alias = SharedProviderLocalAliasPolicy.Normalize(request.LocalAlias);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var (import, profile) = await LoadImportedMutationAsync(
             dbContext,
@@ -380,20 +380,6 @@ public sealed class SharedProviderManagementService(
         }
     }
 
-
-    private static string NormalizeAlias(string alias)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(alias);
-        var normalized = alias.Trim();
-        if (normalized.Length > 200 || normalized.Any(char.IsControl))
-        {
-            throw new ArgumentException(
-                "The local provider alias must contain at most 200 visible characters.",
-                nameof(alias));
-        }
-
-        return normalized;
-    }
 
     private static void ValidateProviderProfileId(Guid providerProfileId)
     {

@@ -1,0 +1,5 @@
+# Ordered execution
+
+E00: freeze source/consumer and exact test inventory; add failing-first source equality, exact target postcondition and local terminal-retention tests. Implement pure evaluators and cleanup. E01 depends on E00: add failed-callback/reconstruction/race tests; implement pending delivery and explicit parent completion, including RefreshButton. E02 depends on both: direct Release ProviderManagement/module/Web builds; freshly built focused Unit/Components/Integration owning selections; real browser recovery/retry and normal Save/Publish/import; architecture, full proposed-source portability and secret scans, no new documentation debt.
+
+Reopen E00 if delivery evidence shows intent or canonical classification is insufficient. Reopen E01 if a read failure is acknowledged or a stale callback consumes another attempt. Catalog production work remains blocked until E02 closure. Governed evidence is compact original failure/pass transcripts and focused TRX compressed once, exact discovery, source hashes, semantic mapping, inspected browser captures. Historical proof stays historical.

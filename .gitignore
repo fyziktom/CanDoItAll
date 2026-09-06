@@ -106,3 +106,6 @@ docker-compose.override.yml
 .DS_Store
 Thumbs.db
 .dotnet_cli_home
+
+# Generated Fast sandbox theme
+src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css

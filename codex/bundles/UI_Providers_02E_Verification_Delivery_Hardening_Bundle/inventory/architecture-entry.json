@@ -1,0 +1,38 @@
+{
+  "snapshotId": "snap-20260906114059-f296347d",
+  "summary": {
+    "projectCount": 2,
+    "typeCount": 720,
+    "memberCount": 6843,
+    "serviceRegistrationCount": 81,
+    "entityCount": 0,
+    "findingCount": 262,
+    "openQuestionCount": 31,
+    "diagnosticCount": 31
+  },
+  "cycles": [
+    {
+      "level": "Module",
+      "nodeIds": [
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+      ]
+    }
+  ],
+  "projectReferences": [
+    {
+      "edgeId": "dep-projectreference-proj-candoitall-modules-agentframe-b4df2cde54ee",
+      "kind": "ProjectReference",
+      "fromId": "proj-candoitall-modules-agentframework",
+      "toId": "proj-candoitall-modules-agentframework-providermanagement",
+      "weight": 1
+    }
+  ]
+}

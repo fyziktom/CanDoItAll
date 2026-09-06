@@ -140,7 +140,7 @@ else
                                                          TestId="agents-catalog-thinking-effort"
                                                          SupportTestId="agents-catalog-thinking-effort-support" />
                             @if (SelectedRuntimeProvider is { IsSourceManaged: true } sharedProvider) {
-                                <SharedProviderRefreshButton @key="sharedProvider.Id" ProviderId="sharedProvider.Id" Refreshed="() => RefreshRuntimeProvidersAsync(renderedSession)" />
+                                <SharedProviderRefreshButton @key="sharedProvider.Id" ProviderId="sharedProvider.Id" Refreshed="delivery => delivery.ReconcileAsync(() => RefreshRuntimeProvidersAsync(renderedSession))" />
                             }
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3">

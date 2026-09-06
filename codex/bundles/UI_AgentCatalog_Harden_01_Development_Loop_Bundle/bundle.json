@@ -1,0 +1,16 @@
+{
+  "referenceId": "CDA-UI-SEAMS-CATALOG-HARDEN-01",
+  "parent": "CDA-UI-SEAMS-CATALOG-01",
+  "shape": "compact-compatible",
+  "status": "closed",
+  "prerequisite": "CDA-UI-SEAMS-PROVIDERS-02E",
+  "phases": [
+    "H00-assets",
+    "H01-browser",
+    "H02-direct-measurements"
+  ],
+  "proofTier": "Governed",
+  "entryHead": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "executionAuthorized": true,
+  "closure": "reviews/closure.md"
+}

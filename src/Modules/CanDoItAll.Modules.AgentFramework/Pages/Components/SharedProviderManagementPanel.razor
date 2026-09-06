@@ -33,7 +33,7 @@
         else if (profileState.Ownership == SharedProviderProfileOwnership.Local)
         {
             <SharedProviderLocalPublicationContent State="profileState"
-                                                   IsBusy="@(isBusy || mutationUnconfirmed)"
+                                                   IsBusy="@(isBusy || hasPendingAttempt)"
                                                    Publish="PublishAsync"
                                                    Unpublish="OpenUnpublishConfirmation" />
         }
@@ -41,7 +41,7 @@
         {
             <SharedProviderImportedProfileContent @key="(profileState.Import!.ImportId, profileState.Import.ImportConcurrencyToken)"
                                                   Import="profileState.Import!"
-                                                  IsBusy="@(isBusy || mutationUnconfirmed)"
+                                                  IsBusy="@(isBusy || hasPendingAttempt)"
                                                   Save="SaveImportedProfileAsync"
                                                   Retire="OpenRetireConfirmation" />
         }

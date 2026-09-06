@@ -89,7 +89,7 @@ public sealed class SharedProviderRecoveryTests {
         Assert.Empty(cut.FindAll("[data-testid='shared-provider-warning']"));
         Assert.False(cut.Find("[data-testid='shared-provider-import-save']").HasAttribute("disabled"));
         Assert.Equal(proxy.ImportToken, cut.FindComponent<SharedProviderImportedProfileContent>().Instance.Import.ImportConcurrencyToken);
-        Assert.Equal("Canonical alias", cut.Find("[data-testid='shared-provider-import-alias']").GetAttribute("value"));
+        Assert.Equal("Submitted alias", cut.Find("[data-testid='shared-provider-import-alias']").GetAttribute("value"));
     }
 
     public class SharingProxy : DispatchProxy {
@@ -101,21 +101,35 @@ public sealed class SharedProviderRecoveryTests {
         public int Writes { get; private set; }
         public Func<Guid, CancellationToken, Task<SharedProviderProfileSharingSnapshot>>? Read { get; set; }
         private readonly HashSet<Guid> saved = [];
+        private readonly Dictionary<Guid, SharedProviderProfileSharingSnapshot> states = [];
+        private readonly Guid sourceId = Guid.NewGuid();
+        private readonly Guid originalImportToken = Guid.NewGuid();
+        private readonly Guid originalProviderToken = Guid.NewGuid();
+        private readonly Guid savedProviderToken = Guid.NewGuid();
+        private readonly CanDoItAll.SharedProviders.Abstractions.SharedProviderPublicationId publicationId = new(Guid.NewGuid());
+        public string? CanonicalAliasOverride { get; set; }
+        private string requestedAlias = "Original alias";
+        private bool intendedEnabled = true;
 
         public SharedProviderProfileSharingSnapshot State(Guid id) {
             if (!Imported) {
-                return SharedProviderPublicationPanelTests.CreateLocalState(id, saved.Contains(id), true);
+                if (!states.TryGetValue(id, out var state)) {
+                    state = SharedProviderPublicationPanelTests.CreateLocalState(id, false, true);
+                    states[id] = state;
+                }
+                return saved.Contains(id) ? state with { Publication = state.Publication! with {
+                    IsPublished = true, ConcurrencyToken = savedProviderToken } } : state;
             }
-            var publication = new CanDoItAll.SharedProviders.Abstractions.SharedProviderPublicationId(Guid.NewGuid());
+            var publication = publicationId;
             return new(id, SharedProviderProfileOwnership.Imported, null, null,
-                new(ImportId, Guid.NewGuid(), "Fixture source", publication, id,
-                    saved.Contains(id) ? "Canonical alias" : "Original alias", true, "Remote",
+                new(ImportId, sourceId, "Fixture source", publication, id,
+                    saved.Contains(id) ? CanonicalAliasOverride ?? requestedAlias : "Original alias", saved.Contains(id) ? intendedEnabled : true, "Remote",
                     CanDoItAll.SharedProviders.Abstractions.SharedProviderPurpose.Chat,
                     CanDoItAll.SharedProviders.Abstractions.SharedProviderTransport.OpenAiCompatible,
                     CanDoItAll.SharedProviders.Abstractions.SharedProviderRoutingModelIdCodec.Create(publication, "model"),
                     SharedProviderSelectionState.Selected,
                     SharedProviderAvailabilityState.Available, [],
-                    saved.Contains(id) ? ImportToken : Guid.NewGuid(), Guid.NewGuid()));
+                    saved.Contains(id) ? ImportToken : originalImportToken, saved.Contains(id) ? savedProviderToken : originalProviderToken));
         }
 
         protected override object? Invoke(MethodInfo? method, object?[]? args) {
@@ -125,6 +139,10 @@ public sealed class SharedProviderRecoveryTests {
             }
             if (method?.Name is nameof(ISharedProviderManagementService.SetPublicationAsync) or nameof(ISharedProviderManagementService.UpdateImportedProfileAsync)) {
                 var id = args![0] is SharedProviderImportedProfileUpdateRequest request ? request.ProviderProfileId : (Guid)args[0]!;
+                if (args[0] is SharedProviderImportedProfileUpdateRequest settings) {
+                    requestedAlias = settings.LocalAlias.Trim();
+                    intendedEnabled = settings.IsEnabled;
+                }
                 Writes++;
                 if (Reject) {
                     return Task.FromException<SharedProviderProfileSharingSnapshot>(new SharedProviderConcurrencyException("Publication", id));

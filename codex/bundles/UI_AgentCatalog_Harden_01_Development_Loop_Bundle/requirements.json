@@ -1,0 +1,53 @@
+[
+  {
+    "id": "B1",
+    "status": "Solved",
+    "inputSection": "B1",
+    "proof": [
+      "inventory/project-closure.json",
+      "inventory/architecture-exit.json",
+      "inventory/final-state.json"
+    ]
+  },
+  {
+    "id": "B2",
+    "status": "Solved",
+    "inputSection": "B2",
+    "proof": [
+      "inventory/asset-closure.md",
+      "proof/final-assets.json",
+      "proof/validation.json"
+    ]
+  },
+  {
+    "id": "B3",
+    "status": "Solved",
+    "inputSection": "B3",
+    "proof": [
+      "proof/browser.md",
+      "proof/runs/fast-acceptance-2026-09-06T13-31-08-341Z/ledger.jsonl",
+      "proof/runs/parity-acceptance-2026-09-06T13-31-25-331Z/ledger.jsonl"
+    ]
+  },
+  {
+    "id": "B4",
+    "status": "Solved",
+    "inputSection": "B4",
+    "proof": [
+      "proof/direct-results.json",
+      "proof/direct-results-table.md",
+      "proof/measurement-review.md",
+      "proof/run-index.json"
+    ]
+  },
+  {
+    "id": "B5",
+    "status": "Solved",
+    "inputSection": "B5",
+    "proof": [
+      "proof/validation.json",
+      "reviews/csharp-architecture-gate.md",
+      "reviews/portability-review.md"
+    ]
+  }
+]

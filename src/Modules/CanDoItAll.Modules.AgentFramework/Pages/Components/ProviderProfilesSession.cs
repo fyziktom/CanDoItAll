@@ -6,6 +6,8 @@ using ProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProf
 
 namespace CanDoItAll.Modules.AgentFramework;
 
+public sealed record ProviderSharedReconciliationResult(bool Completed, bool EditorReplaced = false);
+
 public sealed class ProviderProfilesSession(IProviderProfilesReads reads, ProviderEditorRecovery? recovery = null) : IDisposable {
     public ProviderEditorRecovery Recovery { get; } = recovery ?? new();
     private CancellationTokenSource? catalogRead;
@@ -210,28 +212,32 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         EditorError = message;
     }
 
-    public async Task<bool> ReconcileSharedAsync(ProviderManagement.SharedProviderChange change) {
+    public async Task<ProviderSharedReconciliationResult> ReconcileSharedAsync(ProviderManagement.SharedProviderChange change) {
         var version = selectionVersion;
         var selectedId = State.ProviderId;
         var wasImported = IsSourceManaged;
         if (!await RefreshMetadataAsync() || !IsCurrentSelection(version)) {
-            return false;
+            return new(false);
         }
         if (change.UnknownScope || change.CommitState == ProviderManagement.SharedProviderCommitState.Unconfirmed) {
             MetadataWarning = "Shared-provider state may have changed. Your draft is retained; refresh to verify the catalog.";
-            return false;
+            return new(true);
         }
         if (!selectedId.HasValue) {
-            return false;
+            return new(true);
         }
         if (change.RetiredProviderProfileIds.Contains(selectedId.Value)) {
             MarkTargetUnavailable("The selected imported provider was retired. It remains selected for audit and can be reactivated from Shared provider connections.");
-            return false;
+            return new(true);
         }
         if ((wasImported || IsSourceManaged) && change.AffectedProviderProfileIds.Contains(selectedId.Value)) {
-            return await SelectAsync(selectedId);
+            if (SelectedProvider is null) {
+                return new(true);
+            }
+            var replaced = await SelectAsync(selectedId);
+            return new(replaced, replaced);
         }
-        return false;
+        return new(true);
     }
 
     public async Task NewAsync() {

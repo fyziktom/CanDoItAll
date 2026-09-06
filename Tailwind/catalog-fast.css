@@ -1,0 +1,4 @@
+@import "tailwindcss" source(none);
+@source "../src/UI/CanDoItAll.AgentFramework.UI";
+@source "../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox";
+@source "../src/UI/CanDoItAll.Conversations.Components";

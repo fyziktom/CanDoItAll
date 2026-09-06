@@ -114,6 +114,7 @@ internal sealed class RecordingSharedProviderManagementService(
     public IReadOnlyList<SharedProviderSourceManagementSnapshot> Sources { get; } = sourceSnapshots ?? [];
 
     public SharedProviderPublicationAction? PublicationAction { get; private set; }
+    public int PublicationWrites { get; private set; }
 
     public SharedProviderImportedProfileUpdateRequest? ImportedUpdate { get; private set; }
 
@@ -128,6 +129,7 @@ internal sealed class RecordingSharedProviderManagementService(
         Guid? expectedConcurrencyToken,
         CancellationToken cancellationToken = default)
     {
+        PublicationWrites++;
         PublicationAction = action;
         State = State with
         {

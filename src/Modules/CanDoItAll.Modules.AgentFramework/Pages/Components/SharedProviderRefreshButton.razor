@@ -9,9 +9,12 @@
     <Cluster>
         <Button Text="Refresh shared provider" Icon="sync" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
                 IsBusy="busy" Disabled="@(busy || Recovery.Source is not null)" Click="RefreshAsync" data-testid="shared-provider-refresh-capabilities" />
+        @if (PendingDeliveryAttempt is not null) {
+            <Button Text="Retry workspace delivery" Disabled="@busy" Click="RetryDeliveryAsync" data-testid="shared-provider-refresh-delivery" />
+        }
     </Cluster>
     @if (Recovery.Source is not null) {
-        <Alert AlertStyle="AlertStyle.Warning">Verify the pending source attempt in Shared provider connections before refreshing.</Alert>
+        <Alert AlertStyle="AlertStyle.Warning">Resolve the pending source attempt in Shared provider connections before another refresh.</Alert>
     }
     @if (message is not null) {
         <Alert AlertStyle="@(failed ? AlertStyle.Danger : AlertStyle.Success)" data-testid="shared-provider-refresh-result">@message</Alert>
@@ -20,7 +23,7 @@
 
 @code {
     [Parameter] public Guid ProviderId { get; set; }
-    [Parameter] public EventCallback<SharedProviderChange> Refreshed { get; set; }
+    [Parameter] public EventCallback<SharedProviderChangeDelivery> Refreshed { get; set; }
     private CancellationTokenSource owner = new();
     private Guid target;
     private long generation;
@@ -28,8 +31,14 @@
     private bool busy;
     private bool failed;
     private string? message;
+    private SharedProviderSourceMutationAttempt? PendingDeliveryAttempt => Recovery.Source is { } attempt &&
+        attempt.Before?.Imports.Any(import => import.ProviderProfileId == target) == true &&
+        Recovery.PendingDelivery(attempt.AttemptId) is not null ? attempt : null;
 
     protected override void OnParametersSet() {
+        if (disposed) {
+            return;
+        }
         if (target == ProviderId) {
             return;
         }
@@ -54,7 +63,6 @@
         var providerId = target;
         busy = true;
         message = null;
-        SharedProviderChange? committed = null;
         SharedProviderSourceMutationAttempt? attempt = null;
         try {
             var sources = await ManagementService.ListSourcesAsync(token);
@@ -68,51 +76,73 @@
             attempt = new(source.Source.Id, SharedProviderSourceMutationKind.Synchronize, source, selection: selected);
             Recovery.BeginSource(attempt);
             var result = await ManagementService.SynchronizeSourceAsync(source.Source.Id, selected, token);
-            committed = result.Change;
             Recovery.RecordCommit(attempt.AttemptId, result.Change);
             if (!IsCurrent(operation, token)) {
                 return;
             }
             Recovery.CompleteSource(attempt);
-            failed = !result.IsSuccessful;
-            message = result.Change?.Warning ?? (failed
-                ? result.Failure?.SanitizedMessage ?? "The shared source is unavailable."
-                : "Shared models and thinking settings refreshed. Your unsaved selections were preserved.");
-            if (result.Change is { } change && Recovery.ClaimPublication(attempt.AttemptId)) {
-                await Refreshed.InvokeAsync(change);
+            if (result.Change is not null && !await DeliverAsync(attempt, operation, token)) {
+                return;
+            }
+            if (IsCurrent(operation, token)) {
+                failed = !result.IsSuccessful;
+                message = result.Change?.Warning ?? (failed
+                    ? result.Failure?.SanitizedMessage ?? "The shared source is unavailable."
+                    : "Shared models and thinking settings refreshed. Your unsaved selections were preserved.");
             }
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (SharedProviderCommittedException exception) {
             if (attempt is not null) {
                 Recovery.RecordCommit(attempt.AttemptId, exception.Change);
             }
-            if (IsCurrent(operation, token)) {
-                if (attempt is not null) {
-                    Recovery.CompleteSource(attempt);
-                }
+            if (IsCurrent(operation, token) && attempt is not null &&
+                await DeliverAsync(attempt, operation, token) && IsCurrent(operation, token)) {
                 failed = true;
                 message = exception.Change.Warning;
-                if (attempt is null || Recovery.ClaimPublication(attempt.AttemptId)) {
-                    await Refreshed.InvokeAsync(exception.Change);
-                }
             }
         } catch (Exception) {
             if (IsCurrent(operation, token)) {
                 failed = true;
-                if (committed is not null) {
-                    message = "The shared-provider change is saved, but its workspace refresh did not complete.";
-                    return;
-                }
                 message = attempt is null ? "The source could not be read. No synchronization was started."
                     : "Shared provider refresh could not be confirmed. Verify the source state before retrying.";
-                await Refreshed.InvokeAsync(new(SharedProviderChangeKind.SourceAvailability, [],
-                    commitState: SharedProviderCommitState.Unconfirmed, unknownScope: true, warning: message));
+                await Refreshed.InvokeAsync(new SharedProviderChangeDelivery(Guid.NewGuid(),
+                    new(SharedProviderChangeKind.SourceAvailability, [], commitState: SharedProviderCommitState.Unconfirmed,
+                        unknownScope: true, warning: message)));
             }
         } finally {
             if (IsCurrent(operation, token)) {
                 busy = false;
             }
         }
+    }
+
+    private async Task RetryDeliveryAsync() {
+        if (disposed || busy || PendingDeliveryAttempt is not { } attempt) {
+            return;
+        }
+        var operation = ++generation;
+        var token = owner.Token;
+        busy = true;
+        try {
+            if (await DeliverAsync(attempt, operation, token) && IsCurrent(operation, token)) {
+                failed = false;
+                message = "Workspace reconciliation completed without repeating synchronization.";
+            }
+        } finally {
+            if (IsCurrent(operation, token)) {
+                busy = false;
+            }
+        }
+    }
+
+    private async Task<bool> DeliverAsync(SharedProviderSourceMutationAttempt attempt, long operation, CancellationToken token) {
+        var result = await Recovery.DeliverSourceAsync(attempt, attempt.SourceId, () => IsCurrent(operation, token),
+            delivery => Refreshed.InvokeAsync(delivery));
+        if (result != SharedProviderDeliveryDisposition.Acknowledged && IsCurrent(operation, token)) {
+            failed = true;
+            message = "The source write is resolved, but workspace delivery is pending. Retry delivery without repeating synchronization.";
+        }
+        return result == SharedProviderDeliveryDisposition.Acknowledged;
     }
 
     public void Dispose() {

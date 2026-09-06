@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
@@ -247,6 +248,89 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         var result = await scope.ServiceProvider.GetRequiredService<IProviderMutationVerification>().VerifyAsync(attempt);
         Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, result.Disposition);
         Assert.Equal(attempt.ProviderId, result.ProviderId);
+    }
+
+    [Fact]
+    public async Task Canonical_sync_verification_requires_exact_selected_set() {
+        await using var scope = fixture.Host.App.Services.CreateAsyncScope();
+        var management = scope.ServiceProvider.GetRequiredService<ISharedProviderManagementService>();
+        var reconciler = scope.ServiceProvider.GetRequiredService<SharedProviderReconciliationCoordinator>();
+        var source = await management.SaveSourceAsync(await SourceRequestAsync());
+        var before = (await management.ListSourcesAsync()).Single(item => item.Source.Id == source.Id);
+        var catalog = RecoveryCatalog();
+        var ids = catalog.Providers.Select(provider => provider.PublicationId).ToHashSet();
+        var subset = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Synchronize,
+            before, selection: ids.Take(1));
+        var exact = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Synchronize, before, selection: ids);
+        var empty = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Synchronize, before);
+        await reconciler.ReconcileAsync(new(source.Id, catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
+            ids, SharedProviderSelectionMode.Replace));
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, (await management.VerifySourceAsync(subset)).Disposition);
+        Assert.Equal(ProviderVerificationDisposition.Committed, (await management.VerifySourceAsync(exact)).Disposition);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, (await management.VerifySourceAsync(empty)).Disposition);
+        await reconciler.ReconcileAsync(new(source.Id, catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
+            new HashSet<SharedProviderPublicationId>(), SharedProviderSelectionMode.Replace));
+        var verified = await management.VerifySourceAsync(empty);
+        Assert.Equal(ProviderVerificationDisposition.Committed, verified.Disposition);
+        var authoritative = verified.Sources.Single(item => item.Source.Id == source.Id);
+        Assert.All(authoritative.Imports, import => Assert.Equal(SharedProviderSelectionState.Retired, import.SelectionState));
+        Assert.Equal(2, verified.Change!.RetiredProviderProfileIds.Count);
+        var repeated = await management.VerifySourceAsync(empty);
+        Assert.Equal(authoritative.Source.ConcurrencyToken, repeated.Sources.Single(item => item.Source.Id == source.Id).Source.ConcurrencyToken);
+    }
+
+    [Fact]
+    public async Task Canonical_target_verification_requires_exact_local_settings_and_publication_state() {
+        await using var scope = fixture.Host.App.Services.CreateAsyncScope();
+        var management = scope.ServiceProvider.GetRequiredService<ISharedProviderManagementService>();
+        var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
+        var id = await registry.SaveProviderAsync(NewEditor());
+        var before = await management.GetProfileSharingAsync(id);
+        var recovery = new SharedProviderRecovery();
+        var publish = recovery.BeginTarget(id, SharedProviderTargetMutationKind.Publish, before);
+        var published = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null);
+        Assert.Equal(SharedProviderTargetVerificationDisposition.Satisfied,
+            SharedProviderTargetVerification.Evaluate(publish, published).Disposition);
+        var unpublished = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Unpublish, published.Publication!.ConcurrencyToken);
+        Assert.Equal(SharedProviderTargetVerificationDisposition.StillUnconfirmed,
+            SharedProviderTargetVerification.Evaluate(publish, unpublished).Disposition);
+
+        var source = await management.SaveSourceAsync(await SourceRequestAsync());
+        var catalog = RecoveryCatalog();
+        await scope.ServiceProvider.GetRequiredService<SharedProviderReconciliationCoordinator>().ReconcileAsync(
+            new(source.Id, catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
+                catalog.Providers.Select(provider => provider.PublicationId).ToHashSet(), SharedProviderSelectionMode.Replace));
+        var import = (await management.ListSourcesAsync()).Single(item => item.Source.Id == source.Id).Imports.First();
+        var sharing = await management.GetProfileSharingAsync(import.ProviderProfileId);
+        var request = new SharedProviderImportedProfileUpdateRequest(import.ImportId, import.ProviderProfileId,
+            "  Exact local alias  ", false, import.ImportConcurrencyToken, import.ProviderConcurrencyToken);
+        var attempt = recovery.BeginTarget(import.ProviderProfileId, SharedProviderTargetMutationKind.ImportedSettings, sharing, request);
+        var saved = await management.UpdateImportedProfileAsync(request);
+        Assert.Equal("Exact local alias", saved.Import!.LocalAlias);
+        Assert.Equal(SharedProviderTargetVerificationDisposition.Satisfied,
+            SharedProviderTargetVerification.Evaluate(attempt, saved).Disposition);
+        var superseded = await management.UpdateImportedProfileAsync(request with {
+            LocalAlias = "A different later alias", ExpectedImportConcurrencyToken = saved.Import.ImportConcurrencyToken,
+            ExpectedProviderConcurrencyToken = saved.Import.ProviderConcurrencyToken });
+        Assert.Equal(SharedProviderTargetVerificationDisposition.StillUnconfirmed,
+            SharedProviderTargetVerification.Evaluate(attempt, superseded).Disposition);
+    }
+
+    private static SharedProviderCatalogDocument RecoveryCatalog() {
+        var providers = Enumerable.Range(0, 2).Select(index => {
+            var id = new SharedProviderPublicationId(Guid.NewGuid());
+            var modelId = SharedProviderRoutingModelIdCodec.Create(id, "fixture-model");
+            var publication = new SharedProviderCatalogPublication(id,
+                new SharedProviderPublicRevision($"sha256:{new string('c', 64)}"), $"Recovery publication {index}",
+                SharedProviderPurpose.Chat, SharedProviderTransport.OpenAiCompatible, modelId,
+                [new SharedProviderCatalogModel(modelId, "Fixture model", [SharedProviderCapability.Responses])],
+                new SharedProviderCatalogHealth(SharedProviderHealthState.Available));
+            return publication with { Revision = SharedProviderCanonicalRevision.ComputePublication(publication) };
+        }).ToArray();
+        var catalog = new SharedProviderCatalogDocument(SharedProviderProtocolVersion.Current,
+            new SharedProviderSourceInstanceId(Guid.NewGuid()), new SharedProviderPublicRevision($"sha256:{new string('d', 64)}"),
+            new SharedProviderProtocolDescriptor(SharedProviderRoutes.OpenAiBase), providers);
+        return catalog with { CatalogRevision = SharedProviderCanonicalRevision.ComputeCatalog(catalog) };
     }
 
     private async Task<SharedProviderSourceEditorRequest> SourceRequestAsync() {

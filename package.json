@@ -6,7 +6,11 @@
   "scripts": {
     "tailwind:build": "npm --prefix Tailwind run build",
     "tailwind:watch": "npm --prefix Tailwind run watch",
-    "watch": "dotnet watch --project ./src/App/CanDoItAll.Web"
+    "watch": "dotnet watch --project ./src/App/CanDoItAll.Web",
+    "catalog:css:build": "npm --prefix Tailwind run catalog:build",
+    "catalog:css:watch": "npm --prefix Tailwind run catalog:watch",
+    "catalog:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile \"Catalog sandbox\" --property:CatalogAssetMode=Parity",
+    "catalog:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile \"Catalog sandbox Fast\" --property:CatalogAssetMode=Fast"
   },
   "repository": {
     "type": "git",

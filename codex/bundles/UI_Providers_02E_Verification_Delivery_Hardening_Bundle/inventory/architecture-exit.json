@@ -1,0 +1,158 @@
+{
+  "snapshotId": "snap-20260906124815-f296347d",
+  "createdUtc": "2026-09-06T12:48:15.256071+00:00",
+  "entrySnapshot": "snap-20260906114059-f296347d",
+  "hasBlockingErrors": false,
+  "projects": [
+    "CanDoItAll.Modules.AgentFramework",
+    "CanDoItAll.Modules.AgentFramework.ProviderManagement"
+  ],
+  "documents": 284,
+  "types": 731,
+  "members": 6885,
+  "serviceRegistrations": 81,
+  "cycles": [
+    {
+      "level": "Module",
+      "nodeIds": [
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+        "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+      ]
+    },
+    {
+      "level": "Type",
+      "nodeIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+        "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info"
+    }
+  ],
+  "projectReferenceChange": false,
+  "cycleChange": false
+}

@@ -1,0 +1,25 @@
+{
+  "source": "NuGet restore evaluated project graph, live project reference substitution",
+  "projects": [
+    "CanDoItAll.AgentFramework.Capabilities.Abstractions",
+    "CanDoItAll.AgentFramework.Models",
+    "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
+    "CanDoItAll.AgentFramework.UI",
+    "CanDoItAll.AgentFramework.UiSandbox",
+    "CanDoItAll.Components.BaseLib",
+    "CanDoItAll.Components.Common",
+    "CanDoItAll.Components.OverlayLib",
+    "CanDoItAll.Conversations.Components",
+    "CanDoItAll.Infrastructure.Abstractions",
+    "CanDoItAll.Memory.Abstractions",
+    "CanDoItAll.SharedKernel"
+  ],
+  "forbidden": [
+    "CanDoItAll.Modules.AgentFramework",
+    "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+    "CanDoItAll.AgentFramework.Core",
+    "CanDoItAll.Web"
+  ],
+  "forbiddenFound": [],
+  "newProductionReferences": []
+}

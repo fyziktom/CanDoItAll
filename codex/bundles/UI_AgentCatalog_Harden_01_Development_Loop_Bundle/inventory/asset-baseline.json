@@ -1,0 +1,32 @@
+{
+  "utc": "2026-09-06T12:59:28.821105+00:00",
+  "sdk": "10.0.303",
+  "node": "24.19.0",
+  "assets": [
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+      "bytes": 115598,
+      "sha256": "c7aade5401dfe65cfd1b119e59eec14d2bf0c337f3fa89e264a4765bad2e5f32"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json",
+      "bytes": 202188,
+      "sha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd"
+    },
+    {
+      "path": "Tailwind/input.css",
+      "bytes": 204,
+      "sha256": "b7bbdcc809ffc6c0b95ac5650541be3aec359aa0e088e2c7527d92bdb105934d"
+    },
+    {
+      "path": "Tailwind/package-lock.json",
+      "bytes": 35992,
+      "sha256": "cc8c6fe1f6bd9c513ec582638631e933be55b5cfa56d06cf1f547bcff9ae8688"
+    },
+    {
+      "path": "../CanDoItAll.Components/src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css",
+      "bytes": 236314,
+      "sha256": "87343da644f7fcadab393072b54e4cfd1b37bb25087eac680859c61844aafced"
+    }
+  ]
+}

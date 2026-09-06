@@ -60,8 +60,8 @@ public static class SharedProviderSourceVerification {
                         && current.Source.Status != SharedProviderSourceStatus.NeverSynchronized,
                     SharedProviderSourceMutationKind.Synchronize => current.Source.LastSyncAtUtc > before.Source.LastSyncAtUtc.GetValueOrDefault()
                         && current.Source.Status != SharedProviderSourceStatus.NeverSynchronized
-                        && attempt.Selection.All(id => current.Imports.Any(import =>
-                            import.RemotePublicationId == id && import.SelectionState == SharedProviderSelectionState.Selected)),
+                        && attempt.Selection.SetEquals(current.Imports.Where(import =>
+                            import.SelectionState == SharedProviderSelectionState.Selected).Select(import => import.RemotePublicationId)),
                     _ => false
                 };
                 if (postcondition) {

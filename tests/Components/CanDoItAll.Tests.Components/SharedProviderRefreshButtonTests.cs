@@ -22,7 +22,7 @@ public sealed class SharedProviderRefreshButtonTests {
         var notified = false;
         var cut = context.Render<SharedProviderRefreshButton>(p => p
             .Add(c => c.ProviderId, proxy.Selected.ProviderProfileId)
-            .Add(c => c.Refreshed, (SharedProviderChange _) => notified = true));
+            .Add(c => c.Refreshed, (SharedProviderChangeDelivery _) => notified = true));
         Assert.Equal(0, proxy.ListCalls);
         cut.Find("[data-testid='shared-provider-refresh-capabilities']").Click();
         cut.WaitForAssertion(() => {

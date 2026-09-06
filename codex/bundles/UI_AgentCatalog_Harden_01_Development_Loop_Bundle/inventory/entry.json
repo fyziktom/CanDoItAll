@@ -1,0 +1,14 @@
+{
+  "branch": "components-decoupling",
+  "head": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "remoteHead": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "dirtyAtEntry": false,
+  "siblingMode": "live source, unchanged",
+  "siblings": {
+    "Components": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+    "FileTools": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+    "SharedInfo": "00e6fe6389eba9a6bc3b2bb78e27fb10b7597292",
+    "Mcp": "abeaea463aa906bca2d83a1b608ff432dbc29d8d"
+  },
+  "snapshot": "snap-20260906114059-f296347d"
+}

@@ -1,0 +1,847 @@
+You are Codex GPT-6 Astra running at xhigh reasoning effort.
+
+Work directly in the CanDoItAll repository on the current
+`components-decoupling` branch.
+
+This prompt authorizes BOTH bundle preparation and implementation for the
+following bounded phase:
+
+1. CDA-UI-SEAMS-PROVIDERS-02E
+2. CDA-UI-SEAMS-CATALOG-HARDEN-01
+
+PROVIDERS-02E is a hard prerequisite for CATALOG-HARDEN-01. Do not begin
+production changes for CATALOG-HARDEN-01 until the bounded PROVIDERS-02E
+acceptance gate is green.
+
+The remotely observed branch head at prompt preparation time was:
+
+    1506386afddd0ed98c4ac43911263198e352c2ba
+    providers phase3
+
+This is an observation, not a pin. Rediscover the actual local and remote
+branch, HEAD, working-tree status, current sibling source mode, and sibling
+revisions at execution entry. Do not reset, overwrite, clean, or discard
+unrelated local work if the state differs.
+
+All bundle documentation and all source-code comments must be written in
+English.
+
+=======================================================================
+AUTHORITATIVE REFERENCES
+=======================================================================
+
+Read and follow these before designing or editing:
+
+- codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle
+  - README.md
+  - plan/01-child-bundle-contract.md
+  - reviews/05-unconfirmed-verification-feedback.md
+  - reviews/06-catalog-extraction-asset-feedback.md
+
+- codex/bundles/UI_Providers_02D_Recovery_Bundle
+  - requirements.json
+  - architecture.md
+  - execution.md
+  - reviews/adjudication.md
+  - retained proof relevant to provider recovery
+
+- codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle
+  - bundle.json
+  - reviews/closure.md
+  - proof/SB03/closure.md
+  - proof/SB03/results.md
+  - retained source inventories and measurement definitions
+
+Preserve all valid conclusions and limits from those bundles. Do not relabel
+historical evidence as proof of new behavior. Do not rewrite or delete their
+proof. A small successor link may be appended only where useful, but all new
+requirements, implementation records, and proof belong to the new bundles.
+
+Create these implementation bundles unless an existing exact-name collision
+is discovered:
+
+1. Directory:
+   codex/bundles/UI_Providers_02E_Verification_Delivery_Hardening_Bundle
+
+   Reference ID:
+   CDA-UI-SEAMS-PROVIDERS-02E
+
+   Parent:
+   CDA-UI-SEAMS-PROVIDERS-02D
+
+2. Directory:
+   codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle
+
+   Reference ID:
+   CDA-UI-SEAMS-CATALOG-HARDEN-01
+
+   Parent:
+   CDA-UI-SEAMS-CATALOG-01
+
+   Prerequisite:
+   CDA-UI-SEAMS-PROVIDERS-02E
+
+Each bundle must contain a compact but complete executable shape consistent
+with existing bundle conventions:
+
+- README.md
+- bundle.json
+- requirements or requirement matrix
+- architecture/decision record
+- execution plan
+- source and consumer inventory
+- exact validation/test plan
+- proof directory
+- review/adjudication and closure records
+- MANIFEST.sha256
+- rollback and limitations
+- an explicit record of entry HEAD and sibling revisions
+
+Prepare the bundle before implementation, adjudicate the findings against the
+actual source, and then implement. Do not blindly implement this prompt when
+the source disproves a detail; record the adjudication and preserve the
+underlying required invariant.
+
+=======================================================================
+GLOBAL CONSTRAINTS
+=======================================================================
+
+Do not:
+
+- merge branches;
+- rebase or rewrite history;
+- delete previous bundles or their evidence;
+- clean unrelated working-tree changes;
+- edit the Components or FileTools sibling repositories;
+- replace live sibling source mode with NuGet snapshot mode;
+- implement production routing or bookmarkability;
+- optimize or refactor the dotnet-watch Manager;
+- refactor provider history;
+- extract the whole provider editor;
+- start AgentCapabilities or Simple Chats work;
+- redesign the UI;
+- add a general durable mutation journal, generic outbox, or distributed
+  exactly-once framework;
+- add a generic Storybook-style sandbox framework;
+- add interfaces, wrappers, controllers, projects, or public contracts only
+  to satisfy a structural quota;
+- add new tracked `.log` files or duplicate large proof artifacts without a
+  concrete validation need.
+
+Recovery in this phase may remain scoped to the Blazor circuit, as documented
+by PROVIDERS-02D. Do not falsely claim durability across server restart or a
+new circuit.
+
+Do not weaken concurrency, ownership, source-managed provider restrictions,
+permanent publication identity, deletion guards, authorization, secret
+handling, runtime revision validation, or catalog invalidation.
+
+No production behavior change is permitted except the correctness and
+recovery changes explicitly required below.
+
+=======================================================================
+WORKSTREAM A — PROVIDERS-02E
+=======================================================================
+
+Goal:
+
+Close the remaining correctness gaps in provider and shared-provider
+verification, post-commit UI delivery, and attempt lifecycle cleanup without
+redesigning the provider architecture.
+
+-----------------------------------------------------------------------
+A1. Exact shared-source synchronization verification
+-----------------------------------------------------------------------
+
+Inspect:
+
+- SharedProviderSourceVerification.cs
+- SharedProviderSourceSyncService.cs
+- SharedProviderSourcesDialog.razor.cs
+- related persistence, reconciliation, and tests
+
+The current synchronization verification accepts the requested selection when
+every requested publication is selected, but it does not reject extra
+selected publications. SynchronizeAsync uses replacement semantics, so subset
+matching is insufficient.
+
+Required invariant:
+
+For SharedProviderSourceMutationKind.Synchronize, the authoritative set of
+imports whose SelectionState is Selected must exactly equal the attempted
+selection.
+
+Use set equality, not subset matching.
+
+This must correctly classify at least:
+
+- requested {A}, current selected {A}:
+  postcondition satisfied;
+
+- requested {A}, current selected {A, B}:
+  not satisfied and must not be classified as committed/satisfied;
+
+- requested {}, current selected {A}:
+  not satisfied;
+
+- requested {}, current selected {} with retired/non-selected imports:
+  satisfied when the remaining existing evidence requirements are met;
+
+- requested {A, B}, current selected {A}:
+  not satisfied;
+
+- selection ordering and duplicate enumeration must not affect comparison.
+
+Preserve the existing evidence requirements around source identity,
+concurrency/revision movement, status, and synchronization time. Do not make
+set equality alone sufficient evidence.
+
+Retired or otherwise non-selected imports must not be counted as selected.
+
+-----------------------------------------------------------------------
+A2. Capture exact intended target postconditions
+-----------------------------------------------------------------------
+
+Inspect:
+
+- SharedProviderRecovery.cs
+- SharedProviderManagementPanel.razor.cs
+- SharedProviderManagement contracts and service
+- imported profile and publication snapshots
+- all relevant component and unit tests
+
+The current SharedProviderTargetAttempt records Kind and Before, but does not
+record the exact requested target state. A successful read currently risks
+unlocking recovery merely because state or concurrency tokens changed.
+
+Required invariant:
+
+A target attempt must capture its exact intended semantic outcome before the
+write begins. Do not infer the complete intent only from Kind and Before.
+
+Represent, directly or through an equivalent bounded design:
+
+- Publish:
+  intended IsPublished = true;
+
+- Unpublish:
+  intended IsPublished = false;
+
+- ImportedSettings:
+  exact ImportId and ProviderProfileId;
+  canonical intended local alias;
+  intended local IsEnabled value;
+
+- Retirement:
+  exact ImportId and ProviderProfileId;
+  intended SelectionState = Retired.
+
+Use canonical normalization shared with the authoritative write path where
+needed. Do not create a second subtly different alias-normalization policy.
+
+Target verification must check:
+
+- exact provider identity;
+- exact import/publication identity where applicable;
+- exact requested postcondition;
+- relevant before/current concurrency tokens;
+- stale target, changed target, and generation fencing;
+- whether the current authoritative state is still the unchanged before
+  state, the desired current state, or an intervening/superseding state.
+
+Do not claim historical causation when only the current desired authoritative
+state is provable. It is acceptable to model “desired authoritative state is
+satisfied” separately from “this historical attempt is proven to have caused
+it.”
+
+Required semantic outcomes:
+
+1. Desired authoritative state satisfied
+   - bind the current authoritative state and current tokens;
+   - clear the unresolved write lock;
+   - retain later unrelated UI state;
+   - publish a semantic change only when one is required;
+   - never replay the backend mutation.
+
+2. Exact unchanged before-state proves the mutation was not applied
+   - clearly report that the write was not applied;
+   - permit a deliberate retry or a new deliberate user action;
+   - do not perform an automatic replay.
+
+3. Different/intervening/superseding state or insufficient evidence
+   - remain visibly unresolved;
+   - keep writes blocked;
+   - do not clear the attempt merely because the read succeeded;
+   - do not replay the mutation.
+
+4. Failed, canceled, stale, or wrong-target read
+   - retain the unresolved attempt;
+   - emit no stale callback;
+   - do not update another target.
+
+Prefer a pure evaluator with direct tests over embedding all classification
+logic in the Razor component. Do not introduce a universal mutation framework.
+
+-----------------------------------------------------------------------
+A3. Separate mutation resolution from semantic change delivery
+-----------------------------------------------------------------------
+
+Inspect:
+
+- SharedProviderRecovery.cs
+- SharedProviderManagementPanel.razor.cs
+- SharedProviderSourcesDialog.razor.cs
+- AgentProviderProfilesPanel.razor.cs
+- the ProvidersChanged callback path
+- all source and target recovery tests
+
+The current flow can:
+
+1. remove the unresolved attempt;
+2. mark publication as claimed/delivered;
+3. await ProvidersChanged.InvokeAsync(...).
+
+If that callback fails or the component is torn down during the handoff, the
+backend commit may be known while the parent reconciliation event is lost.
+The original write must not be replayed to compensate.
+
+Required lifecycle:
+
+- mutation unresolved;
+- mutation resolved with an optional semantic change;
+- semantic change pending delivery;
+- delivery in progress, serialized by attempt;
+- delivery acknowledged;
+- terminal attempt cleanup.
+
+Required invariants:
+
+- A known committed or canonically verified change must not be forgotten
+  before its parent reconciliation callback is successfully acknowledged or
+  explicitly retained as pending delivery.
+
+- Marking a change as delivered before invoking the callback is forbidden.
+
+- A callback failure must leave a visible, retryable delivery/reconciliation
+  state.
+
+- Retrying delivery must never repeat the provider/shared-provider backend
+  mutation.
+
+- Component/overlay reconstruction in the same circuit must be able to
+  continue pending delivery.
+
+- Delivery for target/source A cannot be consumed by target/source B.
+
+- A stale component or stale generation cannot acknowledge or clear a newer
+  attempt.
+
+- Concurrent retry clicks must not invoke the same pending delivery in
+  parallel.
+
+- Once delivery is successfully acknowledged, normal repeated rendering,
+  loading, or verification must not invoke it again.
+
+Do not pretend that arbitrary EventCallback execution has durable exactly-once
+semantics. Use the attempt identity as the bounded idempotency key. If the
+current callback contract cannot make partial callback execution safe, choose
+and document a minimal explicit approach, for example an attempt-scoped
+delivery envelope and idempotent receiver-side handling.
+
+Do not broaden this into a general application event bus.
+
+Visible behavior must distinguish:
+
+- write outcome unresolved;
+- write resolved but parent reconciliation delivery pending;
+- write definitely not applied and eligible for deliberate retry;
+- write resolved and fully reconciled.
+
+-----------------------------------------------------------------------
+A4. Terminal recovery cleanup
+-----------------------------------------------------------------------
+
+Inspect both:
+
+- ProviderEditorRecovery
+- SharedProviderRecovery
+
+ProviderEditorRecovery currently retains current-attempt bookkeeping after
+terminal completion/removal. SharedProviderRecovery retains knownChanges and
+delivered attempt IDs indefinitely for the circuit.
+
+Required invariants:
+
+- terminally completed provider attempts remove both unresolved state and
+  matching current-attempt bookkeeping;
+
+- terminally completed shared attempts remove target/source, known-change,
+  in-flight, delivery, and deduplication bookkeeping after acknowledged
+  delivery;
+
+- stale completion of an older attempt must never clear a newer current
+  attempt for the same identity;
+
+- unresolved and pending-delivery attempts must remain retained;
+
+- controlled retries must keep the original stable identity and submission;
+
+- cleanup must be behavior-driven, not guarded by tests that assert private
+  dictionary field counts or a mandated number of classes.
+
+Add tests that prove stale attempts cannot be resurrected or clear newer
+attempts. Avoid brittle implementation-shape tests.
+
+-----------------------------------------------------------------------
+A5. Preserve PROVIDERS-02D guarantees
+-----------------------------------------------------------------------
+
+Retain all previously proven behavior, including:
+
+- stable candidate ID for first provider save;
+- create-only expected-absence protection;
+- canonical database verification without Save/Delete;
+- no automatic replay after unknown writes;
+- exact update/delete revision classification;
+- preservation of later draft edits, EditContext, and editor section;
+- source create with stable proposed identity;
+- overlay/component reconstruction recovery within the circuit;
+- source-managed provider ownership restrictions;
+- typed affected and retired provider sets;
+- permanent publication identity and deletion remediation;
+- API 409 unconfirmed-write contract;
+- sanitized mutation receipts;
+- no-store response behavior;
+- no Retry-After suggestion;
+- committed-reconciliation-pending behavior;
+- provider catalog reconciliation without replay.
+
+Do not rename or weaken the public API behavior merely to simplify tests.
+
+-----------------------------------------------------------------------
+A6. Required PROVIDERS-02E tests
+-----------------------------------------------------------------------
+
+At minimum, add focused named coverage equivalent to these topics. Exact names
+may follow repository conventions, but the test plan and closure must map
+every topic to an executable case.
+
+Source verification:
+
+- Synchronize_verification_requires_exact_selected_set
+- Synchronize_verification_rejects_requested_subset
+- Synchronize_verification_rejects_nonempty_current_for_empty_request
+- Synchronize_verification_accepts_exact_empty_selection
+- Synchronize_verification_ignores_retired_imports_in_selected_set
+- Synchronize_verification_keeps_existing_revision_and_time_evidence
+- Failed_or_stale_source_verification_remains_locked
+
+Target verification:
+
+- Publish_verification_requires_published_postcondition
+- Unpublish_verification_requires_unpublished_postcondition
+- Imported_settings_verification_requires_exact_alias_and_enabled_state
+- Imported_settings_verification_rejects_changed_but_different_values
+- Retirement_verification_requires_exact_import_identity_and_retired_state
+- Exact_before_state_allows_deliberate_retry_without_replay
+- Intervening_target_revision_remains_unresolved
+- Wrong_target_or_stale_generation_cannot_unlock
+- Verified_target_refreshes_current_authoritative_tokens
+
+Delivery:
+
+- Known_commit_callback_failure_retains_pending_target_delivery
+- Known_commit_callback_failure_retains_pending_source_delivery
+- Delivery_retry_does_not_repeat_backend_mutation
+- Component_recreation_can_resume_pending_delivery
+- Successful_acknowledgement_prevents_second_delivery
+- Target_A_delivery_cannot_be_acknowledged_by_target_B
+- Source_A_delivery_cannot_be_acknowledged_by_source_B
+- Concurrent_delivery_retry_is_serialized
+- Disposed_or_stale_component_emits_no_new_callback
+
+Cleanup and preservation:
+
+- Terminal_provider_attempt_cannot_be_resurrected
+- Stale_provider_completion_cannot_clear_newer_attempt
+- Terminal_shared_attempt_releases_attempt_bookkeeping
+- Pending_delivery_survives_cleanup_of_unrelated_attempts
+- Existing_PROVIDER_02D_recovery_cases_remain_green
+
+Use failing-first tests for confirmed defects where practical. Retain original
+failure evidence in the bundle without committing redundant multi-megabyte
+artifacts.
+
+-----------------------------------------------------------------------
+A7. PROVIDERS-02E validation gate
+-----------------------------------------------------------------------
+
+Build at least the directly affected production projects in Release:
+
+- CanDoItAll.Modules.AgentFramework.ProviderManagement
+- CanDoItAll.Modules.AgentFramework
+- CanDoItAll.Web
+
+Run freshly built focused Unit, Components, and Integration selections covering
+the exact provider and shared-provider owners.
+
+Run real component/browser acceptance when visible recovery state or callback
+retry behavior changes. Do not substitute a mocked service-only test for all
+UI lifecycle evidence.
+
+Decide whether a wider stable checkpoint is required from actual invalidation:
+
+- If only internal provider/shared-provider implementation changes, use a
+  bounded owning selection plus direct consumer builds.
+
+- If a public cross-module contract, shared persistence contract, DI root, or
+  common result type changes, run the corresponding cross-assembly stable
+  checkpoint and document why.
+
+The PROVIDERS-02E gate is green only when:
+
+- all four A1–A4 areas are implemented and proven;
+- no PROVIDERS-02D guarantee regresses;
+- no unresolved high-severity provider finding remains;
+- no new architecture cycle or forbidden project reference is introduced;
+- no secret or raw credential is present in proof;
+- no new tracked log/documentation debt is introduced.
+
+Only then begin CATALOG-HARDEN-01.
+
+=======================================================================
+WORKSTREAM B — CATALOG-HARDEN-01
+=======================================================================
+
+Goal:
+
+Turn the extracted Agent Framework catalog sandbox into a practical direct
+dotnet-watch development surface while preserving a separate production-parity
+mode and producing a local measurement that is not dominated by Manager,
+MCP, screenshot, or remote browser transport.
+
+Do not move or extract another feature in this workstream.
+
+-----------------------------------------------------------------------
+B1. Preserve the existing lightweight ownership boundary
+-----------------------------------------------------------------------
+
+The following architecture must remain true:
+
+- CanDoItAll.AgentFramework.UI owns the controlled catalog rendering,
+  AgentSelectionCard, and pure presentation mapping.
+
+- AgentCatalogHost and production effects remain in
+  CanDoItAll.Modules.AgentFramework.
+
+- The sandbox must not gain project references to:
+  - CanDoItAll.Modules.AgentFramework;
+  - ProviderManagement;
+  - AgentFramework.Core;
+  - persistence/database projects;
+  - the production Web project;
+  - unrelated feature modules.
+
+- The sandbox may continue to reference the lightweight UI project and required
+  UI/static assets.
+
+- Do not copy or fork the production catalog components into sandbox-only
+  versions.
+
+Re-run an architecture/project graph check after changes.
+
+-----------------------------------------------------------------------
+B2. Add explicit Parity and Fast asset modes
+-----------------------------------------------------------------------
+
+The current sandbox links the production application Tailwind output, while
+the root Tailwind input scans the whole main `src` tree.
+
+Introduce two explicit development modes.
+
+1. Parity mode
+
+   Purpose:
+   - production rendering parity;
+   - regression verification;
+   - final visual acceptance.
+
+   Requirements:
+   - preserve the existing production CSS output and real production asset
+     composition;
+   - continue using real BaseLib assets, fonts, icons, tooltip styling,
+     component scoped CSS, and production theme bytes;
+   - preserve existing parity evidence;
+   - do not replace this mode with a reduced stylesheet.
+
+2. Fast mode
+
+   Purpose:
+   - frequent manual Razor/C#/CSS detail iteration;
+   - reduced Tailwind source scan and sandbox-local generated output.
+
+   Requirements:
+   - generate a sandbox-local CSS output;
+   - never overwrite or replace
+     src/App/CanDoItAll.Web/wwwroot/css/output.css;
+   - scan only the exact UI source closure whose utility classes must be
+     generated for this sandbox;
+   - audit whether each live sibling source requires scanning or already
+     supplies its own compiled CSS;
+   - do not automatically scan entire sibling repositories without evidence;
+   - keep Components and FileTools live;
+   - do not edit either sibling repository;
+   - include the catalog UI project, sandbox source, required conversation UI
+     source, and only justified additional roots;
+   - keep required app-level CSS imports explicit and minimal;
+   - produce clear failure diagnostics when the fast CSS has not been built.
+
+Keep the existing `Catalog sandbox` launch profile behavior compatible,
+preferably as Parity. Add a clearly named Fast launch profile and direct
+commands for it.
+
+The Fast build must not fail merely because the production parity CSS output
+is absent. Any existing MSBuild requirement for the full production theme must
+be conditional on Parity mode or otherwise separated correctly.
+
+Expose the active asset mode through a development-only, non-sensitive
+mechanism such as:
+
+- a root data attribute;
+- the existing runtime/readiness probe;
+- or both.
+
+The browser tests and benchmark must verify that the requested mode is
+actually active. Do not infer the mode only from an HTTP 200 response.
+
+Provide cross-platform npm scripts where practical, for example distinct
+build/watch commands for the sandbox-local fast CSS. Do not require a
+PowerShell-only implementation for the core workflow.
+
+Document direct usage from the repository root, including the two-terminal
+workflow where appropriate:
+
+- Tailwind watcher;
+- dotnet watch sandbox process.
+
+Correct any obvious encoding artifact in the existing sandbox documentation,
+including the malformed `1600×1000` text.
+
+-----------------------------------------------------------------------
+B3. Validate Fast mode rendering honestly
+-----------------------------------------------------------------------
+
+Fast mode is not allowed to claim byte-for-byte production parity.
+
+Required proof:
+
+Parity mode:
+
+- same real catalog components;
+- same production theme bytes;
+- representative computed-style assertions;
+- real interactive events;
+- tooltip, icon/font, card, tree, loading, empty, and avatar fallback states.
+
+Fast mode:
+
+- same real catalog components;
+- successful interactive events;
+- representative utility classes present;
+- no unstyled first viewport;
+- intended scroll owners preserved;
+- readable cards/tree/tooltips;
+- no clipped primary actions in the representative desktop frame;
+- a CSS edit/undo cycle updates the browser without rebuilding production CSS;
+- the production CSS file hash remains unchanged by Fast-mode work.
+
+A reduced Fast theme may intentionally omit unrelated application styles.
+Record those limits. Do not silently fall back to the production output and
+call the mode fast.
+
+Do not build a generic sandbox registry or Storybook clone. Small reusable
+sandbox shell code is allowed only when directly justified by asset-mode
+selection, readiness, or future addition of another Agent Framework specimen.
+
+-----------------------------------------------------------------------
+B4. Add a direct local dotnet-watch benchmark
+-----------------------------------------------------------------------
+
+Do not overwrite or reinterpret the existing SB03 results. They remain valid
+for their documented managed observation loop.
+
+Create a new, bounded benchmark owned by CATALOG-HARDEN-01 whose primary goal
+is local developer-observed latency.
+
+The benchmark must:
+
+- launch dotnet watch as a direct local OS process;
+- not use the CanDoItAll dotnet-watch Manager;
+- not use MCP SourceWatch;
+- not use remote browser tools;
+- not use screenshot transport as the timing endpoint;
+- use a local Playwright/browser process or equivalent local browser
+  assertion;
+- use one monotonic local harness clock for source flush and final browser
+  predicate where possible;
+- separately capture SDK hot-reload/update timing from browser-visible timing;
+- verify exact active process/watch generation;
+- verify exact active asset mode;
+- freeze each edit, browser predicate, repetition count, and undo operation
+  before collecting comparison data;
+- restore every edited source file byte-for-byte and verify final hashes;
+- retain failed calibration attempts explicitly instead of replacing them
+  with favorable samples;
+- classify restart, browser reload, missing event, timeout, and fallback
+  separately;
+- make no performance claim unsupported by the measured data.
+
+Required reduced comparison:
+
+For each host/mode below, use at least:
+
+- one representative Razor edit;
+- one representative C# edit;
+- one representative CSS edit;
+- three successful warm repetitions per edit.
+
+Hosts/modes:
+
+1. post-extraction full application using direct dotnet watch;
+2. catalog sandbox in Parity mode;
+3. catalog sandbox in Fast mode.
+
+This is a bounded 27-primary-warm-trial target unless a test must be repeated
+because it was explicitly classified as failed/incomparable.
+
+For CSS trials, run the appropriate companion Tailwind watcher and measure the
+actual computed-style or visible browser predicate, not only file generation.
+
+Use the existing isolated full-app fixture/environment from the previous
+catalog measurement where reusable. Do not use an operator database.
+
+A process-cold comparison is optional in this hardening bundle. Warm iteration
+is the required result. If cold startup is measured, identify populated caches
+and launch overhead exactly.
+
+If the full-app direct lane is genuinely blocked by a reproducible external
+prerequisite, do not fabricate or substitute values. Record the exact blocker
+and still complete Parity/Fast implementation and comparison. Such a result
+must be reported as Partial for full-app comparison, not as a successful
+three-host benchmark.
+
+Report for every edit/host:
+
+- minimum;
+- maximum;
+- range;
+- median;
+- successful count;
+- reload/restart/failure count;
+- SDK apply/update timing;
+- local edit-to-visible timing.
+
+A mixed or negative result is a valid result. Do not assert that Fast mode or
+the sandbox is faster unless the retained data supports that statement.
+
+-----------------------------------------------------------------------
+B5. Catalog validation gate
+-----------------------------------------------------------------------
+
+Build in Release at least:
+
+- CanDoItAll.AgentFramework.UI
+- CanDoItAll.AgentFramework.UiSandbox
+- directly affected UI consumers
+
+Run focused Unit/Components tests for:
+
+- catalog controlled state and typed intents;
+- card and mapper behavior;
+- asset mode selection;
+- Parity static assets;
+- Fast static assets;
+- active-mode readiness probe;
+- production CSS hash preservation;
+- no forbidden project references.
+
+Run browser acceptance for both modes.
+
+Perform at least one real watch edit/undo cycle for:
+
+- Razor;
+- C#;
+- CSS.
+
+Do not rerun the whole repository test estate merely because proof files or
+sandbox documentation changed. Use actual invalidation to choose broader
+gates.
+
+The CATALOG-HARDEN-01 gate is green only when:
+
+- both modes are usable and distinguishable;
+- Fast mode uses its own generated output;
+- Fast mode does not mutate production CSS;
+- Parity behavior remains valid;
+- direct watch commands are documented and executed;
+- the required bounded benchmark is complete or an exact external blocker is
+  honestly recorded;
+- the sandbox dependency graph remains lightweight;
+- no Components/FileTools sibling edit occurred;
+- no next feature extraction was started.
+
+=======================================================================
+SHARED ARCHITECTURE FOLLOW-UP
+=======================================================================
+
+After each child is proven, evaluate whether a genuinely generalized lesson
+belongs in:
+
+    codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/reviews/
+
+Do not rewrite existing reviews 05 or 06.
+
+A small successor review may be added only after implementation evidence
+exists. It may cover, for example:
+
+- exact postcondition verification versus successful-read verification;
+- mutation resolution versus semantic delivery acknowledgement;
+- bounded Fast versus Parity sandbox asset modes;
+- direct local developer timing versus orchestration-dominated timing.
+
+Update the shared bundle manifest only when its files actually change.
+
+Do not turn provider-specific recovery classes or catalog-specific scripts
+into mandatory universal architecture patterns.
+
+=======================================================================
+FINAL REPORT
+=======================================================================
+
+At completion, report separately for PROVIDERS-02E and
+CATALOG-HARDEN-01:
+
+1. Entry branch, HEAD, dirty-state disposition, and sibling revisions.
+2. Findings adjudicated as confirmed, modified, or rejected.
+3. Files added, moved, and modified.
+4. Responsibilities changed and responsibilities intentionally retained.
+5. Exact production dependency graph impact.
+6. Exact behavior and recovery invariants proven.
+7. Exact tests/builds/browser scenarios executed, with counts and failures.
+8. Benchmark table and measurement limitations.
+9. Any negative or mixed performance result.
+10. Documentation and proof artifacts added.
+11. Remaining known limitations:
+    - circuit-scoped recovery;
+    - no durable journal;
+    - no production routing/bookmarkability;
+    - no Manager optimization;
+    - no additional editor extraction.
+12. Rollback points.
+13. Whether the next safe candidate remains AgentCapabilitiesPanel.
+
+Do not prepare or implement the AgentCapabilities bundle in this phase.
+
+Do not claim merge readiness. This branch is still an active multi-bundle
+development branch, and historical repository documentation debt remains a
+separate concern.

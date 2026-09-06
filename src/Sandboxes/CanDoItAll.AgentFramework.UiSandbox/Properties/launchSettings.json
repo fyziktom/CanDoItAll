@@ -10,7 +10,22 @@
         "DOTNET_ENVIRONMENT": "Development",
         "Logging__LogLevel__Default": "Warning",
         "DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER": "1",
-        "DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH": "1"
+        "DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH": "0",
+        "CatalogAssetMode": "Parity"
+      }
+    },
+    "Catalog sandbox Fast": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://127.0.0.1:5392",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "Logging__LogLevel__Default": "Warning",
+        "DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER": "1",
+        "DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH": "0",
+        "CatalogAssetMode": "Fast"
       }
     }
   }

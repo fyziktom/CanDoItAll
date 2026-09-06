@@ -1,0 +1,222 @@
+{
+  "entryHead": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "moved": [],
+  "files": [
+    {
+      "path": ".gitignore",
+      "change": "modified",
+      "sha256": "a00788c98df518a454f3107317654ff57586208be4077fc69f1009e28aaec48b"
+    },
+    {
+      "path": "Tailwind/catalog-fast.css",
+      "change": "added",
+      "sha256": "245f91bbcddf079a7b99559cf8ae5ce0b39d005feee0ec50567501acc35409ef"
+    },
+    {
+      "path": "Tailwind/package.json",
+      "change": "modified",
+      "sha256": "be9ff53fbba3244cce18d5c89d57954868897030d514c64d0449ed0ed83fd01c"
+    },
+    {
+      "path": "package.json",
+      "change": "modified",
+      "sha256": "1ad7314df54b4d9b1a162fb65e838b4ba472e85a438efa47ee5d04f6491989d9"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderLocalAliasPolicy.cs",
+      "change": "added",
+      "sha256": "a4e8febc57d4b40b8bb120c66a6eaf3c9b220f40f340bbfab648e6fda37407af"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+      "change": "modified",
+      "sha256": "54845f856f2207776bf7104b31be35792354dada49f30b8af126aa0fffe747b7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceVerification.cs",
+      "change": "modified",
+      "sha256": "0efa16aba819de68ede9fb1e9214c781cbb96762b2c7c8b320b3b6aa4828d863"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
+      "change": "modified",
+      "sha256": "ad0b5b003c4be3a87a6478ccb5895422eb358b2ad20adb834bd8988af568e706"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+      "change": "modified",
+      "sha256": "1742cad0dead7a301dd2f1ab1eb97b86b44cb610ece114dadd74c84a95c68955"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
+      "change": "modified",
+      "sha256": "d338a559307b06bb091e121a26c506c6d6640731ae0e973718f173e8ef7a852b"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelThinkingEditor.razor",
+      "change": "modified",
+      "sha256": "a2a436ead26a4a77f113a8e9fb9ee01ecb00993ff671801a4bd653279921f1dd"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesSession.cs",
+      "change": "modified",
+      "sha256": "db948954639629c972a9aa4f1ff025b6acfe930640d9ad428c627159e78fb6bf"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor",
+      "change": "modified",
+      "sha256": "4d496a006c4e07871f196238b06d2b3c2b8fbf6be55491056153b679cc9936e2"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor.cs",
+      "change": "modified",
+      "sha256": "cfbfc8ed66ecbd91f88466cc4545a41dabae6eb725ae54c0e33b119bab66fe35"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderRefreshButton.razor",
+      "change": "modified",
+      "sha256": "52a1c3c685c6327c52dc2c34f3d662d50a52a18efc0ef3ca8544498ac583d41f"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
+      "change": "modified",
+      "sha256": "d8e9d6febd2bdd411101fe7a94fe51a14a2c8369b84f362504f4e524532c60f7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
+      "change": "modified",
+      "sha256": "b82a3f54977943da21607b45605586e0c8270b51a188d09df3f195b8b7ffdb79"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorRecovery.cs",
+      "change": "modified",
+      "sha256": "d7305ccec34e8ea8dc725a98aeef6eb87dc914c159969441d4b67a578feff466"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderChangeDelivery.cs",
+      "change": "added",
+      "sha256": "b4db305d2982a49fa6518b67ec6a47652c85c153a3391ed37e76a7cd3fae0781"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderRecovery.cs",
+      "change": "modified",
+      "sha256": "208531ad6cc35912a917763bcae51d9e48326887698413990d3ccb5169fac6e0"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/SharedProviderTargetVerification.cs",
+      "change": "added",
+      "sha256": "25a7e1e60736847efbbbf3c8597a26509c5a90ce0f45aee389920cef64d942fe"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "change": "modified",
+      "sha256": "0a4c8fa9926e423b101dc3aa9a11b75e242c9bdd299eaf4fe3cdf80488d88f93"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogAssets.cs",
+      "change": "added",
+      "sha256": "dabfb87a1f03b7c236867498c6832f0bdc1649e50ab30578df6f9b200e9071a3"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",
+      "change": "modified",
+      "sha256": "2359317856807e5d093e6c8da616936b74f3a4abf299cab30519b1f57ff81b89"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/App.razor",
+      "change": "modified",
+      "sha256": "11b07ac7919df36bff0524e0757f2ff601416d4cfb991d418fc17dfb41e5153d"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+      "change": "modified",
+      "sha256": "4bb60528a7f60db208d7e5cdd4fa087414c55a088cee179f645778f9f2fae6cb"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Properties/launchSettings.json",
+      "change": "modified",
+      "sha256": "1c57e020d742563ada0da37134581b012668669809c84003f6dd7fcf6e9e30ee"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "change": "modified",
+      "sha256": "41cfd138142361fe2f536fd466bfa8741b5d1f1ce902f49e8c6077dcdc879cde"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedDeliveryReconstructionTests.cs",
+      "change": "added",
+      "sha256": "cf283fb5338d93dc40b6a37abce787bb14bb71354f856b8baa0a3eeced5ea0d6"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderDeliveryHardeningTests.cs",
+      "change": "added",
+      "sha256": "85bec77ad166c3c2a53252cf6d473ad0be163e511d3e9faf960b4ef9cc00dd77"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderOwnedEffectsTests.cs",
+      "change": "modified",
+      "sha256": "e6a553d8556e9c72ea809cd4c3281d404e870e5e8409485966f3aaf2cde98d8b"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderPublicationPanelTests.cs",
+      "change": "modified",
+      "sha256": "aa5e88a3bac57c09e67e1fcb36b3c6d1ec3afbab48a2ea8553ce9233a399b1b2"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRecoveryTests.cs",
+      "change": "modified",
+      "sha256": "d3f38f2596199e3321dd36bfd735ffeed87353a75d819d724a7fa478c20da9d4"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedProviderRefreshButtonTests.cs",
+      "change": "modified",
+      "sha256": "785ffe993327854e1660b97072899f114e12bab44b7811789a4b8f5143be1014"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/SharedSourceRecoveryTests.cs",
+      "change": "modified",
+      "sha256": "e8055b88a19bd39620c211edd02e33d115d2843e8b742e1aac912de74dcc169e"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProviderRecoveryIntegrationTests.cs",
+      "change": "modified",
+      "sha256": "3bf9947f900388ec7c4e5a5a884212c01f38c542920f62f1f174c312259060b2"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/CatalogAssetModeTests.cs",
+      "change": "added",
+      "sha256": "17f182a1532ad483b4f2b6b48938899dfe59c2cd3c793cd2923736721ea32d13"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderSharedReconciliationTests.cs",
+      "change": "modified",
+      "sha256": "cfad417ba31fba7173e322478c91a93bbb57199f257387b14a3f331d613f0aa1"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderVerificationHardeningTests.cs",
+      "change": "added",
+      "sha256": "41fcd8b386925a7064e3d969c93ae065d37221c69671d5b20a4cc33fd42aec1c"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/SharedDeliveryLifecycleTests.cs",
+      "change": "added",
+      "sha256": "8f394f0c31f81ebe20336953dfaef5bf5341f629dcc6b21c2fb72253b0a4f20c"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/SharedTargetVerificationTests.cs",
+      "change": "added",
+      "sha256": "fdfc6874c769019da0dede561d467b33decc6977fb343cb0c6c4f7a05b2abf81"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "change": "modified",
+      "sha256": "9fb4b4fe3c2ed62b1bd844d6d136e887dc0818fb7a63c8366e6d71c8410af55d"
+    },
+    {
+      "path": "tools/Validation/Portability/portability-risk-baseline.json",
+      "change": "modified",
+      "sha256": "779facf7026ebb14eb3f408cf8046ee04edaae2eff874834a6c4a2717ec60f96",
+      "reason": "Reviewed README-only fingerprint replacement/removals; scanner policy unchanged."
+    }
+  ]
+}

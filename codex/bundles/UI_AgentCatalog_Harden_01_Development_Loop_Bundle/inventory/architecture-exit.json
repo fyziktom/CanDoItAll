@@ -1,0 +1,59 @@
+{
+  "snapshotId": "snap-20260906141738-a1331b34",
+  "utc": "2026-09-06T14:17:38.5310395+00:00",
+  "scope": [
+    "CanDoItAll.AgentFramework.UI",
+    "CanDoItAll.AgentFramework.UiSandbox"
+  ],
+  "blockingErrors": false,
+  "cycles": [],
+  "findings": [
+    {
+      "rule": "COMPLEXITY-002",
+      "severity": "Info",
+      "title": "Type with many members",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs"
+    },
+    {
+      "rule": "COMPLEXITY-002",
+      "severity": "Info",
+      "title": "Type with many members",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs"
+    },
+    {
+      "rule": "COMPLEXITY-002",
+      "severity": "Info",
+      "title": "Type with many members",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs"
+    },
+    {
+      "rule": "COMPLEXITY-002",
+      "severity": "Info",
+      "title": "Type with many members",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "DEP0002",
+      "severity": "Warning",
+      "message": "Duplicate type display name detected: Microsoft.CodeAnalysis.EmbeddedAttribute."
+    },
+    {
+      "code": "DEP0002",
+      "severity": "Warning",
+      "message": "Duplicate type display name detected: Microsoft.Extensions.Validation.Embedded.ValidatableTypeAttribute."
+    },
+    {
+      "code": "DI0002",
+      "severity": "Warning",
+      "message": "Service type could not be resolved for AddSingleton.",
+      "source": {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+        "line": 9,
+        "column": 1
+      }
+    }
+  ],
+  "adjudication": "No cycle or blocking error. Informational member-size heuristics are not architecture quotas. The AddSingleton factory is the existing local CatalogFixture snapshot registration; runtime acceptance proves composition. Evaluated restore graph separately verifies the complete 12-project transitive closure including live sibling substitutions."
+}

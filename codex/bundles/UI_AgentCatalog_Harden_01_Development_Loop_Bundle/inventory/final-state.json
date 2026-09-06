@@ -1,0 +1,34 @@
+{
+  "utc": "2026-09-06T14:31:11.513353+00:00",
+  "branch": "components-decoupling",
+  "head": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "remoteHead": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "siblings": {
+    "Components": {
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "status": []
+    },
+    "FileTools": {
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "status": []
+    },
+    "SharedInfo": {
+      "head": "00e6fe6389eba9a6bc3b2bb78e27fb10b7597292",
+      "status": []
+    },
+    "Mcp": {
+      "head": "abeaea463aa906bca2d83a1b608ff432dbc29d8d",
+      "status": []
+    }
+  },
+  "liveSourceMode": "unchanged",
+  "historicalFilesComparedToHead": 593,
+  "historicalContentChanges": [],
+  "historicalGitDiff": [],
+  "checkoutEolOnlyDifferences": 160,
+  "documentationDebt": {
+    "trackedLogFiles": 118,
+    "byteIdenticalToHead": true
+  },
+  "newTrackedLogs": []
+}

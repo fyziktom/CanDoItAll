@@ -101,11 +101,11 @@ public partial class AgentDetailsDialog : IDisposable
 
     private async Task RefreshRuntimeProvidersAsync(AgentEditorSession owner) {
         if (!IsCurrent(owner)) {
-            return;
+            throw new OperationCanceledException(owner.CancellationToken);
         }
         var refreshedProviders = await EditorReads.ReadProvidersAsync(owner.CancellationToken);
         if (!IsCurrent(owner)) {
-            return;
+            throw new OperationCanceledException(owner.CancellationToken);
         }
         providers = refreshedProviders;
         areProvidersLoaded = true;

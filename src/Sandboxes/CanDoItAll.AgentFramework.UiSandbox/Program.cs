@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.UiSandbox.Components;
 using CanDoItAll.Components.BaseLib;
 
 var builder = WebApplication.CreateBuilder(args);
+CatalogAssets.ValidateRequestedMode(builder.Configuration[nameof(CatalogAssetMode)]);
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddSingleton(CatalogFixture.Load());

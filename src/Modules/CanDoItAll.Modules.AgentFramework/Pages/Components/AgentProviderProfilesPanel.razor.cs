@@ -139,21 +139,26 @@ public partial class AgentProviderProfilesPanel : IDisposable {
 
     private long sharingRevision;
 
-    private async Task RefreshProvidersAfterSharedChangeAsync(ProviderManagement.SharedProviderChange change) {
-        var selectedId = session.State.ProviderId;
-        var replaced = await session.ReconcileSharedAsync(change);
-        if (replaced) {
-            SyncProviderEditorText();
-        }
-        if (selectedId.HasValue && session.State.ProviderId == selectedId &&
-            change.AffectedProviderProfileIds.Contains(selectedId.Value) &&
-            change.Kind is not (ProviderManagement.SharedProviderChangeKind.Publication or
-                ProviderManagement.SharedProviderChangeKind.ImportedSettings or
-                ProviderManagement.SharedProviderChangeKind.ImportRetirement)) {
-            sharingRevision++;
-        }
-        RefreshProviderTreeExpansionDefaults();
-    }
+    private Task RefreshProvidersAfterSharedChangeAsync(SharedProviderChangeDelivery delivery) =>
+        delivery.ReconcileAsync(async () => {
+            var change = delivery.Change;
+            var selectedId = session.State.ProviderId;
+            var result = await session.ReconcileSharedAsync(change);
+            if (!result.Completed) {
+                throw new InvalidOperationException("The provider workspace reconciliation did not complete.");
+            }
+            if (result.EditorReplaced) {
+                SyncProviderEditorText();
+            }
+            if (selectedId.HasValue && session.State.ProviderId == selectedId &&
+                change.AffectedProviderProfileIds.Contains(selectedId.Value) &&
+                change.Kind is not (ProviderManagement.SharedProviderChangeKind.Publication or
+                    ProviderManagement.SharedProviderChangeKind.ImportedSettings or
+                    ProviderManagement.SharedProviderChangeKind.ImportRetirement)) {
+                sharingRevision++;
+            }
+            RefreshProviderTreeExpansionDefaults();
+        });
 
     private async Task SaveProviderAsync() {
         providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();

@@ -1,0 +1,11 @@
+# Verification and delivery decisions
+
+Retain the existing provider/read/mutation boundaries. Source set verification stays in ProviderManagement. Extract target postcondition evaluation from Razor into a pure module policy; capture exact immutable Publish/Unpublish/imported alias+enabled/retirement intent before the first await. Authoritative alias normalization is shared with the write service. Compare permanent publication/import/provider identities and before/current concurrency tokens.
+
+The circuit recovery owner retains unresolved or resolved-pending-delivery attempts. A resolved change is carried in an attempt-scoped envelope. Its receiver runs idempotent read reconciliation and acknowledges only completed work. The coordinator serializes delivery, checks target/source capability and generation before starting/acknowledging, and retains failures/reconstruction. A receiver acknowledgement prevents replay of partial handoff after sender teardown. Callback code can be retried; it must consist of repeatable reconciliation, not backend writes. No generic event bus/outbox/journal.
+
+Terminal cleanup removes the active attempt and all associated change/delivery state. Late operations may record a known commit only for the matching active attempt; an older completion cannot erase a newer attempt. Controlled absence retries keep the original identity/submission.
+
+Dependency impact: no new project or reference, no schema/HTTP DTO changes. A module-owned delivery contract affects sharing/source/refresh components, ProviderModelThinkingEditor, Agents provider workspace and AgentDetailsDialog's read callback. Corresponding cross-assembly provider/agent component and registry/API integration selections are required. No whole-estate run absent broader invalidation.
+
+UI: preserve 1600x1000 desktop split editor and wide connections dialog. Existing Alert/Button feedback distinguishes unknown write, desired state satisfied but delivery pending, definitely not applied, and reconciled. No new overlay stack, sizing or scroll-owner redesign. No new partial file. Pure policy/recovery tests plus real rendered event tests, production-backed canonical integration, and isolated browser acceptance.

@@ -9,8 +9,14 @@
     <ChildContent>
         @if (Recovery.Source is { } unresolved) {
             <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-source-unresolved">
-                Source attempt @unresolved.SourceId requires verification before another operation.
-                <Button Text="Verify source attempt" Click="VerifySourceAsync" Disabled="@operationBusy" data-testid="shared-provider-source-verify" />
+                @if (Recovery.PendingDelivery(unresolved.AttemptId) is not null) {
+                    <text>The source write is resolved; workspace reconciliation delivery is pending.</text>
+                } else if (Recovery.SourceRetryAllowed) {
+                    <text>The source write was not applied. A deliberate retry keeps the same attempt identity.</text>
+                } else {
+                    <text>Source attempt @unresolved.SourceId requires verification before another operation.</text>
+                }
+                <Button Text="@(Recovery.PendingDelivery(unresolved.AttemptId) is not null ? "Retry source delivery" : "Verify source attempt")" Click="VerifySourceAsync" Disabled="@operationBusy" data-testid="shared-provider-source-verify" />
                 @if (Recovery.SourceRetryAllowed) {
                     <Button Text="Retry verified source operation" Click="RetryVerifiedSourceAsync" Disabled="@operationBusy" data-testid="shared-provider-source-retry-verified" />
                 }

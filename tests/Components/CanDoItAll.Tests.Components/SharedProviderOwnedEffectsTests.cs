@@ -65,7 +65,7 @@ public sealed class SharedProviderOwnedEffectsTests {
         var unrelated = harness.Context.Render<Dialog>(p => p.Add(x => x.IsOpen, true).Add(x => x.TestId, "unrelated-dialog"));
         var cut = harness.Context.Render<SharedProviderSourcesDialog>(p => p
             .Add(x => x.Secrets, [new SecretListItem(proxy.SecretId, "Fixture credential", SecretKind.Token, "workspace", DateTimeOffset.UtcNow)])
-            .Add(x => x.ProvidersChanged, (SharedProviderChange change) => changes.Add(change)));
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => changes.Add(delivery.Change)));
         Task running;
         if (action == SourceAction.Save) {
             await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
@@ -100,7 +100,7 @@ public sealed class SharedProviderOwnedEffectsTests {
         var changes = new List<SharedProviderChange>();
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, first)
-            .Add(x => x.ProvidersChanged, (SharedProviderChange change) => changes.Add(change)));
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => changes.Add(delivery.Change)));
         var operation = cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         cut.WaitForAssertion(() => Assert.Equal(first, proxy.WrittenId));
         cut.Render(p => p.Add(x => x.ProviderProfileId, second));
@@ -126,7 +126,7 @@ public sealed class SharedProviderOwnedEffectsTests {
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         var id = Guid.NewGuid();
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, id)
-            .Add(x => x.ProvidersChanged, (SharedProviderChange change) => changes.Add(change)));
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => changes.Add(delivery.Change)));
         var operation = cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         cut.WaitForAssertion(() => Assert.Equal(id, proxy.WrittenId));
         await cut.InvokeAsync(() => cut.Instance.Dispose());
@@ -162,6 +162,7 @@ public sealed class SharedProviderOwnedEffectsTests {
         public Guid SourceId { get; } = Guid.NewGuid();
         public Guid ImportedId { get; } = Guid.NewGuid();
         public bool Delay { get; set; } = true;
+        public int Operations { get; private set; }
         public CancellationToken ReceivedToken { get; private set; }
         private readonly TaskCompletionSource<SharedProviderSourceWriteResult> write = new();
         private readonly TaskCompletionSource<SharedProviderSourceOperationResult> operation = new();
@@ -186,6 +187,7 @@ public sealed class SharedProviderOwnedEffectsTests {
                     null, null, null, null, "", Guid.NewGuid());
                 return Task.FromResult<IReadOnlyList<SharedProviderSourceManagementSnapshot>>([new(source, [imported])]);
             }
+            Operations++;
             ReceivedToken = (CancellationToken)args![^1]!;
             return method?.Name switch {
                 nameof(ISharedProviderManagementService.SaveSourceAsync) => write.Task,

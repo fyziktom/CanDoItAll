@@ -16,6 +16,7 @@ internal static class CatalogWatchState {
     public static CatalogRuntimeStatus Read(IConfiguration configuration) => new(
         true,
         "Ready",
+        CatalogAssets.Mode,
         Environment.ProcessId,
         int.TryParse(Environment.GetEnvironmentVariable(WatchIterationVariable), out var iteration)
             ? iteration
@@ -29,6 +30,7 @@ internal static class CatalogWatchState {
 internal sealed record CatalogRuntimeStatus(
     bool IsReady,
     string Summary,
+    CatalogAssetMode AssetMode,
     int RuntimePid,
     int? WatchIteration,
     long HotReloadGeneration,

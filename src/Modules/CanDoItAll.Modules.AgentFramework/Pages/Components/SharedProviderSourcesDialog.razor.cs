@@ -19,7 +19,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
 
     [Parameter]
-    public EventCallback<SharedProviderChange> ProvidersChanged { get; set; }
+    public EventCallback<SharedProviderChangeDelivery> ProvidersChanged { get; set; }
 
     [Parameter]
     public EventCallback OnClose { get; set; }
@@ -34,8 +34,8 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     private string loadError = string.Empty;
     private bool isLoading;
     private bool operationBusy;
-    private bool mutationUnconfirmed => Recovery.Source is not null;
-    private bool isBusy => operationBusy || mutationUnconfirmed;
+    private bool hasPendingAttempt => Recovery.Source is not null;
+    private bool isBusy => operationBusy || hasPendingAttempt;
     private readonly CancellationTokenSource lifetime = new();
     private CancellationToken ownerToken;
     private long generation;
@@ -183,7 +183,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     private async Task RunSourceMutationAsync(
         Func<CancellationToken, Task<SharedProviderChange?>> mutation, string successTitle,
         SharedProviderSourceMutationAttempt attempt, bool controlledRetry = false) {
-        if (disposed || operationBusy || (mutationUnconfirmed && !controlledRetry)) {
+        if (disposed || operationBusy || (hasPendingAttempt && !controlledRetry)) {
             return;
         }
         Recovery.BeginSource(attempt);
@@ -198,8 +198,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
                 return;
             }
             Recovery.CompleteSource(attempt);
-            await PublishChangeAsync(change, operation, attempt.AttemptId);
-            if (!IsCurrent(operation)) {
+            if (!await PublishChangeAsync(change, operation, attempt.AttemptId) || !IsCurrent(operation)) {
                 return;
             }
             await LoadAsync();
@@ -229,11 +228,37 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         }
     }
 
-    private async Task PublishChangeAsync(SharedProviderChange? change, long operation, Guid? attemptId = null) {
-        if (change is not null && IsCurrent(operation) && (!attemptId.HasValue || Recovery.ClaimPublication(attemptId.Value))) {
-            await ProvidersChanged.InvokeAsync(change);
+    private async Task<bool> PublishChangeAsync(SharedProviderChange? change, long operation, Guid? attemptId = null) {
+        if (!IsCurrent(operation)) {
+            return false;
         }
+        if (change is null) {
+            return true;
+        }
+        if (!attemptId.HasValue) {
+            try {
+                await ProvidersChanged.InvokeAsync(new SharedProviderChangeDelivery(Guid.NewGuid(), change));
+                return IsCurrent(operation);
+            } catch (Exception) {
+                if (IsCurrent(operation)) {
+                    loadError = "The write remains unconfirmed and its advisory workspace refresh did not complete. Verify the source attempt.";
+                }
+                return false;
+            }
+        }
+        if (Recovery.Source is not { } attempt || attempt.AttemptId != attemptId) {
+            return false;
+        }
+        var result = await Recovery.DeliverSourceAsync(attempt, attempt.SourceId, () => IsCurrent(operation),
+            delivery => ProvidersChanged.InvokeAsync(delivery));
+        if (IsCurrent(operation) && result != SharedProviderDeliveryDisposition.Acknowledged) {
+            loadError = DeliveryPendingMessage;
+        }
+        return result == SharedProviderDeliveryDisposition.Acknowledged;
     }
+
+    private const string DeliveryPendingMessage =
+        "The source write is resolved, but workspace reconciliation delivery is pending. Retry delivery without repeating the write.";
 
     private async Task HandleOperationFailureAsync(Exception exception, long operation, SharedProviderSourceMutationAttempt attempt) {
         if (exception is SharedProviderCommittedException committed) {
@@ -340,7 +365,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     private async Task<SharedProviderSourceOperationResult?> RunSourceOperationAsync(
         Func<CancellationToken, Task<SharedProviderSourceOperationResult>> run,
         SharedProviderSourceMutationAttempt attempt, bool controlledRetry = false) {
-        if (disposed || operationBusy || (mutationUnconfirmed && !controlledRetry)) {
+        if (disposed || operationBusy || (hasPendingAttempt && !controlledRetry)) {
             return null;
         }
         Recovery.BeginSource(attempt);
@@ -355,8 +380,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
                 return null;
             }
             Recovery.CompleteSource(attempt);
-            await PublishChangeAsync(result.Change, operation, attempt.AttemptId);
-            if (!IsCurrent(operation)) {
+            if (!await PublishChangeAsync(result.Change, operation, attempt.AttemptId) || !IsCurrent(operation)) {
                 return null;
             }
             await LoadAsync();
@@ -399,6 +423,14 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         var operation = ++generation;
         operationBusy = true;
         try {
+            if (Recovery.PendingDelivery(attempt.AttemptId) is { } delivery) {
+                if (await PublishChangeAsync(delivery.Change, operation, attempt.AttemptId) && IsCurrent(operation)) {
+                    sourceDialogError = string.Empty;
+                    sourceDialogOpen = false;
+                    await LoadAsync();
+                }
+                return;
+            }
             var result = await ManagementService.VerifySourceAsync(attempt, ownerToken);
             if (!IsCurrent(operation) || result.SourceId != attempt.SourceId || Recovery.Source?.AttemptId != attempt.AttemptId) {
                 return;
@@ -414,7 +446,8 @@ public partial class SharedProviderSourcesDialog : IDisposable {
                 Recovery.AllowSourceRetry(attempt);
                 return;
             }
-            var change = Recovery.KnownChange(attempt.AttemptId) ?? result.Change;
+            var change = result.Change;
+            Recovery.RecordCommit(attempt.AttemptId, change);
             Recovery.CompleteSource(attempt);
             sourceDialogOpen = false;
             await PublishChangeAsync(change, operation, attempt.AttemptId);

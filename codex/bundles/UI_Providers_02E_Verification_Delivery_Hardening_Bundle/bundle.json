@@ -1,0 +1,16 @@
+{
+  "referenceId": "CDA-UI-SEAMS-PROVIDERS-02E",
+  "parent": "CDA-UI-SEAMS-PROVIDERS-02D",
+  "shape": "compact-compatible",
+  "status": "closed",
+  "prerequisite": "CDA-UI-SEAMS-PROVIDERS-02D",
+  "phases": [
+    "E00-verification",
+    "E01-delivery",
+    "E02-closure"
+  ],
+  "proofTier": "Governed",
+  "entryHead": "1506386afddd0ed98c4ac43911263198e352c2ba",
+  "executionAuthorized": true,
+  "closure": "reviews/closure.md"
+}

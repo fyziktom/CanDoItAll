@@ -36,8 +36,8 @@ public sealed class ProviderSharedReconciliationTests {
         session.Draft.Notes = "Unsaved notes";
         session.Draft.SuggestedModels = ["typed-model"];
         session.Draft.Tags = ["unsaved-tag"];
-        Assert.False(await session.ReconcileSharedAsync(new(kind, [Guid.NewGuid()], remoteOwnedFieldsChanged: true,
-            catalogMembershipMayHaveChanged: true)));
+        Assert.False((await session.ReconcileSharedAsync(new(kind, [Guid.NewGuid()], remoteOwnedFieldsChanged: true,
+            catalogMembershipMayHaveChanged: true))).EditorReplaced);
         Assert.Same(context, session.EditContext);
         Assert.Equal("Unsaved name", session.Draft.Name);
         Assert.Equal("Unsaved notes", session.Draft.Notes);
@@ -59,7 +59,8 @@ public sealed class ProviderSharedReconciliationTests {
         var count = reads.EditorReads;
         var applied = await session.ReconcileSharedAsync(new(SharedProviderChangeKind.SourceEnablement,
             [affected ? reads.Id : Guid.NewGuid()], remoteOwnedFieldsChanged: true));
-        Assert.Equal(affected, applied);
+        Assert.True(applied.Completed);
+        Assert.Equal(affected, applied.EditorReplaced);
         Assert.Equal(count + (affected ? 1 : 0), reads.EditorReads);
         Assert.Equal(!affected, ReferenceEquals(context, session.EditContext));
     }

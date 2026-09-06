@@ -1,0 +1,62 @@
+{
+  "owningSelections": [
+    {
+      "group": "Unit",
+      "filter": "FullyQualifiedName~CatalogAssetModeTests",
+      "discoveryReceipt": "list-unit.txt",
+      "discoverySha256": "c93b09fae04e939d283c358f0f16d0b6c64955c45b1bbd07d69dd26690ecd0d7",
+      "discoveryUtc": "2026-09-06T13:09:05.696503+00:00",
+      "names": [
+        "CanDoItAll.Tests.Unit.AgentFramework.CatalogAssetModeTests.Default_asset_mode_matches_the_built_theme",
+        "CanDoItAll.Tests.Unit.AgentFramework.CatalogAssetModeTests.Runtime_configuration_cannot_misrepresent_the_built_asset_mode",
+        "CanDoItAll.Tests.Unit.AgentFramework.CatalogAssetModeTests.Unsupported_asset_mode_fails_explicitly(requested: \"Unknown\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.CatalogAssetModeTests.Unsupported_asset_mode_fails_explicitly(requested: \"9\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.CatalogAssetModeTests.Unsupported_asset_mode_fails_explicitly(requested: \"\")"
+      ],
+      "method": "Retained discovery ran before the corresponding test execution; this index points to those original receipts."
+    },
+    {
+      "group": "Components",
+      "filter": "FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCatalogBoundaryTests",
+      "discoveryReceipt": "list-components.txt",
+      "discoverySha256": "1e5328b5cb7fdb553f625d2c81ef7766a9378211436e6adef274777eacc1f428",
+      "discoveryUtc": "2026-09-06T13:09:07.202685+00:00",
+      "names": [
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Controlled_panel_search_and_selection_emit_intents_without_services",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_opens_once_and_changed_request_opens_again",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_delete_preserves_no_confirmation_and_clears_selection",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_results_refresh_once_and_cancel_has_no_write(members: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_results_refresh_once_and_cancel_has_no_write(members: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Saved_catalog_refresh_publishes_selection_only_for_the_current_editor_target(clearDuringRefresh: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_can_be_cleared_and_same_deep_link_reopens(invalidRequest: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Requested_agent_can_be_cleared_and_same_deep_link_reopens(invalidRequest: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_cancels_load_and_ignores_late_success_or_failure(fail: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_cancels_load_and_ignores_late_success_or_failure(fail: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_ignores_team_dialog_results(members: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposed_catalog_ignores_team_dialog_results(members: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_inflight_team_mutations_without_refresh_or_notification(members: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_inflight_team_mutations_without_refresh_or_notification(members: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_chat_launch_and_ignores_late_result(fail: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposal_cancels_chat_launch_and_ignores_late_result(fail: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Team_dialog_shell_and_content_have_unique_test_ids",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.Disposing_catalog_closes_only_its_editor_and_allows_same_target_in_replacement_host",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Agent_selection_card_renders_actions_outside_the_selection_button",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Enterprise_agent_card_has_stable_status_type_tags_and_service_tooltips",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_hr_agent",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_prompts_curator_agent",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_workflow_curator_identity",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_delegates_new_chat_only_for_the_exact_scheduler_agent_identity",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_reports_the_actual_selected_agent_to_its_page_owner",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Catalog_marks_card_selection_as_handled_for_requested_dialog_echo",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogPanelTests.Deleted_agent_result_clears_selection_instead_of_selecting_another_agent"
+      ],
+      "method": "Retained discovery ran before the corresponding test execution; this index points to those original receipts."
+    }
+  ],
+  "invalidation": "Asset-mode changes affect the sandbox executable and build/static asset composition. Catalog rendering and host source are unchanged after byte-for-byte benchmark undo. Reuse fresh provider Web/module consumer builds and run catalog owning rendering/intent tests; no whole-estate invalidation.",
+  "browser": "tools/direct-watch.cjs --host parity|fast --phase acceptance; real controls, static asset bytes, actual mode/probe and computed styles.",
+  "watch": "Frozen plan/frozen-direct-edits.json and raw per-run ledgers; 3 successful repetitions per edit/host, not an architecture count rule."
+}

@@ -1,0 +1,3 @@
+# Ordered execution
+
+H00 may begin only after PROVIDERS-02E closure: freeze actual assets/source closure and SDK/siblings; implement explicit modes and npm build/watch commands. H01: direct Release UI/sandbox/affected consumers; focused state/mapper/component and asset/probe gates; inspect both browser modes at 1600x1000. H02: freeze 27 warm trial definitions; execute direct local full-app/Parity/Fast lanes; retain failures, SDK and visible timing, exact mode/process generations and source undo hashes. Summarize min/max/range/median/count by lane/edit. Close only with honest limits and unchanged production CSS/siblings. Reopen H00 for missing/incorrect assets; do not reinterpret older SB03 proof.

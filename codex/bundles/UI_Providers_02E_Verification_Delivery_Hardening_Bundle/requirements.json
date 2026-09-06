@@ -1,0 +1,72 @@
+[
+  {
+    "id": "A1",
+    "status": "Solved",
+    "inputSection": "A1",
+    "proof": [
+      "reviews/closure.md",
+      "proof/validation.json",
+      "plan/semantic-test-map.md"
+    ]
+  },
+  {
+    "id": "A2",
+    "status": "Solved",
+    "inputSection": "A2",
+    "proof": [
+      "reviews/closure.md",
+      "proof/validation.json",
+      "plan/semantic-test-map.md"
+    ]
+  },
+  {
+    "id": "A3",
+    "status": "Solved",
+    "inputSection": "A3",
+    "proof": [
+      "reviews/closure.md",
+      "proof/validation.json",
+      "plan/semantic-test-map.md"
+    ]
+  },
+  {
+    "id": "A4",
+    "status": "Solved",
+    "inputSection": "A4",
+    "proof": [
+      "reviews/closure.md",
+      "proof/validation.json",
+      "plan/semantic-test-map.md"
+    ]
+  },
+  {
+    "id": "A5",
+    "status": "Solved",
+    "inputSection": "A5",
+    "proof": [
+      "reviews/closure.md",
+      "proof/validation.json",
+      "plan/semantic-test-map.md"
+    ]
+  },
+  {
+    "id": "A6",
+    "status": "Solved",
+    "inputSection": "A6",
+    "proof": [
+      "reviews/closure.md",
+      "proof/validation.json",
+      "plan/semantic-test-map.md"
+    ]
+  },
+  {
+    "id": "A7",
+    "status": "Solved",
+    "inputSection": "A7",
+    "proof": [
+      "reviews/closure.md",
+      "proof/validation.json",
+      "plan/semantic-test-map.md"
+    ]
+  }
+]

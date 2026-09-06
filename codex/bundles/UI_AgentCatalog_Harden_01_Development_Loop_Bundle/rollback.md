@@ -1,0 +1,9 @@
+# Rollback and retained limits
+
+Entry is components-decoupling at 1506386afddd0ed98c4ac43911263198e352c2ba with a clean tree. The source inventory records every added/modified path and hash; no source file moved. All changes remain uncommitted. No reset, merge, rebase, squash, branch cleanup or sibling mutation was performed.
+
+Provider rollback boundary: the new child changes only provider verification, target postconditions, bounded delivery acknowledgement/cleanup and their module consumers/tests. There is no schema migration or new durable store. Reverting this child's coordinated source diff restores the previous recovery behavior and its known defects; do not revert only one side of the typed callback contract. A circuit restart loses pending in-memory recovery by the already accepted contract.
+
+Catalog rollback boundary: revert the sandbox asset-mode class, conditional project content/output properties, Program/App/probe/profile updates, root/Tailwind npm scripts, ignored Fast-output rule and asset-mode Unit reference/test. The existing Parity theme bytes and real rendering boundary already remain unchanged. The ignored generated Fast file may be left unused; no broad file cleanup is required. All transient benchmark edits were restored byte-for-byte.
+
+Recovery remains circuit scoped with no durable journal. No routing/bookmarkability, Manager optimization, provider-history work or further editor extraction is included. Fast has a deliberately bounded theme and no universal parity guarantee. The benchmark is a small same-machine warm sample; the retained Blazor renderer hot-reload crash can recur. Historical documentation debt is separate. AgentCapabilitiesPanel remains a candidate for the next independently reviewed seam, but no such bundle is prepared or implemented here. No merge-readiness claim.

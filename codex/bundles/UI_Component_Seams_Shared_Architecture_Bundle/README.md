@@ -93,3 +93,7 @@ input preservation, and the complete checksum manifest.
 - [Unconfirmed verification feedback](reviews/05-unconfirmed-verification-feedback.md)
 
 [Catalog extraction and asset evidence feedback](reviews/06-catalog-extraction-asset-feedback.md) records generalized lessons proven by the first real rendering extraction and browser sandbox. Performance claims remain gated by its measurement phase.
+
+[Verification postconditions and acknowledged delivery](reviews/07-verification-postconditions-and-delivery.md) records the proven provider follow-up lessons.
+
+Follow-up: [explicit assets and direct observation](reviews/08-explicit-assets-and-direct-observation.md).

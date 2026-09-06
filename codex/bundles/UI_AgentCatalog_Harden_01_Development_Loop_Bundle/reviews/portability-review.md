@@ -1,0 +1,7 @@
+# Final portability baseline review
+
+The complete scan initially found one added and four stale protected fingerprints, all in the sandbox README. The new fingerprint is its sentence describing the live Components/FileTools checkouts and corrected portable 1600x1000 viewport. The old external-tool sentence is replaced; obsolete managed/MCP, elevation and Windows-executable documentation entries are removed. There is no new executable portability risk.
+
+A read-only comparison using the official enforcement module proved that every delta belongs to this exact README, scanner patterns/policy are unchanged, and the historical codex proof excerpt cannot enter the protected baseline. Automatic approval review initially rejected the broad refresh due to that unrelated raw-scan excerpt; the read-only exact-delta evidence resolved the concern before the official refresh was retried and approved. No alternate writer or validation bypass was used.
+
+The inspected baseline diff changes only generation time, allowance total (14300 -> 14297), and these README entries. Final enforcement runs without --write-baseline. Provider child's earlier 14300-finding pass remains its historical prerequisite checkpoint; this catalog child owns the later documentation baseline delta. Scanner self-tests remain 6 + 4 passing cases. The final complete re-scan and enforcement receipts are retained with the closure.

@@ -19,6 +19,7 @@ public sealed class ProviderEditorRecovery {
     public void Complete(ProviderMutationAttempt attempt) {
         if (current.GetValueOrDefault(attempt.ProviderId) == attempt.AttemptId) {
             attempts.Remove(attempt.ProviderId);
+            current.Remove(attempt.ProviderId);
         }
     }
 
@@ -35,6 +36,9 @@ public sealed class ProviderEditorRecovery {
     public bool Remove(ProviderUnresolvedAttempt entry) {
         if (attempts.GetValueOrDefault(entry.Attempt.ProviderId) != entry) {
             return false;
+        }
+        if (current.GetValueOrDefault(entry.Attempt.ProviderId) == entry.Attempt.AttemptId) {
+            current.Remove(entry.Attempt.ProviderId);
         }
         return attempts.Remove(entry.Attempt.ProviderId);
     }
