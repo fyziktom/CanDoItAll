@@ -59,3 +59,6 @@ scenarios and comparable observations, not an arbitrary promised speedup.
 
 Measure the same scenarios in the sandbox. Report remaining asset/build/host bottlenecks.
 Direct watch optimization and Manager adaptation remain separately owned later work.
+
+
+Chart readiness requires actual plot geometry and stable series paths. Decorative SVGs, titles and placeholders do not prove settlement. If a later responsive/rendered-asset correction affects comparable source, preserve the earlier result and collect a corrected pre-extraction baseline before the final comparison. Use exact source restoration and evaluated graph receipts when reconstructing the prior owner. [Evidence and scope](../reviews/14-independent-read-lanes-and-owned-effects.md).

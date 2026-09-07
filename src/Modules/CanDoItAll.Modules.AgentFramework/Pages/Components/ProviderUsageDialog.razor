@@ -1,21 +1,27 @@
-@inject ProviderUsageQueryService UsageQueryService
+@using System.Collections.Immutable
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IAgentsWorkspaceQuery WorkspaceQuery
+@inject ILogger<ProviderUsageDialog> Logger
 
-@if (isLoading)
-{
+@if (isLoading) {
     <LoadingState Eyebrow="Provider usage"
                   Title="Loading provider usage"
                   Description="Reading provider-level usage aggregates for this workspace." />
 }
-else if (!string.IsNullOrWhiteSpace(loadError))
-{
+else if (!string.IsNullOrWhiteSpace(loadError)) {
     <EmptyState Eyebrow="Usage unavailable"
                 Title="Provider usage could not be loaded"
                 Description="@loadError" />
 }
-else
-{
+else {
     <Stack GapScale="LayoutGap.Large"
            data-testid="provider-usage-dialog">
+        @if (!snapshot.IsComplete) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="usage-dialog-partial">
+                Some usage evidence is unavailable. Displayed totals are partial.
+            </Alert>
+        }
         <Grid Gap="LayoutGap.Medium"
               ColumnTemplate="repeat(auto-fit,minmax(9rem,1fr))">
             <MetricCard Label="Providers" Value="@AgentUsageDisplay.FormatCount(snapshot.Providers.Count)" />
@@ -44,14 +50,12 @@ else
         </Grid>
 
         <SurfaceCard Soft="true">
-            @if (snapshot.Providers.Count == 0)
-            {
+            @if (snapshot.Providers.Count == 0) {
                 <EmptyState Eyebrow="No usage"
                             Title="No provider usage rows"
                             Description="Provider usage rows appear after executions report usage observations." />
             }
-            else
-            {
+            else {
                 <DataGrid TItem="ProviderUsageProviderRow"
                           Data="@ProviderRows"
                           AllowPaging="true"
@@ -113,8 +117,7 @@ else
 }
 
 @code {
-    private static readonly CdaChartOptions ProviderUsageBarChartOptions = new()
-    {
+    private readonly CdaChartOptions ProviderUsageBarChartOptions = new() {
         Type = CdaChartType.Bar,
         XAxisType = CdaChartAxisType.Category,
         Unit = "observations",
@@ -124,11 +127,10 @@ else
         ShowLegend = false,
         ValuePrecision = 0,
         TooltipPrecision = 0,
-        Palette = CdaChartPalette.Calm
+        Palette = CdaChartPalette.Calm.ToImmutableArray()
     };
 
-    private static readonly CdaChartOptions ProviderUsageDonutChartOptions = new()
-    {
+    private readonly CdaChartOptions ProviderUsageDonutChartOptions = new() {
         Type = CdaChartType.Donut,
         XAxisType = CdaChartAxisType.Category,
         Unit = "observations",
@@ -139,7 +141,7 @@ else
         ValuePrecision = 0,
         TooltipPrecision = 0,
         LegendPosition = CdaChartLegendPosition.Bottom,
-        Palette = CdaChartPalette.Energetic
+        Palette = CdaChartPalette.Energetic.ToImmutableArray()
     };
 
     [CascadingParameter]
@@ -150,6 +152,10 @@ else
 
     private ProviderUsageSnapshot snapshot = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isLoading = true;
+    private bool disposed;
+    private long generation;
+    private ProviderUsageWorkloadSelection? requestedSelection;
+    private CancellationTokenSource? readCancellation;
     private string? loadError;
 
     private IReadOnlyList<ProviderUsageProviderRow> ProviderRows =>
@@ -164,33 +170,83 @@ else
 
     private IReadOnlyList<CdaChartSeries> ProviderUsageDonutSeries => BuildProviderUsageSeries(CdaChartType.Donut, "Provider share");
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            snapshot = await UsageQueryService.QueryAsync(Selection);
+    protected override async Task OnParametersSetAsync() {
+        if (disposed || requestedSelection == Selection) {
+            return;
         }
-        catch (Exception exception)
-        {
-            loadError = exception.Message;
+        var requestGeneration = ++generation;
+        CancelRead();
+        var request = Selection;
+        requestedSelection = request;
+        readCancellation = new();
+        var owner = readCancellation;
+        var token = owner.Token;
+        isLoading = true;
+        loadError = null;
+        try {
+            request.Validate();
+            var result = await WorkspaceQuery.ReadUsageAsync(request, token);
+            if (!IsCurrent()) {
+                return;
+            }
+            if (result.Selection != request) {
+                throw new InvalidDataException("Usage evidence returned a different requested scope.");
+            }
+            snapshot = result with {
+                Consumers = result.Consumers.ToImmutableArray(),
+                Providers = result.Providers.ToImmutableArray(),
+                Models = result.Models.ToImmutableArray(),
+                Sources = result.Sources.ToImmutableArray()
+            };
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (IsCurrent()) {
+                loadError = "Usage evidence could not be refreshed. Close this dialog and retry the selected scope.";
+                Logger.LogWarning("Usage detail read failed ({FailureType}); scope {Scope}.", exception.GetType().Name, request);
+            }
+        } finally {
+            if (IsCurrent()) {
+                isLoading = false;
+            }
+            if (ReferenceEquals(readCancellation, owner)) {
+                readCancellation = null;
+                owner.Dispose();
+            }
         }
-        finally
-        {
-            isLoading = false;
+
+        bool IsCurrent() => !disposed && generation == requestGeneration && Selection == request && !token.IsCancellationRequested;
+    }
+
+    private void CancelRead() {
+        var owner = readCancellation;
+        readCancellation = null;
+        if (owner is null) {
+            return;
+        }
+        try {
+            owner.Cancel();
+        } finally {
+            owner.Dispose();
         }
     }
 
-    private IReadOnlyList<CdaChartSeries> BuildProviderUsageSeries(CdaChartType chartType, string name)
-    {
-        if (ProviderRows.Count == 0)
-        {
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        generation++;
+        CancelRead();
+    }
+
+    private IReadOnlyList<CdaChartSeries> BuildProviderUsageSeries(CdaChartType chartType, string name) {
+        if (ProviderRows.Count == 0) {
             return [];
         }
 
         return
         [
-            new CdaChartSeries
-            {
+            new CdaChartSeries {
                 Name = name,
                 Type = chartType,
                 Points = ProviderRows

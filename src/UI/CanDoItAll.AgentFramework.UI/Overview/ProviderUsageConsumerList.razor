@@ -1,3 +1,4 @@
+@namespace CanDoItAll.AgentFramework.UI.Overview
 @using CanDoItAll.AgentFramework.Usage
 @using CanDoItAll.Components.BaseLib
 
@@ -8,6 +9,11 @@
         <EmptyState Eyebrow="Loading"
                     Title="Usage ranking is loading"
                     Description="Combining selected provider usage sources." />
+    }
+    else if (IsUnavailable) {
+        <EmptyState Eyebrow="Unavailable"
+                    Title="Usage ranking is unavailable"
+                    Description="Retry the selected scope to load its usage evidence." />
     }
     else if (Rows.Count == 0)
     {
@@ -64,6 +70,9 @@
 
     [Parameter]
     public bool IsLoading { get; set; }
+
+    [Parameter]
+    public bool IsUnavailable { get; set; }
 
     [Parameter]
     public bool ShowFailureRank { get; set; }

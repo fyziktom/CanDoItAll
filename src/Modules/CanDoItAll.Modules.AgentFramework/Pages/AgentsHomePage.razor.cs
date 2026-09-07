@@ -3,14 +3,15 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Components.Charts;
+using System.Collections.Immutable;
+using CanDoItAll.AgentFramework.UI.Overview;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
-public partial class AgentsHomePage
-{
+public partial class AgentsHomePage : IDisposable {
     private const string AgentFrameworkShellHelpText =
         "This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.";
 
@@ -53,12 +54,31 @@ public partial class AgentsHomePage
     [SupplyParameterFromQuery(Name = AgentWorkspaceRouteState.UsageScopeQueryKey)]
     public string? RequestedUsageScope { get; set; }
 
-    private int technicalAgentCount;
-    private int providerCount;
-    private int boundResourceCount;
-    private int capabilityCount;
-    private int activeRunCount;
-    private int failedRunCount;
+    [Inject]
+    private ILogger<AgentsHomePage> Logger { get; set; } = default!;
+
+    private readonly CancellationTokenSource lifetime = new();
+    private AgentsOverviewSession session = default!;
+    private bool disposed;
+    private bool hasRendered;
+    private CancellationTokenSource? overviewDialogs;
+    private readonly HashSet<AgentsOverviewDetail> openDetails = [];
+    private long dialogGeneration;
+    private IDisposable? samePageDialogs;
+
+    private AgentsOverviewState OverviewPresentation => AgentsOverviewPresentation.Create(
+        session.Overview, session.AcceptedUsage, usageSelection, isOverviewLoading, isUsageLoading,
+        session.OverviewError, session.UsageError, overviewConsumerAvatarImageUrls) with {
+            HeaderWarning = HasHeaderFailure ? HeaderFailureText : null,
+            HeaderLoading = session.HeaderLoading,
+            OpenDetails = openDetails.ToImmutableHashSet()
+        };
+    private int technicalAgentCount => overview.Totals.AgentCount;
+    private int providerCount => overview.Totals.ProviderCount;
+    private int? boundResourceCount => session.Header?.BoundResourceCount;
+    private int capabilityCount => overview.Totals.CapabilityCount;
+    private int activeRunCount => overview.Totals.ActiveRuns;
+    private int failedRunCount => overview.Totals.FailedRuns;
     private AgentsWorkspaceState workspaceState = new();
     private string selectedTab => workspaceState.Section.ToTabKey();
     private Guid? effectiveRequestedAgentId => workspaceState.AgentId;
@@ -66,26 +86,31 @@ public partial class AgentsHomePage
     private SimpleChatWorkspaceRouteState simpleChatRouteState => workspaceState.SimpleChat;
     private AgentDefinition? selectedContextAgent;
     private AgentTeamDefinition? selectedContextTeam;
-    private AgentDefinition? hrAgent;
+    private AgentsHeaderAgent? hrAgent => session.Header?.HrAgent;
     private AgentChatContextAccessState selectionAccessState => workspaceState.SelectionAccess;
-    private bool isLoaded;
     private bool isConfirmingDefaults;
     private bool isFeedingDefaults;
     private bool isOpeningHrAgent;
-    private bool hasOverviewLoadError;
-    private string? overviewLoadError;
-    private AgentOverviewSnapshot overview = AgentOverviewSnapshot.Empty;
+    private AgentOverviewSnapshot overview => session.Overview ?? AgentOverviewSnapshot.Empty;
     private ProviderUsageWorkloadSelection usageSelection => workspaceState.UsageSelection;
-    private ProviderUsageSnapshot usage = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
-    private bool isUsageLoading;
-    private bool refreshUsageFromRoute;
-    private bool hasUsageLoaded;
-    private bool hasOverviewLoaded;
-    private bool isRefreshingShell;
-    private bool IsHistoryHost => workspaceState.Section.IsHistoryHost();
-    private string? usageLoadError;
-    private IReadOnlyDictionary<string, string?> overviewConsumerAvatarImageUrls =
-        new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+    private bool isUsageLoading => !hasRendered || session.UsageLoading;
+    private bool isOverviewLoading => !hasRendered || session.OverviewLoading;
+    private bool hasUsageLoaded => session.GetAcceptedUsage(usageSelection) is not null;
+    private bool hasOverviewLoaded => session.Overview is not null;
+    private bool CanOpenUsage => hasUsageLoaded && !isUsageLoading;
+    private IReadOnlyDictionary<string, string?> overviewConsumerAvatarImageUrls
+        => session.Header?.AvatarImageUrls ?? System.Collections.Immutable.ImmutableDictionary<string, string?>.Empty;
+    private bool IsHrReady => session.HeaderError is null && hrAgent is not null
+        && !session.Header!.Failures.HasFlag(AgentsHeaderFailure.HrAgent);
+    private bool HasHeaderFailure => session.HeaderError is not null || session.Header?.Failures is not (null or AgentsHeaderFailure.None);
+    private string HeaderFailureText => session.HeaderError ?? string.Join(" ", new[] {
+        session.Header?.Failures.HasFlag(AgentsHeaderFailure.HrAgent) == true ? "HR Agent information is unavailable." : null,
+        session.Header?.Failures.HasFlag(AgentsHeaderFailure.Avatars) == true ? "Agent avatars could not be refreshed." : null,
+        session.Header?.Failures.HasFlag(AgentsHeaderFailure.BoundResources) == true ? "Bound-resource information could not be refreshed." : null
+    }.Where(value => value is not null));
+    private string BoundResourceValue => boundResourceCount is { } count
+        ? count + (session.Header?.Failures.HasFlag(AgentsHeaderFailure.BoundResources) == true ? " \u00b7 stale" : string.Empty)
+        : !hasRendered || session.HeaderLoading ? "..." : "\u2014";
 
     private AgentChatContextSurface AgentChatSurface
         => AgentFrameworkAgentsChatContextBuilder.Build(
@@ -94,7 +119,8 @@ public partial class AgentsHomePage
             effectiveRequestedTeamId,
             technicalAgentCount,
             providerCount,
-            boundResourceCount,
+            session.HeaderError is null && session.Header?.Failures.HasFlag(AgentsHeaderFailure.BoundResources) != true
+                ? boundResourceCount : null,
             capabilityCount,
             activeRunCount,
             failedRunCount,
@@ -113,48 +139,13 @@ public partial class AgentsHomePage
             ]);
 
     private AgentChatContextAccessState AgentChatAccessState
-        => hasOverviewLoadError
-            ? AgentChatContextAccessState.Failed
-            : isLoaded
-                ? workspaceState.Section.UsesAgentSelection()
-                    ? selectionAccessState
-                    : AgentChatContextAccessState.Ready
-                : AgentChatContextAccessState.Loading;
+        => workspaceState.Section.UsesAgentSelection() ? selectionAccessState : AgentChatContextAccessState.Ready;
 
     private string HrAgentDisplayName
         => hrAgent?.Name ?? HrAgentIdentity.DefaultDisplayName;
 
     private string HrAgentAvatarImageUrl
         => hrAgent?.AvatarImageUrl ?? HrAgentIdentity.DefaultAvatarImageUrl;
-
-    private static readonly CdaChartOptions ProviderUsageBarChartOptions = new()
-    {
-        Type = CdaChartType.Bar,
-        XAxisType = CdaChartAxisType.Category,
-        Unit = "observations",
-        YAxisTitle = "Usage observations",
-        ShowToolbar = false,
-        EnableZoom = false,
-        ShowLegend = false,
-        ValuePrecision = 0,
-        TooltipPrecision = 0,
-        Palette = CdaChartPalette.Calm
-    };
-
-    private static readonly CdaChartOptions ProviderUsageDistributionChartOptions = new()
-    {
-        Type = CdaChartType.Donut,
-        XAxisType = CdaChartAxisType.Category,
-        Unit = "observations",
-        ShowToolbar = false,
-        EnableZoom = false,
-        ShowLegend = true,
-        ShowDataLabels = true,
-        ValuePrecision = 0,
-        TooltipPrecision = 0,
-        LegendPosition = CdaChartLegendPosition.Bottom,
-        Palette = CdaChartPalette.Energetic
-    };
 
     private IReadOnlyList<SecondaryTabItem> Tabs =>
     [
@@ -171,291 +162,104 @@ public partial class AgentsHomePage
         new(AgentWorkspaceTabs.Diagnostics, "Diagnostics", ResolveSummaryValue(failedRunCount))
     ];
 
-    private IReadOnlyList<SecondaryTabItem> UsageScopeTabs =>
-    [
-        new(nameof(ProviderUsageWorkloadSelection.Agents), "Agents"),
-        new(nameof(ProviderUsageWorkloadSelection.SimpleChats), "Chats"),
-        new(nameof(ProviderUsageWorkloadSelection.Both), "Both")
-    ];
-
-    private string UsageScopeKey => usageSelection.ToString();
-
-    private string UsageScopeLabel => usageSelection switch
-    {
-        ProviderUsageWorkloadSelection.Agents => "Agents",
-        ProviderUsageWorkloadSelection.SimpleChats => "Chats",
-        ProviderUsageWorkloadSelection.Both => "Agents and Chats",
-        _ => throw new ArgumentOutOfRangeException(nameof(usageSelection), usageSelection, "Unknown usage scope.")
-    };
-
-    private IReadOnlyList<OverviewMetricBadge> OverviewMetricBadges =>
-    [
-        new(
-            "Agents",
-            ResolveOverviewValue(overview.Totals.AgentCount),
-            "groups",
-            "info",
-            "Organization-scoped technical runtime records.",
-            "agents-overview-metric-agents"),
-        new(
-            "Teams",
-            ResolveOverviewValue(overview.Totals.TeamCount),
-            "hub",
-            "success",
-            "Agent teams available from the technical catalog.",
-            "agents-overview-metric-teams"),
-        new(
-            "Providers",
-            ResolveOverviewValue(overview.Totals.ProviderCount),
-            "cloud",
-            "accent",
-                "Provider profiles executed through AgentFramework.",
-            "agents-overview-metric-providers"),
-        new(
-            "Capabilities",
-            ResolveOverviewValue(overview.Totals.CapabilityCount),
-            "extension",
-            "warning",
-            "Reusable skills, MCP servers, and other runtime capabilities.",
-            "agents-overview-metric-capabilities"),
-        new(
-            "Sessions",
-            ResolveOverviewValue(overview.Totals.SessionCount),
-            "forum",
-            "neutral",
-            "Chat and runtime sessions associated with the workspace.",
-            "agents-overview-metric-sessions"),
-        new(
-            "Usage",
-            ResolveUsageValue(usage.Totals.UsageObservationCount),
-            "monitor_heart",
-            "info",
-            $"Usage observations for {UsageScopeLabel}.",
-            "agents-overview-metric-usage"),
-        new(
-            "Tokens",
-            ResolveUsageTokens(usage.Totals.Tokens.TotalTokens),
-            "token",
-            "success",
-            $"Known token usage for {UsageScopeLabel}.",
-            "agents-overview-metric-tokens"),
-        new(
-            "Cost",
-            ResolveUsageCost(),
-            "paid",
-            "danger",
-            $"Known execution-time provider cost for {UsageScopeLabel}; unpriced observations are never treated as free.",
-            "agents-overview-metric-cost")
-    ];
-
-    private IReadOnlyList<ProviderUsageProviderRow> OverviewProviderRows =>
-        usage.Providers
-            .OrderByDescending(item => item.Totals.UsageObservationCount)
-            .Take(6)
-            .ToArray();
-
-    private IReadOnlyList<ProviderUsageConsumerRow> TopUsageConsumers =>
-        usage.Consumers
-            .OrderByDescending(item => item.Totals.ExecutionCount)
-            .ThenByDescending(item => item.Totals.KnownCostUsd)
-            .Take(5)
-            .ToArray();
-
-    private IReadOnlyList<ProviderUsageConsumerRow> TopFailingConsumers =>
-        usage.Consumers
-            .Where(item => item.Totals.FailedExecutionCount > 0)
-            .OrderByDescending(item => item.Totals.FailedExecutionCount)
-            .ThenByDescending(item => item.Totals.ExecutionCount)
-            .Take(5)
-            .ToArray();
-
-    private IReadOnlyDictionary<string, string?> OverviewConsumerAvatarImageUrls =>
-        overviewConsumerAvatarImageUrls;
-
-    private IReadOnlyList<CdaChartSeries> ProviderUsageBarSeries =>
-        OverviewProviderRows.Count == 0
-            ? []
-            :
-            [
-                new CdaChartSeries
-                {
-                    Name = "Provider usage",
-                    Type = CdaChartType.Bar,
-                    Points = OverviewProviderRows
-                        .Select(item => new CdaChartPoint(
-                            AgentUsageDisplay.TrimLabel(item.ProviderName, 22),
-                            item.Totals.UsageObservationCount))
-                        .ToArray()
+    protected override void OnInitialized() {
+        samePageDialogs = DialogService.PreserveDialogsOnSamePageNavigation();
+        session = new(WorkspaceQuery, LoggerFactory.CreateLogger<AgentsOverviewSession>(),
+            () => disposed ? Task.CompletedTask : InvokeAsync(() => {
+                if (!disposed) {
+                    StateHasChanged();
                 }
-            ];
-
-    private IReadOnlyList<CdaChartSeries> ProviderUsageDistributionSeries =>
-        OverviewProviderRows.Count == 0
-            ? []
-            :
-            [
-                new CdaChartSeries
-                {
-                    Name = "Provider share",
-                    Type = CdaChartType.Donut,
-                    Points = OverviewProviderRows
-                        .Select(item => new CdaChartPoint(
-                            AgentUsageDisplay.TrimLabel(item.ProviderName, 22),
-                            item.Totals.UsageObservationCount))
-                        .ToArray()
-                }
-            ];
-
-    private static string ResolveOverviewMetricBadgeClass(string tone)
-    {
-        return tone switch
-        {
-            "success" => "agents-overview-stat-badge agents-overview-stat-badge--success",
-            "warning" => "agents-overview-stat-badge agents-overview-stat-badge--warning",
-            "danger" => "agents-overview-stat-badge agents-overview-stat-badge--danger",
-            "accent" => "agents-overview-stat-badge agents-overview-stat-badge--accent",
-            "neutral" => "agents-overview-stat-badge agents-overview-stat-badge--neutral",
-            _ => "agents-overview-stat-badge agents-overview-stat-badge--info"
-        };
+            }));
     }
 
-    protected override Task OnInitializedAsync()
-    {
-        return Task.CompletedTask;
-    }
+    [Inject]
+    private ILoggerFactory LoggerFactory { get; set; } = default!;
 
-    protected override void OnParametersSet()
-    {
+    protected override Task OnParametersSetAsync() {
         ApplyRequestedTab();
+        return hasRendered ? session.EnsureAsync(workspaceState.Section, usageSelection) : Task.CompletedTask;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await RefreshShellAsync();
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (!firstRender || disposed) {
             return;
         }
-
-        if (!isLoaded || IsHistoryHost || isRefreshingShell ||
-            (!refreshUsageFromRoute && (hasOverviewLoaded || hasOverviewLoadError)))
-        {
-            return;
-        }
-
-        refreshUsageFromRoute = false;
-        if (!hasOverviewLoaded) {
-            await RefreshShellAsync();
-            return;
-        }
-        await LoadUsageSelectionAsync(usageSelection);
-        await InvokeAsync(StateHasChanged);
+        hasRendered = true;
+        var load = session.EnsureAsync(workspaceState.Section, usageSelection);
+        StateHasChanged();
+        await load;
     }
 
-    private async Task RefreshShellAsync() {
-        isRefreshingShell = true;
-        try
-        {
-            hasOverviewLoadError = false;
-            overviewLoadError = null;
-            await LoadDashboardAsync();
-        }
-        catch (Exception exception)
-        {
-            hasOverviewLoadError = true;
-            overviewLoadError = exception.Message;
-            SetStatusError($"Failed to load agent runtime summary. {exception.Message}");
-        }
-        finally
-        {
-            isRefreshingShell = false;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
+    private Task RetryOverviewAsync() => session.RetryOverviewAsync();
+    private Task RetryUsageAsync() => session.RetryUsageAsync(usageSelection);
+    private Task RetryHeaderAsync() => session.RetryHeaderAsync();
 
-    private async Task LoadDashboardAsync() {
-        var snapshot = await WorkspaceQuery.ReadShellAsync(workspaceState.Section, usageSelection);
-        if (snapshot.Overview is { } loadedOverview) {
-            overview = loadedOverview;
-            hasOverviewLoaded = true;
-        }
-        if (snapshot.Usage is { } loadedUsage) {
-            usage = loadedUsage;
-            hasUsageLoaded = true;
-        }
-        usageLoadError = ResolveUsageSourceError(usage);
-        hrAgent = snapshot.HrAgent;
-        overviewConsumerAvatarImageUrls = snapshot.AvatarImageUrls;
-        if (snapshot.HrAgentError is { } hrAgentError) {
-            NotificationService.Warning("HR Agent unavailable", hrAgentError);
-        }
-        technicalAgentCount = overview.Totals.AgentCount;
-        providerCount = overview.Totals.ProviderCount;
-        capabilityCount = overview.Totals.CapabilityCount;
-        activeRunCount = overview.Totals.ActiveRuns;
-        failedRunCount = overview.Totals.FailedRuns;
-        boundResourceCount = snapshot.BoundResourceCount;
-        isLoaded = true;
-    }
-
-    private async Task FeedDefaultsAsync()
-    {
-        if (isConfirmingDefaults || isFeedingDefaults)
-        {
+    private async Task FeedDefaultsAsync() {
+        if (disposed || isConfirmingDefaults || isFeedingDefaults) {
             return;
         }
 
         isConfirmingDefaults = true;
 
-        try
-        {
+        try {
             var confirmed = await DialogService.OpenAsync<AgentDefaultsConfirmationDialog>(
                 "Load default agents and providers?",
-                options: new DialogOptions
-                {
+                options: new DialogOptions {
                     Eyebrow = "Managed defaults",
                     Subtitle = "Confirm before synchronizing the AgentFramework catalog.",
                     Size = ModalSize.Compact,
                     DenseChrome = true,
                     AriaLabel = "Confirm loading default agents and providers",
                     TestId = "agents-feed-defaults-confirmation"
-                });
+                }, cancellationToken: lifetime.Token);
+            if (disposed) {
+                return;
+            }
             isConfirmingDefaults = false;
-            if (confirmed is not true)
-            {
+            if (confirmed is not true) {
                 return;
             }
 
             isFeedingDefaults = true;
             ClearStatusMessage();
-            await CatalogWarmupService.WarmupAsync();
-            await LoadDashboardAsync();
+            await CatalogWarmupService.WarmupAsync(lifetime.Token);
+            if (disposed) {
+                return;
+            }
+            await session.RefreshDemandedAsync(workspaceState.Section, usageSelection);
+            if (disposed) {
+                return;
+            }
             SetStatusMessage("Default agents, providers, capabilities, workflows, and CRM-HR projections were synchronized.");
         }
-        catch (Exception exception)
-        {
-            SetStatusError($"Failed to load default agents and providers. {exception.Message}");
-        }
-        finally
-        {
-            isConfirmingDefaults = false;
-            isFeedingDefaults = false;
-            await InvokeAsync(StateHasChanged);
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (!disposed) {
+                Logger.LogWarning("Default catalog synchronization failed ({FailureType}).", exception.GetType().Name);
+                SetStatusError("Default catalog synchronization could not finish. Check its current state before retrying.");
+            }
+        } finally {
+            if (!disposed) {
+                isConfirmingDefaults = false;
+                isFeedingDefaults = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
     private Task HandleTabChangedAsync(string key) {
+        if (key != selectedTab) {
+            CloseOverviewDialogs();
+        }
         workspaceState = workspaceState.SelectSection(AgentWorkspaceSections.FromTabKey(key));
         Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
         return Task.CompletedTask;
     }
 
-    private Task HandleSelectedAgentChangedAsync(AgentDefinition? agent)
-    {
+    private Task HandleSelectedAgentChangedAsync(AgentDefinition? agent) {
         workspaceState = workspaceState with { AgentId = agent?.Id };
         selectedContextAgent = agent;
-        if (!string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
-        {
+        if (!string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal)) {
             workspaceState = workspaceState with { TeamId = null };
             selectedContextTeam = null;
         }
@@ -463,17 +267,14 @@ public partial class AgentsHomePage
         return Task.CompletedTask;
     }
 
-    private Task HandleSelectedTeamChangedAsync(AgentTeamDefinition? team)
-    {
+    private Task HandleSelectedTeamChangedAsync(AgentTeamDefinition? team) {
         workspaceState = workspaceState with { TeamId = team?.Id };
         selectedContextTeam = team;
         return Task.CompletedTask;
     }
 
-    private Task HandleSelectionAccessStateChangedAsync(AgentChatContextAccessState state)
-    {
-        if (!Enum.IsDefined(state))
-        {
+    private Task HandleSelectionAccessStateChangedAsync(AgentChatContextAccessState state) {
+        if (!Enum.IsDefined(state)) {
             throw new ArgumentOutOfRangeException(nameof(state), state, "The Agents selection access state is undefined.");
         }
 
@@ -481,8 +282,7 @@ public partial class AgentsHomePage
         return Task.CompletedTask;
     }
 
-    private void ApplyRequestedTab()
-    {
+    private void ApplyRequestedTab() {
         var routeState = AgentWorkspaceRouteState.Parse(
             ResolveRequestedTab(),
             ResolveRequestedAgentId(),
@@ -493,35 +293,32 @@ public partial class AgentsHomePage
             RequestedUsageScope ?? TryGetQueryValue(AgentWorkspaceRouteState.UsageScopeQueryKey));
         var requestedAgentId = routeState.AgentId;
         var requestedTeamId = routeState.TeamId;
-        if (selectedContextAgent?.Id != requestedAgentId)
-        {
+        if (selectedContextAgent?.Id != requestedAgentId) {
             selectedContextAgent = null;
         }
 
-        if (selectedContextTeam?.Id != requestedTeamId)
-        {
+        if (selectedContextTeam?.Id != requestedTeamId) {
             selectedContextTeam = null;
         }
 
-        workspaceState = workspaceState.ApplyRoute(routeState);
-        refreshUsageFromRoute = !IsHistoryHost && isLoaded && !isUsageLoading &&
-            (!hasUsageLoaded || usage.Selection != routeState.UsageSelection);
+        var next = workspaceState.ApplyRoute(routeState);
+        if (workspaceState.Section == AgentWorkspaceSection.Overview &&
+            (next.Section != AgentWorkspaceSection.Overview || next.UsageSelection != usageSelection)) {
+            CloseOverviewDialogs();
+        }
+        workspaceState = next;
     }
 
-    private string? ResolveRequestedTab()
-    {
-        if (!string.IsNullOrWhiteSpace(RequestedTab))
-        {
+    private string? ResolveRequestedTab() {
+        if (!string.IsNullOrWhiteSpace(RequestedTab)) {
             return RequestedTab;
         }
 
         return TryGetQueryValue("tab");
     }
 
-    private Guid? ResolveRequestedAgentId()
-    {
-        if (RequestedAgentId.HasValue)
-        {
+    private Guid? ResolveRequestedAgentId() {
+        if (RequestedAgentId.HasValue) {
             return RequestedAgentId;
         }
 
@@ -530,10 +327,8 @@ public partial class AgentsHomePage
             : null;
     }
 
-    private Guid? ResolveRequestedTeamId()
-    {
-        if (RequestedTeamId.HasValue)
-        {
+    private Guid? ResolveRequestedTeamId() {
+        if (RequestedTeamId.HasValue) {
             return RequestedTeamId;
         }
 
@@ -543,19 +338,15 @@ public partial class AgentsHomePage
     }
 
     private string? TryGetQueryValue(
-        string key)
-    {
+        string key) {
         var query = Navigation.ToAbsoluteUri(Navigation.Uri).Query;
-        if (string.IsNullOrWhiteSpace(query))
-        {
+        if (string.IsNullOrWhiteSpace(query)) {
             return null;
         }
 
-        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)) {
             var segments = pair.Split('=', 2);
-            if (!string.Equals(Uri.UnescapeDataString(segments[0]), key, StringComparison.OrdinalIgnoreCase))
-            {
+            if (!string.Equals(Uri.UnescapeDataString(segments[0]), key, StringComparison.OrdinalIgnoreCase)) {
                 continue;
             }
 
@@ -570,117 +361,61 @@ public partial class AgentsHomePage
     private static string BuildAgentsRoute(
         string tab,
         Guid? agentId,
-        Guid? teamId)
-    {
+        Guid? teamId) {
         if (!agentId.HasValue &&
             !teamId.HasValue &&
-            string.Equals(tab, AgentWorkspaceTabs.Overview, StringComparison.Ordinal))
-        {
+            string.Equals(tab, AgentWorkspaceTabs.Overview, StringComparison.Ordinal)) {
             return "/agents";
         }
 
-        var query = new List<string>
-        {
+        var query = new List<string> {
             $"tab={Uri.EscapeDataString(tab)}"
         };
 
-        if (agentId.HasValue)
-        {
+        if (agentId.HasValue) {
             query.Add($"agentId={agentId.Value:D}");
         }
 
-        if (teamId.HasValue)
-        {
+        if (teamId.HasValue) {
             query.Add($"teamId={teamId.Value:D}");
         }
 
         return $"/agents?{string.Join("&", query)}";
     }
 
-    private string ResolveSummaryValue(int value)
-    {
-        return hasOverviewLoaded ? value.ToString() : IsHistoryHost ? "—" : "...";
+    private string ResolveSummaryValue(int value) {
+        return hasOverviewLoaded ? value.ToString() : isOverviewLoading ? "..." : "\u2014";
     }
 
-    private string ResolveOverviewValue(int value)
-    {
-        return isLoaded ? AgentUsageDisplay.FormatCount(value) : "...";
-    }
-
-    private string ResolveOverviewTokens(int value)
-    {
-        return isLoaded ? AgentUsageDisplay.FormatTokens(value) : "...";
-    }
-
-    private string ResolveOverviewCost(decimal value)
-    {
-        return isLoaded ? AgentUsageDisplay.FormatCost(value) : "...";
-    }
-
-    private string ResolveUsageValue(int value)
-        => isLoaded && !isUsageLoading ? AgentUsageDisplay.FormatCount(value) : "...";
-
-    private string ResolveUsageTokens(int value)
-        => isLoaded && !isUsageLoading ? AgentUsageDisplay.FormatTokens(value) : "...";
-
-    private string ResolveUsageCost()
-    {
-        if (!isLoaded || isUsageLoading)
-        {
-            return "...";
+    private Task HandleOverviewIntentAsync(AgentsOverviewIntent intent) {
+        if (disposed) {
+            return Task.CompletedTask;
         }
-
-        var knownCost = AgentUsageDisplay.FormatCost(usage.Totals.KnownCostUsd);
-        return usage.Totals.UnpricedObservationCount == 0
-            ? knownCost
-            : usage.Totals.PricedObservationCount == 0
-                ? "Unpriced"
-                : $"{knownCost} + {usage.Totals.UnpricedObservationCount:N0} unpriced";
+        return intent switch {
+            AgentsOverviewIntent.SelectUsage change => HandleUsageScopeChangedAsync(change.Selection),
+            AgentsOverviewIntent.RetryOverview => RetryOverviewAsync(),
+            AgentsOverviewIntent.RetryUsage => RetryUsageAsync(),
+            AgentsOverviewIntent.RetryHeader => RetryHeaderAsync(),
+            AgentsOverviewIntent.OpenDetail detail => OpenUsageDialogAsync(detail.Detail, detail.Selection),
+            AgentsOverviewIntent.OpenTeam team => OpenAgentsForTeamAsync(team.TeamId),
+            _ => throw new ArgumentOutOfRangeException(nameof(intent))
+        };
     }
 
-    private async Task HandleUsageScopeChangedAsync(string key)
-    {
-        var selection = key switch
-        {
-            nameof(ProviderUsageWorkloadSelection.Agents) => ProviderUsageWorkloadSelection.Agents,
-            nameof(ProviderUsageWorkloadSelection.SimpleChats) => ProviderUsageWorkloadSelection.SimpleChats,
-            nameof(ProviderUsageWorkloadSelection.Both) => ProviderUsageWorkloadSelection.Both,
-            _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown usage scope key.")
-        };
-        if (selection == usageSelection)
-        {
+    private async Task HandleUsageScopeChangedAsync(ProviderUsageWorkloadSelection selection) {
+        if (selection is not (ProviderUsageWorkloadSelection.Agents or ProviderUsageWorkloadSelection.SimpleChats or ProviderUsageWorkloadSelection.Both)) {
+            throw new ArgumentOutOfRangeException(nameof(selection));
+        }
+        if (disposed || selection == usageSelection) {
             return;
         }
-
+        CloseOverviewDialogs();
         workspaceState = workspaceState with { UsageSelection = selection };
-        isUsageLoading = true;
         Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
-        await LoadUsageSelectionAsync(selection);
+        await session.EnsureAsync(workspaceState.Section, usageSelection);
     }
 
-    private async Task LoadUsageSelectionAsync(ProviderUsageWorkloadSelection selection)
-    {
-        isUsageLoading = true;
-        usageLoadError = null;
-        try
-        {
-            usage = await WorkspaceQuery.ReadUsageAsync(selection);
-            hasUsageLoaded = true;
-            usageLoadError = ResolveUsageSourceError(usage);
-        }
-        catch (Exception exception)
-        {
-            usageLoadError = exception.Message;
-            NotificationService.Error("Usage scope failed", exception.Message);
-        }
-        finally
-        {
-            isUsageLoading = false;
-        }
-    }
-
-    private Task HandleSimpleChatRouteStateChangedAsync(SimpleChatWorkspaceRouteState state)
-    {
+    private Task HandleSimpleChatRouteStateChangedAsync(SimpleChatWorkspaceRouteState state) {
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = workspaceState with { SimpleChat = state };
         Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
@@ -690,161 +425,132 @@ public partial class AgentsHomePage
     private string BuildCurrentRoute()
         => AgentWorkspaceRouteState.Build(workspaceState.ToRoute());
 
-    private static string? ResolveUsageSourceError(ProviderUsageSnapshot snapshot)
-    {
-        var failures = snapshot.Sources
-            .Where(source => source.State != ProviderUsageSourceState.Complete)
-            .Select(source => source.Error?.Message ?? $"{source.SourceName} returned partial usage data.")
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        return failures.Length == 0 ? null : string.Join(' ', failures);
-    }
-
-    private async Task OpenAgentUsageDialogAsync()
-    {
-        try
-        {
-            await DialogService.OpenAsync<AgentUsageDialog>(
-                "Consumer usage",
-                new Dictionary<string, object?>
-                {
-                    [nameof(AgentUsageDialog.Selection)] = usageSelection
-                },
-                options: new DialogOptions
-                {
+    private async Task OpenUsageDialogAsync(AgentsOverviewDetail detail, ProviderUsageWorkloadSelection selection) {
+        if (disposed || workspaceState.Section != AgentWorkspaceSection.Overview || selection != usageSelection
+            || !CanOpenUsage || !openDetails.Add(detail)) {
+            return;
+        }
+        var (component, title, subtitle, testId) = detail switch {
+            AgentsOverviewDetail.Consumers => (typeof(AgentUsageDialog), "Consumer usage", "Rank technical agents by executions, known usage, failed runs, and last activity.", "agents-usage-dialog-shell"),
+            AgentsOverviewDetail.Providers => (typeof(ProviderUsageDialog), "Provider usage", "Inspect provider usage, token totals, unknown observations, cost, and failed runs.", "provider-usage-dialog-shell"),
+            AgentsOverviewDetail.Models => (typeof(ModelUsageDialog), "Model usage", "Inspect model-level usage without adding model detail to the default dashboard.", "model-usage-dialog-shell"),
+            _ => throw new ArgumentOutOfRangeException(nameof(detail))
+        };
+        overviewDialogs ??= new();
+        var token = overviewDialogs.Token;
+        var generation = dialogGeneration;
+        try {
+            await DialogService.OpenAsync(title, component,
+                new Dictionary<string, object?> { [nameof(AgentUsageDialog.Selection)] = selection },
+                new DialogOptions {
                     Eyebrow = "Usage analytics",
-                    Subtitle = "Rank technical agents by executions, known usage, failed runs, and last activity.",
+                    Subtitle = subtitle,
                     Size = ModalSize.Wide,
                     DenseChrome = true,
-                    AriaLabel = "Agent usage details",
-                    TestId = "agents-usage-dialog-shell"
-                });
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Agent usage failed", exception.Message);
+                    AriaLabel = title + " details",
+                    TestId = testId
+                }, token);
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (!disposed && generation == dialogGeneration) {
+                Logger.LogWarning("Overview {Detail} dialog failed ({FailureType}).", detail, exception.GetType().Name);
+                NotificationService.Error("Usage details unavailable", "The usage dialog could not be opened. Retry the selected scope.");
+            }
+        } finally {
+            if (!disposed && generation == dialogGeneration) {
+                openDetails.Remove(detail);
+            }
         }
     }
 
-    private async Task OpenProviderUsageDialogAsync()
-    {
-        try
-        {
-            await DialogService.OpenAsync<ProviderUsageDialog>(
-                "Provider usage",
-                new Dictionary<string, object?>
-                {
-                    [nameof(ProviderUsageDialog.Selection)] = usageSelection
-                },
-                options: new DialogOptions
-                {
-                    Eyebrow = "Provider distribution",
-                    Subtitle = "Inspect provider usage, token totals, unknown observations, cost, and failed runs.",
-                    Size = ModalSize.Wide,
-                    DenseChrome = true,
-                    AriaLabel = "Provider usage details",
-                    TestId = "provider-usage-dialog-shell"
-                });
+    private void CloseOverviewDialogs() {
+        dialogGeneration++;
+        openDetails.Clear();
+        var owner = overviewDialogs;
+        overviewDialogs = null;
+        if (owner is null) {
+            return;
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Provider usage failed", exception.Message);
+        try {
+            owner.Cancel();
+        } finally {
+            owner.Dispose();
         }
     }
 
-    private async Task OpenModelUsageDialogAsync()
-    {
-        try
-        {
-            await DialogService.OpenAsync<ModelUsageDialog>(
-                "Model usage",
-                new Dictionary<string, object?>
-                {
-                    [nameof(ModelUsageDialog.Selection)] = usageSelection
-                },
-                options: new DialogOptions
-                {
-                    Eyebrow = "Model distribution",
-                    Subtitle = "Inspect model-level usage without adding model detail to the default dashboard.",
-                    Size = ModalSize.Wide,
-                    DenseChrome = true,
-                    AriaLabel = "Model usage details",
-                    TestId = "model-usage-dialog-shell"
-                });
+    private Task OpenAgentsForTeamAsync(Guid teamId) {
+        if (disposed || session.Overview?.TeamShortcuts.Any(team => team.TeamId == teamId) != true) {
+            return Task.CompletedTask;
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Model usage failed", exception.Message);
-        }
-    }
-
-    private Task OpenAgentsForTeamAsync(Guid teamId)
-    {
+        CloseOverviewDialogs();
         workspaceState = workspaceState with { Section = AgentWorkspaceSection.Agents, AgentId = null, TeamId = teamId };
         Navigation.NavigateTo(BuildAgentsRoute(AgentWorkspaceTabs.Agents, null, teamId));
         return Task.CompletedTask;
     }
 
-    private void SetStatusMessage(string value)
-    {
+    private void SetStatusMessage(string value) {
         NotificationService.Success("AgentFramework updated", value);
     }
 
-    private void SetStatusError(string value)
-    {
+    private void SetStatusError(string value) {
         NotificationService.Error("AgentFramework update failed", value);
     }
 
-    private void ClearStatusMessage()
-    {
+    private void ClearStatusMessage() {
     }
 
-    private void OpenCrmHrAgents()
-    {
+    private void OpenCrmHrAgents() {
         Navigation.NavigateTo("/crm-hr/agents");
     }
 
-    private async Task OpenHrAgentAsync()
-    {
-        if (isOpeningHrAgent ||
-            hrAgent is null ||
-            !HrAgentIdentity.Matches(hrAgent) ||
-            AgentChatAccessState != AgentChatContextAccessState.Ready)
-        {
+    private async Task OpenHrAgentAsync() {
+        if (disposed || isOpeningHrAgent || !IsHrReady ||
+            hrAgent is null || hrAgent.Id != HrAgentIdentity.AgentId) {
             return;
         }
 
         isOpeningHrAgent = true;
-        try
-        {
-            await AgentChatLauncher.StartNewChatAsync(hrAgent.Id);
+        try {
+            await AgentChatLauncher.StartNewChatAsync(hrAgent.Id, lifetime.Token);
+            if (disposed) {
+                return;
+            }
             NotificationService.Success("HR Agent ready", "Opened a new managed HR chat.");
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Unable to open HR Agent", exception.Message);
-        }
-        finally
-        {
-            isOpeningHrAgent = false;
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (!disposed) {
+                Logger.LogWarning("HR Agent launch failed ({FailureType}).", exception.GetType().Name);
+                NotificationService.Error("Unable to open HR Agent", "The HR chat could not be opened. Retry when the agent is available.");
+            }
+        } finally {
+            if (!disposed) {
+                isOpeningHrAgent = false;
+            }
         }
     }
 
-    private void OpenProcesses()
-    {
+    private void OpenProcesses() {
         Navigation.NavigateTo("/processes");
     }
 
-    private void OpenWorkflows()
-    {
+    private void OpenWorkflows() {
         Navigation.NavigateTo("/agents/workflows");
     }
 
-    private sealed record OverviewMetricBadge(
-        string Label,
-        string Value,
-        string Icon,
-        string Tone,
-        string TooltipText,
-        string TestId);
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        samePageDialogs?.Dispose();
+        CloseOverviewDialogs();
+        session.Dispose();
+        try {
+            lifetime.Cancel();
+        } finally {
+            lifetime.Dispose();
+        }
+    }
+
 }

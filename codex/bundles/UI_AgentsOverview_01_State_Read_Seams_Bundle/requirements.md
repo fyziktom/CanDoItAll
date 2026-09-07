@@ -9,16 +9,16 @@
 | OV05 | Workspace owns desired usage scope; accepted data carries a matching observation stamp. | Session/page / O01 |
 | OV06 | Explicit retryable Overview failure; partial HR; visible typed usage partial failures preserving successful data. | Reads / O01 |
 | OV07 | Loading, empty, partial, failed and ready remain distinct; failed reads never become fake zero success. | Surface / O01 |
-| OV08 | Real stats/charts/lists/teams render without feature services and emit typed intents. | Presentation / O01 |
+| OV08 | Real stats/charts/lists/teams render without feature services and emit typed intents. | Presentation / O02-O03 |
 | OV09 | Dialogs receive accepted current scope and own cancellable reads; unrelated overlays survive cancellation. | Page/dialogs / O02 |
 | OV10 | One team intent/navigation; Defaults and HR commands retain page ownership and business semantics. | Page / O02 |
 | OV11 | Preserve real composition, charts/assets, CSS/scroll ownership, accessibility and desktop geometry. | O02-O03 |
 | OV12 | Physical movement follows valid fresh Overview baseline; application reads/effects stay outside UI. | O03 |
 | OV13 | Extend existing sandbox, preserving catalog/capabilities/modes; measure pre/post full app and Parity/Fast. | O03 |
 | OV14 | Public RED/GREEN, exact discovery/direct builds, real integration, static/secret gates, honest history. | All |
-| OV15 | Preparation only now; implementation requires separate authority. | All |
+| OV15 | Execute O00-O03 sequentially under input 02; prepare Governance only after manifest closure and do not implement it. | All |
 
-## Explicit decisions for future authorized execution
+## Explicit execution decisions
 
 - Retain old accepted data internally during scope replacement, but never label/display A totals as requested B. Show loading/error and disable usage-detail actions until matching accepted data exists. A failed B read cannot expose A as B.
 - Typed partial B results are accepted B data with visible source warnings. Preserve successful contributions, unpriced/unknown counters, ranking, source metadata validation and deduplication. Contradictory source metadata must not become a plausible partial sum.
@@ -30,4 +30,6 @@
 
 ## Non-goals
 
-No new URL/routed-dialog design, history internals, provider architecture, general capability CRUD, AgentDetails/Chat/Simple Chats/Voice/Floating refactoring, new sandbox project, sibling edits, generic controller/event bus/outbox, durable recovery, history operations or unmeasured performance claims.
+No new URL/routed-dialog design, history internals, provider architecture, general capability CRUD, AgentDetails/Chat/Simple Chats/Voice/Floating refactoring, new sandbox project, incidental sibling edits, generic controller/event bus/outbox, durable recovery, history operations or unmeasured performance claims.
+
+The one proven sibling exception is recorded in proof/O02/sibling-blocker.md. It does not authorize further sibling refactoring.

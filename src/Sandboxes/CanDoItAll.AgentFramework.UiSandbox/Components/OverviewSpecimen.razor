@@ -1,0 +1,122 @@
+@inject NavigationManager Navigation
+
+<PageTitle>Overview sandbox</PageTitle>
+
+<header class="catalog-sandbox__controls overview-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <Cluster Gap="LayoutGap.Small">
+            <h1 class="cda-title-xl">Overview sandbox</h1>
+            <Button Text="Catalog specimen" Click="@(() => OpenSpecimen(SandboxSpecimen.Catalog))" data-testid="sandbox-catalog" />
+            <Button Text="Capabilities specimen" Click="@(() => OpenSpecimen(SandboxSpecimen.Capabilities))" data-testid="sandbox-capabilities" />
+        </Cluster>
+        <p>Real Overview components and charts. Actions change sample state and the intent log.</p>
+        <Grid ColumnTemplate="auto minmax(14rem,30rem) auto" Gap="LayoutGap.Small" AlignItems="AlignItems.Center">
+            <label for="overview-scenario" class="cda-field-label">Scenario</label>
+            <select id="overview-scenario" class="cda-input" value="@ScenarioToken"
+                    @onchange="ChangeScenario" data-testid="sandbox-overview-scenario">
+                @foreach (var definition in OverviewSandboxContext.Scenarios) {
+                    <option value="@definition.Token">@definition.Label</option>
+                }
+            </select>
+            <Button Text="@(matchedLayout ? "Use flexible layout" : "Match desktop baseline")"
+                    Click="@(() => SetContext(context with { Layout = matchedLayout ? CatalogSandboxLayout.Flexible : CatalogSandboxLayout.Matched }))"
+                    data-testid="sandbox-layout" />
+        </Grid>
+        <output aria-live="polite" data-testid="sandbox-intent">@intentText</output>
+    </Stack>
+</header>
+
+<main class="@(matchedLayout ? "catalog-sandbox__frame catalog-sandbox__frame--matched" : "catalog-sandbox__frame")"
+      data-testid="sandbox-overview-specimen">
+    <AgentsOverviewSurface State="state" Intent="HandleIntent" />
+</main>
+
+<Tooltip />
+
+@code {
+    [Parameter]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    public string? LayoutQuery { get; set; }
+
+    [Parameter]
+    public string? UsageScopeQuery { get; set; }
+
+    private OverviewSandboxContext context = new();
+    private AgentsOverviewState state = OverviewSandboxFixture.Create(new());
+    private bool initialized;
+    private bool matchedLayout => context.Layout == CatalogSandboxLayout.Matched;
+    private string ScenarioToken => OverviewSandboxContext.Scenarios.Single(item => item.Scenario == context.Scenario).Token;
+    private string intentText = "No intent yet.";
+
+    protected override void OnParametersSet() {
+        var next = OverviewSandboxContext.Parse(ScenarioQuery, LayoutQuery, UsageScopeQuery);
+        if (!initialized || next != context) {
+            SetContext(next);
+        }
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender) {
+        var uri = Navigation.GetUriWithQueryParameters(context.ToQuery());
+        if (!string.Equals(uri, Navigation.Uri, StringComparison.Ordinal)) {
+            Navigation.NavigateTo(uri, replace: true);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void SetContext(OverviewSandboxContext next) {
+        var replacesSample = !initialized || next.Scenario != context.Scenario || next.Scope != context.Scope;
+        initialized = true;
+        context = next;
+        if (replacesSample) {
+            state = OverviewSandboxFixture.Create(context);
+        }
+    }
+
+    private void ChangeScenario(ChangeEventArgs args) {
+        SetContext(OverviewSandboxContext.Parse(args.Value?.ToString(), matchedLayout ? "matched" : "flexible",
+            context.ToQuery()["usageScope"]?.ToString()));
+        intentText = "No intent yet.";
+    }
+
+    private void OpenSpecimen(SandboxSpecimen specimen) {
+        var query = context.ToQuery().ToDictionary(item => item.Key, item => item.Value);
+        query["specimen"] = specimen == SandboxSpecimen.Capabilities ? "capabilities" : null;
+        query["scenario"] = specimen == SandboxSpecimen.Capabilities ? "baseline" : "normal";
+        query["usageScope"] = null;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(query), replace: true);
+    }
+
+    private void HandleIntent(AgentsOverviewIntent intent) {
+        var ready = OverviewSandboxFixture.Create(context with { Scenario = OverviewSandboxScenario.Ready });
+        switch (intent) {
+            case AgentsOverviewIntent.SelectUsage select:
+                SetContext(context with { Scope = select.Selection });
+                intentText = $"Sample usage scope: {select.Selection}. No query runs.";
+                break;
+            case AgentsOverviewIntent.RetryOverview:
+                state = state with { Totals = ready.Totals, Teams = ready.Teams, OverviewPhase = AgentsOverviewReadPhase.Ready, OverviewError = null };
+                intentText = "Sample Overview read completed. No query runs.";
+                break;
+            case AgentsOverviewIntent.RetryUsage:
+                state = state with {
+                    UsageTotals = ready.UsageTotals, AcceptedScope = ready.AcceptedScope, Consumers = ready.Consumers,
+                    Providers = ready.Providers, UsageSources = ready.UsageSources, UsagePhase = AgentsOverviewReadPhase.Ready, UsageError = null
+                };
+                intentText = "Sample usage read completed. No query runs.";
+                break;
+            case AgentsOverviewIntent.RetryHeader:
+                state = state with { HeaderWarning = null, HeaderLoading = false };
+                intentText = "Sample header read completed. No query runs.";
+                break;
+            case AgentsOverviewIntent.OpenDetail detail when detail.Selection == state.DesiredScope && state.CanOpen(detail.Detail):
+                state = state with { OpenDetails = state.OpenDetails.Add(detail.Detail) };
+                intentText = $"Sample {detail.Detail} detail requested for {detail.Selection}. No data-loading dialog opens.";
+                break;
+            case AgentsOverviewIntent.OpenTeam team when state.Teams.Any(item => item.TeamId == team.TeamId):
+                intentText = $"Sample team {team.TeamId} requested. No production navigation.";
+                break;
+        }
+    }
+}

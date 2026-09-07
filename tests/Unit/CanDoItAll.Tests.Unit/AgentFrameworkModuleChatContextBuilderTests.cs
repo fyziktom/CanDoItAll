@@ -7,6 +7,14 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentFrameworkModuleChatContextBuilderTests
 {
     [Fact]
+    public void Unknown_bound_count_is_omitted_without_erasing_known_overview_facts() {
+        var surface = AgentFrameworkAgentsChatContextBuilder.Build(
+            AgentFrameworkAgentsChatView.Overview, null, null, 42, 3, null, 7, 2, 1);
+        Assert.DoesNotContain(surface.Position.Facts, fact => fact.Name == "bound-resource-count");
+        Assert.Contains(surface.Position.Facts, fact => fact.Name == "technical-agent-count" && fact.Value == "42");
+    }
+
+    [Fact]
     public void Request_history_context_has_no_invented_summary_or_inherited_agent_selection() {
         var view = AgentFrameworkAgentsChatContextBuilder.ResolveView(
             CanDoItAll.Modules.AgentFramework.Pages.AgentWorkspaceTabs.RequestHistory);

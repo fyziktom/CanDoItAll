@@ -2,11 +2,14 @@ namespace CanDoItAll.AgentFramework.UiSandbox;
 
 public enum SandboxSpecimen {
     Catalog,
-    Capabilities
+    Capabilities,
+    Overview
 }
 
 public static class SandboxSpecimens {
-    public static SandboxSpecimen Parse(string? token) =>
-        string.Equals(token?.Trim(), "capabilities", StringComparison.OrdinalIgnoreCase)
-            ? SandboxSpecimen.Capabilities : SandboxSpecimen.Catalog;
+    public static SandboxSpecimen Parse(string? token) => token?.Trim().ToLowerInvariant() switch {
+        "capabilities" => SandboxSpecimen.Capabilities,
+        "overview" => SandboxSpecimen.Overview,
+        _ => SandboxSpecimen.Catalog
+    };
 }

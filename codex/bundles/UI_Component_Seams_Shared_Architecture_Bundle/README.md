@@ -107,3 +107,5 @@ Follow-up: [explicit assets and direct observation](reviews/08-explicit-assets-a
 [Revision ordering and explicit liveness](reviews/12-revision-ordering-and-explicit-liveness.md).
 
 [Rendered closure and adversarial content](reviews/13-rendered-closure-and-adversarial-content.md).
+
+[Independent read lanes and owned dashboard effects](reviews/14-independent-read-lanes-and-owned-effects.md).

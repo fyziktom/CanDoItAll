@@ -11,6 +11,7 @@
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <EmbeddedResource Include="Fixtures/catalog.json" LogicalName="CatalogFixture.json" />
     <EmbeddedResource Include="Fixtures/capabilities.json" LogicalName="CapabilitiesFixture.json" />
+    <EmbeddedResource Include="Fixtures/overview.json" LogicalName="OverviewFixture.json" />
     <Content Remove="wwwroot/css/catalog-fast.css" Condition="'$(CatalogAssetMode)' != 'Fast'" />
     <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
              ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"

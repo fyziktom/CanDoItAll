@@ -45,3 +45,7 @@ a {
         margin-inline: 24px;
     }
 }
+
+.overview-sandbox__controls {
+    min-height: 223.59375px;
+}

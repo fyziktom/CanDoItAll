@@ -1,13 +1,28 @@
-# Dependency direction
+# Current dependency direction
 
-[Evaluated Module references](../inventory/module-references.json): 47 direct items in current live-sibling mode. This is a receipt, not a desired count. BaseLib, Charts and OverlayLib are also declared package dependencies resolved by repository source policy. [CodeAnalytics](../inventory/codeanalytics.json) has existing namespace/type cycles and incomplete parsed project references; it is not full evaluated graph proof.
+O03's evaluated live graph contains 14 projects and no cycle or prohibited runtime edge. Before the move the same sandbox root had 12. The two additions are the existing Usage value-contract library and actual Charts library. The UI uses Usage values, not its query execution. The sandbox registers chart/UI services only; all page/session/query/HR/defaults/navigation/dialog effects remain in Module.
 
-Current UI has Models, Conversations.Components and BaseLib in its closure (11 evaluated projects in capability proof). Usage directly references only Models and owns pure contracts/aggregation over read ports. Charts source has no project references, requests Blazor-ApexCharts 6.1.0 and Components.Web 10.0.10. Its README's 10.0.4 is stale; use evaluated assets, not prose. Siblings remain read-only.
+| Project | Evaluated direct project dependencies |
+|---|---|
+| CanDoItAll.AgentFramework.UiSandbox | CanDoItAll.AgentFramework.UI |
+| CanDoItAll.AgentFramework.UI | CanDoItAll.AgentFramework.Usage, CanDoItAll.AgentFramework.Models, CanDoItAll.Conversations.Components, CanDoItAll.Components.BaseLib, CanDoItAll.Components.Charts |
+| CanDoItAll.AgentFramework.Usage | CanDoItAll.AgentFramework.Models |
+| CanDoItAll.AgentFramework.Models | CanDoItAll.AgentFramework.Capabilities.Abstractions, CanDoItAll.Memory.Abstractions, CanDoItAll.SharedKernel, CanDoItAll.Infrastructure.Abstractions, CanDoItAll.AgentFramework.ProviderHistory.Abstractions |
+| CanDoItAll.Conversations.Components | CanDoItAll.Components.BaseLib, CanDoItAll.Components.OverlayLib |
+| CanDoItAll.Components.BaseLib | CanDoItAll.Components.Common |
+| CanDoItAll.Components.Charts | None |
+| CanDoItAll.AgentFramework.Capabilities.Abstractions | None |
+| CanDoItAll.Memory.Abstractions | None |
+| CanDoItAll.SharedKernel | None |
+| CanDoItAll.Infrastructure.Abstractions | None |
+| CanDoItAll.AgentFramework.ProviderHistory.Abstractions | None |
+| CanDoItAll.Components.OverlayLib | CanDoItAll.Components.BaseLib |
+| CanDoItAll.Components.Common | None |
 
-O01/O02 change Module ownership, not physical edges. Planned O03 allows UI -> existing Usage value contracts and real Charts, alongside current allowed dependencies. Reuse typed usage scope/rows instead of duplicating the entire model to avoid a small pure library. Surface/sandbox never inject, register or invoke ProviderUsageQueryService or its sources. Session/query execution remains Module. If Usage/Charts acquires runtime dependencies before O03, repair the move map before importing it.
+The receipts use evaluated MSBuild references, not the static project's package/project text. Live sibling mode is preserved. Scoped UI CodeAnalytics complements this graph and reports no cycles/services; it does not erase pre-existing Module namespace/type cycle findings or establish whole-solution acyclicity.
 
-Forbidden UI/sandbox edges: Module, Core, Persistence, provider runtime/ProviderManagement, Voice, AppComponents, broad AgentFramework.Components, workspace services/production composition. No universal Contracts project, runtime service locator or operation state in UI merely for a badge.
+Forbidden UI/sandbox owners remain Module, Core, Persistence, provider runtime, Voice, AppComponents and broad AgentFramework.Components. No old wrapper points back into Module. AgentUsageDisplay has one honest public pure owner because retained Module consumers use it directly. The small existing Usage contracts are reused without moving application snapshots or inventing duplicate DTOs.
 
-O03 must use real AddCanDoItAllCharts, ChartsHeadAssets, Apex JS/CSS and CdaChart. Verify registrations are presentation-only, existing package license/distribution and assets; no library upgrade. Do not stub charts in measurements. Preserve live Components/FileTools revisions and source mode.
+The O02 BaseLib source exception remains required: a bounded opt-in same-page navigation lease preserves unrelated dialogs while the page cancels its own references. This is an additive public dependency, separately tested and included in the broad stable invalidation. Its live sibling source/approval bytes must accompany the app change. FileTools is unchanged. No package-mode substitution or further sibling change is part of O03.
 
-Before/after graph proof requires evaluated transitive references/cycles, current CodeAnalytics with limits, direct consumer builds, real chart browser execution, public list tests and source removal from old owner. Actual shared public/asset changes may trigger broader validation; record why first. Empty parsed references/file counts do not prove isolation.
+The original preparation graphs remain in inventory. Current receipts are retained under proof/O03/raw and proof/O03/final. Any later graph or asset drift invalidates the dependent extraction/browser/measurement proof and requires fresh evaluation.

@@ -48,7 +48,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
         Guid? requestedTeamId,
         int technicalAgentCount,
         int providerCount,
-        int boundResourceCount,
+        int? boundResourceCount,
         int capabilityCount,
         int activeRunCount,
         int failedRunCount,
@@ -60,7 +60,9 @@ public static class AgentFrameworkAgentsChatContextBuilder
         ValidateOptionalId(requestedTeamId, nameof(requestedTeamId));
         ValidateCount(technicalAgentCount, nameof(technicalAgentCount));
         ValidateCount(providerCount, nameof(providerCount));
-        ValidateCount(boundResourceCount, nameof(boundResourceCount));
+        if (boundResourceCount is { } knownBoundCount) {
+            ValidateCount(knownBoundCount, nameof(boundResourceCount));
+        }
         ValidateCount(capabilityCount, nameof(capabilityCount));
         ValidateCount(activeRunCount, nameof(activeRunCount));
         ValidateCount(failedRunCount, nameof(failedRunCount));
@@ -88,7 +90,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
             new AgentChatContextSource(
                 new AgentChatContextSourceKind(SourceKind),
                 new AgentChatContextSourceId(BuildSourceId(viewToken, agentId, teamId))),
-            $"Agents · {viewLabel}",
+            $"Agents Â· {viewLabel}",
             new AgentChatSurfacePosition(
                 Module,
                 Surface,
@@ -109,7 +111,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
     private static IReadOnlyList<AgentChatContextPositionFact> BuildFacts(
         int technicalAgentCount,
         int providerCount,
-        int boundResourceCount,
+        int? boundResourceCount,
         int capabilityCount,
         int activeRunCount,
         int failedRunCount)
@@ -117,7 +119,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
         [
             new("technical-agent-count", technicalAgentCount.ToString()),
             new("provider-count", providerCount.ToString()),
-            new("bound-resource-count", boundResourceCount.ToString()),
+            .. (boundResourceCount is { } count ? new[] { new AgentChatContextPositionFact("bound-resource-count", count.ToString()) } : []),
             new("capability-count", capabilityCount.ToString()),
             new("active-run-count", activeRunCount.ToString()),
             new("failed-run-count", failedRunCount.ToString())

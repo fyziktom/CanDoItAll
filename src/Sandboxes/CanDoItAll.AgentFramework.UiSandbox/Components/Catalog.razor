@@ -4,11 +4,17 @@
 @if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Capabilities) {
     <CapabilitiesSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" />
 }
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Overview) {
+    <OverviewSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" UsageScopeQuery="@UsageScopeQuery" />
+}
 else {
     <CatalogSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" TeamQuery="@TeamQuery" />
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "usageScope")]
+    public string? UsageScopeQuery { get; set; }
+
     [SupplyParameterFromQuery(Name = "specimen")]
     public string? SpecimenQuery { get; set; }
 

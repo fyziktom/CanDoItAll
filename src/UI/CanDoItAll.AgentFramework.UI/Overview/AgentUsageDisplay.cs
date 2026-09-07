@@ -1,9 +1,9 @@
 using System.Globalization;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
+namespace CanDoItAll.AgentFramework.UI.Overview;
 
-internal static class AgentUsageDisplay
+public static class AgentUsageDisplay
 {
     public static string FormatCount(int value)
     {

@@ -103,3 +103,7 @@ verify returned identity, and fence success and failure after each await. Overla
 cancels only its owned requests and presentations. Apply the same fence in caller
 continuations that display notifications or open another presentation after a helper returns.
 Backend commit receipts remain valid even when their presentation owner disappears.
+
+## Independent aggregate and context lanes
+
+Aggregate availability, selection access and independently resolved action targets are separate decisions. Keep one accepted immutable owner for shared totals. Preserve same-scope accepted data with explicit stale state after refresh failure; omit unavailable facts. A desired scope must never inherit another scope's cached values or enabled effects. Test the real global presentation host as well as page-owned cancellation on scope/navigation changes. [Direct read/effect evidence](../reviews/14-independent-read-lanes-and-owned-effects.md).

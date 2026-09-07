@@ -1,28 +1,27 @@
-# Raw input coverage
+# Input coverage and execution traceability
 
-The complete raw directive is retained once under inputs. Parts A/B and their findings are closed by the capability bundles; this child does not rewrite or re-execute them. [Capabilities report](../UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md) and [02G closure](../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md) carry that evidence.
+The original preparation directive remains in inputs. Its preparation-only traceability is preserved in [the original table](preparation-traceability.md). The new [owner execution authorization](inputs/02-implementation-authorization.md) authorizes O00 -> O01 -> O02 -> O03, followed only by Governance preparation. No historical Capabilities or Provider proof has been rewritten as a new execution.
 
-| Input | Normalized coverage | Destination/proof | Current closure |
-|---|---|---|---|
-| Mission C / preparation only | OV15 | README, execution and gate; final no-production-drift receipt | Prepared only |
-| C0 sources/six ownership categories | OV01-OV03/OV08-OV11 | Source/analysis inventory + boundary map; O00 re-entry | Prepared |
-| C1 page/session/Surface/effect seam | OV01-OV10 | Architecture maps/patterns; O01/O02 direct proof | Prepared, no implementation |
-| C2 rapid scope A -> B | OV04-OV05 | T01/T05, O00 RED -> O01 GREEN | Planned |
-| C2 route while active | OV01/OV04-OV05 | T02 | Planned |
-| C2 dispose overview/usage | OV04 | T03/T04 | Planned |
-| C2 stale failure/success | OV04-OV05 | T01/T05/T06 | Planned |
-| C2 history lazy reads | OV01/OV03 | T07 and existing exact two-case history test | Existing witness referenced; extended proof planned |
-| C2 HR partial | OV06 | T08 and current query characterization | Referenced/planned |
-| C2 overview error/retry | OV06-OV07 | T09 | Planned |
-| C2 usage partial good data | OV06-OV07 | T10/current aggregation tests | Referenced/planned |
-| C2 no unrelated reads | OV03 | T11/current query test | Referenced/planned |
-| C2 accepted-scope dialogs | OV09 | T12/owned overlay witnesses | Planned |
-| C2 typed team intent | OV08/OV10 | T13 and page route test | Planned |
-| C2 service-free charts/lists | OV08 | T14 and real browser | Planned |
-| C2 one header count owner | OV02 | T15 plus direct source ownership review | Planned |
-| C3 sequential children | OV12, OV13, OV14, OV15 | O00-O03/checkpoints, explicit later authority | Prepared |
-| C4 roadmap | OV15 | [Roadmap](../UI_Agents_Component_Seams_Bundle/plan/04-agent-module-continuation-roadmap.md), umbrella link | Prepared, none implemented |
-| Safety/English/literal non-goals | OV14-OV15 | Requirements, validation, no-drift receipt, manifests | Preparation gate |
-| Final report items 23-25 | OV15 | Parent report links this child/roadmap and separate readiness | Documentation follow-up |
+| Input / requirement | Current evidence and decision | State |
+|---|---|---|
+| A0 committed predecessor seal | [Committed handoff](proof/A0/committed-handoff.json), [adjudication](proof/A0/adjudication.md): exact tested working source/assets; committed differences are explicitly newline-only. | Solved with byte qualification |
+| A1 avatar assembly compatibility | Same adjudication and published-artifact observation; no supported binary package contract found. Current Conversations implementation/namespace/direction retained; AppComponents README clarified. | Solved for documented source contract |
+| A2 responsive assets | Existing single component-layout-utilities.css remains sufficient and unchanged. O03's real responsive regression uses its existing 2xl Grid API; corrected baseline and browser proof retained. | Solved |
+| A3 current entry / authorization | Input 02, A0 entry inventories/builds/discovery, current architecture and execution ledger. Original preparation inputs/proof remain historical. | Solved |
+| OV01 route/context ownership | O00 negative witnesses and O01/O02 public page/context tests; final owning selection. Usage scope remains outside semantic chat identity. | Solved |
+| OV02 one accepted Overview / header independence | O01 registered query integration, session tests, O02 real header/metric/HR browser behavior. No fake summary or bound count facts. | Solved |
+| OV03 separate reads and demand | Header/Overview/Usage query operations, no obsolete combined query caller; history-host and scope-isolation tests. | Solved |
+| OV04 cancellation/generation | O00 semantic RED -> O01 GREEN; O02 dialog and real ownership regressions; disposal/late success/failure/finally coverage. | Solved |
+| OV05 desired/accepted scope | O00 scope/route RED and O01 acceptance; O02 current-scope dialog gate; final sandbox mismatch/transition states. | Solved |
+| OV06 independent safe failure/retry/partial data | O01/O02 owning tests and real Web fault-injection reads; matching partial contributions retained. | Solved |
+| OV07 initial versus stale presentation | Session and public Surface/page assertions; real initial/stale/empty/loading/partial browser states. | Solved |
+| OV08 actual controlled surface | O02 in-Module closure; O03 actual movement and independent real-component sandbox tests/plots. | Solved |
+| OV09 owned usage overlays | All three dialogs own reads; public real DialogService navigation RED/GREEN proves conditional sibling API necessity. Unrelated dialogs survive. | Solved, exact live sibling patch required |
+| OV10 Defaults/HR/team effects | Page-owned commands preserved, no retry/warmup replay; actual HR launch/Defaults confirmation/team navigation browser proof. | Solved |
+| OV11 real composition/assets | In-Module O02 browser closure, final Web and Parity/Fast chart/asset/long/responsive evidence; original failures retained. | Solved |
+| OV12 ordered physical movement | Original pre-move baseline before source movement; explicit corrected pre-owner replay after the proven responsive fix; seven real files moved; no application effect moved. | Solved |
+| OV13 existing sandbox and measured comparison | Typed Overview scenarios, compatibility discovery/tests; 12 cold starts, 216 corrected comparable warm observations and restored bytes/owned exits. | Solved |
+| OV14 validation and honest evidence | Exact focused discovery/executions, direct builds, graph review, browser review, fresh static/secret gates. Broad stable passed 10236 cases with explicit deferred-theory/display adjudication for the 10181 pre-execution entries. Existing documentation debt is explicit. | Solved for bounded source/behavior; unchanged historical documentation debt remains |
+| OV15 sequential closure / Governance preparation only | O00/O01/O02 individual closures/manifests; Governance has not begun before the Overview manifest is verified. | Overview closed; Governance preparation follows the verified manifest |
 
-No unsafe characterization becomes intended acceptance. O00 must turn source hypotheses into executed evidence before corrections; disproven suspicions remain documented with no unnecessary change. New uncertainty reopens the responsible decision before dependent work, without reopening unrelated accepted provider/capability architecture.
+Unsafe characterization is not intended acceptance. Correct existing behaviors remained characterization, test setup/assertion errors are distinguished from semantic RED, and late responsive evidence reopened the affected baseline before comparable measurements. Counts describe executions and do not constrain architecture. Final focused selections execute 363 cases covering 360 distinct display names because three cases intentionally overlap compatibility/owning selections.

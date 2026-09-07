@@ -83,3 +83,15 @@ The embedded baseline is the public rendering snapshot captured before Capabilit
 Both modes use the same specimens. Fast scans the existing UI/UiSandbox/Conversations roots, with live BaseLib compiled CSS; no Module or broad Components scan root is added. Capabilities correctness, source movement, direct-watch baseline and comparison evidence belong to `codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle`. Small graph size alone is not performance proof.
 
 The themes also import `Tailwind/main/component-layout-utilities.css`, the shared production compatibility rules for BaseLib Split's runtime-composed responsive classes. These rules intentionally remain unlayered to match the live BaseLib cascade. Class generation alone is insufficient here; the browser acceptance verifies actual computed FilterBar layout in both modes.
+
+## Overview specimen
+
+Open `/agents?specimen=overview&scenario=baseline&layout=matched&usageScope=both` in either mode. The absent or unknown specimen still selects Catalog; existing catalog and capabilities query/default behavior remains. Overview scopes use explicit `both`, `agents` and `chats` tokens in this sandbox only. Production route semantics are unchanged.
+
+The baseline is an immutable export from a task-owned canonical fixture: two rendering providers, two technical agents, six completed usage observations and one added team, read through production persistence/query adapters. No provider was invoked. The export also contains actual seeded workspace counts and safe bundled-avatar paths. The sandbox reads only its embedded JSON; it has no database profile, query implementation, projection source or provider/runtime registration.
+
+The scenario selector covers initial loading/failure, stale Overview, empty/ready, HR and bound-count partial header states, loading/stale usage, desired-versus-accepted scope mismatch, wrong-scope rejection, partial/unknown/unpriced usage, long consumer/provider/team labels and pending detail actions. All scope, retry, detail and team interactions change sample state and the intent log. Details do not open the production data-loading dialogs. Long model-label behavior is validated in the real retained Module dialog because the Overview surface has no model rows.
+
+Both modes use the actual Charts components, Apex chart JavaScript/static assets, isolated Overview CSS, real consumer avatars, icons and tooltips. The Overview controls reserve the observed full-app top offset so its 1600x1000 comparison uses the same rendered chart frame. Small viewports and long labels are separate browser checks.
+
+Overview-specific direct-watch measurements and exact probe/restoration evidence belong to `codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/O03`. Historical Catalog/Capabilities timings are not Overview measurements.
