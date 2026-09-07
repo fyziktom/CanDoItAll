@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.Core;
 
 public enum CapabilityVerificationDisposition {
-    Rejected, CanceledBeforeDiagnostic, DiagnosticInterrupted, Superseded, PublicationCanceled, PublicationNotStarted, Committed, Unconfirmed
+    Rejected, CanceledBeforeDiagnostic, DiagnosticInterrupted, Superseded, PublicationCanceled, PublicationNotStarted, Committed, Unconfirmed, InfrastructureUnavailable
 }
 
 public enum CapabilityProofRecovery { Satisfied, NotPublished, Superseded, Unconfirmed }
@@ -67,7 +67,7 @@ public sealed class CapabilityProofReceipt {
         Capabilities = agent.Capabilities.Select(attachment => attachment.CapabilityId == capabilityId ? attachment with {
             ProofStatus = proof.Status, LastVerifiedAtUtc = proof.CheckedAtUtc, ProofNotes = proof.Notes
         } : attachment).ToArray(),
-        UpdatedAtUtc = proof.CheckedAtUtc
+        UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, proof.CheckedAtUtc)
     };
     internal static CapabilityCatalogItem Apply(CapabilityCatalogItem capability, CapabilityVerificationResult proof) => capability with {
         ProofStatus = proof.Status, LastVerifiedAtUtc = proof.CheckedAtUtc, ProofNotes = proof.Notes
@@ -105,11 +105,11 @@ internal sealed class CapabilityVerificationPublication(ISandboxWorkspaceCatalog
             if (agent.ProviderProfileId.HasValue && provider is null) {
                 return new(CapabilityVerificationDisposition.Rejected);
             }
-            provider = CapabilityProofReceipt.Copy(provider);
+            provider = provider is null ? null : provider with { Profile = CapabilityProofReceipt.Copy(provider.Profile) };
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
             return new(CapabilityVerificationDisposition.CanceledBeforeDiagnostic);
         } catch (Exception) {
-            return new(CapabilityVerificationDisposition.Rejected);
+            return new(CapabilityVerificationDisposition.InfrastructureUnavailable);
         }
 
         CapabilityVerificationResult proof;
@@ -139,7 +139,7 @@ internal sealed class CapabilityVerificationPublication(ISandboxWorkspaceCatalog
                 var currentAgent = current.Agents.SingleOrDefault(item => item.Id == agentId);
                 var currentCapability = current.Capabilities.SingleOrDefault(item => item.Id == capabilityId);
                 var currentProvider = agent.ProviderProfileId is { } providerId
-                    ? providers.CaptureProvider(providerId, new(current, snapshot.Revision)) : null;
+                    ? providers.CaptureProvider(providerId, new(current, current.CatalogDataRevision)) : null;
                 if (currentAgent is null || currentCapability is null || !receipt.MatchesInputs(currentAgent, currentCapability) ||
                     CapabilityProofReceipt.Fingerprint(currentProvider) != providerFingerprint) {
                     throw new VerificationSupersededException();

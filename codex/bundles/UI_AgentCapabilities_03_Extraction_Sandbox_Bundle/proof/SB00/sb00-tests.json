@@ -1,0 +1,82 @@
+[
+  {
+    "kind": "unit",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~AgentCapabilitiesSessionTests.|FullyQualifiedName~CatalogSandboxContextTests.|FullyQualifiedName~CatalogAssetModeTests.",
+      "--logger",
+      "trx;LogFileName=sb00-unit.trx",
+      "--results-directory",
+      ".mcp-state\\capa03"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T02:53:24.427636+00:00",
+    "finishedUtc": "2026-09-07T02:53:26.536301+00:00",
+    "counters": {
+      "total": "30",
+      "executed": "30",
+      "passed": "30",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "nonPass": []
+  },
+  {
+    "kind": "components",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~AgentCapabilitiesSurfaceTests.|FullyQualifiedName~AgentCapabilitiesHostTests.|FullyQualifiedName~AgentCapabilitiesReadLifecycleTests.|FullyQualifiedName~AgentCapabilityListTests.|FullyQualifiedName~AgentEditorCapabilityCompositionTests.|FullyQualifiedName~AgentDetailsDialogCapabilityTests.|FullyQualifiedName~AgentsHomePageTests.|(FullyQualifiedName~AgentPanelSelectionFailClosedTests.&FullyQualifiedName~Capabilities_panel_)",
+      "--logger",
+      "trx;LogFileName=sb00-components.trx",
+      "--results-directory",
+      ".mcp-state\\capa03"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T02:53:26.536301+00:00",
+    "finishedUtc": "2026-09-07T02:54:10.113689+00:00",
+    "counters": {
+      "total": "49",
+      "executed": "49",
+      "passed": "49",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "nonPass": []
+  }
+]

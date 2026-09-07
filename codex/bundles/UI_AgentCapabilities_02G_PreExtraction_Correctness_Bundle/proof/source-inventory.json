@@ -1,0 +1,144 @@
+{
+  "utc": "2026-09-07T01:40:49.359575+00:00",
+  "head": "b540b465cf408dd9c9adeb939538b78ced9bc7bb",
+  "basis": "HEAD plus the owned unstaged source/test changes; no commit claimed",
+  "files": [
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+      "sha256": "000f298ac64131779c5f00f424f1806f4d2e000c9cc4f2b22315bfc0d40382ad",
+      "bytes": 53248
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentConfigurationVersion.cs",
+      "sha256": "29a77806fa965a21ffcbd3da6120061670043b885c282685e4d336c6c35da940",
+      "bytes": 1632
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
+      "sha256": "a0595829419243d6ec4c27666949bc6d1e2681d792c73ddf1f286c86dad3d774",
+      "bytes": 10742
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentExternalProvisioningService.cs",
+      "sha256": "44c14121ab01ec34383d3acf550e68daedd17102fc229a8cd7c0098196983606",
+      "bytes": 24665
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs",
+      "sha256": "b347565843f721915a4b816c67fc31333fc67f784d89c92ef8a316de8f0bf3bd",
+      "bytes": 9618
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
+      "sha256": "b52a4fb51b3fb0fddc30436c4883044c95fb34d763e641762118c7fcc22dd08d",
+      "bytes": 28615
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+      "sha256": "9ebd7c36273c644e875782d126ceea131d41d9d1a9f22b77da92aa7abd305ee8",
+      "bytes": 12768
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Packages/AgentPackageImportService.cs",
+      "sha256": "a1a3c94391a348c90a260dc8fdec257cb0bf572bb7ef1e88688fee3542d9a554",
+      "bytes": 23045
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
+      "sha256": "74ab113e577bb0efd5efbef2d5f1b04fa9ab58248d3cda03a7ec62b5fbaac000",
+      "bytes": 87928
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkOrganizationCatalogRepairService.cs",
+      "sha256": "fb50b38405f237874338f05e2d80751872d77edca3b15311afe1e92aa8ead962",
+      "bytes": 23874
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+      "sha256": "37ef830c24a858985d3f685ba1408bcbc692fb1a46c7fb9b91e08599d54bbfff",
+      "bytes": 19028
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs",
+      "sha256": "be2581953f197605a4a685c9f07bac0931d614db6d8b9dbfd8506295e177e894",
+      "bytes": 3877
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c",
+      "bytes": 22082
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "sha256": "7950f5e5718f68227930376584727020a1fb0023333b82c35ecc6f1d02ad50fe",
+      "bytes": 9794
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs",
+      "sha256": "2cc660c9cad38769f70380405a72f5c9fbb59374618c6cd49b837223c3b48544",
+      "bytes": 4153
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityOperations.cs",
+      "sha256": "fcf4f5e63ccd898c74cac1c4ca79b8240f9912e3df9756939d1769b2225bf425",
+      "bytes": 12549
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilityCuratorLaunch.cs",
+      "sha256": "295214bfc50497aa2a51d8e594ceabc441f448f958f3248c0596c5b8a4c492e3",
+      "bytes": 2496
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+      "sha256": "43cabf859f9817ea21d03c5bdbc6f07d4dccaf3f12aee553fd06e4177708529d",
+      "bytes": 48529
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesAcknowledgementTests.cs",
+      "sha256": "6fdd75e32a8c1db5e60e798f980aae41d2fcfcc1ec126f9b8870667ee2d1d27d",
+      "bytes": 9860
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesRecoveryEffectsTests.cs",
+      "sha256": "adf26be5d9eb01c037ef48735dd964649edaa0f77a204c736ab6f35b36b11dc2",
+      "bytes": 15048
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityCorrectnessIntegrationTests.cs",
+      "sha256": "b80fac5c67982d3ca4c17ffbc7fa68473b766a144862ec9c123cdbf812f8d37c",
+      "bytes": 13285
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationApiIntegrationTests.cs",
+      "sha256": "61f66cf630836576a30d34d003d945818ce9ff3977fd67dc291b383ee3059b9e",
+      "bytes": 5025
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationRaceIntegrationTests.cs",
+      "sha256": "8cc20ae45a9fccd2d094a1c72d7061fe64c0455ec262acea9f14f97df7815642",
+      "bytes": 7546
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityWorkspaceResolutionTests.cs",
+      "sha256": "71a46949ea598ab9eaddd5adfd5c839b4d48dca083590316841d2b5ef9bb0dac",
+      "bytes": 1986
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilityCorrectnessTests.cs",
+      "sha256": "0389664be8304ee05a95343768d76c23c2de1057fb2feb51edf8bacedaee36c5",
+      "bytes": 4661
+    }
+  ],
+  "unchangedProjectGraph": [],
+  "applicationTypesRetainedInModule": [
+    "AgentCapabilityOperationKind",
+    "AgentCapabilityOperationStatus",
+    "AgentCapabilityOperationState",
+    "CapabilityCuratorLaunchStatus",
+    "CapabilityCuratorLaunchSnapshot"
+  ],
+  "purePresentationMappedInHost": [
+    "AgentCapabilityOperationPresentation",
+    "AgentCapabilityCuratorPresentation"
+  ]
+}

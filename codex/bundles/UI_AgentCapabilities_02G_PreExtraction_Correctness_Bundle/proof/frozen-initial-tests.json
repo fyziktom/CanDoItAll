@@ -1,0 +1,37 @@
+{
+  "stage": "Frozen before production correction and RED execution",
+  "selections": [
+    {
+      "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilityCorrectnessTests.cs",
+      "class": "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityCorrectnessTests",
+      "expectedDiscoveredCases": 5,
+      "exactMethods": [
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityCorrectnessTests.Accepted_agent_updates_are_monotonic_and_assignment_recovery_finds_the_desired_set",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentCapabilityCorrectnessTests.Escaping_command_failure_finishes_its_own_entry_without_automatic_replay"
+      ]
+    },
+    {
+      "source": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesAcknowledgementTests.cs",
+      "class": "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesAcknowledgementTests",
+      "expectedDiscoveredCases": 4,
+      "exactMethods": [
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesAcknowledgementTests.Receiptless_diagnostic_acknowledgement_releases_only_the_retained_block_and_requires_new_intent",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesAcknowledgementTests.Receipt_backed_unknown_requires_canonical_verification_instead_of_abandonment",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesAcknowledgementTests.Curator_acknowledgement_survives_reconstruction_and_never_launches_or_deletes_a_chat",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesAcknowledgementTests.Curator_acknowledgement_preserves_a_previously_returned_authoritative_chat"
+      ]
+    },
+    {
+      "source": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityCorrectnessIntegrationTests.cs",
+      "class": "CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests",
+      "expectedDiscoveredCases": 7,
+      "exactMethods": [
+        "CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests.Proof_observation_time_does_not_regress_agent_revision_or_assignment_recovery",
+        "CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests.Future_agent_revision_survives_real_assignment_commit_and_read_only_recovery",
+        "CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests.Final_provider_capture_receives_current_catalog_content_and_its_current_revision",
+        "CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests.Initial_infrastructure_failure_is_not_input_rejection_and_never_dispatches_diagnostic",
+        "CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests.Unavailable_verification_API_returns_sanitized_conflict_without_automatic_replay"
+      ]
+    }
+  ]
+}

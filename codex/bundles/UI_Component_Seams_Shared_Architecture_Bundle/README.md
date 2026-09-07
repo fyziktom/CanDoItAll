@@ -5,7 +5,7 @@
 **Kind:** Non-executable architecture reference
 **Revision date:** 2026-09-05
 **Preparation status:** Revised; manual semantic validation recorded in reviews
-**Execution status:** Non-executable reference; the current owner request authorizes Providers-02 implementation and, after its closure, preparation only of the catalog extraction/sandbox measurement child
+**Execution status:** Non-executable reference. Each child records its own current owner authorization, prerequisites, implementation state and proof; historical child instructions are not standing authorization for later work.
 
 ## Purpose and authority
 
@@ -103,3 +103,7 @@ Follow-up: [explicit assets and direct observation](reviews/08-explicit-assets-a
 [Second stateful rendering archetype](reviews/10-second-archetype-state-read-seam.md).
 
 [Authoritative mutations and effect lifetimes](reviews/11-authoritative-mutations-and-effect-lifetimes.md).
+
+[Revision ordering and explicit liveness](reviews/12-revision-ordering-and-explicit-liveness.md).
+
+[Rendered closure and adversarial content](reviews/13-rendered-closure-and-adversarial-content.md).

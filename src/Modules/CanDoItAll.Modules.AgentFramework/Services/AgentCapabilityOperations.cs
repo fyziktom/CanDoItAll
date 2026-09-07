@@ -40,7 +40,13 @@ public sealed class AgentCapabilityOperations(IAgentCapabilityCommands commands,
     }
 
     private async Task<AgentCapabilityOperationState?> DispatchAsync(OperationEntry entry, CancellationToken token) {
-        var status = await commands.AssignAsync(entry.Assignment!, token);
+        AgentCapabilityOperationStatus status;
+        try {
+            status = token.IsCancellationRequested ? AgentCapabilityOperationStatus.CanceledBeforeDispatch
+                : await commands.AssignAsync(entry.Assignment!, token);
+        } catch (Exception) {
+            status = AgentCapabilityOperationStatus.Unconfirmed;
+        }
         return Finish(entry, status);
     }
 
@@ -78,6 +84,18 @@ public sealed class AgentCapabilityOperations(IAgentCapabilityCommands commands,
         return Finish(entry, status);
     }
 
+    public bool AcknowledgeDiagnostic(Guid agentId, Guid attemptId) {
+        lock (gate) {
+            if (!operations.TryGetValue(agentId, out var entry) || entry.State.AttemptId != attemptId ||
+                !entry.State.CanAcknowledgeDiagnostic || entry.State.IsActive || entry.Receipt is not null || entry.Assignment is not null) {
+                return false;
+            }
+            operations.Remove(agentId);
+        }
+        Changed?.Invoke();
+        return true;
+    }
+
     public bool CompleteReconciliation(Guid agentId, Guid attemptId, bool adoptCurrent = false) {
         lock (gate) {
             if (!operations.TryGetValue(agentId, out var entry) || entry.State.AttemptId != attemptId ||
@@ -98,10 +116,17 @@ public sealed class AgentCapabilityOperations(IAgentCapabilityCommands commands,
             }
             state = owner.Assignment is { } assignment ? State(assignment, status, false)
                 : ProofState(owner.State.AttemptId, owner.State.AgentId, owner.State.CapabilityId, status, false);
-            if (status is AgentCapabilityOperationStatus.Rejected or AgentCapabilityOperationStatus.CanceledBeforeDispatch) {
+            var retainedReceipt = receipt ?? owner.Receipt;
+            if (owner.Assignment is null && retainedReceipt is null && status == AgentCapabilityOperationStatus.Unconfirmed) {
+                state = state with {
+                    CanAcknowledgeDiagnostic = true,
+                    Message = "The diagnostic may have executed, but no proof receipt was returned. Acknowledge this uncertainty before starting a new diagnostic. Acknowledgement does not undo or repeat it."
+                };
+            }
+            if (status is AgentCapabilityOperationStatus.Rejected or AgentCapabilityOperationStatus.CanceledBeforeDispatch or AgentCapabilityOperationStatus.UnavailableBeforeDispatch) {
                 operations.Remove(state.AgentId);
             } else {
-                operations[state.AgentId] = owner with { State = state, Receipt = receipt ?? owner.Receipt };
+                operations[state.AgentId] = owner with { State = state, Receipt = retainedReceipt };
             }
         }
         Changed?.Invoke();
@@ -135,9 +160,16 @@ public sealed class AgentCapabilityOperations(IAgentCapabilityCommands commands,
     }
 
     private async Task<AgentCapabilityOperationState?> DispatchDiagnosticAsync(OperationEntry owner, CancellationToken token) {
-        var outcome = await commands.DiagnoseAsync(owner.State.AgentId, owner.State.CapabilityId, token);
+        CapabilityVerificationOutcome outcome;
+        try {
+            outcome = token.IsCancellationRequested ? new(CapabilityVerificationDisposition.CanceledBeforeDiagnostic)
+                : await commands.DiagnoseAsync(owner.State.AgentId, owner.State.CapabilityId, token);
+        } catch (Exception) {
+            outcome = new(CapabilityVerificationDisposition.Unconfirmed);
+        }
         var status = outcome.Disposition switch {
             CapabilityVerificationDisposition.Rejected => AgentCapabilityOperationStatus.Rejected,
+            CapabilityVerificationDisposition.InfrastructureUnavailable => AgentCapabilityOperationStatus.UnavailableBeforeDispatch,
             CapabilityVerificationDisposition.CanceledBeforeDiagnostic => AgentCapabilityOperationStatus.CanceledBeforeDispatch,
             CapabilityVerificationDisposition.Committed => AgentCapabilityOperationStatus.Committed,
             CapabilityVerificationDisposition.Superseded or CapabilityVerificationDisposition.DiagnosticInterrupted => AgentCapabilityOperationStatus.Superseded,
@@ -154,7 +186,8 @@ public sealed class AgentCapabilityOperations(IAgentCapabilityCommands commands,
             AgentCapabilityOperationStatus.DesiredStateSatisfied => "The captured proof is authoritative. No diagnostic was repeated.",
             AgentCapabilityOperationStatus.DefinitelyNotCommitted => "Proof was not published. Adopt the current state before deliberately starting another diagnostic.",
             AgentCapabilityOperationStatus.Superseded => "The diagnostic was interrupted or its inputs changed. No stale proof was published; adopt the current state.",
-            AgentCapabilityOperationStatus.Rejected => "The diagnostic could not start. Check the agent, attachment, and provider availability.",
+            AgentCapabilityOperationStatus.Rejected => "The diagnostic could not start. Check the agent, attachment, and provider identity.",
+            AgentCapabilityOperationStatus.UnavailableBeforeDispatch => "The diagnostic did not start because its current data is unavailable. Retry loading the target before making a new diagnostic request.",
             AgentCapabilityOperationStatus.CanceledBeforeDispatch => "Verification canceled before the diagnostic started.",
             _ => "Proof publication is unconfirmed. Verify canonical state without repeating the diagnostic."
         });

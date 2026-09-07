@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "browserVersion": "149.0.7827.55",
+  "steps": [
+    "Real diagnostic publishes proof before a lost response; explicit acknowledgement unlocks without replay and preserves raw draft.",
+    "Inspected the actual visible managed chat after lost creation response; acknowledgement preserves its canonical identity and performs no launch or deletion."
+  ],
+  "initial": {
+    "alphaId": "a970e3cc-6bc8-4b4d-805d-7eb333f6f5ea",
+    "betaId": "a8670f12-5957-45fe-8fbd-e33a5652aa61",
+    "capabilityId": "b550e854-a574-49fa-b423-df492a310655",
+    "assigned": false,
+    "proof": "NotRun",
+    "curatorSessionCount": 0,
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false,
+    "assignmentCalls": 0,
+    "diagnosticCalls": 0,
+    "previewCalls": 0,
+    "curatorCalls": 0,
+    "chatSessionId": null,
+    "failEditorRead": false
+  },
+  "final": {
+    "alphaId": "a970e3cc-6bc8-4b4d-805d-7eb333f6f5ea",
+    "betaId": "a8670f12-5957-45fe-8fbd-e33a5652aa61",
+    "capabilityId": "b550e854-a574-49fa-b423-df492a310655",
+    "assigned": true,
+    "proof": "Verified",
+    "curatorSessionCount": 1,
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false,
+    "assignmentCalls": 1,
+    "diagnosticCalls": 2,
+    "previewCalls": 0,
+    "curatorCalls": 1,
+    "chatSessionId": "0292ee48-6006-4c68-83a2-f701e0f108af",
+    "failEditorRead": false
+  },
+  "pageErrors": []
+}

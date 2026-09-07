@@ -1,0 +1,11 @@
+# Revision ordering and explicit liveness
+
+Evidence: [Capabilities-02G adjudication](../../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/adjudication.md) and [semantic test map](../../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/semantic-test-map.md). These are generalized rules from direct tests and actual production composition, not a universal type design.
+
+1. Recovery that orders concurrency revisions requires strictly increasing revisions for every supported accepted configuration mutation. Wall-clock and diagnostic observation timestamps are not sufficient. Preserve observation time separately; include import, maintenance and canonical normalization producers in the audit. Unchanged normalization must be idempotent and rejected/superseded work must not advance revision.
+2. An operation coordinator owns its state-machine integrity even when an adapter unexpectedly throws. Finish only its own attempt as non-active unknown, preserve newer owners, and provide a non-replaying repair path.
+3. Exact evidence determines recovery options. A retained immutable submission or proof receipt continues to require canonical reads. If an effect has no exact correlation by construction, explicit attempt-fenced acknowledgement can release a documented circuit-local block without claiming absence, rollback or permission to replay the original effect. A new invocation requires new intent.
+4. Retain any known committed identity when acknowledging a different unknown attempt. Admission readiness and proof of historical success are separate facts.
+5. Keep current snapshot content paired with its actual revision. Copy mutable descendants independently while retaining immutable identity/fingerprint values; a serialization round trip is not automatically a complete semantic copy.
+6. Invalid input and unavailable infrastructure before dispatch have distinct typed outcomes. Document safe API behavior and response declarations; never imply automatic replay of a non-idempotent effect merely because its prerequisite read was unavailable.
+7. Map one accepted application snapshot into pure presentation data. Rendering contracts may expose opaque attempt identity and action availability; they do not own mutation outcome, recovery or admission policies. Keep these policies outside lightweight rendering assemblies.

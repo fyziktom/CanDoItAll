@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Capabilities;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;

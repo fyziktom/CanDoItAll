@@ -1,0 +1,180 @@
+[
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:21:52.554939+00:00",
+    "finishedUtc": "2026-09-07T04:21:54.954201+00:00",
+    "log": "sb02-build-CanDoItAll.Conversations.Components.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:21:54.954201+00:00",
+    "finishedUtc": "2026-09-07T04:21:59.002902+00:00",
+    "log": "sb02-build-CanDoItAll.AppComponents.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:21:59.003896+00:00",
+    "finishedUtc": "2026-09-07T04:22:02.517470+00:00",
+    "log": "sb02-build-CanDoItAll.AgentFramework.UI.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:22:02.518471+00:00",
+    "finishedUtc": "2026-09-07T04:22:08.732296+00:00",
+    "log": "sb02-build-CanDoItAll.AgentFramework.Components.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:22:08.732296+00:00",
+    "finishedUtc": "2026-09-07T04:22:30.801280+00:00",
+    "log": "sb02-build-CanDoItAll.Modules.AgentFramework.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:22:30.802280+00:00",
+    "finishedUtc": "2026-09-07T04:22:58.183069+00:00",
+    "log": "sb02-build-CanDoItAll.Web.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q",
+      "--property:CatalogAssetMode=Parity"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:22:58.183069+00:00",
+    "finishedUtc": "2026-09-07T04:23:02.143021+00:00",
+    "log": "sb02-build-CanDoItAll.AgentFramework.UiSandbox-Parity.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q",
+      "--property:CatalogAssetMode=Fast"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:23:02.144023+00:00",
+    "finishedUtc": "2026-09-07T04:23:06.610931+00:00",
+    "log": "sb02-build-CanDoItAll.AgentFramework.UiSandbox-Fast.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:23:06.610931+00:00",
+    "finishedUtc": "2026-09-07T04:23:41.732285+00:00",
+    "log": "sb02-build-CanDoItAll.Tests.Unit.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:23:41.733282+00:00",
+    "finishedUtc": "2026-09-07T04:24:13.972833+00:00",
+    "log": "sb02-build-CanDoItAll.Tests.Components.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:24:13.974340+00:00",
+    "finishedUtc": "2026-09-07T04:24:42.849752+00:00",
+    "log": "sb02-build-CanDoItAll.Tests.Integration.txt"
+  }
+]

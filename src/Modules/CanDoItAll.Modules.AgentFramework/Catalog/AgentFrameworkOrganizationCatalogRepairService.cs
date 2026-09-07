@@ -267,7 +267,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             ProviderProfileId = provider.Id,
             Model = model,
             ConfigurationJson = configurationJson,
-            UpdatedAtUtc = updatedAtUtc
+            UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, updatedAtUtc)
         };
     }
 

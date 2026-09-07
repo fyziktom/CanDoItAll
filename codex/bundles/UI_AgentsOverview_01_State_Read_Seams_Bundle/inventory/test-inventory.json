@@ -1,0 +1,79 @@
+{
+  "status": "Preparation reference only, not a new execution",
+  "referenceDiscoveryUtc": "2026-09-07T04:40:52.534278+00:00",
+  "sourceDiscoverySha256": "4ddda6f06272a682ba88859cb04b34def09462526d4886ba3379cdd6de38cfdd",
+  "instruction": "Rebuild/list/freeze exact methods and expanded cases at O00 before execution; reviewed differences are not count invariants.",
+  "groups": [
+    {
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageWorkloadSelectionTests",
+      "expectedDiscoveryReference": 37,
+      "discoveredNames": [
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.History_hosts_round_trip_without_inheriting_chat_or_team_routes(tab: \"providers\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.History_hosts_round_trip_without_inheriting_chat_or_team_routes(tab: \"request-history\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.DefinitionsAreTheDefaultSimpleChatWorkspaceView",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.ConversationDeepLinksRemainExplicitAfterDefinitionsBecomeTheDefault",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.ChatsRouteRedirectsAndPreservesRecognizedState",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.InvalidOrIncompatibleSimpleChatStateIsDiscardedDeterministically",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: \"agents\", expected: Agents)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: \"simple-chats\", expected: SimpleChats)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: \"both\", expected: Both)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests.UsageScopeHasTypedDeterministicParsing(value: \"invalid\", expected: Both)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.History_demand_skips_aggregates_but_keeps_shell_identity(section: Providers)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.History_demand_skips_aggregates_but_keeps_shell_identity(section: RequestHistory)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.Usage_refresh_does_not_reload_shell",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.Hr_catalog_failure_is_partial_but_overview_failure_is_not(failOverview: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests.Hr_catalog_failure_is_partial_but_overview_failure_is_not(failOverview: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Overview, key: \"overview\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Agents, key: \"agents\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: SimpleChats, key: \"simple-chats\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Providers, key: \"providers\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: RequestHistory, key: \"request-history\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Voice, key: \"voice\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: FloatingChat, key: \"floating-chat\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Chat, key: \"chat\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Capabilities, key: \"capabilities\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Governance, key: \"governance\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Sections_preserve_existing_tab_keys(section: Diagnostics, key: \"diagnostics\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Leaving_catalog_clears_team_but_retains_agent",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests.Same_route_keeps_access_readiness_but_changed_selection_requires_loading",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageWorkloadSelectionTests.NoneAndUnknownSelectionAreRejected",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageWorkloadSelectionTests.ChatSessionIdDoesNotClassifySimpleChat",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests.Selected_sources_are_read_concurrently_and_reported_deterministically",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests.AgentsOnlyReturnsOnlyAgentEvidence",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests.SimpleChatsOnlyReturnsOnlyInvocationEvidence",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests.BothEqualsDeduplicatedSourceSum",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests.RetriesAddAttemptCostButOnlyOneOperationExecution",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests.LegacyKnownTokensRemainUnpricedRatherThanFree",
+        "CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests.PartialSourceFailureIsVisible"
+      ]
+    },
+    {
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_consumer_list_preserves_compact_avatar_led_agent_rows|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_failure_ranking_keeps_failure_first_and_run_count_secondary|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo",
+      "expectedDiscoveryReference": 12,
+      "discoveredNames": [
+        "CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_consumer_list_preserves_compact_avatar_led_agent_rows",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_failure_ranking_keeps_failure_first_and_run_count_secondary",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Hr_agent_avatar_action_remains_in_the_page_header_across_module_tabs",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chat_inner_view_is_restored_from_the_typed_query_state",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested(tab: \"providers\")",
+        "CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested(tab: \"request-history\")",
+        "CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation"
+      ]
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests",
+      "expectedDiscoveryReference": 1,
+      "discoveredNames": [
+        "CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Real_registration_reads_overview_and_bound_resources"
+      ]
+    }
+  ]
+}

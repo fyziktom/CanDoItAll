@@ -1,0 +1,68 @@
+[
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q",
+      "--property:CatalogAssetMode=Parity"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:26:36.637550+00:00",
+    "finishedUtc": "2026-09-07T04:26:41.189831+00:00",
+    "log": "sb02-repair-build-CanDoItAll.AgentFramework.UiSandbox-Parity.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q",
+      "--property:CatalogAssetMode=Fast"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:26:41.190952+00:00",
+    "finishedUtc": "2026-09-07T04:26:45.786491+00:00",
+    "log": "sb02-repair-build-CanDoItAll.AgentFramework.UiSandbox-Fast.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:26:45.787498+00:00",
+    "finishedUtc": "2026-09-07T04:27:15.813434+00:00",
+    "log": "sb02-repair-build-CanDoItAll.Tests.Unit.txt"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "--nologo",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T04:27:15.814436+00:00",
+    "finishedUtc": "2026-09-07T04:27:44.978119+00:00",
+    "log": "sb02-repair-build-CanDoItAll.Tests.Components.txt"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "utc": "2026-09-07T06:11:57.436374+00:00",
+  "test": "Responsive_filter_layout_matches_full_app_at_large_desktop",
+  "expectedCases": [
+    "Parity",
+    "Fast"
+  ],
+  "expected": {
+    "flexDirection": "row",
+    "alignItems": "center",
+    "justifyContent": "space-between"
+  },
+  "sourceChangeBeforeRed": false
+}

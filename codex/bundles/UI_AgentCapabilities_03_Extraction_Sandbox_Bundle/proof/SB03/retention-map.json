@@ -1,0 +1,2950 @@
+{
+  "utc": "2026-09-07T06:48:23.962185+00:00",
+  "artifacts": [
+    {
+      "source": ".mcp-state/capa03/stable-build.txt",
+      "retained": "proof/SB03/validation/stable-build.txt.gz",
+      "capturedSha256": "a4b5efa82dce8389a40afc2277d00d2828b75f72d2dca2fc373a41624dfbf940",
+      "retainedSha256": "3d6d37ca43c49edbf06bef2f1aba671ea04eb3e1cf929812397bd95f8a77ad18",
+      "sourceBytes": 126,
+      "retainedBytes": 151
+    },
+    {
+      "source": ".mcp-state/capa03/stable-discovery.txt",
+      "retained": "proof/SB03/validation/stable-discovery.txt.gz",
+      "capturedSha256": "220f09e42b7e7638cc4a44f445e407c354baefd84d5603636ecb506f69ade094",
+      "retainedSha256": "cd0032a3b5bb25cb86c37b3fd8df8b49f6d42519eb297a5c720dae11ffa3d36f",
+      "sourceBytes": 1565869,
+      "retainedBytes": 224274
+    },
+    {
+      "source": ".mcp-state/capa03/stable-frozen.json",
+      "retained": "proof/SB03/validation/stable-frozen.json.gz",
+      "capturedSha256": "4ddda6f06272a682ba88859cb04b34def09462526d4886ba3379cdd6de38cfdd",
+      "retainedSha256": "35627a339ff4c1cfc532702846441bd12ea995397822b1409155b23a6fc7f258",
+      "sourceBytes": 2756635,
+      "retainedBytes": 675031
+    },
+    {
+      "source": ".mcp-state/capa03/stable-result.txt",
+      "retained": "proof/SB03/validation/stable-result.txt.gz",
+      "capturedSha256": "8e7e477fde99e19a4816884f30f0ad5a3de3d1a7d22bae54c2357d30182ed36d",
+      "retainedSha256": "fcab0ab13991c113bf558347a20f7ced91d368bdbec259bed2a70c52389b156a",
+      "sourceBytes": 2731,
+      "retainedBytes": 574
+    },
+    {
+      "source": ".mcp-state/capa03/stable-summary.json",
+      "retained": "proof/SB03/validation/stable-summary.json",
+      "capturedSha256": "ea18077348ccd4166305a664324823a1b21afc6863eb233bcf8601839d7ebb4f",
+      "retainedSha256": "c7f97b1054c604fd1d5a8192dd37b87d21a804e0cbac26df55bcbfcb92fb3d9a",
+      "sourceBytes": 4186,
+      "retainedBytes": 4045
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-assembly-review.json",
+      "retained": "proof/SB03/validation/cascade-assembly-review.json",
+      "capturedSha256": "8ed7b20dbec694c8ee4e9ebb88ddb0b2c94bf97c66ff44b7e1aefee273114686",
+      "retainedSha256": "1d0a29a838fdc63dfdb26badd7f92a347e1937903a7c1fda1d2c586adceaf944",
+      "sourceBytes": 1440,
+      "retainedBytes": 1425
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-0.txt",
+      "retained": "proof/SB03/validation/cascade-build-0.txt.gz",
+      "capturedSha256": "472c7f6f84eee97d8ede57e490c5fc8dd72f2420846f49875dd06079a40118d9",
+      "retainedSha256": "1060fb86971a28fce4a5a91ce83c0b68fe125d20c1983fcf639798d1afefb377",
+      "sourceBytes": 38,
+      "retainedBytes": 78
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-1.txt",
+      "retained": "proof/SB03/validation/cascade-build-1.txt.gz",
+      "capturedSha256": "aa01fe73614b99efbf5515b4f2b562f65cf3ddb9111d7846a62b356250c475e6",
+      "retainedSha256": "c31cc6c461ff49de27f5f164232266da2b98558bf387ea2000667cb5cbd6bb8a",
+      "sourceBytes": 37,
+      "retainedBytes": 77
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-2.txt",
+      "retained": "proof/SB03/validation/cascade-build-2.txt.gz",
+      "capturedSha256": "26645c63c12deabb80ce2b560c43052bcae785e89c5d545e848bc37389a000c1",
+      "retainedSha256": "74de31f27386472865c18a04fdc3820222b1638eed85ade29f213cdd58a7025c",
+      "sourceBytes": 126,
+      "retainedBytes": 153
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-3.txt",
+      "retained": "proof/SB03/validation/cascade-build-3.txt.gz",
+      "capturedSha256": "1b6981f8288f34eb80d9a7e6b82676c3edcfa73cccabcd8c9096efd19ae77f70",
+      "retainedSha256": "44e319e98295c7c996a0c102d696a1ed173d6dae837b550e1cd4e5018bcf3c41",
+      "sourceBytes": 126,
+      "retainedBytes": 153
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-4.txt",
+      "retained": "proof/SB03/validation/cascade-build-4.txt.gz",
+      "capturedSha256": "07a4a45de59ede04ac1ce56ed8252ad2417dc49656ed2bbf974d3eeef2532412",
+      "retainedSha256": "91d0f5a0569975938f5a45b92dd75e78bfa282e5527efa74c2e26d61e83fddb7",
+      "sourceBytes": 126,
+      "retainedBytes": 153
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-5.txt",
+      "retained": "proof/SB03/validation/cascade-build-5.txt.gz",
+      "capturedSha256": "eedcd5453122df37fbe75751d7206255668ba708bc7a716689d4b546f401df62",
+      "retainedSha256": "7fcbdcb34aed353b5d5b3c6bdf4b65c119c44748d59332eb8556a2ef719cf9f1",
+      "sourceBytes": 126,
+      "retainedBytes": 153
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-6.txt",
+      "retained": "proof/SB03/validation/cascade-build-6.txt.gz",
+      "capturedSha256": "16fc2583e5f9a855551e0709428a62c41436d5246ac50f007da9f74a100b2b2f",
+      "retainedSha256": "0c7c0e8c013eac9866a7a806af4a4d074a822d82c63ae8e31dca31957c49417a",
+      "sourceBytes": 126,
+      "retainedBytes": 154
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-build-7.txt",
+      "retained": "proof/SB03/validation/cascade-build-7.txt.gz",
+      "capturedSha256": "400dc19db03b5b8ccebc751e8d7d926b923b93458ef19c2cb03d279b1e10df10",
+      "retainedSha256": "d8e114ac72938a9d52c6aae039c16bdb3c2d8a7faee9ccaedc6482d284c8cfb9",
+      "sourceBytes": 126,
+      "retainedBytes": 154
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-builds.json",
+      "retained": "proof/SB03/validation/cascade-builds.json",
+      "capturedSha256": "63a361ba6eef034dad8c1161f958fa68d5d392e2e0c6859b9f1d7e47c3f178b1",
+      "retainedSha256": "d3e01e2468326997807d538e360e81996eb66c97e771b6d02c810dd0f457e4ed",
+      "sourceBytes": 3158,
+      "retainedBytes": 3036
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Components-discovery.txt",
+      "retained": "proof/SB03/validation/cascade-Components-discovery.txt.gz",
+      "capturedSha256": "02589d873f182dba441fd2689c46901091af5a345a6ad5809bb0b13bb04b1669",
+      "retainedSha256": "281d552235e4b04519e72cfa7bf0e9bc1353c5a6a668bfd78c3a4b7b8b5b95b2",
+      "sourceBytes": 7153,
+      "retainedBytes": 1083
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Components-result.txt",
+      "retained": "proof/SB03/validation/cascade-Components-result.txt.gz",
+      "capturedSha256": "9838484548426b18cf8df2adb2c7a9082d5185b12e1142cfbc3c56ea61c0d529",
+      "retainedSha256": "38845a93883f11acd75694ca5316fdb05f41edbf8fe046a4136e1c540d43a49c",
+      "sourceBytes": 502,
+      "retainedBytes": 347
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Components-summary.json",
+      "retained": "proof/SB03/validation/cascade-Components-summary.json",
+      "capturedSha256": "a695b5a92e1b8479c41e99bbb99116a802a07be4e37934acba8ef65634a751ae",
+      "retainedSha256": "132ede24c6adb58dbf706262ca8c6e6c8f1d7502025c491dc82ad84154481459",
+      "sourceBytes": 37271,
+      "retainedBytes": 36673
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Components.trx",
+      "retained": "proof/SB03/validation/cascade-Components.trx.gz",
+      "capturedSha256": "bef3f9fc998dc35c6a7ead9fefb7a62b9664adc90e39ed4dd42bc3918d94e8cd",
+      "retainedSha256": "cd690a689c94b10b918b84ed7f6ed2d5437e63f98936c7022ebb1332d60f679e",
+      "sourceBytes": 64011,
+      "retainedBytes": 7139
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-runner-setup-error.json",
+      "retained": "proof/SB03/validation/cascade-runner-setup-error.json",
+      "capturedSha256": "cf77411ccc2b9124304102d203dbc71516ba0bce5b926d6bdcd25d2fbd689e7f",
+      "retainedSha256": "b88167021d684d3fa4f93a20e44da989a5ef23c99a037c9af975a7a3622bfbfc",
+      "sourceBytes": 287,
+      "retainedBytes": 282
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-static-0.txt",
+      "retained": "proof/SB03/validation/cascade-static-0.txt.gz",
+      "capturedSha256": "383fc82f776789e6a5830807f107d5e174b4496fd951e4e4cdfc49aaeffefb20",
+      "retainedSha256": "a04005d209c31b895e59951004f58e7d4b0f146dedb80c74b191dcb23ec41885",
+      "sourceBytes": 283,
+      "retainedBytes": 185
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-static-1.txt",
+      "retained": "proof/SB03/validation/cascade-static-1.txt.gz",
+      "capturedSha256": "23c5493c9ca2a01cf561655c8f361e8ef60300f2e888a773e690596154e01a64",
+      "retainedSha256": "e0795403c357949b7c3f1031cc68684281e0950520e36af90fbf8dcb5063abcf",
+      "sourceBytes": 68,
+      "retainedBytes": 109
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-static-2.txt",
+      "retained": "proof/SB03/validation/cascade-static-2.txt.gz",
+      "capturedSha256": "c47945ca134b67f1f4a3f1e98c7aa683ce525be01d8d9b4c4a91fe54cf8274d7",
+      "retainedSha256": "174f3abe0b720b68679aa5766cdc3ff33308cf84d9bdd7b480d6c087d87bd64c",
+      "sourceBytes": 187,
+      "retainedBytes": 183
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Unit-discovery.txt",
+      "retained": "proof/SB03/validation/cascade-Unit-discovery.txt.gz",
+      "capturedSha256": "ce43da1739d30d08e854e976d3b0c3bb5055f3bb277bac7177f4640bb6ed4d59",
+      "retainedSha256": "ac55d2583fcb9438eac66be243eb4026c08853384126d0d0b4369032107c0498",
+      "sourceBytes": 9704,
+      "retainedBytes": 1309
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Unit-result.txt",
+      "retained": "proof/SB03/validation/cascade-Unit-result.txt.gz",
+      "capturedSha256": "02532940685f3824131cda979786cce0c1acea73d111bbdab54322fcdbe51aa5",
+      "retainedSha256": "1da9bf9e2fe4d639a284adabb7732c25e666581e9ee7b94599531f60a15fab64",
+      "sourceBytes": 475,
+      "retainedBytes": 341
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Unit-summary.json",
+      "retained": "proof/SB03/validation/cascade-Unit-summary.json",
+      "capturedSha256": "768baf95dfcfad4c497a4a1c3bcdf43906fb70e03570286cfa96b4fff3adcd72",
+      "retainedSha256": "69fd7e57f8271537434ab7ecdb9955744ae2c821a87be60b63d1d81ed90f68e5",
+      "sourceBytes": 54903,
+      "retainedBytes": 53997
+    },
+    {
+      "source": ".mcp-state/capa03/cascade-Unit.trx",
+      "retained": "proof/SB03/validation/cascade-Unit.trx.gz",
+      "capturedSha256": "ca371d05554d2117961441e5009850b975090ece817d8710ef049381e1d27a64",
+      "retainedSha256": "5142288fd771d8a0e59a06b33ffad61738a9b259a8ace7b5cefa1120e1c4b645",
+      "sourceBytes": 93920,
+      "retainedBytes": 11634
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-assembly-review.json",
+      "retained": "proof/SB03/validation/responsive-assembly-review.json",
+      "capturedSha256": "71e2cef8039547dd84db74ad610d9597467f667e87cba89ca946a10eeb1f8cc3",
+      "retainedSha256": "c3cbda2bb304f109f4c0b396587098bfd6a672e77c176da1e7098e1ca9049e0e",
+      "sourceBytes": 1547,
+      "retainedBytes": 1530
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-0.txt",
+      "retained": "proof/SB03/validation/responsive-build-0.txt.gz",
+      "capturedSha256": "26bcaa95ce79e9f3d52825920461427c785d553da21473ab48a5abd6279d3039",
+      "retainedSha256": "e97142aea426fb324ac3d367cda5d5a3345ef8e3f96e285e12d387e934c22d23",
+      "sourceBytes": 38,
+      "retainedBytes": 81
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-1.txt",
+      "retained": "proof/SB03/validation/responsive-build-1.txt.gz",
+      "capturedSha256": "90fe6f48f9104e80853083761652e2d8f6119846e84febcec657c4d49da66a90",
+      "retainedSha256": "cd86567f3aacf79c218c4ca5738df44a6f75ecb78a622dfea68b88e86fceeeee",
+      "sourceBytes": 37,
+      "retainedBytes": 80
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-2.txt",
+      "retained": "proof/SB03/validation/responsive-build-2.txt.gz",
+      "capturedSha256": "a7191f7454e91833b1fae7d797032261c089095bb7da05b1b0fe71f8573f5853",
+      "retainedSha256": "3455dc3f5db08117d95f3e4b51e30d485e065e75b6978ad6f7e864f1e1249116",
+      "sourceBytes": 126,
+      "retainedBytes": 156
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-3.txt",
+      "retained": "proof/SB03/validation/responsive-build-3.txt.gz",
+      "capturedSha256": "8e08dc6e403dde04d49ff59f093e0ddd3554da142f7f881bae92f08df449b9e1",
+      "retainedSha256": "8acecaa972d738ba8f30d83198e1fe4111a7406b389de8f91a3f7ed7a7c74936",
+      "sourceBytes": 126,
+      "retainedBytes": 157
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-4.txt",
+      "retained": "proof/SB03/validation/responsive-build-4.txt.gz",
+      "capturedSha256": "5a3f57b5411e82b2bde39ae80fa49ebb18320917411e8fcda1676125ae11cc78",
+      "retainedSha256": "32dc2dbd2fd844d2940bd4719ab49486a092b3b9707fb2227727c07b54ca670e",
+      "sourceBytes": 126,
+      "retainedBytes": 156
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-5.txt",
+      "retained": "proof/SB03/validation/responsive-build-5.txt.gz",
+      "capturedSha256": "dc87e7c06dae1be382ecea7ad626ef7b9106cbd8138b79724f94bfaff992ad73",
+      "retainedSha256": "5abb97291c145460f9bb73f20c8db6b4757bb6ab2915574162c2f4052c2dbff2",
+      "sourceBytes": 126,
+      "retainedBytes": 156
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-Components.txt",
+      "retained": "proof/SB03/validation/responsive-build-Components.txt.gz",
+      "capturedSha256": "e6864fd58753ec885e37e1ee029ffd9485a8eeaf72aa384279a9f67bcd9d52f9",
+      "retainedSha256": "2dfd16e01ba571ce44185d211cf8f6e784c90ccd6130471ce9e2b0a37dea0888",
+      "sourceBytes": 126,
+      "retainedBytes": 166
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-build-Unit.txt",
+      "retained": "proof/SB03/validation/responsive-build-Unit.txt.gz",
+      "capturedSha256": "c2ab8ab33685b368bf1880014adde913a0e678533027c5b7d4dcb0f3d8c6004f",
+      "retainedSha256": "a9f982271de3ba7d7b348da4c32c2760cb853b06c766b76aa1fa644647021724",
+      "sourceBytes": 126,
+      "retainedBytes": 160
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-builds.json",
+      "retained": "proof/SB03/validation/responsive-builds.json",
+      "capturedSha256": "9fd43cec9a0e21f67046b34d2b7f8cad1d5ae1c3afd9428be0303edea90cebed",
+      "retainedSha256": "014151fe0661e860b657586611df7ed49cfb783e8b340cd69b4ee3aeeb4319c8",
+      "sourceBytes": 2432,
+      "retainedBytes": 2340
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Components-discovery.txt",
+      "retained": "proof/SB03/validation/responsive-Components-discovery.txt.gz",
+      "capturedSha256": "02589d873f182dba441fd2689c46901091af5a345a6ad5809bb0b13bb04b1669",
+      "retainedSha256": "f76c5f616e5bf19ed0560bebc705d1c5a9cb0f770d0e93f3d09d0c020318e580",
+      "sourceBytes": 7153,
+      "retainedBytes": 1086
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Components-result.txt",
+      "retained": "proof/SB03/validation/responsive-Components-result.txt.gz",
+      "capturedSha256": "ba4d56f2d83e5f6c22b81c8f383f769df595cf4fa97f4a62c062f48e0d7f62fc",
+      "retainedSha256": "cc17b5789b5946879565dcee847030414f05d267c1d741590863a2b81ebda3e2",
+      "sourceBytes": 505,
+      "retainedBytes": 351
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Components-summary.json",
+      "retained": "proof/SB03/validation/responsive-Components-summary.json",
+      "capturedSha256": "2d3ea181881e28592c639352257b23916d61fcab6b55193bfd06788b1fbb324a",
+      "retainedSha256": "9a002c13d70d2476c89df2de039c03a82929ab59b5e992fe8d76e8fb79b5ba08",
+      "sourceBytes": 37280,
+      "retainedBytes": 36682
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Components.trx",
+      "retained": "proof/SB03/validation/responsive-Components.trx.gz",
+      "capturedSha256": "e00ae8e8bc57eb71d7051ab9c71a2c6098cdcb5b251d83720180088f3f05ca2a",
+      "retainedSha256": "9f33eb12772958183326a9f2419a8b6cff6bd8ae9c5e4eac645f4e930b5cffbd",
+      "sourceBytes": 64011,
+      "retainedBytes": 7242
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-test-builds.json",
+      "retained": "proof/SB03/validation/responsive-test-builds.json",
+      "capturedSha256": "4777da3be50abd62fbfc7ff973b194c6f1b7eeaf540583b2713e3a07d3b8e6fe",
+      "retainedSha256": "1003acf8c6f061fa68819eedbe830113c905a5cffb4ee8f52db24ca3e5e1e30a",
+      "sourceBytes": 679,
+      "retainedBytes": 649
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Unit-discovery.txt",
+      "retained": "proof/SB03/validation/responsive-Unit-discovery.txt.gz",
+      "capturedSha256": "ce43da1739d30d08e854e976d3b0c3bb5055f3bb277bac7177f4640bb6ed4d59",
+      "retainedSha256": "b387ae1e26ae7db2f4d28828ec81ffad76d64d8349fe8529f7ed25b74d10bc66",
+      "sourceBytes": 9704,
+      "retainedBytes": 1312
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Unit-result.txt",
+      "retained": "proof/SB03/validation/responsive-Unit-result.txt.gz",
+      "capturedSha256": "03b0f928ba2c84ca4f7e2e394de47770bbfa640e48a50adbc777a7ad530f4891",
+      "retainedSha256": "bc7af97c77f278ca719f1677d0a0811cf6e01b1076e1a126f5cd5477e508dcd8",
+      "sourceBytes": 478,
+      "retainedBytes": 345
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Unit-summary.json",
+      "retained": "proof/SB03/validation/responsive-Unit-summary.json",
+      "capturedSha256": "1799f01c281b8f5280cdb9826a3546e199f8b3c78665c0eeb771033ca49c2a01",
+      "retainedSha256": "ace96ef41e6dc7a6ece3881a2c293ed481559bacd968c7ae8a59ccd771a86b10",
+      "sourceBytes": 54912,
+      "retainedBytes": 54006
+    },
+    {
+      "source": ".mcp-state/capa03/responsive-Unit.trx",
+      "retained": "proof/SB03/validation/responsive-Unit.trx.gz",
+      "capturedSha256": "e8ea43a919ca3f681d3dab32a8b9391acbf179805c322dbd955b7c4c7971b2ee",
+      "retainedSha256": "870d0a5a256ce63970bc097491f9c063ad20a920e335ee03b30ca1a25183e5a1",
+      "sourceBytes": 93920,
+      "retainedBytes": 11687
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-calibrate-1.txt.gz",
+      "capturedSha256": "01b061b57986c47b6701a11b5d071cd71bb28e84e6c3ffef7e76a1a68ab3410d",
+      "retainedSha256": "9985e0b0116faaf3e8e6541b01850c543338fa752eb10b02b99a4c1ebaf968fe",
+      "sourceBytes": 1705,
+      "retainedBytes": 829
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-cold-1.txt.gz",
+      "capturedSha256": "9e988b319fc20c8fd4d8a903c8e9df63d14f9fd54c64c70cb308bb3c971f8918",
+      "retainedSha256": "55b87c8e1a3f77dd102c2ad105f4c90e870ecebddfc44add33742fe80f98b79e",
+      "sourceBytes": 1690,
+      "retainedBytes": 819
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-cold-2.txt.gz",
+      "capturedSha256": "8e667b95cab88481dc96e58f76c83b17422150c4cde4557e0aa0c4d44dde2851",
+      "retainedSha256": "229007cdb32e96b1d48b53af823f26d8f73e108d86ea9a8b677488f4290e7df2",
+      "sourceBytes": 1690,
+      "retainedBytes": 816
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-cold-3.txt.gz",
+      "capturedSha256": "3784058a1c264d8a463930a3b182e4a15d8374bf256cd98f0c20ae021056285f",
+      "retainedSha256": "eb31201987239831913ca5c71c64892c3c226e3536c58b1994846e2b2177742b",
+      "sourceBytes": 1690,
+      "retainedBytes": 823
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-warm-1.txt.gz",
+      "capturedSha256": "1ebde9f07d5ec6b3dec345fcee906ac72cab77aeb7e5459008ee6cc7a8870e76",
+      "retainedSha256": "c36f4db134e977674ea99ae9b9228e84b74b2a97de321d686bceeebcc6c8f953",
+      "sourceBytes": 93149,
+      "retainedBytes": 7207
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-calibrate-1.txt.gz",
+      "capturedSha256": "54c457895a16059c964e8b9a1248a8de7c2ce7daae7b6f7804a058ac201f069a",
+      "retainedSha256": "c8a17a70386266aeb3d6caf8884a3d23ebaefc190aca525a0aeccb47978764cd",
+      "sourceBytes": 1675,
+      "retainedBytes": 838
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-cold-1.txt.gz",
+      "capturedSha256": "3b3439ae823b910a9ea3b23db865949364867daf8a03c81a6989e0c8b1c7f158",
+      "retainedSha256": "156ce20682fe2f9d5ea7573a3bf16e05b8e1846f4c2b3dc958fd82f183bddbe4",
+      "sourceBytes": 1658,
+      "retainedBytes": 825
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-cold-2.txt.gz",
+      "capturedSha256": "a4ba55c707d3abec8877edd4a9c62dfed7db4b480d7faafd2a8b74d9cc7b1575",
+      "retainedSha256": "ee27f915e131deee58d5808c023cf3981c784dd95b585862318f9b45671b7913",
+      "sourceBytes": 1660,
+      "retainedBytes": 827
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-cold-3.txt.gz",
+      "capturedSha256": "7d8f9b5f2efe920bd91ca9718c4e1d350502d6effa01ddb918a46e298d2f1e93",
+      "retainedSha256": "4967f49d2a2c3ba12b22ce7abd54fc251f0cc8d8e1a74560fcd4f2e273d74e08",
+      "sourceBytes": 1660,
+      "retainedBytes": 829
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-warm-1.txt.gz",
+      "capturedSha256": "7d5e6e39c57afa1766d34b534e4fe8ece0117fbef7eca76f8343bc445a7a2411",
+      "retainedSha256": "d552a039b7c114fdcad15b97d9f70a6b458727a618272a5e5e6d42a86cdb592b",
+      "sourceBytes": 93587,
+      "retainedBytes": 7153
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-calibrate-1.txt.gz",
+      "capturedSha256": "ad473ab66130be593139034862bc1ed688c895f671ca9afd687055f8f0b28963",
+      "retainedSha256": "ae3711d7f55ba3ff6b5ba705c80831152b5c86e802eb20b04cf961004e1afe60",
+      "sourceBytes": 1667,
+      "retainedBytes": 830
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-cold-1.txt.gz",
+      "capturedSha256": "b63f5865380aa214ad64d0dcf92f9033a4841a1b30726d711bfaaae90af17ef5",
+      "retainedSha256": "fb8859b1eb05113e17786cd4edb4c32eac74a9980880154a6eb5ccf2baf91406",
+      "sourceBytes": 1655,
+      "retainedBytes": 821
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-cold-2.txt.gz",
+      "capturedSha256": "8f653e5b0ed98a6fc1377896bd8b619601afeaabf664f817f3890050e2fe3d1e",
+      "retainedSha256": "094765e3df77657ea34f20c2e00e162f10bf2497272ff4a48cee0ab4cf1fd34f",
+      "sourceBytes": 1654,
+      "retainedBytes": 825
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-cold-3.txt.gz",
+      "capturedSha256": "6c07fd9a04f067d33e9cc13dcca1dd84e02cbe09cd4dadac8126829899d490ea",
+      "retainedSha256": "eb8c023f673ebfa20956b17b3016dbed982d47aa2e19df399bb39e68af46ed79",
+      "sourceBytes": 1655,
+      "retainedBytes": 821
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-warm-1.txt.gz",
+      "capturedSha256": "fddfa4b12c83f1e350e34eb3c3de039359f1e3b86a54e19470263070c843750a",
+      "retainedSha256": "e99814a75b1671c5f6eec1ae01ce7068f427935c27e540f27bb89fcf9a2470a4",
+      "sourceBytes": 94859,
+      "retainedBytes": 7257
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-web-assets-build.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-web-assets-build.txt.gz",
+      "capturedSha256": "f3888ca3318edac76129488d41957fde3888712bd161b036ce398d0b595989b8",
+      "retainedSha256": "b0d026a5b737af232e61fe3925be857eb178e141a1c74cf67e650ceca0b66b66",
+      "sourceBytes": 126,
+      "retainedBytes": 171
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-fast-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-fast-calibrate-1.txt.gz",
+      "capturedSha256": "8dc35191c9a363ce600fb883c3d453f11c072b7ab4e6d92f9107d5c7b9d600f2",
+      "retainedSha256": "211eb983d46bc759470fa97cf8c39d9ae1936904b4205415f8804a849f597461",
+      "sourceBytes": 1703,
+      "retainedBytes": 820
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-fast-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-fast-cold-1.txt.gz",
+      "capturedSha256": "b3792e577df44308e10ba4dce7938a59dda8912cf4f5b82f8ef1dde0a6d004fb",
+      "retainedSha256": "76db81da7d77557f07bf1fe945a08905ed7be6da2f3913044c5df31934e08877",
+      "sourceBytes": 1690,
+      "retainedBytes": 810
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-fast-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-fast-warm-1.txt.gz",
+      "capturedSha256": "43d807767b76ed538f1fee698cded2d1e070b698bfc3552d78e672d232f0f9bb",
+      "retainedSha256": "2c526061fd128d4fead032573fd42c7167ef360aeebd180c0f0d1ca75aa8988a",
+      "sourceBytes": 92935,
+      "retainedBytes": 7176
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-parity-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-parity-calibrate-1.txt.gz",
+      "capturedSha256": "5a885f76e6132ef5317f934f43a61ecdfdabc37349a22a5627024510887dcdf4",
+      "retainedSha256": "10c008082a0375435abdc6e3c2d0d8f3d768c14e8afb7ff1a203d42710ed922c",
+      "sourceBytes": 1675,
+      "retainedBytes": 828
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-parity-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-parity-cold-1.txt.gz",
+      "capturedSha256": "9257f70687b46fb64f07e1772904d36cfabf69aadf1a3150ad37148317ebfc07",
+      "retainedSha256": "5337dccfb97607b6effb0c6edf94e9aeaf82e45a16f0ac586a798f7522bed036",
+      "sourceBytes": 1660,
+      "retainedBytes": 819
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-parity-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-parity-warm-1.txt.gz",
+      "capturedSha256": "ed2d94e5212135de8fafecb0001dc7bca31d86483cb364f0b01f7e3f609addfe",
+      "retainedSha256": "662aea233692c09d5502c76e903f48b8d76fbe5326007f0af691419d2a80557f",
+      "sourceBytes": 93590,
+      "retainedBytes": 7192
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-post-fullapp-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-post-fullapp-calibrate-1.txt.gz",
+      "capturedSha256": "3856164b13be15ce1e09aff369c18bb0c2022f449d05a50bb5abe88f21c755b3",
+      "retainedSha256": "1d9fefed5f94ca85727fd463f26746b2ee2acb78074ad5025a134f65ac2922be",
+      "sourceBytes": 1671,
+      "retainedBytes": 823
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-post-fullapp-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-post-fullapp-cold-1.txt.gz",
+      "capturedSha256": "3808ee57f6f9a6837ab280f80f27f950e45db8f9379f2a489ba49ff562f44700",
+      "retainedSha256": "804a300bcdf0493aaa14813540893a802f8fa369bc94502de7e4fd0a313c3633",
+      "sourceBytes": 1655,
+      "retainedBytes": 811
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-post-fullapp-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-post-fullapp-warm-1.txt.gz",
+      "capturedSha256": "c4028ee64144f782f49b2ffd3aa81619b93331912ee9bf20cffc8b50667575f1",
+      "retainedSha256": "8f1389ffe1d298eb3998c7ae36ea5e74644600df05d7e4e2f86e6ad940bb4da3",
+      "sourceBytes": 94964,
+      "retainedBytes": 7314
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-calibrate-1.txt.gz",
+      "capturedSha256": "01b061b57986c47b6701a11b5d071cd71bb28e84e6c3ffef7e76a1a68ab3410d",
+      "retainedSha256": "9985e0b0116faaf3e8e6541b01850c543338fa752eb10b02b99a4c1ebaf968fe",
+      "sourceBytes": 1705,
+      "retainedBytes": 829
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-cold-1.txt.gz",
+      "capturedSha256": "9e988b319fc20c8fd4d8a903c8e9df63d14f9fd54c64c70cb308bb3c971f8918",
+      "retainedSha256": "55b87c8e1a3f77dd102c2ad105f4c90e870ecebddfc44add33742fe80f98b79e",
+      "sourceBytes": 1690,
+      "retainedBytes": 819
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-warm-1.txt.gz",
+      "capturedSha256": "1ebde9f07d5ec6b3dec345fcee906ac72cab77aeb7e5459008ee6cc7a8870e76",
+      "retainedSha256": "c36f4db134e977674ea99ae9b9228e84b74b2a97de321d686bceeebcc6c8f953",
+      "sourceBytes": 93149,
+      "retainedBytes": 7207
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-calibrate-1.txt.gz",
+      "capturedSha256": "54c457895a16059c964e8b9a1248a8de7c2ce7daae7b6f7804a058ac201f069a",
+      "retainedSha256": "c8a17a70386266aeb3d6caf8884a3d23ebaefc190aca525a0aeccb47978764cd",
+      "sourceBytes": 1675,
+      "retainedBytes": 838
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-cold-1.txt.gz",
+      "capturedSha256": "3b3439ae823b910a9ea3b23db865949364867daf8a03c81a6989e0c8b1c7f158",
+      "retainedSha256": "156ce20682fe2f9d5ea7573a3bf16e05b8e1846f4c2b3dc958fd82f183bddbe4",
+      "sourceBytes": 1658,
+      "retainedBytes": 825
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-warm-1.txt.gz",
+      "capturedSha256": "7d5e6e39c57afa1766d34b534e4fe8ece0117fbef7eca76f8343bc445a7a2411",
+      "retainedSha256": "d552a039b7c114fdcad15b97d9f70a6b458727a618272a5e5e6d42a86cdb592b",
+      "sourceBytes": 93587,
+      "retainedBytes": 7153
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-calibrate-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-calibrate-1.txt.gz",
+      "capturedSha256": "ad473ab66130be593139034862bc1ed688c895f671ca9afd687055f8f0b28963",
+      "retainedSha256": "ae3711d7f55ba3ff6b5ba705c80831152b5c86e802eb20b04cf961004e1afe60",
+      "sourceBytes": 1667,
+      "retainedBytes": 830
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-cold-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-cold-1.txt.gz",
+      "capturedSha256": "b63f5865380aa214ad64d0dcf92f9033a4841a1b30726d711bfaaae90af17ef5",
+      "retainedSha256": "fb8859b1eb05113e17786cd4edb4c32eac74a9980880154a6eb5ccf2baf91406",
+      "sourceBytes": 1655,
+      "retainedBytes": 821
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-warm-1.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-warm-1.txt.gz",
+      "capturedSha256": "fddfa4b12c83f1e350e34eb3c3de039359f1e3b86a54e19470263070c843750a",
+      "retainedSha256": "e99814a75b1671c5f6eec1ae01ce7068f427935c27e540f27bb89fcf9a2470a4",
+      "sourceBytes": 94859,
+      "retainedBytes": 7257
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-fast-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-fast-cold-2.txt.gz",
+      "capturedSha256": "41becb23ffce847eda5484c6c1ae4746e408b570b7924a085977a4223353cf01",
+      "retainedSha256": "65d22b3af7a82e765fec9feec9ba2c4d5f2a16170cb16058bb7ca7b573824f4d",
+      "sourceBytes": 1690,
+      "retainedBytes": 811
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-parity-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-parity-cold-2.txt.gz",
+      "capturedSha256": "23444ddbb4ba8d1b15289674cc3f4007dfa82796e0232e8f3c92f197342e2a4c",
+      "retainedSha256": "fd89a33d156603ad5fb82e163711f9d82b6e3678188e0cef2742309174f0534d",
+      "sourceBytes": 1660,
+      "retainedBytes": 818
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-post-fullapp-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-post-fullapp-cold-2.txt.gz",
+      "capturedSha256": "d9a1b4c7f13ec1a8fddb6975271a65e0623b4064b0ab34ad6bdbc77eb3061fe3",
+      "retainedSha256": "0aced33e77a29be7e2fe87086f18b2688b1c5d164d6254231433107dcd3286f1",
+      "sourceBytes": 1655,
+      "retainedBytes": 811
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-cold-2.txt.gz",
+      "capturedSha256": "8e667b95cab88481dc96e58f76c83b17422150c4cde4557e0aa0c4d44dde2851",
+      "retainedSha256": "229007cdb32e96b1d48b53af823f26d8f73e108d86ea9a8b677488f4290e7df2",
+      "sourceBytes": 1690,
+      "retainedBytes": 816
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-cold-2.txt.gz",
+      "capturedSha256": "a4ba55c707d3abec8877edd4a9c62dfed7db4b480d7faafd2a8b74d9cc7b1575",
+      "retainedSha256": "ee27f915e131deee58d5808c023cf3981c784dd95b585862318f9b45671b7913",
+      "sourceBytes": 1660,
+      "retainedBytes": 827
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-cold-2.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-cold-2.txt.gz",
+      "capturedSha256": "8f653e5b0ed98a6fc1377896bd8b619601afeaabf664f817f3890050e2fe3d1e",
+      "retainedSha256": "094765e3df77657ea34f20c2e00e162f10bf2497272ff4a48cee0ab4cf1fd34f",
+      "sourceBytes": 1654,
+      "retainedBytes": 825
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-fast-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-fast-cold-3.txt.gz",
+      "capturedSha256": "60ad9757e01a44794b43279437ddb2fadca8d3527fa042f84183eb1dcca3b1ff",
+      "retainedSha256": "6f1eb6d468f6606e3559bff987369c329b69398e1d3fd7c0c014fe20bb285ac4",
+      "sourceBytes": 1690,
+      "retainedBytes": 808
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-parity-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-parity-cold-3.txt.gz",
+      "capturedSha256": "36e5066098f39d71ca134d5352e47f773b154e4128d4fcc4e386a18ef529b651",
+      "retainedSha256": "f5d121141475b41940a14aa4e81d3fe641031ca0191c3551f57d7c170fce013d",
+      "sourceBytes": 1657,
+      "retainedBytes": 816
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-post-fullapp-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-post-fullapp-cold-3.txt.gz",
+      "capturedSha256": "5c3d241941ec66fbea14c0b453888a5aa9436dddd1e9c3bfdd64201b6f8756af",
+      "retainedSha256": "822563f9731423bb35dba745403386d4bb79e7111469b88dabac7089015e3c5d",
+      "sourceBytes": 1655,
+      "retainedBytes": 813
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-fast-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-fast-cold-3.txt.gz",
+      "capturedSha256": "3784058a1c264d8a463930a3b182e4a15d8374bf256cd98f0c20ae021056285f",
+      "retainedSha256": "eb31201987239831913ca5c71c64892c3c226e3536c58b1994846e2b2177742b",
+      "sourceBytes": 1690,
+      "retainedBytes": 823
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-parity-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-parity-cold-3.txt.gz",
+      "capturedSha256": "7d8f9b5f2efe920bd91ca9718c4e1d350502d6effa01ddb918a46e298d2f1e93",
+      "retainedSha256": "4967f49d2a2c3ba12b22ce7abd54fc251f0cc8d8e1a74560fcd4f2e273d74e08",
+      "sourceBytes": 1660,
+      "retainedBytes": 829
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-post-fullapp-cold-3.txt",
+      "retained": "proof/SB03/validation/sb03-responsive-post-fullapp-cold-3.txt.gz",
+      "capturedSha256": "6c07fd9a04f067d33e9cc13dcca1dd84e02cbe09cd4dadac8126829899d490ea",
+      "retainedSha256": "eb8c023f673ebfa20956b17b3016dbed982d47aa2e19df399bb39e68af46ed79",
+      "sourceBytes": 1655,
+      "retainedBytes": 821
+    },
+    {
+      "source": ".mcp-state/capa03/stable-trx/lucys_LUCYSPOWER_2026-09-07_00_41_03_net10.0.trx",
+      "retained": "proof/SB03/validation/stable-trx/lucys_LUCYSPOWER_2026-09-07_00_41_03_net10.0.trx.gz",
+      "capturedSha256": "33d24fb0f97b9ce76b45b7052f81792b6ff266a2b8e646cb2f6e2f19b4c33bb4",
+      "retainedSha256": "de643802abe1b0bc1a4833a7f6176c6416770ffd4506d4271ca22470c034afba",
+      "sourceBytes": 2228646,
+      "retainedBytes": 388589
+    },
+    {
+      "source": ".mcp-state/capa03/stable-trx/lucys_LUCYSPOWER_2026-09-07_00_59_24_net10.0.trx",
+      "retained": "proof/SB03/validation/stable-trx/lucys_LUCYSPOWER_2026-09-07_00_59_24_net10.0.trx.gz",
+      "capturedSha256": "b041015f4ae3354743ecfbd9a184adf46ef4be48d6c7ae045594e2f78c1c24d8",
+      "retainedSha256": "e0a936fe04e2fc6c2072cba976fe5a605f9d0a35d1d5905ec583678a2041851f",
+      "sourceBytes": 80748095,
+      "retainedBytes": 7372755
+    },
+    {
+      "source": ".mcp-state/capa03/stable-trx/lucys_LUCYSPOWER_2026-09-07_01_46_11_net10.0.trx",
+      "retained": "proof/SB03/validation/stable-trx/lucys_LUCYSPOWER_2026-09-07_01_46_11_net10.0.trx.gz",
+      "capturedSha256": "e2717d26da76168f2ead6b19fbcb5f05399e66405594518cf699eabdce9c2455",
+      "retainedSha256": "733c8928a20fedebfab526687dc6b59abb4d8b83392e3cf314befe770bc3aea1",
+      "sourceBytes": 37080,
+      "retainedBytes": 4453
+    },
+    {
+      "source": ".mcp-state/capa03/stable-trx/lucys_LUCYSPOWER_2026-09-07_01_46_12_net10.0.trx",
+      "retained": "proof/SB03/validation/stable-trx/lucys_LUCYSPOWER_2026-09-07_01_46_12_net10.0.trx.gz",
+      "capturedSha256": "097bf4740da72c3bb6a246201476570151733adc4435c09b8903c4170c4a47b7",
+      "retainedSha256": "9a0f01a4bb0342891842065d86487878fe846016a4ec876053a353bf12569ced",
+      "sourceBytes": 290951,
+      "retainedBytes": 46131
+    },
+    {
+      "source": ".mcp-state/capa03/stable-trx/lucys_LUCYSPOWER_2026-09-07_01_46_25_net10.0.trx",
+      "retained": "proof/SB03/validation/stable-trx/lucys_LUCYSPOWER_2026-09-07_01_46_25_net10.0.trx.gz",
+      "capturedSha256": "64c3e80873497525cc650ff225373ea1596ae67df2a98705d726afd7d9a0f709",
+      "retainedSha256": "98fbe077bfb05e5ab7d34edaeec4c8b99b7fac6941dede7413a5c750349f344e",
+      "sourceBytes": 10863180,
+      "retainedBytes": 2022732
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-responsive-runs.json",
+      "retained": "proof/SB03/sb03-responsive-runs.json",
+      "capturedSha256": "8cbf5b8454e9328f98c2dc57404374ffa53c71cdefa7172c6c273c48d38c9153",
+      "retainedSha256": "baaa3b00fd67798c29cd216ddafe654977b547e671575fe5a66a3c0c91737f86",
+      "sourceBytes": 10615,
+      "retainedBytes": 10258
+    },
+    {
+      "source": ".mcp-state/capa03/sb03-incomplete-assets-runs.json",
+      "retained": "proof/SB03/sb03-incomplete-assets-runs.json",
+      "capturedSha256": "13d4ab5ff528e2e39fa56e5af9d8d5e9526a4e2f1865d07fe00915d953c5553d",
+      "retainedSha256": "a9687ff7d3034a9c18d9359f3e9c42a5c9d1b8554a331b7e56a5bd130d69a8bd",
+      "sourceBytes": 10450,
+      "retainedBytes": 10093
+    },
+    {
+      "source": ".mcp-state/capa03/planned-edits-post-incomplete-assets.json",
+      "retained": "proof/SB03/planned-edits-post-incomplete-assets.json",
+      "capturedSha256": "3702d22b015f9826dcd776e00bc6da1be1d981bd0ca8f5bf0d9f70cf6c550cc2",
+      "retainedSha256": "347f10b1043231a4b8e424be6e42955d4a32da4ae4899a69ec1fc0933ecb2fbc",
+      "sourceBytes": 8715,
+      "retainedBytes": 8552
+    },
+    {
+      "source": ".mcp-state/capa03/planned-edits-post.json",
+      "retained": "proof/SB03/planned-edits-post.json",
+      "capturedSha256": "690c52d68f044d999964b82e7d72dfdc6aaa056f4a2594972e7402698b2fcd9c",
+      "retainedSha256": "fd31b5f92b596eccd60dc87d1520376842ee5bd91e1ee98a03ae5f836f520ba6",
+      "sourceBytes": 10114,
+      "retainedBytes": 9933
+    },
+    {
+      "source": ".mcp-state/capa03/measurement-comparison.json",
+      "retained": "proof/SB03/measurement-comparison.json",
+      "capturedSha256": "639be82c71a0a79c2bce5b5ef53f9fdddfc032690c987f562f9d493eedff4e3a",
+      "retainedSha256": "85c000f6f8e54c563e7227db8dc10a3219fff42d3d6255b088885848eb4c4382",
+      "sourceBytes": 96284,
+      "retainedBytes": 93134
+    },
+    {
+      "source": ".mcp-state/capa03/measurement-results.md",
+      "retained": "proof/SB03/measurement-results.md",
+      "capturedSha256": "ad0f4afc77da3c9e8fd8c2d38db380dd80afddf818ef0f9d817e0745e3317c6a",
+      "retainedSha256": "d57c4cd1bfdac8b3edace1b170f4636cdcd8ce336dcb82ae5f536def4f2353dd",
+      "sourceBytes": 4211,
+      "retainedBytes": 4159
+    },
+    {
+      "source": ".mcp-state/capa03/measurement-samples.csv",
+      "retained": "proof/SB03/measurement-samples.csv",
+      "capturedSha256": "e4befa924899aa7923d37afe1914665ed39371a523d1af7ba1f7a02e8320d8a7",
+      "retainedSha256": "e4befa924899aa7923d37afe1914665ed39371a523d1af7ba1f7a02e8320d8a7",
+      "sourceBytes": 35499,
+      "retainedBytes": 35499
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Fast/failure-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-red/Fast/failure-dom.txt.gz",
+      "capturedSha256": "b47cd706e134588a273867abc9d57e94c4bbb925640191519f9e8ad5b6dc2941",
+      "retainedSha256": "2c29eaf2454baee6d91dbeba49885d4f08d8f766c93a6a9d1af84a32ad826c30",
+      "sourceBytes": 35560,
+      "retainedBytes": 8345
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Fast/failure.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-red/Fast/failure.jpeg",
+      "capturedSha256": "41994e77ced41d50cf921a3f7e281f5b0319d234e6d7efd7d1cfbe43c5c027a8",
+      "retainedSha256": "41994e77ced41d50cf921a3f7e281f5b0319d234e6d7efd7d1cfbe43c5c027a8",
+      "sourceBytes": 178318,
+      "retainedBytes": 178318
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Fast/host.txt",
+      "retained": "proof/SB03/browser/browser-responsive-red/Fast/host.txt.gz",
+      "capturedSha256": "80166da361dc6757e89623eacd2623a29b8d68c8f7348ea7fcb7f0dd0be0bb2f",
+      "retainedSha256": "253e6085eb53fbc628720342f43ad771b5c2b36a5832d3b70574ee76ed870f03",
+      "sourceBytes": 14288,
+      "retainedBytes": 1649
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Fast/summary.json",
+      "retained": "proof/SB03/browser/browser-responsive-red/Fast/summary.json",
+      "capturedSha256": "346f9d061705d0c04a9510f40ad5f24878401f378fbd496ae7272cc7c5fd46b0",
+      "retainedSha256": "346f9d061705d0c04a9510f40ad5f24878401f378fbd496ae7272cc7c5fd46b0",
+      "sourceBytes": 1311,
+      "retainedBytes": 1311
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Parity/failure-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-red/Parity/failure-dom.txt.gz",
+      "capturedSha256": "b47cd706e134588a273867abc9d57e94c4bbb925640191519f9e8ad5b6dc2941",
+      "retainedSha256": "2c29eaf2454baee6d91dbeba49885d4f08d8f766c93a6a9d1af84a32ad826c30",
+      "sourceBytes": 35560,
+      "retainedBytes": 8345
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Parity/failure.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-red/Parity/failure.jpeg",
+      "capturedSha256": "41994e77ced41d50cf921a3f7e281f5b0319d234e6d7efd7d1cfbe43c5c027a8",
+      "retainedSha256": "41994e77ced41d50cf921a3f7e281f5b0319d234e6d7efd7d1cfbe43c5c027a8",
+      "sourceBytes": 178318,
+      "retainedBytes": 178318
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Parity/host.txt",
+      "retained": "proof/SB03/browser/browser-responsive-red/Parity/host.txt.gz",
+      "capturedSha256": "8c78620841d0ede6b2077adbefc667f05097bb2afa93749c3ad3f5c59f072090",
+      "retainedSha256": "d74a9de25b071808a7239d52eb48dc437d79dbb4524eb17cecaa7af093c83c47",
+      "sourceBytes": 14280,
+      "retainedBytes": 1625
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-red/Parity/summary.json",
+      "retained": "proof/SB03/browser/browser-responsive-red/Parity/summary.json",
+      "capturedSha256": "e08d2c0d1d77cd1138f60ae11fec828323007d43208dfbb231f22c4090b305ef",
+      "retainedSha256": "e08d2c0d1d77cd1138f60ae11fec828323007d43208dfbb231f22c4090b305ef",
+      "sourceBytes": 1191,
+      "retainedBytes": 1191
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Fast/failure-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-green/Fast/failure-dom.txt.gz",
+      "capturedSha256": "b47cd706e134588a273867abc9d57e94c4bbb925640191519f9e8ad5b6dc2941",
+      "retainedSha256": "2c29eaf2454baee6d91dbeba49885d4f08d8f766c93a6a9d1af84a32ad826c30",
+      "sourceBytes": 35560,
+      "retainedBytes": 8345
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Fast/failure.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-green/Fast/failure.jpeg",
+      "capturedSha256": "59404d7ce814fbb8e98697046b1644b9919b58967ca735afc96d8cea792d11ca",
+      "retainedSha256": "59404d7ce814fbb8e98697046b1644b9919b58967ca735afc96d8cea792d11ca",
+      "sourceBytes": 178338,
+      "retainedBytes": 178338
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Fast/host.txt",
+      "retained": "proof/SB03/browser/browser-responsive-green/Fast/host.txt.gz",
+      "capturedSha256": "c97ae386b8c76c3031b2d98f8ecb09cff8afd5e6c2820fb126cd92a58396909a",
+      "retainedSha256": "89fad2689543882f3bd78f165d17ef4d40f6277257b4597b9189be8c3623c809",
+      "sourceBytes": 14288,
+      "retainedBytes": 1637
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Fast/summary.json",
+      "retained": "proof/SB03/browser/browser-responsive-green/Fast/summary.json",
+      "capturedSha256": "c9ec0013d286f0788e622a93deeee6331cef326d91af84a818183653baa78046",
+      "retainedSha256": "c9ec0013d286f0788e622a93deeee6331cef326d91af84a818183653baa78046",
+      "sourceBytes": 1194,
+      "retainedBytes": 1194
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Parity/failure-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-green/Parity/failure-dom.txt.gz",
+      "capturedSha256": "b47cd706e134588a273867abc9d57e94c4bbb925640191519f9e8ad5b6dc2941",
+      "retainedSha256": "2c29eaf2454baee6d91dbeba49885d4f08d8f766c93a6a9d1af84a32ad826c30",
+      "sourceBytes": 35560,
+      "retainedBytes": 8345
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Parity/failure.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-green/Parity/failure.jpeg",
+      "capturedSha256": "59404d7ce814fbb8e98697046b1644b9919b58967ca735afc96d8cea792d11ca",
+      "retainedSha256": "59404d7ce814fbb8e98697046b1644b9919b58967ca735afc96d8cea792d11ca",
+      "sourceBytes": 178338,
+      "retainedBytes": 178338
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Parity/host.txt",
+      "retained": "proof/SB03/browser/browser-responsive-green/Parity/host.txt.gz",
+      "capturedSha256": "c977e5b406ecb7f000db6574fdad572c0f79d39af5ea43b63d85cc427047aece",
+      "retainedSha256": "3f183c3aa03e74cad2f8900aaef089e805032a7b8ec8ab73730fa3fd8d375444",
+      "sourceBytes": 14279,
+      "retainedBytes": 1644
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-green/Parity/summary.json",
+      "retained": "proof/SB03/browser/browser-responsive-green/Parity/summary.json",
+      "capturedSha256": "808fdf15dff4c4ebde1b77a30ef5fc94cbaab3f42e5c449f46f71756ec87fb63",
+      "retainedSha256": "808fdf15dff4c4ebde1b77a30ef5fc94cbaab3f42e5c449f46f71756ec87fb63",
+      "sourceBytes": 1198,
+      "retainedBytes": 1198
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/baseline-responsive-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/baseline-responsive-dom.txt.gz",
+      "capturedSha256": "b47cd706e134588a273867abc9d57e94c4bbb925640191519f9e8ad5b6dc2941",
+      "retainedSha256": "8b1633ae4ad6e751fda26da01b0ee74826ccc39441b6859e756b7052fe9f8d89",
+      "sourceBytes": 35560,
+      "retainedBytes": 8357
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/baseline-responsive.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/baseline-responsive.jpeg",
+      "capturedSha256": "a7a3a57aea57d5fe78449040f28eeef8abab6133396b37b37e9a9d04d25bb144",
+      "retainedSha256": "a7a3a57aea57d5fe78449040f28eeef8abab6133396b37b37e9a9d04d25bb144",
+      "sourceBytes": 184128,
+      "retainedBytes": 184128
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/committed-warning-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/committed-warning-dom.txt.gz",
+      "capturedSha256": "c272a0159857ae2c73052a60f51b014107fda80654ae3b7ef0c08256a65168dd",
+      "retainedSha256": "6a693b932d62bc3daefc7fed444c759ba3daae2a5c8d5a8d9ebf09e654ede760",
+      "sourceBytes": 2806,
+      "retainedBytes": 1073
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/committed-warning.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/committed-warning.jpeg",
+      "capturedSha256": "905ddfa9a33fed79145f83342e6f954b32b6bda08b22967387c2f620fdf5637e",
+      "retainedSha256": "905ddfa9a33fed79145f83342e6f954b32b6bda08b22967387c2f620fdf5637e",
+      "sourceBytes": 139102,
+      "retainedBytes": 139102
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/curator-unconfirmed-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/curator-unconfirmed-dom.txt.gz",
+      "capturedSha256": "14fd6b3ed61285ffad31e967780afc0b78a9a431245a3bada77bc456b8350d63",
+      "retainedSha256": "4eb6cf9bccbae40175b27069277c1101b539c3fb9c5d2ad509c074f672b4c845",
+      "sourceBytes": 2940,
+      "retainedBytes": 1135
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/curator-unconfirmed.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/curator-unconfirmed.jpeg",
+      "capturedSha256": "028fb43617c181aa5955f5b84b3bb29b7f19a53e50491ed216b4df58ee520193",
+      "retainedSha256": "028fb43617c181aa5955f5b84b3bb29b7f19a53e50491ed216b4df58ee520193",
+      "sourceBytes": 148974,
+      "retainedBytes": 148974
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/diagnostic-acknowledgement-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/diagnostic-acknowledgement-dom.txt.gz",
+      "capturedSha256": "76b52b627f6c22f614337d5c0ac7f0404a1a4c921433e08bdb9dd9454a77720d",
+      "retainedSha256": "02c82240dc1a9c097e09d985e867f9133b16e5c7c5dfbc70f5fd6e59e24c7e70",
+      "sourceBytes": 2848,
+      "retainedBytes": 1102
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/diagnostic-acknowledgement.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/diagnostic-acknowledgement.jpeg",
+      "capturedSha256": "ebb047b3a285f63a8a3b96c31637da1caa30a3fb0229161d0aef342b5e301729",
+      "retainedSha256": "ebb047b3a285f63a8a3b96c31637da1caa30a3fb0229161d0aef342b5e301729",
+      "sourceBytes": 143195,
+      "retainedBytes": 143195
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/failed-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/failed-dom.txt.gz",
+      "capturedSha256": "f64fbe2023427a9bd0dd4fe0ea4a681b308db25e332f742c3ed599bbe7ebec99",
+      "retainedSha256": "64d1ce241ca0da67529e6208400498d44a4526c3c5e19a94f80a3a8627b021d6",
+      "sourceBytes": 1127,
+      "retainedBytes": 634
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/failed.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/failed.jpeg",
+      "capturedSha256": "8e586620abbdc54662d583ee8d0a5e772283e35b40792d72c9bd2e9b9aab6913",
+      "retainedSha256": "8e586620abbdc54662d583ee8d0a5e772283e35b40792d72c9bd2e9b9aab6913",
+      "sourceBytes": 71233,
+      "retainedBytes": 71233
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/host.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/host.txt.gz",
+      "capturedSha256": "63cbb12595ebc26b207133297bab95989cb552920eb89b12c6f774e71c31a110",
+      "retainedSha256": "33c357af439217fd9d1caa8e2fd2ecb1439d626305a4cb5d87bfc27b886c1331",
+      "sourceBytes": 48599,
+      "retainedBytes": 2743
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/kinds-and-proof-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/kinds-and-proof-dom.txt.gz",
+      "capturedSha256": "ce33badab9594e8c473a356a4471c24acaaab25757f38dac33ad1095ea95058b",
+      "retainedSha256": "16a3c2e1c7f9192ff797f130a43ff9dfbc5ed16e90a5563ab07b17c895848005",
+      "sourceBytes": 2732,
+      "retainedBytes": 1037
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/kinds-and-proof.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/kinds-and-proof.jpeg",
+      "capturedSha256": "cb55dfeb6fd3efc3bf743d3d581743e18ca6049f8a2d4ddfac2b1331b96a9ee9",
+      "retainedSha256": "cb55dfeb6fd3efc3bf743d3d581743e18ca6049f8a2d4ddfac2b1331b96a9ee9",
+      "sourceBytes": 152878,
+      "retainedBytes": 152878
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/long-content-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/long-content-dom.txt.gz",
+      "capturedSha256": "3f7ef366336b4b227f0382fa3389059d3ed2ed9f73b2ddfdbf35707a3b0e485f",
+      "retainedSha256": "3cec96add266e028550c6e4d1f23501d14a21269ac9231863934107102e0d2b1",
+      "sourceBytes": 5823,
+      "retainedBytes": 1126
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/long-content.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/long-content.jpeg",
+      "capturedSha256": "73d09072fe9a05f90b076ffd9f3d6eba00c67127326611d93740cd4bb2e0a227",
+      "retainedSha256": "73d09072fe9a05f90b076ffd9f3d6eba00c67127326611d93740cd4bb2e0a227",
+      "sourceBytes": 169216,
+      "retainedBytes": 169216
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/long-geometry.json",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/long-geometry.json",
+      "capturedSha256": "b61920137220309d72a228c04412b9b91e861c775f129def14fe01d094fdee90",
+      "retainedSha256": "b61920137220309d72a228c04412b9b91e861c775f129def14fe01d094fdee90",
+      "sourceBytes": 6839,
+      "retainedBytes": 6839
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Fast/summary.json",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Fast/summary.json",
+      "capturedSha256": "5af4867b5631498d814d84af450a79a58866496924457b58a756015ea7fc23dc",
+      "retainedSha256": "5af4867b5631498d814d84af450a79a58866496924457b58a756015ea7fc23dc",
+      "sourceBytes": 177976,
+      "retainedBytes": 177976
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/baseline-responsive-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/baseline-responsive-dom.txt.gz",
+      "capturedSha256": "b47cd706e134588a273867abc9d57e94c4bbb925640191519f9e8ad5b6dc2941",
+      "retainedSha256": "8b1633ae4ad6e751fda26da01b0ee74826ccc39441b6859e756b7052fe9f8d89",
+      "sourceBytes": 35560,
+      "retainedBytes": 8357
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/baseline-responsive.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/baseline-responsive.jpeg",
+      "capturedSha256": "a7a3a57aea57d5fe78449040f28eeef8abab6133396b37b37e9a9d04d25bb144",
+      "retainedSha256": "a7a3a57aea57d5fe78449040f28eeef8abab6133396b37b37e9a9d04d25bb144",
+      "sourceBytes": 184128,
+      "retainedBytes": 184128
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/committed-warning-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/committed-warning-dom.txt.gz",
+      "capturedSha256": "c272a0159857ae2c73052a60f51b014107fda80654ae3b7ef0c08256a65168dd",
+      "retainedSha256": "6a693b932d62bc3daefc7fed444c759ba3daae2a5c8d5a8d9ebf09e654ede760",
+      "sourceBytes": 2806,
+      "retainedBytes": 1073
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/committed-warning.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/committed-warning.jpeg",
+      "capturedSha256": "6bad2b53cd1c6941894762d677f73f83d4aaa1d1617e34ddb446280ae7a79100",
+      "retainedSha256": "6bad2b53cd1c6941894762d677f73f83d4aaa1d1617e34ddb446280ae7a79100",
+      "sourceBytes": 139085,
+      "retainedBytes": 139085
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/curator-unconfirmed-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/curator-unconfirmed-dom.txt.gz",
+      "capturedSha256": "14fd6b3ed61285ffad31e967780afc0b78a9a431245a3bada77bc456b8350d63",
+      "retainedSha256": "4eb6cf9bccbae40175b27069277c1101b539c3fb9c5d2ad509c074f672b4c845",
+      "sourceBytes": 2940,
+      "retainedBytes": 1135
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/curator-unconfirmed.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/curator-unconfirmed.jpeg",
+      "capturedSha256": "028fb43617c181aa5955f5b84b3bb29b7f19a53e50491ed216b4df58ee520193",
+      "retainedSha256": "028fb43617c181aa5955f5b84b3bb29b7f19a53e50491ed216b4df58ee520193",
+      "sourceBytes": 148974,
+      "retainedBytes": 148974
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/diagnostic-acknowledgement-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/diagnostic-acknowledgement-dom.txt.gz",
+      "capturedSha256": "76b52b627f6c22f614337d5c0ac7f0404a1a4c921433e08bdb9dd9454a77720d",
+      "retainedSha256": "02c82240dc1a9c097e09d985e867f9133b16e5c7c5dfbc70f5fd6e59e24c7e70",
+      "sourceBytes": 2848,
+      "retainedBytes": 1102
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/diagnostic-acknowledgement.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/diagnostic-acknowledgement.jpeg",
+      "capturedSha256": "ebb047b3a285f63a8a3b96c31637da1caa30a3fb0229161d0aef342b5e301729",
+      "retainedSha256": "ebb047b3a285f63a8a3b96c31637da1caa30a3fb0229161d0aef342b5e301729",
+      "sourceBytes": 143195,
+      "retainedBytes": 143195
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/failed-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/failed-dom.txt.gz",
+      "capturedSha256": "f64fbe2023427a9bd0dd4fe0ea4a681b308db25e332f742c3ed599bbe7ebec99",
+      "retainedSha256": "64d1ce241ca0da67529e6208400498d44a4526c3c5e19a94f80a3a8627b021d6",
+      "sourceBytes": 1127,
+      "retainedBytes": 634
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/failed.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/failed.jpeg",
+      "capturedSha256": "76d181dac45497e55c0b8239ad6df382b25985cc2f31bd26e8c60a7b91138851",
+      "retainedSha256": "76d181dac45497e55c0b8239ad6df382b25985cc2f31bd26e8c60a7b91138851",
+      "sourceBytes": 71300,
+      "retainedBytes": 71300
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/host.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/host.txt.gz",
+      "capturedSha256": "7c6353537143b16ac85c5969a880351f560cd20ddf34a9f772452731fde0e3ee",
+      "retainedSha256": "44593ec590ab15cfaf32a4b4b3d54dd83042d5be715e27c8e9869e4ef9b7723b",
+      "sourceBytes": 48552,
+      "retainedBytes": 2743
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/kinds-and-proof-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/kinds-and-proof-dom.txt.gz",
+      "capturedSha256": "ce33badab9594e8c473a356a4471c24acaaab25757f38dac33ad1095ea95058b",
+      "retainedSha256": "16a3c2e1c7f9192ff797f130a43ff9dfbc5ed16e90a5563ab07b17c895848005",
+      "sourceBytes": 2732,
+      "retainedBytes": 1037
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/kinds-and-proof.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/kinds-and-proof.jpeg",
+      "capturedSha256": "cb55dfeb6fd3efc3bf743d3d581743e18ca6049f8a2d4ddfac2b1331b96a9ee9",
+      "retainedSha256": "cb55dfeb6fd3efc3bf743d3d581743e18ca6049f8a2d4ddfac2b1331b96a9ee9",
+      "sourceBytes": 152878,
+      "retainedBytes": 152878
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/long-content-dom.txt",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/long-content-dom.txt.gz",
+      "capturedSha256": "3f7ef366336b4b227f0382fa3389059d3ed2ed9f73b2ddfdbf35707a3b0e485f",
+      "retainedSha256": "3cec96add266e028550c6e4d1f23501d14a21269ac9231863934107102e0d2b1",
+      "sourceBytes": 5823,
+      "retainedBytes": 1126
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/long-content.jpeg",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/long-content.jpeg",
+      "capturedSha256": "73d09072fe9a05f90b076ffd9f3d6eba00c67127326611d93740cd4bb2e0a227",
+      "retainedSha256": "73d09072fe9a05f90b076ffd9f3d6eba00c67127326611d93740cd4bb2e0a227",
+      "sourceBytes": 169216,
+      "retainedBytes": 169216
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/long-geometry.json",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/long-geometry.json",
+      "capturedSha256": "b61920137220309d72a228c04412b9b91e861c775f129def14fe01d094fdee90",
+      "retainedSha256": "b61920137220309d72a228c04412b9b91e861c775f129def14fe01d094fdee90",
+      "sourceBytes": 6839,
+      "retainedBytes": 6839
+    },
+    {
+      "source": ".mcp-state/capa03/browser-responsive-cascade-green/Parity/summary.json",
+      "retained": "proof/SB03/browser/browser-responsive-cascade-green/Parity/summary.json",
+      "capturedSha256": "fb6c464c0ce7045cbd32da295372c3b0d6e5fca058ebc9d188ab9fdeae7c7d08",
+      "retainedSha256": "fb6c464c0ce7045cbd32da295372c3b0d6e5fca058ebc9d188ab9fdeae7c7d08",
+      "sourceBytes": 177975,
+      "retainedBytes": 177975
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/browser-events.json",
+      "capturedSha256": "0edc82b4673a17ce121bd04e56aa0cf0a5a6bb71534a217098c306f41dff0e4b",
+      "retainedSha256": "0edc82b4673a17ce121bd04e56aa0cf0a5a6bb71534a217098c306f41dff0e4b",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/dotnet-watch.txt.gz",
+      "capturedSha256": "cacd637b81eac5c9bd1c256280aafdb33458a625a6940e8fab3d6e70b4a9eb30",
+      "retainedSha256": "740f077293bf7f553366843044e38207eedc72028f98278107c69d15c0a8d810",
+      "sourceBytes": 12060,
+      "retainedBytes": 2327
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/ledger.jsonl.gz",
+      "capturedSha256": "8dc35191c9a363ce600fb883c3d453f11c072b7ab4e6d92f9107d5c7b9d600f2",
+      "retainedSha256": "3444a114fd279553bc3147a1a02f5ae342ce5d9d293786d67f0fd881c0f3abc0",
+      "sourceBytes": 1703,
+      "retainedBytes": 807
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/tailwind.txt.gz",
+      "capturedSha256": "c3e777461e5792246695175ff5cc359e1a124a9131c0975e390ca186c2dd3cd9",
+      "retainedSha256": "49b17be3e4dc5ffcc6301bdb16f2b271d23f69162a5a2d75986731af050d7540",
+      "sourceBytes": 608,
+      "retainedBytes": 290
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-02-12-978Z/watch-events.json",
+      "capturedSha256": "f5df1cb466ec51ddd489a0b6293e1799c15bbe0e6847856b78a186a4ac815516",
+      "retainedSha256": "f5df1cb466ec51ddd489a0b6293e1799c15bbe0e6847856b78a186a4ac815516",
+      "sourceBytes": 18504,
+      "retainedBytes": 18504
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/browser-events.json",
+      "capturedSha256": "ecc12406a068c482a185b96ed2b3fb8792be002d10dc8afe40991f981d9733f2",
+      "retainedSha256": "ecc12406a068c482a185b96ed2b3fb8792be002d10dc8afe40991f981d9733f2",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/dotnet-watch.txt.gz",
+      "capturedSha256": "f3266803610dd6d98232af38350942533ed0f90da22d599138c63448ff38304f",
+      "retainedSha256": "d08430e214eda55e60e8d8d0bd92bf89b8954fa6465e0c2a9e2be8fadc4e31ae",
+      "sourceBytes": 12060,
+      "retainedBytes": 2335
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/ledger.jsonl.gz",
+      "capturedSha256": "01b061b57986c47b6701a11b5d071cd71bb28e84e6c3ffef7e76a1a68ab3410d",
+      "retainedSha256": "907e6aed7046737e7fd7bc9f944f4920e90b9b725488e87071122324473223e6",
+      "sourceBytes": 1705,
+      "retainedBytes": 805
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/tailwind.txt.gz",
+      "capturedSha256": "e6da2426d93ec9c6c09093a69149ffeae2545481f6f77bffee4c8c3b42d55e4d",
+      "retainedSha256": "d9a2bacee463bfc727d95ff879d2e2ab5d72733538e149472aecdfd7c82d2119",
+      "sourceBytes": 608,
+      "retainedBytes": 293
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-calibrate-2026-09-07T06-44-05-346Z/watch-events.json",
+      "capturedSha256": "c58ce932c383060023043613cf884b6ebb1ade604afea55a3d10b80c7212592b",
+      "retainedSha256": "c58ce932c383060023043613cf884b6ebb1ade604afea55a3d10b80c7212592b",
+      "sourceBytes": 18504,
+      "retainedBytes": 18504
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-30-610Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-30-610Z/browser-events.json",
+      "capturedSha256": "4153b0e0569fa592f0676cbf89499d07dc2f6f752805c7be04ba13a2fcdf244f",
+      "retainedSha256": "4153b0e0569fa592f0676cbf89499d07dc2f6f752805c7be04ba13a2fcdf244f",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-30-610Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-30-610Z/dotnet-watch.txt.gz",
+      "capturedSha256": "3f4c362a2221f17fe3a0bd25391e1621c2f700604571c1e793ddddfaa4329e17",
+      "retainedSha256": "018e04221399c73b5dd4de67a642ec739add38aa14715f934dae9e249a098096",
+      "sourceBytes": 12060,
+      "retainedBytes": 2333
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-30-610Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-30-610Z/ledger.jsonl.gz",
+      "capturedSha256": "b3792e577df44308e10ba4dce7938a59dda8912cf4f5b82f8ef1dde0a6d004fb",
+      "retainedSha256": "c49c023ce6116bf6b22369d6358dde90898e0150bf2309d82dcf96074ed14259",
+      "sourceBytes": 1690,
+      "retainedBytes": 802
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-30-610Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-30-610Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-30-610Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-30-610Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-30-610Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-30-610Z/tailwind.txt.gz",
+      "capturedSha256": "95ba847023679c082e61f2e8946dab237e71056b2cb5b663b6490e5d4e07d890",
+      "retainedSha256": "677847344488c374ac8858f4856e418fc891b77d9dbaf532b9588c9c445e8aad",
+      "sourceBytes": 557,
+      "retainedBytes": 286
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-30-610Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-30-610Z/watch-events.json",
+      "capturedSha256": "b204b1b680d368aff99750d191d9d35ce04f3d81776207caf530817eef9f9d94",
+      "retainedSha256": "b204b1b680d368aff99750d191d9d35ce04f3d81776207caf530817eef9f9d94",
+      "sourceBytes": 18145,
+      "retainedBytes": 18145
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-47-141Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-47-141Z/browser-events.json",
+      "capturedSha256": "9ba59765cb808d5f08787f3b44ac3ebd09165a703e681aef2a714203fba625de",
+      "retainedSha256": "9ba59765cb808d5f08787f3b44ac3ebd09165a703e681aef2a714203fba625de",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-47-141Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-47-141Z/dotnet-watch.txt.gz",
+      "capturedSha256": "398d2049d3539a971353c02161e8da5cb093dfeb27fac3a6a8351298987a9b1d",
+      "retainedSha256": "e475f9048b294368dafec0eb20b655ac741a79ed427ef77c215d7195fd9f8186",
+      "sourceBytes": 12060,
+      "retainedBytes": 2333
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-47-141Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-47-141Z/ledger.jsonl.gz",
+      "capturedSha256": "41becb23ffce847eda5484c6c1ae4746e408b570b7924a085977a4223353cf01",
+      "retainedSha256": "4e059e3de2b56583e9bf3d470721ddd938b28823ff28b4091eca162fa066f6e9",
+      "sourceBytes": 1690,
+      "retainedBytes": 803
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-47-141Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-47-141Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-47-141Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-47-141Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-47-141Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-47-141Z/tailwind.txt.gz",
+      "capturedSha256": "a9201511aa2029a0210c60fff44fdc0f16d80fabb74c59083dc34d5d06c0ff39",
+      "retainedSha256": "1f9191a2b7be1cc6283e3389d72d687aa34a3f0f60ea863b0fcb7487d3b83ed9",
+      "sourceBytes": 556,
+      "retainedBytes": 288
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-02-47-141Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-02-47-141Z/watch-events.json",
+      "capturedSha256": "eae0617c9f573ae562e72c293de7d8582e8a42876e494ffb3dbdd4095da86bd0",
+      "retainedSha256": "eae0617c9f573ae562e72c293de7d8582e8a42876e494ffb3dbdd4095da86bd0",
+      "sourceBytes": 18144,
+      "retainedBytes": 18144
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-03-03-720Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-03-03-720Z/browser-events.json",
+      "capturedSha256": "696f0e3e4ca537e8459ec71e9db475b40bb29c39e683cb1bc5c93d75fd8197f7",
+      "retainedSha256": "696f0e3e4ca537e8459ec71e9db475b40bb29c39e683cb1bc5c93d75fd8197f7",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-03-03-720Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-03-03-720Z/dotnet-watch.txt.gz",
+      "capturedSha256": "8148762de2a19593451c88985289437496157134af40d380d20830e9691fbe3a",
+      "retainedSha256": "4099ad44dd2841de0e5a066aac647cb251265617afcf80572ef9b9b3aeaa401d",
+      "sourceBytes": 12060,
+      "retainedBytes": 2333
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-03-03-720Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-03-03-720Z/ledger.jsonl.gz",
+      "capturedSha256": "60ad9757e01a44794b43279437ddb2fadca8d3527fa042f84183eb1dcca3b1ff",
+      "retainedSha256": "b83d3d3a05d9395ab7348be3f7bf8e31708ea2246d388251ad643729ee577634",
+      "sourceBytes": 1690,
+      "retainedBytes": 800
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-03-03-720Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-03-03-720Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-03-03-720Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-03-03-720Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-03-03-720Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-03-03-720Z/tailwind.txt.gz",
+      "capturedSha256": "6c8f3b662729c0fa00cacd661510bb09cab745cf6a328e19dc4052644b2899ad",
+      "retainedSha256": "8921916291029c5f58e0d7ec2d57e4abd86e8aae8ae4f3b311a965c8531111f5",
+      "sourceBytes": 556,
+      "retainedBytes": 281
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-03-03-720Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-03-03-720Z/watch-events.json",
+      "capturedSha256": "3b5fe489a4e737a79177fe32f6c5889eac45d0de1a51ac954ababb1b39d03fd3",
+      "retainedSha256": "3b5fe489a4e737a79177fe32f6c5889eac45d0de1a51ac954ababb1b39d03fd3",
+      "sourceBytes": 18144,
+      "retainedBytes": 18144
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-22-337Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-22-337Z/browser-events.json",
+      "capturedSha256": "a6789481ebef0eedcd72f34344d360fd27e99b5cf92fac67f286fc041278d8c3",
+      "retainedSha256": "a6789481ebef0eedcd72f34344d360fd27e99b5cf92fac67f286fc041278d8c3",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-22-337Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-22-337Z/dotnet-watch.txt.gz",
+      "capturedSha256": "101ea2d44a8266e9c4b74668797804098283259f4e00908bf1dfb3cb9c589535",
+      "retainedSha256": "acec95c96cd596711f94deb7b7a111b4f0ac6da0932c1b3cb89070a8bc513a82",
+      "sourceBytes": 12060,
+      "retainedBytes": 2328
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-22-337Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-22-337Z/ledger.jsonl.gz",
+      "capturedSha256": "9e988b319fc20c8fd4d8a903c8e9df63d14f9fd54c64c70cb308bb3c971f8918",
+      "retainedSha256": "286a8b210e8920ed2c5ad9968291e737c8cfb3ad2c1f7da1b9205853709557b9",
+      "sourceBytes": 1690,
+      "retainedBytes": 800
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-22-337Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-22-337Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-22-337Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-22-337Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-22-337Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-22-337Z/tailwind.txt.gz",
+      "capturedSha256": "ab967c23b8e959120830974dcb1f85eeb789444d6c4e0e3aa4c0d1524fadf367",
+      "retainedSha256": "ab40f5190de9fc053a144d28583d8864580965918cfcad3589206b2ee2ca3aa4",
+      "sourceBytes": 556,
+      "retainedBytes": 288
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-22-337Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-22-337Z/watch-events.json",
+      "capturedSha256": "a2b64456d654780f78842ee354a9561cb9e1defd38fba7032509fab090c3586b",
+      "retainedSha256": "a2b64456d654780f78842ee354a9561cb9e1defd38fba7032509fab090c3586b",
+      "sourceBytes": 18144,
+      "retainedBytes": 18144
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-39-029Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-39-029Z/browser-events.json",
+      "capturedSha256": "735acdb47c50b06e9728b759ea60d223c3bb54583bd62677c2c5d94f09d0b767",
+      "retainedSha256": "735acdb47c50b06e9728b759ea60d223c3bb54583bd62677c2c5d94f09d0b767",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-39-029Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-39-029Z/dotnet-watch.txt.gz",
+      "capturedSha256": "efdd03350dc81892a3321a2436d89e4cbd4471b2041171f2b091504d4aa89d04",
+      "retainedSha256": "890934f100e156e7482ad3ba55ebcadf9854f1bbe68c70dbe4535282d64bda97",
+      "sourceBytes": 12060,
+      "retainedBytes": 2325
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-39-029Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-39-029Z/ledger.jsonl.gz",
+      "capturedSha256": "8e667b95cab88481dc96e58f76c83b17422150c4cde4557e0aa0c4d44dde2851",
+      "retainedSha256": "0624a0c4cbe060863e6ea331ae33f6a98bf575a1afe3e4e0abba84629f4c5612",
+      "sourceBytes": 1690,
+      "retainedBytes": 797
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-39-029Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-39-029Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-39-029Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-39-029Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-39-029Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-39-029Z/tailwind.txt.gz",
+      "capturedSha256": "2508d0f46e9101ac98c05e93d187ff717043baf84ef574a6af59531c006c4454",
+      "retainedSha256": "3ba397e685eac27f29e77a27a9e479ff0dd9597e7b0bbefc21fa1294a23c650d",
+      "sourceBytes": 557,
+      "retainedBytes": 291
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-39-029Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-39-029Z/watch-events.json",
+      "capturedSha256": "4c14393a7d00a099fadbbcd7137b0921d37d6418dc5c877b4d7ac9e40b092fd8",
+      "retainedSha256": "4c14393a7d00a099fadbbcd7137b0921d37d6418dc5c877b4d7ac9e40b092fd8",
+      "sourceBytes": 18145,
+      "retainedBytes": 18145
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-56-723Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-56-723Z/browser-events.json",
+      "capturedSha256": "a2fc6b60d17db1ca6723e038ceb762a12c0003d48f5e06dff163b32e9c1e3474",
+      "retainedSha256": "a2fc6b60d17db1ca6723e038ceb762a12c0003d48f5e06dff163b32e9c1e3474",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-56-723Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-56-723Z/dotnet-watch.txt.gz",
+      "capturedSha256": "76eca656e6673affa479d35b3f02af255465af824227a85fb61882fface3e130",
+      "retainedSha256": "dd2e65f4b03d9b94cb945a96476dfc5b82c558a7710c0a792169b59e7e33a2a4",
+      "sourceBytes": 12060,
+      "retainedBytes": 2329
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-56-723Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-56-723Z/ledger.jsonl.gz",
+      "capturedSha256": "3784058a1c264d8a463930a3b182e4a15d8374bf256cd98f0c20ae021056285f",
+      "retainedSha256": "fda05d57f7db2815903011bd1182f58fc9e6dc1ac77377c04cd0c61fd8152873",
+      "sourceBytes": 1690,
+      "retainedBytes": 804
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-56-723Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-56-723Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-56-723Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-56-723Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-56-723Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-56-723Z/tailwind.txt.gz",
+      "capturedSha256": "4488413cbdd5b708f600618503d185b2c6f8fe3b98a60970681c7837222d70bb",
+      "retainedSha256": "59039b50bf33f14c406d053025507929ad60b8702efaed150a358a1f110a0674",
+      "sourceBytes": 556,
+      "retainedBytes": 284
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-cold-2026-09-07T06-44-56-723Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-cold-2026-09-07T06-44-56-723Z/watch-events.json",
+      "capturedSha256": "54801833f357f5810b76449fee3fbe8a256209af3ee249c766a700f23ae4a115",
+      "retainedSha256": "54801833f357f5810b76449fee3fbe8a256209af3ee249c766a700f23ae4a115",
+      "sourceBytes": 18144,
+      "retainedBytes": 18144
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-03-20-458Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-03-20-458Z/browser-events.json",
+      "capturedSha256": "c054e589744b8b3b40a8bac16f2ad45a58675a3c65b4dbe6aff2360a0fbe1633",
+      "retainedSha256": "c054e589744b8b3b40a8bac16f2ad45a58675a3c65b4dbe6aff2360a0fbe1633",
+      "sourceBytes": 15688,
+      "retainedBytes": 15688
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-03-20-458Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-03-20-458Z/dotnet-watch.txt.gz",
+      "capturedSha256": "a4fff28dd7cc55705eeab0728b6e6e8de9a3c05d20473d8887dd675cd856aec7",
+      "retainedSha256": "aa00a8bcac8ed10f1faf3ac8b9276ab04a9034c79a37e9ec625852ac870c03b6",
+      "sourceBytes": 196543,
+      "retainedBytes": 5016
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-03-20-458Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-03-20-458Z/ledger.jsonl.gz",
+      "capturedSha256": "43d807767b76ed538f1fee698cded2d1e070b698bfc3552d78e672d232f0f9bb",
+      "retainedSha256": "17348dd8a6b8d1d966a7ccb1106bcdf0b21fe4528423d90f8aad84711f6e8e26",
+      "sourceBytes": 92935,
+      "retainedBytes": 7168
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-03-20-458Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-03-20-458Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-03-20-458Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-03-20-458Z/samples.json",
+      "capturedSha256": "c10b647d0af31e0a4157844f19806a4a40e345fba2227e754de2804a768da1e3",
+      "retainedSha256": "c10b647d0af31e0a4157844f19806a4a40e345fba2227e754de2804a768da1e3",
+      "sourceBytes": 120440,
+      "retainedBytes": 120440
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-03-20-458Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-03-20-458Z/tailwind.txt.gz",
+      "capturedSha256": "9499a7df7c49b016402c50fd08ef9ae28379734615c0eafb31d80f17f5906dd8",
+      "retainedSha256": "1a63524f926ddbfba5982299c89c70f0e198ac4c987f9c3144a93ea2f1f226e6",
+      "sourceBytes": 2403,
+      "retainedBytes": 609
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-03-20-458Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-03-20-458Z/watch-events.json",
+      "capturedSha256": "f96b183e1a2f05e0ee6cbb11301d5035888f8f7a7777766fdfc7089e2e01087e",
+      "retainedSha256": "f96b183e1a2f05e0ee6cbb11301d5035888f8f7a7777766fdfc7089e2e01087e",
+      "sourceBytes": 329713,
+      "retainedBytes": 329713
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-45-13-453Z/browser-events.json",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-45-13-453Z/browser-events.json",
+      "capturedSha256": "e1dc7d94294dc203cae63e6ce503a102427332d366c4667914f0827ab577ec2e",
+      "retainedSha256": "e1dc7d94294dc203cae63e6ce503a102427332d366c4667914f0827ab577ec2e",
+      "sourceBytes": 15688,
+      "retainedBytes": 15688
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-45-13-453Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-45-13-453Z/dotnet-watch.txt.gz",
+      "capturedSha256": "9ac20f0ec9e1972ecd0740ef954cdbe170687f590f01c0945b41aac311bb36e4",
+      "retainedSha256": "1a5ffbb71b0841c1e0dfec83d7d3fdb89dfd51eb2652c8a4c7b0e5b9b15aee7d",
+      "sourceBytes": 196544,
+      "retainedBytes": 5030
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-45-13-453Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-45-13-453Z/ledger.jsonl.gz",
+      "capturedSha256": "1ebde9f07d5ec6b3dec345fcee906ac72cab77aeb7e5459008ee6cc7a8870e76",
+      "retainedSha256": "4aa71910a2e530b56ad4d204c6dc7580781db745a86da31c267f6b95db0be41c",
+      "sourceBytes": 93149,
+      "retainedBytes": 7188
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-45-13-453Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-45-13-453Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-45-13-453Z/samples.json",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-45-13-453Z/samples.json",
+      "capturedSha256": "3f8eb02fc7b091b5dc68d1194ed57bfdc5f8a267affbebfc7ba65ac310b9b1d9",
+      "retainedSha256": "3f8eb02fc7b091b5dc68d1194ed57bfdc5f8a267affbebfc7ba65ac310b9b1d9",
+      "sourceBytes": 120654,
+      "retainedBytes": 120654
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-45-13-453Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-45-13-453Z/tailwind.txt.gz",
+      "capturedSha256": "31e44381bf5c598435b24b503a8c1899359f323ffb013e79ab8a969bc68acdb6",
+      "retainedSha256": "44e646c8ee897479fec628bbb6e5ede35f6f4b5d277f13ed4f6eeae439715b16",
+      "sourceBytes": 2400,
+      "retainedBytes": 605
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/fast-warm-2026-09-07T06-45-13-453Z/watch-events.json",
+      "retained": "proof/SB03/measurements/fast-warm-2026-09-07T06-45-13-453Z/watch-events.json",
+      "capturedSha256": "43e624148d9f2945e072c0d94bca3011d2b9d7d239b6194f98aeac873cc5c8ea",
+      "retainedSha256": "43e624148d9f2945e072c0d94bca3011d2b9d7d239b6194f98aeac873cc5c8ea",
+      "sourceBytes": 329711,
+      "retainedBytes": 329711
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/browser-events.json",
+      "capturedSha256": "574c33780c8f3fd13814788643d2cd0fd4818964e3dffa0f55150f43f62b10b5",
+      "retainedSha256": "574c33780c8f3fd13814788643d2cd0fd4818964e3dffa0f55150f43f62b10b5",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/dotnet-watch.txt.gz",
+      "capturedSha256": "a8dac865faa30e79750df2dd71eb5287cfc5c00d6b96b4578bdb4fbc5784c04a",
+      "retainedSha256": "13abd775cee6a5491770315434ab0177ea65f20b6a9f819d995bc9d3602cb52a",
+      "sourceBytes": 12076,
+      "retainedBytes": 2330
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/ledger.jsonl.gz",
+      "capturedSha256": "5a885f76e6132ef5317f934f43a61ecdfdabc37349a22a5627024510887dcdf4",
+      "retainedSha256": "57da60105ce4d07b0deec02db6bba8848ca4fa00ece15d1b1f60b6c6340d2782",
+      "sourceBytes": 1675,
+      "retainedBytes": 813
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/tailwind.txt.gz",
+      "capturedSha256": "5e49c205f9caa2a6775e25ec407c4889f594711828433016525c5ecfef40e89c",
+      "retainedSha256": "c71d5f846c655577db6e695458137c506a1a3a185c091814bd312b4d847d2e24",
+      "sourceBytes": 513,
+      "retainedBytes": 278
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T05-58-34-529Z/watch-events.json",
+      "capturedSha256": "b6c78bcb0600e91879f74fba37e8b1571beceaade5426091286c0bd8e98307dc",
+      "retainedSha256": "b6c78bcb0600e91879f74fba37e8b1571beceaade5426091286c0bd8e98307dc",
+      "sourceBytes": 18078,
+      "retainedBytes": 18078
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/browser-events.json",
+      "capturedSha256": "d5e0e41e493b006ac8e0908a62f318c250dcdfd9a8d0d2fad4e9b7794ce76703",
+      "retainedSha256": "d5e0e41e493b006ac8e0908a62f318c250dcdfd9a8d0d2fad4e9b7794ce76703",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/dotnet-watch.txt.gz",
+      "capturedSha256": "3531fe6a280e7a62af978c473fc38bb27950045e8b79bd30bfe6e6acc9a01251",
+      "retainedSha256": "98b5e62495110fc9f5f8e60588c78326c453bb3833c00bd7eca3e7d81b721fee",
+      "sourceBytes": 12076,
+      "retainedBytes": 2331
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/ledger.jsonl.gz",
+      "capturedSha256": "54c457895a16059c964e8b9a1248a8de7c2ce7daae7b6f7804a058ac201f069a",
+      "retainedSha256": "4b08bb5411e8fdc74f133218d053188af324b8740d83dc2ae0f8b3335e7eaa08",
+      "sourceBytes": 1675,
+      "retainedBytes": 812
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/tailwind.txt.gz",
+      "capturedSha256": "0c2abdf8589f64aaeec15b37be260afed51afe5c646a36ffd0772b0c363451e2",
+      "retainedSha256": "b086f8cdb6d5b21eef8772a80ce79ec67bdc2c1529663eb7289bc4164640bab7",
+      "sourceBytes": 527,
+      "retainedBytes": 281
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-calibrate-2026-09-07T06-40-30-231Z/watch-events.json",
+      "capturedSha256": "110e12db2867817540fa632bf0c5acf8ca51177bf6bcba6b9bf89b64eb361b3e",
+      "retainedSha256": "110e12db2867817540fa632bf0c5acf8ca51177bf6bcba6b9bf89b64eb361b3e",
+      "sourceBytes": 18169,
+      "retainedBytes": 18169
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-58-53-695Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-58-53-695Z/browser-events.json",
+      "capturedSha256": "8e26f6b793bb40ffd10cb685cc823a8da070befe02866e2ec9a1f4f366bad26e",
+      "retainedSha256": "8e26f6b793bb40ffd10cb685cc823a8da070befe02866e2ec9a1f4f366bad26e",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-58-53-695Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-58-53-695Z/dotnet-watch.txt.gz",
+      "capturedSha256": "e4c8fa83db5e5d49878b743fea986d2541f385aa1e29f12a714ebbeebe43ca84",
+      "retainedSha256": "45e5aab51262583cbf74a3c87e072b4540e33a69b6a72eddb55b32ea418c0b1a",
+      "sourceBytes": 12076,
+      "retainedBytes": 2336
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-58-53-695Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-58-53-695Z/ledger.jsonl.gz",
+      "capturedSha256": "9257f70687b46fb64f07e1772904d36cfabf69aadf1a3150ad37148317ebfc07",
+      "retainedSha256": "666f6a456040978fb9f0b2f636af5f6537bf445ae6ce16577522f5914438362f",
+      "sourceBytes": 1660,
+      "retainedBytes": 809
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-58-53-695Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-58-53-695Z/ready.jpeg",
+      "capturedSha256": "5314087ee7544bab88441fde9fbe84ae36c8b5d731af8daaf6468cfb30b63535",
+      "retainedSha256": "5314087ee7544bab88441fde9fbe84ae36c8b5d731af8daaf6468cfb30b63535",
+      "sourceBytes": 150803,
+      "retainedBytes": 150803
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-58-53-695Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-58-53-695Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-58-53-695Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-58-53-695Z/tailwind.txt.gz",
+      "capturedSha256": "68e86bf68b08a11405979144b4569200a039b1da1402dbf804558cccc313cceb",
+      "retainedSha256": "8411ec5e67ad209726b24777ffce5cebd191cec38505808be5fe37a9255eb448",
+      "sourceBytes": 485,
+      "retainedBytes": 272
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-58-53-695Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-58-53-695Z/watch-events.json",
+      "capturedSha256": "d00a3ed0f2fde8ceabfaa7ad8b268dd506ff0b48fb96119a9c2318ab8ca1b063",
+      "retainedSha256": "d00a3ed0f2fde8ceabfaa7ad8b268dd506ff0b48fb96119a9c2318ab8ca1b063",
+      "sourceBytes": 17896,
+      "retainedBytes": 17896
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-10-712Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-10-712Z/browser-events.json",
+      "capturedSha256": "c27c42dd6e12698d49c826f091d5db738ff313dd2ee59ac116b9335e1b4de286",
+      "retainedSha256": "c27c42dd6e12698d49c826f091d5db738ff313dd2ee59ac116b9335e1b4de286",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-10-712Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-10-712Z/dotnet-watch.txt.gz",
+      "capturedSha256": "f53f4993f3b5d3d50bb00aab39a51b43f2306e3ada3e5137dcb9b285ad3d7047",
+      "retainedSha256": "8bd390a945c45bb99e9b38ae6627d4ae0cecc5149dd46dc5a87c8f27aa58d8da",
+      "sourceBytes": 12074,
+      "retainedBytes": 2327
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-10-712Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-10-712Z/ledger.jsonl.gz",
+      "capturedSha256": "23444ddbb4ba8d1b15289674cc3f4007dfa82796e0232e8f3c92f197342e2a4c",
+      "retainedSha256": "52079135b25aac03783cb7fcfedfdda983a218f422999e4f0d68e84a3e08d2e5",
+      "sourceBytes": 1660,
+      "retainedBytes": 808
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-10-712Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-10-712Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-10-712Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-10-712Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-10-712Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-10-712Z/tailwind.txt.gz",
+      "capturedSha256": "6d573cfd139e8e658c307886f0061fac18dadc56e3656635cd97c11f59b0169b",
+      "retainedSha256": "4e5caa8ffcd643dd90048d0dc92e36811d929b7f5a7700d01256871ac0968a28",
+      "sourceBytes": 485,
+      "retainedBytes": 274
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-10-712Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-10-712Z/watch-events.json",
+      "capturedSha256": "08b8f561650348f2465b0dd8c0bb16b257b72faddabd9eaf1ad514616b387580",
+      "retainedSha256": "08b8f561650348f2465b0dd8c0bb16b257b72faddabd9eaf1ad514616b387580",
+      "sourceBytes": 17894,
+      "retainedBytes": 17894
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-27-818Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-27-818Z/browser-events.json",
+      "capturedSha256": "abc1b3e86714270f48f4afd68179f5c11163214239fd99b2e186210210f1ed24",
+      "retainedSha256": "abc1b3e86714270f48f4afd68179f5c11163214239fd99b2e186210210f1ed24",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-27-818Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-27-818Z/dotnet-watch.txt.gz",
+      "capturedSha256": "dd54ee4233e21b165274910221783ebbb1242c704b51df587d3bbcd7222d7190",
+      "retainedSha256": "0dd057fdc92cf6b0424e7eb77c1313ae8aab4a3ad1acea95055917627a278059",
+      "sourceBytes": 12076,
+      "retainedBytes": 2332
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-27-818Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-27-818Z/ledger.jsonl.gz",
+      "capturedSha256": "36e5066098f39d71ca134d5352e47f773b154e4128d4fcc4e386a18ef529b651",
+      "retainedSha256": "3871b58527df560183463eb2ce2b359fbe65fbae359aaaefb19eb001c5ed1a72",
+      "sourceBytes": 1657,
+      "retainedBytes": 806
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-27-818Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-27-818Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-27-818Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-27-818Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-27-818Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-27-818Z/tailwind.txt.gz",
+      "capturedSha256": "348b794749fcbb01751e21a0697d5b8f7fffa5f80ab8782c9b2df431ab07b0fd",
+      "retainedSha256": "4f4a6f1b10ecb612e29bdcbe2ee96f4b688036792b0a2b8f0d96e1b3e99ebee3",
+      "sourceBytes": 485,
+      "retainedBytes": 271
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T05-59-27-818Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T05-59-27-818Z/watch-events.json",
+      "capturedSha256": "5eb6b293e89ace06f728b34f7f1403ce84d1ef36d85ccb9021bc668ed29fa169",
+      "retainedSha256": "5eb6b293e89ace06f728b34f7f1403ce84d1ef36d85ccb9021bc668ed29fa169",
+      "sourceBytes": 17896,
+      "retainedBytes": 17896
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-40-48-194Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-40-48-194Z/browser-events.json",
+      "capturedSha256": "96cba0abcaa01ae8a5533c8a8866206303d2cefa8fc3876554ecc83fe1755e46",
+      "retainedSha256": "96cba0abcaa01ae8a5533c8a8866206303d2cefa8fc3876554ecc83fe1755e46",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-40-48-194Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-40-48-194Z/dotnet-watch.txt.gz",
+      "capturedSha256": "5e07f3a96a0cf1b6e7d86116f9709dc925bb9bfa1fa8abf56f823c769fcf3058",
+      "retainedSha256": "97ca24965f6cc033ba1f905532e50d75805852665b8187fc00a847d8fe249445",
+      "sourceBytes": 12075,
+      "retainedBytes": 2330
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-40-48-194Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-40-48-194Z/ledger.jsonl.gz",
+      "capturedSha256": "3b3439ae823b910a9ea3b23db865949364867daf8a03c81a6989e0c8b1c7f158",
+      "retainedSha256": "2c805b2c0ee458249762568581d8a194d92036bd6e6304f4f9326047887c3b64",
+      "sourceBytes": 1658,
+      "retainedBytes": 804
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-40-48-194Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-40-48-194Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-40-48-194Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-40-48-194Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-40-48-194Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-40-48-194Z/tailwind.txt.gz",
+      "capturedSha256": "45e831d4d2461f278e24741e130764281fd8845eedd1490de18bc6a198359048",
+      "retainedSha256": "33dcfa614a196e744b25fc528ea647830866b3e33562a640ca631964061100eb",
+      "sourceBytes": 485,
+      "retainedBytes": 273
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-40-48-194Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-40-48-194Z/watch-events.json",
+      "capturedSha256": "bcef8c1a3364c328dcd9df9c0cf8deccfbe60a7835618f37d8242ecc71c0f93c",
+      "retainedSha256": "bcef8c1a3364c328dcd9df9c0cf8deccfbe60a7835618f37d8242ecc71c0f93c",
+      "sourceBytes": 17895,
+      "retainedBytes": 17895
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-05-150Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-05-150Z/browser-events.json",
+      "capturedSha256": "b3ed4ea121fc5b9b62a951c1a30dfd8ffdb62c494eb7c7873e136724a489ccf1",
+      "retainedSha256": "b3ed4ea121fc5b9b62a951c1a30dfd8ffdb62c494eb7c7873e136724a489ccf1",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-05-150Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-05-150Z/dotnet-watch.txt.gz",
+      "capturedSha256": "c03bb7c649d39f89fc5cb40550571201314beb316847edb1a019be8351d2d119",
+      "retainedSha256": "e25bc0a0e1de4972d2a32a3d28ea6471054f0b971c933e97f55b386ee19fb417",
+      "sourceBytes": 12076,
+      "retainedBytes": 2336
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-05-150Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-05-150Z/ledger.jsonl.gz",
+      "capturedSha256": "a4ba55c707d3abec8877edd4a9c62dfed7db4b480d7faafd2a8b74d9cc7b1575",
+      "retainedSha256": "991eeeaff3d93155a1bf5257a082708d93e70bf2628b0db0a4cf66046b14970a",
+      "sourceBytes": 1660,
+      "retainedBytes": 806
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-05-150Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-05-150Z/ready.jpeg",
+      "capturedSha256": "6653832632f7ecc1841732bd05310bb2fd720527641f2b37f4c0f77f962c4361",
+      "retainedSha256": "6653832632f7ecc1841732bd05310bb2fd720527641f2b37f4c0f77f962c4361",
+      "sourceBytes": 150982,
+      "retainedBytes": 150982
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-05-150Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-05-150Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-05-150Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-05-150Z/tailwind.txt.gz",
+      "capturedSha256": "881e23df926aaaec39cc5f9ff1d53c7640caae131fb4b60ae996561b7505fa7f",
+      "retainedSha256": "d81e353496574c9c1a744f89b93a7129df6bf4bf16a9874fbb99cef39f18c661",
+      "sourceBytes": 499,
+      "retainedBytes": 276
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-05-150Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-05-150Z/watch-events.json",
+      "capturedSha256": "a7e776b96ccfa23d1484316092997e7e5527119dff0f910f4a1ba08c55e5cf05",
+      "retainedSha256": "a7e776b96ccfa23d1484316092997e7e5527119dff0f910f4a1ba08c55e5cf05",
+      "sourceBytes": 17987,
+      "retainedBytes": 17987
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-22-176Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-22-176Z/browser-events.json",
+      "capturedSha256": "e024c6eae35959eeb9a8e5820895bb158be474c3c7e718c91bd2a213a30663c6",
+      "retainedSha256": "e024c6eae35959eeb9a8e5820895bb158be474c3c7e718c91bd2a213a30663c6",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-22-176Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-22-176Z/dotnet-watch.txt.gz",
+      "capturedSha256": "a61d930a8b4e84c9cf7f11d66f9b9584163f8332727752939723f783fd0281a2",
+      "retainedSha256": "5a025ff8c31645250fc0bbf86ca05d2b51d67b757a194e818943a86de1d63cbb",
+      "sourceBytes": 12075,
+      "retainedBytes": 2329
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-22-176Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-22-176Z/ledger.jsonl.gz",
+      "capturedSha256": "7d8f9b5f2efe920bd91ca9718c4e1d350502d6effa01ddb918a46e298d2f1e93",
+      "retainedSha256": "883f114410d54fc2571625306c9f9e40c715e82d19a389e02c6c4f83bc324e4c",
+      "sourceBytes": 1660,
+      "retainedBytes": 808
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-22-176Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-22-176Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-22-176Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-22-176Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-22-176Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-22-176Z/tailwind.txt.gz",
+      "capturedSha256": "e4cfcdbc5d2c6d7bb715a9af4a063c66e6bf76ff42342400d52758d1d7d30b05",
+      "retainedSha256": "484bd66dddd63c9d1507474cbf2f0676f3ca6d9293ef5ab387a55a490f7d1e83",
+      "sourceBytes": 485,
+      "retainedBytes": 272
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-cold-2026-09-07T06-41-22-176Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-cold-2026-09-07T06-41-22-176Z/watch-events.json",
+      "capturedSha256": "326ba7f7a5405f1d551647f665d0e3c68126e31229706d70d13578179e0c055e",
+      "retainedSha256": "326ba7f7a5405f1d551647f665d0e3c68126e31229706d70d13578179e0c055e",
+      "sourceBytes": 17895,
+      "retainedBytes": 17895
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T05-59-45-267Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T05-59-45-267Z/browser-events.json",
+      "capturedSha256": "24c09baee98c12ada180b4fbf46683be5a25f7aade7cf2a4e436fe79314c79b0",
+      "retainedSha256": "24c09baee98c12ada180b4fbf46683be5a25f7aade7cf2a4e436fe79314c79b0",
+      "sourceBytes": 15592,
+      "retainedBytes": 15592
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T05-59-45-267Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T05-59-45-267Z/dotnet-watch.txt.gz",
+      "capturedSha256": "06432028b8f88c137b44cb36e3663a1dac2261e0a93c7e9139fd128778ed6189",
+      "retainedSha256": "4f493ebce6f0bcc6cc6a2c6670d115f941f70e1a1ee47c477c4bd00ddd5af7b9",
+      "sourceBytes": 196033,
+      "retainedBytes": 4965
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T05-59-45-267Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T05-59-45-267Z/ledger.jsonl.gz",
+      "capturedSha256": "ed2d94e5212135de8fafecb0001dc7bca31d86483cb364f0b01f7e3f609addfe",
+      "retainedSha256": "68eb01c01d605fc6b05eeec810ff1f85049a11451760dd8a0e8eac245330aa85",
+      "sourceBytes": 93590,
+      "retainedBytes": 7182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T05-59-45-267Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T05-59-45-267Z/ready.jpeg",
+      "capturedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "retainedSha256": "361ec6b8cb75b841c2d54619374464652e24b6bf71086167dc829b32a4c1197f",
+      "sourceBytes": 150781,
+      "retainedBytes": 150781
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T05-59-45-267Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T05-59-45-267Z/samples.json",
+      "capturedSha256": "9d76d27f9159123a0d86bf16dd5ff5f9b51d24c63ecca9ee39f1c072d8801a57",
+      "retainedSha256": "9d76d27f9159123a0d86bf16dd5ff5f9b51d24c63ecca9ee39f1c072d8801a57",
+      "sourceBytes": 121081,
+      "retainedBytes": 121081
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T05-59-45-267Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T05-59-45-267Z/tailwind.txt.gz",
+      "capturedSha256": "469d0ed9f112fa936152339c4dca4a86b331d0a096b286d03edf9f0ed7019dc9",
+      "retainedSha256": "64dc4493bae9fdaa8d7032ab2d1c1d5c0b6979d1fdf056cdbfe53dffee53461c",
+      "sourceBytes": 2226,
+      "retainedBytes": 550
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T05-59-45-267Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T05-59-45-267Z/watch-events.json",
+      "capturedSha256": "4d839fa5f5efce9f312b7c562363900540a19592b37b578836c2d8681f0862c0",
+      "retainedSha256": "4d839fa5f5efce9f312b7c562363900540a19592b37b578836c2d8681f0862c0",
+      "sourceBytes": 328494,
+      "retainedBytes": 328494
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T06-41-39-200Z/browser-events.json",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T06-41-39-200Z/browser-events.json",
+      "capturedSha256": "a666ddbbcfb5c0cd49ee11fa749f1574e52ac5c52e578b5ebb52ac5782868417",
+      "retainedSha256": "a666ddbbcfb5c0cd49ee11fa749f1574e52ac5c52e578b5ebb52ac5782868417",
+      "sourceBytes": 15592,
+      "retainedBytes": 15592
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T06-41-39-200Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T06-41-39-200Z/dotnet-watch.txt.gz",
+      "capturedSha256": "aa2a0a799ce2898cc99fb1ed4b3461e9be88ef4bcac558c953ecde42d2a2c391",
+      "retainedSha256": "7ebe38b4ab8741b4a426ac8718ca34a2513df5717734275e5175a03884f715f2",
+      "sourceBytes": 196032,
+      "retainedBytes": 4978
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T06-41-39-200Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T06-41-39-200Z/ledger.jsonl.gz",
+      "capturedSha256": "7d5e6e39c57afa1766d34b534e4fe8ece0117fbef7eca76f8343bc445a7a2411",
+      "retainedSha256": "60631b4fd95f5b7605e423de4aa98cc5992df632b95cd766f50076b962d62191",
+      "sourceBytes": 93587,
+      "retainedBytes": 7132
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T06-41-39-200Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T06-41-39-200Z/ready.jpeg",
+      "capturedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "retainedSha256": "be993dc624dc21eb82731fb56bcbd553aa50e3f1dffe947b6c863a2aa4197b4a",
+      "sourceBytes": 150944,
+      "retainedBytes": 150944
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T06-41-39-200Z/samples.json",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T06-41-39-200Z/samples.json",
+      "capturedSha256": "1107a71248d37964ca2690216413e21bdc0b044269dd7d91ba9b9021c1589997",
+      "retainedSha256": "1107a71248d37964ca2690216413e21bdc0b044269dd7d91ba9b9021c1589997",
+      "sourceBytes": 121078,
+      "retainedBytes": 121078
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T06-41-39-200Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T06-41-39-200Z/tailwind.txt.gz",
+      "capturedSha256": "27bbf77b2e10ff82fb5fbd52cd8fe165a00c38dbf94be74ab742b97cf7a4bd97",
+      "retainedSha256": "62292affe62ef3b28d0248860e4fd95bcc5963d3ea376a1f9c58bafadde3d1a1",
+      "sourceBytes": 2236,
+      "retainedBytes": 553
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/parity-warm-2026-09-07T06-41-39-200Z/watch-events.json",
+      "retained": "proof/SB03/measurements/parity-warm-2026-09-07T06-41-39-200Z/watch-events.json",
+      "capturedSha256": "afe0693fdefae8b999c49f013716b35072a145d50378ba7dfadcbdd073907dd4",
+      "retainedSha256": "afe0693fdefae8b999c49f013716b35072a145d50378ba7dfadcbdd073907dd4",
+      "sourceBytes": 328580,
+      "retainedBytes": 328580
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/browser-events.json",
+      "capturedSha256": "c59d4513ed08cbdbc53558292755430bdc25bff9d0b12674395856adba8ad75b",
+      "retainedSha256": "c59d4513ed08cbdbc53558292755430bdc25bff9d0b12674395856adba8ad75b",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/dotnet-watch.txt.gz",
+      "capturedSha256": "eed08e2b24d1704f669209fcfae9cb908de84e7ff1986aeebac48db909ff7977",
+      "retainedSha256": "a0f8c98bda5ff3dc1de09c19821af5a330b774d3012a57f085b654e3ff7b0fe4",
+      "sourceBytes": 83713,
+      "retainedBytes": 5528
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/ledger.jsonl.gz",
+      "capturedSha256": "3856164b13be15ce1e09aff369c18bb0c2022f449d05a50bb5abe88f21c755b3",
+      "retainedSha256": "7878e5b9a52b415deebc813e5240679187409c83b22cebf9e010474376376f19",
+      "sourceBytes": 1671,
+      "retainedBytes": 802
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/tailwind.txt.gz",
+      "capturedSha256": "841b2cca74043877c4f9d103cfc9920d863151e672e5663dcfa1f553bbf2e7ee",
+      "retainedSha256": "5d66136913024abcba85b6a42eaa37985f93afe152415d8047ac4080a0fd023b",
+      "sourceBytes": 1674,
+      "retainedBytes": 488
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T05-49-00-174Z/watch-events.json",
+      "capturedSha256": "6e6dcc263ced8dfe4d63d1e3cd33d17426e82f4df0900a9fb72f116397025f1f",
+      "retainedSha256": "6e6dcc263ced8dfe4d63d1e3cd33d17426e82f4df0900a9fb72f116397025f1f",
+      "sourceBytes": 120460,
+      "retainedBytes": 120460
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/browser-events.json",
+      "capturedSha256": "36e1ea4f96b4e4e547becf315266eb30e00d1cc59d01f805c8374e34f22a801a",
+      "retainedSha256": "36e1ea4f96b4e4e547becf315266eb30e00d1cc59d01f805c8374e34f22a801a",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/dotnet-watch.txt.gz",
+      "capturedSha256": "f9881075f314fb738aaaf71457432a3420ed75a0fed94d347235c10826506440",
+      "retainedSha256": "d99a2e9fcfdf7abcfd53ba0dc1a7742785990a61f7f00e0aef5e196600a76871",
+      "sourceBytes": 83715,
+      "retainedBytes": 5541
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/ledger.jsonl.gz",
+      "capturedSha256": "ad473ab66130be593139034862bc1ed688c895f671ca9afd687055f8f0b28963",
+      "retainedSha256": "0e9695dbc233d24fde11aa3054e38d72b1d66e6fd07262d1c945a2f1c1a7df21",
+      "sourceBytes": 1667,
+      "retainedBytes": 798
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/tailwind.txt.gz",
+      "capturedSha256": "7552b41466f29e92a252fa4f9e98eca9e79590f3eb5247cd4da3f160d3f87d84",
+      "retainedSha256": "04fa74ca146efabd5c578379806bc3cf7328a8e1936c6df6629986293e089d66",
+      "sourceBytes": 1061,
+      "retainedBytes": 385
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-calibrate-2026-09-07T06-31-47-642Z/watch-events.json",
+      "capturedSha256": "ff4b424636d80449005a554e934d92b9e49462a3e1b285ba4f85f4fec4c13357",
+      "retainedSha256": "ff4b424636d80449005a554e934d92b9e49462a3e1b285ba4f85f4fec4c13357",
+      "sourceBytes": 116461,
+      "retainedBytes": 116461
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/browser-events.json",
+      "capturedSha256": "a7580324c346a16116d89244f34a221aa7b67f2cfe1ca362438589abd005d897",
+      "retainedSha256": "a7580324c346a16116d89244f34a221aa7b67f2cfe1ca362438589abd005d897",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/dotnet-watch.txt.gz",
+      "capturedSha256": "4056f649f7258a92f93d9359182cee0d6561b31ba46c614b206e3484d9e1093d",
+      "retainedSha256": "ca0ac4e7c93a40065a2735fadcc7a75976057351d8b2415de654032707e1cc05",
+      "sourceBytes": 83715,
+      "retainedBytes": 5524
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/ledger.jsonl.gz",
+      "capturedSha256": "3808ee57f6f9a6837ab280f80f27f950e45db8f9379f2a489ba49ff562f44700",
+      "retainedSha256": "09afc89afd4ce33100fe353bbecf3a31e21482ff4b5439d97e9ba0a7a855afa3",
+      "sourceBytes": 1655,
+      "retainedBytes": 795
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/tailwind.txt.gz",
+      "capturedSha256": "7296892c201566692071ca0c5469b8ee76af9ee155673c03d237880575a68617",
+      "retainedSha256": "3f42713406ccfaa9aa7ef584512e755bcb1658ea8d362e2111e905722353fb95",
+      "sourceBytes": 992,
+      "retainedBytes": 375
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-50-50-450Z/watch-events.json",
+      "capturedSha256": "90cb54cdd2bd51d7ccc6e476624833398c9611a168b28ef450b7ed19f244019e",
+      "retainedSha256": "90cb54cdd2bd51d7ccc6e476624833398c9611a168b28ef450b7ed19f244019e",
+      "sourceBytes": 116007,
+      "retainedBytes": 116007
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/browser-events.json",
+      "capturedSha256": "8cb8fb62db9e563500a841d1d3ab0ace7ff1bef1662d578e5a86990453bc1f8c",
+      "retainedSha256": "8cb8fb62db9e563500a841d1d3ab0ace7ff1bef1662d578e5a86990453bc1f8c",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/dotnet-watch.txt.gz",
+      "capturedSha256": "e0633c0d0d9b22c7e1e067851beb2e212791b9073a680ab1092f3367ab499f3f",
+      "retainedSha256": "a18249fb39ae571d42562848ce45180ea189fc0b87eea3013db4e087408c3a8c",
+      "sourceBytes": 83715,
+      "retainedBytes": 5568
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/ledger.jsonl.gz",
+      "capturedSha256": "d9a1b4c7f13ec1a8fddb6975271a65e0623b4064b0ab34ad6bdbc77eb3061fe3",
+      "retainedSha256": "02c4eabc61736df13a9f77198288696052f705818fba3ff8fdbfe2745a0b8224",
+      "sourceBytes": 1655,
+      "retainedBytes": 795
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/ready.jpeg",
+      "capturedSha256": "b0fd54ddd130259327796a6d7833dc9285d69de69fbc3a0b1f80cff2c75ae955",
+      "retainedSha256": "b0fd54ddd130259327796a6d7833dc9285d69de69fbc3a0b1f80cff2c75ae955",
+      "sourceBytes": 190180,
+      "retainedBytes": 190180
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/tailwind.txt.gz",
+      "capturedSha256": "50bd00be3324e584fd88c975836e69a56c70d7a867a97f16d7c3846d16c31098",
+      "retainedSha256": "be5c1e1754f0222710ee6b2013f0e127a7925a8378baf3ec633c8fcb3926b008",
+      "sourceBytes": 993,
+      "retainedBytes": 371
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-51-51-456Z/watch-events.json",
+      "capturedSha256": "67b53f8a4b117b08af75c575f3990a8f76766a3a64754c4c3979388f81aed640",
+      "retainedSha256": "67b53f8a4b117b08af75c575f3990a8f76766a3a64754c4c3979388f81aed640",
+      "sourceBytes": 116008,
+      "retainedBytes": 116008
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/browser-events.json",
+      "capturedSha256": "4b9052af037399a51d4316d36b83bcbae2654627b460d6f5b3490288c75b8322",
+      "retainedSha256": "4b9052af037399a51d4316d36b83bcbae2654627b460d6f5b3490288c75b8322",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/dotnet-watch.txt.gz",
+      "capturedSha256": "b73e6967e96a2bb29ced4b6fb98cf3486add2f42741611eb8ffa6adec90f53c0",
+      "retainedSha256": "299b4f2b9c22686f6456974de12f800cfd57e0d3d1d8b8d2c1cec34cf7094e76",
+      "sourceBytes": 83715,
+      "retainedBytes": 5554
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/ledger.jsonl.gz",
+      "capturedSha256": "5c3d241941ec66fbea14c0b453888a5aa9436dddd1e9c3bfdd64201b6f8756af",
+      "retainedSha256": "68707c9bd75414f96e99a2849456131e143f54b23867e33c410d3b8b8382c8b8",
+      "sourceBytes": 1655,
+      "retainedBytes": 797
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/tailwind.txt.gz",
+      "capturedSha256": "c37515fbdf425f584a8f640682ec7869fd598bbaaf4867de5f56b1ee94d5970b",
+      "retainedSha256": "34c9859bf13e22e24f8fd0cd0d18dab956206369198d5e3a5f5542ccab5c7a91",
+      "sourceBytes": 978,
+      "retainedBytes": 372
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T05-52-51-730Z/watch-events.json",
+      "capturedSha256": "dbbdbf18376d61d56bb223241fe34043d3722737720d3241380b30ce83ad4058",
+      "retainedSha256": "dbbdbf18376d61d56bb223241fe34043d3722737720d3241380b30ce83ad4058",
+      "sourceBytes": 115916,
+      "retainedBytes": 115916
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/browser-events.json",
+      "capturedSha256": "d156487144a6af1a5eb504e2ed1fe37f23431b756926a4f4f92587a64d4a0eb3",
+      "retainedSha256": "d156487144a6af1a5eb504e2ed1fe37f23431b756926a4f4f92587a64d4a0eb3",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/dotnet-watch.txt.gz",
+      "capturedSha256": "83ca13fcaaf5b1ede0fa5063c30d344b25cb7d52b7600037f093e2163b5a8f7b",
+      "retainedSha256": "08e90744357123b32c1b15587f8e8c7ce7e998e494fca275d75c103820d09e0c",
+      "sourceBytes": 83715,
+      "retainedBytes": 5542
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/ledger.jsonl.gz",
+      "capturedSha256": "b63f5865380aa214ad64d0dcf92f9033a4841a1b30726d711bfaaae90af17ef5",
+      "retainedSha256": "770f5d8df2465e1db6943a54a1497fdde53a8808798bac435cca0cbcb2099afe",
+      "sourceBytes": 1655,
+      "retainedBytes": 794
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/tailwind.txt.gz",
+      "capturedSha256": "e340ddca359f090579122ee0c1f3fe0c4a1b9bbd1a7e6e18cb2271f3adbbb98c",
+      "retainedSha256": "79edbae78a4cbd4de52f48af67c69d489f171bd0ee4d529fa2cf7244854af5b7",
+      "sourceBytes": 964,
+      "retainedBytes": 370
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-32-49-718Z/watch-events.json",
+      "capturedSha256": "bd320dbf2be89622a2ebbd7130c1134ff683c2afbf62c8720ee3bb600e1a3011",
+      "retainedSha256": "bd320dbf2be89622a2ebbd7130c1134ff683c2afbf62c8720ee3bb600e1a3011",
+      "sourceBytes": 115825,
+      "retainedBytes": 115825
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/browser-events.json",
+      "capturedSha256": "57780f22b86c6156c076d9a52eadc72c7b2965d7663148010091b5f34ae80cfd",
+      "retainedSha256": "57780f22b86c6156c076d9a52eadc72c7b2965d7663148010091b5f34ae80cfd",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/dotnet-watch.txt.gz",
+      "capturedSha256": "a43fd4aaf01e39400260b2c2d8f015a1099fed2f7b0e784b1e4527b29d40e047",
+      "retainedSha256": "cfa968a35a27aca11db9a8ff6fa90419b2d05e73f8efb05068a742a56d1b0e54",
+      "sourceBytes": 83715,
+      "retainedBytes": 5546
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/ledger.jsonl.gz",
+      "capturedSha256": "8f653e5b0ed98a6fc1377896bd8b619601afeaabf664f817f3890050e2fe3d1e",
+      "retainedSha256": "414d29c2d69ea6622f56ecbffbac2a9ce471148a8d120a8794c3de986ea994b3",
+      "sourceBytes": 1654,
+      "retainedBytes": 798
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/tailwind.txt.gz",
+      "capturedSha256": "dabf64b9ad342ce76309c99cb7c880b63b9afbe41b611245f852c5e15c9fb1ac",
+      "retainedSha256": "52bff9ce2a9848257ca467435bed22a68ac6e4fbf8e120a574bdb816838a38cb",
+      "sourceBytes": 978,
+      "retainedBytes": 374
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-33-50-182Z/watch-events.json",
+      "capturedSha256": "559226a62c804adb11a6e7f99821da308a61c336301ee97902a47f78858da87d",
+      "retainedSha256": "559226a62c804adb11a6e7f99821da308a61c336301ee97902a47f78858da87d",
+      "sourceBytes": 115916,
+      "retainedBytes": 115916
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/browser-events.json",
+      "capturedSha256": "320a67574ac2c8dc1c3ebb05c1e0466d5bc83b284522fb85b12c01a3dfb88075",
+      "retainedSha256": "320a67574ac2c8dc1c3ebb05c1e0466d5bc83b284522fb85b12c01a3dfb88075",
+      "sourceBytes": 76,
+      "retainedBytes": 76
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/dotnet-watch.txt.gz",
+      "capturedSha256": "b2c640aef5230f02480820b7590c46e6ad025d8879c01cfbf06e7d35240577f1",
+      "retainedSha256": "42e5d2b6a84fdc92940f35136ca7573d7e14f4bc56bc036be57df6bf9de591ec",
+      "sourceBytes": 83715,
+      "retainedBytes": 5532
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/ledger.jsonl.gz",
+      "capturedSha256": "6c07fd9a04f067d33e9cc13dcca1dd84e02cbe09cd4dadac8126829899d490ea",
+      "retainedSha256": "d6dc885837d22ab0bbae65650c718fa5771ac4a4fdcca9e8db99b666ffdfcb62",
+      "sourceBytes": 1655,
+      "retainedBytes": 794
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/samples.json",
+      "capturedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retainedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sourceBytes": 2,
+      "retainedBytes": 2
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/tailwind.txt.gz",
+      "capturedSha256": "312f285b88c365b0d009d2b5a1c331d2c5f80bcc880cd7891e3af3f52451b719",
+      "retainedSha256": "ccd620b4f0d692bb56655270c847dabf076cad751d43afe24a390cec055bc5d7",
+      "sourceBytes": 1006,
+      "retainedBytes": 376
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-cold-2026-09-07T06-34-50-725Z/watch-events.json",
+      "capturedSha256": "0dd4cc98ce27e93f2101d4f1db3684d9d4980d7dc2ef012dcc85dfdcf98ad860",
+      "retainedSha256": "0dd4cc98ce27e93f2101d4f1db3684d9d4980d7dc2ef012dcc85dfdcf98ad860",
+      "sourceBytes": 116098,
+      "retainedBytes": 116098
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/browser-events.json",
+      "capturedSha256": "7319e02458c3a1cc3c41d75c1fda5641407356d183f51bf3a0f4321598243233",
+      "retainedSha256": "7319e02458c3a1cc3c41d75c1fda5641407356d183f51bf3a0f4321598243233",
+      "sourceBytes": 15592,
+      "retainedBytes": 15592
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/dotnet-watch.txt.gz",
+      "capturedSha256": "7434451aa375e6521adbdf87867d524cb860fb5acd768bc6277cc3367dc8fb4b",
+      "retainedSha256": "df6d877a64af0becb1ad10fa07732091ae686f4bf76325e56084842418449a71",
+      "sourceBytes": 254039,
+      "retainedBytes": 8179
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/ledger.jsonl.gz",
+      "capturedSha256": "c4028ee64144f782f49b2ffd3aa81619b93331912ee9bf20cffc8b50667575f1",
+      "retainedSha256": "2a1f666557ecd5d8df54f4fa9b9a8eabef22805c3e7ae8da87a7631660fa2ed4",
+      "sourceBytes": 94964,
+      "retainedBytes": 7298
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/ready.jpeg",
+      "capturedSha256": "e8d92ce0b7105daa24953b862c3579902e6ae961664099d98be7202a145d11a1",
+      "retainedSha256": "e8d92ce0b7105daa24953b862c3579902e6ae961664099d98be7202a145d11a1",
+      "sourceBytes": 190219,
+      "retainedBytes": 190219
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/samples.json",
+      "capturedSha256": "deaa3efecd1580073ff33f8c379895a66bedff6d37913c32a9c46b1f7b7cbb1f",
+      "retainedSha256": "deaa3efecd1580073ff33f8c379895a66bedff6d37913c32a9c46b1f7b7cbb1f",
+      "sourceBytes": 122462,
+      "retainedBytes": 122462
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/tailwind.txt.gz",
+      "capturedSha256": "dfe0729acb6844ec850559e06e16d606590dcc863fcb5208ce0b0d1cab4efa80",
+      "retainedSha256": "532a54a2a7c846d736989efb86728e99c83e27665a5076051a09b7a970ed9f90",
+      "sourceBytes": 2769,
+      "retainedBytes": 625
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T05-53-51-150Z/watch-events.json",
+      "capturedSha256": "8742dbfb2897fa4c4d5e54aed84f3031ce85f44d5c124d5e54476bece430672d",
+      "retainedSha256": "8742dbfb2897fa4c4d5e54aed84f3031ce85f44d5c124d5e54476bece430672d",
+      "sourceBytes": 419153,
+      "retainedBytes": 419153
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/browser-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/browser-events.json",
+      "capturedSha256": "4de8e429af0ef4da08c9d0d510b2a83887c841436d48def5ac670673e4f57809",
+      "retainedSha256": "4de8e429af0ef4da08c9d0d510b2a83887c841436d48def5ac670673e4f57809",
+      "sourceBytes": 15592,
+      "retainedBytes": 15592
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/dotnet-watch.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/dotnet-watch.txt.gz",
+      "capturedSha256": "6ebd731c27e38ed69338d5cdc494bc7dd6d25f659a2894bd37f73958b17897e0",
+      "retainedSha256": "35350c5d477f65791a68cd7f0803396a7af148bae9997245b82fb99a5aebc27c",
+      "sourceBytes": 254463,
+      "retainedBytes": 8181
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/ledger.jsonl",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/ledger.jsonl.gz",
+      "capturedSha256": "fddfa4b12c83f1e350e34eb3c3de039359f1e3b86a54e19470263070c843750a",
+      "retainedSha256": "551d59b9d0be90463823a038e12e35e1571da12ae2069107a835af12c55d897e",
+      "sourceBytes": 94859,
+      "retainedBytes": 7230
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/ready.jpeg",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/ready.jpeg",
+      "capturedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "retainedSha256": "3b2f126d8d3f5f8c3d44a3658114c08d0387f2d3fad9b03f8968e313dd98ea20",
+      "sourceBytes": 190182,
+      "retainedBytes": 190182
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/samples.json",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/samples.json",
+      "capturedSha256": "175b5ae38904b90c6ec9e20a4c0d85ea52d37299cd7a834014cabf87645d6900",
+      "retainedSha256": "175b5ae38904b90c6ec9e20a4c0d85ea52d37299cd7a834014cabf87645d6900",
+      "sourceBytes": 122357,
+      "retainedBytes": 122357
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/tailwind.txt",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/tailwind.txt.gz",
+      "capturedSha256": "e1bc78dec21864a54b57f2b701a9d6e5c3b3c06b153526e0aa68de4b87ecacef",
+      "retainedSha256": "69176e13c86fccec2f9e00862635cafd6e6d5337f1d13343d35b1dab7845947e",
+      "sourceBytes": 2765,
+      "retainedBytes": 629
+    },
+    {
+      "source": ".mcp-state/capa03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/watch-events.json",
+      "retained": "proof/SB03/measurements/post-fullapp-warm-2026-09-07T06-35-52-967Z/watch-events.json",
+      "capturedSha256": "b400ab4cad9d8cde857b2d1a8d32f4be5fa21c8330bcca78dd954d22f883da17",
+      "retainedSha256": "b400ab4cad9d8cde857b2d1a8d32f4be5fa21c8330bcca78dd954d22f883da17",
+      "sourceBytes": 419908,
+      "retainedBytes": 419908
+    },
+    {
+      "source": ".mcp-state/capa03/run-sb03-responsive.py",
+      "retained": "tools/run-sb03-responsive.py",
+      "capturedSha256": "9225d7d01a7326b1eec8ba73697d07c8c960badb7e4ad9d13a071c4b5a8c11a4",
+      "retainedSha256": "45f1661d49bf8bdf375f1efb472adacd3756de063b708054df712cb329568384",
+      "sourceBytes": 3114,
+      "retainedBytes": 3070
+    },
+    {
+      "source": ".mcp-state/capa03/summarize-sb03.py",
+      "retained": "tools/summarize-sb03.py",
+      "capturedSha256": "5a9893ee430ea1feeff48f03c723ba3cd80f04c6dba3557e54f7e8f45cf9eb6c",
+      "retainedSha256": "5a9893ee430ea1feeff48f03c723ba3cd80f04c6dba3557e54f7e8f45cf9eb6c",
+      "sourceBytes": 7880,
+      "retainedBytes": 7880
+    },
+    {
+      "source": ".mcp-state/capa03/run-cascade-validation.py",
+      "retained": "tools/run-cascade-validation.py",
+      "capturedSha256": "d6034b57d1df40802f7ace84235f83d485d919bb155dae26d67fbbe4ebfad5a9",
+      "retainedSha256": "554eddeb29a699a9c55e34de4bd0fe27e97ace60c3d61d0e9704997258fd9715",
+      "sourceBytes": 1983,
+      "retainedBytes": 1961
+    },
+    {
+      "source": ".mcp-state/capa03/browser-sandbox.cjs",
+      "retained": "tools/browser-sandbox-final.cjs",
+      "capturedSha256": "b6542fbd5812f3ce85de98d749117e4b975cb8d3498194656291defdd6f2be69",
+      "retainedSha256": "20bc57cf0f7bda3f959ba00a4b5c2640edab7734cedf9e8efdf01e9b093f9b54",
+      "sourceBytes": 15338,
+      "retainedBytes": 15124
+    }
+  ],
+  "note": "Raw stable theory-secret values were sanitized before retention by the frozen runner. Its separately recorded raw hashes identify pre-sanitization inputs. This map hashes the actual sanitized source bytes. Gzip is lossless with deterministic timestamp. Final manifest hashes retained bytes after any text newline normalization."
+}

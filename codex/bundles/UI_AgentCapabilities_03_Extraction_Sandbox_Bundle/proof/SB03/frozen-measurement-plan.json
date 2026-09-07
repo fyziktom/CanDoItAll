@@ -1,0 +1,163 @@
+{
+  "status": "FROZEN protocol v2: startup confirmation and all predicates settled before interactive-ready",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "hosts": [
+    "pre-fullapp",
+    "post-fullapp",
+    "parity",
+    "fast"
+  ],
+  "sdk": "10.0.303",
+  "readyTimeoutMs": 240000,
+  "timeoutMs": 60000,
+  "settlementMinimumMs": 1500,
+  "settlementQuietMs": 350,
+  "repetitions": 3,
+  "coldRepetitions": 3,
+  "selectedAgentId": "9ba4d415-cc9c-4e0e-b03a-cc0000000001",
+  "filter": "capa03-benchmark",
+  "edits": [
+    {
+      "id": "razor-1",
+      "category": "Razor",
+      "prePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "old": ">Effect</label>",
+      "replacement": ">Effect measurement</label>",
+      "selector": "label:has(+ [data-testid=\"agents-capability-access-effect\"])",
+      "before": "Effect",
+      "after": "Effect measurement",
+      "property": null,
+      "preSha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c"
+    },
+    {
+      "id": "razor-2",
+      "category": "Razor",
+      "prePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "old": ">Scope</label>",
+      "replacement": ">Scope measurement</label>",
+      "selector": "label:has(+ [data-testid=\"agents-capability-access-scope\"])",
+      "before": "Scope",
+      "after": "Scope measurement",
+      "property": null,
+      "preSha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c"
+    },
+    {
+      "id": "razor-3",
+      "category": "Razor",
+      "prePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "old": ">Reason</label>",
+      "replacement": ">Reason measurement</label>",
+      "selector": "label:has(+ [data-testid=\"agents-capability-access-reason\"])",
+      "before": "Reason",
+      "after": "Reason measurement",
+      "property": null,
+      "preSha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c"
+    },
+    {
+      "id": "csharp-kind",
+      "category": "C#",
+      "prePath": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "old": "CapabilityKind.McpServer => \"MCP server\",",
+      "replacement": "CapabilityKind.McpServer => \"MCP server measurement\",",
+      "selector": "[data-testid=\"agents-capability-card\"][data-capability-kind=\"McpServer\"] .cda-status-badge:nth-child(1):not(:only-child)",
+      "before": "MCP server",
+      "after": "MCP server measurement",
+      "property": null,
+      "preSha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf"
+    },
+    {
+      "id": "csharp-proof",
+      "category": "C#",
+      "prePath": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "old": "CapabilityProofStatus.Verified => (\"Verified\", \"success\"),",
+      "replacement": "CapabilityProofStatus.Verified => (\"Verified measurement\", \"success\"),",
+      "selector": "[data-testid=\"agents-capability-card\"][data-capability-kind=\"McpServer\"] .cda-status-badge:nth-child(2)",
+      "before": "Verified",
+      "after": "Verified measurement",
+      "property": null,
+      "preSha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf"
+    },
+    {
+      "id": "csharp-endpoint",
+      "category": "C#",
+      "prePath": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "old": ": capability.EndpointOrPath;",
+      "replacement": ": $\"Endpoint {capability.EndpointOrPath}\";",
+      "selector": "[data-testid=\"agents-capability-card\"][data-capability-kind=\"McpServer\"] .agent-capability-list__endpoint",
+      "before": "render-only:capa03-mcp",
+      "after": "Endpoint render-only:capa03-mcp",
+      "property": null,
+      "preSha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf"
+    },
+    {
+      "id": "css-heading",
+      "category": "CSS",
+      "prePath": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.css",
+      "old": "font-size: 1.125rem;",
+      "replacement": "font-size: 1.1875rem;",
+      "selector": ".agent-capabilities-panel__heading",
+      "before": 18,
+      "after": 19,
+      "property": "fontSize",
+      "preSha256": "089452ca2eed47fd8705dec414ff07edfbedb711871a1663ca0ecd79fb7aec26"
+    },
+    {
+      "id": "css-card-title",
+      "category": "CSS",
+      "prePath": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.css",
+      "old": "font-size: 0.95rem;",
+      "replacement": "font-size: 1rem;",
+      "selector": "[data-testid=\"agents-capability-card\"][data-capability-kind=\"McpServer\"] .agent-capability-list__title",
+      "before": 15.2,
+      "after": 16,
+      "property": "fontSize",
+      "preSha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49"
+    },
+    {
+      "id": "css-endpoint",
+      "category": "CSS",
+      "prePath": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "postPath": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.css",
+      "old": "font-size: 0.72rem;",
+      "replacement": "font-size: 0.75rem;",
+      "selector": "[data-testid=\"agents-capability-card\"][data-capability-kind=\"McpServer\"] .agent-capability-list__endpoint",
+      "before": 11.52,
+      "after": 12,
+      "property": "fontSize",
+      "preSha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49"
+    }
+  ],
+  "harnessSha256": "3b6399c35dbd2d20abd0a7c6faa9b63df3bfd9bc045c317f74d5c0ac46a5b912",
+  "fixture": {
+    "databaseName": "cditall_capabilities_measure_db64e5f72194469699f476f428565c06",
+    "snapshotSha256": "1213f18fbe782687dd6a6a3d45a492bfc87f77eea795d3c2e9ae7b82bd7b4fa3",
+    "dataScope": "Exact task-owned isolated database and file store; stable identities across pre/post."
+  },
+  "frozenUtc": "2026-09-07T03:13:56.579135+00:00",
+  "calibrationRun": "pre-fullapp-calibrate-2026-09-07T03-04-03-100Z",
+  "interTrialPauseMs": 750,
+  "processColdMeaning": "Existing restored dependencies and filesystem caches; Tailwind generation and dotnet watch build/start included. No global cache deletion.",
+  "protocolVersion": "2; cleanup robustness revision 3",
+  "coldReadiness": "Actual startup confirmation acknowledged through the normal Continue button, matching fixture visible, all nine predicates true, same frozen navigation settlement. Static/prerendered fixture alone is insufficient.",
+  "timingImplementationSha256": "154704caa8cc33a20897c61f562947574b1a1b39c6963bbb02b8e9aa94c75064",
+  "cleanupRevision": "Only a final restoration exception boundary changed; all launch, cold-readiness, edit, timing and settlement code is byte-identical to accepted v2 cold runs.",
+  "postHashes": {
+    "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.css": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+    "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.css": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939"
+  },
+  "postSourceFrozenUtc": "2026-09-07T05:06:15.605476+00:00",
+  "postSourceCorrection": "Two CSS-only long-content constraints proven by direct browser RED/GREEN; normal probe definitions unchanged."
+}

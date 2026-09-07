@@ -1,0 +1,13 @@
+# SB00 pre-extraction baseline closure
+
+Status: PASS
+
+The actual pre-extraction full application was measured before any source movement. Correctness predecessor 02G closed first. Direct UI/broad Components/Module/Web/Sandbox Parity/Fast and owning test builds passed; actual frozen baseline selections passed 30 Unit and 49 Component cases. The evaluated lightweight graph has 11 projects, no cycle or forbidden dependency; live siblings remain the entry revisions.
+
+The accepted cold samples include the real startup confirmation and settled interactive fixture: 56.865, 57.959 and 58.040 seconds. The complete repeated warm run contains nine edit definitions, each with three forward and three reverse observations (54), all successful. Forward edit-to-first-visible medians: Razor 592ms, C# 140ms, CSS 3780ms. Settled medians include the explicit common settlement window: Razor 2388ms, C# 1984ms, CSS 5330ms. These are baseline measurements only, not improvement claims. Original events distinguish managed changes, browser refresh/navigation and static CSS updates.
+
+Negative evidence is retained: initial setup mistakes, three invalid protocol-v1 cold observations (the asynchronous startup gate was not awaited), and a v2 warm interruption after 43 successful observations caused by Windows UNKNOWN/open on the temporary list CSS. Exact OS cause remains unproven. The temporary delta was reconstructed and hash-verified; all processes/port were gone. A cleanup-only exception boundary guarantees evidence/shutdown. Launch, readiness, edit and timing code stayed identical to the accepted cold protocol; the entire warm matrix then passed.
+
+All nine original source hashes and production/Fast CSS assets are restored. Only task-owned processes were launched/stopped. No domain operation, model/tool/diagnostic/chat invocation, sibling change, source move or canonical route change was performed. Original raw logs, screenshots, DOM, plan, safe fixture, sample distributions and failure/restoration receipts are retained here. Full-app screenshots show the real list and all predicates within 1600 x 1000, retaining the existing tree/card scroll owners.
+
+SB01 may now move the seven planned real source files, retaining application outcomes, sessions and effects in Module/Core. Broader stable tests are not repeated for SB00: no production change invalidates the already completed 02G checkpoint. New assembly/import changes will invalidate the named owning selections in SB01. Manifest, link and secret checks are performed before source movement; inherited documentation log debt remains explicit.

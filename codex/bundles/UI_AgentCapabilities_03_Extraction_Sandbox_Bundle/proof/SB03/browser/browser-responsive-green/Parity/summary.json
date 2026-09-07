@@ -1,0 +1,38 @@
+{
+  "mode": "Parity",
+  "port": 5393,
+  "hostPid": 42120,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "scenarios": [],
+  "screenshots": [
+    "failure"
+  ],
+  "errors": [],
+  "status": "FAIL",
+  "runtime": {
+    "isReady": true,
+    "summary": "Ready",
+    "assetMode": "Parity",
+    "runtimePid": 42120,
+    "watchIteration": null,
+    "hotReloadGeneration": 0,
+    "ownerKind": null,
+    "ownerId": null,
+    "serverInstanceId": null
+  },
+  "browserVersion": "149.0.7827.55",
+  "responsiveFilter": {
+    "className": "flex min-w-0 w-full flex-col [gap:var(--cda-split-gap)] lg:flex-row lg:items-center lg:justify-between",
+    "flexDirection": "column",
+    "alignItems": "center",
+    "justifyContent": "space-between"
+  },
+  "failure": {
+    "message": "Responsive_filter_layout_matches_full_app_at_large_desktop\n\n'column' !== 'row'\n",
+    "stack": "AssertionError [ERR_ASSERTION]: Responsive_filter_layout_matches_full_app_at_large_desktop\n\n'column' !== 'row'\n\n    at run (C:\\repositories\\CanDoItAll\\.mcp-state\\capa03\\browser-sandbox.cjs:60:16)\n    at async C:\\repositories\\CanDoItAll\\.mcp-state\\capa03\\browser-sandbox.cjs:210:5"
+  },
+  "hostStopped": true
+}

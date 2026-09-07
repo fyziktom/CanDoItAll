@@ -20,6 +20,8 @@ This project renders source-neutral presentation state and raises typed callback
 
 Allowed dependencies are Blazor and the shared CanDoItAll component libraries required by rendered UI. AgentFramework, product modules, backend services, EF Core, persistence, and provider SDKs must not be referenced.
 
+AgentAvatarActionButton is the shared service-free avatar/tooltip action used to open a conversation. It retains its existing CanDoItAll.AppComponents namespace for source compatibility; AppComponents references this assembly, and this assembly does not reference AppComponents.
+
 Product owners adapt their domain/runtime state into the contracts in this project. Opaque keys are never interpreted here.
 
 ## Related docs

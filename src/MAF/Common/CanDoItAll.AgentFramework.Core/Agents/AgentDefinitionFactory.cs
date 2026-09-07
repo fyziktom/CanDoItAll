@@ -97,7 +97,7 @@ internal static class AgentDefinitionFactory
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList(),
             CreatedAtUtc: existingAgent?.CreatedAtUtc ?? now,
-            UpdatedAtUtc: now)
+            UpdatedAtUtc: AgentConfigurationVersion.NextRevision(existingAgent?.UpdatedAtUtc, now))
         {
             AvatarImageUrl = string.IsNullOrWhiteSpace(model.AvatarImageUrl)
                 ? null

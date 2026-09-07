@@ -1,0 +1,135 @@
+@inject AgentCatalogSnapshot Fixture
+@inject NavigationManager Navigation
+
+<PageTitle>Agent catalog sandbox</PageTitle>
+
+<header class="catalog-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <Cluster Gap="LayoutGap.Small">
+            <h1 class="cda-title-xl">Agent catalog sandbox</h1>
+            <Button Text="Capabilities specimen" Click="OpenCapabilities" data-testid="sandbox-capabilities" />
+        </Cluster>
+        <p>Real catalog components with local state and recorded intents.</p>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Normal" Click="@(() => Show(CatalogSandboxScenario.Normal))" data-testid="sandbox-normal" />
+            <Button Text="Loading" Click="@(() => Show(CatalogSandboxScenario.Loading))" data-testid="sandbox-loading" />
+            <Button Text="Empty" Click="@(() => Show(CatalogSandboxScenario.Empty))" data-testid="sandbox-empty" />
+            <Button Text="Card states" Click="@(() => Show(CatalogSandboxScenario.CardStates))" data-testid="sandbox-card-states" />
+            <Button Text="Avatar fallback" Click="@(() => Show(CatalogSandboxScenario.AvatarFallback))" data-testid="sandbox-avatar-fallback" />
+            <Button Text="@(matchedLayout ? "Use flexible layout" : "Match desktop baseline")"
+                    Click="@(() => SetContext(context with { Layout = matchedLayout ? CatalogSandboxLayout.Flexible : CatalogSandboxLayout.Matched }))"
+                    data-testid="sandbox-layout" />
+        </Cluster>
+        <output aria-live="polite" data-testid="sandbox-intent">@intentText</output>
+    </Stack>
+</header>
+
+<main class="@(matchedLayout ? "catalog-sandbox__frame catalog-sandbox__frame--matched" : "catalog-sandbox__frame")">
+    @if (scenario is CatalogSandboxScenario.CardStates or CatalogSandboxScenario.AvatarFallback) {
+        <SurfaceCard Class="catalog-sandbox__specimen">
+            <AgentSelectionCard Agent="@Specimen"
+                                IsSelected="true"
+                                ShowFavorite="true"
+                                IsFavorite="@favorite"
+                                OnFavoriteToggle="@(() => favorite = !favorite)"
+                                ShowStatusRibbon="true"
+                                ShowKindBadge="true"
+                                ShowDetailsTooltip="true"
+                                IsPrivateProvider="true"
+                                OnSelect="@(() => intentText = "Card selected")"
+                                OnDoubleClick="@(() => intentText = "Card opened")" />
+            @if (scenario == CatalogSandboxScenario.AvatarFallback) {
+                <Cluster Gap="LayoutGap.Small">
+                    <Avatar FallbackText="CA" UseDefaultImageWhenMissing="false" Size="AvatarSize.Large" />
+                    <p>Seeded card avatar and explicit initials fallback.</p>
+                </Cluster>
+            }
+        </SurfaceCard>
+    }
+    else {
+        <AgentCatalogPanel Snapshot="@(scenario == CatalogSandboxScenario.Empty ? AgentCatalogSnapshot.Empty : Fixture)"
+                           Selection="@selection"
+                           IsLoading="@(scenario == CatalogSandboxScenario.Loading)"
+                           Intent="HandleIntent" />
+    }
+</main>
+
+<Tooltip />
+
+@code {
+    [Parameter]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    public string? LayoutQuery { get; set; }
+
+    [Parameter]
+    public string? AgentQuery { get; set; }
+
+    [Parameter]
+    public string? TeamQuery { get; set; }
+
+    private CatalogSandboxContext context = new();
+    private CatalogSandboxScenario scenario => context.Scenario;
+    private AgentCatalogSelection selection => context.Selection;
+    private bool matchedLayout => context.Layout == CatalogSandboxLayout.Matched;
+    private string intentText = "No intent yet.";
+    private bool favorite;
+
+    private AgentDefinition Specimen => scenario == CatalogSandboxScenario.AvatarFallback
+        ? Fixture.Agents[0] with { AvatarImageUrl = null }
+        : Fixture.Agents[0];
+
+    protected override void OnParametersSet() {
+        context = CatalogSandboxContext.Parse(ScenarioQuery, LayoutQuery, AgentQuery, TeamQuery, Fixture);
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender) {
+        ReplaceQuery();
+        return Task.CompletedTask;
+    }
+
+    private void SetContext(CatalogSandboxContext value) {
+        context = value.Normalize(Fixture);
+        ReplaceQuery();
+    }
+
+    private void ReplaceQuery() {
+        var query = context.ToQuery().ToDictionary(item => item.Key, item => item.Value);
+        query["specimen"] = null;
+        var uri = Navigation.GetUriWithQueryParameters(query);
+        if (!string.Equals(uri, Navigation.Uri, StringComparison.Ordinal)) {
+            Navigation.NavigateTo(uri, replace: true);
+        }
+    }
+
+    private void OpenCapabilities() {
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new CapabilitiesSandboxContext(Layout: context.Layout).ToQuery()), replace: true);
+    }
+
+    private void Show(CatalogSandboxScenario value) {
+        SetContext(context with { Scenario = value, AgentId = null, TeamId = null });
+        intentText = "No intent yet.";
+    }
+
+    private void HandleIntent(AgentCatalogIntent intent) {
+        var nextSelection = intent switch {
+            AgentCatalogIntent.SelectAgent select => selection with { AgentId = select.AgentId },
+            AgentCatalogIntent.SelectTeamMember select => selection with { AgentId = select.AgentId },
+            AgentCatalogIntent.SelectTeam select => selection with { TeamId = select.TeamId },
+            _ => selection
+        };
+        SetContext(context with { AgentId = nextSelection.AgentId, TeamId = nextSelection.TeamId });
+        intentText = intent switch {
+            AgentCatalogIntent.SelectAgent select => $"Selected agent {select.AgentId}.",
+            AgentCatalogIntent.SelectTeamMember select => $"Selected team member {select.AgentId}.",
+            AgentCatalogIntent.SelectTeam select => $"Selected team {select.TeamId}.",
+            AgentCatalogIntent.OpenAgent open => $"Open agent editor: {open.AgentId?.ToString() ?? "New"}.",
+            AgentCatalogIntent.OpenTeam open => $"Open team editor: {open.TeamId?.ToString() ?? "New"}.",
+            AgentCatalogIntent.EditMembers edit => $"Edit team members: {edit.TeamId}.",
+            AgentCatalogIntent.DeleteTeam delete => $"Delete team: {delete.TeamId}.",
+            AgentCatalogIntent.OpenChat chat => $"Open chat: {chat.AgentId}.",
+            _ => throw new ArgumentOutOfRangeException(nameof(intent))
+        };
+    }
+}

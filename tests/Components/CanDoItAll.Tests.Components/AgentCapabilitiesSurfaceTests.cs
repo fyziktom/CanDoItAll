@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Capabilities;
 using System.Collections.Immutable;
 using Bunit;
 using CanDoItAll.AgentFramework.Models;

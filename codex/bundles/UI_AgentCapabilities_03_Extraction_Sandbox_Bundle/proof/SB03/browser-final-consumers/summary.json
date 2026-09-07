@@ -1,0 +1,47 @@
+{
+  "ownedPid": 62624,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "reason": "Final shared-list CSS in both real consumers",
+  "geometry": [
+    {
+      "consumer": "AgentDetailsDialog",
+      "card": {
+        "x": 63,
+        "y": 416.96875,
+        "width": 725.5,
+        "height": 218.84375
+      },
+      "content": {
+        "x": 80,
+        "y": 469.96875,
+        "width": 691.5,
+        "height": 64.84375
+      }
+    }
+  ],
+  "initial": {
+    "alphaId": "7f65e0ec-0bc3-4dd1-be11-f8ed391754e9",
+    "betaId": "217274a7-79ba-4be7-b911-23df0eeb0027",
+    "capabilityId": "4d3629a7-fb54-46a4-b627-701bb8749715",
+    "assigned": false,
+    "proof": "NotRun",
+    "curatorSessionCount": 0,
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false,
+    "assignmentCalls": 0,
+    "diagnosticCalls": 0,
+    "previewCalls": 0,
+    "curatorCalls": 0,
+    "chatSessionId": null,
+    "failEditorRead": false
+  },
+  "browserVersion": "149.0.7827.55",
+  "status": "FAIL",
+  "error": "Expected values to be strictly equal:\n\ntrue !== false\n",
+  "ownedExit": 0,
+  "pageErrors": []
+}

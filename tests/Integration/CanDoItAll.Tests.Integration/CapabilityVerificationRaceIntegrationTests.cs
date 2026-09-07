@@ -84,6 +84,7 @@ internal sealed class PausedInlineProof : ICapabilityProofService {
     public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public int Calls { get; private set; }
     public Action? AfterDiagnostic { get; set; }
+    public DateTimeOffset? CheckedAtUtc { get; set; }
     public AgentDefinition? CapturedAgent { get; private set; }
     public ProviderProfile? CapturedProvider { get; private set; }
     public CapabilityCatalogItem? CapturedCapability { get; private set; }
@@ -97,7 +98,7 @@ internal sealed class PausedInlineProof : ICapabilityProofService {
         await Release.Task;
         var result = await new CapabilityProofService(new PhysicalFileSystemPathPolicyFactory()).VerifyAsync(agent, provider, capability, cancellationToken);
         AfterDiagnostic?.Invoke();
-        return result;
+        return CheckedAtUtc is { } checkedAt ? result with { CheckedAtUtc = checkedAt } : result;
     }
 }
 
@@ -111,7 +112,11 @@ public class CapabilityStoreProbe : DispatchProxy {
     public Action? BeforeCatalogWrite { get; set; }
     public Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog>? BeforeUpdate { get; set; }
     public int Writes { get; private set; }
+    public bool CatalogReadUnavailable { get; set; }
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
+        if (CatalogReadUnavailable && targetMethod!.Name == nameof(ISandboxWorkspaceStore.LoadCatalogSnapshotAsync)) {
+            return Task.FromException<SandboxWorkspaceCatalogSnapshot>(new IOException("Catalog fixture is unavailable"));
+        }
         if (targetMethod!.Name == nameof(ISandboxWorkspaceStore.UpdateCatalogAsync) && args!.Length == 2) {
             Writes++;
             var update = (Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog>)args[0]!;

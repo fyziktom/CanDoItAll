@@ -219,3 +219,11 @@ git diff --check
 ```
 
 For API behavior changes, add focused route and application-service tests, then use the stable repository gate in [Testing](testing.md).
+
+## Capability verification and recovery
+
+`POST /api/agents/{agentId}/capabilities/{capabilityId}/verify` retains its successful `ApiAck` response. Invalid agent, capability, attachment, or required provider identity returns HTTP 400 with `outcome: Rejected`. Infrastructure unavailable before diagnostic dispatch returns HTTP 409 with `outcome: InfrastructureUnavailable`; other non-completed outcomes also return 409. Typed failure responses include the target identities, available proof receipt identity/time, and `automaticReplaySafe: false`. They contain no internal exception detail. Do not automatically retry this diagnostic POST.
+
+Agent `UpdatedAtUtc` is a strictly increasing concurrency revision for accepted configuration writes, even when the wall clock repeats or moves backwards. Keep sending the authoritative expected revision when updating an agent. Proof `LastVerifiedAtUtc` retains the actual observation time independently of that revision.
+
+The capabilities workspace keeps unresolved operations within the circuit. Retained assignment submissions and proof receipts use canonical reads for recovery, without replaying a write or diagnostic. If a diagnostic returns no correlatable receipt, explicit acknowledgement releases only the circuit block and does not prove rollback. Unknown Curator creation likewise requires inspecting managed chats and acknowledging uncertainty; it neither deletes a chat nor launches another. A subsequent diagnostic or launch is a new explicit user action. Recovery is not durable across a new circuit or process restart.

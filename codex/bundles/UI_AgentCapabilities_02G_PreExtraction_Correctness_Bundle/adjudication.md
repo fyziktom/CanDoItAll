@@ -1,0 +1,26 @@
+# Current-source adjudication before implementation
+
+All conclusions below are high-confidence source findings; executable RED/GREEN evidence is linked in semantic-test-map.md and validation.md.
+
+| Finding | Decision and source |
+|---|---|
+| A0 | Confirmed bookkeeping update. Independent remote and local match the entry receipt; historical closure describes the earlier staged state correctly. Both committed manifests pass: 227 predecessor files and 13 prepared files. Historical closure is unchanged. |
+| A1 | Confirmed. Commands/coordinator consume the proposed moved operation types for retention/retry/adoption; Curator status gates single-flight. Keep all in Module. Host maps once to immutable rendering records without recovery policy. |
+| A2 | Confirmed. AgentConfigurationVersion creates a SHA-256 configuration fingerprint; it does not order revisions. Factory uses supplied wall clock; proof Apply uses observation time directly. Add a common strictly-increasing revision helper beside the fingerprint; apply to existing-identity configuration mutation sites, including import replacement and external archive. Preserve new-identity and observation timestamps. Overflow must fail before commit rather than wrap. |
+| A3 | Confirmed. Coordinator dispatch awaits both command methods without an exception boundary. It must finish the owning entry as non-active unknown and retain reference fencing. |
+| A4 | Confirmed. Generic diagnostic unknown has no receipt and no stable diagnostic correlation in the Task facade. Add attempt-fenced explicit acknowledgement only for receipt-less verification. It releases the circuit block, states the diagnostic may have executed, and neither replays nor claims rollback. Receipt-backed proof and immutable assignment remain read-only recovery paths. |
+| A5 | Confirmed. FloatingAgentChatCoordinator reserves an active handle, persists a new workspace session, then attaches it; its catch removes the handle but cannot prove session absence. Launcher accepts no attempt/session identity. No exact new-chat query is possible after failure. Require explicit acknowledgement after inspecting managed chats. Preserve any previously returned authoritative chat; no deletion or launch on acknowledgement. |
+| A6 | Confirmed public-contract mismatch. Final callback pairs current catalog with the original snapshot revision. Use current CatalogDataRevision. A revision-observing snapshot implementation proves the fix; separate provider/catalog authority remains unchanged. |
+| A7 | Confirmed. Initial generic exception is Rejected, conflating unavailable infrastructure with absent/invalid input. Add InfrastructureUnavailable before diagnostic dispatch; retain Task facade. HTTP 409 with typed disposition and automaticReplaySafe=false avoids suggesting automatic POST retry. Explicit input rejection remains 400; success remains ApiAck. Publish OpenAPI 200/400/409 declarations. |
+| A8 | Confirmed. Host reads coordinator twice for one snapshot. Read once and map the same entry to busy/presentation. Curator projection likewise reads one atomic launch snapshot. |
+| A9 | Required gate. No moves until RED/GREEN, predecessor regression selections, direct builds, scans and manifest validation close this child. |
+
+Product limits: acknowledgement is an explicit circuit-local admission decision, not durable recovery or proof of absence. A subsequent diagnostic/chat launch is a new user intent. General capability CRUD, historical detail fallback, provider architecture, routing and sibling repositories remain outside scope.
+
+## A6a: newly observed provider lease-copy defect
+
+The initial A6 witness repeatedly stopped at Superseded before the final callback. Source tracing found that JSON copying ProviderRuntimeProfileSnapshotLease drops ProviderConfigurationFingerprint.Value: the readonly struct has no JSON constructor. This is a production defect, not evidence for the callback pairing itself. Freeze Unchanged_provider_lease_preserves_fingerprint_and_allows_proof_publication before correction. Preserve immutable lease fingerprint/revision with a record copy and independently copy only the mutable profile; do not change the shared fingerprint type or provider authority. After this narrow fix, rerun A6 while leaving its pairing correction unapplied to obtain a direct RED witness.
+
+A6 direct RED after lease preservation: the public callback witness supplied CatalogDataRevision 3 with catalog content at revision 4; final capture now uses current.CatalogDataRevision. A7 additionally covers the outer current-profile resolver and missing snapshot-source composition, both directly witnessed as RED before correction. HTTP remains 409 for known not-started infrastructure failures with automaticReplaySafe=false, avoiding a transient-retry POST contract.
+
+A2 additional producers: DeleteCapabilityAsync removes agent attachments without a revision; seed/catalog normalization can alter canonical agent configuration without advancing its revision. Both are within the requested accepted-configuration invariant. Add direct file-store RED/GREEN witnesses. Use the same revision helper only for changed existing identities; unchanged normalization must remain idempotent. This does not add CRUD recovery. Broader validation is reconsidered because normalization is shared by catalog consumers.

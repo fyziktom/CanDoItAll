@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Capabilities;
 using System.Collections.Immutable;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -36,15 +37,24 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     private Guid? detailsOpen;
     private AgentCapabilityPreview? preview;
 
-    private AgentCapabilitiesSnapshot Snapshot => session.Snapshot with {
-        IsBusy = Operations.Find(session.TargetAgentId) is not null,
-        Operation = Operations.Find(session.TargetAgentId) ?? (lastOperationGeneration == session.Generation ? lastOperation : null),
-        IsAccessPreviewBusy = previewCancellation is not null && previewOwnerGeneration == session.Generation,
-        IsOpeningCurator = CuratorLaunch.Status is CapabilityCuratorLaunchStatus.Pending or CapabilityCuratorLaunchStatus.Unconfirmed,
-        CuratorLaunchStatus = CuratorLaunch.Status,
-        IsOpeningWizard = wizardOpen,
-        Preview = previewGeneration == session.Generation ? preview : null
-    };
+    private AgentCapabilitiesSnapshot Snapshot {
+        get {
+            var retained = Operations.Find(session.TargetAgentId);
+            var operation = retained ?? (lastOperationGeneration == session.Generation ? lastOperation : null);
+            var curator = CuratorLaunch.Snapshot;
+            return session.Snapshot with {
+                IsBusy = retained is not null,
+                Operation = operation is null ? null : new(operation.AgentId, operation.AttemptId, operation.Message,
+                    operation.CanVerify, operation.CanReconcile, operation.CanRetry, operation.CanAdopt, operation.CanAcknowledgeDiagnostic),
+                IsAccessPreviewBusy = previewCancellation is not null && previewOwnerGeneration == session.Generation,
+                CuratorLaunch = new(curator.AttemptId,
+                    curator.Status is CapabilityCuratorLaunchStatus.Pending or CapabilityCuratorLaunchStatus.Unconfirmed,
+                    curator.Status == CapabilityCuratorLaunchStatus.Unconfirmed, curator.OpenedChat is not null),
+                IsOpeningWizard = wizardOpen,
+                Preview = previewGeneration == session.Generation ? preview : null
+            };
+        }
+    }
 
     protected override void OnInitialized() {
         session = new(Reads);
@@ -119,8 +129,25 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         AgentCapabilitiesIntent.RecoverOperation => RecoverOperationAsync(),
         AgentCapabilitiesIntent.RetryAssignment => RetryAssignmentAsync(),
         AgentCapabilitiesIntent.AdoptCurrent => RecoverOperationAsync(adoptCurrent: true),
+        AgentCapabilitiesIntent.AcknowledgeDiagnostic acknowledgement => AcknowledgeDiagnosticAsync(acknowledgement),
+        AgentCapabilitiesIntent.AcknowledgeCurator acknowledgement => AcknowledgeCuratorAsync(acknowledgement.AttemptId),
         _ => throw new ArgumentOutOfRangeException(nameof(intent))
     };
+
+    private Task AcknowledgeDiagnosticAsync(AgentCapabilitiesIntent.AcknowledgeDiagnostic acknowledgement) {
+        if (!disposed && session.TargetAgentId == acknowledgement.AgentId &&
+            Operations.AcknowledgeDiagnostic(acknowledgement.AgentId, acknowledgement.AttemptId)) {
+            lastOperation = null;
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task AcknowledgeCuratorAsync(Guid attemptId) {
+        if (!disposed) {
+            CuratorLaunch.AcknowledgeUnconfirmed(attemptId);
+        }
+        return Task.CompletedTask;
+    }
 
     private async Task ToggleCapabilityAsync(Guid capabilityId) {
         if (session.Draft is not { } draft || Snapshot.IsBusy) {
@@ -273,7 +300,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     }
 
     private async Task OpenCapabilityCuratorAsync() {
-        if (disposed || !Snapshot.Curator.CanLaunch || Snapshot.IsBusy || Snapshot.IsOpeningCurator) {
+        if (disposed || !Snapshot.Curator.CanLaunch || Snapshot.IsBusy || Snapshot.CuratorLaunch.IsBusy) {
             return;
         }
         var started = await CuratorLaunch.OpenAsync(lifetime.Token);

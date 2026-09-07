@@ -1,6 +1,6 @@
 # Direct watch measurement protocol
 
-PLANNED, not executed. SB00 must produce a valid full-app baseline before SB01 moves any source. If direct watch cannot be observed, stop before movement with the exact blocker; do not relabel old catalog or fixture runs.
+SB00 produced its accepted pre-extraction baseline before source movement; see ../proof/SB00/closure.md. The frozen protocol is now reused for SB03. Historical failed calibration/measurement attempts remain retained separately.
 
 ## Freeze and comparability
 
@@ -25,3 +25,7 @@ Classify from evidence: hot reload (visible update, no navigation/restart), brow
 Raw samples contain host/mode/category/edit ID/repetition/direction/timestamps/duration/classification/reason/hash/evidence paths. Per matched group report successful count, failures, minimum, maximum, range (max-min), median. Never hide failures inside a successful-only headline. Report cold separately; explain whether spread/restarts support improvement. Smaller graph/CSS alone is not a measured benefit; promise no percentage.
 
 Restore only the exact owned measurement files after checking current bytes. Concurrent edits cause a stop, never overwrite. Stop only owned watchers/processes; keep compact raw and negative evidence. Verify restored source/assets and sibling status. No reset/clean/history rewrite or deletion of user runtime data. Logs must contain no secrets or personal workspace content.
+
+## Executed asset correction
+
+SB03 discovered missing dynamic responsive utility/cascade closure in both sandbox modes. The actual pre-move full app already supplied those rules. The existing production rules now have one shared Tailwind input; both browser modes pass. The first complete post-extraction series is retained as non-comparable, and every post calibration/cold/warm run is repeated. Exact timing probes, repetitions, source-flush/readiness/settlement logic and the direct-watch harness hash remain unchanged. See [the adjudication](../proof/SB03/responsive-utility-adjudication.md).

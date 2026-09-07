@@ -149,6 +149,12 @@ internal sealed class AgentPackageImportService(
             warnings.Add("Clone mode imports the agent definition only; sessions, run evidence, metrics, and memory are not copied.");
         }
 
+        if (command.Mode == AgentPackageImportMode.ReplaceExactVersion && existingAgent is not null) {
+            resolvedAgent = resolvedAgent with {
+                UpdatedAtUtc = AgentConfigurationVersion.NextRevision(existingAgent.UpdatedAtUtc, DateTimeOffset.UtcNow)
+            };
+        }
+
         EnsureTemplateIdentityAvailable(document, resolvedAgent, command.Mode);
 
         var baseDocument = command.Mode == AgentPackageImportMode.ReplaceExactVersion

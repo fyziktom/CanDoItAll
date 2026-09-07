@@ -1,7 +1,7 @@
 # Execution state
 
-PREPARED ONLY. SB00 Not started -> SB01 Gated -> SB02 Gated -> SB03 Gated.
+SB00: PASS. SB01: PASS. SB02: PASS. SB03: PASS.
 
-Capabilities-02 bounded closure preceded preparation. No source movement, capability sandbox change or performance run occurred. Exact baseline counts/edit predicates are not fabricated; SB00 freezes them from actual source before any move.
+[Capabilities-02G closed](../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md) before this program began. [SB00 accepted baseline](proof/SB00/closure.md) was sealed before physical movement. [SB01 extraction proof](proof/SB01/closure.md) records real movement, the narrowly corrected shared avatar dependency, direct builds, exact tests, browser regression, CSS and graph validation.
 
-Current authorization is preparation only. A later execution request begins with rediscovery of branch/remote/diff/source/siblings and preserves unrelated work. Failed baseline blocks movement. Changed rendering/contract/CSS dependencies invalidate dependent proof. No Simple Chats bundle is prepared; its definition catalog is only a possible later feature after capabilities extraction and sandbox proof.
+[SB02 sandbox closure](proof/SB02/closure.md) records exact tests, both real browser modes, corrected matched geometry and asset closure. SB03 compares the accepted pre-move full-app series with post-move full app and sandbox Parity/Fast using the frozen direct-watch protocol. [SB03 closure](proof/SB03/closure.md) records the completed comparison, stable gate, restoration and static proof. Overview preparation and the module roadmap may begin only after the manifest seal for this closure passes.

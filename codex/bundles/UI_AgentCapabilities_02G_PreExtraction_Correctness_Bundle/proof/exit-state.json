@@ -1,0 +1,25 @@
+{
+  "utc": "2026-09-07T02:42:51.574895+00:00",
+  "branch": "components-decoupling",
+  "head": "b540b465cf408dd9c9adeb939538b78ced9bc7bb",
+  "remote": "b540b465cf408dd9c9adeb939538b78ced9bc7bb\trefs/heads/components-decoupling",
+  "parent": "d066d367d6abc147e046bee1308ea5f702e65cfd",
+  "tree": "f8e127cffe93409efd13d741abfc7b191677658c",
+  "aheadBehind": "0\t0",
+  "index": "",
+  "ownedWorkingState": "M .gitignore\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/MANIFEST.sha256\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/architecture.md\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/execution.md\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/inventory/source-boundary.json\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/validation.md\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/requirements.md\n M codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/reviews/readiness.md\n M codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/MANIFEST.sha256\n M codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/README.md\n M docs/api-control-plane.md\n M src/App/CanDoItAll.Web/Api/AgentsApi.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentConfigurationVersion.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentExternalProvisioningService.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Core/Packages/AgentPackageImportService.cs\n M src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkOrganizationCatalogRepairService.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityOperations.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilityCuratorLaunch.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs\n M tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesRecoveryEffectsTests.cs\n M tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationApiIntegrationTests.cs\n M tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationRaceIntegrationTests.cs\n?? codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/\n?? codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/reviews/12-revision-ordering-and-explicit-liveness.md\n?? tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesAcknowledgementTests.cs\n?? tests/Integration/CanDoItAll.Tests.Integration/CapabilityCorrectnessIntegrationTests.cs\n?? tests/Integration/CanDoItAll.Tests.Integration/CapabilityWorkspaceResolutionTests.cs\n?? tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilityCorrectnessTests.cs",
+  "siblings": [
+    {
+      "repository": "C:\\repositories\\CanDoItAll.Components",
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "status": ""
+    },
+    {
+      "repository": "C:\\repositories\\CanDoItAll.FileTools",
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "status": ""
+    }
+  ],
+  "historicalClosureUnchanged": true,
+  "sourceBasis": "Current HEAD plus recorded unstaged owned source/test patch; no commit, staging, push or history mutation performed."
+}

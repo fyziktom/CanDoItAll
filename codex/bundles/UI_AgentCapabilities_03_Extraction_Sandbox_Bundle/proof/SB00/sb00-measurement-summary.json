@@ -1,0 +1,199 @@
+{
+  "status": "PASS",
+  "utc": "2026-09-07T03:31:35.163344+00:00",
+  "warmRun": "pre-fullapp-warm-2026-09-07T03-25-57-301Z",
+  "cold": [
+    {
+      "run": "pre-fullapp-cold-2026-09-07T03-13-56-700Z",
+      "elapsedMs": 56864.944,
+      "confirmations": 1
+    },
+    {
+      "run": "pre-fullapp-cold-2026-09-07T03-14-58-306Z",
+      "elapsedMs": 57958.5894,
+      "confirmations": 1
+    },
+    {
+      "run": "pre-fullapp-cold-2026-09-07T03-16-01-105Z",
+      "elapsedMs": 58040.4942,
+      "confirmations": 1
+    }
+  ],
+  "coldSummary": {
+    "minMs": 56864.944,
+    "maxMs": 58040.4942,
+    "rangeMs": 1175.5501999999979,
+    "medianMs": 57958.5894
+  },
+  "warmGroups": [
+    {
+      "category": "Razor",
+      "direction": "forward",
+      "observations": 9,
+      "firstVisible": {
+        "minMs": 470.8955,
+        "maxMs": 9482.9317,
+        "rangeMs": 9012.036199999999,
+        "medianMs": 592.4311
+      },
+      "settledVisible": {
+        "minMs": 2137.1244,
+        "maxMs": 11365.635,
+        "rangeMs": 9228.5106,
+        "medianMs": 2388.4107
+      },
+      "classifications": {
+        "browser-reload": 9
+      }
+    },
+    {
+      "category": "Razor",
+      "direction": "reverse",
+      "observations": 9,
+      "firstVisible": {
+        "minMs": 485.2687,
+        "maxMs": 2204.9258,
+        "rangeMs": 1719.6571,
+        "medianMs": 595.9916
+      },
+      "settledVisible": {
+        "minMs": 2184.8083,
+        "maxMs": 3888.2531,
+        "rangeMs": 1703.4447999999998,
+        "medianMs": 2358.7539
+      },
+      "classifications": {
+        "browser-reload": 9
+      }
+    },
+    {
+      "category": "C#",
+      "direction": "forward",
+      "observations": 9,
+      "firstVisible": {
+        "minMs": 77.6769,
+        "maxMs": 194.9235,
+        "rangeMs": 117.24659999999999,
+        "medianMs": 139.6911
+      },
+      "settledVisible": {
+        "minMs": 1877.7281,
+        "maxMs": 2088.8074,
+        "rangeMs": 211.0793000000001,
+        "medianMs": 1984.0638
+      },
+      "classifications": {
+        "browser-reload": 9
+      }
+    },
+    {
+      "category": "C#",
+      "direction": "reverse",
+      "observations": 9,
+      "firstVisible": {
+        "minMs": 85.3482,
+        "maxMs": 162.1097,
+        "rangeMs": 76.7615,
+        "medianMs": 144.7547
+      },
+      "settledVisible": {
+        "minMs": 1751.7322,
+        "maxMs": 1979.4722,
+        "rangeMs": 227.74,
+        "medianMs": 1829.2461
+      },
+      "classifications": {
+        "browser-reload": 9
+      }
+    },
+    {
+      "category": "CSS",
+      "direction": "forward",
+      "observations": 9,
+      "firstVisible": {
+        "minMs": 3648.1421,
+        "maxMs": 5170.7696,
+        "rangeMs": 1522.6274999999996,
+        "medianMs": 3780.1806
+      },
+      "settledVisible": {
+        "minMs": 5198.3895,
+        "maxMs": 6770.7339,
+        "rangeMs": 1572.3444,
+        "medianMs": 5329.6379
+      },
+      "classifications": {
+        "hot-reload": 9
+      }
+    },
+    {
+      "category": "CSS",
+      "direction": "reverse",
+      "observations": 9,
+      "firstVisible": {
+        "minMs": 3624.6417,
+        "maxMs": 5818.5284,
+        "rangeMs": 2193.8867,
+        "medianMs": 3771.3077
+      },
+      "settledVisible": {
+        "minMs": 5189.8286,
+        "maxMs": 7368.7721,
+        "rangeMs": 2178.9435000000003,
+        "medianMs": 5321.3657
+      },
+      "classifications": {
+        "hot-reload": 9
+      }
+    }
+  ],
+  "restored": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c",
+      "expected": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c",
+      "expected": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c",
+      "expected": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "sha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf",
+      "expected": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "sha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf",
+      "expected": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "sha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf",
+      "expected": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "sha256": "089452ca2eed47fd8705dec414ff07edfbedb711871a1663ca0ecd79fb7aec26",
+      "expected": "089452ca2eed47fd8705dec414ff07edfbedb711871a1663ca0ecd79fb7aec26"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "sha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49",
+      "expected": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "sha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49",
+      "expected": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49"
+    }
+  ],
+  "negativeEvidence": "Three protocol-v1 cold observations invalidated by the late startup gate; one v2 warm attempt interrupted after 43 successful observations by Windows UNKNOWN/open. Exact original restoration and full repeat retained.",
+  "timingCodeContinuity": "Accepted cold and warm timing/launch/readiness code is byte-identical; warm cleanup revision only catches a restoration error to guarantee evidence and shutdown."
+}

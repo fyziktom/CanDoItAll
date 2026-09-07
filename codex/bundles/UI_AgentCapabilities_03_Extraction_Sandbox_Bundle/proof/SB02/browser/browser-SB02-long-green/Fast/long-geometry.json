@@ -1,0 +1,146 @@
+{
+  "heading": "A deliberately long capability review agent name that wraps at the real header boundary",
+  "target": "9ba4d415-cc9c-4e0e-b03a-cc0000000001",
+  "loading": false,
+  "failed": false,
+  "cards": [
+    {
+      "kind": "McpServer",
+      "text": "MCP server\nVerified\nAttached\nMCP inspection with a deliberately long descriptive name for the real card\n\nInspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects.\n\nrender-only:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nsample\nlong-descriptive-tag-for-layout-inspection\nreview\nRemove\nVerify\nDetails",
+      "width": 325.125,
+      "contentWidth": 291.125,
+      "disabled": [
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "kind": "Skill",
+      "text": "Skill\nNot run\nAvailable\nReview skill with a deliberately long descriptive name for the real card\n\nInspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects.\n\nrender-only:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nsample\nlong-descriptive-tag-for-layout-inspection\nreview\nAssign\nVerify\nDetails",
+      "width": 325.140625,
+      "contentWidth": 291.140625,
+      "disabled": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "kind": "Tool",
+      "text": "Tool\nPending review\nAvailable\nWorkspace tool with a deliberately long descriptive name for the real card\n\nInspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects.\n\nrender-only:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nsample\nlong-descriptive-tag-for-layout-inspection\nreview\nAssign\nVerify\nDetails",
+      "width": 325.125,
+      "contentWidth": 291.125,
+      "disabled": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "kind": "Plugin",
+      "text": "Plugin\nFailed\nAvailable\nPlugin inspection with a deliberately long descriptive name for the real card\n\nInspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects.\n\nrender-only:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nsample\nlong-descriptive-tag-for-layout-inspection\nreview\nAssign\nVerify\nDetails",
+      "width": 325.125,
+      "contentWidth": 291.125,
+      "disabled": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "kind": "Rag",
+      "text": "Rag\nVerified\nAvailable\nReference retrieval with a deliberately long descriptive name for the real card\n\nInspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects.\n\nrender-only:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nsample\nlong-descriptive-tag-for-layout-inspection\nreview\nAssign\nVerify\nDetails",
+      "width": 325.140625,
+      "contentWidth": 291.140625,
+      "disabled": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "kind": "AiContext",
+      "text": "AI context\nNot run\nAvailable\nContext guidance with a deliberately long descriptive name for the real card\n\nInspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects.\n\nrender-only:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nsample\nlong-descriptive-tag-for-layout-inspection\nreview\nAssign\nVerify\nDetails",
+      "width": 325.125,
+      "contentWidth": 291.125,
+      "disabled": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "kind": "Memory",
+      "text": "Memory\nPending review\nAvailable\nMemory inspection with a deliberately long descriptive name for the real card\n\nInspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects. Inspect wrapping and scroll behavior without external effects.\n\nrender-only:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nsample\nlong-descriptive-tag-for-layout-inspection\nreview\nAssign\nVerify\nDetails",
+      "width": 325.125,
+      "contentWidth": 291.125,
+      "disabled": [
+        false,
+        true,
+        false
+      ]
+    }
+  ],
+  "curatorDisabled": false,
+  "curatorUnknown": false,
+  "root": {
+    "display": "contents",
+    "width": 0,
+    "x": 0,
+    "y": 0,
+    "overflowY": "visible",
+    "clientHeight": 0,
+    "scrollHeight": 0,
+    "scope": [
+      "b-gvr8yccb3q"
+    ]
+  },
+  "tree": {
+    "display": "block",
+    "width": 334,
+    "x": 142,
+    "y": 350.59375,
+    "overflowY": "auto",
+    "clientHeight": 118,
+    "scrollHeight": 118,
+    "scope": [
+      "b-gvr8yccb3q"
+    ]
+  },
+  "cardScroll": {
+    "display": "block",
+    "width": 997,
+    "x": 530,
+    "y": 714.59375,
+    "overflowY": "auto",
+    "clientHeight": 616,
+    "scrollHeight": 1003,
+    "scope": [
+      "b-gvr8yccb3q"
+    ]
+  },
+  "stats": {
+    "display": "block",
+    "width": 226.5,
+    "x": 866,
+    "y": 240.34375,
+    "overflowY": "visible",
+    "clientHeight": 82,
+    "scrollHeight": 82,
+    "scope": [
+      "b-gvr8yccb3q"
+    ]
+  },
+  "frame": {
+    "display": "block",
+    "width": 1419,
+    "x": 125,
+    "y": 222.59375,
+    "overflowY": "visible",
+    "clientHeight": 1125,
+    "scrollHeight": 1125,
+    "scope": []
+  },
+  "horizontalOverflow": false
+}

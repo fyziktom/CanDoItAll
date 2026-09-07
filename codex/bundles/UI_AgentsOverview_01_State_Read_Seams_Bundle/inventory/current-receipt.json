@@ -1,0 +1,28 @@
+{
+  "utc": "2026-09-07T07:40:58.351404+00:00",
+  "branch": "components-decoupling",
+  "localHead": "b540b465cf408dd9c9adeb939538b78ced9bc7bb",
+  "remoteHead": "b540b465cf408dd9c9adeb939538b78ced9bc7bb",
+  "parent": "d066d367d6abc147e046bee1308ea5f702e65cfd",
+  "committedTree": "f8e127cffe93409efd13d741abfc7b191677658c",
+  "aheadBehindRemote": "0\t0",
+  "indexStatus": "",
+  "validatedNonBundlePaths": 72,
+  "productionAssetDrift": [],
+  "siblings": [
+    {
+      "name": "CanDoItAll.Components",
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "branch": "codex/original-ui-refactoring-release",
+      "status": ""
+    },
+    {
+      "name": "CanDoItAll.FileTools",
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "branch": "HEAD",
+      "status": ""
+    }
+  ],
+  "note": "Preparation only. All changes remain unstaged/untracked; no commit/push/history operations.",
+  "completeNonBundleSetUnchanged": true
+}

@@ -10,6 +10,10 @@ Reference: **CDA-UI-SEAMS-AGENTS-01-v2**. Shared architecture: [CDA-UI-SEAMS-BAS
 
 The goal is to make Agents UI boundaries explicit without losing existing behavior, and prepare a credible first small sandbox that improves developer iteration. Agents is the first application UI slice, not the architecture for every later module.
 
+## Agent-module continuation
+
+Capabilities-03 is now closed. The [continuation roadmap](plan/04-agent-module-continuation-roadmap.md) records the prepared, unimplemented Overview child and later bounded slices. This forward reference does not rewrite historical Agents proof or authorize later production work.
+
 ## Read first
 
 1. [Requirements](requirements/00-normalized-requirements.md), [invariants](requirements/01-invariants-and-non-goals.md), and [behavior preservation matrix](requirements/02-behavior-preservation-matrix.md).

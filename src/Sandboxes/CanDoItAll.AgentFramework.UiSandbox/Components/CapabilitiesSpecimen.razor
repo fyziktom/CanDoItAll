@@ -1,0 +1,165 @@
+@inject NavigationManager Navigation
+
+<PageTitle>Capabilities sandbox</PageTitle>
+
+<header class="catalog-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <Cluster Gap="LayoutGap.Small">
+            <h1 class="cda-title-xl">Capabilities sandbox</h1>
+            <Button Text="Catalog specimen" Click="OpenCatalog" data-testid="sandbox-catalog" />
+        </Cluster>
+        <p>Real capability components. Actions change sample state and the intent log.</p>
+        <Grid ColumnTemplate="auto minmax(14rem,30rem) auto" Gap="LayoutGap.Small" AlignItems="AlignItems.Center">
+            <label for="capabilities-scenario" class="cda-field-label">Scenario</label>
+            <select id="capabilities-scenario" class="cda-input" value="@ScenarioToken"
+                    @onchange="ChangeScenario" data-testid="sandbox-capabilities-scenario">
+                @foreach (var definition in CapabilitiesSandboxContext.Scenarios) {
+                    <option value="@definition.Token">@definition.Label</option>
+                }
+            </select>
+            <Button Text="@(matchedLayout ? "Use flexible layout" : "Match desktop baseline")"
+                    Click="@(() => SetContext(context with { Layout = matchedLayout ? CatalogSandboxLayout.Flexible : CatalogSandboxLayout.Matched }))"
+                    data-testid="sandbox-layout" />
+        </Grid>
+        <output aria-live="polite" data-testid="sandbox-intent">@intentText</output>
+    </Stack>
+</header>
+
+<main class="@(matchedLayout ? "catalog-sandbox__frame catalog-sandbox__frame--matched" : "catalog-sandbox__frame")"
+      data-testid="sandbox-capabilities-specimen">
+    <AgentCapabilitiesSurface Snapshot="@presentation.Snapshot" Selection="@context.Selection"
+                              LoadState="@presentation.LoadState" Intent="HandleIntent" />
+</main>
+
+<Tooltip />
+
+@code {
+    [Parameter]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    public string? LayoutQuery { get; set; }
+
+    [Parameter]
+    public string? AgentQuery { get; set; }
+
+    private CapabilitiesSandboxContext context = new();
+    private CapabilitiesSandboxPresentation presentation = new(AgentCapabilitiesSnapshot.Empty, AgentCapabilitiesLoadState.Loading);
+    private bool initialized;
+    private bool matchedLayout => context.Layout == CatalogSandboxLayout.Matched;
+    private string ScenarioToken => CapabilitiesSandboxContext.Scenarios.Single(item => item.Scenario == context.Scenario).Token;
+    private string intentText = "No intent yet.";
+
+    protected override void OnParametersSet() {
+        var next = CapabilitiesSandboxContext.Parse(ScenarioQuery, LayoutQuery, AgentQuery);
+        if (!initialized || next != context) {
+            initialized = true;
+            SetContext(next);
+        }
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender) {
+        ReplaceQuery();
+        return Task.CompletedTask;
+    }
+
+    private void SetContext(CapabilitiesSandboxContext next) {
+        var replacesSample = !initialized || next.Scenario != context.Scenario || next.AgentId != context.AgentId;
+        context = next;
+        if (replacesSample || presentation.LoadState == AgentCapabilitiesLoadState.Loading) {
+            presentation = CapabilitiesSandboxFixture.Create(context);
+        }
+    }
+
+    private void ReplaceQuery() {
+        var uri = Navigation.GetUriWithQueryParameters(context.ToQuery());
+        if (!string.Equals(uri, Navigation.Uri, StringComparison.Ordinal)) {
+            Navigation.NavigateTo(uri, replace: true);
+        }
+    }
+
+    private void ChangeScenario(ChangeEventArgs args) {
+        SetContext(CapabilitiesSandboxContext.Parse(args.Value?.ToString(), matchedLayout ? "matched" : "flexible", null));
+        intentText = "No intent yet.";
+    }
+
+    private void OpenCatalog() {
+        var query = new CatalogSandboxContext(Layout: context.Layout).ToQuery().ToDictionary(item => item.Key, item => item.Value);
+        query["specimen"] = null;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(query), replace: true);
+    }
+
+    private void HandleIntent(AgentCapabilitiesIntent intent) {
+        var snapshot = presentation.Snapshot;
+        switch (intent) {
+            case AgentCapabilitiesIntent.SelectAgent select:
+                SetContext(context with { AgentId = select.AgentId });
+                intentText = $"Selected sample agent {select.AgentId}.";
+                break;
+            case AgentCapabilitiesIntent.ToggleAssignment toggle:
+                var ids = snapshot.SelectedCapabilityIds;
+                presentation = presentation with { Snapshot = snapshot with {
+                    SelectedCapabilityIds = ids.Contains(toggle.CapabilityId) ? ids.Remove(toggle.CapabilityId) : ids.Add(toggle.CapabilityId)
+                } };
+                intentText = $"Sample assignment changed: {toggle.CapabilityId}.";
+                break;
+            case AgentCapabilitiesIntent.VerifyCapability verify:
+                intentText = $"Sample verification requested: {verify.CapabilityId}. No diagnostic runs.";
+                break;
+            case AgentCapabilitiesIntent.OpenDetails details:
+                intentText = $"Sample details requested: {details.CapabilityId}.";
+                break;
+            case AgentCapabilitiesIntent.CreateCapability create:
+                intentText = $"Sample create requested: {create.Kind}.";
+                break;
+            case AgentCapabilitiesIntent.PreviewAccess preview:
+                var valid = !string.IsNullOrWhiteSpace(preview.Draft.Value);
+                presentation = presentation with { Snapshot = snapshot with {
+                    Preview = new(valid, valid ? snapshot.SelectedCapabilityIds.Length : 0, 0,
+                        valid ? [] : [new("Selector", "A sample value is required.", "Enter a value.")], [])
+                } };
+                intentText = $"Sample preview: {preview.Draft.Effect}, {preview.Draft.Scope}, {preview.Draft.Reason}";
+                break;
+            case AgentCapabilitiesIntent.OpenCurator:
+                presentation = presentation with { Snapshot = snapshot with {
+                    CuratorLaunch = new(CapabilitiesSandboxFixture.CuratorAttemptId, false, false, true)
+                } };
+                intentText = "Sample Curator opened. No chat is created.";
+                break;
+            case AgentCapabilitiesIntent.AcknowledgeDiagnostic acknowledge
+                when snapshot.Operation is { CanAcknowledgeDiagnostic: true } operation &&
+                     operation.AgentId == acknowledge.AgentId && operation.AttemptId == acknowledge.AttemptId:
+                ClearOperation("Sample diagnostic uncertainty acknowledged. No diagnostic runs.");
+                break;
+            case AgentCapabilitiesIntent.AcknowledgeCurator acknowledge
+                when snapshot.CuratorLaunch.RequiresAcknowledgement && snapshot.CuratorLaunch.AttemptId == acknowledge.AttemptId:
+                presentation = presentation with { Snapshot = snapshot with {
+                    Curator = snapshot.Curator with { CanLaunch = true },
+                    CuratorLaunch = snapshot.CuratorLaunch with { RequiresAcknowledgement = false }
+                } };
+                intentText = "Sample Curator uncertainty acknowledged. No chat is created or deleted.";
+                break;
+            case AgentCapabilitiesIntent.RecoverOperation:
+                ClearOperation("Sample canonical read requested. No mutation is replayed.");
+                break;
+            case AgentCapabilitiesIntent.RetryAssignment:
+                ClearOperation("Deliberate sample assignment retry requested.");
+                break;
+            case AgentCapabilitiesIntent.AdoptCurrent:
+                ClearOperation("Sample current state adopted.");
+                break;
+            case AgentCapabilitiesIntent.RetryLoad:
+                presentation = CapabilitiesSandboxFixture.Create(context);
+                intentText = $"Sample read retried for {context.AgentId}.";
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(intent));
+        }
+    }
+
+    private void ClearOperation(string message) {
+        presentation = presentation with { Snapshot = presentation.Snapshot with { Operation = null, IsBusy = false } };
+        intentText = message;
+    }
+}
+

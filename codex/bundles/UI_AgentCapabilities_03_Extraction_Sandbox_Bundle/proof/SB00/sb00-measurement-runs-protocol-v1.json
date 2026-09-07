@@ -1,0 +1,71 @@
+[
+  {
+    "phase": "cold",
+    "repetition": 1,
+    "command": [
+      "node",
+      ".mcp-state\\capa03\\direct-watch.cjs",
+      "--plan",
+      ".mcp-state\\capa03\\planned-edits.json",
+      "--host",
+      "pre-fullapp",
+      "--phase",
+      "cold",
+      "--repetition",
+      "1",
+      "--environment",
+      ".mcp-state/capa03-data/environment.json",
+      "--output",
+      ".mcp-state\\capa03\\measurements"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T03:06:09.147978+00:00",
+    "finishedUtc": "2026-09-07T03:07:06.402394+00:00"
+  },
+  {
+    "phase": "cold",
+    "repetition": 2,
+    "command": [
+      "node",
+      ".mcp-state\\capa03\\direct-watch.cjs",
+      "--plan",
+      ".mcp-state\\capa03\\planned-edits.json",
+      "--host",
+      "pre-fullapp",
+      "--phase",
+      "cold",
+      "--repetition",
+      "2",
+      "--environment",
+      ".mcp-state/capa03-data/environment.json",
+      "--output",
+      ".mcp-state\\capa03\\measurements"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T03:07:09.403898+00:00",
+    "finishedUtc": "2026-09-07T03:08:07.592169+00:00"
+  },
+  {
+    "phase": "cold",
+    "repetition": 3,
+    "command": [
+      "node",
+      ".mcp-state\\capa03\\direct-watch.cjs",
+      "--plan",
+      ".mcp-state\\capa03\\planned-edits.json",
+      "--host",
+      "pre-fullapp",
+      "--phase",
+      "cold",
+      "--repetition",
+      "3",
+      "--environment",
+      ".mcp-state/capa03-data/environment.json",
+      "--output",
+      ".mcp-state\\capa03\\measurements"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T03:08:10.594299+00:00",
+    "finishedUtc": "2026-09-07T03:09:38.005289+00:00"
+  }
+]

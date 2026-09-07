@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "files": [
+    {
+      "path": "src\\UI\\CanDoItAll.AgentFramework.UI\\obj\\Release\\net10.0\\scopedcss\\Capabilities\\AgentCapabilitiesSurface.razor.rz.scp.css",
+      "sha256": "1df7e9c36f4441e51bb0d7d715a9b4f505b515d63b446cd99e2dc0ddab8cc9f8"
+    },
+    {
+      "path": "src\\UI\\CanDoItAll.AgentFramework.UI\\obj\\Release\\net10.0\\scopedcss\\Capabilities\\AgentCapabilityList.razor.rz.scp.css",
+      "sha256": "fc582c51a19861bd5daf74688659a22181887c946afedad201cd8c1f07c02c16"
+    },
+    {
+      "path": "src\\UI\\CanDoItAll.AgentFramework.UI\\obj\\Release\\net10.0\\scopedcss\\projectbundle\\CanDoItAll.AgentFramework.UI.bundle.scp.css",
+      "sha256": "4a96abccdd7a0f5b83404fc21f91adc67d4cde11b397e236c0dd1912a72439b4"
+    }
+  ]
+}

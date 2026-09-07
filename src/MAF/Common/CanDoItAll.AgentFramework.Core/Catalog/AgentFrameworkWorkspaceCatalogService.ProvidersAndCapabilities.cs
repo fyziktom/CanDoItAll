@@ -247,25 +247,21 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return capabilityId;
     }
 
-    public async Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
-    {
-        await UpdateCatalogAsync(catalog => catalog with
-        {
+    public async Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) {
+        var now = DateTimeOffset.UtcNow;
+        await UpdateCatalogAsync(catalog => catalog with {
             Capabilities = catalog.Capabilities.Where(item => item.Id != capabilityId).ToList(),
-            Agents = catalog.Agents
-                .Select(agent => agent with
-                {
-                    Capabilities = agent.Capabilities
-                        .Where(item => item.CapabilityId != capabilityId)
-                        .ToList()
-                })
-                .ToList()
+            Agents = catalog.Agents.Select(agent => agent.Capabilities.All(item => item.CapabilityId != capabilityId)
+                ? agent : agent with {
+                    Capabilities = agent.Capabilities.Where(item => item.CapabilityId != capabilityId).ToList(),
+                    UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
+                }).ToList()
         }, cancellationToken);
     }
 
     public async Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
         if (providerSource is not IProviderRuntimeProfileSnapshotSource snapshots) {
-            throw new CapabilityVerificationException(new(CapabilityVerificationDisposition.Rejected));
+            throw new CapabilityVerificationException(new(CapabilityVerificationDisposition.InfrastructureUnavailable));
         }
         var outcome = await new CapabilityVerificationPublication(store, capabilityProofService, snapshots)
             .ExecuteAsync(agentId, capabilityId, cancellationToken);

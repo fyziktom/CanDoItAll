@@ -8,14 +8,15 @@ public enum AgentCapabilityOperationKind { Assignment, Verification }
 
 public enum AgentCapabilityOperationStatus {
     Pending, Rejected, Conflict, Reconciled, Committed, CommittedWithWarning, Unconfirmed,
-    DesiredStateSatisfied, DefinitelyNotCommitted, Superseded, CanceledBeforeDispatch
+    DesiredStateSatisfied, DefinitelyNotCommitted, Superseded, CanceledBeforeDispatch, UnavailableBeforeDispatch
 }
 
 public sealed record AgentCapabilityOperationState(Guid AttemptId, Guid AgentId, Guid CapabilityId,
     AgentCapabilityOperationKind Kind, AgentCapabilityOperationStatus Status, bool IsActive, string Message) {
+    public bool CanAcknowledgeDiagnostic { get; init; }
     public bool CanReconcile => !IsActive && Status is AgentCapabilityOperationStatus.Committed
         or AgentCapabilityOperationStatus.CommittedWithWarning or AgentCapabilityOperationStatus.DesiredStateSatisfied;
-    public bool CanVerify => !IsActive && Status is AgentCapabilityOperationStatus.Unconfirmed or AgentCapabilityOperationStatus.Conflict;
+    public bool CanVerify => !IsActive && !CanAcknowledgeDiagnostic && Status is AgentCapabilityOperationStatus.Unconfirmed or AgentCapabilityOperationStatus.Conflict;
     public bool CanRetry => !IsActive && Kind == AgentCapabilityOperationKind.Assignment && Status == AgentCapabilityOperationStatus.DefinitelyNotCommitted;
     public bool CanAdopt => !IsActive && Status is AgentCapabilityOperationStatus.Superseded or AgentCapabilityOperationStatus.DefinitelyNotCommitted;
 }

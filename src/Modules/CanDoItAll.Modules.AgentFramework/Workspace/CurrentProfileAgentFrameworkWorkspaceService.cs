@@ -351,9 +351,17 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().DeleteCapabilityAsync(capabilityId, cancellationToken);
     }
 
-    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
-    {
-        return ResolveService().VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
+    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
+        IAgentFrameworkWorkspaceService workspace;
+        try {
+            cancellationToken.ThrowIfCancellationRequested();
+            workspace = ResolveService();
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw new CapabilityVerificationException(new(CapabilityVerificationDisposition.CanceledBeforeDiagnostic));
+        } catch (Exception) {
+            throw new CapabilityVerificationException(new(CapabilityVerificationDisposition.InfrastructureUnavailable));
+        }
+        return workspace.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
     }
 
     public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default)

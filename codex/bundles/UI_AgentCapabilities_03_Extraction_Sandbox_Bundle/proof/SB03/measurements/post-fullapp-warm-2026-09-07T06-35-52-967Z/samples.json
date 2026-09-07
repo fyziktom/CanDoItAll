@@ -1,0 +1,4165 @@
+[
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-1",
+    "category": "Razor",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "173c8ace5e6c50a9d7a77e82b7c15e0dc9cbe6a01a630114962bdc3b7589cc1a",
+    "flushNs": "396609430744700",
+    "utc": "2026-09-07T06:36:51.236Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 0,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396613003020600",
+    "firstVisibleMs": 3572.2759,
+    "settledVisibleMs": 5589.3455,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 2017
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396609839861700",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396614081512900",
+        "text": "dotnet watch : C# and Razor changes applied in 4553ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396614081393500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396614081898600",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396614082891400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396614470738000",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396614471314500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-1",
+    "category": "Razor",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396615177147900",
+    "utc": "2026-09-07T06:36:56.983Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 1,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396617535577600",
+    "firstVisibleMs": 2358.4297,
+    "settledVisibleMs": 4176.067,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1818
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396615403703800",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396618575508700",
+        "text": "dotnet watch : C# and Razor changes applied in 3320ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396618576139800",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396618576401000",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396618576901400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396618835015600",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396618835687700",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-1",
+    "category": "Razor",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "173c8ace5e6c50a9d7a77e82b7c15e0dc9cbe6a01a630114962bdc3b7589cc1a",
+    "flushNs": "396620320794100",
+    "utc": "2026-09-07T06:37:02.127Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 2,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396622536495500",
+    "firstVisibleMs": 2215.7014,
+    "settledVisibleMs": 3915.2902,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1700
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396620471297400",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396623521239600",
+        "text": "dotnet watch : C# and Razor changes applied in 3151ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396623522010400",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396623522564900",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396623522601000",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396623758569600",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396623759131500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-1",
+    "category": "Razor",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396624378496300",
+    "utc": "2026-09-07T06:37:06.184Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 3,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396626268896600",
+    "firstVisibleMs": 1890.4003,
+    "settledVisibleMs": 3673.7127,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1783
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 4,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396624453546800",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396627235570100",
+        "text": "dotnet watch : C# and Razor changes applied in 2850ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396627236727900",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396627237025200",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396627237102700",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396627520104100",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396627520630000",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-1",
+    "category": "Razor",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "173c8ace5e6c50a9d7a77e82b7c15e0dc9cbe6a01a630114962bdc3b7589cc1a",
+    "flushNs": "396629010844200",
+    "utc": "2026-09-07T06:37:10.817Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 4,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396630852951500",
+    "firstVisibleMs": 1842.1073,
+    "settledVisibleMs": 3557.5502,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1715
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 5,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396629103153700",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396631868760900",
+        "text": "dotnet watch : C# and Razor changes applied in 2808ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396631869435300",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396631869789000",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396631869922200",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396632092535700",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396632093098400",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-1",
+    "category": "Razor",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396632729900600",
+    "utc": "2026-09-07T06:37:14.536Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 5,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396634269063400",
+    "firstVisibleMs": 1539.1628,
+    "settledVisibleMs": 3338.1154,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1799
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 6,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396632768526500",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396635335282400",
+        "text": "dotnet watch : C# and Razor changes applied in 2596ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396635336941800",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396635337197700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396635337260800",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396635571185700",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396635571897300",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-2",
+    "category": "Razor",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "5cee7d3677164a425100d1c41fe170ba4857eb9c0c3640113adcb718cd1e14b7",
+    "flushNs": "396637036657200",
+    "utc": "2026-09-07T06:37:18.842Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 6,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396638068197500",
+    "firstVisibleMs": 1031.5403,
+    "settledVisibleMs": 2716.5927,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1685
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 7,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396637080892700",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396639036282900",
+        "text": "dotnet watch : C# and Razor changes applied in 1976ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396639037101900",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396639037559100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396639037932000",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396639254494100",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396639255467200",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-2",
+    "category": "Razor",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396639904543100",
+    "utc": "2026-09-07T06:37:21.710Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 7,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396640502574900",
+    "firstVisibleMs": 598.0318,
+    "settledVisibleMs": 2413.241,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1815
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 8,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396640019744200",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396641541994500",
+        "text": "dotnet watch : C# and Razor changes applied in 1584ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396641542684900",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396641542953800",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396641543131600",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396641763825600",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396641764499300",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-2",
+    "category": "Razor",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "5cee7d3677164a425100d1c41fe170ba4857eb9c0c3640113adcb718cd1e14b7",
+    "flushNs": "396643279385600",
+    "utc": "2026-09-07T06:37:25.085Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 8,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396643734362400",
+    "firstVisibleMs": 454.9768,
+    "settledVisibleMs": 2255.1398,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1800
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 9,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396643348232600",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396644786434400",
+        "text": "dotnet watch : C# and Razor changes applied in 1475ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396644787277200",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396644787857100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396644788062200",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396644995265300",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396644996062000",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-2",
+    "category": "Razor",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396645679460200",
+    "utc": "2026-09-07T06:37:27.485Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 9,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396646204154900",
+    "firstVisibleMs": 524.6947,
+    "settledVisibleMs": 2305.1808,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1780
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 10,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396645766719400",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396647213755300",
+        "text": "dotnet watch : C# and Razor changes applied in 1479ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396647214499700",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396647214751100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396647214853400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396647427571300",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396647428103600",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-2",
+    "category": "Razor",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "5cee7d3677164a425100d1c41fe170ba4857eb9c0c3640113adcb718cd1e14b7",
+    "flushNs": "396648912800500",
+    "utc": "2026-09-07T06:37:30.719Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 10,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396649451656300",
+    "firstVisibleMs": 538.8558,
+    "settledVisibleMs": 2238.3737,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1700
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 11,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396648981652800",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396650443817000",
+        "text": "dotnet watch : C# and Razor changes applied in 1494ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396650444562200",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396650444915700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396650445155300",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396650653065200",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396650653608200",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-2",
+    "category": "Razor",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396651292154300",
+    "utc": "2026-09-07T06:37:33.098Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 11,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396651768775200",
+    "firstVisibleMs": 476.6209,
+    "settledVisibleMs": 2276.1496,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1800
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 12,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396651360097900",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396652763938300",
+        "text": "dotnet watch : C# and Razor changes applied in 1425ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396652765142900",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396652765241100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396652765271300",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396653019047700",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396653019600500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-3",
+    "category": "Razor",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "bbbca6cbbd0df282713d5fbc3d77a174e321f8a9d2d5fc874d215d60e4876886",
+    "flushNs": "396654504756500",
+    "utc": "2026-09-07T06:37:36.310Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 12,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396654918394100",
+    "firstVisibleMs": 413.6376,
+    "settledVisibleMs": 2113.1293,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1700
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 13,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396654553558700",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396655777072700",
+        "text": "dotnet watch : C# and Razor changes applied in 1248ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396655777943900",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396655778198500",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396655778326800",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396656028109000",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396656028696800",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-3",
+    "category": "Razor",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396656774400900",
+    "utc": "2026-09-07T06:37:38.580Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 13,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396657167385800",
+    "firstVisibleMs": 392.9849,
+    "settledVisibleMs": 2093.5179,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1701
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 14,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396656815107000",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396658087719700",
+        "text": "dotnet watch : C# and Razor changes applied in 1304ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396658088720400",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396658089000900",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396658089036000",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396658345293100",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396658345839200",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-3",
+    "category": "Razor",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "bbbca6cbbd0df282713d5fbc3d77a174e321f8a9d2d5fc874d215d60e4876886",
+    "flushNs": "396659795638800",
+    "utc": "2026-09-07T06:37:41.601Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 14,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396660268065200",
+    "firstVisibleMs": 472.4264,
+    "settledVisibleMs": 2289.1145,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1816
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 15,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396659895455500",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396661372906800",
+        "text": "dotnet watch : C# and Razor changes applied in 1523ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396661373470100",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396661373779200",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396661373890300",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396661590183200",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396661590721700",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-3",
+    "category": "Razor",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396662265001200",
+    "utc": "2026-09-07T06:37:44.071Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 15,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396662801481600",
+    "firstVisibleMs": 536.4804,
+    "settledVisibleMs": 2218.5316,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1682
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 16,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396662374017800",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396663798522200",
+        "text": "dotnet watch : C# and Razor changes applied in 1497ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396663799034400",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396663799391800",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396663799504900",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396664008325300",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396664009002500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-3",
+    "category": "Razor",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "bbbca6cbbd0df282713d5fbc3d77a174e321f8a9d2d5fc874d215d60e4876886",
+    "flushNs": "396665424425500",
+    "utc": "2026-09-07T06:37:47.230Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 16,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396666351270900",
+    "firstVisibleMs": 926.8454,
+    "settledVisibleMs": 2725.961,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1799
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 17,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396665502203600",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396667367218700",
+        "text": "dotnet watch : C# and Razor changes applied in 1889ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396667367950100",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396667368268600",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396667368412200",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396667602908900",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396667603428100",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "razor-3",
+    "category": "Razor",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+    "flushNs": "396668302844800",
+    "utc": "2026-09-07T06:37:50.109Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 17,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396669133351000",
+    "firstVisibleMs": 830.5062,
+    "settledVisibleMs": 2631.5558,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1801
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 18,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396668360853800",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396670149482900",
+        "text": "dotnet watch : C# and Razor changes applied in 1810ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396670150125500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396670150482900",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396670150673400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396670417405000",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396670418026500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-kind",
+    "category": "C#",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "c5d4888ba258e55fd09e0184de337e082cf45cc3c3b08ed9a3909eff08fc49de",
+    "flushNs": "396671885500400",
+    "utc": "2026-09-07T06:37:53.691Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 18,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396672050230300",
+    "firstVisibleMs": 164.7299,
+    "settledVisibleMs": 1747.6483,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1583
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 19,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396671956855000",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396672956406800",
+        "text": "dotnet watch : C# and Razor changes applied in 1051ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396672957004500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396672957408700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396672957586400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396673142139800",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396673142988300",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-kind",
+    "category": "C#",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396673793965900",
+    "utc": "2026-09-07T06:37:55.600Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 19,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396673950576700",
+    "firstVisibleMs": 156.6108,
+    "settledVisibleMs": 1823.7234,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1667
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 20,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396673852858000",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396674901891800",
+        "text": "dotnet watch : C# and Razor changes applied in 1055ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396674902467800",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396674902846400",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396674902964400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396675109476600",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396675109961100",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-kind",
+    "category": "C#",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "c5d4888ba258e55fd09e0184de337e082cf45cc3c3b08ed9a3909eff08fc49de",
+    "flushNs": "396676520891300",
+    "utc": "2026-09-07T06:37:58.326Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 20,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396676583376200",
+    "firstVisibleMs": 62.4849,
+    "settledVisibleMs": 1745.9533,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1683
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 21,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396676536110300",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396677541449400",
+        "text": "dotnet watch : C# and Razor changes applied in 1010ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396677542163700",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396677542530700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396677542561500",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396677730161400",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396677730819600",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-kind",
+    "category": "C#",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396678431408000",
+    "utc": "2026-09-07T06:38:00.237Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 21,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396678568203800",
+    "firstVisibleMs": 136.7958,
+    "settledVisibleMs": 1951.7738,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1815
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 22,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396678487149800",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396679625197800",
+        "text": "dotnet watch : C# and Razor changes applied in 1143ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396679625838700",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396679626054900",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396679626166300",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396679810727400",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396679811301600",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-kind",
+    "category": "C#",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "c5d4888ba258e55fd09e0184de337e082cf45cc3c3b08ed9a3909eff08fc49de",
+    "flushNs": "396681337990400",
+    "utc": "2026-09-07T06:38:03.144Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 22,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396681482749200",
+    "firstVisibleMs": 144.7588,
+    "settledVisibleMs": 1828.6707,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1684
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 23,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396681350415700",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396682429606200",
+        "text": "dotnet watch : C# and Razor changes applied in 1084ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396682430246900",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396682430574000",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396682430705200",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396682635408000",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396682635972900",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-kind",
+    "category": "C#",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396683306436400",
+    "utc": "2026-09-07T06:38:05.112Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 23,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396683399840200",
+    "firstVisibleMs": 93.4038,
+    "settledVisibleMs": 1759.7127,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1667
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 24,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396683333815200",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396684322870200",
+        "text": "dotnet watch : C# and Razor changes applied in 995ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396684323557000",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396684324041100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396684324093800",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396684556077800",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396684556736600",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-proof",
+    "category": "C#",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "d4a8d4a455c7719b2b5bcc1cf2c14d59fbe4773d89c6d0c7d55803ef407dc4c7",
+    "flushNs": "396685985377800",
+    "utc": "2026-09-07T06:38:07.791Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 24,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396686066165200",
+    "firstVisibleMs": 80.7874,
+    "settledVisibleMs": 1747.3115,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1666
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 25,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396686019110500",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396686994623900",
+        "text": "dotnet watch : C# and Razor changes applied in 981ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396686995278800",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396686995823100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396686995872600",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396687253255100",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396687253924600",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-proof",
+    "category": "C#",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396687865212500",
+    "utc": "2026-09-07T06:38:09.671Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 25,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396688016899700",
+    "firstVisibleMs": 151.6872,
+    "settledVisibleMs": 1835.5202,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1684
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 26,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396687912576300",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396688946439800",
+        "text": "dotnet watch : C# and Razor changes applied in 1038ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396688947488600",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396688947870900",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396688948032000",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396689183976500",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396689184499300",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-proof",
+    "category": "C#",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "d4a8d4a455c7719b2b5bcc1cf2c14d59fbe4773d89c6d0c7d55803ef407dc4c7",
+    "flushNs": "396690623513100",
+    "utc": "2026-09-07T06:38:12.429Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 26,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396690767250900",
+    "firstVisibleMs": 143.7378,
+    "settledVisibleMs": 1843.9453,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1700
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 27,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396690666325000",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396691700402200",
+        "text": "dotnet watch : C# and Razor changes applied in 1039ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396691701039400",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396691701643100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396691701798400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396691938173300",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396691938814500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-proof",
+    "category": "C#",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396692612219100",
+    "utc": "2026-09-07T06:38:14.418Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 27,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396692767143100",
+    "firstVisibleMs": 154.924,
+    "settledVisibleMs": 1820.9209,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1666
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 28,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396692676954900",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396693712212000",
+        "text": "dotnet watch : C# and Razor changes applied in 1041ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396693712849500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396693713112500",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396693713322700",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396693921101100",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396693921655100",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-proof",
+    "category": "C#",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "d4a8d4a455c7719b2b5bcc1cf2c14d59fbe4773d89c6d0c7d55803ef407dc4c7",
+    "flushNs": "396695346424700",
+    "utc": "2026-09-07T06:38:17.152Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 28,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396695499714400",
+    "firstVisibleMs": 153.2897,
+    "settledVisibleMs": 1820.5153,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1667
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 29,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396695392254500",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396696415056700",
+        "text": "dotnet watch : C# and Razor changes applied in 1027ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396696415618000",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396696416214700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396696416333600",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396696625282000",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396696625933500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-proof",
+    "category": "C#",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396697321588000",
+    "utc": "2026-09-07T06:38:19.127Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 29,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396697416156000",
+    "firstVisibleMs": 94.568,
+    "settledVisibleMs": 1894.2729,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1799
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 30,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396697329725900",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396697400344400",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396698491934900",
+        "text": "dotnet watch : C# and Razor changes applied in 1170ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396698492712200",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396698492983900",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396698493114100",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396698714871000",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396698715527300",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-endpoint",
+    "category": "C#",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "f082d7340d0ef703ab577764f13e20a3905ac7e17ea600043c08fdf17b2d65e4",
+    "flushNs": "396700146808400",
+    "utc": "2026-09-07T06:38:21.952Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 30,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396700249800000",
+    "firstVisibleMs": 102.9916,
+    "settledVisibleMs": 2036.116,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1933
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 31,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396701403679300",
+        "text": "dotnet watch : C# and Razor changes applied in 1250ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396701404380500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396701405013100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396701405048700",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396701621683500",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396701622234500",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-endpoint",
+    "category": "C#",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396702338954600",
+    "utc": "2026-09-07T06:38:24.145Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 31,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396702498671500",
+    "firstVisibleMs": 159.7169,
+    "settledVisibleMs": 1860.262,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1701
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 32,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396702362434400",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396703462956800",
+        "text": "dotnet watch : C# and Razor changes applied in 1107ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396703463680500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396703463878100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396703463993500",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396703670785900",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396703671319300",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-endpoint",
+    "category": "C#",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "f082d7340d0ef703ab577764f13e20a3905ac7e17ea600043c08fdf17b2d65e4",
+    "flushNs": "396705196125100",
+    "utc": "2026-09-07T06:38:27.002Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 32,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396705298647900",
+    "firstVisibleMs": 102.5228,
+    "settledVisibleMs": 1869.3707,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1767
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 33,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396705221487200",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396706253553400",
+        "text": "dotnet watch : C# and Razor changes applied in 1037ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396706254398200",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396706254907100",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396706255192400",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396706523760700",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396706524399600",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-endpoint",
+    "category": "C#",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396707207727800",
+    "utc": "2026-09-07T06:38:29.013Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 33,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396707298802100",
+    "firstVisibleMs": 91.0743,
+    "settledVisibleMs": 1757.8825,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1667
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 34,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396707219816600",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396708185306300",
+        "text": "dotnet watch : C# and Razor changes applied in 971ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396708186110400",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396708186387700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396708186605700",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396708437510200",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396708437966700",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-endpoint",
+    "category": "C#",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "f082d7340d0ef703ab577764f13e20a3905ac7e17ea600043c08fdf17b2d65e4",
+    "flushNs": "396709871639400",
+    "utc": "2026-09-07T06:38:31.677Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 34,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396709948300600",
+    "firstVisibleMs": 76.6612,
+    "settledVisibleMs": 1894.8381,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1818
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 35,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396709902005500",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396710932065300",
+        "text": "dotnet watch : C# and Razor changes applied in 1034ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396710932750500",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396710933337700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396710933521100",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396711246194200",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396711247040000",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "csharp-endpoint",
+    "category": "C#",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+    "flushNs": "396711940147500",
+    "utc": "2026-09-07T06:38:33.746Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 35,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "browser-reload",
+    "firstVisibleNs": "396712031774500",
+    "firstVisibleMs": 91.627,
+    "settledVisibleMs": 1875.8136,
+    "settlement": {
+      "starts": 1,
+      "ends": 1,
+      "waitMs": 1785
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396711960288400",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396713060144600",
+        "text": "dotnet watch : C# and Razor changes applied in 1106ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396713060861800",
+        "kind": "sdk-message",
+        "type": "RefreshBrowser"
+      },
+      {
+        "ns": "396713061224700",
+        "kind": "main-frame-navigation"
+      },
+      {
+        "ns": "396713061346000",
+        "kind": "enhancednavigationstart"
+      },
+      {
+        "ns": "396713281983700",
+        "kind": "enhancedload"
+      },
+      {
+        "ns": "396713282960000",
+        "kind": "enhancednavigationend"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-heading",
+    "category": "CSS",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "131a682037c2e7435f90ee81b84ca38270ef16d4ae12b063ad1a8d24d0d8ff4f",
+    "flushNs": "396714749451500",
+    "utc": "2026-09-07T06:38:36.555Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396719698086500",
+    "firstVisibleMs": 4948.635,
+    "settledVisibleMs": 6533.2314,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1584
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396719525332100",
+        "text": "dotnet watch : Hot reload capabilities: AddExplicitInterfaceImplementation AddFieldRva AddInstanceFieldToExistingType AddMethodToExistingType AddStaticFieldToExistingType Baseline GenericAddFieldToExistingType GenericAddMethodToExistingType GenericUpdateMethod ChangeCustomAttributes NewTypeDefinition UpdateParameters."
+      },
+      {
+        "label": "dotnet-watch",
+        "ns": "396719530880600",
+        "text": "dotnet watch : Static asset changes applied in 4750ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396719531741700",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-heading",
+    "category": "CSS",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+    "flushNs": "396721446292300",
+    "utc": "2026-09-07T06:38:43.252Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396732530909600",
+    "firstVisibleMs": 11084.6173,
+    "settledVisibleMs": 12634.9079,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1550
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396732435043300",
+        "text": "dotnet watch : Static asset changes applied in 3522ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396732435832900",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-heading",
+    "category": "CSS",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "131a682037c2e7435f90ee81b84ca38270ef16d4ae12b063ad1a8d24d0d8ff4f",
+    "flushNs": "396734979568800",
+    "utc": "2026-09-07T06:38:56.785Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396738563700300",
+    "firstVisibleMs": 3584.1315,
+    "settledVisibleMs": 5118.1411,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1534
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396738481739600",
+        "text": "dotnet watch : Static asset changes applied in 3444ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396738482505700",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-heading",
+    "category": "CSS",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+    "flushNs": "396740214188900",
+    "utc": "2026-09-07T06:39:02.020Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396743863520100",
+    "firstVisibleMs": 3649.3312,
+    "settledVisibleMs": 5215.8909,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1567
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396743777313700",
+        "text": "dotnet watch : Static asset changes applied in 3551ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396743778121300",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-heading",
+    "category": "CSS",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "131a682037c2e7435f90ee81b84ca38270ef16d4ae12b063ad1a8d24d0d8ff4f",
+    "flushNs": "396746328005400",
+    "utc": "2026-09-07T06:39:08.134Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396749950133900",
+    "firstVisibleMs": 3622.1285,
+    "settledVisibleMs": 5169.5675,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1547
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396749854125200",
+        "text": "dotnet watch : Static asset changes applied in 3470ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396749855091700",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-heading",
+    "category": "CSS",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+    "flushNs": "396751622167500",
+    "utc": "2026-09-07T06:39:13.428Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396755113378400",
+    "firstVisibleMs": 3491.2109,
+    "settledVisibleMs": 5042.4527,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1551
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396755045636200",
+        "text": "dotnet watch : Static asset changes applied in 3396ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396755046501200",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-card-title",
+    "category": "CSS",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "b9f860d599576e75077e87719299bf5d9e91977320a60a51e84d499440444699",
+    "flushNs": "396757570634500",
+    "utc": "2026-09-07T06:39:19.376Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396761179577500",
+    "firstVisibleMs": 3608.943,
+    "settledVisibleMs": 5175.8855,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1567
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396761099646400",
+        "text": "dotnet watch : Static asset changes applied in 3505ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396761100590800",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-card-title",
+    "category": "CSS",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+    "flushNs": "396762858415100",
+    "utc": "2026-09-07T06:39:24.664Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396766414531600",
+    "firstVisibleMs": 3556.1165,
+    "settledVisibleMs": 5121.6814,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1566
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396766319635600",
+        "text": "dotnet watch : Static asset changes applied in 3409ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396766320342200",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-card-title",
+    "category": "CSS",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "b9f860d599576e75077e87719299bf5d9e91977320a60a51e84d499440444699",
+    "flushNs": "396768880205300",
+    "utc": "2026-09-07T06:39:30.686Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396773129520300",
+    "firstVisibleMs": 4249.315,
+    "settledVisibleMs": 5798.9295,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1550
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396773051771800",
+        "text": "dotnet watch : Static asset changes applied in 4114ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396773052372200",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-card-title",
+    "category": "CSS",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+    "flushNs": "396774809572200",
+    "utc": "2026-09-07T06:39:36.615Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396778480606800",
+    "firstVisibleMs": 3671.0346,
+    "settledVisibleMs": 5202.3515,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1532
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396778390580700",
+        "text": "dotnet watch : Static asset changes applied in 3525ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396778391381200",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-card-title",
+    "category": "CSS",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "b9f860d599576e75077e87719299bf5d9e91977320a60a51e84d499440444699",
+    "flushNs": "396780911337700",
+    "utc": "2026-09-07T06:39:42.717Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396784713043600",
+    "firstVisibleMs": 3801.7059,
+    "settledVisibleMs": 5350.677,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1549
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396784622735400",
+        "text": "dotnet watch : Static asset changes applied in 3688ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396784623932100",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-card-title",
+    "category": "CSS",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+    "flushNs": "396786381730600",
+    "utc": "2026-09-07T06:39:48.187Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396789911895100",
+    "firstVisibleMs": 3530.1645,
+    "settledVisibleMs": 5080.0056,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1549
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396789840650200",
+        "text": "dotnet watch : Static asset changes applied in 3405ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396789842529100",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-endpoint",
+    "category": "CSS",
+    "repetition": 1,
+    "direction": "forward",
+    "flushedSha256": "ba683b712f601f90333d3e7d05d21051ff453c9ec3a9825125dfb8201be9fc9c",
+    "flushNs": "396792348598700",
+    "utc": "2026-09-07T06:39:54.154Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396795878943500",
+    "firstVisibleMs": 3530.3448,
+    "settledVisibleMs": 5079.8995,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1550
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396795809460300",
+        "text": "dotnet watch : Static asset changes applied in 3417ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396795810417400",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-endpoint",
+    "category": "CSS",
+    "repetition": 1,
+    "direction": "reverse",
+    "flushedSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+    "flushNs": "396797550313800",
+    "utc": "2026-09-07T06:39:59.356Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396801345329600",
+    "firstVisibleMs": 3795.0158,
+    "settledVisibleMs": 5361.8822,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1567
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396801274676800",
+        "text": "dotnet watch : Static asset changes applied in 3716ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396801275499900",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-endpoint",
+    "category": "CSS",
+    "repetition": 2,
+    "direction": "forward",
+    "flushedSha256": "ba683b712f601f90333d3e7d05d21051ff453c9ec3a9825125dfb8201be9fc9c",
+    "flushNs": "396803802131700",
+    "utc": "2026-09-07T06:40:05.608Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396807544788900",
+    "firstVisibleMs": 3742.6572,
+    "settledVisibleMs": 5293.091,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1551
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396807454256200",
+        "text": "dotnet watch : Static asset changes applied in 3613ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396807454953900",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-endpoint",
+    "category": "CSS",
+    "repetition": 2,
+    "direction": "reverse",
+    "flushedSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+    "flushNs": "396809221572100",
+    "utc": "2026-09-07T06:40:11.027Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396813560993600",
+    "firstVisibleMs": 4339.4215,
+    "settledVisibleMs": 5873.156,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1534
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396813491173500",
+        "text": "dotnet watch : Static asset changes applied in 4233ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396813492055200",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-endpoint",
+    "category": "CSS",
+    "repetition": 3,
+    "direction": "forward",
+    "flushedSha256": "ba683b712f601f90333d3e7d05d21051ff453c9ec3a9825125dfb8201be9fc9c",
+    "flushNs": "396815965928700",
+    "utc": "2026-09-07T06:40:17.771Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396819577877300",
+    "firstVisibleMs": 3611.9486,
+    "settledVisibleMs": 5178.8355,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1567
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396819489485200",
+        "text": "dotnet watch : Static asset changes applied in 3466ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396819490429400",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  },
+  {
+    "host": "post-fullapp",
+    "phase": "warm",
+    "editId": "css-endpoint",
+    "category": "CSS",
+    "repetition": 3,
+    "direction": "reverse",
+    "flushedSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+    "flushNs": "396821279192000",
+    "utc": "2026-09-07T06:40:23.085Z",
+    "before": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentBefore": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "success": true,
+    "classification": "hot-reload",
+    "firstVisibleNs": "396824777673300",
+    "firstVisibleMs": 3498.4813,
+    "settledVisibleMs": 5048.8545,
+    "settlement": {
+      "starts": 0,
+      "ends": 0,
+      "waitMs": 1551
+    },
+    "after": {
+      "isReady": true,
+      "runtimePid": 57928,
+      "watchIteration": 1,
+      "hotReloadGeneration": 36,
+      "assetMode": "Production",
+      "ownerKind": "DirectCapabilitiesBenchmark",
+      "ownerId": "post-fullapp-warm-2026-09-07T06-35-52-967Z"
+    },
+    "documentAfter": {
+      "id": "c41fe4f1-2675-4f55-b5bb-37a4042df8f3",
+      "timeOrigin": 1788763005990
+    },
+    "native": [
+      {
+        "label": "dotnet-watch",
+        "ns": "396824690142200",
+        "text": "dotnet watch : Static asset changes applied in 3410ms."
+      }
+    ],
+    "browserEvents": [
+      {
+        "ns": "396824691183700",
+        "kind": "sdk-message",
+        "type": "UpdateStaticFile"
+      }
+    ],
+    "databaseConfirmations": 0,
+    "filterRestorations": 0
+  }
+]

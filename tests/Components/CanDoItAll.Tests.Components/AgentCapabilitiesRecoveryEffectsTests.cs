@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Capabilities;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -41,7 +42,8 @@ public sealed class AgentCapabilitiesRecoveryEffectsTests {
         await cut.Find("[data-testid='agents-capability-verify']").ClickAsync();
         fixture.Workspace.CatalogReadFails = true;
         await cut.Find("[data-testid='agents-capability-recover']").ClickAsync();
-        Assert.Equal(AgentCapabilityOperationStatus.Unconfirmed, cut.FindComponent<AgentCapabilitiesSurface>().Instance.Snapshot.Operation!.Status);
+        Assert.True(cut.FindComponent<AgentCapabilitiesSurface>().Instance.Snapshot.Operation!.CanVerify);
+        Assert.False(cut.FindComponent<AgentCapabilitiesSurface>().Instance.Snapshot.Operation!.CanAcknowledgeDiagnostic);
         Assert.True(cut.FindComponent<AgentCapabilitiesSurface>().Instance.Snapshot.IsBusy);
         Assert.Equal(1, fixture.Workspace.VerifyCalls);
     }

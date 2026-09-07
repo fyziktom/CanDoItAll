@@ -33,6 +33,10 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     internal static SandboxWorkspaceCatalog NormalizeCatalog(SandboxWorkspaceCatalog catalog)
     {
+        var previousAgents = catalog.Agents.GroupBy(agent => agent.Id).ToDictionary(group => group.Key, group => {
+            var latest = group.MaxBy(agent => agent.UpdatedAtUtc)!;
+            return (Revision: latest.UpdatedAtUtc, Fingerprint: AgentConfigurationVersion.Create(latest));
+        });
         var seeded = SandboxWorkspaceSeedFactory.Create();
         var providers = MergeProviders(catalog.Providers, seeded.Providers);
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
@@ -46,6 +50,16 @@ internal static class SandboxWorkspaceSeedNormalizer
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
         var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
+        var now = DateTimeOffset.UtcNow;
+        activeAgents = activeAgents.Select(agent => {
+            if (!previousAgents.TryGetValue(agent.Id, out var previous) ||
+                previous.Fingerprint == AgentConfigurationVersion.Create(agent)) {
+                return agent;
+            }
+            return agent with {
+                UpdatedAtUtc = AgentConfigurationVersion.NextRevision(previous.Revision, agent.UpdatedAtUtc > now ? agent.UpdatedAtUtc : now)
+            };
+        }).ToList();
         var agentTeams = MergeAgentTeams(catalog.AgentTeams, seeded.AgentTeams, agents.IdMap, activeAgents);
 
         return catalog with

@@ -1,0 +1,852 @@
+[
+  {
+    "ns": "396911375160600",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396916302564700",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396916302844600",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396916303323600",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396916346802100",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396916347652200",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396919356838700",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396919357232300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396919357520100",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396919400599900",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396919401101300",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396922965662000",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396922966054700",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396922966437800",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396922992036800",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396922992614500",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396925255239200",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396925255502700",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396925255703100",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396925283804600",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396925284492100",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396928136118200",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396928136373400",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396928136409600",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396928175717500",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396928176284200",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396930207305100",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396930207730500",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396930208012000",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396930234691600",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396930235323400",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396933056859700",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396933057357200",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396933057480300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396933084675500",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396933085248000",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396935135751300",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396935136021300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396935136157700",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396935171140100",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396935171726200",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396937918564700",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396937918890500",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396937919212400",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396937942131300",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396937943657300",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396939998870000",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396939999338700",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396939999777400",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396940022789800",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396940023301800",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396942785708900",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396942786176100",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396942786207600",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396942819280500",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396942820395200",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396944823785200",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396944824214500",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396944824382800",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396944847738100",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396944848428400",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396947560245200",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396947560518000",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396947560622300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396947586924700",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396947587453100",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396949641526500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396949641861000",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396949641893500",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396949679583200",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396949680131200",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396952442470600",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396952442928300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396952443047600",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396952469576200",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396952470096800",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396954447719300",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396954448204000",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396954448339900",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396954475497400",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396954476034600",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396957247441500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396957247771900",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396957247958300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396957274633500",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396957275144500",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396959165817500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396959166079100",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396959166195100",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396959191634200",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396959192065300",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396961662050700",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396961662522000",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396961662721700",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396961693059600",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396961693924300",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396963352725100",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396963353027000",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396963353136300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396963380974600",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396963381399600",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396965801633500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396965801858800",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396965801990400",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396965837118200",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396965837787900",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396967499364200",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396967499655900",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396967499782900",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396967527633000",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396967528177000",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396969936720500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396969937024100",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396969937190700",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396969960522900",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396969960940500",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396971629590400",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396971629644300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396971629769700",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396971663037900",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396971663256400",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396974090183200",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396974091048400",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396974091091900",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396974115030500",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396974115580400",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396975795893500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396975796058300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396975796211300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396975822072700",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396975822555400",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396978297166600",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396978297481500",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396978297531100",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396978322067600",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396978322557200",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396979993688300",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396979994215300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396979994350800",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396980021939600",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396980022694500",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396982450634500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396982450890900",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396982451033600",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396982476511100",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396982477027600",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396984153337700",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396984153921500",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396984154068300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396984197971500",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396984198574600",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396986606451400",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396986606594800",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396986606626200",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396986633282300",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396986634082000",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396988306544500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396988306851200",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396988306963300",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396988335671300",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396988336369100",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396990745235700",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396990745565000",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396990745684800",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396990774537900",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396990775162800",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396992427312400",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396992427356300",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396992427451900",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396992466910100",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396992467464900",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396994872590000",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396994872911100",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396994873048500",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396994899121900",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396994899704800",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396996569383500",
+    "kind": "sdk-message",
+    "type": "RefreshBrowser"
+  },
+  {
+    "ns": "396996569873200",
+    "kind": "main-frame-navigation"
+  },
+  {
+    "ns": "396996569907200",
+    "kind": "enhancednavigationstart"
+  },
+  {
+    "ns": "396996597223900",
+    "kind": "enhancedload"
+  },
+  {
+    "ns": "396996597781500",
+    "kind": "enhancednavigationend"
+  },
+  {
+    "ns": "396999659933300",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397001738031100",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397004510180200",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397006530141100",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397009355078100",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397011392874300",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397014162745100",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397016165194900",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397018953493600",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397020995881900",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397023708519800",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397025705017500",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397028472846200",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397030488068500",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397033250722800",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397035285921400",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397038022821900",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  },
+  {
+    "ns": "397040037828700",
+    "kind": "sdk-message",
+    "type": "UpdateStaticFile"
+  }
+]

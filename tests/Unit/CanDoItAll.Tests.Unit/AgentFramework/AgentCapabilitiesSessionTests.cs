@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Capabilities;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;

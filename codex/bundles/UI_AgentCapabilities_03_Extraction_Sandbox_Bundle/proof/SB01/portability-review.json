@@ -1,0 +1,146 @@
+{
+  "added": 23,
+  "stale": 23,
+  "unchangedTotal": 14302,
+  "review": [
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 59,
+      "category": "mcp",
+      "evidence_excerpt": "<CompactStat Label=\"MCP servers\""
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 60,
+      "category": "mcp",
+      "evidence_excerpt": "Value=\"@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()\""
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 90,
+      "category": "mcp",
+      "evidence_excerpt": "<Button Text=\"New MCP\""
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 95,
+      "category": "mcp",
+      "evidence_excerpt": "Click=\"@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))\""
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 96,
+      "category": "mcp",
+      "evidence_excerpt": "data-testid=\"agents-capability-new-mcp\" />"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 171,
+      "category": "mcp",
+      "evidence_excerpt": "Description=\"Add a skill, tool, or MCP server before assigning it to this agent.\" />"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 211,
+      "category": "mcp",
+      "evidence_excerpt": "<option value=\"@SelectorKind.McpServerKey\">MCP server key</option>"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 212,
+      "category": "mcp",
+      "evidence_excerpt": "<option value=\"@SelectorKind.McpToolName\">MCP tool name</option>"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 223,
+      "category": "mcp",
+      "evidence_excerpt": "<label class=\"cda-field-label\">MCP server key</label>"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "line": 307,
+      "category": "mcp",
+      "evidence_excerpt": "<option value=\"@CapabilityTypeFilter.Mcp\">MCP</option>"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 77,
+      "category": "case-policy",
+      "evidence_excerpt": ".OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 100,
+      "category": "case-policy",
+      "evidence_excerpt": ".ThenBy(capability => capability.Name, StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 106,
+      "category": "case-policy",
+      "evidence_excerpt": ".Distinct(StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 107,
+      "category": "case-policy",
+      "evidence_excerpt": ".OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 144,
+      "category": "case-policy",
+      "evidence_excerpt": "return capability.Name.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 145,
+      "category": "case-policy",
+      "evidence_excerpt": "capability.Key.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 146,
+      "category": "case-policy",
+      "evidence_excerpt": "capability.Description.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 147,
+      "category": "case-policy",
+      "evidence_excerpt": "capability.EndpointOrPath.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase) ||"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 148,
+      "category": "case-policy",
+      "evidence_excerpt": "capability.Tags.Any(tag => tag.Contains(capabilitySearch, StringComparison.OrdinalIgnoreCase));"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 157,
+      "category": "case-policy",
+      "evidence_excerpt": "capability.Tags.Any(tag => string.Equals(tag, filter, StringComparison.OrdinalIgnoreCase)));"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 171,
+      "category": "mcp",
+      "evidence_excerpt": "CapabilityTypeFilter.Mcp => capability.Kind == CapabilityKind.McpServer,"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "line": 201,
+      "category": "mcp",
+      "evidence_excerpt": "Mcp,"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "line": 53,
+      "category": "mcp",
+      "evidence_excerpt": "CapabilityKind.McpServer => \"MCP server\","
+    }
+  ],
+  "decision": "Relocated existing MCP label/filter references and explicit ordinal case comparisons. No executable I/O, platform assumptions or new dependency. Path-sensitive fingerprints changed with the move; protected total and per-category findings unchanged."
+}

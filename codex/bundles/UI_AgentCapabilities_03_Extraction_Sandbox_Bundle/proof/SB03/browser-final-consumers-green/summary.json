@@ -1,0 +1,63 @@
+{
+  "ownedPid": 28068,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "reason": "Final shared-list CSS in both real consumers",
+  "geometry": [
+    {
+      "consumer": "AgentDetailsDialog",
+      "card": {
+        "x": 63,
+        "y": 416.96875,
+        "width": 725.5,
+        "height": 218.84375
+      },
+      "content": {
+        "x": 80,
+        "y": 469.96875,
+        "width": 691.5,
+        "height": 64.84375
+      }
+    }
+  ],
+  "initial": {
+    "alphaId": "71f595a4-fda8-47bd-add2-c61dc0a1cedb",
+    "betaId": "2f0792e1-0ce1-4a32-be79-c682c87b1188",
+    "capabilityId": "8149b84e-4bd3-47d6-920b-9e38a9887f1a",
+    "assigned": false,
+    "proof": "NotRun",
+    "curatorSessionCount": 0,
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false,
+    "assignmentCalls": 0,
+    "diagnosticCalls": 0,
+    "previewCalls": 0,
+    "curatorCalls": 0,
+    "chatSessionId": null,
+    "failEditorRead": false
+  },
+  "browserVersion": "149.0.7827.55",
+  "final": {
+    "alphaId": "71f595a4-fda8-47bd-add2-c61dc0a1cedb",
+    "betaId": "2f0792e1-0ce1-4a32-be79-c682c87b1188",
+    "capabilityId": "8149b84e-4bd3-47d6-920b-9e38a9887f1a",
+    "assigned": true,
+    "proof": "NotRun",
+    "curatorSessionCount": 0,
+    "curatorAvailable": true,
+    "held": false,
+    "cancelled": false,
+    "assignmentCalls": 0,
+    "diagnosticCalls": 0,
+    "previewCalls": 0,
+    "curatorCalls": 0,
+    "chatSessionId": null,
+    "failEditorRead": false
+  },
+  "status": "PASS",
+  "ownedExit": 0,
+  "pageErrors": []
+}

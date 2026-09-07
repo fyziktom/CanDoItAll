@@ -1,0 +1,30 @@
+[
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T06:15:49.626854+00:00",
+    "finishedUtc": "2026-09-07T06:16:13.830609+00:00"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T06:16:13.830609+00:00",
+    "finishedUtc": "2026-09-07T06:16:37.297192+00:00"
+  }
+]

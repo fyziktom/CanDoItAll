@@ -1,0 +1,13 @@
+# Responsive utility closure follow-up
+
+Confirmed after inspecting the completed timing screenshots: FilterBar renders a column in the sandbox at 1600 x 1000 while the full app renders a row. BaseLib Split composes breakpoint-prefixed utility names at runtime. The compiled BaseLib and both generated themes omit those names; Web app.css supplies an existing five-breakpoint compatibility set that the sandbox does not receive. This is a missing asset dependency, not a state or service defect.
+
+Freeze browser test `Responsive_filter_layout_matches_full_app_at_large_desktop`: two mode cases, Parity and Fast. At the measured viewport the real FilterBar Split must compute flex-direction: row, align-items: center and justify-content: space-between. Existing 29-scenario coverage and actual card/scroll checks remain. Obtain RED before changing theme input.
+
+The first attempted correction generated the bounded utility names with Tailwind `@source inline()`. Its direct browser rerun still failed in both modes: the live BaseLib stylesheet has an unlayered `.flex-col` rule, which wins over layered responsive utilities. Both failed runs remain negative evidence; generated class presence alone did not establish rendered closure.
+
+Final correction: move the existing 25 unlayered Web app.css Split compatibility rules, without changing their five breakpoints or declarations, into `Tailwind/main/component-layout-utilities.css`, imported by production and Fast theme inputs. Remove the original block from Web app.css to keep one source. Keep the live sibling untouched and add no Module/broad Components scan root or runtime dependency. This preserves production cascade semantics and supplies the real component's missing sandbox asset dependency. The follow-up browser matrix must pass before timing resumes.
+
+The first completed post-extraction full-app/Parity/Fast series remains retained but is not accepted for the matched comparison. Repeat all post-extraction calibration/cold/warm series after the rendered asset contract passes. The pre-extraction full-app baseline remains valid: its existing compatibility rules already supplied this layout. Timing probes and their source-flush/readiness/classification code remain unchanged.
+
+Validation is bounded to regenerated themes, direct Web/UI/sandbox builds, owning asset/query tests and both full browser scenario matrices. The broad 10086-case gate is retained for its actual source state; inspect assembly hashes after this asset-only change rather than automatically replaying it. Final source/asset restoration, static scans and manifests remain required.

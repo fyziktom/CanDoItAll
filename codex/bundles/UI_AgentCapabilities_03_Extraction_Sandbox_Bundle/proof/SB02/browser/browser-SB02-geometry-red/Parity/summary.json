@@ -1,0 +1,32 @@
+{
+  "mode": "Parity",
+  "port": 5393,
+  "hostPid": 32776,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "scenarios": [],
+  "screenshots": [
+    "failure"
+  ],
+  "errors": [],
+  "status": "FAIL",
+  "runtime": {
+    "isReady": true,
+    "summary": "Ready",
+    "assetMode": "Parity",
+    "runtimePid": 32776,
+    "watchIteration": null,
+    "hotReloadGeneration": 0,
+    "ownerKind": null,
+    "ownerId": null,
+    "serverInstanceId": null
+  },
+  "browserVersion": "149.0.7827.55",
+  "failure": {
+    "message": "Matched top frame differs from the pre-extraction baseline.",
+    "stack": "AssertionError [ERR_ASSERTION]: Matched top frame differs from the pre-extraction baseline.\n    at run (C:\\repositories\\CanDoItAll\\.mcp-state\\capa03\\browser-sandbox.cjs:89:13)\n    at async C:\\repositories\\CanDoItAll\\.mcp-state\\capa03\\browser-sandbox.cjs:175:8"
+  },
+  "hostStopped": true
+}

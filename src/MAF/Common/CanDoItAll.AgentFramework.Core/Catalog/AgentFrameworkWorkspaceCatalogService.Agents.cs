@@ -152,7 +152,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 updatedAgents.Add(agent with
                 {
                     ConfigurationJson = revocation.ConfigurationJson,
-                    UpdatedAtUtc = now
+                    UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
                 });
             }
 
@@ -194,7 +194,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             var updated = agent with
             {
                 ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, access),
-                UpdatedAtUtc = now
+                UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
             };
 
             return catalog with
@@ -328,6 +328,11 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             var providerIdMap = BuildProviderIdMap(document.Providers, normalizedImportedProviders);
             var capabilityIdMap = BuildCapabilityIdMap(document.Capabilities, normalizedImportedCapabilities);
             var importedAgent = RemapImportedAgent(normalizedImportedAgent, providerIdMap, capabilityIdMap, document.Capabilities, normalizedImportedCapabilities);
+            if (document.Agents.FirstOrDefault(agent => agent.Id == importedAgent.Id) is { } previousAgent) {
+                importedAgent = importedAgent with {
+                    UpdatedAtUtc = AgentConfigurationVersion.NextRevision(previousAgent.UpdatedAtUtc, DateTimeOffset.UtcNow)
+                };
+            }
             var importedProviders = normalizedImportedProviders
                 .Where(provider => providerIdMap[provider.Id] == provider.Id)
                 .ToList();

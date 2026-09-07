@@ -1,4 +1,4 @@
-# Agent catalog sandbox
+# Agent Framework UI sandbox
 
 Run from the repository root with the SDK selected by `global.json` and the live Components and FileTools checkouts. Open the browser at 1600x1000 for the matched desktop fixture. The flexible-layout button removes the measurement frame.
 
@@ -33,7 +33,7 @@ Parity links the actual production CSS with its physical ContentRoot, plus real 
 
 ## Fast: local assets and bounded scanning
 
-Terminal one builds and watches only the catalog UI, sandbox and required Conversations UI source roots:
+Terminal one builds and watches only the rendering UI, sandbox and required Conversations UI source roots:
 
 ```sh
 npm run catalog:css:build
@@ -71,3 +71,15 @@ The original extraction and managed observation results remain in `codex/bundles
 The development specimen accepts `scenario=normal|loading|empty|card-states|avatar-fallback`, `layout=matched|flexible`, and optional `agentId`/`teamId` query values on `/agents`. IDs must exist in the embedded fixture. Invalid values normalize to Normal/Matched or no selection. Controls replace the current history entry; a browser reload restores that context. Search text, favorite toggles and recorded intent text remain transient.
 
 For a reproducible normal specimen, start at `/agents?scenario=normal&layout=matched`. This query belongs only to the sandbox and does not change production routing.
+
+## Capabilities specimen
+
+Use `/agents?specimen=capabilities&scenario=baseline&layout=matched`. Missing or unknown specimen tokens retain the catalog default and its existing scenario/layout/agentId/teamId behavior. Both specimen owners normalize with replace-history. A capabilities target that is malformed or absent stays an explicit failed target; retry does not select another agent. Raw filters, access-rule text and intent output are transient.
+
+The capability scenario selector has explicit named tokens in CapabilitiesSandboxContext. It covers loading, failed and missing targets, empty states, every supported kind/proof state, long content, assignment/recovery eligibility, preview and Curator/acknowledgement presentations. All IDs are deterministic. AgentCapabilitiesSurface, AgentCapabilityList and the shared avatar action are the real production rendering components, including BaseLib tree, tags, cards, tooltips and isolated CSS. The matched frame preserves the full-app left/top coordinates at 1600 x 1000.
+
+The embedded baseline is the public rendering snapshot captured before Capabilities-03 extraction. Search `capa03-benchmark` for the matched three-card timing fixture. Other scenarios use small immutable samples. Clicks update only controlled sample state or the output line; they never register or invoke workspace, persistence, provider, diagnostic, chat or external endpoint services. Recovery eligibility is supplied as presentation flags, not calculated from application outcome types.
+
+Both modes use the same specimens. Fast scans the existing UI/UiSandbox/Conversations roots, with live BaseLib compiled CSS; no Module or broad Components scan root is added. Capabilities correctness, source movement, direct-watch baseline and comparison evidence belong to `codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle`. Small graph size alone is not performance proof.
+
+The themes also import `Tailwind/main/component-layout-utilities.css`, the shared production compatibility rules for BaseLib Split's runtime-composed responsive classes. These rules intentionally remain unlayered to match the live BaseLib cascade. Class generation alone is insufficient here; the browser acceptance verifies actual computed FilterBar layout in both modes.

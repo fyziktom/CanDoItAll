@@ -1,0 +1,61 @@
+{
+  "utc": "2026-09-07T03:24:34.806991+00:00",
+  "cause": "Node reported Windows UNKNOWN/open while checking/restoring the CSS probe. Exact OS cause is not proven; a later independent read succeeded. No application mutation occurred.",
+  "beforeSha256": "8b1954e38350578b8a8222ac49fa2455f4a165e1c03192ee95cbbd867b5d814b",
+  "restored": [
+    {
+      "editId": "razor-1",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c",
+      "restored": true
+    },
+    {
+      "editId": "razor-2",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c",
+      "restored": true
+    },
+    {
+      "editId": "razor-3",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "sha256": "7824d871e1bdbbee4e39fe8275b459ea562db234b024870d545f3a19c2f58d3c",
+      "restored": true
+    },
+    {
+      "editId": "csharp-kind",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "sha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf",
+      "restored": true
+    },
+    {
+      "editId": "csharp-proof",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "sha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf",
+      "restored": true
+    },
+    {
+      "editId": "csharp-endpoint",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "sha256": "90eb7cdbc83c1f8df8f2c83cce6e1a44d9ecc32b8c415e67c9471fa89c2645bf",
+      "restored": true
+    },
+    {
+      "editId": "css-heading",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "sha256": "089452ca2eed47fd8705dec414ff07edfbedb711871a1663ca0ecd79fb7aec26",
+      "restored": true
+    },
+    {
+      "editId": "css-card-title",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "sha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49",
+      "restored": true
+    },
+    {
+      "editId": "css-endpoint",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "sha256": "ef9d15814d0cdaee19be6f3147355e1a52a5b209172f5ddc615d7bf54ce0df49",
+      "restored": true
+    }
+  ]
+}

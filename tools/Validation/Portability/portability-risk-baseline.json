@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-06T22:18:02.823452+00:00",
+  "generated_utc": "2026-09-07T04:39:21.726627+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14302,
+  "allowance_count": 14383,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -14879,12 +14879,6 @@
       "path": "src/MAF/Capabilities/README.md",
       "category": "mcp",
       "source_fingerprint": "399d8b3e421ef9cba954a8fdece93c3e4cf3156830d50df66f2153a32a6ec6f9",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "578fe8c9a36a1a84ed2f02b289486d59941d939c8e458bd376247ea0d99a4041",
       "count": 1
     },
     {
@@ -41699,138 +41693,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
       "category": "mcp",
       "source_fingerprint": "3b1833d31d2590d9b3b885520205a081f7aebe75d25b150236bf52e2b2e9bdd8",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "0ef3faec70b5859b82484a7be08a61c0962255a48ebddd87360401029b344e55",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "2462245531e0b250a080840508b8872d88150db91fe273abc6e9aba4c97b162d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "639f756f1ef90f81315c1d78a66edba7b13ece62a9ac23fd3116e7afaf0233d3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "762b406f79e911e95abdb6906fa86c2425a5cb89d71114c2c1c16234a20d0ecd",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "7d2fdcbfaa21e8c3f2b624d3e8c3dc20f1a6f2792cccb44ca2e8df1d2da7f2a5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "7d6060d2f431be8f32f26902c193941b414dc82194f1f12be9d2d01a18f01521",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "99ed9438e0a2695037e7dcf83627f5c27fb881b5a203fcc4affe52d4702a9cc0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "b971480b62c35a104872f87fe4330168a6e479420a5e4abdeb6bb2056cde423c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "c2dfb90f34c85c45ce60badc2f1d737dd8d269a1a31b0c83e69fa0b6f12b52a4",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
-      "category": "mcp",
-      "source_fingerprint": "c5d7451c8d9d1780b50161922c1c6780aeed2b7ad97a77d1febaa2b727154d17",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "1156df16a1fb8845d7d5dd9d3b95663feb9a306d11ed775a72c051ca4f4f490c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "137b3dc4374cc8f3e3338e5739465eaa855eaf7f1a6f091ba4ac2c4e8b4055a3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "466498f76a86aa56f460ffb0d9f2ef0408555d51b5a7350a6326ef3d4e1f6877",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "4931cfa53a19f28dc7ff1e85bc72fab44ee30251cdf6ef0b692a80f5c689a662",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "7008451ec11d8fe96ffa2f93a0bba7faf4f585d03a3eef992593f287a808795d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "746890df0cf9f55e844713672d51b927e4d4ae1d4ee2fa791ada34177d59e62f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "7a452ba16e1a311f15c3466985fb77dead626316653b73b937bd54a9f8ab7a7e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a76df2b45d7c83fd71642d088453859e53ca7a1a93d5dc65721a1f0bfdb02934",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "d70dcafaab4114a3b75374bbb816b70400b9ba23956e248a683629f23f10317e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f6e62c33c7461d565fb2db1df00c93c9b438d46dfc51ebedc45dcf777c2171eb",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "9732c20f08378ece53d6520224401cd51e25e67adca41f96df81efbac132f282",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "ced284cd5a5cf55b30f3eb48359fc8fdb98c2688bbd6b0c0d5f365ed3099cd81",
       "count": 1
     },
     {
@@ -69440,6 +69302,24 @@
       "count": 2
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxContext.cs",
+      "category": "case-policy",
+      "source_fingerprint": "8444188878b8b076eff35fb49602f743c7d0da549015195a4a7616a4bb8113a6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxContext.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b59aa203d2fddfb3a7b9c4623a15ae65a54fc6d863607ae462ec97ea3a9924c6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxFixture.cs",
+      "category": "mcp",
+      "source_fingerprint": "cc6c8e413b071638ffc70a93d802dd676996005aed5f8259f882ac1e206afda7",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogSandboxContext.cs",
       "category": "case-policy",
       "source_fingerprint": "8a4f044725dd136771198fed6678c1a1da91844cda678951be083a46fb621dd0",
@@ -69467,6 +69347,462 @@
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",
       "category": "mcp",
       "source_fingerprint": "df3edd5e2d8ef98d8c3a6c60eedfb2595cde913ed20b7a875be8f5ae9d3a6615",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "absolute-path-field",
+      "source_fingerprint": "92875f7a771a0209aedfedae9b7405197575c2d872da7c3952c121dcc9f0e68b",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "absolute-path-field",
+      "source_fingerprint": "bb237838b9da38ed3d23be6c3526c96d29e41b5b37d509d49329db05942b5c38",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "absolute-path-field",
+      "source_fingerprint": "da7ad4fb51d3bad79a41c6533ae513227230236af666c6b6ffb526344259b977",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "01e1d3f91926f346c8fef426225b6187a5aa4a4818b7dd586c86361760d05928",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "050c6bf3dece320768d1f912557ab70069fe6553320dd2f85425b34b5f3faa3f",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "0859c2487bad56bc92248f30b966dce66b309b29ce52977256fbbd8bfbf16523",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "0b24e8f3fe17187575b98fa49f15ab02b6517247af0fa6e862898f74060fef1c",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "236f231c53d21826e6572d9211d2de585e62a6b3a65c532c1048872026844f31",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "25894c854cb0fe377603ca3520bbc2f04d09017a11e090555beedfdbbad52984",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "3f10e2a053377f4605be1c3bdb74f4d42130457869a38b37dab516ad3001a031",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "468fb2aaf8a8d2c3a3dcabeca93d84712663ef17cc94c7966bf11f5de20d9068",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "46c3ed58979a9325c87623e866ebbd3c5634d6c8a4c16213cdd58a351ec7084d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "4f1bbc803049fc3ab60b369a2c9dce4066e5c0b9767754ef18a71f4473f59c66",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "5c4cb7aca6a113e50da39ee68a6685b8652f07acb599c59fabdc1fcebb94b876",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "68696200aae10ab85ec33233743450a102f9838e8b7ae3592d3fa9d387f5c366",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "6d96d1915781ed8eb592311f8e101494f6aa28c23c9b64d9179068dd80339223",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "6dd59055d74a16ef79277013d4f2dcb7a10299dfbe6817df5a197b6eb808f4a4",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "7382a1a524b1208f33b033ee5bb41f267734216adc32ebb245b3d9c110644ba4",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "7773ca4cbeba6e1b49b5b8d29ef9d0f8d440a2edc9b7fa4a49c0376589800a69",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "81863d09d7966fd47c1bc187d1b5b62f757f987b02debcf87271bcc34a1c9b09",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "8690a42e7837a003bb18fc62267effeffaa0ace2eccf9949d6d406a82d884dd6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "9165f36ac6aceed59f977646431b99bddc7b359723ebc450414564d456b8f2b1",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "9555011d526238fd7e76ecf7079dea586eca7aa801ca74d8b8546e5854b29192",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "9cc3fa8a18aac9aeb2cb8915cb6f76b330b3f6cc6b24d55f8a8e0abef7ab4c7d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "9eaaf3dd699f70cf77cf179ee32c111d584c5d098f6e70706defefe3dcb0d5f4",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "a1dcd35509e882cdf2772748b91b7487e9c0afc400de0a04dfa30f792aaf1b7f",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "ba820e33500a32634cd0744f7d7caeee193d71df45960538bc7802e9d821134a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "bcb8216a4774831a6484866b09ce2fa4fed685aee56f0c74201292456169786e",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "d6b04872b542c51901077169af9af0799eff5dfe2fab8ceaba4c029a71f0cbfd",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "d7937305acecf4f02d8b8838b55c065c904661f89a328bcf3e1283b5c7e7b7ca",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "dc60e38b02e555d7885d996a3b6648600e069f10018f81099150ff0a4a99fd57",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "e7a78ddc530b23de84f4163677f8a2b978a3be57db89d8a7721dcc5d28dee544",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "ecb1bcf2f6c98d6d2a17a4fb76602d386a23adcd64669fc17d8c8dac1ed4d8c6",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "f219403351d0728a5c54de5fa0b34f7ef2becce9e55660d5819026f247a29ffc",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "mcp",
+      "source_fingerprint": "f647b6c1571d27d87827a055c2cc3e769579cb3f31a47301aafc5377336663dd",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "process-domain",
+      "source_fingerprint": "c3df037665b0f6a524f32e5cbc46674716f73507603ac16671a7280d751dc11c",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "shell-elevation",
+      "source_fingerprint": "2c6b852c7a8e3f74b23e4830071b2d8e93a5af485e3110fb1f7e78f3f1bf0422",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "shell-elevation",
+      "source_fingerprint": "38d18f73f862a1f299826cfb53ed90675462cb62dcc759107f0b0298584fd595",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "shell-elevation",
+      "source_fingerprint": "4309bd31746c413ead09f0959c0d2864bda6e96686f09435dce641fed4b8548c",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "shell-elevation",
+      "source_fingerprint": "6ca5f3a51f289c0284315fd8d0b15170bd13caf5e1a1b682a40a8d5fff7d079d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "shell-elevation",
+      "source_fingerprint": "d212fb15b1d6f01a117ca562f7b5fa8483b604938caa374c89460e3afb6eb232",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "shell-elevation",
+      "source_fingerprint": "d796d4a61bd84477f8c5b132b135f1989dc3280231784397133e8cbd333cf83d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "shell-elevation",
+      "source_fingerprint": "ef643e7888a2455e92567cb4e82a74e0d53a44f6c21534197282fc2d4bbb4f40",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-executable",
+      "source_fingerprint": "5070286aaab4850c662812d41be35e3f7d4ab23ad848ed52d288635bbe4aac64",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-executable",
+      "source_fingerprint": "6c8bf352742f975c0067589d9b31263e82b3463ae344260f6b06eea1965e2ed7",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-executable",
+      "source_fingerprint": "a3cb624a848e864daebddadaa7b69179b2efa4e6621a10b7d9f8f2b28ae4ed21",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "0a77128415f7c6090f394fb27d5e858a8402e51d4c76e29b74492a1b1c2581b3",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "0d29f80c1446cb1715926d84df26a5fdbfe7bcf245342b57650b4eb958a6044b",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "125e5327869abd8d473fbe160d2356d4a79a0fc22ad55d29b7c9d3e91d114f14",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "1d5b0439a88c0dfb2ca749c6e485a9bcf31cc93b1786d4ba3b0555478191736b",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "3212d18ea7882b0d08eefb9be2b93ac703364d5f38cb3caf99c9cad2c01ee347",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "32916230b8aeff753e53affd3baafc5f31948ab4a1bac5f640fd6c866440deab",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "3628a45c4327fdec93f9f42dc2e1f69cf748f1c0c2f0c70f5e0eedc23354d32f",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "375c3d35f973bb130db48a441a77b3391e6a6798ce5410af10c8762145211d18",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "4907555af2510fb308599c39c1d402f37938ff92aabd68cd894ec8ac76c7ee24",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "4fc8e75669295279149e46b2159aaecd67c1dd6692ea5564a2a80c2848c640b2",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "5a97fe4c4d1f822d1566a941099a827c535ae30af5705d40b341e79887f98167",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "861be58fbba5c9646a177240aa2eae14525211dda3316021e80d3fef6a838958",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "91f7ea654ca547db7e98230e57b075302a3a365d9be4d63e3b7cf9617fe94d9f",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "9998ced42d888e2ec394582850c8f2b0072f0b7e0a00ef763a37c403755652f5",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "9d4ac089be6b37589af230fdc18c549b8c2eb826f8aec0a6a43f3739dcf6aafe",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "b095778a8357233cdee4f5cd1979095dbfe122355638c281455d2d1ee6351031",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "b1f9f7827cad93c3126daabe3df971ed891df07c06cc03215604d687c9418798",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "b9af66ec4d8fee5435133c401627e431dc8fa3634442175613cce1a0e5d85507",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "ba8642b9c28509789e3fc30166189c91d3f20e404d4e1343d322b6512fa9bcdb",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "c4a1929e716d2fdc9c90047db51acf76ac1ea3d89a4eb7f9410cb005082173a8",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "c60ca3120f0bbd11032c079f257bbef16a966602af307031bd4bce76d5722fa6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "c74a5e3a6e0e573664a04d5d09b09e59d7bd94708590fb32f4e2305d1437b18a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "c8eee9cbf9e7ace789c8252db94e069b799e73d3a2916d3e15dfe356117417f9",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "cc7c343280fbb2903ad742719eb2513b87903e6dbffba74be57e445bc3545345",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "cd602cefd32f44f09175fca7eacc02569ff4694223c8aba4c2727d91b5fdad44",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "dd9dc0d25ba595a0a0a08892c7adced772be9949d4615d3f166bddaa162ad489",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "de1caa493d2e5d3683ffb61acaf1d7ebf1b5b92d396627b153fd1d6b82c8dc69",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "e10f4ba58285ee90b0d68c43389ead6e61fab311afa6f42fb25fae5b36ed1d14",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "e32210a21cad0442e74cb348aa2d74e5b420a71819ff2d0549a575739ad15633",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "category": "windows-path",
+      "source_fingerprint": "e558c727c5b13e921ab57dd7a4aca0b33069172b71023c74f93b1fffcf447cb3",
       "count": 1
     },
     {
@@ -69509,6 +69845,150 @@
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
       "category": "external-tool",
       "source_fingerprint": "a5ea14dc81de75fafccc9868df41e228dabeae8e63aff655c7df3f6b0eb118ca",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ef72060169966ce7720de66910d24777b364f422b1bf003023bfe96ed61ddcb5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "0b30ee0cf769125b0f899d53c9ac256a40b6ab76433ebc04e5eb1221f3772821",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "1fe1a12fad1a2756cc22edb9cd57e5f9244c853917da8caf65398e2c61099d8a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "258183dadc974162d7e5db298675235a1aba85fe48aa113c9fcbfd460a1ac079",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "4911767ab885272afdfa79da0828df2691e5d37d2cdb200f78dbba7036eca74d",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "8b49a79f3a5946045d1904bfc95197147d7c3c409eb3bf30b1c8b10e52baa4f5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "8b4da81053c679b2d364687c8bb70fe6db2676a9ad2146757f39b773a8641e83",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "8ed5d20789fa9cd1c5df62139acbb2f6c34b57e501bd2b3769716e5f21461c1a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "ba83a2601e3fd9019b5d670762ab37ae9abd8255817fda24040441c7f143fc3a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "c3f64bc3e7ab40f5e222e24eee7bd56683482f05342d90ba778c9776254da044",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "cf0b70f920a9b06151d5d0166cf7604178208889a00a685c5c63060f27dcc507",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "01111d35c0839f3a8fffd64694177ee6d4f7eece9a58fb68a38c91e895d737eb",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "1620aea17b8546d6cdec3fd0d9a728f6a6ba5071d378c97a2ca6f187e9baf797",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "256b0e1209dcb3032bbf630d41ebb760ba7f965e67187592ae6c28d11409b0af",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "77b69ca97320568d138cbd0896596ed5268b84f42f42614e61ad76064a54403b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "81e7e1ff40b8a66fe71e17eff0fd8e69bd188d342ce8e5cade5ded8b430ec903",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a612356a862dcb976ddbd4cb95bb80da4571f402260ce7d5b337011d6b0d3665",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d03729bda41a48295af2de8884b38f8d530e45aa5a633b543dfc74e311b8194c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e2be1b0c04eaea17cf630eb51b6080abb78cec9a353be21eefc1a92ffcf0d0a4",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e4606ed19d5f023010dbb4b83f388ee58699bc06f00e7037116e431dd9f37f8d",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "fbb2be239d5183aafda6ab6f82a7392069da0e566382dd5cd0641b1912ef939a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "mcp",
+      "source_fingerprint": "48d152fd3a171c8e9bf068f9bb3eaa1ab60c222c0ace167b320363d200630259",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "category": "mcp",
+      "source_fingerprint": "d7ab5c627963bf3d970802183e0f605bceb2d5622792af2eacf47f81d27636b4",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "category": "mcp",
+      "source_fingerprint": "28a119467834265a6ec359b7d7e7301d7bded5d449e542787a4d8d3d27dd81ed",
       "count": 1
     },
     {

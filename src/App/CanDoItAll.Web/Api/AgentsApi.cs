@@ -396,7 +396,10 @@ internal static class AgentsApi
                         ? StatusCodes.Status400BadRequest : StatusCodes.Status409Conflict);
             }
         })
-        .WithName("VerifyAgentCapability");
+        .WithName("VerifyAgentCapability")
+        .Produces<ApiAck>()
+        .Produces<CapabilityVerificationApiResponse>(StatusCodes.Status400BadRequest)
+        .Produces<CapabilityVerificationApiResponse>(StatusCodes.Status409Conflict);
 
         agents.MapPost("/capabilities/setup-tests/tool", async (
                 CapabilityToolSetupTestRequest request,

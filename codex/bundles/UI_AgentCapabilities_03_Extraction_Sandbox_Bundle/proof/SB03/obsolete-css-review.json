@@ -1,0 +1,12 @@
+[
+  {
+    "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/obj/Release/net10.0/scopedcss/projectbundle/CanDoItAll.AgentFramework.Components.bundle.scp.css",
+    "sha256": "31cc597ec3cd9bfe3bc379fcf8a272496ae18816d955edbb45bd253096ebe128",
+    "obsoleteSelectorAbsent": "agent-capability-list"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/obj/Release/net10.0/scopedcss/projectbundle/CanDoItAll.Modules.AgentFramework.bundle.scp.css",
+    "sha256": "d46b88852fefdcce4657418081464f402ae7ca2169182ccdbaef0586b9d7d40d",
+    "obsoleteSelectorAbsent": "agent-capabilities-host"
+  }
+]

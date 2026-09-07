@@ -130,5 +130,19 @@
       "Stack",
       "StatusBadge"
     ]
+  },
+  "correctnessFollowUp": "CDA-UI-SEAMS-AGENT-CAPABILITIES-02G",
+  "applicationTypesRetainedInModule": [
+    "AgentCapabilityOperationKind",
+    "AgentCapabilityOperationStatus",
+    "AgentCapabilityOperationState",
+    "CapabilityCuratorLaunchStatus"
+  ],
+  "presentationBoundary": "Host maps one retained operation and one atomic Curator launch snapshot to immutable rendering records. No application outcome/recovery semantics in UI.",
+  "executionBaseline": {
+    "head": "b540b465cf408dd9c9adeb939538b78ced9bc7bb",
+    "sourceBasis": "02G closed owned working source before movement; current hashes under proof/SB00/source-assets-entry.json",
+    "watchBaseline": "proof/SB00/closure.md",
+    "timingPlan": "proof/SB00/frozen-measurement-plan.json"
   }
 }
