@@ -90,7 +90,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
             new AgentChatContextSource(
                 new AgentChatContextSourceKind(SourceKind),
                 new AgentChatContextSourceId(BuildSourceId(viewToken, agentId, teamId))),
-            $"Agents Â· {viewLabel}",
+            $"Agents · {viewLabel}",
             new AgentChatSurfacePosition(
                 Module,
                 Surface,

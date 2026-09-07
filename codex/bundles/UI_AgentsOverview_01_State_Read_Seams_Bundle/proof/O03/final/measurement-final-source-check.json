@@ -1,0 +1,311 @@
+{
+  "utc": "2026-09-07T15:14:01.854996+00:00",
+  "checks": [
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+      "expectedSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+      "actualSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+      "matches": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+      "expectedSha256": "c2cfe645cb5793e12c063b9b133dae115868e8d6cf223c66bec0a55882045ae7",
+      "actualSha256": "c2cfe645cb5793e12c063b9b133dae115868e8d6cf223c66bec0a55882045ae7",
+      "matches": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor",
+      "expectedSha256": "1d370c0c2530bc6ec24a3c936c5f7f502ec7acf63569d3bcf983268e525264bf",
+      "actualSha256": "1d370c0c2530bc6ec24a3c936c5f7f502ec7acf63569d3bcf983268e525264bf",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "expectedSha256": "bbcce2bbaca918c7604df443549847fc4cf458ace8821c82aed6a3ace4e04598",
+      "actualSha256": "bbcce2bbaca918c7604df443549847fc4cf458ace8821c82aed6a3ace4e04598",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxContext.cs",
+      "expectedSha256": "9d7832a743c5c616d7e0c6e68448de934d57d7169807cd295337959232813194",
+      "actualSha256": "9d7832a743c5c616d7e0c6e68448de934d57d7169807cd295337959232813194",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxFixture.cs",
+      "expectedSha256": "99aea1fbfbe0fe685257fdd6fb78fe2cac1574a27b7da6a98d756d004f583ef6",
+      "actualSha256": "99aea1fbfbe0fe685257fdd6fb78fe2cac1574a27b7da6a98d756d004f583ef6",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogAssets.cs",
+      "expectedSha256": "dabfb87a1f03b7c236867498c6832f0bdc1649e50ab30578df6f9b200e9071a3",
+      "actualSha256": "dabfb87a1f03b7c236867498c6832f0bdc1649e50ab30578df6f9b200e9071a3",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogFixture.cs",
+      "expectedSha256": "dd88616ea657c0162deda9b30c726f76faa7d454377e8030bd7bb74e5aad909e",
+      "actualSha256": "dd88616ea657c0162deda9b30c726f76faa7d454377e8030bd7bb74e5aad909e",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogSandboxContext.cs",
+      "expectedSha256": "3f40ade23a88a9ac37012c8360b4db4334c276b3b7c1c4f93ab45d49bf7452b5",
+      "actualSha256": "3f40ade23a88a9ac37012c8360b4db4334c276b3b7c1c4f93ab45d49bf7452b5",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CatalogWatchState.cs",
+      "expectedSha256": "2359317856807e5d093e6c8da616936b74f3a4abf299cab30519b1f57ff81b89",
+      "actualSha256": "2359317856807e5d093e6c8da616936b74f3a4abf299cab30519b1f57ff81b89",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/App.razor",
+      "expectedSha256": "11b07ac7919df36bff0524e0757f2ff601416d4cfb991d418fc17dfb41e5153d",
+      "actualSha256": "11b07ac7919df36bff0524e0757f2ff601416d4cfb991d418fc17dfb41e5153d",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CapabilitiesSpecimen.razor",
+      "expectedSha256": "857249608b885ccb8368fb40828d0fb71d28fce7578f6b17c1c0eb72f651e1fe",
+      "actualSha256": "857249608b885ccb8368fb40828d0fb71d28fce7578f6b17c1c0eb72f651e1fe",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+      "expectedSha256": "25ff1a35d1c840ea1bee988c207224a9d287d89c808ffcd5c4c81c887053bff9",
+      "actualSha256": "25ff1a35d1c840ea1bee988c207224a9d287d89c808ffcd5c4c81c887053bff9",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CatalogSpecimen.razor",
+      "expectedSha256": "f544bc41885d70ddcf8e0390fdf686eead55c269a133775b8151b2ff277c706c",
+      "actualSha256": "f544bc41885d70ddcf8e0390fdf686eead55c269a133775b8151b2ff277c706c",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/OverviewSpecimen.razor",
+      "expectedSha256": "13b6a6ff57b75a4988f23ecdf9b52cbbae21132d5a25dc6b7c34533277a3adea",
+      "actualSha256": "13b6a6ff57b75a4988f23ecdf9b52cbbae21132d5a25dc6b7c34533277a3adea",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Routes.razor",
+      "expectedSha256": "53867db72f77e41e86832bc3639d0340d6abf3befa8219edd7246132c1d851ae",
+      "actualSha256": "53867db72f77e41e86832bc3639d0340d6abf3befa8219edd7246132c1d851ae",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor",
+      "expectedSha256": "e9ab39c9c49029fc220eb03cd0b2dc6796907a42e1c311da2c8f7761db3b8b1c",
+      "actualSha256": "e9ab39c9c49029fc220eb03cd0b2dc6796907a42e1c311da2c8f7761db3b8b1c",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "expectedSha256": "1213f18fbe782687dd6a6a3d45a492bfc87f77eea795d3c2e9ae7b82bd7b4fa3",
+      "actualSha256": "1213f18fbe782687dd6a6a3d45a492bfc87f77eea795d3c2e9ae7b82bd7b4fa3",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/catalog.json",
+      "expectedSha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd",
+      "actualSha256": "181dcb9bd930bf62b3e7012573254c5dbf295141af5739752f0be70b1d9005cd",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/overview.json",
+      "expectedSha256": "3621dcff873f79b8eb4f9f58a8f0697da7a6e35d3d04568b22a2e0822aed95c2",
+      "actualSha256": "3621dcff873f79b8eb4f9f58a8f0697da7a6e35d3d04568b22a2e0822aed95c2",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxContext.cs",
+      "expectedSha256": "9f5d693a0651fcd3fd21e17c8fdd07c57bc5c7b3f76557347e35b118c6b56fec",
+      "actualSha256": "9f5d693a0651fcd3fd21e17c8fdd07c57bc5c7b3f76557347e35b118c6b56fec",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxFixture.cs",
+      "expectedSha256": "acf41cb8b58540a38e1d99f138ffd76715315b7bb9b7e7a9762ba1cada1660d5",
+      "actualSha256": "acf41cb8b58540a38e1d99f138ffd76715315b7bb9b7e7a9762ba1cada1660d5",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+      "expectedSha256": "0c452ca2bb1e35db463d98c571950c0a6999a19f1aa9146f1cd8ba20187ac211",
+      "actualSha256": "0c452ca2bb1e35db463d98c571950c0a6999a19f1aa9146f1cd8ba20187ac211",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Properties/launchSettings.json",
+      "expectedSha256": "1c57e020d742563ada0da37134581b012668669809c84003f6dd7fcf6e9e30ee",
+      "actualSha256": "1c57e020d742563ada0da37134581b012668669809c84003f6dd7fcf6e9e30ee",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "expectedSha256": "dcac7e87900e54a52fc8db9a8b7c7bea9246ecc600ca632a8b7155f362cc8a3e",
+      "actualSha256": "dcac7e87900e54a52fc8db9a8b7c7bea9246ecc600ca632a8b7155f362cc8a3e",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs",
+      "expectedSha256": "54fa1fa1419ac9cf23871edafd7b8ebcd4f9ca834370b6f1a1c9f5d3bde5cbf7",
+      "actualSha256": "54fa1fa1419ac9cf23871edafd7b8ebcd4f9ca834370b6f1a1c9f5d3bde5cbf7",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css",
+      "expectedSha256": "f6bf55f752dabd695a77d698ccfbef4e2df004f8e991c7961c99fa92b6e77d4e",
+      "actualSha256": "f6bf55f752dabd695a77d698ccfbef4e2df004f8e991c7961c99fa92b6e77d4e",
+      "matches": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/sandbox.css",
+      "expectedSha256": "1029f60de72f09a463887ee67db1f3323575055f781896abe84ae0fcfd31aa34",
+      "actualSha256": "1029f60de72f09a463887ee67db1f3323575055f781896abe84ae0fcfd31aa34",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "expectedSha256": "4a3e0824909c4a8f91cb61f7185e7faff14c53cba9e36ad5f1acd24117110d37",
+      "actualSha256": "4a3e0824909c4a8f91cb61f7185e7faff14c53cba9e36ad5f1acd24117110d37",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesState.cs",
+      "expectedSha256": "7cd940da0b3be70a36419f0fabdad58fa2b9c597b6b94bedd0eed08fe01ce188",
+      "actualSha256": "7cd940da0b3be70a36419f0fabdad58fa2b9c597b6b94bedd0eed08fe01ce188",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "expectedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+      "actualSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "expectedSha256": "e447ae3d7beda59aa05f7e222bca2119e52be4071b2f6c892090923a2f8d97a8",
+      "actualSha256": "e447ae3d7beda59aa05f7e222bca2119e52be4071b2f6c892090923a2f8d97a8",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.css",
+      "expectedSha256": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+      "actualSha256": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor",
+      "expectedSha256": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7",
+      "actualSha256": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "expectedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+      "actualSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.css",
+      "expectedSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+      "actualSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Cards/AgentSelectionCard.razor",
+      "expectedSha256": "d4a11bcc64f3093a03bf11b2c65ef70aec79f630792b528be0038b7622d8c093",
+      "actualSha256": "d4a11bcc64f3093a03bf11b2c65ef70aec79f630792b528be0038b7622d8c093",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
+      "expectedSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+      "actualSha256": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
+      "expectedSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+      "actualSha256": "d2f9b0fbfb8aa6a9c22b7dc42ddb2c6671f99467ed639560bcb59638cec89517",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css",
+      "expectedSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478",
+      "actualSha256": "af44e3fde475b02418725c078908026ac82dd1fd8e1b88a598c0e8a55f2bd478",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogState.cs",
+      "expectedSha256": "2a1856984fabf5adb74123324c2c71f134e971c2ed930ac8bb9b7919910b8b30",
+      "actualSha256": "2a1856984fabf5adb74123324c2c71f134e971c2ed930ac8bb9b7919910b8b30",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentUsageDisplay.cs",
+      "expectedSha256": "ea2efc5784291becf27246249c274e3bad806738d5bc365934a6819f37e294e7",
+      "actualSha256": "ea2efc5784291becf27246249c274e3bad806738d5bc365934a6819f37e294e7",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewPresentation.cs",
+      "expectedSha256": "9db41f719d1ba79b8cf81354183bcefcedce8141d85d717ef7ed75bd24d89a91",
+      "actualSha256": "9db41f719d1ba79b8cf81354183bcefcedce8141d85d717ef7ed75bd24d89a91",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewState.cs",
+      "expectedSha256": "bef08b47cd9e7eca7aebe5fb23e8f2558048492e118bdfc81b2403569dcfbe36",
+      "actualSha256": "bef08b47cd9e7eca7aebe5fb23e8f2558048492e118bdfc81b2403569dcfbe36",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor",
+      "expectedSha256": "dc5bf5466fa6c82fa8861089581582cf0b60d54fa9ad544380b338e32c50d160",
+      "actualSha256": "dc5bf5466fa6c82fa8861089581582cf0b60d54fa9ad544380b338e32c50d160",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.cs",
+      "expectedSha256": "67c05a700669b907a573a044a0b30bde97d8548838f143f503c9f276581119b4",
+      "actualSha256": "67c05a700669b907a573a044a0b30bde97d8548838f143f503c9f276581119b4",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.css",
+      "expectedSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6",
+      "actualSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/ProviderUsageConsumerList.razor",
+      "expectedSha256": "4ab6fdf982c3c7fb40fd74a6a02d29c7683312a0bbcf5a7d1974bed17651d3d0",
+      "actualSha256": "4ab6fdf982c3c7fb40fd74a6a02d29c7683312a0bbcf5a7d1974bed17651d3d0",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
+      "expectedSha256": "be0d8bc473cc8a5d98da4f7793cbc6278da3a62a0d39fdd0b0d015cbb39ee86b",
+      "actualSha256": "be0d8bc473cc8a5d98da4f7793cbc6278da3a62a0d39fdd0b0d015cbb39ee86b",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/README.md",
+      "expectedSha256": "1388dbea2acb2759f76da4dba3edb5ba50ffbfed5265e007629fa9380be5b2ad",
+      "actualSha256": "1388dbea2acb2759f76da4dba3edb5ba50ffbfed5265e007629fa9380be5b2ad",
+      "matches": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor",
+      "expectedSha256": "28103756d6005f6481694f35694ead3d8c2442395519d41985338b32ab7802ab",
+      "actualSha256": "28103756d6005f6481694f35694ead3d8c2442395519d41985338b32ab7802ab",
+      "matches": true
+    }
+  ]
+}

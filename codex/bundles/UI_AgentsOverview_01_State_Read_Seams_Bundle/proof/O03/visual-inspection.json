@@ -1,0 +1,131 @@
+{
+  "utc": "2026-09-07T14:56:54.627018+00:00",
+  "images": [
+    {
+      "path": "browser-web-r2/Normal.jpeg",
+      "sha256": "2a8d892208d20dc75a4c90e115faa378e322256ee7160c7b558822fbcaee2241",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/LongModelDialog.jpeg",
+      "sha256": "b372280cf9f0e9ecab7187fd0bf1c9766ed61f38f0885f3ad7d5fa36739be94e",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/HeaderFailure.jpeg",
+      "sha256": "73777e8d2f5bcee74537c55c81344630d473863bed1aab6bcdb4d9f3f535ffb8",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/ConsumerDialog.jpeg",
+      "sha256": "d15c0459f60d0b0d7670d3a9a251c7a8dfd81b88ba9db8b7ec6d6532d984bca1",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/OverviewFailure.jpeg",
+      "sha256": "3ff96566e729920e7b160450704d9dd48405dd318f3daaa5c082f18e902df163",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/UsageRefreshFailure.jpeg",
+      "sha256": "770b059cd901278bb477f307c3c5665de2de59775e37633649fa27c2804c8830",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/ProviderDialog.jpeg",
+      "sha256": "8a125aaa6cd3a2a6d4853fd876ebded26c730bcb8fd0b3eccc1b31c421829daa",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/HrChatAfterOverviewFailure.jpeg",
+      "sha256": "1d7f80b15d47f6cdbfffbcbc9e7c32457f518f98a8fd1576fc293f7d24f05cfa",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/DefaultsConfirmation.jpeg",
+      "sha256": "889ce093487bd0d959767f60c47a188fa054f3ebf48b9003e146eb17ffe77fcc",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/RequestedScopeFailure.jpeg",
+      "sha256": "03a9a0e32923d4bc9d11e2b71af56e2654e2b06fcb80e3b884600185a5120337",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/HoldOverview.jpeg",
+      "sha256": "433b79186f0a6c6c41d4472571a5b6821051a583261de02689bd43c3b9285ef1",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-web-r2/BoundFailure.jpeg",
+      "sha256": "000054f9d6f74d7283c27c691df94372ab8b4be641e88b42c6d0314f6e851d04",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Parity/baseline.jpeg",
+      "sha256": "5142f547377b8017a83b4ee7efc3f4f48906f2fdabf458f698686a14ec0fa311",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Parity/long-responsive-1280.jpeg",
+      "sha256": "65a5fa92866c1a85299b6c446fbabd34e0ed940c450d3da99a15afc3f247620d",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Parity/loading.jpeg",
+      "sha256": "e48881775c46e7050d518d9859d61bd5821223f02049509d2a23869b906b8899",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Parity/initial-failure.jpeg",
+      "sha256": "ca0dcd350cf489186fa02359ada8f576e86325e3c8d1f295c34bf9c94fac41c0",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Parity/stale-overview.jpeg",
+      "sha256": "80fb2f47c80c4cb0c48e886f104875c46348e0d5ef2b209e4f6d87f61aca2769",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Parity/header-partial.jpeg",
+      "sha256": "7dcd4a8a72191b90594ac57d2e5fdfec2d281ffa76a11e8705dcd8f3b2ea499c",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Parity/scope-pending.jpeg",
+      "sha256": "3fb7721770c989e3240e6bd20e267e1a5261caa3e85ab60cc70604a8faed1815",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Fast/partial.jpeg",
+      "sha256": "68247ee9d1d0ae757eb0cfee3a50f42f14abf26030ccaa3e6fe87e56075f0792",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Fast/wrong-scope.jpeg",
+      "sha256": "5a04e179d6d376e1a0980d1f25d0ccd301d586069386f650201721a01649cc0a",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Fast/long-responsive-900.jpeg",
+      "sha256": "0bbb9494c3d4dd1301656f29c8c5256e7377b9c5be7f302b6a6ba8eb0d07ebff",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Fast/long-content.jpeg",
+      "sha256": "515ce16a4faa05ea2d78c37ced932b61cf815d0bf659b47e0c3ae539f3ea83b8",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Fast/empty.jpeg",
+      "sha256": "f38c7b39348769e8d6d37305fd30eee59c4d09e4b142e2d8196564fd291eaa02",
+      "visuallyInspected": true
+    },
+    {
+      "path": "browser-sandbox-r3/Fast/unknown-unpriced.jpeg",
+      "sha256": "46421f53a1ce32aa29ea3f5a1dd2f2fa350cd08c97ae301113cea466db48c245",
+      "visuallyInspected": true
+    }
+  ],
+  "note": "Representative images were actually viewed. All scenario DOM/geometry/action checks are in the executed browser scripts and summaries; this does not claim every retained image was manually viewed."
+}

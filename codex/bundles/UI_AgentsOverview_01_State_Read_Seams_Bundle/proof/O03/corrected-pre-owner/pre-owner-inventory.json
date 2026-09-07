@@ -1,0 +1,46 @@
+[
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\Overview\\AgentsOverviewState.cs",
+    "sha256": "3e40d828d3384d8dbd1f1660e328164a93107cf154a8e0a7f6d3be5f4a3f09dc"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\Overview\\AgentsOverviewPresentation.cs",
+    "sha256": "64a84268ffeac3b6d5e8bc43ccfc5a3ab5b59b422cb40a3e1775e2bb872d2e95"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\Overview\\AgentsOverviewSurface.razor",
+    "sha256": "ca46f21755f6d5b2ed0d2228641106af6e08267be4bd29d1baaedb967dac037e"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\Overview\\AgentsOverviewSurface.razor.cs",
+    "sha256": "3550f9929e9eb074290a12ea24e1feb2255877510cff70ac52d994429a2c93b6"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\Overview\\AgentsOverviewSurface.razor.css",
+    "sha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\ProviderUsageConsumerList.razor",
+    "sha256": "aa8939c2b7e1da6682670b0e8fca3fc28d09b22805e823279440ca14e007df49"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\Components\\AgentUsageDisplay.cs",
+    "sha256": "928b8933ab01e6e9f4e375326d2a1cab232303ba2a587010c75f20dd69375d99"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\Pages\\AgentsHomePage.razor.cs",
+    "sha256": "769613b4e7ddfb0b32e3e510a346897048aaa475e4767d1d938a9b48a7456b56"
+  },
+  {
+    "path": "src\\Modules\\CanDoItAll.Modules.AgentFramework\\_Imports.razor",
+    "sha256": "1c9f8b0d87e50043e7cbcf19d5f84ecb7b7b6ae4939dd05fcf7a8b5bb6e00ebb"
+  },
+  {
+    "path": "src\\UI\\CanDoItAll.AgentFramework.UI\\_Imports.razor",
+    "sha256": "d11bde22644d651f1b59870e4af31ba5e561e3a1b4a1327f29efb59ae25f149b"
+  },
+  {
+    "path": "src\\UI\\CanDoItAll.AgentFramework.UI\\CanDoItAll.AgentFramework.UI.csproj",
+    "sha256": "cb744e9077e3c4e1cafc78275ad6d3450aa4e38a28b9367378ffb0c4b6ca19e6"
+  }
+]

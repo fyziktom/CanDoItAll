@@ -1,0 +1,29 @@
+{
+  "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+  "checks": [
+    {
+      "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs",
+      "sha256": "732db7916ec82c577302f47fabf4f2192a83d80225ca67f06471c6d86577719f",
+      "actualSha256": "732db7916ec82c577302f47fabf4f2192a83d80225ca67f06471c6d86577719f",
+      "matches": true
+    },
+    {
+      "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json",
+      "sha256": "0c67ffcb9fefb622cd842f8b774d5cc3c321ed03397892750f3b922bc7c74cd5",
+      "actualSha256": "0c67ffcb9fefb622cd842f8b774d5cc3c321ed03397892750f3b922bc7c74cd5",
+      "matches": true
+    },
+    {
+      "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt",
+      "sha256": "62fbf2a57b8bbfc90f1e5e353069640708f434a133202d77e69e695f6d74473d",
+      "actualSha256": "62fbf2a57b8bbfc90f1e5e353069640708f434a133202d77e69e695f6d74473d",
+      "matches": true
+    },
+    {
+      "path": "tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+      "sha256": "c9c5e632c533e99a033339c9bde59cde677544a879af9ac7b572824c8cbfb18d",
+      "actualSha256": "c9c5e632c533e99a033339c9bde59cde677544a879af9ac7b572824c8cbfb18d",
+      "matches": true
+    }
+  ]
+}

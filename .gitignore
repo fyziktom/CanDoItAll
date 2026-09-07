@@ -132,3 +132,9 @@ src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css
 
 !codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/
 !codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/**
+
+# Exact historical Overview and Governance proof, delivery reviewed by Overview-01D.
+!codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/**
+!codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/proof/**

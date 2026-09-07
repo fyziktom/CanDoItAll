@@ -1,0 +1,27 @@
+[
+  {
+    "name": "governance-current-panel-red",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests",
+      "/m:1",
+      "--logger",
+      "console;verbosity=normal",
+      "--logger",
+      "trx;LogFileName=governance-red.trx",
+      "--results-directory",
+      "C:/repositories/CanDoItAll/.mcp-state/governance/red-r2"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T23:09:51.591035+00:00",
+    "finishedUtc": "2026-09-07T23:10:32.344228+00:00",
+    "outputSha256": "c1f4ae562f287ec4e507934d53b4bfe20a47df9edc7139f53bdc4a745e4858bf"
+  }
+]

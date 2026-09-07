@@ -1,0 +1,102 @@
+SADA .NET SDK:
+ Version:           10.0.303
+ Commit:            e730f1db75
+ Workload version:  10.0.300-manifests.b0ae88bd
+ MSBuild version:   18.6.14+e730f1db7
+
+Běhové prostředí:
+ OS Name:     Windows
+ OS Version:  10.0.26200
+ OS Platform: Windows
+ RID:         win-x64
+ Base Path:   C:\Program Files\dotnet\sdk\10.0.303\
+
+Nainstalované úlohy .NET:
+ [maccatalyst]
+   Zdroj instalace: VS 18.10.12113.136
+   Verze manifestu:    26.5.10301/10.0.100
+   Cesta manifestu:       C:\Program Files\dotnet\sdk-manifests\10.0.100\microsoft.net.sdk.maccatalyst\26.5.10301\WorkloadManifest.json
+   Typ instalace:              Msi
+
+ [wasm-tools-net9]
+   Zdroj instalace: VS 18.10.12113.136
+   Verze manifestu:    10.0.111/10.0.100
+   Cesta manifestu:       C:\Program Files\dotnet\sdk-manifests\10.0.100\microsoft.net.workload.mono.toolchain.net9\10.0.111\WorkloadManifest.json
+   Typ instalace:              Msi
+
+ [ios]
+   Zdroj instalace: VS 18.10.12113.136
+   Verze manifestu:    26.5.10301/10.0.100
+   Cesta manifestu:       C:\Program Files\dotnet\sdk-manifests\10.0.100\microsoft.net.sdk.ios\26.5.10301\WorkloadManifest.json
+   Typ instalace:              Msi
+
+ [android]
+   Zdroj instalace: VS 18.10.12113.136
+   Verze manifestu:    36.1.69/10.0.100
+   Cesta manifestu:       C:\Program Files\dotnet\sdk-manifests\10.0.100\microsoft.net.sdk.android\36.1.69\WorkloadManifest.json
+   Typ instalace:              Msi
+
+ [wasm-tools]
+   Zdroj instalace: VS 18.10.12113.136
+   Verze manifestu:    10.0.111/10.0.100
+   Cesta manifestu:       C:\Program Files\dotnet\sdk-manifests\10.0.100\microsoft.net.workload.mono.toolchain.current\10.0.111\WorkloadManifest.json
+   Typ instalace:              Msi
+
+ [maui-windows]
+   Zdroj instalace: VS 18.10.12113.136
+   Verze manifestu:    10.0.20/10.0.100
+   Cesta manifestu:       C:\Program Files\dotnet\sdk-manifests\10.0.100\microsoft.net.sdk.maui\10.0.20\WorkloadManifest.json
+   Typ instalace:              Msi
+
+Nakonfigurováno pro použití sad úloh (workload sets) při instalaci nových manifestů
+Nejsou nainstalované žádné sady úloh. Spuštěním příkazu dotnet workload restore nainstalujte sadu úloh.
+
+Host:
+  Version:      10.0.11
+  Architecture: x64
+  Commit:       e2f47b0110
+
+.NET SDKs installed:
+  8.0.424 [C:\Program Files\dotnet\sdk]
+  9.0.315 [C:\Program Files\dotnet\sdk]
+  9.0.317 [C:\Program Files\dotnet\sdk]
+  10.0.100-rc.1.25451.107 [C:\Program Files\dotnet\sdk]
+  10.0.204 [C:\Program Files\dotnet\sdk]
+  10.0.303 [C:\Program Files\dotnet\sdk]
+  10.0.400 [C:\Program Files\dotnet\sdk]
+
+.NET runtimes installed:
+  Microsoft.AspNetCore.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 9.0.14 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 9.0.17 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 9.0.19 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 10.0.8 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 10.0.11 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+  Microsoft.NETCore.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  Microsoft.NETCore.App 9.0.14 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  Microsoft.NETCore.App 9.0.17 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  Microsoft.NETCore.App 9.0.19 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  Microsoft.NETCore.App 10.0.8 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  Microsoft.NETCore.App 10.0.11 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  Microsoft.WindowsDesktop.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+  Microsoft.WindowsDesktop.App 9.0.14 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+  Microsoft.WindowsDesktop.App 9.0.17 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+  Microsoft.WindowsDesktop.App 9.0.19 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+  Microsoft.WindowsDesktop.App 10.0.8 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+  Microsoft.WindowsDesktop.App 10.0.11 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+
+Other architectures found:
+  x86   [C:\Program Files (x86)\dotnet]
+    registered at [HKLM\SOFTWARE\dotnet\Setup\InstalledVersions\x86\InstallLocation]
+
+Environment variables:
+  Not set
+
+global.json file:
+  C:\repositories\CanDoItAll\global.json
+
+Learn more:
+  https://aka.ms/dotnet/info
+
+Download .NET:
+  https://aka.ms/dotnet/download

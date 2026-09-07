@@ -1,0 +1,1797 @@
+[
+  {
+    "label": "tailwind",
+    "ns": "420515907227600",
+    "text": "≈ tailwindcss v4.2.1"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420515907445300",
+    "text": ""
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420516093250300",
+    "text": "dotnet watch : Working directory: 'C:\\repositories\\CanDoItAll'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420516104645400",
+    "text": "dotnet watch : Watching with Hot Reload."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420516162435600",
+    "text": "dotnet watch : Hot reload enabled. For a list of supported edits, see https://aka.ms/dotnet/hot-reload."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420516162441400",
+    "text": "dotnet watch : Press Ctrl+R to restart."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420516169147600",
+    "text": "dotnet watch : Building C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj ..."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420516179353100",
+    "text": "dotnet watch : Launched 'C:\\Program Files\\dotnet\\dotnet.exe' with arguments 'build C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj --property:CatalogAssetMode=Parity --property:NuGetInteractive=false': process id 62620"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420516361261500",
+    "text": "Done in 453ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420516885031500",
+    "text": "  Determining projects to restore..."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420521678920000",
+    "text": "  All projects are up-to-date for restore."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420524566896100",
+    "text": "  CanDoItAll.Components.Common -> C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Common\\bin\\Debug\\net10.0\\CanDoItAll.Components.Common.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420524868202200",
+    "text": "  CanDoItAll.AgentFramework.ProviderHistory.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420525143058300",
+    "text": "  CanDoItAll.Memory.SourceGateway.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.SourceGateway.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.Memory.SourceGateway.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420525509167100",
+    "text": "  CanDoItAll.SharedProviders.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.SharedProviders.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.SharedProviders.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420525542158500",
+    "text": "  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420525612418100",
+    "text": "  CanDoItAll.SharedKernel -> C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.SharedKernel\\bin\\Debug\\net10.0\\CanDoItAll.SharedKernel.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420526657795100",
+    "text": "  CanDoItAll.Security.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Security.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.Security.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420526681763000",
+    "text": "  CanDoItAll.FileTools.Abstractions -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420526942830900",
+    "text": "  CanDoItAll.Infrastructure.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.Infrastructure.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420527587716600",
+    "text": "  CanDoItAll.AgentFramework.Tools.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tools.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Tools.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420528517342600",
+    "text": "  CanDoItAll.FileTools.Desktop -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.Desktop\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.Desktop.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420528559377000",
+    "text": "  CanDoItAll.AgentFramework.Capabilities.Templates -> C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Templates\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Capabilities.Templates.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420529194493300",
+    "text": "  CanDoItAll.AgentFramework.Capabilities.Access -> C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Access\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Capabilities.Access.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420529437348900",
+    "text": "  CanDoItAll.AgentFramework.Tools -> C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tools\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Tools.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420529481408000",
+    "text": "  CanDoItAll.Components.Charts -> C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts\\bin\\Debug\\net10.0\\CanDoItAll.Components.Charts.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420529655390800",
+    "text": "  CanDoItAll.Git -> C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Git\\bin\\Debug\\net10.0\\CanDoItAll.Git.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420529657701000",
+    "text": "  CanDoItAll.Memory.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420529672673900",
+    "text": "  CanDoItAll.Infrastructure -> C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\bin\\Debug\\net10.0\\CanDoItAll.Infrastructure.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420529910920900",
+    "text": "  CanDoItAll.AgentFramework.Mcp.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\Mcp\\CanDoItAll.AgentFramework.Mcp.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Mcp.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420530402614700",
+    "text": "  CanDoItAll.Components.BaseLib -> C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\bin\\Debug\\net10.0\\CanDoItAll.Components.BaseLib.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420530461924100",
+    "text": "  CanDoItAll.AgentFramework.ProviderHistory.Application -> C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Application\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.ProviderHistory.Application.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420530565209500",
+    "text": "  CanDoItAll.Modules.Security -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Security\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Security.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420530633415500",
+    "text": "  CanDoItAll.Processes.Contracts -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Contracts\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Contracts.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420530687407400",
+    "text": "  CanDoItAll.Components.Git -> C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Components.Git\\bin\\Debug\\net10.0\\CanDoItAll.Components.Git.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420530745889400",
+    "text": "  CanDoItAll.AgentFramework.Skills.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\Skills\\CanDoItAll.AgentFramework.Skills.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Skills.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420530898993700",
+    "text": "  CanDoItAll.AgentFramework.Models -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Models\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Models.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531059472700",
+    "text": "  CanDoItAll.Memory.Http.Contracts -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Http.Contracts\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Http.Contracts.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531154144300",
+    "text": "  CanDoItAll.AgentFramework.ProviderHistory.Persistence -> C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Persistence\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.ProviderHistory.Persistence.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531250272600",
+    "text": "  CanDoItAll.AgentFramework.Skills -> C:\\repositories\\CanDoItAll\\src\\MAF\\Skills\\CanDoItAll.AgentFramework.Skills\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Skills.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531257741700",
+    "text": "  CanDoItAll.Memory.Application -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Application\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Application.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531448056100",
+    "text": "  CanDoItAll.FileTools.FileInteraction.Core -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Core\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.FileInteraction.Core.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531588161200",
+    "text": "  CanDoItAll.Memory.Persistence -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Persistence\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Persistence.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531672254700",
+    "text": "  CanDoItAll.FileTools.FileBrowser.Core -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileBrowser.Core\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.FileBrowser.Core.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531852085400",
+    "text": "  CanDoItAll.FileTools.Integration.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.FileTools.Integration.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.Integration.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531912878200",
+    "text": "  CanDoItAll.Memory.Mock -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Mock\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Mock.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420531980057500",
+    "text": "  CanDoItAll.Memory.Mcp -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Mcp\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Mcp.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532243308600",
+    "text": "  CanDoItAll.Plugins.Abstractions -> C:\\repositories\\CanDoItAll\\src\\plugins\\Abstractions\\CanDoItAll.Plugins.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.Plugins.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532245608300",
+    "text": "  CanDoItAll.Components.OverlayLib -> C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib\\bin\\Debug\\net10.0\\CanDoItAll.Components.OverlayLib.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532317271300",
+    "text": "  CanDoItAll.AgentFramework.ProviderPipelines -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.ProviderPipelines\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.ProviderPipelines.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532328002300",
+    "text": "  CanDoItAll.AgentFramework.Runtime.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Runtime.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Runtime.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532351287000",
+    "text": "  CanDoItAll.Memory.Http -> C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Http\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Http.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532653981900",
+    "text": "  CanDoItAll.AgentFramework.Tooling -> C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tooling\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Tooling.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532757872800",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532861579200",
+    "text": "  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Workflows.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420532974554000",
+    "text": "  CanDoItAll.AgentFramework.Llm.Abstractions -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Llm.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.Abstractions.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420533339896400",
+    "text": "Done in 650ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533386916800",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Core\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533446993900",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533492229500",
+    "text": "  CanDoItAll.AgentFramework.Llm.SimpleChats.Core -> C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Core\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.SimpleChats.Core.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533561811300",
+    "text": "  CanDoItAll.Modules.Collaboration -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Collaboration\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Collaboration.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533627981800",
+    "text": "  CanDoItAll.AgentFramework.Workflows.Builder -> C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Builder\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Workflows.Builder.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533677001400",
+    "text": "  CanDoItAll.AgentFramework.Llm.Conversations -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Llm.Conversations\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.Conversations.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533795131500",
+    "text": "  CanDoItAll.FileTools.Integration -> C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.FileTools.Integration\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.Integration.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533809640800",
+    "text": "  CanDoItAll.Components.Mermaid -> C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Mermaid\\bin\\Debug\\net10.0\\CanDoItAll.Components.Mermaid.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420533967613900",
+    "text": "  CanDoItAll.Conversations.Components -> C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Components\\bin\\Debug\\net10.0\\CanDoItAll.Conversations.Components.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420534022105900",
+    "text": "Done in 674ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534029927200",
+    "text": "  CanDoItAll.AgentFramework.Llm.SimpleChats.Application -> C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534099862000",
+    "text": "  CanDoItAll.AgentFramework.Usage -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Usage\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Usage.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534293785600",
+    "text": "  CanDoItAll.Components.CanvasLib -> C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.CanvasLib\\bin\\Debug\\net10.0\\CanDoItAll.Components.CanvasLib.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534327703600",
+    "text": "  CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence -> C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534360964100",
+    "text": "  CanDoItAll.Conversations.Shell -> C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Shell\\bin\\Debug\\net10.0\\CanDoItAll.Conversations.Shell.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534500094400",
+    "text": "  CanDoItAll.FileTools.FileInteraction.Components -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Components\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.FileInteraction.Components.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534508304600",
+    "text": "  CanDoItAll.AgentFramework.Providers -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Providers\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Providers.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534516303300",
+    "text": "  CanDoItAll.Processes.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Abstractions.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420534620218800",
+    "text": "Done in 596ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534800904800",
+    "text": "  CanDoItAll.FileTools.FileBrowser.Components -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileBrowser.Components\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.FileBrowser.Components.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420534943170000",
+    "text": "  CanDoItAll.Processes.Core -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Core\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Core.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535009616800",
+    "text": "  CanDoItAll.SharedProviders.Http -> C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.SharedProviders.Http\\bin\\Debug\\net10.0\\CanDoItAll.SharedProviders.Http.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535021465000",
+    "text": "  CanDoItAll.AgentFramework.Llm.ProviderRuntime -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Llm.ProviderRuntime\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.ProviderRuntime.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535086642400",
+    "text": "  CanDoItAll.Memory.Drivers.CognitiveMemory -> C:\\repositories\\CanDoItAll\\src\\Memory\\Drivers\\CanDoItAll.Memory.Drivers.CognitiveMemory\\bin\\Debug\\net10.0\\CanDoItAll.Memory.Drivers.CognitiveMemory.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535150603900",
+    "text": "  CanDoItAll.AgentFramework.UI -> C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.UI.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420535279436400",
+    "text": "Done in 642ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535363417700",
+    "text": "  CanDoItAll.Modules.Memory -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Memory\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Memory.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535403493300",
+    "text": "  CanDoItAll.Processes.Templates -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Templates\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Templates.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535450119900",
+    "text": "  CanDoItAll.Processes.Drivers.Abstractions -> C:\\repositories\\CanDoItAll\\src\\Processes\\Drivers\\CanDoItAll.Processes.Drivers.Abstractions\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Drivers.Abstractions.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535462871900",
+    "text": "  CanDoItAll.AgentFramework.Core -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Core.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535550836100",
+    "text": "  CanDoItAll.Processes.Projections -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Projections\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Projections.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535720736100",
+    "text": "  CanDoItAll.AgentFramework.Workflows.Core -> C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Core\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Workflows.Core.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420535772097900",
+    "text": "  CanDoItAll.FileTools.FileInteraction.Markdown -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Markdown\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.FileInteraction.Markdown.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420535960868200",
+    "text": "Done in 668ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536050361600",
+    "text": "  CanDoItAll.Processes.Drivers.Standard -> C:\\repositories\\CanDoItAll\\src\\Processes\\Drivers\\CanDoItAll.Processes.Drivers.Standard\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Drivers.Standard.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536278353200",
+    "text": "  CanDoItAll.Tools.Documents -> C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.Tools.Documents\\bin\\Debug\\net10.0\\CanDoItAll.Tools.Documents.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536349076600",
+    "text": "  CanDoItAll.AgentFramework.Voice -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Voice\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Voice.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536381510700",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536384374600",
+    "text": "  CanDoItAll.AgentFramework.Mcp -> C:\\repositories\\CanDoItAll\\src\\MAF\\Mcp\\CanDoItAll.AgentFramework.Mcp\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Mcp.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536438286400",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536446268000",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536521079500",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536531229200",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420536647300000",
+    "text": "Done in 625ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536694493700",
+    "text": "  CanDoItAll.FileTools.FileInteraction.Spreadsheet -> C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Spreadsheet\\bin\\Debug\\net10.0\\CanDoItAll.FileTools.FileInteraction.Spreadsheet.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536715543400",
+    "text": "  CanDoItAll.Processes.Builder -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Builder\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Builder.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536734648800",
+    "text": "  CanDoItAll.AgentFramework.Memory -> C:\\repositories\\CanDoItAll\\src\\MAF\\Memory\\CanDoItAll.AgentFramework.Memory\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Memory.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536903474600",
+    "text": "  CanDoItAll.AgentFramework.Workflows.Templates -> C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Templates\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Workflows.Templates.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420536981276900",
+    "text": "  CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime -> C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537036099000",
+    "text": "  CanDoItAll.Processes.Runtime -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Runtime\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Runtime.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537286760600",
+    "text": "  CanDoItAll.Processes.Persistence -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Persistence.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537287419100",
+    "text": "  CanDoItAll.Processes.Application -> C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Application\\bin\\Debug\\net10.0\\CanDoItAll.Processes.Application.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537290150100",
+    "text": "  CanDoItAll.AppComponents -> C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AppComponents\\bin\\Debug\\net10.0\\CanDoItAll.AppComponents.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420537355768300",
+    "text": "Done in 696ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537447204900",
+    "text": "  CanDoItAll.Modules.AgentFramework.ProviderManagement -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework.ProviderManagement\\bin\\Debug\\net10.0\\CanDoItAll.Modules.AgentFramework.ProviderManagement.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537551216400",
+    "text": "  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Runtime\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Workflows.Runtime.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537684032200",
+    "text": "  CanDoItAll.Components.Gantt -> C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Gantt\\bin\\Debug\\net10.0\\CanDoItAll.Components.Gantt.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420537912228600",
+    "text": "  CanDoItAll.AgentFramework.Persistence -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Persistence\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Persistence.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420537996168500",
+    "text": "Done in 633ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538025608200",
+    "text": "  CanDoItAll.Plugin.Email -> C:\\repositories\\CanDoItAll\\src\\plugins\\Implementations\\CanDoItAll.Plugin.Email\\bin\\Debug\\net10.0\\CanDoItAll.Plugin.Email.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538118861400",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538302644700",
+    "text": "  CanDoItAll.AgentFramework.Components -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Components\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Components.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538366106700",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538366245600",
+    "text": "  CanDoItAll.AgentFramework.Maf -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Maf\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Maf.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538494353400",
+    "text": "  CanDoItAll.Modules.Plugins -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Plugins\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Plugins.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420538594713200",
+    "text": "Done in 593ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538714366800",
+    "text": "  CanDoItAll.Plugin.Gmail -> C:\\repositories\\CanDoItAll\\src\\plugins\\Implementations\\CanDoItAll.Plugin.Gmail\\bin\\Debug\\net10.0\\CanDoItAll.Plugin.Gmail.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420538784568300",
+    "text": "  CanDoItAll.Plugin.Office365 -> C:\\repositories\\CanDoItAll\\src\\plugins\\Implementations\\CanDoItAll.Plugin.Office365\\bin\\Debug\\net10.0\\CanDoItAll.Plugin.Office365.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420539114402500",
+    "text": "  CanDoItAll.Modules.Prompts -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Prompts\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Prompts.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420539127490900",
+    "text": "  CanDoItAll.Modules.Projects -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Projects\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Projects.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420539223676500",
+    "text": "Done in 625ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420539457759800",
+    "text": "  CanDoItAll.AgentFramework.WorkflowExecutors.Standard -> C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420539705339800",
+    "text": "  CanDoItAll.AgentFramework.Workflows.MafAdapter -> C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.MafAdapter\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Workflows.MafAdapter.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420539804975500",
+    "text": "Done in 574ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420539806014900",
+    "text": "Done in 404µs"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420539854149100",
+    "text": "  CanDoItAll.Modules.SchedulerPlanner -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.SchedulerPlanner\\bin\\Debug\\net10.0\\CanDoItAll.Modules.SchedulerPlanner.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420539918160100",
+    "text": "  CanDoItAll.AgentFramework.Llm.SimpleChats.Components -> C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420540429135800",
+    "text": "Done in 621ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420540486209400",
+    "text": "  CanDoItAll.Modules.Workspace -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workspace\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Workspace.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420540490551400",
+    "text": "  CanDoItAll.Modules.TestLab -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.TestLab\\bin\\Debug\\net10.0\\CanDoItAll.Modules.TestLab.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420540548401400",
+    "text": "  CanDoItAll.AgentFramework.Hosting -> C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Hosting\\bin\\Debug\\net10.0\\CanDoItAll.AgentFramework.Hosting.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420540975053800",
+    "text": "Done in 533ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420541153872300",
+    "text": "  CanDoItAll.Modules.Resources -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Resources\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Resources.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420541389146400",
+    "text": "  CanDoItAll.Modules.CrmHr -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.CrmHr\\bin\\Debug\\net10.0\\CanDoItAll.Modules.CrmHr.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420541481840300",
+    "text": "Done in 504ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420541947439000",
+    "text": "Done in 457ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420542444648100",
+    "text": "Done in 488ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420542581684800",
+    "text": "  CanDoItAll.Modules.Workbench -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workbench\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Workbench.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420542751616900",
+    "text": "Done in 812µs"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420543279747300",
+    "text": "Done in 450ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420543709343100",
+    "text": "Done in 410ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420543899341700",
+    "text": "  CanDoItAll.Modules.AgentFramework -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\bin\\Debug\\net10.0\\CanDoItAll.Modules.AgentFramework.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420544104559700",
+    "text": "Done in 345µs"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420544577103200",
+    "text": "Done in 381ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420544990515500",
+    "text": "Done in 386ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420545229183400",
+    "text": "  CanDoItAll.Modules.Processes -> C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Processes\\bin\\Debug\\net10.0\\CanDoItAll.Modules.Processes.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420545448440200",
+    "text": "Done in 336µs"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420545624480000",
+    "text": "  CanDoItAll.Composition -> C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Composition\\bin\\Debug\\net10.0\\CanDoItAll.Composition.dll"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420546028639900",
+    "text": "  CanDoItAll.Migrations.PostgreSql -> C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Migrations.PostgreSql\\bin\\Debug\\net10.0\\CanDoItAll.Migrations.PostgreSql.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420546031001400",
+    "text": "Done in 455ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420546495688700",
+    "text": "Done in 449ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420546857359500",
+    "text": "Done in 354ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420547198944500",
+    "text": "Done in 335ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547516666000",
+    "text": "  CanDoItAll.Web -> C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\Debug\\net10.0\\CanDoItAll.Web.dll"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420547546286300",
+    "text": "Done in 341ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547637425500",
+    "text": ""
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547637990900",
+    "text": "Build succeeded."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547638038800",
+    "text": "    0 Warning(s)"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547638079100",
+    "text": "    0 Error(s)"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547638182200",
+    "text": ""
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547638184700",
+    "text": "Time Elapsed 00:00:31.21"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420547691484800",
+    "text": "dotnet watch : Process id 62620 ran for 31520ms and exited with exit code 0."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420550246068500",
+    "text": "dotnet watch : Project graph loaded in 2,6s."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420550271647000",
+    "text": "dotnet watch : Loading projects ..."
+  },
+  {
+    "label": "tailwind",
+    "ns": "420551529096600",
+    "text": "Done in 324ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420551876353800",
+    "text": "Done in 340ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420552358958000",
+    "text": "Done in 315ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420552684834800",
+    "text": "Done in 312ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420553007776000",
+    "text": "Done in 320ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420553344728000",
+    "text": "Done in 329ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420553674040500",
+    "text": "Done in 314ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420554116370500",
+    "text": "Done in 332ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420554504146600",
+    "text": "Done in 327ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420554909200500",
+    "text": "Done in 321ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420555238200700",
+    "text": "Done in 320ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420555622580600",
+    "text": "Done in 342ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420555948282600",
+    "text": "Done in 309ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420556870639300",
+    "text": "Done in 308ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420557190491500",
+    "text": "Done in 314ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420557767125600",
+    "text": "Done in 314ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420558083411700",
+    "text": "Done in 303ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420558399473600",
+    "text": "Done in 306ms"
+  },
+  {
+    "label": "tailwind",
+    "ns": "420558738167200",
+    "text": "Done in 328ms"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559200784300",
+    "text": "dotnet watch : Design-time build completed in 8,9s."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559201747800",
+    "text": "dotnet watch : Loaded 122 project(s) in 8,9s."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559204411300",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559212113100",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559212422900",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Components\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559212601800",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileBrowser.Components\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559212989800",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.CanvasLib\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559213707600",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Components\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559214261300",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AppComponents\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559214813600",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Projects\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559215270200",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559215688300",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workspace\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559216178700",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Components\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559216790500",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Spreadsheet\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559216934500",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Markdown\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559217048900",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Mermaid\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559217479500",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Gantt\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559217976300",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559218211200",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.TestLab\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559218636700",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Resources\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559219075700",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Prompts\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559219565200",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Shell\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559220069300",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workbench\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559221404200",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.CrmHr\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559222051400",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Collaboration\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559222313100",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559222897600",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Plugins\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559223103100",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559224425200",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Components.Git\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559224872500",
+    "text": "dotnet watch : Manifest file 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Components.Git\\obj\\Debug\\net10.0\\staticwebassets.development.json' not found."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559224958400",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.SchedulerPlanner\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559225611400",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Processes\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559227059200",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Memory\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559238106000",
+    "text": "dotnet watch : Reading static web assets manifest file: 'C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\obj\\Debug\\net10.0\\staticwebassets.development.json'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559240239700",
+    "text": "dotnet watch : Watching 4208 file(s) for changes"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566456600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Skills\\CanDoItAll.AgentFramework.Skills'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566505700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Usage'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566506300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Projections'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566507600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Projects'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566508000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566508300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Application'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566519900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.FileTools.Integration.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566520300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Runtime.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566535900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Http.Contracts'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566550100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Contracts'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566573200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\Drivers\\CanDoItAll.Memory.Drivers.CognitiveMemory'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566600200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.SourceGateway.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566831500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566832800",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566833200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566833600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Mcp\\CanDoItAll.AgentFramework.Mcp'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566833900",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566834200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.FileTools.Integration'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566834600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Hosting'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566835000",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.Desktop'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566835300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Plugins'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566835600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566835900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Core'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566836200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Components'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566851100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.SharedProviders.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566851500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Application'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566859900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Builder'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566874500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Templates'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566983200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Components'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566983900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.SharedKernel'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566984300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Git'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566984700",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566985000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.SchedulerPlanner'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566996900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.MafAdapter'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559566997300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Application'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567012000",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Core'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567027900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\plugins\\Implementations\\CanDoItAll.Plugin.Email'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567143400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567145600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\plugins\\Abstractions\\CanDoItAll.Plugins.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567146000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Templates'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567214400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Migrations.PostgreSql'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567215100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tools.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567215500",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Common'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567215800",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567236700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567237000",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Mermaid'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567246400",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Gantt'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567263700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework.ProviderManagement'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567282500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Templates'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567309000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567405100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567565100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Resources'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567610500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Llm.Conversations'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567632400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Runtime'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567649100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Security'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567671200",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.CanvasLib'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567760000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Runtime'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567761300",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567865800",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567866400",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567866800",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileBrowser.Core'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567867100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567951700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567952200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Persistence'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567952600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Core'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567952900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.SharedProviders.Http'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567953200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Shell'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567953600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.ProviderPipelines'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559567953900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workbench'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568031900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Persistence'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568033700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Models'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568082000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Skills\\CanDoItAll.AgentFramework.Skills.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568082500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Core'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568082900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Http'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568083200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\Drivers\\CanDoItAll.Processes.Drivers.Standard'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568083600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568095900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tooling'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568119700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Security.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568129200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.CrmHr'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568144300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tools'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568165200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Access'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568198600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568207400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.TestLab'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568221800",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Collaboration'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568244900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Components.Git'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568254400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568290500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Mock'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568308400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568324500",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Components'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568334700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Builder'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568362200",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Spreadsheet'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568370400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Prompts'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568386600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Voice'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568403900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\plugins\\Implementations\\CanDoItAll.Plugin.Office365'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568422400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568438400",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileInteraction.Markdown'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568452900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Mcp\\CanDoItAll.AgentFramework.Mcp.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568467000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Application'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568484400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Tools\\CanDoItAll.Tools.Documents'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568503500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Memory\\CanDoItAll.AgentFramework.Memory'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568530000",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Memory'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568548900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Mcp'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568557800",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Providers'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568600500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568648200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Processes\\Drivers\\CanDoItAll.Processes.Drivers.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568648900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568649300",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\SimpleChats\\CanDoItAll.AgentFramework.Llm.SimpleChats.Components'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568671700",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Llm.ProviderRuntime'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568672200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Processes'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568688400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AppComponents'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568702800",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Composition'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568723200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Persistence'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568765600",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workspace'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559568766400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.Core'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569233900",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569235400",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569235800",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\plugins\\Implementations\\CanDoItAll.Plugin.Gmail'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569236100",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Llm.Abstractions'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569236500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\WorkflowExecutors\\Standard\\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569236800",
+    "text": "dotnet watch : Exclusion glob: '.artifacts/**;.mcp-state/**;output/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;**\\node_modules\\**;node_modules\\**;**\\jspm_packages\\**;jspm_packages\\**;**\\bower_components\\**;bower_components\\**;**\\packages.lock.json;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll.FileTools\\src\\CanDoItAll.FileTools.FileBrowser.Components'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569237200",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420559569237500",
+    "text": "dotnet watch : Exclusion glob: '.mcp-state/**;.artifacts/**;artifacts/**;playwright-report/**;test-results/**;TestResults/**;coverage/**;screenshots/**;bin\\Debug\\/**;obj\\Debug\\/**;bin\\/**;obj\\/**;bin\\Debug\\net10.0\\publish\\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store' under project 'C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Maf'"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420561364975300",
+    "text": "dotnet watch : Solution after project update: v1"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420561841539000",
+    "text": "dotnet watch : Hot reload session started."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420561846339800",
+    "text": "dotnet watch : Application kind: WebApplication."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420561848302300",
+    "text": "dotnet watch : [CanDoItAll.Web (net10.0)] Using browser-refresh middleware"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420562256035700",
+    "text": "dotnet watch : [CanDoItAll.Web (net10.0)] Refresh server running at ws://localhost:57681,wss://localhost:57683."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420562305735000",
+    "text": "dotnet watch : [CanDoItAll.Web (net10.0)] Waiting for application to connect to pipe 'c63e8ff2ebf3487c9ead28acb86ddfea'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420562312299500",
+    "text": "dotnet watch : [CanDoItAll.Web (net10.0)] Launched 'C:\\Program Files\\dotnet\\dotnet.exe' with arguments 'run --no-build -e DOTNET_WATCH=1 -e DOTNET_WATCH_ITERATION=1 -e DOTNET_MODIFIABLE_ASSEMBLIES=debug -e \"DOTNET_STARTUP_HOOKS=C:\\Program Files\\dotnet\\sdk\\10.0.303\\DotnetTools\\dotnet-watch\\10.0.303\\tools\\net10.0\\any\\hotreload\\net6.0\\Microsoft.AspNetCore.Watch.BrowserRefresh.dll;C:\\Program Files\\dotnet\\sdk\\10.0.303\\DotnetTools\\dotnet-watch\\10.0.303\\tools\\net10.0\\any\\hotreload\\net10.0\\Microsoft.Extensions.DotNetDeltaApplier.dll\" -e DOTNET_WATCH_HOTRELOAD_NAMEDPIPE_NAME=c63e8ff2ebf3487c9ead28acb86ddfea -e ASPNETCORE_AUTO_RELOAD_WS_ENDPOINT=ws://localhost:57681,wss://localhost:57683 -e ASPNETCORE_AUTO_RELOAD_WS_KEY=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtx+g2RhRghIfXDH/DO6aRNagcuGUklvK2BBIn8KzVuPvnDv4aQ0A/WKsAEli0r1vqlmPqIrh98/zJ4tSCNznSjztnqaP2dpq2sWqlIlOF/+kRrVgsEKKlAIur2S2w5LRaXltXJRdLLxJ61KaSboOUSTgedfB2iP/rEhD0SKYRp6SYpW4i11tWGGREq+gTNPKX1K1eNZ4NrZ3AT+2VBWXgmJiy+cvvst9GGTZAmvuNoOqw6hIKkB63s6r71dWvwxV9Bqt8FchuKJmv8Ngoo/swRQcdEvZOAQagjyea+lHXqWzD7fK3yY9pADS9/gJR3Ho049HT82x6yeubBVQv0WRkQIDAQAB -e ASPNETCORE_AUTO_RELOAD_VDIR=/ -e ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=Microsoft.AspNetCore.Watch.BrowserRefresh --project src/App/CanDoItAll.Web --no-launch-profile --property CatalogAssetMode=Parity': process id 66092"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420563685664500",
+    "text": "dotnet watch : [CanDoItAll.Web (net10.0)] Capabilities: 'Baseline AddMethodToExistingType AddStaticFieldToExistingType AddInstanceFieldToExistingType NewTypeDefinition ChangeCustomAttributes UpdateParameters GenericUpdateMethod GenericAddMethodToExistingType GenericAddFieldToExistingType AddFieldRva AddExplicitInterfaceImplementation'."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420563765021000",
+    "text": "dotnet watch : Waiting for changes"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420567250612800",
+    "text": "warn: CanDoItAll.Modules.Security.SecretVaultStartupValidator[0]"
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420567250616900",
+    "text": "      Secret vault provider DataProtectionFile is running with DevelopmentOnly protection. This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary."
+  },
+  {
+    "label": "dotnet-watch",
+    "ns": "420571599310800",
+    "text": "dotnet watch : [Browser #1] Connected to refresh server."
+  }
+]

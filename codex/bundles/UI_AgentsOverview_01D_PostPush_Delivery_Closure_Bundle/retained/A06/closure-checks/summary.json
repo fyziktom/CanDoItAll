@@ -1,0 +1,15 @@
+{
+  "utc": "2026-09-07T22:27:05.755594+00:00",
+  "sourceSecretTextFiles": 7175,
+  "componentsSecretTextFiles": 1373,
+  "componentsHistoricalMatches": 0,
+  "componentsAddedMatches": 0,
+  "sourceSecretBinaryFiles": 2215,
+  "historicalSourceMatches": 245,
+  "addedSourceMatches": 0,
+  "removedSourceMatches": 0,
+  "inheritedDocumentationLogPaths": 118,
+  "newDocumentationLogPaths": [],
+  "removedDocumentationLogPaths": [],
+  "documentationStatus": "FAILED_INHERITED_DEBT; no gate waiver or merge readiness"
+}

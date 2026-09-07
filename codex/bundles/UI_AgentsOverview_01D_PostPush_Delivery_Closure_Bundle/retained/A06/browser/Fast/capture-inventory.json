@@ -1,0 +1,177 @@
+[
+  {
+    "path": "baseline.jpeg",
+    "bytes": 150402,
+    "sha256": "1eff25d59609a825429309738423f6f56230e57108ac82f8a04e8086d0b6119f",
+    "retained": true,
+    "reason": "Selected exact acceptance screenshot"
+  },
+  {
+    "path": "bound-unavailable.jpeg",
+    "bytes": 154727,
+    "sha256": "b6b460d505bae0317db62c040493af9f15ae232f858864ce248e9a76dd9d1604",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "capabilities-compatibility.jpeg",
+    "bytes": 184151,
+    "sha256": "6d1a2e3ee09069d6a1b428db2183bf9aea2e9b96335390759765cf7062f81949",
+    "retained": true,
+    "reason": "Selected exact acceptance screenshot"
+  },
+  {
+    "path": "catalog-compatibility.jpeg",
+    "bytes": 199301,
+    "sha256": "7cecce2efaea135953c680d3f5140e0e26ef3a09609e5c3ffa8cced55e07c746",
+    "retained": true,
+    "reason": "Selected exact acceptance screenshot"
+  },
+  {
+    "path": "controlled-intents.jpeg",
+    "bytes": 155410,
+    "sha256": "b0738f29d3dc9fa4adee0a7d599380a031f537e43669ab7f5fee7260a901969a",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "detail-pending.jpeg",
+    "bytes": 149223,
+    "sha256": "84259725c136bbc12ffe52c9a6ef2c414edda3d73cafac63d768d6f8419baf5f",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "empty.jpeg",
+    "bytes": 133577,
+    "sha256": "f38c7b39348769e8d6d37305fd30eee59c4d09e4b142e2d8196564fd291eaa02",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "header-partial.jpeg",
+    "bytes": 153246,
+    "sha256": "665a73300b9475f2a75cb409545cf99bcc8782ad1973db433886921f414691be",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "initial-failure.jpeg",
+    "bytes": 146268,
+    "sha256": "bcb9f4b46d8de7fd6f04fcae1aafb0cb60faf04d1cf9853afbcd468c2fce5c02",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "loading.jpeg",
+    "bytes": 125914,
+    "sha256": "df7cc03db422e06f99c4bc0d6bdc2428e1eee512174d1033ca658fc5085e7773",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "long-content.jpeg",
+    "bytes": 152185,
+    "sha256": "515ce16a4faa05ea2d78c37ced932b61cf815d0bf659b47e0c3ae539f3ea83b8",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "long-responsive-1280.jpeg",
+    "bytes": 118152,
+    "sha256": "d1ce4135656a8d13f9c78b773d86db0dbb4364db979bf68796ac0aa4473770f7",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "long-responsive-900.jpeg",
+    "bytes": 80775,
+    "sha256": "0bbb9494c3d4dd1301656f29c8c5256e7377b9c5be7f302b6a6ba8eb0d07ebff",
+    "retained": true,
+    "reason": "Selected exact acceptance screenshot"
+  },
+  {
+    "path": "partial.jpeg",
+    "bytes": 155393,
+    "sha256": "61cbb106c6c4c4e882307f601b9a52bc20fafd63f14a5fb1240edb6859308ca0",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "ready.jpeg",
+    "bytes": 149436,
+    "sha256": "35211db33e4c7b9dbec35369c347174af493250ffd30d4f80426648803f16ad1",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "retry.jpeg",
+    "bytes": 153710,
+    "sha256": "719541d849b8fb8b4f2eab98592748b3245e0e76bb6cc4447dc8a89fd8d8357d",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "scope-agents.jpeg",
+    "bytes": 150097,
+    "sha256": "403d0062e2b2d00d086f66005a91f40d39ebdb54ee2c99c1a6fe87a71e49a850",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "scope-both.jpeg",
+    "bytes": 151698,
+    "sha256": "e9eeaa95338ae4b0657be160de68887d63480fd31a336cc586ef7ac67eb2b796",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "scope-chats.jpeg",
+    "bytes": 153587,
+    "sha256": "0d02b5880c0ee416aa2b0f43d87212c61a95283fcf2eaf899615e113045c1658",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "scope-pending.jpeg",
+    "bytes": 131817,
+    "sha256": "1b27daabe1203186a226ebaecdc4ae634ccc024a626d28fe6e93ff967b9866f6",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "stale-overview.jpeg",
+    "bytes": 159126,
+    "sha256": "1a1478eb65d81d09cca041949ea2e6318896fe3a46231b744c4e747b7029fbb4",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "stale-usage.jpeg",
+    "bytes": 161830,
+    "sha256": "022adb50c1de10a783bee46d27fdc05a80eeb5e060a87b57e1fb50b8aad04154",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "unknown-unpriced.jpeg",
+    "bytes": 151642,
+    "sha256": "46421f53a1ce32aa29ea3f5a1dd2f2fa350cd08c97ae301113cea466db48c245",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "usage-loading.jpeg",
+    "bytes": 130927,
+    "sha256": "4def6883b9aed9562d894f4cf72b36527510cd95426605d65b1ac2d5eb13303c",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  },
+  {
+    "path": "wrong-scope.jpeg",
+    "bytes": 148803,
+    "sha256": "5a04e179d6d376e1a0980d1f25d0ccd301d586069386f650201721a01649cc0a",
+    "retained": false,
+    "reason": "Redundant scenario capture; exact summary, DOM, and reproducibility harness retained"
+  }
+]

@@ -1,0 +1,139 @@
+{
+  "utc": "2026-09-07T18:35:06.006932+00:00",
+  "repositories": [
+    {
+      "repository": "CanDoItAll",
+      "state": {
+        "branch": {
+          "exit": 0,
+          "output": "components-decoupling",
+          "error": ""
+        },
+        "head": {
+          "exit": 0,
+          "output": "2f3a6020e805deb02a6dcfbdfb52f352eb59ce61",
+          "error": ""
+        },
+        "tree": {
+          "exit": 0,
+          "output": "6b112718e6892ce2113b71dfaa71b170637e3f0c",
+          "error": ""
+        },
+        "status": {
+          "exit": 0,
+          "output": "?? codex/bundles/UI_AgentsOverview_01D_PostPush_Delivery_Closure_Bundle/",
+          "error": ""
+        },
+        "index": {
+          "exit": 0,
+          "output": "",
+          "error": ""
+        },
+        "remote": {
+          "exit": 0,
+          "output": "2f3a6020e805deb02a6dcfbdfb52f352eb59ce61\trefs/heads/components-decoupling",
+          "error": ""
+        },
+        "aheadBehind": {
+          "exit": 0,
+          "output": "0\t0",
+          "error": ""
+        }
+      }
+    },
+    {
+      "repository": "CanDoItAll.Components",
+      "state": {
+        "branch": {
+          "exit": 0,
+          "output": "codex/original-ui-refactoring-release",
+          "error": ""
+        },
+        "head": {
+          "exit": 0,
+          "output": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+          "error": ""
+        },
+        "tree": {
+          "exit": 0,
+          "output": "8ee42b3f1f97fd4bb7b3b3f526029228d8ed6e23",
+          "error": ""
+        },
+        "status": {
+          "exit": 0,
+          "output": "M src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt\n?? tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+          "error": ""
+        },
+        "index": {
+          "exit": 0,
+          "output": "",
+          "error": ""
+        },
+        "remote": {
+          "exit": 0,
+          "output": "ref: refs/heads/main\tHEAD\nbd1eb1030c438c861b94b3b8d3b9dba72925d685\tHEAD",
+          "error": ""
+        },
+        "remoteTree": {
+          "exit": 0,
+          "output": "8ee42b3f1f97fd4bb7b3b3f526029228d8ed6e23",
+          "error": ""
+        },
+        "aheadBehind": {
+          "exit": 0,
+          "output": "0\t1",
+          "error": ""
+        },
+        "ownedEntryFiles": [
+          {
+            "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs",
+            "sha256": "732db7916ec82c577302f47fabf4f2192a83d80225ca67f06471c6d86577719f"
+          },
+          {
+            "path": "tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+            "sha256": "c9c5e632c533e99a033339c9bde59cde677544a879af9ac7b572824c8cbfb18d"
+          },
+          {
+            "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json",
+            "sha256": "0c67ffcb9fefb622cd842f8b774d5cc3c321ed03397892750f3b922bc7c74cd5"
+          },
+          {
+            "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt",
+            "sha256": "62fbf2a57b8bbfc90f1e5e353069640708f434a133202d77e69e695f6d74473d"
+          }
+        ]
+      }
+    },
+    {
+      "repository": "CanDoItAll.FileTools",
+      "state": {
+        "branch": {
+          "exit": 0,
+          "output": "",
+          "error": ""
+        },
+        "head": {
+          "exit": 0,
+          "output": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+          "error": ""
+        },
+        "tree": {
+          "exit": 0,
+          "output": "6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d",
+          "error": ""
+        },
+        "status": {
+          "exit": 0,
+          "output": "",
+          "error": ""
+        },
+        "index": {
+          "exit": 0,
+          "output": "",
+          "error": ""
+        }
+      }
+    }
+  ],
+  "fileToolsRemoteObservation": "SSH authentication unavailable; local recorded identity and cleanliness preserved. No FileTools change authorized."
+}

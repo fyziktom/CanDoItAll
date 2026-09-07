@@ -1,0 +1,16 @@
+{
+  "expectedScenarios": 31,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "source": "Historical 28-scenario real Web harness, retained unchanged at predecessor; this follow-up adds exact Overview/Governance context text, query/fragment preservation, and nested team cancellation.",
+  "scriptSha256": "82ae0e3d54c9c62972a72d7d7f1dbc531ba85d9a33245121f84b8a9545da02d1",
+  "newScenarios": [
+    "GovernanceContextName",
+    "DefaultsSurvivesQueryAndFragment",
+    "TeamOwnedIconPickerCanceled"
+  ],
+  "port": 5275,
+  "controlPort": 17305
+}

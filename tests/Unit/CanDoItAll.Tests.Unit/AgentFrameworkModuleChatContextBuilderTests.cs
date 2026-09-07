@@ -6,6 +6,15 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentFrameworkModuleChatContextBuilderTests
 {
+
+    [Theory]
+    [InlineData(AgentFrameworkAgentsChatView.Overview, "Agents \u00b7 Overview")]
+    [InlineData(AgentFrameworkAgentsChatView.Governance, "Agents \u00b7 Governance")]
+    public void Agents_display_name_uses_the_exact_middle_dot(AgentFrameworkAgentsChatView view, string expected) {
+        var surface = AgentFrameworkAgentsChatContextBuilder.Build(view, null, null, 0, 0, 0, 0, 0, 0);
+        Assert.Equal(expected, surface.DisplayName);
+    }
+
     [Fact]
     public void Unknown_bound_count_is_omitted_without_erasing_known_overview_facts() {
         var surface = AgentFrameworkAgentsChatContextBuilder.Build(

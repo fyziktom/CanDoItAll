@@ -1,0 +1,7 @@
+{
+  "reason": "Shared DialogService cancellation registration now inserts a dialog before registering cancellation, preventing already-canceled-token orphans. This changes shared cancellation/notification behavior for all consuming components.",
+  "expectedDiscoveryRows": 10199,
+  "expectedRuntimeCases": 10254,
+  "basis": "Predecessor fresh stable inventory 10181 rows/10236 runtime cases plus the exact 18 newly added primary cases; deferred data expansion remains 55.",
+  "notReason": "The bundle merely reaching a phase boundary is not a broad-gate reason."
+}

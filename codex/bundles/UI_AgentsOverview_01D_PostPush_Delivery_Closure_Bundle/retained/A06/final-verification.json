@@ -1,0 +1,25 @@
+{
+  "mode": "proposed",
+  "tree": null,
+  "results": [
+    {
+      "bundle": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle",
+      "entries": 1192,
+      "links": 103,
+      "errors": []
+    },
+    {
+      "bundle": "codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle",
+      "entries": 33,
+      "links": 24,
+      "errors": []
+    },
+    {
+      "bundle": "codex/bundles/UI_AgentsOverview_01D_PostPush_Delivery_Closure_Bundle",
+      "entries": 366,
+      "links": 76,
+      "errors": []
+    }
+  ],
+  "passed": true
+}

@@ -17,6 +17,87 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public enum OverviewDialogCase { Consumer, Provider, Model }
 
 public sealed class AgentsOverviewEffectLifecycleTests {
+
+    public enum DelayedReadOutcome { Success, Failure, Canceled }
+
+    [Theory]
+    [InlineData(OverviewDialogCase.Consumer, DelayedReadOutcome.Success)]
+    [InlineData(OverviewDialogCase.Consumer, DelayedReadOutcome.Failure)]
+    [InlineData(OverviewDialogCase.Consumer, DelayedReadOutcome.Canceled)]
+    [InlineData(OverviewDialogCase.Provider, DelayedReadOutcome.Success)]
+    [InlineData(OverviewDialogCase.Provider, DelayedReadOutcome.Failure)]
+    [InlineData(OverviewDialogCase.Provider, DelayedReadOutcome.Canceled)]
+    [InlineData(OverviewDialogCase.Model, DelayedReadOutcome.Success)]
+    [InlineData(OverviewDialogCase.Model, DelayedReadOutcome.Failure)]
+    [InlineData(OverviewDialogCase.Model, DelayedReadOutcome.Canceled)]
+    public async Task Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(OverviewDialogCase kind, DelayedReadOutcome outcome) {
+        await using var fixture = await OverviewPageFixture.CreateAsync();
+        var release = new TaskCompletionSource();
+        var newer = new TaskCompletionSource<ProviderUsageSourceResult>();
+        var registered = new TaskCompletionSource();
+        var callbacks = 0;
+        fixture.Agents.Read = async token => {
+            await release.Task;
+            try {
+                using var registration = token.Register(() => callbacks++);
+                registered.SetResult();
+            } catch (Exception error) {
+                registered.SetException(error);
+                throw;
+            }
+            return outcome switch {
+                DelayedReadOutcome.Failure => throw new IOException(OverviewPageFixture.PrivateFailure),
+                DelayedReadOutcome.Canceled => throw new OperationCanceledException(token),
+                _ => fixture.Agents.Result("Old result")
+            };
+        };
+        fixture.Chats.Read = _ => newer.Task;
+        var cut = Render(fixture, kind, ProviderUsageWorkloadSelection.Agents);
+        cut.WaitForAssertion(() => Assert.Equal(1, fixture.Agents.Reads));
+        var oldToken = fixture.Agents.LastToken;
+        cut.Render(p => p.Add(c => c.Type, ComponentType(kind)).Add(c => c.Parameters, DynamicParameters(ProviderUsageWorkloadSelection.SimpleChats)));
+        cut.WaitForAssertion(() => Assert.Equal(1, fixture.Chats.Reads));
+        Assert.True(oldToken.IsCancellationRequested);
+        await cut.InvokeAsync(() => release.SetResult());
+        await registered.Task;
+        Assert.Equal(1, callbacks);
+        Assert.Empty(cut.FindComponents<CdaChart>());
+        Assert.Empty(cut.FindAll("[data-testid='" + ContentId(kind) + "']"));
+        Assert.DoesNotContain(OverviewPageFixture.PrivateFailure, cut.Markup);
+        await cut.InvokeAsync(() => newer.SetResult(fixture.Chats.Result("Current result")));
+        cut.WaitForElement("[data-testid='" + ContentId(kind) + "']");
+        Assert.Throws<ObjectDisposedException>(() => oldToken.WaitHandle);
+        Assert.Empty(fixture.Harness.Context.Services.GetRequiredService<NotificationService>().Messages);
+    }
+
+    [Fact]
+    public async Task Closing_team_editor_cancels_its_icon_picker_and_preserves_unrelated_dialog() {
+        await using var fixture = await OverviewPageFixture.CreateAsync();
+        var host = fixture.Harness.Context.Render<DialogHost>();
+        var dialogs = fixture.Harness.Context.Services.GetRequiredService<DialogService>();
+        using var lease = dialogs.PreserveDialogsOnSamePageNavigation();
+        var unrelatedTask = dialogs.OpenAsync("Independent", _ => builder => builder.AddContent(0, "Unrelated work"));
+        var unrelated = Assert.Single(dialogs.Dialogs);
+        var editorTask = dialogs.OpenAsync<AgentTeamDetailsDialog>("Team");
+        host.WaitForElement("[data-testid='agents-team-choose-icon']");
+        var editor = dialogs.Dialogs.Single(dialog => dialog.ComponentType == typeof(AgentTeamDetailsDialog));
+        var pickerTask = host.InvokeAsync(() => host.Find("[data-testid='agents-team-choose-icon']").ClickAsync());
+        host.WaitForAssertion(() => Assert.Equal(3, dialogs.Dialogs.Count));
+        try {
+            await host.InvokeAsync(() => editor.CloseAsync());
+            await editorTask;
+            host.WaitForAssertion(() => Assert.Same(unrelated, Assert.Single(dialogs.Dialogs)));
+            await pickerTask;
+            Assert.Contains("Unrelated work", host.Markup);
+        } finally {
+            foreach (var reference in dialogs.Dialogs.ToArray()) {
+                await host.InvokeAsync(() => reference.CloseAsync());
+            }
+            await pickerTask;
+            await unrelatedTask;
+        }
+    }
+
     [Theory]
     [InlineData(OverviewDialogCase.Consumer, false)]
     [InlineData(OverviewDialogCase.Consumer, true)]

@@ -1,0 +1,171 @@
+diff --git a/src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs b/src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs
+index 0beb61ad..6dd5df0a 100644
+--- a/src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs
++++ b/src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs
+@@ -8,13 +8,22 @@ public sealed class DialogService : IDisposable
+     private readonly NavigationManager navigationManager;
+     private readonly List<DialogReference> dialogs = [];
+     private bool disposed;
++    private int samePageNavigationOwners;
++    private string currentPage;
+ 
+     public DialogService(NavigationManager navigationManager)
+     {
+         this.navigationManager = navigationManager;
++        currentPage = new Uri(navigationManager.Uri).GetLeftPart(UriPartial.Path);
+         this.navigationManager.LocationChanged += HandleLocationChanged;
+     }
+ 
++    public IDisposable PreserveDialogsOnSamePageNavigation() {
++        ThrowIfDisposed();
++        samePageNavigationOwners++;
++        return new SamePageNavigationOwner(this);
++    }
++
+     public event Action? Changed;
+ 
+     public IReadOnlyList<DialogReference> Dialogs => dialogs;
+@@ -157,9 +166,26 @@ public sealed class DialogService : IDisposable
+ 
+     private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+     {
++        var nextPage = new Uri(args.Location).GetLeftPart(UriPartial.Path);
++        var samePage = string.Equals(currentPage, nextPage, StringComparison.Ordinal);
++        currentPage = nextPage;
++        if (samePageNavigationOwners > 0 && samePage) {
++            return;
++        }
+         CloseAll();
+     }
+ 
++    private sealed class SamePageNavigationOwner(DialogService service) : IDisposable {
++        private DialogService? owner = service;
++
++        public void Dispose() {
++            var current = Interlocked.Exchange(ref owner, null);
++            if (current is not null) {
++                current.samePageNavigationOwners--;
++            }
++        }
++    }
++
+     private void NotifyChanged()
+     {
+         Changed?.Invoke();
+diff --git a/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json b/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json
+index e6bfcd87..f46b25ed 100644
+--- a/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json
++++ b/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json
+@@ -1027,6 +1027,7 @@
+         "members": [
+           "ctor(Microsoft.AspNetCore.Components.NavigationManager navigationManager)",
+           "event System.Action Changed",
++          "method System.IDisposable PreserveDialogsOnSamePageNavigation()",
+           "method System.Threading.Tasks.Task CloseAsync(CanDoItAll.Components.BaseLib.DialogReference dialog, System.Object result = optional)",
+           "method System.Threading.Tasks.Task CloseAsync(System.Object result = optional)",
+           "method System.Threading.Tasks.Task\u003CSystem.Object\u003E OpenAsync(System.String title, Microsoft.AspNetCore.Components.RenderFragment\u003CCanDoItAll.Components.BaseLib.DialogReference\u003E childContent, CanDoItAll.Components.BaseLib.DialogOptions options = optional, System.Threading.CancellationToken cancellationToken = optional)",
+diff --git a/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt b/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt
+index d487e4dc..0e69ae78 100644
+--- a/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt
++++ b/tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt
+@@ -164,7 +164,7 @@ src/CanDoItAll.Components.BaseLib/Components/Modals/Dialog.razor.js | bytes=1908
+ src/CanDoItAll.Components.BaseLib/Components/Modals/DialogHost.razor | bytes=2300 | sha256=1e1ff9ef2fae1f43a3cb3ba5fd3c760cb249f0f40e807e5d8fe5ec39f0560fff
+ src/CanDoItAll.Components.BaseLib/Components/Modals/DialogInterop.cs | bytes=1466 | sha256=5b1f6a58ca675511f6076f50f1198485df231c8c040c46ecef2ac565b68b3f96
+ src/CanDoItAll.Components.BaseLib/Components/Modals/DialogScaffold.razor | bytes=2783 | sha256=49e364295022ff0b0774f4e5851a47921a9788b51fb56beee50b2461091d2933
+-src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs | bytes=8421 | sha256=3739c8e6df8698da9b1490f1c401c82ce13b32039a34aad3c328584a432faf81
++src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs | bytes=9398 | sha256=732db7916ec82c577302f47fabf4f2192a83d80225ca67f06471c6d86577719f
+ src/CanDoItAll.Components.BaseLib/Components/Modals/InspectorDialogLayout.razor | bytes=1208 | sha256=5d05e737e3011a202767daaba5ae7087ae392f866cb408b171b9e2a98843a9be
+ src/CanDoItAll.Components.BaseLib/Components/Modals/PickerDialogShell.razor | bytes=1424 | sha256=1d0a932677c2482aaef72f436d752b267fc7657490761e6a02e06a0c4d84c981
+ src/CanDoItAll.Components.BaseLib/Components/Navigation/Compatibility/DashboardActions.razor | bytes=251 | sha256=84de962b6e062bc710b1eef7b04765556098ab57d4be7614217a3f75570057fd
+--- /dev/null
++++ b/tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs
+@@ -0,0 +1,89 @@
++using Microsoft.AspNetCore.Components;
++
++namespace CanDoItAll.Components.BaseLib.Tests;
++
++public sealed class DialogNavigationOwnershipTests {
++    [Fact]
++    public async Task Default_query_navigation_preserves_existing_close_behavior() {
++        var navigation = new TestNavigation();
++        using var service = new DialogService(navigation);
++        var result = service.OpenAsync("Default", _ => builder => builder.AddContent(0, "Content"));
++        navigation.NavigateTo("/agents?tab=providers");
++        Assert.Empty(service.Dialogs);
++        Assert.Null(await result);
++    }
++
++    [Theory]
++    [InlineData("/agents?tab=providers")]
++    [InlineData("/agents#details")]
++    public void Opted_in_same_page_navigation_preserves_dialog_identity(string location) {
++        var navigation = new TestNavigation();
++        using var service = new DialogService(navigation);
++        using var owner = service.PreserveDialogsOnSamePageNavigation();
++        _ = service.OpenAsync("Independent", _ => builder => builder.AddContent(0, "Content"));
++        var reference = Assert.Single(service.Dialogs);
++        navigation.NavigateTo(location);
++        Assert.Same(reference, Assert.Single(service.Dialogs));
++        Assert.False(reference.Result.IsCompleted);
++    }
++
++    [Fact]
++    public void Path_navigation_still_closes_dialogs_with_an_active_owner() {
++        var navigation = new TestNavigation();
++        using var service = new DialogService(navigation);
++        using var owner = service.PreserveDialogsOnSamePageNavigation();
++        _ = service.OpenAsync("Independent", _ => builder => builder.AddContent(0, "Content"));
++        navigation.NavigateTo("/projects");
++        Assert.Empty(service.Dialogs);
++    }
++
++    [Fact]
++    public void Last_owner_disposal_restores_default_behavior_and_is_idempotent() {
++        var navigation = new TestNavigation();
++        using var service = new DialogService(navigation);
++        var first = service.PreserveDialogsOnSamePageNavigation();
++        var second = service.PreserveDialogsOnSamePageNavigation();
++        _ = service.OpenAsync("Independent", _ => builder => builder.AddContent(0, "Content"));
++        first.Dispose();
++        first.Dispose();
++        navigation.NavigateTo("/agents?tab=providers");
++        Assert.Single(service.Dialogs);
++        second.Dispose();
++        navigation.NavigateTo("/agents?tab=overview");
++        Assert.Empty(service.Dialogs);
++    }
++
++    [Fact]
++    public async Task Owner_cancellation_closes_only_its_reference_during_same_page_navigation() {
++        var navigation = new TestNavigation();
++        using var service = new DialogService(navigation);
++        using var owner = service.PreserveDialogsOnSamePageNavigation();
++        using var cancellation = new CancellationTokenSource();
++        _ = service.OpenAsync("Independent", _ => builder => builder.AddContent(0, "Content"));
++        var independent = Assert.Single(service.Dialogs);
++        var pending = service.OpenAsync("Owned", _ => builder => builder.AddContent(0, "Content"), cancellationToken: cancellation.Token);
++        cancellation.Cancel();
++        navigation.NavigateTo("/agents?usageScope=simple-chats");
++        Assert.Same(independent, Assert.Single(service.Dialogs));
++        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
++    }
++
++    [Fact]
++    public void Disposed_service_rejects_new_navigation_owners() {
++        var service = new DialogService(new TestNavigation());
++        using var owner = service.PreserveDialogsOnSamePageNavigation();
++        service.Dispose();
++        Assert.Throws<ObjectDisposedException>(() => service.PreserveDialogsOnSamePageNavigation());
++    }
++
++    private sealed class TestNavigation : NavigationManager {
++        public TestNavigation() {
++            Initialize("http://localhost/", "http://localhost/agents");
++        }
++
++        protected override void NavigateToCore(string uri, bool forceLoad) {
++            Uri = ToAbsoluteUri(uri).ToString();
++            NotifyLocationChanged(false);
++        }
++    }
++}

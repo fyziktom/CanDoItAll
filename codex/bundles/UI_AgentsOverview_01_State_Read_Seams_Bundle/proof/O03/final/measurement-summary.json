@@ -1,0 +1,3439 @@
+{
+  "utc": "2026-09-07T14:59:17.315564+00:00",
+  "scope": "Corrected pre-owner baseline and final extracted-owner series only. Original pre-move series and failed calibrations/browser attempts are separately retained, never relabeled.",
+  "cold": {
+    "pre-fullapp": {
+      "n": 3,
+      "minimumMs": 67465.97,
+      "maximumMs": 87597.5806,
+      "rangeMs": 20131.6106,
+      "medianMs": 69924.55
+    },
+    "post-fullapp": {
+      "n": 3,
+      "minimumMs": 67142.5217,
+      "maximumMs": 118188.7103,
+      "rangeMs": 51046.18860000001,
+      "medianMs": 68057.6485
+    },
+    "parity": {
+      "n": 3,
+      "minimumMs": 19421.3961,
+      "maximumMs": 24268.8953,
+      "rangeMs": 4847.499199999998,
+      "medianMs": 19451.8301
+    },
+    "fast": {
+      "n": 3,
+      "minimumMs": 19192.7317,
+      "maximumMs": 23761.4678,
+      "rangeMs": 4568.736099999998,
+      "medianMs": 19272.3397
+    }
+  },
+  "byCategory": [
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 331.6756,
+        "maximumMs": 10666.3725,
+        "rangeMs": 10334.696899999999,
+        "medianMs": 410.4915
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2332.8134,
+        "maximumMs": 12866.1838,
+        "rangeMs": 10533.3704,
+        "medianMs": 2843.589
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 270.4191,
+        "maximumMs": 463.8575,
+        "rangeMs": 193.4384,
+        "medianMs": 294.2507
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2367.4911,
+        "maximumMs": 2780.5214,
+        "rangeMs": 413.0302999999999,
+        "medianMs": 2543.515
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 4656.9798,
+        "maximumMs": 7242.5582,
+        "rangeMs": 2585.5784000000003,
+        "medianMs": 5237.6082
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 6606.7346,
+        "maximumMs": 9192.2733,
+        "rangeMs": 2585.538700000001,
+        "medianMs": 7186.6183
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 343.8201,
+        "maximumMs": 2419.6436,
+        "rangeMs": 2075.8235,
+        "medianMs": 404.3792
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2544.3158,
+        "maximumMs": 4516.4341,
+        "rangeMs": 1972.1183000000005,
+        "medianMs": 2660.5546
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 214.5931,
+        "maximumMs": 407.9753,
+        "rangeMs": 193.3822,
+        "medianMs": 291.4119
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2454.5634,
+        "maximumMs": 2925.1637,
+        "rangeMs": 470.60030000000006,
+        "medianMs": 2724.3382
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 4910.7827,
+        "maximumMs": 17813.1363,
+        "rangeMs": 12902.353599999999,
+        "medianMs": 5206.3082
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 6860.4681,
+        "maximumMs": 19763.1207,
+        "rangeMs": 12902.6526,
+        "medianMs": 7155.5074
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 269.2468,
+        "maximumMs": 4007.1379,
+        "rangeMs": 3737.8911000000003,
+        "medianMs": 579.1669
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2363.3153,
+        "maximumMs": 6373.4831,
+        "rangeMs": 4010.1678,
+        "medianMs": 2817.7481
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 99.4004,
+        "maximumMs": 223.9889,
+        "rangeMs": 124.5885,
+        "medianMs": 152.5478
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2187.0896,
+        "maximumMs": 2510.7648,
+        "rangeMs": 323.67520000000013,
+        "medianMs": 2311.5236
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 4432.3056,
+        "maximumMs": 5895.3941,
+        "rangeMs": 1463.0885000000007,
+        "medianMs": 5018.2323
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 6382.8451,
+        "maximumMs": 7844.9985,
+        "rangeMs": 1462.1534000000001,
+        "medianMs": 6969.2058
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 267.6982,
+        "maximumMs": 2473.6792,
+        "rangeMs": 2205.981,
+        "medianMs": 492.7245
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2351.3124,
+        "maximumMs": 4775.0739,
+        "rangeMs": 2423.7615000000005,
+        "medianMs": 2792.2047
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 87.6832,
+        "maximumMs": 241.1547,
+        "rangeMs": 153.4715,
+        "medianMs": 152.4061
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2127.414,
+        "maximumMs": 2589.3601,
+        "rangeMs": 461.94609999999966,
+        "medianMs": 2386.2303
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 4483.245,
+        "maximumMs": 7005.4197,
+        "rangeMs": 2522.1747000000005,
+        "medianMs": 4682.7554
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 6433.4055,
+        "maximumMs": 8971.6516,
+        "rangeMs": 2538.2460999999994,
+        "medianMs": 6633.3188
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 198.9987,
+        "maximumMs": 2036.0776,
+        "rangeMs": 1837.0789,
+        "medianMs": 270.016
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2166.12,
+        "maximumMs": 4008.7916,
+        "rangeMs": 1842.6716000000001,
+        "medianMs": 2235.3093
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 79.6648,
+        "maximumMs": 264.3403,
+        "rangeMs": 184.6755,
+        "medianMs": 128.2883
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2033.3635,
+        "maximumMs": 2220.0901,
+        "rangeMs": 186.72659999999996,
+        "medianMs": 2093.4471
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 560.7056,
+        "maximumMs": 1073.7218,
+        "rangeMs": 513.0162,
+        "medianMs": 712.0081
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2511.4332,
+        "maximumMs": 3006.2356,
+        "rangeMs": 494.80240000000003,
+        "medianMs": 2643.7414
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 259.6997,
+        "maximumMs": 1148.6969,
+        "rangeMs": 888.9971999999999,
+        "medianMs": 286.0015
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2209.1463,
+        "maximumMs": 3115.0134,
+        "rangeMs": 905.8670999999999,
+        "medianMs": 2251.8219
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 83.106,
+        "maximumMs": 159.923,
+        "rangeMs": 76.81700000000001,
+        "medianMs": 144.5818
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2037.4247,
+        "maximumMs": 2134.928,
+        "rangeMs": 97.50329999999985,
+        "medianMs": 2095.4141
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 573.1835,
+        "maximumMs": 888.5179,
+        "rangeMs": 315.3344000000001,
+        "medianMs": 699.1076
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2488.5441,
+        "maximumMs": 2821.0257,
+        "rangeMs": 332.48160000000007,
+        "medianMs": 2648.3645
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 265.8339,
+        "maximumMs": 1849.1202,
+        "rangeMs": 1583.2863,
+        "medianMs": 278.3476
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2215.7529,
+        "maximumMs": 3827.762,
+        "rangeMs": 1612.0091000000002,
+        "medianMs": 2240.4329
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 82.0151,
+        "maximumMs": 223.2954,
+        "rangeMs": 141.2803,
+        "medianMs": 144.7017
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2049.1234,
+        "maximumMs": 2173.0812,
+        "rangeMs": 123.95780000000013,
+        "medianMs": 2096.7413
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 524.6199,
+        "maximumMs": 1090.8586,
+        "rangeMs": 566.2387,
+        "medianMs": 576.2052
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2443.7281,
+        "maximumMs": 3025.2603,
+        "rangeMs": 581.5322000000001,
+        "medianMs": 2520.2252
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "category": "Razor",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 197.1097,
+        "maximumMs": 968.919,
+        "rangeMs": 771.8093,
+        "medianMs": 278.294
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2164.1118,
+        "maximumMs": 2920.3676,
+        "rangeMs": 756.2557999999999,
+        "medianMs": 2240.6512
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "category": "C#",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 77.5833,
+        "maximumMs": 197.3406,
+        "rangeMs": 119.7573,
+        "medianMs": 145.0812
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2043.6765,
+        "maximumMs": 2163.4962,
+        "rangeMs": 119.81970000000001,
+        "medianMs": 2122.9169
+      },
+      "classifications": {
+        "browser-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "category": "CSS",
+      "observations": 9,
+      "failures": 0,
+      "firstVisible": {
+        "n": 9,
+        "minimumMs": 553.6828,
+        "maximumMs": 768.5301,
+        "rangeMs": 214.8472999999999,
+        "medianMs": 626.6374
+      },
+      "settledVisible": {
+        "n": 9,
+        "minimumMs": 2487.7565,
+        "maximumMs": 2718.3656,
+        "rangeMs": 230.60910000000013,
+        "medianMs": 2565.2678
+      },
+      "classifications": {
+        "hot-reload": 9
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    }
+  ],
+  "byEdit": [
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 1541.2087,
+        "maximumMs": 10666.3725,
+        "rangeMs": 9125.1638,
+        "medianMs": 1810.5879
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 3824.559,
+        "maximumMs": 12866.1838,
+        "rangeMs": 9041.624800000001,
+        "medianMs": 4142.6667
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 349.6419,
+        "maximumMs": 410.4915,
+        "rangeMs": 60.84959999999995,
+        "medianMs": 350.9482
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2332.8134,
+        "maximumMs": 2843.589,
+        "rangeMs": 510.77559999999994,
+        "medianMs": 2533.4025
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 331.6756,
+        "maximumMs": 852.845,
+        "rangeMs": 521.1694,
+        "medianMs": 400.9001
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2501.5049,
+        "maximumMs": 2936.2534,
+        "rangeMs": 434.74850000000015,
+        "medianMs": 2530.8126
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 294.2507,
+        "maximumMs": 463.8575,
+        "rangeMs": 169.60680000000002,
+        "medianMs": 349.9137
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2477.5974,
+        "maximumMs": 2780.5214,
+        "rangeMs": 302.924,
+        "medianMs": 2665.1798
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 285.08,
+        "maximumMs": 352.5556,
+        "rangeMs": 67.47560000000004,
+        "medianMs": 287.5997
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2367.4911,
+        "maximumMs": 2651.5449,
+        "rangeMs": 284.0537999999997,
+        "medianMs": 2480.2165
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 270.4191,
+        "maximumMs": 347.3746,
+        "rangeMs": 76.95549999999997,
+        "medianMs": 292.3151
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2469.713,
+        "maximumMs": 2702.1814,
+        "rangeMs": 232.46839999999975,
+        "medianMs": 2543.515
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 5131.4414,
+        "maximumMs": 6566.0938,
+        "rangeMs": 1434.6524,
+        "medianMs": 5237.6082
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 7064.2487,
+        "maximumMs": 8513.0889,
+        "rangeMs": 1448.8402000000006,
+        "medianMs": 7186.6183
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4805.6822,
+        "maximumMs": 7242.5582,
+        "rangeMs": 2436.876,
+        "medianMs": 5569.2068
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6755.2795,
+        "maximumMs": 9192.2733,
+        "rangeMs": 2436.993800000001,
+        "medianMs": 7501.2059
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "forward",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4656.9798,
+        "maximumMs": 5441.9272,
+        "rangeMs": 784.9474,
+        "medianMs": 4790.7747
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6606.7346,
+        "maximumMs": 7374.9499,
+        "rangeMs": 768.2152999999998,
+        "medianMs": 6722.6975
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 1242.4335,
+        "maximumMs": 2419.6436,
+        "rangeMs": 1177.2100999999998,
+        "medianMs": 1508.5134
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 3448.5201,
+        "maximumMs": 4516.4341,
+        "rangeMs": 1067.9140000000002,
+        "medianMs": 3838.4559
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 343.8201,
+        "maximumMs": 404.3792,
+        "rangeMs": 60.5591,
+        "medianMs": 360.4596
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2559.9814,
+        "maximumMs": 2660.5546,
+        "rangeMs": 100.57319999999982,
+        "medianMs": 2587.8776
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 344.9213,
+        "maximumMs": 1054.4045,
+        "rangeMs": 709.4832000000001,
+        "medianMs": 349.4685
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2544.3158,
+        "maximumMs": 3225.9343,
+        "rangeMs": 681.6185,
+        "medianMs": 2548.2625
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 214.5931,
+        "maximumMs": 345.2926,
+        "rangeMs": 130.6995,
+        "medianMs": 333.5318
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2663.8227,
+        "maximumMs": 2767.107,
+        "rangeMs": 103.2842999999998,
+        "medianMs": 2744.7297
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 223.5838,
+        "maximumMs": 407.9753,
+        "rangeMs": 184.3915,
+        "medianMs": 291.4119
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2724.3382,
+        "maximumMs": 2925.1637,
+        "rangeMs": 200.82549999999992,
+        "medianMs": 2807.9658
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 271.4313,
+        "maximumMs": 356.923,
+        "rangeMs": 85.49169999999998,
+        "medianMs": 273.0901
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2454.5634,
+        "maximumMs": 2655.659,
+        "rangeMs": 201.0956000000001,
+        "medianMs": 2589.514
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4910.7827,
+        "maximumMs": 17813.1363,
+        "rangeMs": 12902.353599999999,
+        "medianMs": 5206.3082
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6860.4681,
+        "maximumMs": 19763.1207,
+        "rangeMs": 12902.6526,
+        "medianMs": 7155.5074
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4979.7138,
+        "maximumMs": 5657.8926,
+        "rangeMs": 678.1787999999997,
+        "medianMs": 5363.3154
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6913.9558,
+        "maximumMs": 7591.4001,
+        "rangeMs": 677.4443000000001,
+        "medianMs": 7297.4823
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "pre-fullapp",
+      "direction": "reverse",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 5102.621,
+        "maximumMs": 5807.9304,
+        "rangeMs": 705.3094000000001,
+        "medianMs": 5116.5809
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 7053.1764,
+        "maximumMs": 7740.3411,
+        "rangeMs": 687.1646999999994,
+        "medianMs": 7065.8673
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 1469.0717,
+        "maximumMs": 4007.1379,
+        "rangeMs": 2538.0662,
+        "medianMs": 2099.1788
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 3563.1629,
+        "maximumMs": 6373.4831,
+        "rangeMs": 2810.3202000000006,
+        "medianMs": 4199.1549
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 269.2468,
+        "maximumMs": 579.1669,
+        "rangeMs": 309.92010000000005,
+        "medianMs": 299.4765
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2452.7145,
+        "maximumMs": 2994.5304,
+        "rangeMs": 541.8159,
+        "medianMs": 2714.4843
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 273.1209,
+        "maximumMs": 738.6893,
+        "rangeMs": 465.5684,
+        "medianMs": 280.7048
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2363.3153,
+        "maximumMs": 2817.7481,
+        "rangeMs": 454.4327999999996,
+        "medianMs": 2489.0936
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 104.029,
+        "maximumMs": 223.9889,
+        "rangeMs": 119.9599,
+        "medianMs": 214.5697
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2307.6264,
+        "maximumMs": 2510.7648,
+        "rangeMs": 203.13839999999982,
+        "medianMs": 2311.5236
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 146.5645,
+        "maximumMs": 158.8096,
+        "rangeMs": 12.24509999999998,
+        "medianMs": 157.9178
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2345.9635,
+        "maximumMs": 2359.0033,
+        "rangeMs": 13.039800000000014,
+        "medianMs": 2356.2108
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 99.4004,
+        "maximumMs": 152.5478,
+        "rangeMs": 53.14739999999999,
+        "medianMs": 103.812
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2187.0896,
+        "maximumMs": 2299.0009,
+        "rangeMs": 111.91130000000021,
+        "medianMs": 2269.5796
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4443.277,
+        "maximumMs": 5895.3941,
+        "rangeMs": 1452.1171000000004,
+        "medianMs": 4662.218
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6393.3031,
+        "maximumMs": 7844.9985,
+        "rangeMs": 1451.6953999999996,
+        "medianMs": 6595.5571
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4582.7637,
+        "maximumMs": 5049.488,
+        "rangeMs": 466.72429999999986,
+        "medianMs": 5018.2323
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6500.9679,
+        "maximumMs": 6998.2906,
+        "rangeMs": 497.3227000000006,
+        "medianMs": 6969.2058
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "forward",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4432.3056,
+        "maximumMs": 5764.0175,
+        "rangeMs": 1331.7119000000002,
+        "medianMs": 5313.5114
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6382.8451,
+        "maximumMs": 7713.147,
+        "rangeMs": 1330.3019000000004,
+        "medianMs": 7263.7011
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 1237.6088,
+        "maximumMs": 2473.6792,
+        "rangeMs": 1236.0704,
+        "medianMs": 1721.0523
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 3453.8809,
+        "maximumMs": 4775.0739,
+        "rangeMs": 1321.1930000000002,
+        "medianMs": 4020.5191
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 288.2402,
+        "maximumMs": 492.7245,
+        "rangeMs": 204.48429999999996,
+        "medianMs": 350.609
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2703.6223,
+        "maximumMs": 2792.2047,
+        "rangeMs": 88.58239999999978,
+        "medianMs": 2775.4103
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 267.6982,
+        "maximumMs": 737.877,
+        "rangeMs": 470.17879999999997,
+        "medianMs": 281.2038
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2351.3124,
+        "maximumMs": 3047.0985,
+        "rangeMs": 695.7861000000003,
+        "medianMs": 2463.3291
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 106.9726,
+        "maximumMs": 153.3674,
+        "rangeMs": 46.394800000000004,
+        "medianMs": 152.3177
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2127.414,
+        "maximumMs": 2242.1587,
+        "rangeMs": 114.74469999999974,
+        "medianMs": 2197.0884
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 87.6832,
+        "maximumMs": 159.4062,
+        "rangeMs": 71.72300000000001,
+        "medianMs": 101.1446
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2386.2303,
+        "maximumMs": 2534.1103,
+        "rangeMs": 147.87999999999965,
+        "medianMs": 2459.8036
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 152.4061,
+        "maximumMs": 241.1547,
+        "rangeMs": 88.74859999999998,
+        "medianMs": 156.3701
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2351.9141,
+        "maximumMs": 2589.3601,
+        "rangeMs": 237.4459999999999,
+        "medianMs": 2427.2612
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4483.245,
+        "maximumMs": 7005.4197,
+        "rangeMs": 2522.1747000000005,
+        "medianMs": 4585.6261
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6433.4055,
+        "maximumMs": 8971.6516,
+        "rangeMs": 2538.2460999999994,
+        "medianMs": 6518.4083
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4511.2361,
+        "maximumMs": 4977.0001,
+        "rangeMs": 465.7640000000001,
+        "medianMs": 4682.7554
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6460.5015,
+        "maximumMs": 6927.9453,
+        "rangeMs": 467.4438,
+        "medianMs": 6633.3188
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "post-fullapp",
+      "direction": "reverse",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 4605.8522,
+        "maximumMs": 4982.4125,
+        "rangeMs": 376.5603000000001,
+        "medianMs": 4865.2147
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 6539.1113,
+        "maximumMs": 6915.7242,
+        "rangeMs": 376.6129000000001,
+        "medianMs": 6798.1979
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 654.176,
+        "maximumMs": 2036.0776,
+        "rangeMs": 1381.9016000000001,
+        "medianMs": 1025.5412
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2619.8143,
+        "maximumMs": 4008.7916,
+        "rangeMs": 1388.9773,
+        "medianMs": 2976.8795
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 214.5468,
+        "maximumMs": 282.1341,
+        "rangeMs": 67.5873,
+        "medianMs": 268.266
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2179.8505,
+        "maximumMs": 2247.9132,
+        "rangeMs": 68.06269999999995,
+        "medianMs": 2216.028
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 198.9987,
+        "maximumMs": 270.016,
+        "rangeMs": 71.0173,
+        "medianMs": 261.2479
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2166.12,
+        "maximumMs": 2235.3093,
+        "rangeMs": 69.1893,
+        "medianMs": 2226.6881
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 125.8991,
+        "maximumMs": 264.3403,
+        "rangeMs": 138.4412,
+        "medianMs": 145.7468
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2074.7199,
+        "maximumMs": 2220.0901,
+        "rangeMs": 145.37019999999984,
+        "medianMs": 2095.4818
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 79.6648,
+        "maximumMs": 127.3021,
+        "rangeMs": 47.637299999999996,
+        "medianMs": 82.7382
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2033.3635,
+        "maximumMs": 2093.4471,
+        "rangeMs": 60.08359999999993,
+        "medianMs": 2047.8225
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 128.2883,
+        "maximumMs": 137.8261,
+        "rangeMs": 9.537800000000004,
+        "medianMs": 133.1604
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2078.522,
+        "maximumMs": 2102.3737,
+        "rangeMs": 23.851700000000164,
+        "medianMs": 2100.3306
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 583.7772,
+        "maximumMs": 1073.7218,
+        "rangeMs": 489.94460000000004,
+        "medianMs": 738.831
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2516.7836,
+        "maximumMs": 3006.2356,
+        "rangeMs": 489.45199999999977,
+        "medianMs": 2688.6744
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 712.0081,
+        "maximumMs": 715.4251,
+        "rangeMs": 3.41700000000003,
+        "medianMs": 715.0424
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2643.7414,
+        "maximumMs": 2648.9143,
+        "rangeMs": 5.172900000000027,
+        "medianMs": 2647.9488
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "forward",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 560.7056,
+        "maximumMs": 674.8354,
+        "rangeMs": 114.12980000000005,
+        "medianMs": 599.2986
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2511.4332,
+        "maximumMs": 2624.5675,
+        "rangeMs": 113.13430000000017,
+        "medianMs": 2532.8134
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 667.7864,
+        "maximumMs": 1148.6969,
+        "rangeMs": 480.91049999999996,
+        "medianMs": 945.1773
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2648.3458,
+        "maximumMs": 3115.0134,
+        "rangeMs": 466.66759999999977,
+        "medianMs": 2945.6919
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 260.7955,
+        "maximumMs": 277.8015,
+        "rangeMs": 17.005999999999972,
+        "medianMs": 266.6175
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2209.1463,
+        "maximumMs": 2233.5331,
+        "rangeMs": 24.38680000000022,
+        "medianMs": 2228.6789
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 259.6997,
+        "maximumMs": 349.6398,
+        "rangeMs": 89.94009999999997,
+        "medianMs": 286.0015
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2242.549,
+        "maximumMs": 2288.3006,
+        "rangeMs": 45.75160000000005,
+        "medianMs": 2251.8219
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 87.5194,
+        "maximumMs": 150.2951,
+        "rangeMs": 62.775699999999986,
+        "medianMs": 144.9545
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2037.4247,
+        "maximumMs": 2134.928,
+        "rangeMs": 97.50329999999985,
+        "medianMs": 2124.9575
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 83.106,
+        "maximumMs": 147.3955,
+        "rangeMs": 64.2895,
+        "medianMs": 128.678
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2049.715,
+        "maximumMs": 2095.4141,
+        "rangeMs": 45.69909999999982,
+        "medianMs": 2060.6351
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 137.2487,
+        "maximumMs": 159.923,
+        "rangeMs": 22.674299999999988,
+        "medianMs": 144.5818
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2069.7296,
+        "maximumMs": 2132.4712,
+        "rangeMs": 62.741599999999835,
+        "medianMs": 2124.2478
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 634.8492,
+        "maximumMs": 888.5179,
+        "rangeMs": 253.66870000000006,
+        "medianMs": 699.1076
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2585.0058,
+        "maximumMs": 2821.0257,
+        "rangeMs": 236.01990000000023,
+        "medianMs": 2648.3645
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 709.419,
+        "maximumMs": 818.2962,
+        "rangeMs": 108.87720000000002,
+        "medianMs": 773.437
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2659.2382,
+        "maximumMs": 2767.0785,
+        "rangeMs": 107.8403000000003,
+        "medianMs": 2688.7083
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "parity",
+      "direction": "reverse",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 573.1835,
+        "maximumMs": 589.3383,
+        "rangeMs": 16.154800000000023,
+        "medianMs": 584.0364
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2488.5441,
+        "maximumMs": 2540.003,
+        "rangeMs": 51.458900000000085,
+        "medianMs": 2517.571
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 688.3628,
+        "maximumMs": 1849.1202,
+        "rangeMs": 1160.7574,
+        "medianMs": 1184.6252
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2653.967,
+        "maximumMs": 3827.762,
+        "rangeMs": 1173.795,
+        "medianMs": 3167.7601
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 269.0582,
+        "maximumMs": 285.0066,
+        "rangeMs": 15.948399999999992,
+        "medianMs": 273.9182
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2217.612,
+        "maximumMs": 2240.4329,
+        "rangeMs": 22.82089999999971,
+        "medianMs": 2234.2763
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 265.8339,
+        "maximumMs": 278.3476,
+        "rangeMs": 12.513699999999972,
+        "medianMs": 268.8951
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2215.7529,
+        "maximumMs": 2255.2411,
+        "rangeMs": 39.488200000000234,
+        "medianMs": 2217.3045
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 82.0151,
+        "maximumMs": 223.2954,
+        "rangeMs": 141.2803,
+        "medianMs": 84.0813
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2049.1234,
+        "maximumMs": 2173.0812,
+        "rangeMs": 123.95780000000013,
+        "medianMs": 2049.5421
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 144.7017,
+        "maximumMs": 153.9213,
+        "rangeMs": 9.219600000000014,
+        "medianMs": 148.2004
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2096.7413,
+        "maximumMs": 2109.3129,
+        "rangeMs": 12.571599999999762,
+        "medianMs": 2103.8936
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 86.8274,
+        "maximumMs": 151.1539,
+        "rangeMs": 64.3265,
+        "medianMs": 87.9946
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2052.5865,
+        "maximumMs": 2116.9002,
+        "rangeMs": 64.31370000000015,
+        "medianMs": 2072.5843
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 576.2052,
+        "maximumMs": 1090.8586,
+        "rangeMs": 514.6534,
+        "medianMs": 631.5994
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2509.6168,
+        "maximumMs": 3025.2603,
+        "rangeMs": 515.6435000000001,
+        "medianMs": 2581.399
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 524.6199,
+        "maximumMs": 569.5316,
+        "rangeMs": 44.911699999999996,
+        "medianMs": 528.2671
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2443.7281,
+        "maximumMs": 2520.2252,
+        "rangeMs": 76.49710000000005,
+        "medianMs": 2474.2738
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "forward",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 525.2134,
+        "maximumMs": 744.6468,
+        "rangeMs": 219.4334,
+        "medianMs": 637.6179
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2458.779,
+        "maximumMs": 2678.9019,
+        "rangeMs": 220.12289999999985,
+        "medianMs": 2588.0247
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "razor-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 585.2258,
+        "maximumMs": 968.919,
+        "rangeMs": 383.69319999999993,
+        "medianMs": 872.7949
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2547.9846,
+        "maximumMs": 2920.3676,
+        "rangeMs": 372.38300000000027,
+        "medianMs": 2839.8167
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "razor-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 213.7388,
+        "maximumMs": 273.6804,
+        "rangeMs": 59.94160000000002,
+        "medianMs": 271.8321
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2179.2632,
+        "maximumMs": 2240.6512,
+        "rangeMs": 61.38799999999992,
+        "medianMs": 2237.6448
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "razor-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 197.1097,
+        "maximumMs": 285.2963,
+        "rangeMs": 88.18659999999997,
+        "medianMs": 278.294
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2164.1118,
+        "maximumMs": 2260.0546,
+        "rangeMs": 95.9427999999998,
+        "medianMs": 2234.278
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "csharp-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 77.5833,
+        "maximumMs": 158.8165,
+        "rangeMs": 81.2332,
+        "medianMs": 134.0854
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2043.6765,
+        "maximumMs": 2126.2494,
+        "rangeMs": 82.57290000000012,
+        "medianMs": 2116.4922
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "csharp-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 139.8919,
+        "maximumMs": 159.5727,
+        "rangeMs": 19.680800000000005,
+        "medianMs": 146.1649
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2079.4398,
+        "maximumMs": 2126.1857,
+        "rangeMs": 46.74589999999989,
+        "medianMs": 2122.9169
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "csharp-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 85.1113,
+        "maximumMs": 197.3406,
+        "rangeMs": 112.2293,
+        "medianMs": 145.0812
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2051.0254,
+        "maximumMs": 2163.4962,
+        "rangeMs": 112.47080000000005,
+        "medianMs": 2133.2331
+      },
+      "classifications": {
+        "browser-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "css-1",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 594.6921,
+        "maximumMs": 660.539,
+        "rangeMs": 65.8469,
+        "medianMs": 632.9648
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2526.8741,
+        "maximumMs": 2593.6847,
+        "rangeMs": 66.8105999999998,
+        "medianMs": 2565.2678
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "css-2",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 553.6828,
+        "maximumMs": 626.6374,
+        "rangeMs": 72.95459999999991,
+        "medianMs": 568.6583
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2487.7565,
+        "maximumMs": 2576.1436,
+        "rangeMs": 88.38709999999992,
+        "medianMs": 2502.2236
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    },
+    {
+      "host": "fast",
+      "direction": "reverse",
+      "edit": "css-3",
+      "observations": 3,
+      "failures": 0,
+      "firstVisible": {
+        "n": 3,
+        "minimumMs": 578.5614,
+        "maximumMs": 768.5301,
+        "rangeMs": 189.9686999999999,
+        "medianMs": 645.5421
+      },
+      "settledVisible": {
+        "n": 3,
+        "minimumMs": 2512.2214,
+        "maximumMs": 2718.3656,
+        "rangeMs": 206.14420000000018,
+        "medianMs": 2580.2428
+      },
+      "classifications": {
+        "hot-reload": 3
+      },
+      "databaseConfirmations": 0,
+      "filterRestorations": 0
+    }
+  ],
+  "runs": [
+    {
+      "directory": ".mcp-state\\overview03-corrected\\measurements\\pre-fullapp-cold-2026-09-07T14-14-58-432Z",
+      "host": "pre-fullapp",
+      "phase": "cold",
+      "planSha256": "e5a34f3eeb764d58ad0643a282970dd3eea04a396c837bd4d9aeaf1add74fdf1",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:14:58.602Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 67048,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:14:58.612Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 61304,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:16:28.249Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 61304,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:16:28.252Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 67048,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03-corrected\\measurements\\pre-fullapp-cold-2026-09-07T14-16-31-325Z",
+      "host": "pre-fullapp",
+      "phase": "cold",
+      "planSha256": "e5a34f3eeb764d58ad0643a282970dd3eea04a396c837bd4d9aeaf1add74fdf1",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:16:31.487Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 67892,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:16:31.507Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 69624,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:17:43.667Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 69624,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:17:43.672Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 67892,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03-corrected\\measurements\\pre-fullapp-cold-2026-09-07T14-17-46-746Z",
+      "host": "pre-fullapp",
+      "phase": "cold",
+      "planSha256": "e5a34f3eeb764d58ad0643a282970dd3eea04a396c837bd4d9aeaf1add74fdf1",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:17:46.911Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 64180,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:17:46.920Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 45168,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:18:56.385Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 45168,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:18:56.387Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 64180,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03-corrected\\measurements\\pre-fullapp-warm-2026-09-07T14-18-59-459Z",
+      "host": "pre-fullapp",
+      "phase": "warm",
+      "planSha256": "e5a34f3eeb764d58ad0643a282970dd3eea04a396c837bd4d9aeaf1add74fdf1",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:18:59.606Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 59748,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:18:59.614Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 67032,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:24:53.656Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 67032,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:24:53.660Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 59748,
+          "code": 1
+        }
+      ],
+      "samples": 54
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\fast-cold-2026-09-07T14-54-32-462Z",
+      "host": "fast",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:54:32.627Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 68836,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\catalog-fast.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\wwwroot\\css\\catalog-fast.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:54:32.635Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 62016,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Fast"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:54:58.167Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 62016,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:54:58.170Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 68836,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\fast-cold-2026-09-07T14-55-01-237Z",
+      "host": "fast",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:55:01.399Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 61532,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\catalog-fast.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\wwwroot\\css\\catalog-fast.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:55:01.407Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 11964,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Fast"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:55:22.329Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 11964,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:55:22.332Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 61532,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\fast-cold-2026-09-07T14-55-25-396Z",
+      "host": "fast",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:55:25.564Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 40852,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\catalog-fast.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\wwwroot\\css\\catalog-fast.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:55:25.575Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 65604,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Fast"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:55:46.542Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 65604,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:55:46.545Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 40852,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\fast-warm-2026-09-07T14-55-49-625Z",
+      "host": "fast",
+      "phase": "warm",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:55:49.781Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 64696,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\catalog-fast.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\wwwroot\\css\\catalog-fast.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:55:49.789Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 59896,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Fast"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:58:41.233Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 59896,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:58:41.235Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 64696,
+          "code": 1
+        }
+      ],
+      "samples": 54
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\parity-cold-2026-09-07T14-50-17-101Z",
+      "host": "parity",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:50:17.264Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 67280,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:50:17.272Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 39372,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:50:43.456Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 39372,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:50:43.461Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 67280,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\parity-cold-2026-09-07T14-50-46-541Z",
+      "host": "parity",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:50:46.692Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 65724,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:50:46.701Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 18524,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:51:08.011Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 18524,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:51:08.016Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 65724,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\parity-cold-2026-09-07T14-51-11-089Z",
+      "host": "parity",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:51:11.245Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 66120,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:51:11.253Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 61464,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:51:32.471Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 61464,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:51:32.474Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 66120,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\parity-warm-2026-09-07T14-51-35-546Z",
+      "host": "parity",
+      "phase": "warm",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:51:35.698Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 33776,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:51:35.719Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 34644,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:54:29.395Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 34644,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:54:29.398Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 33776,
+          "code": 1
+        }
+      ],
+      "samples": 54
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\post-fullapp-cold-2026-09-07T14-40-18-345Z",
+      "host": "post-fullapp",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:40:18.514Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 43952,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:40:18.525Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 11436,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:42:19.041Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 11436,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:42:19.044Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 43952,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\post-fullapp-cold-2026-09-07T14-42-22-131Z",
+      "host": "post-fullapp",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:42:22.293Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 52548,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:42:22.304Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 64928,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:43:32.326Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 64928,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:43:32.330Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 52548,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\post-fullapp-cold-2026-09-07T14-43-35-402Z",
+      "host": "post-fullapp",
+      "phase": "cold",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:43:35.554Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 61800,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:43:35.572Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 56640,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:44:44.690Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 56640,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:44:44.695Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 61800,
+          "code": 1
+        }
+      ],
+      "samples": 0
+    },
+    {
+      "directory": ".mcp-state\\overview03\\final\\measurements\\post-fullapp-warm-2026-09-07T14-44-47-767Z",
+      "host": "post-fullapp",
+      "phase": "warm",
+      "planSha256": "285f8a327c29e4a4df85025acdb5efb57f2d5790ce4b4f1ef1230662a5f00671",
+      "ownedProcesses": [
+        {
+          "utc": "2026-09-07T14:44:47.924Z",
+          "kind": "owned-process-start",
+          "label": "tailwind",
+          "pid": 60996,
+          "command": "C:\\Program Files\\nodejs\\node.exe",
+          "argv": [
+            "C:\\repositories\\CanDoItAll\\Tailwind\\node_modules\\@tailwindcss\\cli\\dist\\index.mjs",
+            "-i",
+            "C:\\repositories\\CanDoItAll\\Tailwind\\input.css",
+            "-o",
+            "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css",
+            "--watch=always"
+          ]
+        },
+        {
+          "utc": "2026-09-07T14:44:47.932Z",
+          "kind": "owned-process-start",
+          "label": "dotnet-watch",
+          "pid": 42660,
+          "command": "dotnet",
+          "argv": [
+            "watch",
+            "--verbose",
+            "--non-interactive",
+            "--project",
+            "src/App/CanDoItAll.Web",
+            "--no-launch-profile",
+            "--property:CatalogAssetMode=Parity"
+          ]
+        }
+      ],
+      "exitReceipts": [
+        {
+          "utc": "2026-09-07T14:50:14.030Z",
+          "kind": "owned-process-exit",
+          "label": "dotnet-watch",
+          "pid": 42660,
+          "code": 1
+        },
+        {
+          "utc": "2026-09-07T14:50:14.033Z",
+          "kind": "owned-process-exit",
+          "label": "tailwind",
+          "pid": 60996,
+          "code": 1
+        }
+      ],
+      "samples": 54
+    }
+  ],
+  "totalWarm": 216,
+  "totalCold": 12,
+  "failures": 0,
+  "classificationCounts": {
+    "browser-reload": 144,
+    "hot-reload": 72
+  }
+}

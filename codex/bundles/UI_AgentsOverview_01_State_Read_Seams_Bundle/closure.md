@@ -11,3 +11,5 @@ The documentation gate still fails its unchanged 118 tracked historical log path
 Manual compatible-shape bundle/architecture gate: PASS with that explicit follow-up. Inputs, requirements, current ownership, negative/positive tests, producer/browser evidence, graph, measurements, status and final byte manifest agree. No provider/Capabilities redesign or production bookmarkability was added. No commit/push/history action occurred.
 
 After verifying O00/O01/O02/O03 and the root MANIFEST.sha256, the next authorized action is preparation only of CDA-UI-SEAMS-AGENT-GOVERNANCE-01 at codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle. No Governance production, tests, projects or assets may change during that preparation.
+
+Post-push delivery status is tracked separately in [the delivery follow-up](delivery-follow-up.md); historical execution claims above are unchanged.

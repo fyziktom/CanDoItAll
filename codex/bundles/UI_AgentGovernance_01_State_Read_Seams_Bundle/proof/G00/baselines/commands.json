@@ -1,0 +1,128 @@
+[
+  {
+    "name": "page-context-discovery",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--list-tests",
+      "--filter",
+      "FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access",
+      "/m:1"
+    ],
+    "expected": 4,
+    "exit": 0,
+    "startedUtc": "2026-09-07T23:13:46.858966+00:00",
+    "finishedUtc": "2026-09-07T23:13:48.245199+00:00",
+    "outputSha256": "0a99c82eb7d3a26ed6975819005cdb5b363e46b829bf8b2a77b55e944e74e51c",
+    "discovered": [
+      "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"agents\")",
+      "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"chat\")",
+      "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"capabilities\")",
+      "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"governance\")"
+    ],
+    "actual": 4,
+    "discoveryMatches": true
+  },
+  {
+    "name": "registered-workspace-discovery",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--list-tests",
+      "--filter",
+      "FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests",
+      "/m:1"
+    ],
+    "expected": 4,
+    "exit": 0,
+    "startedUtc": "2026-09-07T23:13:48.245199+00:00",
+    "finishedUtc": "2026-09-07T23:13:49.851692+00:00",
+    "outputSha256": "f500ce3b7517d2f3ea1d3808153b9f2a11f75646c831a36906ed8a7556c14fb7",
+    "discovered": [
+      "CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Real_registration_reads_overview_and_bound_resources",
+      "CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Registered_header_preserves_real_hr_and_overview_when_bound_read_fails",
+      "CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Registered_header_preserves_real_bound_count_when_agent_catalog_fails",
+      "CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Registered_usage_and_header_do_not_require_successful_overview"
+    ],
+    "actual": 4,
+    "discoveryMatches": true
+  },
+  {
+    "name": "page-context-baseline",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access",
+      "/m:1"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T23:13:49.852692+00:00",
+    "finishedUtc": "2026-09-07T23:14:09.063429+00:00",
+    "outputSha256": "b390fef37525a08a7d3f2719d0890ff7fc2a5aa0db39bee99f98431a7a2d8194"
+  },
+  {
+    "name": "registered-workspace-baseline",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests",
+      "/m:1"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T23:14:09.064414+00:00",
+    "finishedUtc": "2026-09-07T23:14:31.067085+00:00",
+    "outputSha256": "5787c402fe359a113a33782b9e16a8cf5bec5642c02625466b3bbb7c2bb3749e"
+  },
+  {
+    "name": "portability-scan",
+    "command": [
+      "python",
+      "tools/Validation/Portability/scan_portability.py",
+      "--repo-root",
+      ".",
+      "--output",
+      ".mcp-state/governance/g00-portability.json"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T23:14:31.068089+00:00",
+    "finishedUtc": "2026-09-07T23:15:32.200160+00:00",
+    "outputSha256": "eb18468fc0def4a4e4f715a99652ba2d8bc778804fb962b6e88cead6bab04b74"
+  },
+  {
+    "name": "portability-enforce",
+    "command": [
+      "python",
+      "tools/Validation/Portability/enforce_portability_baseline.py",
+      "--scan",
+      ".mcp-state/governance/g00-portability.json",
+      "--baseline",
+      "tools/Validation/Portability/portability-risk-baseline.json"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T23:15:32.200160+00:00",
+    "finishedUtc": "2026-09-07T23:15:32.708054+00:00",
+    "outputSha256": "7102e12df4564fdb33e506e4ee02115f771ad6643e3391c6eca20854e4391ad7"
+  }
+]

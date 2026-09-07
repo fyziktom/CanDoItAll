@@ -1,6 +1,6 @@
 # G00 — Current behavior and semantic RED
 
-Status: PLANNED, NOT EXECUTED. Prerequisite: future owner implementation authorization, current prerequisite manifests, source/remote/sibling rediscovery. No production repair or source movement in this child.
+Status: CLOSED. See proof/G00/closure.md and final compiled adjudication. New authorization and sealed Phase A closure are recorded under proof/G00 alongside fresh repository/source observations. No production repair or source movement in this child.
 
 Read the current panel/page, current-profile workspace forwarding, Core history reader and Models contracts. Reconfirm the preparation adjudication and existing partial guard. Freeze current DI, actual graph, source/asset hashes and test discovery. Inventory all current timeline/metrics consumers and public package policy. Preserve the inherited Overview prerequisite and sibling patch independently.
 

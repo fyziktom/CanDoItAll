@@ -1,0 +1,15 @@
+{
+  "observedUtc": "2026-09-07T22:10:09.046999+00:00",
+  "command": [
+    "dotnet-stack",
+    "report",
+    "--process-id",
+    "63336"
+  ],
+  "exit": 0,
+  "rawSha256": "b061b73ce7e0158d6c35f589914f0a6fc181b1e5ad4ec99ad59b80d3f4dccfa7",
+  "observation": "One read-only stack snapshot caught PhysicalFileSystemPathPolicy.DetectCaseSensitivity through DurableFileWriter and FileSandboxWorkspaceJsonStore persistence. It does not establish the cause of the extended duration or prove that every request is advancing.",
+  "interrupted": false,
+  "sourceChanged": false,
+  "heapValuesRead": false
+}

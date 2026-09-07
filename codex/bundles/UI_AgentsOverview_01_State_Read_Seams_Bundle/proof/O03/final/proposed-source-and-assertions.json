@@ -1,0 +1,402 @@
+{
+  "utc": "2026-09-07T16:28:19.935684+00:00",
+  "status": "Final compiled and browser-verified proposed source; page CSS one-byte EOF hygiene explicitly qualified in hygiene/receipt.json.",
+  "sources": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentFrameworkAgentsChatContextBuilder.cs",
+      "beforeSha256": "c1247755f0b73ec074b8846cc851c74b39a9346ac0ce2d71cefa5962bbd970e7",
+      "afterSha256": "3ca083bdab998bb0915952c1e3e4b3afa28cfbd2f5d0912ab5506cf3d65cc715",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+      "beforeSha256": "b82444695743c2006eb30197b400719c9a27bfde77725887ad8495ee09d4165f",
+      "afterSha256": "436d033a0ae4ad91a2153c4aba135cd99b53e98479c0daae45ca5b53cf245122",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+      "beforeSha256": "f986a01ffac933e9b8c687047ab1356bc422f54777e0ab95fb126ff1f1c3ed83",
+      "afterSha256": "c2cfe645cb5793e12c063b9b133dae115868e8d6cf223c66bec0a55882045ae7",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.css",
+      "beforeSha256": "75a041082910dce902c7759f5579cd590dd7f7f9226c39f55a3b08b7f23780f3",
+      "afterSha256": "a19833becfa1be75cf9522f688b037cf7496ef3b1c7c7525ae90d6844272929a",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsOverviewSession.cs",
+      "beforeSha256": null,
+      "afterSha256": "a6b4cc0add07868aa2f78886f2f7dd5b2815c4afaeb5b72167e84aea86d86f31",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDialog.razor",
+      "beforeSha256": "5287c620f9473fda712adef818e0bc9b53ee49d83f6ffe3a49b712c6786f1716",
+      "afterSha256": "80a569f3a3ac9a0e171c0dc2d1a3b7b60111ef6ef5d9d7c1cffd631ef8073aee",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDisplay.cs",
+      "beforeSha256": "928b8933ab01e6e9f4e375326d2a1cab232303ba2a587010c75f20dd69375d99",
+      "afterSha256": null,
+      "deleted": true,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
+      "beforeSha256": "7ef53ff091fd72bddb264e35098cff02040bd69de96fef1ab2570f815b6542c7",
+      "afterSha256": "1c324f7167170cf72d9e0fa563631827cde81d096fceb643efc5fd6804b8ab4c",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageConsumerList.razor",
+      "beforeSha256": "c112ed73e68b847b2c5a615eb9a3f13c2435f72674a9afdeb8a6983c8b544c6e",
+      "afterSha256": null,
+      "deleted": true,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageDialog.razor",
+      "beforeSha256": "6811b30c113f0fed9cd2dfe8f4582194ef397d407e11b72197737a264902bde3",
+      "afterSha256": "0f7d5cd8906152cfaa7bfb9d23246c91d49464ae85733b18a9df67b9f9d17072",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs",
+      "beforeSha256": "19c14afa38f0a087c66d90eac4182ecdc2c89ff3c5881d62c80b685c25e08cf3",
+      "afterSha256": "ec20a011e8d220d3412f0958ebbffe18c1f2851fe7aee968493165bda49881b1",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor",
+      "beforeSha256": "cc3235d2722c3d42afcccf615bc57071ba35d2ed289a7f4d30d49d9957ec742e",
+      "afterSha256": "1d370c0c2530bc6ec24a3c936c5f7f502ec7acf63569d3bcf983268e525264bf",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "beforeSha256": "f8e2faebaa254cf9497cc0fb9b7ad541cb32888b93d8d4b6e3ae1c247f1b0a2e",
+      "afterSha256": "bbcce2bbaca918c7604df443549847fc4cf458ace8821c82aed6a3ace4e04598",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+      "beforeSha256": "a3592f4f51dd36b2c26320e9f4411e0c792b43f20544714600405593f911c527",
+      "afterSha256": "25ff1a35d1c840ea1bee988c207224a9d287d89c808ffcd5c4c81c887053bff9",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/OverviewSpecimen.razor",
+      "beforeSha256": null,
+      "afterSha256": "13b6a6ff57b75a4988f23ecdf9b52cbbae21132d5a25dc6b7c34533277a3adea",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor",
+      "beforeSha256": "91b91005c53425aaac2cacc24d110368e5bec607d834282d955686b4413802fb",
+      "afterSha256": "e9ab39c9c49029fc220eb03cd0b2dc6796907a42e1c311da2c8f7761db3b8b1c",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/overview.json",
+      "beforeSha256": null,
+      "afterSha256": "3621dcff873f79b8eb4f9f58a8f0697da7a6e35d3d04568b22a2e0822aed95c2",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxContext.cs",
+      "beforeSha256": null,
+      "afterSha256": "9f5d693a0651fcd3fd21e17c8fdd07c57bc5c7b3f76557347e35b118c6b56fec",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxFixture.cs",
+      "beforeSha256": null,
+      "afterSha256": "acf41cb8b58540a38e1d99f138ffd76715315b7bb9b7e7a9762ba1cada1660d5",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+      "beforeSha256": "31d82ee877323989d37eb29817c82667847bcdc674e3df968bdd0c40d49f976a",
+      "afterSha256": "0c452ca2bb1e35db463d98c571950c0a6999a19f1aa9146f1cd8ba20187ac211",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "beforeSha256": "f1fc194263abec5b4116f3046754d22c0f7a7b2290179122a32932c9d9d62ed6",
+      "afterSha256": "dcac7e87900e54a52fc8db9a8b7c7bea9246ecc600ca632a8b7155f362cc8a3e",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs",
+      "beforeSha256": "e2d16e2ad497cd0973e9c9002dbe8755f3ca90ac816d754ac9e0cb54f57f2866",
+      "afterSha256": "54fa1fa1419ac9cf23871edafd7b8ebcd4f9ca834370b6f1a1c9f5d3bde5cbf7",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/sandbox.css",
+      "beforeSha256": "e958860b336c336bcb44f2054002cc310ecf7f0213899e56eeb9f067cd715a86",
+      "afterSha256": "1029f60de72f09a463887ee67db1f3323575055f781896abe84ae0fcfd31aa34",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "beforeSha256": "fd4c650169a2bce450b5c52519dcdfd0f9d9523af2047c91faf72079b5ce342d",
+      "afterSha256": "4a3e0824909c4a8f91cb61f7185e7faff14c53cba9e36ad5f1acd24117110d37",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentUsageDisplay.cs",
+      "beforeSha256": null,
+      "afterSha256": "ea2efc5784291becf27246249c274e3bad806738d5bc365934a6819f37e294e7",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewPresentation.cs",
+      "beforeSha256": null,
+      "afterSha256": "9db41f719d1ba79b8cf81354183bcefcedce8141d85d717ef7ed75bd24d89a91",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewState.cs",
+      "beforeSha256": null,
+      "afterSha256": "bef08b47cd9e7eca7aebe5fb23e8f2558048492e118bdfc81b2403569dcfbe36",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor",
+      "beforeSha256": null,
+      "afterSha256": "dc5bf5466fa6c82fa8861089581582cf0b60d54fa9ad544380b338e32c50d160",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.cs",
+      "beforeSha256": null,
+      "afterSha256": "67c05a700669b907a573a044a0b30bde97d8548838f143f503c9f276581119b4",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.css",
+      "beforeSha256": null,
+      "afterSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/ProviderUsageConsumerList.razor",
+      "beforeSha256": null,
+      "afterSha256": "4ab6fdf982c3c7fb40fd74a6a02d29c7683312a0bbcf5a7d1974bed17651d3d0",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/README.md",
+      "beforeSha256": "cf1a7678cbb929703f3a0a9b6f9da2ad94e316e937615382a8668fa4e6f197ed",
+      "afterSha256": "1388dbea2acb2759f76da4dba3edb5ba50ffbfed5265e007629fa9380be5b2ad",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor",
+      "beforeSha256": "d11bde22644d651f1b59870e4af31ba5e561e3a1b4a1327f29efb59ae25f149b",
+      "afterSha256": "28103756d6005f6481694f35694ead3d8c2442395519d41985338b32ab7802ab",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "src/UI/CanDoItAll.AppComponents/README.md",
+      "beforeSha256": "70a33168c5724a911b7bb763027f9f735741373fd306c2a9cbe60e87cf945f31",
+      "afterSha256": "d10d2e86c3ad56729b6dcbe211a43f1fbf4ff76e00b4794d41b4dd6b64f11ef7",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentAvatarRenderingTests.cs",
+      "beforeSha256": "860d7000a51d4b70eda62c7f7dc6695ddd92293537beec1dbdf879fba3e68dad",
+      "afterSha256": "dbdeab3c0d297dc393b7c1fc260324153191d96e1f459bef66d0b4d39e2f01b4",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentsOverviewEffectLifecycleTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "09ac8e322098bbd1cb291c2cbdb2835f5853caa4eee150969cbabc17bdd76b79",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentsOverviewReadLifecycleTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "d1279a3e9f1112c25c2942daa6bc6033b35d308de7e7bb5477801677a424cfe9",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentsOverviewSurfaceTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "a3146fa2bc33b4fdf1cd2e7b93a046104c9d20f3119c253ea5adf1e9de607f46",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/OverviewSandboxTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "97503400831b0412605d6cb2101ece3bbe4274d97290e61c6e679cb88637970f",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentsWorkspaceQueryTests.cs",
+      "beforeSha256": "f47294e71da9b05f43c26ecc6c8cc0ae39d714c7e8d85a56f1f55b3978411a42",
+      "afterSha256": "7d2e8474bc6b0c455b7118331664f643d13b69e7b9743a4737037deb69c06170",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsOverviewPresentationTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "550d3cda72a1b47eabb867ce9e1425ab5cdc8a7e2a2ad059d78ef6357f35ccd0",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsOverviewSessionTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "696594e776ff8f6f087d9a31edbf55e8e4cc67b7b758bec839f7a85bcbcad8d2",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsWorkspaceQueryTests.cs",
+      "beforeSha256": "b1b8b6de48d8d217851aa728119f4a939b754213bcb0d209c4957e273f70116b",
+      "afterSha256": "2addaed09907da3381ee2dd0dca590591c9bdc4fdaa06bca880617310618c4c1",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/OverviewSandboxContextTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "ae9827d2a11e5052402c7c410dc0bfbc940c143800e4dba2b20484e601092ca6",
+      "deleted": false,
+      "added": true
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkModuleChatContextBuilderTests.cs",
+      "beforeSha256": "d7c267c82b17a525e51a2ff07473a9a84d7cee08053a05c36ed923030af09add",
+      "afterSha256": "8a3ef933ba746393143a2e35806b2b4a0154041100be25fdeea4dcd1763d4010",
+      "deleted": false,
+      "added": false
+    },
+    {
+      "path": "tools/Validation/Portability/portability-risk-baseline.json",
+      "beforeSha256": "73588f7d0dd628b32f31463828278c18c9ae69aabba3bfd5f8aa7ffb84d7d216",
+      "afterSha256": "ca3f9f50b9daf63263ca33d2bbb108f35ce577f16c96b1e43f02308bf8bb6c03",
+      "deleted": false,
+      "added": false
+    }
+  ],
+  "checks": [
+    {
+      "name": "obsolete-combined-query",
+      "command": [
+        "rg",
+        "-n",
+        "ReadShellAsync|AgentsShellSnapshot",
+        "src",
+        "tests",
+        "-g",
+        "*.cs",
+        "-g",
+        "*.razor"
+      ],
+      "exit": 1,
+      "matches": "",
+      "stderr": ""
+    },
+    {
+      "name": "pending-production-markers",
+      "command": [
+        "rg",
+        "-n",
+        "TODO|NotImplementedException|NotSupportedException|fixture|OVERVIEW_PLAYWRIGHT",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/AgentFrameworkAgentsChatContextBuilder.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsOverviewSession.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/OverviewSpecimen.razor",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxContext.cs",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxFixture.cs",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs",
+        "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentUsageDisplay.cs",
+        "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewPresentation.cs",
+        "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewState.cs",
+        "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor",
+        "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.cs",
+        "src/UI/CanDoItAll.AgentFramework.UI/Overview/ProviderUsageConsumerList.razor",
+        "src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor",
+        "-g",
+        "*.cs",
+        "-g",
+        "*.razor"
+      ],
+      "exit": 0,
+      "matches": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxFixture.cs:88:            ?? throw new InvalidOperationException(\"The frozen Overview fixture is missing.\");\nsrc/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxFixture.cs:92:            ?? throw new InvalidOperationException(\"The frozen Overview fixture is invalid.\");\n",
+      "stderr": ""
+    }
+  ],
+  "invariantsReviewed": [
+    "OV01",
+    "OV02",
+    "OV03",
+    "OV04",
+    "OV05",
+    "OV06",
+    "OV07",
+    "OV08",
+    "OV09",
+    "OV10",
+    "OV11",
+    "OV12",
+    "OV13",
+    "OV14",
+    "OV15"
+  ]
+}

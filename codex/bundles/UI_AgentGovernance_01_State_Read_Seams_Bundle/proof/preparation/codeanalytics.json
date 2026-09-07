@@ -1,0 +1,287 @@
+{
+  "snapshotId": "snap-20260907164254-5c18b873",
+  "createdUtc": "2026-09-07T16:42:54.1477869+00:00",
+  "scope": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\CanDoItAll.Modules.AgentFramework.csproj",
+  "hasBlockingErrors": false,
+  "counts": {
+    "projects": 1,
+    "documents": 205,
+    "types": 547,
+    "members": 5728,
+    "services": 55,
+    "findings": 218,
+    "openQuestions": 20
+  },
+  "diagnostics": [
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 88,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 255,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 257,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 260,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 264,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 274,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 277,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 281,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 284,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 295,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 298,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 300,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 302,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 340,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 342,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 344,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 401,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 402,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 403,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/AgentFrameworkModuleServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "line": 404,
+        "column": 9
+      }
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework was truncated to 80 types."
+    },
+    {
+      "code": "MRD0001",
+      "severity": "Info",
+      "message": "Class diagram - CanDoItAll.Modules.AgentFramework.Pages was truncated to 80 types."
+    }
+  ],
+  "governanceFindings": [
+    {
+      "findingId": "finding-type-size-type-proj-candoitall-modules-agentframewo-e60987e9d853",
+      "ruleId": "COMPLEXITY-002",
+      "severity": "Info",
+      "category": "Complexity",
+      "title": "Type with many members",
+      "description": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentGovernancePanel exposes 29 source members.",
+      "rationale": "Large types often become aggregation points for unrelated behavior.",
+      "confidence": 0.71,
+      "relatedIds": [
+        "type-proj-candoitall-modules-agentframework-candoitall-m-127cdaf4f053"
+      ],
+      "source": {
+        "path": "Pages/Components/AgentGovernancePanel.razor.cs",
+        "line": 7,
+        "column": 1,
+        "endLine": 256,
+        "endColumn": 2
+      }
+    }
+  ],
+  "cycles": [
+    {
+      "level": "Module",
+      "nodes": [
+        {
+          "id": "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+          "name": null
+        },
+        {
+          "id": "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2",
+          "name": null
+        }
+      ]
+    },
+    {
+      "level": "Type",
+      "nodes": [
+        {
+          "id": "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+          "name": null
+        },
+        {
+          "id": "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60",
+          "name": null
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "The Governance text-filter returned no dependency edges. This does not prove isolation: Razor and evaluated live project references must be inspected.",
+    "Scoped snapshot project-reference arrays are empty. Use the sealed post-Overview evaluated graph and future fresh MSBuild graph, not those empty arrays.",
+    "This is preparation evidence, not compiled test or runtime proof."
+  ]
+}

@@ -1,3 +1,4 @@
+@implements IDisposable
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
@@ -75,66 +76,94 @@
     private AgentTeamEditorModel editorModel = new();
     private bool isLoading = true;
     private bool isBusy;
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationToken ownerToken;
+    private bool disposed;
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() {
+        ownerToken = lifetime.Token;
         try
         {
-            editorModel = await WorkspaceService.GetAgentTeamEditorAsync(TeamId);
+            var loaded = await WorkspaceService.GetAgentTeamEditorAsync(TeamId, ownerToken);
+            if (!disposed) {
+                editorModel = loaded;
+            }
         }
-        finally
-        {
-            isLoading = false;
+        catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
+        } finally {
+            if (!disposed) {
+                isLoading = false;
+            }
         }
     }
 
-    private async Task SaveAsync()
-    {
+    private async Task SaveAsync() {
+        if (disposed || isBusy) {
+            return;
+        }
         isBusy = true;
         try
         {
             editorModel.Icon = AgentTeamIconCatalog.Normalize(editorModel.Icon);
-            var teamId = await WorkspaceService.SaveAgentTeamAsync(editorModel);
+            var teamId = await WorkspaceService.SaveAgentTeamAsync(editorModel, ownerToken);
+            if (disposed) {
+                return;
+            }
             NotificationService.Success("Team saved", "Agent team details were saved.");
             if (DialogReference is not null)
             {
                 await DialogReference.CloseAsync(new AgentTeamDetailsDialogResult(teamId));
             }
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Team save failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
+        catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (!disposed) {
+                NotificationService.Error("Team save failed", exception.Message);
+            }
+        } finally {
+            if (!disposed) {
+                isBusy = false;
+            }
         }
     }
 
     private Task CancelAsync()
         => DialogReference?.CloseAsync() ?? Task.CompletedTask;
 
-    private async Task OpenIconPickerAsync()
-    {
-        var result = await DialogService.OpenAsync<MaterialIconPickerDialog>(
-            "Choose team icon",
-            new Dictionary<string, object?>
-            {
-                [nameof(MaterialIconPickerDialog.SelectedIcon)] = editorModel.Icon
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Team identity",
-                Subtitle = "Pick a Material icon for this AgentFramework team.",
-                Size = ModalSize.Wide,
-                DenseChrome = true,
-                AriaLabel = "Choose team icon",
-                TestId = "material-icon-picker-dialog-shell"
-            });
+    private async Task OpenIconPickerAsync() {
+        if (disposed) {
+            return;
+        }
+        try {
+            var result = await DialogService.OpenAsync<MaterialIconPickerDialog>(
+                "Choose team icon",
+                new Dictionary<string, object?> {
+                    [nameof(MaterialIconPickerDialog.SelectedIcon)] = editorModel.Icon
+                },
+                new DialogOptions {
+                    Eyebrow = "Team identity",
+                    Subtitle = "Pick a Material icon for this AgentFramework team.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    AriaLabel = "Choose team icon",
+                    TestId = "material-icon-picker-dialog-shell"
+                }, ownerToken);
+            if (!disposed && result is string icon) {
+                editorModel.Icon = AgentTeamIconCatalog.Normalize(icon);
+            }
+        } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
+        }
+    }
 
-        if (result is string icon)
-        {
-            editorModel.Icon = AgentTeamIconCatalog.Normalize(icon);
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        try {
+            lifetime.Cancel();
+        } finally {
+            lifetime.Dispose();
         }
     }
 }

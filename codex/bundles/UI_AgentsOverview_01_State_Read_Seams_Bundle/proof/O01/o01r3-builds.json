@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      ".mcp-state/overview-browser-fixture/OverviewBrowser.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0
+  }
+]

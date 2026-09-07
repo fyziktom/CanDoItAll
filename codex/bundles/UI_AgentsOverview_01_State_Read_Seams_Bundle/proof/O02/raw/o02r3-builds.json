@@ -1,0 +1,77 @@
+[
+  {
+    "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:26:12.445784+00:00"
+  },
+  {
+    "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:27:11.472325+00:00"
+  },
+  {
+    "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:27:38.352587+00:00"
+  },
+  {
+    "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:27:58.429490+00:00"
+  },
+  {
+    "project": ".mcp-state/overview-browser-fixture/OverviewBrowser.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      ".mcp-state/overview-browser-fixture/OverviewBrowser.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:28:20.900089+00:00"
+  }
+]

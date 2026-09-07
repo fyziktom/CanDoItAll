@@ -1,0 +1,73 @@
+[
+  {
+    "command": [
+      "python",
+      ".mcp-state\\overview03\\final\\scan-source.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T16:24:17.369500+00:00",
+    "finishedUtc": "2026-09-07T16:24:43.533040+00:00",
+    "output": "post-hygiene-static-1.txt"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/test_enforce_portability_baseline.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T16:24:43.534022+00:00",
+    "finishedUtc": "2026-09-07T16:24:43.679849+00:00",
+    "output": "post-hygiene-static-2.txt"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T16:24:43.680849+00:00",
+    "finishedUtc": "2026-09-07T16:24:44.259651+00:00",
+    "output": "post-hygiene-static-3.txt"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/scan_portability.py",
+      "--repo-root",
+      ".",
+      "--output",
+      ".mcp-state\\overview03\\final\\post-hygiene-portability.json",
+      "--include-untracked"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T16:24:44.260650+00:00",
+    "finishedUtc": "2026-09-07T16:25:39.812120+00:00",
+    "output": "post-hygiene-static-4.txt"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/enforce_portability_baseline.py",
+      "--scan",
+      ".mcp-state\\overview03\\final\\post-hygiene-portability.json",
+      "--baseline",
+      "tools/Validation/Portability/portability-risk-baseline.json"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T16:25:39.812120+00:00",
+    "finishedUtc": "2026-09-07T16:25:40.278101+00:00",
+    "output": "post-hygiene-static-5.txt"
+  },
+  {
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-File",
+      "tools/Validation/Test-Documentation.ps1"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T16:25:40.279101+00:00",
+    "finishedUtc": "2026-09-07T16:25:43.647375+00:00",
+    "output": "post-hygiene-static-6.txt"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "a06-owning-components-r2",
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_consumer_list_preserves_compact_avatar_led_agent_rows|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_failure_ranking_keeps_failure_first_and_run_count_secondary|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentsOverviewEffectLifecycleTests|FullyQualifiedName~AgentsOverviewSurfaceTests",
+      "/m:1",
+      "--blame-hang",
+      "--blame-hang-timeout",
+      "60s",
+      "--blame-hang-dump-type",
+      "none",
+      "--logger",
+      "console;verbosity=detailed",
+      "--logger",
+      "trx;LogFileName=a06-owning-components-r2.trx",
+      "--results-directory",
+      "C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\owning-trx-r2"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T20:12:51.837951+00:00",
+    "finishedUtc": "2026-09-07T20:20:27.549364+00:00",
+    "outputSha256": "6d02d93b67d66627db6e8c0e83a2b8a9c0cfc9267b59701f80d3f95bf10974da"
+  }
+]

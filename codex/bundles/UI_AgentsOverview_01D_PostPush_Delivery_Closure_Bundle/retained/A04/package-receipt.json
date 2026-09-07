@@ -1,0 +1,14 @@
+{
+  "version": "0.3.0-overview01d.20260907193451",
+  "published": false,
+  "packages": [
+    {
+      "name": "CanDoItAll.Components.BaseLib.0.3.0-overview01d.20260907193451.nupkg",
+      "sha256": "3c26c50c2ce3b031a1e8f79d1d548be31ffb0b0cfd9740f29ba55f279e55ea4c"
+    },
+    {
+      "name": "CanDoItAll.Components.Common.0.3.0-overview01d.20260907193451.nupkg",
+      "sha256": "08d3618dd23b3aafc2a8a6ec9e8946c872a5b7f7e744c5b4a2d0aef0654f8a36"
+    }
+  ]
+}

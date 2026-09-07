@@ -1,0 +1,11 @@
+{
+  "command": [
+    "node",
+    "C:\\repositories\\CanDoItAll\\codex\\bundles\\UI_AgentsOverview_01D_PostPush_Delivery_Closure_Bundle\\retained\\A06\\browser-web-r3.cjs"
+  ],
+  "scriptSha256": "da43124a3d18aea874568aa29952008f524adb1114a5dd7b993cfeea2081912e",
+  "playwrightModule": "C:\\Users\\lucys\\AppData\\Local\\npm-cache\\_npx\\e41f203b7505f1fb\\node_modules\\playwright",
+  "startedUtc": "2026-09-07T19:57:28.874563+00:00",
+  "finishedUtc": "2026-09-07T19:58:14.625946+00:00",
+  "exit": 0
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "url": "https://api.nuget.org/v3-flatcontainer/candoitall.appcomponents/index.json",
+    "status": 404
+  },
+  {
+    "url": "https://api.github.com/repos/fyziktom/CanDoItAll/releases?per_page=100",
+    "status": 200,
+    "summary": []
+  }
+]

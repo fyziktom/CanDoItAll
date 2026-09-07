@@ -1,0 +1,50 @@
+[
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentFrameworkAgentsChatContextBuilder.cs",
+    "sha256": "3ca083bdab998bb0915952c1e3e4b3afa28cfbd2f5d0912ab5506cf3d65cc715"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+    "sha256": "ce043a8859bb2fada01a5fa775edd7a12c001d1eb7834c58febc4586521ac44b"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+    "sha256": "4e127fc16a85193ed4ab8b6b666164b41c8ad157576b209658c0a51fcb551ed3"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsOverviewSession.cs",
+    "sha256": "a6b4cc0add07868aa2f78886f2f7dd5b2815c4afaeb5b72167e84aea86d86f31"
+  },
+  {
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs",
+    "sha256": "ec20a011e8d220d3412f0958ebbffe18c1f2851fe7aee968493165bda49881b1"
+  },
+  {
+    "path": "src/UI/CanDoItAll.AppComponents/README.md",
+    "sha256": "d10d2e86c3ad56729b6dcbe211a43f1fbf4ff76e00b4794d41b4dd6b64f11ef7"
+  },
+  {
+    "path": "tests/Components/CanDoItAll.Tests.Components/AgentsOverviewReadLifecycleTests.cs",
+    "sha256": "0384bffccb1f9a131a70bdecd85a737bd8ee719390ab80aaba2ffd1bcfdc16e4"
+  },
+  {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentsWorkspaceQueryTests.cs",
+    "sha256": "7d2e8474bc6b0c455b7118331664f643d13b69e7b9743a4737037deb69c06170"
+  },
+  {
+    "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsOverviewSessionTests.cs",
+    "sha256": "696594e776ff8f6f087d9a31edbf55e8e4cc67b7b758bec839f7a85bcbcad8d2"
+  },
+  {
+    "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsWorkspaceQueryTests.cs",
+    "sha256": "2addaed09907da3381ee2dd0dca590591c9bdc4fdaa06bca880617310618c4c1"
+  },
+  {
+    "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkModuleChatContextBuilderTests.cs",
+    "sha256": "8a3ef933ba746393143a2e35806b2b4a0154041100be25fdeea4dcd1763d4010"
+  },
+  {
+    "path": "tools/Validation/Portability/portability-risk-baseline.json",
+    "sha256": "08c396bea30b960096aca1cf4aebcacca5105a698dfa9d4e7de47b253e88d7da"
+  }
+]

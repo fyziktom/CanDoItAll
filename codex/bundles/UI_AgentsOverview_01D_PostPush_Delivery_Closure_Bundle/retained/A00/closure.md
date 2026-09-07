@@ -1,0 +1,11 @@
+# A00 audit closure
+
+Current independently observed primary branch/local/remote HEAD is components-decoupling at 2f3a6020e805deb02a6dcfbdfb52f352eb59ce61, parent ad2ded645e65b8b205959f6fed816d082b99a7be, tree 6b112718e6892ce2113b71dfaa71b170637e3f0c. Entry index/worktree were clean. Components local c3e6aa03a878994c0ba8aed6af017d0be75f3796 and remote main bd1eb1030c438c861b94b3b8d3b9dba72925d685 have the same tree, 8ee42b3f1f97fd4bb7b3b3f526029228d8ed6e23; remote main is a merge successor. Its committed DialogService lacks the API already called by the pushed primary page. The exact four initial local patch files are recorded separately. FileTools is clean and detached at 7c7453c6583365ae5bd63f8fc6efc4a776e15818. Its remote SSH identity could not be refreshed because authentication was refused; no authentication or source changes were attempted.
+
+All 46 final Overview source entries agree with pushed source: 45 byte-exact and one newline-only. There is no semantic discrepancy. All 1186 Overview and 33 Governance root entries exist locally with matching hashes. At entry, 1152 Overview and 10 Governance entries were absent from Git and their local ignored files were the only raw support for several pushed claims. None of that proof is missing locally.
+
+SDK 10.0.303, Node 24.19.0, Playwright 1.61.1, Chromium 149.0.7827.55 and Tailwind 4.2.1 were freshly observed. Explicit asset hashes are retained. Evaluated UI/sandbox source graph has 14 projects and preserves the existing dependency boundary. Current compiled baseline discovery is exactly 72 Unit, 78 Components and four Integration cases for the frozen owning filters. These are discovery observations, not new passing executions.
+
+GitHub combined statuses returned no entries; this does not establish a green check-run result. CI still pins the older Components source and a different FileTools revision. No CI implementation is authorized here. Proposed clean source and package reproducibility are A04 gates, not claims made by this audit.
+
+Source inspections confirm accepted Overview ownership and identify the team nested icon picker and pre-canceled DialogService registration as concrete next witnesses. The cancellation timing concern remains unproven until A05 public behavior. This audit closes input discovery, not delivery readiness.

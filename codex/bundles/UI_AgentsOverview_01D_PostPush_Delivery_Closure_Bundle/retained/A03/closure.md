@@ -1,0 +1,11 @@
+# A03 dialog contract closure
+
+The accepted additive lease remains one instance-owned `IDisposable` per opt-in owner, with reference counting and idempotent release. Query and fragment transitions on the same canonical path preserve the exact dialog reference, result task and cancellation registration. Different path/case/trailing slash closes dialogs. With no lease, navigation retains the existing close-with-null behavior. Service disposal detaches navigation and cancels remaining results; outstanding leases can then be disposed safely.
+
+The direct new cancellation regression exposed an orphan when an already-canceled token ran before the reference entered the service collection. The minimum correction inserts the reference before cancellation registration and disposes a registration that completed synchronously. It adds no new public API beyond the previously prepared lease. The real team-editor public test also exposed an orphan nested icon picker. That editor now owns cancellation for its read, save and picker, suppresses late UI publication, and disposes its lifetime idempotently.
+
+Fresh GREEN: 14 navigation cases, seven publishing/API/source-package cases, eight primary Unit cases and ten primary Components cases; 39 total, zero failures/skips. [Results](green/results.json). The original external-origin test setup was rejected by NavigationManager before reaching the service; it is retained as setup failure, not product RED. Conservative different-path tests and actual browser departure cover the supported contract.
+
+The final owning component selection also passed all 88 cases. Real Web acceptance retained the same Defaults DOM reference across query/fragment Back/Forward, canceled the team editor and its owned picker on host removal, and closed dialogs on actual page departure. Unrelated overlays remain untouched by owner cancellation. See the [dialog audit](../../architecture/dialog-audit.md) and [Web receipt](../A06/browser/Web/summary.json).
+
+The sibling has exactly five owned changed files: DialogService, BaseLib README, DialogNavigationOwnershipTests, public API approval, and source-package approval. The API is still absent from sibling history; this closure concerns proposed bytes only.

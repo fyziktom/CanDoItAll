@@ -1,0 +1,185 @@
+{
+  "utc": "2026-09-07T22:50:46.753277+00:00",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "exists": true,
+      "sha256": "e5b644f8946fe79abc4c275b9d44e41caa2b1f392af1a97fa979282d1bb7525e"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "exists": true,
+      "sha256": "17b84782ac812477cd732b4aad768edca71344720c61652176540ea2d612d9cb"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "exists": true,
+      "sha256": "a260898ba74de74d00e8429df0d0f4a86307ecbbd92889d5e3e33b9e606ca6f0"
+    },
+    {
+      "path": ".gitignore",
+      "exists": true,
+      "sha256": "55b4f0b6b2edd5acc25f51ff93fcb695abd99c099f509328f8d795f35ecc0a05"
+    },
+    {
+      "path": "Directory.Build.props",
+      "exists": true,
+      "sha256": "2975a09de9f25331b6fa7b1b84a3d9fd7651f3f4cddee5b1b74c5feb651242f7"
+    },
+    {
+      "path": "Directory.Build.targets",
+      "exists": true,
+      "sha256": "4645585c06a34c201a4e8a8d4547f01198d2225eafac01c92f41b2fc013d01ea"
+    },
+    {
+      "path": "Tailwind/catalog-fast.css",
+      "exists": true,
+      "sha256": "d09a9daa2a96402bc474633aa2dee8c62d387372e3e08d9df8f01c4f8dbf0daa"
+    },
+    {
+      "path": "Tailwind/input.css",
+      "exists": true,
+      "sha256": "3836a34464192fb077c8bfb14cdd0581e772674b6d9010cda1af73f81caef88d"
+    },
+    {
+      "path": "Tailwind/main/component-layout-utilities.css",
+      "exists": true,
+      "sha256": "311909ab73be481a52dbefc4373bef9d4c132363a044a32c3a84a8d43ecb3d57"
+    },
+    {
+      "path": "docs/testing.md",
+      "exists": true,
+      "sha256": "5db356c384eae17edf03ac0a166cc2818478e183d3a05d28cf8f114132b77575"
+    },
+    {
+      "path": "global.json",
+      "exists": true,
+      "sha256": "b132d105648c7dbe49f2c391fe0b9898027e470ddc7cfd4d7239af5df63401fa"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/app.css",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentRuntimeDetailsDialog.razor",
+      "exists": true,
+      "sha256": "7591bb943156c4706b6bddd135f66071a3d9519e8360807c7364fa89da683f48"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "exists": true,
+      "sha256": "4f9c8c0985639660bc1f4867aeb98b28f8411375eae3d7df6708616c1d0b2b39"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ExecutionTimelinePanel.razor",
+      "exists": true,
+      "sha256": "ef75b7e8dfe502f47c698415b04e9fe3567f657001ff3bd3960db0cc32eafe7c"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/MetricSummaryPanel.razor",
+      "exists": true,
+      "sha256": "0f2450e764f679a826078cabf03cc3b8f6a70b311e63cd57b353f9c7a7be35e6"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs",
+      "exists": true,
+      "sha256": "7e5f736fed2cb96a79b7c1b7f056b827ae66086912a036023b67bcb4b113e492"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs",
+      "exists": true,
+      "sha256": "34d60c4a5abd29948570d572bb6bc67ecaabed09e42f23bb6cd6784f2f3911c9"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Helpers.cs",
+      "exists": true,
+      "sha256": "a481fff6cefac6f18111ec64bba9fb0fa1f48c7fdbf8a223993c9113d662acb1"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs",
+      "exists": true,
+      "sha256": "879cf2bb198d6c76e0f5ad2b38d16922f97e057508140cd21ddde7976f8a5bd9"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/ConversationModels.cs",
+      "exists": true,
+      "sha256": "4f340d94aa5ce5c2d6a698c1ac64a701c4864c2d48f09f21c57a4643025bdfd7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "exists": true,
+      "sha256": "03f50c9d5d6c1d94056a18158cd3eebb0414c44649dcc156393c9def6dda2f1f"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+      "exists": true,
+      "sha256": "436d033a0ae4ad91a2153c4aba135cd99b53e98479c0daae45ca5b53cf245122"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+      "exists": true,
+      "sha256": "c2cfe645cb5793e12c063b9b133dae115868e8d6cf223c66bec0a55882045ae7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor",
+      "exists": true,
+      "sha256": "94f032a02bd1191c9b48d66d3c76647979e1cc5c99b4cf01eff1a668aa10c51b"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor.cs",
+      "exists": true,
+      "sha256": "7473eda33f76b00c51e53e1369d887180d71f71c62da329235796096466c0ae2"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor.css",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+      "exists": true,
+      "sha256": "39ad6fde9fe909ede7440ff326eac33d3f15b1a77ee3d242ac19e4a2b0159273"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+      "exists": true,
+      "sha256": "43cabf859f9817ea21d03c5bdbc6f07d4dccaf3f12aee553fd06e4177708529d"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "exists": true,
+      "sha256": "bbcce2bbaca918c7604df443549847fc4cf458ace8821c82aed6a3ace4e04598"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/fast.css",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "exists": true,
+      "sha256": "4a3e0824909c4a8f91cb61f7185e7faff14c53cba9e36ad5f1acd24117110d37"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentsHomePageTests.cs",
+      "exists": true,
+      "sha256": "ad125fb0406179d4946c6b70809e09f8de00e9cfd64eb0d890e9f57a3d651a58"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentsOverviewReadLifecycleTests.cs",
+      "exists": true,
+      "sha256": "d1279a3e9f1112c25c2942daa6bc6033b35d308de7e7bb5477801677a424cfe9"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentFrameworkExecutionRunTrackingIntegrationTests.cs",
+      "exists": true,
+      "sha256": "9c4ac1b6c455d7e53a2bca0b0f45568488385885a30cce292ab1982d5a3b1275"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkModuleChatContextBuilderTests.cs",
+      "exists": true,
+      "sha256": "e002d8c6bbe389ce9af100de401773f3912349328cb88bf4ee6f8f35afd0b730"
+    }
+  ]
+}

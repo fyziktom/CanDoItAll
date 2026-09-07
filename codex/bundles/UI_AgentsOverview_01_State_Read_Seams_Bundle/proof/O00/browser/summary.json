@@ -1,0 +1,103 @@
+{
+  "utc": "2026-09-07T10:38:21.540Z",
+  "ownedPid": 62480,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "scenarios": [
+    {
+      "mode": "Normal",
+      "hrDisabled": false,
+      "charts": 4,
+      "metric": "groups\nAGENTS\n42",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    },
+    {
+      "mode": "Partial",
+      "hrDisabled": false,
+      "charts": 4,
+      "metric": "groups\nAGENTS\n42",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    },
+    {
+      "mode": "Empty",
+      "hrDisabled": false,
+      "charts": 0,
+      "metric": "groups\nAGENTS\n0",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    },
+    {
+      "mode": "HoldOverview",
+      "hrDisabled": true,
+      "charts": 0,
+      "metric": "groups\nAGENTS\n...",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    },
+    {
+      "mode": "OverviewFailure",
+      "hrDisabled": true,
+      "charts": 0,
+      "metric": "groups\nAGENTS\n...",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    },
+    {
+      "mode": "UsageFailure",
+      "hrDisabled": true,
+      "charts": 0,
+      "metric": "groups\nAGENTS\n...",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    },
+    {
+      "mode": "HeaderFailure",
+      "hrDisabled": true,
+      "charts": 4,
+      "metric": "groups\nAGENTS\n42",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    },
+    {
+      "mode": "BoundFailure",
+      "hrDisabled": true,
+      "charts": 0,
+      "metric": "groups\nAGENTS\n...",
+      "geometry": {
+        "width": 1419,
+        "scrollWidth": 1419,
+        "viewport": 1600
+      }
+    }
+  ],
+  "errors": [],
+  "browser": "149.0.7827.55",
+  "outcome": "Observed current behavior; failures are characterized, not accepted.",
+  "ownedExit": 0,
+  "finishedUtc": "2026-09-07T10:38:38.334Z"
+}

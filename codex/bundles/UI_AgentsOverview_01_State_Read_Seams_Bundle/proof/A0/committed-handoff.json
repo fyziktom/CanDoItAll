@@ -1,0 +1,2021 @@
+{
+  "utc": "2026-09-07T10:16:38.202483+00:00",
+  "entry": {
+    "utc": "2026-09-07T10:04:24.685115+00:00",
+    "branch": "components-decoupling",
+    "head": "ad2ded645e65b8b205959f6fed816d082b99a7be",
+    "remoteHead": "ad2ded645e65b8b205959f6fed816d082b99a7be",
+    "parent": "b540b465cf408dd9c9adeb939538b78ced9bc7bb",
+    "tree": "3c9d3eb3eded55bf3e1aea83225dbccf8635dc66",
+    "aheadBehind": "0\t0",
+    "status": "",
+    "index": "",
+    "siblings": [
+      {
+        "name": "CanDoItAll.Components",
+        "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+        "branch": "codex/original-ui-refactoring-release",
+        "status": ""
+      },
+      {
+        "name": "CanDoItAll.FileTools",
+        "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+        "branch": "HEAD",
+        "status": ""
+      }
+    ],
+    "manifests": [
+      {
+        "bundle": "UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle",
+        "entries": 256,
+        "byteMismatches": [],
+        "relativeLinkCount": 29,
+        "missingLinks": []
+      },
+      {
+        "bundle": "UI_AgentCapabilities_03_Extraction_Sandbox_Bundle",
+        "entries": 800,
+        "byteMismatches": [
+          {
+            "path": "proof/SB03/measurement-samples.csv",
+            "expected": "e4befa924899aa7923d37afe1914665ed39371a523d1af7ba1f7a02e8320d8a7",
+            "actual": "2dfe7f2abf2e70cbc32681f9af5a0e9e34a4edd3a6f0545b56acf055b4c3374d"
+          },
+          {
+            "path": "subbundles/SB02.md",
+            "expected": "a26538811a905c2a8928a873d3c1fc3fd2050c9dc972e3709145dd4552bad666",
+            "actual": "11d4b00bd8cb4e8a4bb1df60575edbe678a2d96c81766ee826ad684f799e3a36"
+          },
+          {
+            "path": "subbundles/SB03.md",
+            "expected": "e8c8bb7b2bf4e530aabf804cc0f9ac5dca625838922958330d973f8e18d7d891",
+            "actual": "daf3934d82b8356fa65dd987851ce496afea2d1bbe08e5fdb9c838c57e009eca"
+          }
+        ],
+        "relativeLinkCount": 59,
+        "missingLinks": []
+      },
+      {
+        "bundle": "UI_AgentsOverview_01_State_Read_Seams_Bundle",
+        "entries": 27,
+        "byteMismatches": [
+          {
+            "path": "inventory/codeanalytics.json",
+            "expected": "65c4f6c229015a39cc8ccb48997b038c14d8dac1662c62b6a59e6c1b85a42944",
+            "actual": "1392c3e6b15faf9bc69bc2170363a85f1aabd70cb87071a7163afb0c6ee37a20"
+          },
+          {
+            "path": "inventory/predecessor-closure-seal.json",
+            "expected": "592d093a382219aa3a471183a3c908171e4108e9ebf0fcea515ee8df600f35d8",
+            "actual": "23c7d3215b78a04d5f60fe4798d7e9a3ba542a42bb053c6e21470c1e353b28d0"
+          }
+        ],
+        "relativeLinkCount": 43,
+        "missingLinks": []
+      }
+    ],
+    "sourcePaths": [
+      {
+        "path": ".gitignore",
+        "expected": "dfaada45667b0cde896bee39e29c11476471c8942c8cb818c6c97d5b5b11333a",
+        "committedSha256": "dfaada45667b0cde896bee39e29c11476471c8942c8cb818c6c97d5b5b11333a",
+        "matches": true
+      },
+      {
+        "path": "Tailwind/catalog-fast.css",
+        "expected": "d09a9daa2a96402bc474633aa2dee8c62d387372e3e08d9df8f01c4f8dbf0daa",
+        "committedSha256": "d09a9daa2a96402bc474633aa2dee8c62d387372e3e08d9df8f01c4f8dbf0daa",
+        "matches": true
+      },
+      {
+        "path": "Tailwind/input.css",
+        "expected": "3836a34464192fb077c8bfb14cdd0581e772674b6d9010cda1af73f81caef88d",
+        "committedSha256": "3836a34464192fb077c8bfb14cdd0581e772674b6d9010cda1af73f81caef88d",
+        "matches": true
+      },
+      {
+        "path": "Tailwind/main/component-layout-utilities.css",
+        "expected": "311909ab73be481a52dbefc4373bef9d4c132363a044a32c3a84a8d43ecb3d57",
+        "committedSha256": "7e98317866ec3ebd7802a6b8a6d457c704867cfa2486415efcf8e3efd676e09d",
+        "matches": false
+      },
+      {
+        "path": "docs/api-control-plane.md",
+        "expected": "00653ceabdf863907a598b9edef218174c3070bf1a842e82787a48741daecc38",
+        "committedSha256": "b303ef9ec06d5512548e8c47a3c559a499562a4803cc26f581608b2a21350760",
+        "matches": false
+      },
+      {
+        "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+        "expected": "000f298ac64131779c5f00f424f1806f4d2e000c9cc4f2b22315bfc0d40382ad",
+        "committedSha256": "d96c1c46db35fa320972e408a6a94f184ae0dd4ced47988097fe96448122b031",
+        "matches": false
+      },
+      {
+        "path": "src/App/CanDoItAll.Web/wwwroot/app.css",
+        "expected": "323c11884246d9da98546bd61ca090a5a0c1bb49bb677d5ad63c399565536c63",
+        "committedSha256": "bb3f9e86757cae4be04e29ee58d6bd1755660c039f2419b31ff606c28c864224",
+        "matches": false
+      },
+      {
+        "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+        "expected": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+        "committedSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+        "matches": true
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentConfigurationVersion.cs",
+        "expected": "29a77806fa965a21ffcbd3da6120061670043b885c282685e4d336c6c35da940",
+        "committedSha256": "7e925316b9c00747f1eeb960562585279cf8f033383ffbc49ca1ceade1572fe9",
+        "matches": false
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
+        "expected": "a0595829419243d6ec4c27666949bc6d1e2681d792c73ddf1f286c86dad3d774",
+        "committedSha256": "0cbb55688aed26cc77d39540a2e4037c2cd6b764a1cdb4807b3a6fd54881e7b6",
+        "matches": false
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentExternalProvisioningService.cs",
+        "expected": "44c14121ab01ec34383d3acf550e68daedd17102fc229a8cd7c0098196983606",
+        "committedSha256": "404565804c17febdeafca77e02e44852bc48886a5b3ca5a759f24116650c555f",
+        "matches": false
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs",
+        "expected": "b347565843f721915a4b816c67fc31333fc67f784d89c92ef8a316de8f0bf3bd",
+        "committedSha256": "5100128fe935deefc32c79a5b3169b615774e7edd58e9d0be4cb35030bb4228e",
+        "matches": false
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
+        "expected": "b52a4fb51b3fb0fddc30436c4883044c95fb34d763e641762118c7fcc22dd08d",
+        "committedSha256": "c342e161320ead4cd00d439f728980fad850556d9deec8d15914edaf0b65dacd",
+        "matches": false
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+        "expected": "9ebd7c36273c644e875782d126ceea131d41d9d1a9f22b77da92aa7abd305ee8",
+        "committedSha256": "7d26c130132570c6c18590a846a6cc7f1d2b8b305230b0049fef88d689617f30",
+        "matches": false
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Packages/AgentPackageImportService.cs",
+        "expected": "a1a3c94391a348c90a260dc8fdec257cb0bf572bb7ef1e88688fee3542d9a554",
+        "committedSha256": "6c7b514e2776301e337fc2f6f7188747ee65ef971f8a64983b17314c7c599814",
+        "matches": false
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
+        "expected": "74ab113e577bb0efd5efbef2d5f1b04fa9ab58248d3cda03a7ec62b5fbaac000",
+        "committedSha256": "9ce10c28642bb63fb1480e74bc912ff294909af2c4178b28798418c59c7ef9c4",
+        "matches": false
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkOrganizationCatalogRepairService.cs",
+        "expected": "fb50b38405f237874338f05e2d80751872d77edca3b15311afe1e92aa8ead962",
+        "committedSha256": "41bc96857dd58acb20ae0d8f3fcf7edcc787b49097bbcb0e3f5959f6ee72303c",
+        "matches": false
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor",
+        "expected": "0b6df1812af49dad4f8043adc8c13767f1823a9ebe1aeed36707e6ba59a99cb1",
+        "committedSha256": "0b6df1812af49dad4f8043adc8c13767f1823a9ebe1aeed36707e6ba59a99cb1",
+        "matches": true
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+        "expected": "a30d61f9fccfb1fc9979ef44036f0aaafb39740e0163678b767ad84c31fcd534",
+        "committedSha256": "a30d61f9fccfb1fc9979ef44036f0aaafb39740e0163678b767ad84c31fcd534",
+        "matches": true
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSession.cs",
+        "expected": "d20f868cce4df10ca4392f723f9816dc84576ce961c40100e921bd191c696cbc",
+        "committedSha256": "d20f868cce4df10ca4392f723f9816dc84576ce961c40100e921bd191c696cbc",
+        "matches": true
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs",
+        "expected": "2cc660c9cad38769f70380405a72f5c9fbb59374618c6cd49b837223c3b48544",
+        "committedSha256": "7fb41e55493164b1dad82ad0c8da933ff54b31c992b3bba52cb4db75cabe4a3f",
+        "matches": false
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityOperations.cs",
+        "expected": "fcf4f5e63ccd898c74cac1c4ca79b8240f9912e3df9756939d1769b2225bf425",
+        "committedSha256": "6816ec240b2da7154b7366fb688db5c05725e7af5b4c6b1cfa7c2426888a1009",
+        "matches": false
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilityCuratorLaunch.cs",
+        "expected": "295214bfc50497aa2a51d8e594ceabc441f448f958f3248c0596c5b8a4c492e3",
+        "committedSha256": "e05f77d9dfe18d52e689aa0f17eb06b618e2d5fa66d45dc61642d1c4be834cc2",
+        "matches": false
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+        "expected": "43cabf859f9817ea21d03c5bdbc6f07d4dccaf3f12aee553fd06e4177708529d",
+        "committedSha256": "7012828887a4c3fdbc1c5a82fd564ce17cae9ac8bd95f042bfdea3fc75773747",
+        "matches": false
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor",
+        "expected": "cc3235d2722c3d42afcccf615bc57071ba35d2ed289a7f4d30d49d9957ec742e",
+        "committedSha256": "cc3235d2722c3d42afcccf615bc57071ba35d2ed289a7f4d30d49d9957ec742e",
+        "matches": true
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "expected": "7ce2ba395c8ab626eea38f19874e0ea7f5be8f8862e7c2245ed323635625ec95",
+        "committedSha256": "f8e2faebaa254cf9497cc0fb9b7ad541cb32888b93d8d4b6e3ae1c247f1b0a2e",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxContext.cs",
+        "expected": "9d7832a743c5c616d7e0c6e68448de934d57d7169807cd295337959232813194",
+        "committedSha256": "0c5fa48f6d80e9c1ec3a8a138bc7705f47fc2149e1f8e81a6f47e8a2a3078b60",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxFixture.cs",
+        "expected": "99aea1fbfbe0fe685257fdd6fb78fe2cac1574a27b7da6a98d756d004f583ef6",
+        "committedSha256": "19f1fd3085d8240cc0b57527a55a04bc5e3e4565c7bee6182f7e4d9d3dea0ee6",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CapabilitiesSpecimen.razor",
+        "expected": "857249608b885ccb8368fb40828d0fb71d28fce7578f6b17c1c0eb72f651e1fe",
+        "committedSha256": "71794a397463215f78f57b445d7f8a55f2ca03737b09cc9eb6b31f81b3fbf1ed",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+        "expected": "e04c16818d201698fc489f22cd6620b948ba353a3b512f3eb97a8626cf593eb2",
+        "committedSha256": "a3592f4f51dd36b2c26320e9f4411e0c792b43f20544714600405593f911c527",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CatalogSpecimen.razor",
+        "expected": "f544bc41885d70ddcf8e0390fdf686eead55c269a133775b8151b2ff277c706c",
+        "committedSha256": "1d26c22b5873ed9a2d9e894ad4d931963201322b3e135aaad37f18b26e9a53e1",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor",
+        "expected": "3623ac0a2ebd53efd9e05af250ad16426b00471431e909c7071589c892146460",
+        "committedSha256": "91b91005c53425aaac2cacc24d110368e5bec607d834282d955686b4413802fb",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+        "expected": "1213f18fbe782687dd6a6a3d45a492bfc87f77eea795d3c2e9ae7b82bd7b4fa3",
+        "committedSha256": "05034933ae5e9b2344924e60e62a8a65b318d1ceb5eb00ca97be8d15ac80a6d1",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+        "expected": "d64782c719ce88dc75c35f49bc4551190a12565458055c393e618787f5fd39f5",
+        "committedSha256": "f1fc194263abec5b4116f3046754d22c0f7a7b2290179122a32932c9d9d62ed6",
+        "matches": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs",
+        "expected": "8aadcb880793825b4f876f0958dcf5be5fad914741aad966512a4c92d9c6d2ee",
+        "committedSha256": "e2d16e2ad497cd0973e9c9002dbe8755f3ca90ac816d754ac9e0cb54f57f2866",
+        "matches": false
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesState.cs",
+        "expected": "7cd940da0b3be70a36419f0fabdad58fa2b9c597b6b94bedd0eed08fe01ce188",
+        "committedSha256": "7cd940da0b3be70a36419f0fabdad58fa2b9c597b6b94bedd0eed08fe01ce188",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+        "expected": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+        "committedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+        "expected": "e447ae3d7beda59aa05f7e222bca2119e52be4071b2f6c892090923a2f8d97a8",
+        "committedSha256": "e447ae3d7beda59aa05f7e222bca2119e52be4071b2f6c892090923a2f8d97a8",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.css",
+        "expected": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+        "committedSha256": "4082454108e8862a26f386975fc068e8efdc7b9c9ef03b4f27e9050de454a315",
+        "matches": false
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor",
+        "expected": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7",
+        "committedSha256": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+        "expected": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+        "committedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.css",
+        "expected": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+        "committedSha256": "c4dd60b83da2cae3e9f42f31df11eb890917039025256ae9e7ac3abd8b4ae23a",
+        "matches": false
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/README.md",
+        "expected": "ec78a2027250f759886830e98bd2b4bf6ec043e09efe3d80638ebf2193b4644d",
+        "committedSha256": "cf1a7678cbb929703f3a0a9b6f9da2ad94e316e937615382a8668fa4e6f197ed",
+        "matches": false
+      },
+      {
+        "path": "src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor",
+        "expected": "d11bde22644d651f1b59870e4af31ba5e561e3a1b4a1327f29efb59ae25f149b",
+        "committedSha256": "d11bde22644d651f1b59870e4af31ba5e561e3a1b4a1327f29efb59ae25f149b",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj",
+        "expected": "5435f45b9d5144c96469a5c3a92e2dfd6c7503dbedd73872b8a043f0818a511f",
+        "committedSha256": "5435f45b9d5144c96469a5c3a92e2dfd6c7503dbedd73872b8a043f0818a511f",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.AppComponents/Components/AgentAvatarActionButton.razor",
+        "expected": null,
+        "committedSha256": null,
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.Conversations.Components/AgentAvatarActionButton.razor",
+        "expected": "806a639f3ca026a74970fc48f50e8a8510fc64387add693b4e0be356924947ef",
+        "committedSha256": "806a639f3ca026a74970fc48f50e8a8510fc64387add693b4e0be356924947ef",
+        "matches": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.Conversations.Components/README.md",
+        "expected": "c90387a212a5b2bfcc20d9100662b243392a9bf1a302c2c2df673c7e771333c1",
+        "committedSha256": "890f358a3b53613cdc028fd3b86f57b4045d08af5f4eed6ac2b1459613b7edcd",
+        "matches": false
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesAcknowledgementTests.cs",
+        "expected": "cf1a35b0d15bc89bac8f2616be7214d7cd0096953b4cd9abcefd7275b0ddd24d",
+        "committedSha256": "cf1a35b0d15bc89bac8f2616be7214d7cd0096953b4cd9abcefd7275b0ddd24d",
+        "matches": true
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesEffectsTests.cs",
+        "expected": "df61a74fc3eebe7e8a3a4905e67ecb5381c14c60c9c3ecbf848bcabf38bc2598",
+        "committedSha256": "df61a74fc3eebe7e8a3a4905e67ecb5381c14c60c9c3ecbf848bcabf38bc2598",
+        "matches": true
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesMutationTests.cs",
+        "expected": "8f0756a4bd510adc8a524981aaba08ae8d3b60671e9252f852041580f2dc3724",
+        "committedSha256": "8f0756a4bd510adc8a524981aaba08ae8d3b60671e9252f852041580f2dc3724",
+        "matches": true
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesReadLifecycleTests.cs",
+        "expected": "93a4220c31c5e20947025bedb4ab37e54e43a66de2f38aba6e0254b3a83d5e4c",
+        "committedSha256": "93a4220c31c5e20947025bedb4ab37e54e43a66de2f38aba6e0254b3a83d5e4c",
+        "matches": true
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesRecoveryEffectsTests.cs",
+        "expected": "a89459a9b562dbc3706bce1eb66f80a581e3a567cd3082aee6d69d12106448a3",
+        "committedSha256": "a89459a9b562dbc3706bce1eb66f80a581e3a567cd3082aee6d69d12106448a3",
+        "matches": true
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesSurfaceTests.cs",
+        "expected": "2cf22ce059e78e880aee4a07ec975401437a8171eeaad2bcf0652f5904728397",
+        "committedSha256": "2cf22ce059e78e880aee4a07ec975401437a8171eeaad2bcf0652f5904728397",
+        "matches": true
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilityListTests.cs",
+        "expected": "27666e238427050f91b519091eeddd9efa8ef2943966c8a42388d7e949ac72ed",
+        "committedSha256": "27666e238427050f91b519091eeddd9efa8ef2943966c8a42388d7e949ac72ed",
+        "matches": true
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "expected": "3c985a91c1355f10013d03cf153e2ec270760d8973ed5f865a69aec222bfd7c5",
+        "committedSha256": "8e99c0f8b23877761d5845ed198469f1a0314e704de6a1691f0030929204f2c4",
+        "matches": false
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/CapabilitiesSandboxTests.cs",
+        "expected": "5709a5aa75bafd09d3fd059bdd3976144f2995f36aa1e39a89dcf5bae2c59a2e",
+        "committedSha256": "5b657c8931d94be3d6303aa88b2a30e9259c5d4732852619b613e18e05f37107",
+        "matches": false
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityCorrectnessIntegrationTests.cs",
+        "expected": "b80fac5c67982d3ca4c17ffbc7fa68473b766a144862ec9c123cdbf812f8d37c",
+        "committedSha256": "ba33da08371a2aba108ed9237c1c40e83fccc531eb70b4ac79b69044b0d87258",
+        "matches": false
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationApiIntegrationTests.cs",
+        "expected": "61f66cf630836576a30d34d003d945818ce9ff3977fd67dc291b383ee3059b9e",
+        "committedSha256": "0eb95ff73122a2c28ddea25b1d8ee57bcc773b708ceec436bde47d1093a6956c",
+        "matches": false
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationRaceIntegrationTests.cs",
+        "expected": "8cc20ae45a9fccd2d094a1c72d7061fe64c0455ec262acea9f14f97df7815642",
+        "committedSha256": "b7938c7749518531004b891d7a4a7b4699b669c3c765e66e246e5b367f7d2fc4",
+        "matches": false
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityWorkspaceResolutionTests.cs",
+        "expected": "71a46949ea598ab9eaddd5adfd5c839b4d48dca083590316841d2b5ef9bb0dac",
+        "committedSha256": "1934e366660d16a24ac0f3b7aaebbbd59c135e31469810c9ba487266ccafc07c",
+        "matches": false
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilitiesSessionTests.cs",
+        "expected": "1c9000233de39c3078aa6a8b338a41d15a017985033ff21bb3188a30d90f4fc1",
+        "committedSha256": "1c9000233de39c3078aa6a8b338a41d15a017985033ff21bb3188a30d90f4fc1",
+        "matches": true
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilityCorrectnessTests.cs",
+        "expected": "0389664be8304ee05a95343768d76c23c2de1057fb2feb51edf8bacedaee36c5",
+        "committedSha256": "d3a2afd663c705409a3d7d7de9cbcbda2785fe146ffaa41f24312214eeff075f",
+        "matches": false
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/CapabilitiesSandboxContextTests.cs",
+        "expected": "e33aa09a21138c081166c9fb5a2a4e70dc165443da931e77a5fed2b359736ce6",
+        "committedSha256": "613cbb11dca99309ca7467921e28918a136ab081d74629bbf50284d5f1884b32",
+        "matches": false
+      },
+      {
+        "path": "tools/Validation/Portability/portability-risk-baseline.json",
+        "expected": "73588f7d0dd628b32f31463828278c18c9ae69aabba3bfd5f8aa7ffb84d7d216",
+        "committedSha256": "73588f7d0dd628b32f31463828278c18c9ae69aabba3bfd5f8aa7ffb84d7d216",
+        "matches": true
+      }
+    ]
+  },
+  "manifests": [
+    {
+      "bundle": "UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle",
+      "entries": 256,
+      "historicalByteMismatches": 0,
+      "allMismatchesNewlineOnly": true
+    },
+    {
+      "bundle": "UI_AgentCapabilities_03_Extraction_Sandbox_Bundle",
+      "entries": 800,
+      "historicalByteMismatches": 3,
+      "allMismatchesNewlineOnly": true
+    },
+    {
+      "bundle": "UI_AgentsOverview_01_State_Read_Seams_Bundle",
+      "entries": 27,
+      "historicalByteMismatches": 2,
+      "allMismatchesNewlineOnly": true
+    }
+  ],
+  "source": [
+    {
+      "path": ".gitignore",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "dfaada45667b0cde896bee39e29c11476471c8942c8cb818c6c97d5b5b11333a",
+      "workingSha256": "dfaada45667b0cde896bee39e29c11476471c8942c8cb818c6c97d5b5b11333a",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "Tailwind/catalog-fast.css",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "d09a9daa2a96402bc474633aa2dee8c62d387372e3e08d9df8f01c4f8dbf0daa",
+      "workingSha256": "d09a9daa2a96402bc474633aa2dee8c62d387372e3e08d9df8f01c4f8dbf0daa",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "Tailwind/input.css",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "3836a34464192fb077c8bfb14cdd0581e772674b6d9010cda1af73f81caef88d",
+      "workingSha256": "3836a34464192fb077c8bfb14cdd0581e772674b6d9010cda1af73f81caef88d",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "Tailwind/main/component-layout-utilities.css",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "7e98317866ec3ebd7802a6b8a6d457c704867cfa2486415efcf8e3efd676e09d",
+      "workingSha256": "311909ab73be481a52dbefc4373bef9d4c132363a044a32c3a84a8d43ecb3d57",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "docs/api-control-plane.md",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "b303ef9ec06d5512548e8c47a3c559a499562a4803cc26f581608b2a21350760",
+      "workingSha256": "00653ceabdf863907a598b9edef218174c3070bf1a842e82787a48741daecc38",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "d96c1c46db35fa320972e408a6a94f184ae0dd4ced47988097fe96448122b031",
+      "workingSha256": "000f298ac64131779c5f00f424f1806f4d2e000c9cc4f2b22315bfc0d40382ad",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/app.css",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "bb3f9e86757cae4be04e29ee58d6bd1755660c039f2419b31ff606c28c864224",
+      "workingSha256": "323c11884246d9da98546bd61ca090a5a0c1bb49bb677d5ad63c399565536c63",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+      "workingSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentConfigurationVersion.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "7e925316b9c00747f1eeb960562585279cf8f033383ffbc49ca1ceade1572fe9",
+      "workingSha256": "29a77806fa965a21ffcbd3da6120061670043b885c282685e4d336c6c35da940",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "0cbb55688aed26cc77d39540a2e4037c2cd6b764a1cdb4807b3a6fd54881e7b6",
+      "workingSha256": "a0595829419243d6ec4c27666949bc6d1e2681d792c73ddf1f286c86dad3d774",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentExternalProvisioningService.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "404565804c17febdeafca77e02e44852bc48886a5b3ca5a759f24116650c555f",
+      "workingSha256": "44c14121ab01ec34383d3acf550e68daedd17102fc229a8cd7c0098196983606",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "5100128fe935deefc32c79a5b3169b615774e7edd58e9d0be4cb35030bb4228e",
+      "workingSha256": "b347565843f721915a4b816c67fc31333fc67f784d89c92ef8a316de8f0bf3bd",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "c342e161320ead4cd00d439f728980fad850556d9deec8d15914edaf0b65dacd",
+      "workingSha256": "b52a4fb51b3fb0fddc30436c4883044c95fb34d763e641762118c7fcc22dd08d",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "7d26c130132570c6c18590a846a6cc7f1d2b8b305230b0049fef88d689617f30",
+      "workingSha256": "9ebd7c36273c644e875782d126ceea131d41d9d1a9f22b77da92aa7abd305ee8",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Packages/AgentPackageImportService.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "6c7b514e2776301e337fc2f6f7188747ee65ef971f8a64983b17314c7c599814",
+      "workingSha256": "a1a3c94391a348c90a260dc8fdec257cb0bf572bb7ef1e88688fee3542d9a554",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "9ce10c28642bb63fb1480e74bc912ff294909af2c4178b28798418c59c7ef9c4",
+      "workingSha256": "74ab113e577bb0efd5efbef2d5f1b04fa9ab58248d3cda03a7ec62b5fbaac000",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkOrganizationCatalogRepairService.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "41bc96857dd58acb20ae0d8f3fcf7edcc787b49097bbcb0e3f5959f6ee72303c",
+      "workingSha256": "fb50b38405f237874338f05e2d80751872d77edca3b15311afe1e92aa8ead962",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "0b6df1812af49dad4f8043adc8c13767f1823a9ebe1aeed36707e6ba59a99cb1",
+      "workingSha256": "0b6df1812af49dad4f8043adc8c13767f1823a9ebe1aeed36707e6ba59a99cb1",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "a30d61f9fccfb1fc9979ef44036f0aaafb39740e0163678b767ad84c31fcd534",
+      "workingSha256": "a30d61f9fccfb1fc9979ef44036f0aaafb39740e0163678b767ad84c31fcd534",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSession.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "d20f868cce4df10ca4392f723f9816dc84576ce961c40100e921bd191c696cbc",
+      "workingSha256": "d20f868cce4df10ca4392f723f9816dc84576ce961c40100e921bd191c696cbc",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "7fb41e55493164b1dad82ad0c8da933ff54b31c992b3bba52cb4db75cabe4a3f",
+      "workingSha256": "2cc660c9cad38769f70380405a72f5c9fbb59374618c6cd49b837223c3b48544",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityOperations.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "6816ec240b2da7154b7366fb688db5c05725e7af5b4c6b1cfa7c2426888a1009",
+      "workingSha256": "fcf4f5e63ccd898c74cac1c4ca79b8240f9912e3df9756939d1769b2225bf425",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilityCuratorLaunch.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "e05f77d9dfe18d52e689aa0f17eb06b618e2d5fa66d45dc61642d1c4be834cc2",
+      "workingSha256": "295214bfc50497aa2a51d8e594ceabc441f448f958f3248c0596c5b8a4c492e3",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "7012828887a4c3fdbc1c5a82fd564ce17cae9ac8bd95f042bfdea3fc75773747",
+      "workingSha256": "43cabf859f9817ea21d03c5bdbc6f07d4dccaf3f12aee553fd06e4177708529d",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "cc3235d2722c3d42afcccf615bc57071ba35d2ed289a7f4d30d49d9957ec742e",
+      "workingSha256": "cc3235d2722c3d42afcccf615bc57071ba35d2ed289a7f4d30d49d9957ec742e",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "f8e2faebaa254cf9497cc0fb9b7ad541cb32888b93d8d4b6e3ae1c247f1b0a2e",
+      "workingSha256": "7ce2ba395c8ab626eea38f19874e0ea7f5be8f8862e7c2245ed323635625ec95",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxContext.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "0c5fa48f6d80e9c1ec3a8a138bc7705f47fc2149e1f8e81a6f47e8a2a3078b60",
+      "workingSha256": "9d7832a743c5c616d7e0c6e68448de934d57d7169807cd295337959232813194",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxFixture.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "19f1fd3085d8240cc0b57527a55a04bc5e3e4565c7bee6182f7e4d9d3dea0ee6",
+      "workingSha256": "99aea1fbfbe0fe685257fdd6fb78fe2cac1574a27b7da6a98d756d004f583ef6",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CapabilitiesSpecimen.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "71794a397463215f78f57b445d7f8a55f2ca03737b09cc9eb6b31f81b3fbf1ed",
+      "workingSha256": "857249608b885ccb8368fb40828d0fb71d28fce7578f6b17c1c0eb72f651e1fe",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "a3592f4f51dd36b2c26320e9f4411e0c792b43f20544714600405593f911c527",
+      "workingSha256": "e04c16818d201698fc489f22cd6620b948ba353a3b512f3eb97a8626cf593eb2",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CatalogSpecimen.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "1d26c22b5873ed9a2d9e894ad4d931963201322b3e135aaad37f18b26e9a53e1",
+      "workingSha256": "f544bc41885d70ddcf8e0390fdf686eead55c269a133775b8151b2ff277c706c",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "91b91005c53425aaac2cacc24d110368e5bec607d834282d955686b4413802fb",
+      "workingSha256": "3623ac0a2ebd53efd9e05af250ad16426b00471431e909c7071589c892146460",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/capabilities.json",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "05034933ae5e9b2344924e60e62a8a65b318d1ceb5eb00ca97be8d15ac80a6d1",
+      "workingSha256": "1213f18fbe782687dd6a6a3d45a492bfc87f77eea795d3c2e9ae7b82bd7b4fa3",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "f1fc194263abec5b4116f3046754d22c0f7a7b2290179122a32932c9d9d62ed6",
+      "workingSha256": "d64782c719ce88dc75c35f49bc4551190a12565458055c393e618787f5fd39f5",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "e2d16e2ad497cd0973e9c9002dbe8755f3ca90ac816d754ac9e0cb54f57f2866",
+      "workingSha256": "8aadcb880793825b4f876f0958dcf5be5fad914741aad966512a4c92d9c6d2ee",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesState.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "7cd940da0b3be70a36419f0fabdad58fa2b9c597b6b94bedd0eed08fe01ce188",
+      "workingSha256": "7cd940da0b3be70a36419f0fabdad58fa2b9c597b6b94bedd0eed08fe01ce188",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+      "workingSha256": "51882c575375e9bb29f76a56a788120868e627f0e66e8d6b5c72cebaa9a4d462",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "e447ae3d7beda59aa05f7e222bca2119e52be4071b2f6c892090923a2f8d97a8",
+      "workingSha256": "e447ae3d7beda59aa05f7e222bca2119e52be4071b2f6c892090923a2f8d97a8",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.css",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "4082454108e8862a26f386975fc068e8efdc7b9c9ef03b4f27e9050de454a315",
+      "workingSha256": "55578635d2cc0c81cc6d041c325b20c2f1a558991ac84586e3d482fb2744264c",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7",
+      "workingSha256": "a37693389872950bde85c9fbfcbd4b058066dd459fc9bf47b1a112125a6cf4c7",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+      "workingSha256": "620c3b47cdf9e28fda39b3141f414a05b03cd8ebb476343cde4c3e4bc647825d",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.css",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "c4dd60b83da2cae3e9f42f31df11eb890917039025256ae9e7ac3abd8b4ae23a",
+      "workingSha256": "5d1c35f8b09f41651b177a4adb8b169eaf0d50ded831da41ad14cd134773b939",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/README.md",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "cf1a7678cbb929703f3a0a9b6f9da2ad94e316e937615382a8668fa4e6f197ed",
+      "workingSha256": "ec78a2027250f759886830e98bd2b4bf6ec043e09efe3d80638ebf2193b4644d",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "d11bde22644d651f1b59870e4af31ba5e561e3a1b4a1327f29efb59ae25f149b",
+      "workingSha256": "d11bde22644d651f1b59870e4af31ba5e561e3a1b4a1327f29efb59ae25f149b",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "5435f45b9d5144c96469a5c3a92e2dfd6c7503dbedd73872b8a043f0818a511f",
+      "workingSha256": "5435f45b9d5144c96469a5c3a92e2dfd6c7503dbedd73872b8a043f0818a511f",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AppComponents/Components/AgentAvatarActionButton.razor",
+      "deleted": true,
+      "workingMatchesTested": true,
+      "committedSha256": null,
+      "workingSha256": null,
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.Conversations.Components/AgentAvatarActionButton.razor",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "806a639f3ca026a74970fc48f50e8a8510fc64387add693b4e0be356924947ef",
+      "workingSha256": "806a639f3ca026a74970fc48f50e8a8510fc64387add693b4e0be356924947ef",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.Conversations.Components/README.md",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "890f358a3b53613cdc028fd3b86f57b4045d08af5f4eed6ac2b1459613b7edcd",
+      "workingSha256": "c90387a212a5b2bfcc20d9100662b243392a9bf1a302c2c2df673c7e771333c1",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesAcknowledgementTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "cf1a35b0d15bc89bac8f2616be7214d7cd0096953b4cd9abcefd7275b0ddd24d",
+      "workingSha256": "cf1a35b0d15bc89bac8f2616be7214d7cd0096953b4cd9abcefd7275b0ddd24d",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesEffectsTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "df61a74fc3eebe7e8a3a4905e67ecb5381c14c60c9c3ecbf848bcabf38bc2598",
+      "workingSha256": "df61a74fc3eebe7e8a3a4905e67ecb5381c14c60c9c3ecbf848bcabf38bc2598",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesMutationTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "8f0756a4bd510adc8a524981aaba08ae8d3b60671e9252f852041580f2dc3724",
+      "workingSha256": "8f0756a4bd510adc8a524981aaba08ae8d3b60671e9252f852041580f2dc3724",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesReadLifecycleTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "93a4220c31c5e20947025bedb4ab37e54e43a66de2f38aba6e0254b3a83d5e4c",
+      "workingSha256": "93a4220c31c5e20947025bedb4ab37e54e43a66de2f38aba6e0254b3a83d5e4c",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesRecoveryEffectsTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "a89459a9b562dbc3706bce1eb66f80a581e3a567cd3082aee6d69d12106448a3",
+      "workingSha256": "a89459a9b562dbc3706bce1eb66f80a581e3a567cd3082aee6d69d12106448a3",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesSurfaceTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "2cf22ce059e78e880aee4a07ec975401437a8171eeaad2bcf0652f5904728397",
+      "workingSha256": "2cf22ce059e78e880aee4a07ec975401437a8171eeaad2bcf0652f5904728397",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentCapabilityListTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "27666e238427050f91b519091eeddd9efa8ef2943966c8a42388d7e949ac72ed",
+      "workingSha256": "27666e238427050f91b519091eeddd9efa8ef2943966c8a42388d7e949ac72ed",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "8e99c0f8b23877761d5845ed198469f1a0314e704de6a1691f0030929204f2c4",
+      "workingSha256": "3c985a91c1355f10013d03cf153e2ec270760d8973ed5f865a69aec222bfd7c5",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/CapabilitiesSandboxTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "5b657c8931d94be3d6303aa88b2a30e9259c5d4732852619b613e18e05f37107",
+      "workingSha256": "5709a5aa75bafd09d3fd059bdd3976144f2995f36aa1e39a89dcf5bae2c59a2e",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityCorrectnessIntegrationTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "ba33da08371a2aba108ed9237c1c40e83fccc531eb70b4ac79b69044b0d87258",
+      "workingSha256": "b80fac5c67982d3ca4c17ffbc7fa68473b766a144862ec9c123cdbf812f8d37c",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationApiIntegrationTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "0eb95ff73122a2c28ddea25b1d8ee57bcc773b708ceec436bde47d1093a6956c",
+      "workingSha256": "61f66cf630836576a30d34d003d945818ce9ff3977fd67dc291b383ee3059b9e",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityVerificationRaceIntegrationTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "b7938c7749518531004b891d7a4a7b4699b669c3c765e66e246e5b367f7d2fc4",
+      "workingSha256": "8cc20ae45a9fccd2d094a1c72d7061fe64c0455ec262acea9f14f97df7815642",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CapabilityWorkspaceResolutionTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "1934e366660d16a24ac0f3b7aaebbbd59c135e31469810c9ba487266ccafc07c",
+      "workingSha256": "71a46949ea598ab9eaddd5adfd5c839b4d48dca083590316841d2b5ef9bb0dac",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilitiesSessionTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "1c9000233de39c3078aa6a8b338a41d15a017985033ff21bb3188a30d90f4fc1",
+      "workingSha256": "1c9000233de39c3078aa6a8b338a41d15a017985033ff21bb3188a30d90f4fc1",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilityCorrectnessTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "d3a2afd663c705409a3d7d7de9cbcbda2785fe146ffaa41f24312214eeff075f",
+      "workingSha256": "0389664be8304ee05a95343768d76c23c2de1057fb2feb51edf8bacedaee36c5",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/CapabilitiesSandboxContextTests.cs",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "613cbb11dca99309ca7467921e28918a136ab081d74629bbf50284d5f1884b32",
+      "workingSha256": "e33aa09a21138c081166c9fb5a2a4e70dc165443da931e77a5fed2b359736ce6",
+      "committedMatchesTested": false,
+      "newlineEquivalent": true
+    },
+    {
+      "path": "tools/Validation/Portability/portability-risk-baseline.json",
+      "deleted": false,
+      "workingMatchesTested": true,
+      "committedSha256": "73588f7d0dd628b32f31463828278c18c9ae69aabba3bfd5f8aa7ffb84d7d216",
+      "workingSha256": "73588f7d0dd628b32f31463828278c18c9ae69aabba3bfd5f8aa7ffb84d7d216",
+      "committedMatchesTested": true,
+      "newlineEquivalent": true
+    }
+  ],
+  "links": [
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "target": "adjudication.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/adjudication.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "target": "semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "target": "validation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "target": "post-push-receipt.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/post-push-receipt.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "target": "proof/architecture-analysis.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/architecture-analysis.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "target": "proof/source-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/source-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/post-push-receipt.md",
+      "target": "proof/entry.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/entry.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/post-push-receipt.md",
+      "target": "proof/post-push-manifests.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/post-push-manifests.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/post-push-receipt.md",
+      "target": "../UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "inputs/owner-directive.txt",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/inputs/owner-directive.txt",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "proof/entry.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/entry.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "proof/post-push-manifests.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/post-push-manifests.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "adjudication.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/adjudication.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "plan.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/plan.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "../UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "validation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "browser-review.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/browser-review.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "target": "proof/exit-state.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/exit-state.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/semantic-test-map.md",
+      "target": "proof/final-owning-selections.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/final-owning-selections.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "proof/exit-state.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/exit-state.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "proof/source-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/source-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "proof/final-owning-selections.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/final-owning-selections.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "proof/stable-expansion-review.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/stable-expansion-review.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "proof/discovery-evidence-repair.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/discovery-evidence-repair.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "proof/stable-artifact-redaction.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/stable-artifact-redaction.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/validation.md",
+      "target": "browser-review.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/browser-review.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "target": "report.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "target": "proof/SB03/closure-validation.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure-validation.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "target": "proof/SB03/final-repository-receipt.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/final-repository-receipt.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "target": "proof/SB03/final-source-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/final-source-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "target": "proof/SB03/measurement-results.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/measurement-results.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "target": "proof/SB03/measurement-interpretation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/measurement-interpretation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/execution.md",
+      "target": "../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/execution.md",
+      "target": "proof/SB00/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB00/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/execution.md",
+      "target": "proof/SB01/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB01/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/execution.md",
+      "target": "proof/SB02/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB02/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/execution.md",
+      "target": "proof/SB03/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/inputs/owner-directive.md",
+      "target": "../../UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/inputs/02-execution-request.txt",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/inputs/02-execution-request.txt",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/measurement-protocol.md",
+      "target": "../proof/SB03/responsive-utility-adjudication.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/responsive-utility-adjudication.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB02/closure.md",
+      "target": "long-content-review.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB02/long-content-review.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure.md",
+      "target": "../../closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure.md",
+      "target": "closure-validation.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure-validation.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure.md",
+      "target": "measurement-results.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/measurement-results.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure.md",
+      "target": "measurement-interpretation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/measurement-interpretation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure.md",
+      "target": "asset-followup.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/asset-followup.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "report.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/README.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "../UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "inputs/owner-directive.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/inputs/owner-directive.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "requirements.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/requirements.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "architecture.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/architecture.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "inventory/source-boundary.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/inventory/source-boundary.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "plan/validation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "plan/measurement-protocol.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/measurement-protocol.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "execution.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/execution.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/README.md",
+      "target": "reviews/readiness.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/reviews/readiness.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/post-push-receipt.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/post-push-receipt.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/adjudication.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/adjudication.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "proof/SB01/movement.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB01/movement.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "proof/SB01/avatar-child-review.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB01/avatar-child-review.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "proof/SB03/responsive-utility-adjudication.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/responsive-utility-adjudication.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "proof/SB03/measurement-results.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/measurement-results.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "proof/SB03/measurement-interpretation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/measurement-interpretation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_Agents_Component_Seams_Bundle/plan/04-agent-module-continuation-roadmap.md",
+      "committedTarget": "codex/bundles/UI_Agents_Component_Seams_Bundle/plan/04-agent-module-continuation-roadmap.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "proof/SB03/closure-validation.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure-validation.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "proof/SB03/final-repository-receipt.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/final-repository-receipt.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_Component_Seams_Shared_Architecture_Bundle/reviews/12-revision-ordering-and-explicit-liveness.md",
+      "committedTarget": "codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/reviews/12-revision-ordering-and-explicit-liveness.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_Component_Seams_Shared_Architecture_Bundle/reviews/13-rendered-closure-and-adversarial-content.md",
+      "committedTarget": "codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/reviews/13-rendered-closure-and-adversarial-content.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/current-receipt.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/current-receipt.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "target": "../UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/final-validation.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/final-validation.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/reviews/readiness.md",
+      "target": "../closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/reviews/readiness.md",
+      "target": "../proof/SB03/closure-validation.json",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB03/closure-validation.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB00.md",
+      "target": "../plan/validation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB00.md",
+      "target": "../plan/measurement-protocol.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/measurement-protocol.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB00.md",
+      "target": "../proof/SB00/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/SB00/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB01.md",
+      "target": "../plan/validation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB01.md",
+      "target": "../plan/measurement-protocol.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/measurement-protocol.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB02.md",
+      "target": "../plan/validation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB02.md",
+      "target": "../plan/measurement-protocol.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/measurement-protocol.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB03.md",
+      "target": "../plan/validation.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/subbundles/SB03.md",
+      "target": "../plan/measurement-protocol.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/plan/measurement-protocol.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/00-csharp-current-state-inventory.md",
+      "target": "../inventory/source-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/source-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/00-csharp-current-state-inventory.md",
+      "target": "../inventory/codeanalytics.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/codeanalytics.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/00-csharp-current-state-inventory.md",
+      "target": "04-csharp-testability-plan.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/04-csharp-testability-plan.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/02-csharp-dependency-direction.md",
+      "target": "../inventory/module-references.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/module-references.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/02-csharp-dependency-direction.md",
+      "target": "../inventory/codeanalytics.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/codeanalytics.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/04-csharp-testability-plan.md",
+      "target": "../inventory/test-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/test-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/04-csharp-testability-plan.md",
+      "target": "../plan/semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/execution.md",
+      "target": "inventory/predecessor-closure-seal.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/predecessor-closure-seal.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/validation.md",
+      "target": "../inventory/test-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/test-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/validation.md",
+      "target": "semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/validation.md",
+      "target": "ui-composition.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/ui-composition.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "inputs/owner-directive.txt",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inputs/owner-directive.txt",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "requirements.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/requirements.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "traceability.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/traceability.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "architecture/00-csharp-current-state-inventory.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/00-csharp-current-state-inventory.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "architecture/01-csharp-boundary-map.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/01-csharp-boundary-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "architecture/02-csharp-dependency-direction.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/02-csharp-dependency-direction.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "architecture/03-csharp-pattern-selection-records.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/03-csharp-pattern-selection-records.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "architecture/04-csharp-testability-plan.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/04-csharp-testability-plan.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "plan/semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "plan/validation.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/validation.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "plan/ui-composition.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/ui-composition.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "subbundles/O00.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O00.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "subbundles/O01.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O01.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "subbundles/O02.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O02.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "subbundles/O03.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O03.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "plan/architecture-checkpoints.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/architecture-checkpoints.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "reviews/csharp-architecture-gate.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/reviews/csharp-architecture-gate.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "execution.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/execution.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "../UI_Agents_Component_Seams_Bundle/plan/04-agent-module-continuation-roadmap.md",
+      "committedTarget": "codex/bundles/UI_Agents_Component_Seams_Bundle/plan/04-agent-module-continuation-roadmap.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "inventory/source-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/source-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "inventory/codeanalytics.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/codeanalytics.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "inventory/predecessor-closure-seal.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/predecessor-closure-seal.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md",
+      "target": "inventory/final-validation.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/final-validation.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O00.md",
+      "target": "../plan/semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O00.md",
+      "target": "../inventory/test-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/test-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O01.md",
+      "target": "../architecture/01-csharp-boundary-map.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/01-csharp-boundary-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O01.md",
+      "target": "../requirements.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/requirements.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O01.md",
+      "target": "../plan/semantic-test-map.md",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/semantic-test-map.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O01.md",
+      "target": "../inventory/test-inventory.json",
+      "committedTarget": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/test-inventory.json",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/traceability.md",
+      "target": "../UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/report.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/traceability.md",
+      "target": "../UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "committedTarget": "codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/closure.md",
+      "valid": true
+    },
+    {
+      "from": "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/traceability.md",
+      "target": "../UI_Agents_Component_Seams_Bundle/plan/04-agent-module-continuation-roadmap.md",
+      "committedTarget": "codex/bundles/UI_Agents_Component_Seams_Bundle/plan/04-agent-module-continuation-roadmap.md",
+      "valid": true
+    }
+  ],
+  "moves": [
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
+      "oldAbsent": true,
+      "newPresent": true
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSurface.razor.cs",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.cs",
+      "oldAbsent": true,
+      "newPresent": true
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesState.cs",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesState.cs",
+      "oldAbsent": true,
+      "newPresent": true
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.css",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor.css",
+      "oldAbsent": true,
+      "newPresent": true
+    },
+    {
+      "from": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor",
+      "oldAbsent": true,
+      "newPresent": true
+    },
+    {
+      "from": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.cs",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.cs",
+      "oldAbsent": true,
+      "newPresent": true
+    },
+    {
+      "from": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentCapabilityList.razor.css",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilityList.razor.css",
+      "oldAbsent": true,
+      "newPresent": true
+    },
+    {
+      "from": "src/UI/CanDoItAll.AppComponents/Components/AgentAvatarActionButton.razor",
+      "to": "src/UI/CanDoItAll.Conversations.Components/AgentAvatarActionButton.razor",
+      "oldAbsent": true,
+      "newPresent": true
+    }
+  ],
+  "decision": "Accepted normalized text handoff: all working compiler/asset inputs are exact previously tested bytes. Committed text differs only by CRLF normalization. Historical manifests remain unchanged; supplemental committed-byte manifests supplied. No semantic predecessor gate is invalidated. New Overview owning builds/discovery run before RED."
+}

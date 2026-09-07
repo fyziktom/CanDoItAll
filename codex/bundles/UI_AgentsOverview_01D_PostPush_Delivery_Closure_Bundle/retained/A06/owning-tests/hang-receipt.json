@@ -1,0 +1,12 @@
+{
+  "utc": "2026-09-07T20:12:00.126575+00:00",
+  "status": "OPERATOR_INTERRUPTED_SLOW_RUN",
+  "selection": "a06-owning-components",
+  "expected": 88,
+  "lastCompletedReceipt": "a06-owning-components-discovery",
+  "startedUtc": "2026-09-07T20:05:37.456619+00:00",
+  "ownedTesthostPid": 68384,
+  "verifiedParentPid": 69248,
+  "action": "Stopped only the exact task-owned stalled testhost to flush partial results; rerun with bounded VSTest hang diagnostics.",
+  "adjudication": "Initial stall inference refuted. The identical diagnostic rerun completed all 88 cases in 7m34s without production edits. First run was prematurely stopped at 73 passes; the later 45s isolated-class limit also interrupted normally progressing 4-12s fixture cases. Neither interruption proves a product defect."
+}

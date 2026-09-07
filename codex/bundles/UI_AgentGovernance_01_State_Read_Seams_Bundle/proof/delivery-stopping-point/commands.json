@@ -1,0 +1,41 @@
+[
+  {
+    "name": "encoding",
+    "command": [
+      "python",
+      "tools/Validation/bundles/scan_text_encoding.py",
+      "--repo-root",
+      ".",
+      "--scope",
+      "codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle",
+      "--scope",
+      "tests/Components/CanDoItAll.Tests.Components/AgentGovernanceReadLifecycleTests.cs",
+      "--output",
+      ".mcp-state/governance/stopping-encoding.json"
+    ],
+    "exitCode": 0,
+    "outputSha256": "03c6e91dd52e8a2f36ab121b121639bb77df6d6aada4527d61fa3d245b456aab"
+  },
+  {
+    "name": "retained-secrets",
+    "command": [
+      "python",
+      "codex/bundles/UI_AgentsOverview_01D_PostPush_Delivery_Closure_Bundle/retained/A06/tools/scan-retained.py",
+      "codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle",
+      ".mcp-state/governance/stopping-secrets.json"
+    ],
+    "exitCode": 0,
+    "outputSha256": "832827081332155bcdb0f3426198df3a0a1c346ba35448aae21b64c4bd91fe9c"
+  },
+  {
+    "name": "documentation",
+    "command": [
+      "pwsh",
+      "-NoProfile",
+      "-File",
+      "tools/Validation/Test-Documentation.ps1"
+    ],
+    "exitCode": 1,
+    "outputSha256": "2aa2691c9685a98e2cbe2c2429f71555ad7a314cb36883d7efbf170bb037cb30"
+  }
+]

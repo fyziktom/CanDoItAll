@@ -1,0 +1,22 @@
+[
+  {
+    "name": "isolated-CanDoItAll.Modules.AgentFramework",
+    "command": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "-p:UseSharedCompilation=false",
+      "-v:q",
+      "-p:UseLocalCanDoItAllLibraries=true",
+      "-p:CanDoItAllComponentsRepositoryRoot=C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\isolated\\CanDoItAll.Components",
+      "-p:CanDoItAllFileToolsRepositoryRoot=C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\isolated\\CanDoItAll.FileTools"
+    ],
+    "cwd": "C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\isolated\\CanDoItAll",
+    "exit": 1,
+    "startedUtc": "2026-09-07T19:21:06.221973+00:00",
+    "finishedUtc": "2026-09-07T19:24:11.529217+00:00"
+  }
+]

@@ -1,0 +1,164 @@
+{
+  "expected": 7,
+  "discovered": [
+    "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.StandardPublicApiMetadataMatchesFreezeSnapshot",
+    "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.StandardProjectPackabilityMetadataMatchesFreezeSnapshot",
+    "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.StandardSourcePackageInputsMatchFreezeSnapshot",
+    "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.BaseLibRequiredStylesheetsContainRuntimeContracts(fileName: \"material-symbols.css\", expectedContract: \".cda-material-icon\")",
+    "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.BaseLibRequiredStylesheetsContainRuntimeContracts(fileName: \"output.css\", expectedContract: \".cda-expand-transition\")",
+    "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.CompatibilityShimManifestMatchesFreezeSnapshot",
+    "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.CompatibilityPolicyDocumentsEveryShimAndRemovalGate"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "C:/repositories/CanDoItAll.Components/tests/CanDoItAll.Components.BaseLib.Tests/CanDoItAll.Components.BaseLib.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~StandardPublishingApprovalTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-07T12:26:46.679269+00:00",
+      "finishedUtc": "2026-09-07T12:26:48.116689+00:00",
+      "output": "o02-sibling-approval-reviewed-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "C:/repositories/CanDoItAll.Components/tests/CanDoItAll.Components.BaseLib.Tests/CanDoItAll.Components.BaseLib.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~StandardPublishingApprovalTests",
+        "--logger",
+        "trx;LogFileName=o02-sibling-approval-reviewed.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-07T12:26:48.117690+00:00",
+      "finishedUtc": "2026-09-07T12:26:50.319916+00:00",
+      "output": "o02-sibling-approval-reviewed-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "7",
+    "executed": "7",
+    "passed": "7",
+    "failed": "0",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "9f39d361-efa9-423c-a0c7-42c9ac75f41e",
+      "testId": "13f34bf3-a0b0-9fba-0442-36c4ae247a6b",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.StandardSourcePackageInputsMatchFreezeSnapshot",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.4424281",
+      "startTime": "2026-09-07T08:26:49.6806713-04:00",
+      "endTime": "2026-09-07T08:26:50.1286704-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9f39d361-efa9-423c-a0c7-42c9ac75f41e"
+    },
+    {
+      "executionId": "f8198dfe-1c13-441a-8b2e-890a5b99b39d",
+      "testId": "4b458768-e197-132a-7ff8-af80361274cb",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.CompatibilityPolicyDocumentsEveryShimAndRemovalGate",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0025690",
+      "startTime": "2026-09-07T08:26:50.1389177-04:00",
+      "endTime": "2026-09-07T08:26:50.1389547-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f8198dfe-1c13-441a-8b2e-890a5b99b39d"
+    },
+    {
+      "executionId": "b6e2bb76-38b3-4804-aba7-66c24f2866bf",
+      "testId": "6931df53-e816-c059-8c29-14460005a693",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.StandardPublicApiMetadataMatchesFreezeSnapshot",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0274001",
+      "startTime": "2026-09-07T08:26:50.1451348-04:00",
+      "endTime": "2026-09-07T08:26:50.1725452-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b6e2bb76-38b3-4804-aba7-66c24f2866bf"
+    },
+    {
+      "executionId": "eb1ff075-5a81-41e2-9f2f-484be22b02d4",
+      "testId": "7b09d10d-9786-70c4-cab8-5827a514b720",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.BaseLibRequiredStylesheetsContainRuntimeContracts(fileName: \"material-symbols.css\", expectedContract: \".cda-material-icon\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0004970",
+      "startTime": "2026-09-07T08:26:50.1387450-04:00",
+      "endTime": "2026-09-07T08:26:50.1387844-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "eb1ff075-5a81-41e2-9f2f-484be22b02d4"
+    },
+    {
+      "executionId": "20f04b89-8a68-4681-a941-b83e5baa531b",
+      "testId": "fe074a7d-b1fe-1072-db19-35e2b33df750",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.StandardProjectPackabilityMetadataMatchesFreezeSnapshot",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0094839",
+      "startTime": "2026-09-07T08:26:50.1390373-04:00",
+      "endTime": "2026-09-07T08:26:50.1426858-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "20f04b89-8a68-4681-a941-b83e5baa531b"
+    },
+    {
+      "executionId": "a09ffc1a-69fb-4b0f-807f-056ef4919aea",
+      "testId": "05160a63-d5df-17bb-2d07-97e8fedd8318",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.BaseLibRequiredStylesheetsContainRuntimeContracts(fileName: \"output.css\", expectedContract: \".cda-expand-transition\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0009207",
+      "startTime": "2026-09-07T08:26:50.1380277-04:00",
+      "endTime": "2026-09-07T08:26:50.1381174-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a09ffc1a-69fb-4b0f-807f-056ef4919aea"
+    },
+    {
+      "executionId": "0fbb6d75-3486-4e8d-8f52-6dbc275abb90",
+      "testId": "28497236-3e28-4a43-79bb-fc1f610f7781",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.StandardPublishingApprovalTests.CompatibilityShimManifestMatchesFreezeSnapshot",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0022581",
+      "startTime": "2026-09-07T08:26:50.1428229-04:00",
+      "endTime": "2026-09-07T08:26:50.1449909-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0fbb6d75-3486-4e8d-8f52-6dbc275abb90"
+    }
+  ]
+}

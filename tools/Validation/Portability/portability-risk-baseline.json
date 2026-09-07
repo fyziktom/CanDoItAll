@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-07T14:35:36.301742+00:00",
+  "generated_utc": "2026-09-07T20:08:05.147269+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14385,
+  "allowance_count": 14388,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -75773,6 +75773,24 @@
       "path": "tools/Validation/Test-RuntimePortability.ps1",
       "category": "path-normalization",
       "source_fingerprint": "837a48591a6d62a66a0687e964dfaa2d928a8b2021f7a8cb064fd3204d3b9410",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/bundles/validate_bundle_delivery.py",
+      "category": "path-normalization",
+      "source_fingerprint": "7b860b70b7e648d5f48be2a5533666b71882c71237f18c40222e129f5b18af73",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/bundles/validate_bundle_delivery.py",
+      "category": "windows-path",
+      "source_fingerprint": "aaeb0229cf1cd5162bf5517576c9b9132312653d7bf308597bc3b0a86f34b24b",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/bundles/validate_bundle_delivery.py",
+      "category": "windows-path",
+      "source_fingerprint": "b95330206e9c8909168ee5bc729628d26bb1b84bc11e763138c496cf64255807",
       "count": 1
     },
     {

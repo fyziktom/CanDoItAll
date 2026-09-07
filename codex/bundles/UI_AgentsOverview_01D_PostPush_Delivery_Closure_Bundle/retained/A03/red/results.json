@@ -1,0 +1,206 @@
+[
+  {
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~Agents_display_name_uses_the_exact_middle_dot|FullyQualifiedName~Canceled_lanes_allow_delayed_registration_without_late_publication",
+      "/m:1",
+      "--logger",
+      "trx;LogFileName=new-unit-discovery.trx",
+      "--results-directory",
+      "C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\red-trx"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T19:07:40.517070+00:00",
+    "finishedUtc": "2026-09-07T19:07:42.843795+00:00",
+    "expected": 8,
+    "results": [
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewSessionTests.Canceled_lanes_allow_delayed_registration_without_late_publication(outcome: Success, disposeOwner: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewSessionTests.Canceled_lanes_allow_delayed_registration_without_late_publication(outcome: Success, disposeOwner: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_display_name_uses_the_exact_middle_dot(view: Overview, expected: \"Agents \u00b7 Overview\")",
+        "outcome": "Failed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewSessionTests.Canceled_lanes_allow_delayed_registration_without_late_publication(outcome: Canceled, disposeOwner: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewSessionTests.Canceled_lanes_allow_delayed_registration_without_late_publication(outcome: Failure, disposeOwner: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewSessionTests.Canceled_lanes_allow_delayed_registration_without_late_publication(outcome: Failure, disposeOwner: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewSessionTests.Canceled_lanes_allow_delayed_registration_without_late_publication(outcome: Canceled, disposeOwner: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkModuleChatContextBuilderTests.Agents_display_name_uses_the_exact_middle_dot(view: Governance, expected: \"Agents \u00b7 Governance\")",
+        "outcome": "Failed"
+      }
+    ]
+  },
+  {
+    "command": [
+      "dotnet",
+      "test",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally|FullyQualifiedName~Closing_team_editor_cancels_its_icon_picker_and_preserves_unrelated_dialog",
+      "/m:1",
+      "--logger",
+      "trx;LogFileName=new-components-discovery.trx",
+      "--results-directory",
+      "C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\red-trx"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T19:08:21.026192+00:00",
+    "finishedUtc": "2026-09-07T19:09:25.642744+00:00",
+    "expected": 10,
+    "results": [
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Consumer, outcome: Success)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Model, outcome: Failure)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Provider, outcome: Success)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Model, outcome: Success)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Closing_team_editor_cancels_its_icon_picker_and_preserves_unrelated_dialog",
+        "outcome": "Failed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Provider, outcome: Canceled)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Consumer, outcome: Failure)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Model, outcome: Canceled)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Consumer, outcome: Canceled)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewEffectLifecycleTests.Usage_dialog_cancellation_allows_delayed_registration_and_fences_finally(kind: Provider, outcome: Failure)",
+        "outcome": "Passed"
+      }
+    ]
+  },
+  {
+    "command": [
+      "dotnet",
+      "test",
+      "../CanDoItAll.Components/tests/CanDoItAll.Components.BaseLib.Tests/CanDoItAll.Components.BaseLib.Tests.csproj",
+      "-c",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--filter",
+      "FullyQualifiedName~DialogNavigationOwnershipTests",
+      "/m:1",
+      "--logger",
+      "trx;LogFileName=sibling-navigation-discovery.trx",
+      "--results-directory",
+      "C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\red-trx"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T19:09:25.643744+00:00",
+    "finishedUtc": "2026-09-07T19:09:26.908323+00:00",
+    "expected": 15,
+    "results": [
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Different_canonical_path_or_authority_is_a_departure(uri: \"/agents/\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Service_disposal_cancels_results_and_detaches_navigation_with_outstanding_leases",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Opted_in_same_page_navigation_preserves_dialog_identity(location: \"/agents#details\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Owner_cancellation_closes_only_its_reference_during_same_page_navigation",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Already_canceled_owner_never_adds_an_orphan_dialog",
+        "outcome": "Failed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Disposed_service_rejects_new_navigation_owners",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Explicit_close_after_query_navigation_completes_the_original_result_once",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Opted_in_same_page_navigation_preserves_dialog_identity(location: \"/agents?tab=providers\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Different_canonical_path_or_authority_is_a_departure(uri: \"https://example.invalid/agents\")",
+        "outcome": "Failed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Different_canonical_path_or_authority_is_a_departure(uri: \"/Agents\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Last_owner_disposal_restores_default_behavior_and_is_idempotent",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.No_owner_navigation_keeps_default_result_semantics(uri: \"/other\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Default_query_navigation_preserves_existing_close_behavior",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Path_navigation_still_closes_dialogs_with_an_active_owner",
+        "outcome": "Passed"
+      },
+      {
+        "name": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.No_owner_navigation_keeps_default_result_semantics(uri: \"/agents#fragment\")",
+        "outcome": "Passed"
+      }
+    ]
+  }
+]

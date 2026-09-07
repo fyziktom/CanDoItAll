@@ -1,0 +1,41 @@
+{
+  "utc": "2026-09-07T14:58:44.252777+00:00",
+  "records": [
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor",
+      "expectedSha256": "dc5bf5466fa6c82fa8861089581582cf0b60d54fa9ad544380b338e32c50d160",
+      "observedBeforeRestorationSha256": "dc5bf5466fa6c82fa8861089581582cf0b60d54fa9ad544380b338e32c50d160",
+      "finalSha256": "dc5bf5466fa6c82fa8861089581582cf0b60d54fa9ad544380b338e32c50d160",
+      "restored": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.cs",
+      "expectedSha256": "67c05a700669b907a573a044a0b30bde97d8548838f143f503c9f276581119b4",
+      "observedBeforeRestorationSha256": "67c05a700669b907a573a044a0b30bde97d8548838f143f503c9f276581119b4",
+      "finalSha256": "67c05a700669b907a573a044a0b30bde97d8548838f143f503c9f276581119b4",
+      "restored": true
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.css",
+      "expectedSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6",
+      "observedBeforeRestorationSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6",
+      "finalSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6",
+      "restored": true
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+      "expectedSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+      "observedBeforeRestorationSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+      "finalSha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee",
+      "restored": true
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css",
+      "expectedSha256": "f6bf55f752dabd695a77d698ccfbef4e2df004f8e991c7961c99fa92b6e77d4e",
+      "observedBeforeRestorationSha256": "f6bf55f752dabd695a77d698ccfbef4e2df004f8e991c7961c99fa92b6e77d4e",
+      "finalSha256": "f6bf55f752dabd695a77d698ccfbef4e2df004f8e991c7961c99fa92b6e77d4e",
+      "restored": true
+    }
+  ],
+  "exit": 0
+}

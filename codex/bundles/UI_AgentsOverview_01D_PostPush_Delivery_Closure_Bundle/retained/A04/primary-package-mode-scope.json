@@ -1,0 +1,41 @@
+{
+  "command": [
+    "dotnet",
+    "msbuild",
+    "Q:/CanDoItAll/src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+    "-nologo",
+    "-p:UseLocalCanDoItAllLibraries=false",
+    "-p:CanDoItAllComponentsPackageVersion=0.3.0-overview01d.20260907193451",
+    "-getItem:PackageReference"
+  ],
+  "exit": 0,
+  "evaluatedDirectPackages": [
+    {
+      "name": "CanDoItAll.Components.BaseLib",
+      "version": "0.3.0-overview01d.20260907193451"
+    },
+    {
+      "name": "CanDoItAll.Components.Charts",
+      "version": "0.3.0-overview01d.20260907193451"
+    },
+    {
+      "name": "CanDoItAll.Components.OverlayLib",
+      "version": "0.3.0-overview01d.20260907193451"
+    }
+  ],
+  "temporaryPackages": [
+    "CanDoItAll.Components.BaseLib",
+    "CanDoItAll.Components.Common"
+  ],
+  "missingFromTemporaryFeed": [
+    {
+      "name": "CanDoItAll.Components.Charts",
+      "version": "0.3.0-overview01d.20260907193451"
+    },
+    {
+      "name": "CanDoItAll.Components.OverlayLib",
+      "version": "0.3.0-overview01d.20260907193451"
+    }
+  ],
+  "primaryPackageModeBuild": "Not executed: the global sibling package version also requests unchanged packages that were not packed. The isolated source-mode Module/Web and real package-only external consumer are the hard proofs; no complete primary package-mode success is claimed."
+}

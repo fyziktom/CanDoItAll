@@ -1,0 +1,67 @@
+[
+  {
+    "command": [
+      "python",
+      ".mcp-state\\overview03\\final\\scan-source.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T15:01:54.839870+00:00",
+    "finishedUtc": "2026-09-07T15:02:28.497358+00:00"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/test_enforce_portability_baseline.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T15:02:28.498356+00:00",
+    "finishedUtc": "2026-09-07T15:02:28.663867+00:00"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T15:02:28.664868+00:00",
+    "finishedUtc": "2026-09-07T15:02:29.226500+00:00"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/scan_portability.py",
+      "--repo-root",
+      ".",
+      "--output",
+      ".mcp-state\\overview03\\final\\closure-portability.json",
+      "--include-untracked"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T15:02:29.227073+00:00",
+    "finishedUtc": "2026-09-07T15:03:38.305055+00:00"
+  },
+  {
+    "command": [
+      "python",
+      "tools/Validation/Portability/enforce_portability_baseline.py",
+      "--scan",
+      ".mcp-state\\overview03\\final\\closure-portability.json",
+      "--baseline",
+      "tools/Validation/Portability/portability-risk-baseline.json"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T15:03:38.306056+00:00",
+    "finishedUtc": "2026-09-07T15:03:38.857724+00:00"
+  },
+  {
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-File",
+      "tools/Validation/Test-Documentation.ps1"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T15:03:38.857724+00:00",
+    "finishedUtc": "2026-09-07T15:03:42.781171+00:00"
+  }
+]

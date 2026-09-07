@@ -7,6 +7,94 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentsOverviewSessionTests {
+
+    public enum LateCompletion { Success, Failure, Canceled }
+
+    [Theory]
+    [InlineData(LateCompletion.Success, false)]
+    [InlineData(LateCompletion.Failure, false)]
+    [InlineData(LateCompletion.Canceled, false)]
+    [InlineData(LateCompletion.Success, true)]
+    [InlineData(LateCompletion.Failure, true)]
+    [InlineData(LateCompletion.Canceled, true)]
+    public async Task Canceled_lanes_allow_delayed_registration_without_late_publication(LateCompletion outcome, bool disposeOwner) {
+        var h = new TaskCompletionSource<AgentsHeaderSnapshot>();
+        var o = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var u = new TaskCompletionSource<ProviderUsageSnapshot>();
+        var reads = new Reads { Header = _ => h.Task, Overview = _ => o.Task, Usage = (_, _) => new(u.Task) };
+        var publications = 0;
+        using var session = new AgentsOverviewSession(reads, NullLogger<AgentsOverviewSession>.Instance, () => {
+            publications++;
+            return Task.CompletedTask;
+        });
+        var old = session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
+        var tokens = new[] { reads.HeaderToken, reads.OverviewToken, reads.UsageToken };
+        var observed = new int[3];
+        var registrations = tokens.Select((token, index) => token.Register(() => observed[index]++)).ToArray();
+        var nextH = new TaskCompletionSource<AgentsHeaderSnapshot>();
+        var nextO = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var nextU = new TaskCompletionSource<ProviderUsageSnapshot>();
+        reads.Header = _ => nextH.Task;
+        reads.Overview = _ => nextO.Task;
+        reads.Usage = (_, _) => new(nextU.Task);
+        Task next = Task.CompletedTask;
+        if (disposeOwner) {
+            session.Dispose();
+            session.Dispose();
+        } else {
+            next = session.RefreshDemandedAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
+        }
+        for (var index = 0; index < tokens.Length; index++) {
+            Assert.True(tokens[index].IsCancellationRequested);
+            Assert.Equal(1, observed[index]);
+            var callbacks = 0;
+            using var delayed = tokens[index].Register(() => callbacks++);
+            Assert.Equal(1, callbacks);
+        }
+        Finish(h, Reads.HeaderValue(), tokens[0]);
+        Finish(o, AgentOverviewSnapshot.Empty, tokens[1]);
+        Finish(u, ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both), tokens[2]);
+        await old;
+        Assert.Equal(0, publications);
+        Assert.Null(session.Header);
+        Assert.Null(session.Overview);
+        Assert.Null(session.AcceptedUsage);
+        Assert.Null(session.HeaderError);
+        Assert.Null(session.OverviewError);
+        Assert.Null(session.UsageError);
+        if (!disposeOwner) {
+            Assert.True(session.HeaderLoading);
+            Assert.True(session.OverviewLoading);
+            Assert.True(session.UsageLoading);
+        }
+        nextH.SetResult(Reads.HeaderValue());
+        nextO.SetResult(AgentOverviewSnapshot.Empty);
+        nextU.SetResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both));
+        await next;
+        session.Dispose();
+        foreach (var token in tokens) {
+            Assert.Throws<ObjectDisposedException>(() => token.WaitHandle);
+        }
+        Assert.All(observed, count => Assert.Equal(1, count));
+        foreach (var registration in registrations) {
+            registration.Dispose();
+        }
+
+        void Finish<T>(TaskCompletionSource<T> pending, T value, CancellationToken token) {
+            switch (outcome) {
+                case LateCompletion.Success:
+                    pending.SetResult(value);
+                    break;
+                case LateCompletion.Failure:
+                    pending.SetException(new IOException("Late read failed"));
+                    break;
+                case LateCompletion.Canceled:
+                    pending.SetCanceled(token);
+                    break;
+            }
+        }
+    }
+
     [Theory]
     [InlineData(AgentWorkspaceSection.Providers)]
     [InlineData(AgentWorkspaceSection.RequestHistory)]

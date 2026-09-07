@@ -1,0 +1,164 @@
+{
+  "expected": 7,
+  "discovered": [
+    "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Default_query_navigation_preserves_existing_close_behavior",
+    "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Opted_in_same_page_navigation_preserves_dialog_identity(location: \"/agents?tab=providers\")",
+    "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Opted_in_same_page_navigation_preserves_dialog_identity(location: \"/agents#details\")",
+    "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Path_navigation_still_closes_dialogs_with_an_active_owner",
+    "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Last_owner_disposal_restores_default_behavior_and_is_idempotent",
+    "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Owner_cancellation_closes_only_its_reference_during_same_page_navigation",
+    "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Disposed_service_rejects_new_navigation_owners"
+  ],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "C:/repositories/CanDoItAll.Components/tests/CanDoItAll.Components.BaseLib.Tests/CanDoItAll.Components.BaseLib.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~DialogNavigationOwnershipTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-07T12:20:04.872217+00:00",
+      "finishedUtc": "2026-09-07T12:20:06.167657+00:00",
+      "output": "o02-dialog-navigation-discovery.txt"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "C:/repositories/CanDoItAll.Components/tests/CanDoItAll.Components.BaseLib.Tests/CanDoItAll.Components.BaseLib.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~DialogNavigationOwnershipTests",
+        "--logger",
+        "trx;LogFileName=o02-dialog-navigation.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+      ],
+      "exit": 0,
+      "startedUtc": "2026-09-07T12:20:06.168656+00:00",
+      "finishedUtc": "2026-09-07T12:20:07.619558+00:00",
+      "output": "o02-dialog-navigation-result.txt"
+    }
+  ],
+  "counters": {
+    "total": "7",
+    "executed": "7",
+    "passed": "7",
+    "failed": "0",
+    "error": "0",
+    "timeout": "0",
+    "aborted": "0",
+    "inconclusive": "0",
+    "passedButRunAborted": "0",
+    "notRunnable": "0",
+    "notExecuted": "0",
+    "disconnected": "0",
+    "warning": "0",
+    "completed": "0",
+    "inProgress": "0",
+    "pending": "0"
+  },
+  "cases": [
+    {
+      "executionId": "9a3a5e33-186a-4e0f-a35e-b05abf3732dd",
+      "testId": "07f3bbc1-9b04-bba6-4de3-a7e3fd3cada3",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Path_navigation_still_closes_dialogs_with_an_active_owner",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0003084",
+      "startTime": "2026-09-07T08:20:07.4822098-04:00",
+      "endTime": "2026-09-07T08:20:07.4822366-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9a3a5e33-186a-4e0f-a35e-b05abf3732dd"
+    },
+    {
+      "executionId": "63d57766-de15-4333-ba42-36338d54afe3",
+      "testId": "3cb59ba9-3e39-2b72-09c9-5123e85b4c96",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Last_owner_disposal_restores_default_behavior_and_is_idempotent",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0013870",
+      "startTime": "2026-09-07T08:20:07.4818395-04:00",
+      "endTime": "2026-09-07T08:20:07.4818812-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "63d57766-de15-4333-ba42-36338d54afe3"
+    },
+    {
+      "executionId": "eacd8f8a-85cd-4b41-a8c7-2a8a1106e2fb",
+      "testId": "a7c7fbab-8b30-3074-ed45-702cd2e41ca0",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Owner_cancellation_closes_only_its_reference_during_same_page_navigation",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0066435",
+      "startTime": "2026-09-07T08:20:07.4810153-04:00",
+      "endTime": "2026-09-07T08:20:07.4810699-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "eacd8f8a-85cd-4b41-a8c7-2a8a1106e2fb"
+    },
+    {
+      "executionId": "297eec8b-5478-4ee4-a349-563a295e07f7",
+      "testId": "943a03bd-d0cb-7f9b-8196-d8f98f7a79bc",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Default_query_navigation_preserves_existing_close_behavior",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0005550",
+      "startTime": "2026-09-07T08:20:07.4822958-04:00",
+      "endTime": "2026-09-07T08:20:07.4823202-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "297eec8b-5478-4ee4-a349-563a295e07f7"
+    },
+    {
+      "executionId": "9c6a3664-ab58-495f-9272-3e4205888c14",
+      "testId": "bcd6ee98-14a6-c7bb-62f5-8cda3a86a08d",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Opted_in_same_page_navigation_preserves_dialog_identity(location: \"/agents#details\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0003677",
+      "startTime": "2026-09-07T08:20:07.4820136-04:00",
+      "endTime": "2026-09-07T08:20:07.4820437-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9c6a3664-ab58-495f-9272-3e4205888c14"
+    },
+    {
+      "executionId": "048c0416-c30e-4577-93f5-e1af82a0c33c",
+      "testId": "cd242ef0-7c1e-d3a0-a3cb-c5d1285601c4",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Opted_in_same_page_navigation_preserves_dialog_identity(location: \"/agents?tab=providers\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0001586",
+      "startTime": "2026-09-07T08:20:07.4821111-04:00",
+      "endTime": "2026-09-07T08:20:07.4821403-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "048c0416-c30e-4577-93f5-e1af82a0c33c"
+    },
+    {
+      "executionId": "1974891c-8af2-40ac-84e2-e37769beb265",
+      "testId": "4c1f7bd8-1846-b21c-89ff-cee22031d56d",
+      "testName": "CanDoItAll.Components.BaseLib.Tests.DialogNavigationOwnershipTests.Disposed_service_rejects_new_navigation_owners",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0084946",
+      "startTime": "2026-09-07T08:20:07.4555776-04:00",
+      "endTime": "2026-09-07T08:20:07.4710299-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1974891c-8af2-40ac-84e2-e37769beb265"
+    }
+  ]
+}

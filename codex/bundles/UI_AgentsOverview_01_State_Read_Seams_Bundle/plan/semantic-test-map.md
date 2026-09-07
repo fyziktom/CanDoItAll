@@ -24,15 +24,15 @@ Prefix C = `CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageReadLifecyc
 
 Additional exact direct witnesses:
 
-- U`Overview_and_usage_generations_are_independent` â€” unrelated refresh cannot cancel/unlock the other lane.
-- U`Same_scope_echo_reuses_pending_read_but_explicit_retry_starts_once` â€” no lost/duplicated read.
-- U`Canceled_old_finally_cannot_clear_newer_read_state` â€” noncooperative completion, exact generation owns busy.
-- U`Accepted_snapshot_collections_are_independent_from_query_result` â€” later source collection changes cannot alter accepted data.
-- `CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewPresentationTests.Chart_series_and_options_are_independent_between_instances` â€” no shared mutable options/arrays.
-- E`Changing_scope_closes_only_owned_usage_dialogs_and_cancels_their_reads` â€” real DialogHost, unrelated overlay remains.
-- E`Disposing_page_and_dialog_suppresses_late_notifications` â€” actual removal then late success/failure.
-- E`Team_navigation_preserves_existing_route_and_occurs_once` â€” one typed event reaches existing page route builder once, existing push behavior.
-- `CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Registered_split_reads_preserve_history_demand_and_independent_header_failure` â€” actual registered ports/isolated fixture, no fabricated adapter success.
+- U`Overview_and_usage_generations_are_independent` — unrelated refresh cannot cancel/unlock the other lane.
+- U`Same_scope_echo_reuses_pending_read_but_explicit_retry_starts_once` — no lost/duplicated read.
+- U`Canceled_old_finally_cannot_clear_newer_read_state` — noncooperative completion, exact generation owns busy.
+- U`Accepted_snapshot_collections_are_independent_from_query_result` — later source collection changes cannot alter accepted data.
+- `CanDoItAll.Tests.Unit.AgentFramework.AgentsOverviewPresentationTests.Chart_series_and_options_are_independent_between_instances` — no shared mutable options/arrays.
+- E`Changing_scope_closes_only_owned_usage_dialogs_and_cancels_their_reads` — real DialogHost, unrelated overlay remains.
+- E`Disposing_page_and_dialog_suppresses_late_notifications` — actual removal then late success/failure.
+- E`Team_navigation_preserves_existing_route_and_occurs_once` — one typed event reaches existing page route builder once, existing push behavior.
+- `CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.Registered_split_reads_preserve_history_demand_and_independent_header_failure` — actual registered ports/isolated fixture, no fabricated adapter success.
 
 These names are frozen before implementation but not asserted to exist now. If more cases are needed, record the source reason and revised discovery before running. T01-T05/T09 are intended semantic RED; T06 direct guard becomes executable with the new session after the current-page races are already witnessed. T07/T08/T10/T11 preserve existing correct contracts while extending combinations. Add meaningful RED for any newly discovered change before fixing it. Do not count one tests-exists/status check as behavior proof.
 

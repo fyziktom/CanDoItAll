@@ -1,0 +1,14 @@
+{
+  "utc": "2026-09-07T20:42:33.408076+00:00",
+  "newWitness": "test_proposed_proof_rejects_git_clean_byte_conversion",
+  "red": "git-clean-red.json",
+  "green": "git-clean-green.json",
+  "newRetainedScope": "retained/** is explicitly byte preserving.",
+  "historicalExceptions": [
+    "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/codeanalytics.json",
+    "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/predecessor-closure-seal.json",
+    "codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O02.md"
+  ],
+  "reason": "These three existing manifest inputs have CRLF working bytes that Git would normalize. Preserve their exact recorded historical bytes using narrowly scoped attributes; do not rewrite historical evidence or unrelated line endings.",
+  "semanticsChanged": false
+}

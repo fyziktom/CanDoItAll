@@ -1,0 +1,342 @@
+{
+  "utc": "2026-09-07T15:40:19.563090+00:00",
+  "rows": [
+    {
+      "selection": "o03-final-compatibility-components-summary",
+      "expected": 95,
+      "discovered": 95,
+      "executed": 95,
+      "exactExpandedNamesMatch": true,
+      "commands": [
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCatalogBoundaryTests|FullyQualifiedName~AgentCapabilitiesSurfaceTests|FullyQualifiedName~AgentAvatarRenderingTests|FullyQualifiedName~AgentAvatarActionButtonTests|FullyQualifiedName~CapabilitiesSandboxTests",
+            "--list-tests"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:37:00.093451+00:00",
+          "finishedUtc": "2026-09-07T14:37:01.688842+00:00",
+          "output": "o03-final-compatibility-components-discovery.txt"
+        },
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCatalogBoundaryTests|FullyQualifiedName~AgentCapabilitiesSurfaceTests|FullyQualifiedName~AgentAvatarRenderingTests|FullyQualifiedName~AgentAvatarActionButtonTests|FullyQualifiedName~CapabilitiesSandboxTests",
+            "--logger",
+            "trx;LogFileName=o03-final-compatibility-components.trx",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:37:01.688842+00:00",
+          "finishedUtc": "2026-09-07T14:38:09.666104+00:00",
+          "output": "o03-final-compatibility-components-result.txt"
+        }
+      ]
+    },
+    {
+      "selection": "o03-final-compatibility-unit-summary",
+      "expected": 60,
+      "discovered": 60,
+      "executed": 60,
+      "exactExpandedNamesMatch": true,
+      "commands": [
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CapabilitiesSandboxContextTests|FullyQualifiedName~CatalogSandboxContextTests|FullyQualifiedName~CatalogAssetModeTests",
+            "--list-tests"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:36:55.198700+00:00",
+          "finishedUtc": "2026-09-07T14:36:57.500997+00:00",
+          "output": "o03-final-compatibility-unit-discovery.txt"
+        },
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CapabilitiesSandboxContextTests|FullyQualifiedName~CatalogSandboxContextTests|FullyQualifiedName~CatalogAssetModeTests",
+            "--logger",
+            "trx;LogFileName=o03-final-compatibility-unit.trx",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:36:57.500997+00:00",
+          "finishedUtc": "2026-09-07T14:36:59.989835+00:00",
+          "output": "o03-final-compatibility-unit-result.txt"
+        }
+      ]
+    },
+    {
+      "selection": "o03-final-new-components-summary",
+      "expected": 26,
+      "discovered": 26,
+      "executed": 26,
+      "exactExpandedNamesMatch": true,
+      "commands": [
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~OverviewSandboxTests",
+            "--list-tests"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:38:09.768079+00:00",
+          "finishedUtc": "2026-09-07T14:38:11.345669+00:00",
+          "output": "o03-final-new-components-discovery.txt"
+        },
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~OverviewSandboxTests",
+            "--logger",
+            "trx;LogFileName=o03-final-new-components.trx",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:38:11.346670+00:00",
+          "finishedUtc": "2026-09-07T14:38:14.905109+00:00",
+          "output": "o03-final-new-components-result.txt"
+        }
+      ]
+    },
+    {
+      "selection": "o03-final-new-unit-r2-summary",
+      "expected": 28,
+      "discovered": 28,
+      "executed": 28,
+      "exactExpandedNamesMatch": true,
+      "commands": [
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~OverviewSandboxContextTests",
+            "--list-tests"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:32:43.269245+00:00",
+          "finishedUtc": "2026-09-07T14:32:45.923087+00:00",
+          "output": "o03-final-new-unit-r2-discovery.txt"
+        },
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~OverviewSandboxContextTests",
+            "--logger",
+            "trx;LogFileName=o03-final-new-unit-r2.trx",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:32:45.923087+00:00",
+          "finishedUtc": "2026-09-07T14:32:48.602545+00:00",
+          "output": "o03-final-new-unit-r2-result.txt"
+        }
+      ]
+    },
+    {
+      "selection": "o03-final-owning-components-summary",
+      "expected": 78,
+      "discovered": 78,
+      "executed": 78,
+      "exactExpandedNamesMatch": true,
+      "commands": [
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_consumer_list_preserves_compact_avatar_led_agent_rows|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_failure_ranking_keeps_failure_first_and_run_count_secondary|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentsOverviewEffectLifecycleTests|FullyQualifiedName~AgentsOverviewSurfaceTests",
+            "--list-tests"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:32:53.775925+00:00",
+          "finishedUtc": "2026-09-07T14:32:55.619299+00:00",
+          "output": "o03-final-owning-components-discovery.txt"
+        },
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.ProviderAdministrationLayoutTests.History_hosts_make_no_aggregate_or_history_reads_until_requested|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_consumer_list_preserves_compact_avatar_led_agent_rows|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentAvatarRenderingTests.Unified_failure_ranking_keeps_failure_first_and_run_count_secondary|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation|FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentCatalogBoundaryTests.First_save_and_update_keep_one_editor_through_real_page_selection_echo|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentsOverviewEffectLifecycleTests|FullyQualifiedName~AgentsOverviewSurfaceTests",
+            "--logger",
+            "trx;LogFileName=o03-final-owning-components.trx",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:32:55.619862+00:00",
+          "finishedUtc": "2026-09-07T14:36:27.037596+00:00",
+          "output": "o03-final-owning-components-result.txt"
+        }
+      ]
+    },
+    {
+      "selection": "o03-final-owning-integration-summary",
+      "expected": 4,
+      "discovered": 4,
+      "executed": 4,
+      "exactExpandedNamesMatch": true,
+      "commands": [
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests",
+            "--list-tests"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:36:27.137062+00:00",
+          "finishedUtc": "2026-09-07T14:36:28.760374+00:00",
+          "output": "o03-final-owning-integration-discovery.txt"
+        },
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests",
+            "--logger",
+            "trx;LogFileName=o03-final-owning-integration.trx",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:36:28.761378+00:00",
+          "finishedUtc": "2026-09-07T14:36:55.093944+00:00",
+          "output": "o03-final-owning-integration-result.txt"
+        }
+      ]
+    },
+    {
+      "selection": "o03-final-owning-unit-summary",
+      "expected": 72,
+      "discovered": 72,
+      "executed": 72,
+      "exactExpandedNamesMatch": true,
+      "commands": [
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageWorkloadSelectionTests|FullyQualifiedName~AgentsOverviewSessionTests|FullyQualifiedName~AgentFrameworkModuleChatContextBuilderTests|FullyQualifiedName~AgentsOverviewPresentationTests",
+            "--list-tests"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:32:48.707722+00:00",
+          "finishedUtc": "2026-09-07T14:32:51.029481+00:00",
+          "output": "o03-final-owning-unit-discovery.txt"
+        },
+        {
+          "command": [
+            "dotnet",
+            "test",
+            "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+            "-c",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceQueryTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentsWorkspaceStateTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkSimpleChatsRouteTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageAggregationTests|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.ProviderUsageWorkloadSelectionTests|FullyQualifiedName~AgentsOverviewSessionTests|FullyQualifiedName~AgentFrameworkModuleChatContextBuilderTests|FullyQualifiedName~AgentsOverviewPresentationTests",
+            "--logger",
+            "trx;LogFileName=o03-final-owning-unit.trx",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.mcp-state\\overview-execution"
+          ],
+          "exit": 0,
+          "startedUtc": "2026-09-07T14:32:51.029481+00:00",
+          "finishedUtc": "2026-09-07T14:32:53.666688+00:00",
+          "output": "o03-final-owning-unit-result.txt"
+        }
+      ]
+    }
+  ],
+  "pass": true
+}

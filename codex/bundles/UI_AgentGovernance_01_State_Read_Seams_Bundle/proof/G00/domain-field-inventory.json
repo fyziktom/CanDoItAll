@@ -1,0 +1,1898 @@
+[
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionRunDetail",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Approvals",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.ExecutionApprovalRecord]"
+      },
+      {
+        "Name": "Artifacts",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.ExecutionArtifactRecord]"
+      },
+      {
+        "Name": "ChatSession",
+        "Type": "CanDoItAll.AgentFramework.Models.ChatSessionRecord"
+      },
+      {
+        "Name": "Checkpoints",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.ExecutionWorkflowCheckpointRecord]"
+      },
+      {
+        "Name": "ExecutionLog",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.ExecutionLogEntry]"
+      },
+      {
+        "Name": "Metrics",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.AgentRunMetric]"
+      },
+      {
+        "Name": "Run",
+        "Type": "CanDoItAll.AgentFramework.Models.ExecutionRunRecord"
+      },
+      {
+        "Name": "ToolReceipts",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.ToolExecutionReceiptRecord]"
+      },
+      {
+        "Name": "UsageObservations",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.ProviderUsageObservation]"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentDefinition",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AvatarImageUrl",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Capabilities",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.AgentCapabilityAssignment]"
+      },
+      {
+        "Name": "ChatHistoryMode",
+        "Type": "CanDoItAll.AgentFramework.Models.AgentChatHistoryMode"
+      },
+      {
+        "Name": "ConfigurationJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "EnableBackgroundResponses",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Instructions",
+        "Type": "System.String"
+      },
+      {
+        "Name": "IsTemplate",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "Model",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Name",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Permissions",
+        "Type": "CanDoItAll.AgentFramework.Models.AgentPermissionsPolicy"
+      },
+      {
+        "Name": "ProviderProfileId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "RequirePerServiceCallChatHistoryPersistence",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "RoleTitle",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Status",
+        "Type": "CanDoItAll.AgentFramework.Models.AgentLifecycleStatus"
+      },
+      {
+        "Name": "Summary",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Tags",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[System.String]"
+      },
+      {
+        "Name": "Temperature",
+        "Type": "System.Double"
+      },
+      {
+        "Name": "TemplateKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "UpdatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "Workload",
+        "Type": "CanDoItAll.AgentFramework.Models.AgentWorkloadKind"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ChatSessionRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AgentId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Compatibility",
+        "Type": "CanDoItAll.AgentFramework.Models.ChatSessionRuntimeCompatibilityRecord"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "LatestExecutionRunId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "LegacyAutoApprovePendingToolCalls",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "LegacyPendingApprovals",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.PendingToolApprovalRecord]"
+      },
+      {
+        "Name": "LegacyRuntimeSessionKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "LegacySerializedSessionStateJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Messages",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.ChatMessageRecord]"
+      },
+      {
+        "Name": "Title",
+        "Type": "System.String"
+      },
+      {
+        "Name": "UpdatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionRunRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AgentId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "AutoApprovePendingToolCalls",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "CausationId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ChatSessionId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "CompletedAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "CorrelationId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "EntryAgentRequestCompatibilityEvidence",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderRequestCompatibilityEvidence"
+      },
+      {
+        "Name": "FailureModel",
+        "Type": "System.String"
+      },
+      {
+        "Name": "FailureProviderName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "FailureProviderProfileId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "HistoryCaller",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "InitialActivityOperationId",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.Models.AgentExecutionOperationId]"
+      },
+      {
+        "Name": "InputSummary",
+        "Type": "System.String"
+      },
+      {
+        "Name": "MessageId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "MetadataJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Model",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Outcome",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.Models.RunOutcome]"
+      },
+      {
+        "Name": "PendingApprovals",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.PendingToolApprovalRecord]"
+      },
+      {
+        "Name": "ProcessRunId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProcessStepId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProviderName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProviderProfileId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "RequestedBy",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RequestedByKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ResultSummary",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Revision",
+        "Type": "System.Int64"
+      },
+      {
+        "Name": "RuntimeSessionKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SchedulerRunId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SerializedSessionStateJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SourceId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SourceKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StartedAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "State",
+        "Type": "CanDoItAll.AgentFramework.Models.ExecutionState"
+      },
+      {
+        "Name": "StructuredOutputContractKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputJsonSchema",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputRawOutput",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputSchemaDescription",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputSchemaHash",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputSchemaName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputSchemaStrict",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "StructuredOutputSchemaVersion",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputTypeName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputValidationErrorsJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StructuredOutputValidationStatus",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Title",
+        "Type": "System.String"
+      },
+      {
+        "Name": "UpdatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentChatHistoryMode",
+    "EnumValues": [
+      "ProviderDefault",
+      "FrameworkManaged",
+      "ProviderManaged"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentPermissionsPolicy",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AllowedSecrets",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.AgentAllowedSecretReference]"
+      },
+      {
+        "Name": "AutoApproveExternalCallsByDefault",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "CanAskOtherAgents",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "CanEscalateToHuman",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "CanObserveOtherAgents",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "CanScheduleWork",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "CanUseTools",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "NormalizedAllowedSecrets",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.AgentAllowedSecretReference]"
+      },
+      {
+        "Name": "RequiresApprovalForExternalCalls",
+        "Type": "System.Boolean"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentLifecycleStatus",
+    "EnumValues": [
+      "Draft",
+      "Active",
+      "Suspended",
+      "Archived"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentWorkloadKind",
+    "EnumValues": [
+      "General",
+      "Management",
+      "Hr",
+      "Sales",
+      "Assistant",
+      "Qa",
+      "Support",
+      "Programming",
+      "Spreadsheet",
+      "Mail",
+      "Research"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionApprovalRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "ApprovalId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ArgumentsJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CallId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "DecidedAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "DecisionNotes",
+        "Type": "System.String"
+      },
+      {
+        "Name": "DecisionSourceId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "DecisionSourceKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Details",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ExecutionRunId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "RequestedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "Status",
+        "Type": "CanDoItAll.AgentFramework.Models.ExecutionApprovalStatus"
+      },
+      {
+        "Name": "ToolKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ToolName",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionArtifactRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "ArtifactKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ContentType",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "DisplayName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ExecutionRunId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "ProducedBy",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RelativePath",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Summary",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ChatSessionRuntimeCompatibilityRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AutoApprovePendingToolCalls",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "HasState",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "PendingApprovals",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.Models.PendingToolApprovalRecord]"
+      },
+      {
+        "Name": "RuntimeSessionKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SerializedSessionStateJson",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionWorkflowCheckpointRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "CapturedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "CheckpointKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CorrelationId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ExecutionRunId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "MessageId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "PendingApprovalIds",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[System.String]"
+      },
+      {
+        "Name": "ProcessRunId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProcessStepId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ResumedAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "RunState",
+        "Type": "CanDoItAll.AgentFramework.Models.ExecutionState"
+      },
+      {
+        "Name": "SchedulerRunId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SourceId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SourceKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SpanId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "TraceId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "WorkflowCheckpointId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "WorkflowSessionId",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionLogEntry",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AgentId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "ChatSessionId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "ExecutionRunId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Message",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Phase",
+        "Type": "System.String"
+      },
+      {
+        "Name": "State",
+        "Type": "CanDoItAll.AgentFramework.Models.ExecutionState"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentRunMetric",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AgentId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "CacheWriteTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "CachedInputTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "ChatSessionId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "CostUsd",
+        "Type": "System.Decimal"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "DurationMs",
+        "Type": "System.Int64"
+      },
+      {
+        "Name": "ExecutionRunId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "InputTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "Model",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Outcome",
+        "Type": "CanDoItAll.AgentFramework.Models.RunOutcome"
+      },
+      {
+        "Name": "OutputTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "ProviderName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ToolCalls",
+        "Type": "System.Int32"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderRequestCompatibilityEvidence",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Adjustment",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderModelParameterAdjustment"
+      },
+      {
+        "Name": "Disposition",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderRequestCompatibilityDisposition"
+      },
+      {
+        "Name": "EffectiveEffort",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.Models.AgentReasoningEffortLevel]"
+      },
+      {
+        "Name": "EffectiveModel",
+        "Type": "System.String"
+      },
+      {
+        "Name": "InvocationFeatures",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderInvocationFeatures"
+      },
+      {
+        "Name": "ProviderKind",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderKind"
+      },
+      {
+        "Name": "ProviderProfileId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "RequestedEffort",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.Models.AgentReasoningEffortLevel]"
+      },
+      {
+        "Name": "RequestedModel",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SchemaVersion",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "Transport",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderTransportKind"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "CredentialId",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.ProviderHistory.ManagedCredentialId]"
+      },
+      {
+        "Name": "DisplayName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Issuer",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Kind",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryAuthenticationKind"
+      },
+      {
+        "Name": "Subject",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionState",
+    "EnumValues": [
+      "Idle",
+      "Preparing",
+      "Running",
+      "WaitingOnTool",
+      "Persisting",
+      "Completed",
+      "Failed"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ToolExecutionReceiptRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "ApprovalMode",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CanRetryWithCorrectedInput",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "CompletedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "DeclaredSideEffectMode",
+        "Type": "CanDoItAll.AgentFramework.Models.ToolExecutionSideEffectMode"
+      },
+      {
+        "Name": "EffectSourceId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "EffectSourceKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "EffectState",
+        "Type": "CanDoItAll.AgentFramework.Models.AgentToolEffectState"
+      },
+      {
+        "Name": "ExecutionRunId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "ExitSummary",
+        "Type": "System.String"
+      },
+      {
+        "Name": "FailureCode",
+        "Type": "System.String"
+      },
+      {
+        "Name": "FailureMessage",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "InvocationOutcome",
+        "Type": "CanDoItAll.AgentFramework.Models.AgentToolInvocationOutcome"
+      },
+      {
+        "Name": "IsolationGuarantee",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RequestSummary",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RiskClass",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RuntimeToolProviderKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RuntimeToolProviderName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StartedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "ToolFamily",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ToolName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "WorkingDirectory",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderUsageObservation",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AgentId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "CacheWriteTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "CachedInputTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "CalculatedCostUsd",
+        "Type": "System.Nullable\u00601[System.Decimal]"
+      },
+      {
+        "Name": "ChatSessionId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "CorrelationId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "DiagnosticsJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ExecutionRunId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "HistoryEvidence",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "InputTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "Model",
+        "Type": "System.String"
+      },
+      {
+        "Name": "OutputTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "PricingProfileHash",
+        "Type": "System.String"
+      },
+      {
+        "Name": "PricingVersion",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProcessRunId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProcessStepId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProviderCostUsd",
+        "Type": "System.Nullable\u00601[System.Decimal]"
+      },
+      {
+        "Name": "ProviderKind",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderKind"
+      },
+      {
+        "Name": "ProviderName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProviderProfileId",
+        "Type": "System.Nullable\u00601[System.Guid]"
+      },
+      {
+        "Name": "ProviderRequestId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProviderResponseId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RawUsageJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ReasoningTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "RuntimeSessionKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SourcePhase",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ToolCallCount",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "TotalTokens",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "TransportKind",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderTransportKind"
+      },
+      {
+        "Name": "UsageStatus",
+        "Type": "CanDoItAll.AgentFramework.Models.ProviderUsageObservationStatus"
+      },
+      {
+        "Name": "WorkflowNodeId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "WorkflowRunId",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentCapabilityAssignment",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "CapabilityId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "CapabilityKey",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Kind",
+        "Type": "CanDoItAll.AgentFramework.Models.CapabilityKind"
+      },
+      {
+        "Name": "LastVerifiedAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "ProofNotes",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProofStatus",
+        "Type": "CanDoItAll.AgentFramework.Models.CapabilityProofStatus"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ExecutionApprovalStatus",
+    "EnumValues": [
+      "Pending",
+      "Approved",
+      "Rejected"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.PendingToolApprovalRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "ApprovalId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ArgumentsJson",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CallId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Details",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ToolKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ToolName",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ChatMessageRecord",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Content",
+        "Type": "System.String"
+      },
+      {
+        "Name": "CreatedAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "Role",
+        "Type": "CanDoItAll.AgentFramework.Models.ChatMessageRole"
+      },
+      {
+        "Name": "TokenEstimate",
+        "Type": "System.Int32"
+      },
+      {
+        "Name": "ToolEvidenceOwnership",
+        "Type": "CanDoItAll.AgentFramework.Models.AgentToolEvidenceOwnership"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.RunOutcome",
+    "EnumValues": [
+      "Succeeded",
+      "Failed",
+      "Cancelled"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderModelParameterAdjustment",
+    "EnumValues": [
+      "None",
+      "ReasoningDisabledForFunctionTools"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderRequestCompatibilityDisposition",
+    "EnumValues": [
+      "Preserved",
+      "Adjusted"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderInvocationFeatures",
+    "EnumValues": [
+      "None",
+      "FunctionTools"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderKind",
+    "EnumValues": [
+      "OpenAi",
+      "AzureOpenAi",
+      "Ollama",
+      "ComfyUi"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderTransportKind",
+    "EnumValues": [
+      "Responses",
+      "ChatCompletions"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryAuthenticationKind",
+    "EnumValues": [
+      "Unknown",
+      "TrustedLocalOperator",
+      "ManagedCredential",
+      "LegacyAuthenticated",
+      "AuthenticationDisabled"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentExecutionOperationId",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Value",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ToolExecutionSideEffectMode",
+    "EnumValues": [
+      "Unspecified",
+      "NoMutation",
+      "ManagedProcessArtifacts",
+      "ExternalArtifactDestination",
+      "ProductMutation"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentToolEffectState",
+    "EnumValues": [
+      "Unknown",
+      "None",
+      "NotCommitted",
+      "Committed"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentToolInvocationOutcome",
+    "EnumValues": [
+      "Unknown",
+      "Succeeded",
+      "Failed",
+      "Cancelled"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Attempts",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[CanDoItAll.AgentFramework.ProviderHistory.HistoryEntry]"
+      },
+      {
+        "Name": "IsPrimary",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "RequestId",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.ProviderRequestId"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ProviderUsageObservationStatus",
+    "EnumValues": [
+      "Observed",
+      "MissingAfterProviderActivity",
+      "UsageUnavailable",
+      "EstimatedFromMetric",
+      "ObservedFromMetric"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.CapabilityKind",
+    "EnumValues": [
+      "McpServer",
+      "Skill",
+      "Tool",
+      "Plugin",
+      "Rag",
+      "AiContext",
+      "Memory"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.CapabilityProofStatus",
+    "EnumValues": [
+      "NotRun",
+      "Verified",
+      "Failed",
+      "PendingReview"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentAllowedSecretReference",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "NameSnapshot",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Purpose",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SecretId",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.ChatMessageRole",
+    "EnumValues": [
+      "System",
+      "User",
+      "Assistant"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentToolEvidenceOwnership",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AgentId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "ChatSessionId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "DatabaseProfileGeneration",
+        "Type": "System.Int64"
+      },
+      {
+        "Name": "DatabaseProfileId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "SourceId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SourceKind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "WorkspaceScope",
+        "Type": "CanDoItAll.AgentFramework.Models.WorkspaceScopeDescriptor"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.AgentReasoningEffortLevel",
+    "EnumValues": [
+      "None",
+      "Low",
+      "Medium",
+      "High",
+      "ExtraHigh",
+      "Max",
+      "Minimal"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.ManagedCredentialId",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Value",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.ProviderRequestId",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Value",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.WorkspaceScopeDescriptor",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "ArtifactRootRelativePath",
+        "Type": "System.String"
+      },
+      {
+        "Name": "DataRootRelativePath",
+        "Type": "System.String"
+      },
+      {
+        "Name": "DisplayName",
+        "Type": "System.String"
+      },
+      {
+        "Name": "IntegrationMapRootRelativePath",
+        "Type": "System.String"
+      },
+      {
+        "Name": "IsDefaultSandbox",
+        "Type": "System.Boolean"
+      },
+      {
+        "Name": "Key",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Kind",
+        "Type": "CanDoItAll.AgentFramework.Models.WorkspaceScopeKind"
+      },
+      {
+        "Name": "ManagedRootRelativePaths",
+        "Type": "System.Collections.Generic.IReadOnlyList\u00601[System.String]"
+      },
+      {
+        "Name": "OutputRootRelativePath",
+        "Type": "System.String"
+      },
+      {
+        "Name": "PartitionRelativePath",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryEntry",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "AttemptId",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.ProviderHistory.ProviderAttemptId]"
+      },
+      {
+        "Name": "Caller",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller"
+      },
+      {
+        "Name": "CorrelationId",
+        "Type": "System.String"
+      },
+      {
+        "Name": "DetailState",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryDetailState"
+      },
+      {
+        "Name": "ExpiresAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "ExternalReference",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryExternalReference"
+      },
+      {
+        "Name": "FinishedAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "Granularity",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryGranularity"
+      },
+      {
+        "Name": "Id",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryEntryId"
+      },
+      {
+        "Name": "MetadataAuthority",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryMetadataAuthority"
+      },
+      {
+        "Name": "Operation",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryOperation"
+      },
+      {
+        "Name": "Outcome",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryOutcome"
+      },
+      {
+        "Name": "Partition",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryPartition"
+      },
+      {
+        "Name": "Price",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryPrice"
+      },
+      {
+        "Name": "Provider",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryProvider"
+      },
+      {
+        "Name": "RemoteRequest",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.RemoteRequestReference"
+      },
+      {
+        "Name": "RequestId",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.ProviderHistory.ProviderRequestId]"
+      },
+      {
+        "Name": "RetentionAuthority",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryRetentionAuthority"
+      },
+      {
+        "Name": "SortAtUtc",
+        "Type": "System.DateTimeOffset"
+      },
+      {
+        "Name": "StartedAtUtc",
+        "Type": "System.Nullable\u00601[System.DateTimeOffset]"
+      },
+      {
+        "Name": "TimeBasis",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryTimeBasis"
+      },
+      {
+        "Name": "Usage",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryUsage"
+      },
+      {
+        "Name": "Version",
+        "Type": "System.Int64"
+      },
+      {
+        "Name": "Workload",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryWorkload"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.Models.WorkspaceScopeKind",
+    "EnumValues": [
+      "Sandbox",
+      "Process",
+      "Project",
+      "Tenant",
+      "Organization"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryDetailState",
+    "EnumValues": [
+      "NotCaptured",
+      "PendingCanonical",
+      "Canonical",
+      "Captured",
+      "UnsupportedDetailShape",
+      "QuotaExceeded",
+      "Expired",
+      "Unavailable",
+      "Deleted",
+      "ProtectionUnavailable"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryExternalReference",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Type",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Value",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryGranularity",
+    "EnumValues": [
+      "ProviderCallAttempt",
+      "LegacyAggregate"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryEntryId",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Value",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryMetadataAuthority",
+    "EnumValues": [
+      "Standalone",
+      "CanonicalProjection"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryOperation",
+    "EnumValues": [
+      "CompleteChat",
+      "AnalyzeImage",
+      "GenerateImage",
+      "EditImage",
+      "TranscribeSpeech",
+      "SynthesizeSpeech",
+      "ListModels",
+      "TestHealth",
+      "CreateOrUpdateModel"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryOutcome",
+    "EnumValues": [
+      "Started",
+      "Succeeded",
+      "Failed",
+      "Cancelled",
+      "TimedOut",
+      "Interrupted",
+      "Unknown"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryPartition",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "OriginInstanceId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "SecurityPartition",
+        "Type": "System.String"
+      },
+      {
+        "Name": "StorageLineageId",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryPrice",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Amount",
+        "Type": "System.Nullable\u00601[System.Decimal]"
+      },
+      {
+        "Name": "Currency",
+        "Type": "System.String"
+      },
+      {
+        "Name": "ProfileHash",
+        "Type": "System.String"
+      },
+      {
+        "Name": "SourceRevision",
+        "Type": "System.String"
+      },
+      {
+        "Name": "State",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryPriceState"
+      },
+      {
+        "Name": "Version",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryProvider",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Id",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.ProviderHistory.ProviderIdentity]"
+      },
+      {
+        "Name": "Kind",
+        "Type": "System.String"
+      },
+      {
+        "Name": "Name",
+        "Type": "System.String"
+      },
+      {
+        "Name": "RequestedModel",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.ProviderHistory.ProviderModelIdentity]"
+      },
+      {
+        "Name": "ResolvedModel",
+        "Type": "System.Nullable\u00601[CanDoItAll.AgentFramework.ProviderHistory.ProviderModelIdentity]"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.RemoteRequestReference",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "ConfiguredSourceId",
+        "Type": "System.Guid"
+      },
+      {
+        "Name": "PublisherRequestId",
+        "Type": "System.String"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryRetentionAuthority",
+    "EnumValues": [
+      "HistoryPolicy",
+      "CanonicalOwner"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryTimeBasis",
+    "EnumValues": [
+      "AttemptStarted",
+      "CanonicalRecorded"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryUsage",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "CacheWriteTokens",
+        "Type": "System.Nullable\u00601[System.Int64]"
+      },
+      {
+        "Name": "CachedInputTokens",
+        "Type": "System.Nullable\u00601[System.Int64]"
+      },
+      {
+        "Name": "ImageCount",
+        "Type": "System.Nullable\u00601[System.Int32]"
+      },
+      {
+        "Name": "InputTokens",
+        "Type": "System.Nullable\u00601[System.Int64]"
+      },
+      {
+        "Name": "OutputTokens",
+        "Type": "System.Nullable\u00601[System.Int64]"
+      },
+      {
+        "Name": "ReasoningTokens",
+        "Type": "System.Nullable\u00601[System.Int64]"
+      },
+      {
+        "Name": "State",
+        "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryUsageState"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryWorkload",
+    "EnumValues": [
+      "Direct",
+      "Agent",
+      "SimpleChat",
+      "Workflow",
+      "Process",
+      "Batch",
+      "SharedRelay",
+      "Diagnostic"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.ProviderAttemptId",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Value",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryPriceState",
+    "EnumValues": [
+      "Unpriced",
+      "ProviderReported",
+      "CalculatedAtExecution",
+      "ExplicitFree",
+      "PartialEstimate",
+      "MissingTariff",
+      "MissingUsage",
+      "UnsupportedUnit",
+      "InvalidEvidence"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.HistoryUsageState",
+    "EnumValues": [
+      "Unavailable",
+      "Partial",
+      "Complete"
+    ],
+    "Properties": []
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.ProviderIdentity",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Value",
+        "Type": "System.Guid"
+      }
+    ]
+  },
+  {
+    "Type": "CanDoItAll.AgentFramework.ProviderHistory.ProviderModelIdentity",
+    "EnumValues": [],
+    "Properties": [
+      {
+        "Name": "Value",
+        "Type": "System.String"
+      }
+    ]
+  }
+]

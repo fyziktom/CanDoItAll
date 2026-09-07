@@ -1,0 +1,12 @@
+{
+  "utc": "2026-09-07T13:21:32.682328+00:00",
+  "snapshotId": "snap-20260907131309-24495abf",
+  "scope": "AgentFramework.UI project only; evaluated transitive sandbox graph is separate",
+  "types": 44,
+  "members": 259,
+  "serviceRegistrations": 0,
+  "findings": 7,
+  "diagnostics": 0,
+  "cycles": [],
+  "dependencyFacts": 37
+}

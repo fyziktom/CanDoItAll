@@ -1,0 +1,48 @@
+{
+  "utc": "2026-09-07T13:25:24.442518+00:00",
+  "baselineClosure": "pre-baseline-closure.json",
+  "moves": [
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/Overview/AgentsOverviewState.cs",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewState.cs",
+      "beforeSha256": "3e40d828d3384d8dbd1f1660e328164a93107cf154a8e0a7f6d3be5f4a3f09dc",
+      "afterSha256": "bef08b47cd9e7eca7aebe5fb23e8f2558048492e118bdfc81b2403569dcfbe36"
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/Overview/AgentsOverviewPresentation.cs",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewPresentation.cs",
+      "beforeSha256": "64a84268ffeac3b6d5e8bc43ccfc5a3ab5b59b422cb40a3e1775e2bb872d2e95",
+      "afterSha256": "9db41f719d1ba79b8cf81354183bcefcedce8141d85d717ef7ed75bd24d89a91"
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/Overview/AgentsOverviewSurface.razor",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor",
+      "beforeSha256": "b615bad907bb4a3cd7c1205f20e13dcb0d3b94e6a596cc50b85193e04cf0f851",
+      "afterSha256": "93da585e675014e016468bb73cb4d1de3731331041016ecbfc9f59cd9e0ac6f1"
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/Overview/AgentsOverviewSurface.razor.cs",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.cs",
+      "beforeSha256": "3550f9929e9eb074290a12ea24e1feb2255877510cff70ac52d994429a2c93b6",
+      "afterSha256": "67c05a700669b907a573a044a0b30bde97d8548838f143f503c9f276581119b4"
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/Overview/AgentsOverviewSurface.razor.css",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentsOverviewSurface.razor.css",
+      "beforeSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6",
+      "afterSha256": "7fbf9ceb16598922251e10fcfc6a026e583d2035fd76b63772964d3a61a98df6"
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageConsumerList.razor",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Overview/ProviderUsageConsumerList.razor",
+      "beforeSha256": "aa8939c2b7e1da6682670b0e8fca3fc28d09b22805e823279440ca14e007df49",
+      "afterSha256": "4ab6fdf982c3c7fb40fd74a6a02d29c7683312a0bbcf5a7d1974bed17651d3d0"
+    },
+    {
+      "from": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDisplay.cs",
+      "to": "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentUsageDisplay.cs",
+      "beforeSha256": "928b8933ab01e6e9f4e375326d2a1cab232303ba2a587010c75f20dd69375d99",
+      "afterSha256": "ea2efc5784291becf27246249c274e3bad806738d5bc365934a6819f37e294e7"
+    }
+  ]
+}

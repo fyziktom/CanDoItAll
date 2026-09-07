@@ -1,0 +1,35 @@
+{
+  "utc": "2026-09-07T20:56:23.641363+00:00",
+  "repositories": [
+    {
+      "repository": "primary",
+      "head": "2f3a6020e805deb02a6dcfbdfb52f352eb59ce61",
+      "tree": "6b112718e6892ce2113b71dfaa71b170637e3f0c",
+      "branch": "components-decoupling",
+      "indexClean": true,
+      "sourceStatus": "Owned proposal inventory is retained separately.",
+      "remoteRefreshExit": 0,
+      "remoteRef": "refs/heads/components-decoupling",
+      "remoteHead": "2f3a6020e805deb02a6dcfbdfb52f352eb59ce61"
+    },
+    {
+      "repository": "Components",
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "tree": "8ee42b3f1f97fd4bb7b3b3f526029228d8ed6e23",
+      "branch": "codex/original-ui-refactoring-release",
+      "indexClean": true,
+      "sourceStatus": "M src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs\n M src/CanDoItAll.Components.BaseLib/README.md\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt\n?? tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+      "remoteRefreshExit": 0,
+      "remoteRef": "refs/heads/main",
+      "remoteHead": "bd1eb1030c438c861b94b3b8d3b9dba72925d685"
+    },
+    {
+      "repository": "FileTools",
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "tree": "6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d",
+      "branch": "HEAD",
+      "indexClean": true,
+      "sourceStatus": ""
+    }
+  ]
+}

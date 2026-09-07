@@ -1,0 +1,28 @@
+{
+  "utc": "2026-09-07T10:45:24.530972+00:00",
+  "node": "v24.19.0",
+  "browser": "149.0.7827.55",
+  "tailwind": "4.2.1",
+  "assets": [
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css",
+      "bytes": 15751,
+      "sha256": "dc38a6fac1afbaf5f28860f7038db9ed8917acd71e045a56495c1bdf4fb6aa53"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+      "bytes": 117283,
+      "sha256": "64dbd6d0a6e2362dea241c4f583aff872d5e687a87c9e93e6871ab7c16b01bee"
+    },
+    {
+      "path": "Tailwind/main/component-layout-utilities.css",
+      "bytes": 2126,
+      "sha256": "311909ab73be481a52dbefc4373bef9d4c132363a044a32c3a84a8d43ecb3d57"
+    },
+    {
+      "path": "Tailwind/node_modules/tailwindcss/package.json",
+      "bytes": 2493,
+      "sha256": "ac2d41af33338d2d0a96190ab84b5419187da9f1fc6d2c91fb5b83238e746b46"
+    }
+  ]
+}

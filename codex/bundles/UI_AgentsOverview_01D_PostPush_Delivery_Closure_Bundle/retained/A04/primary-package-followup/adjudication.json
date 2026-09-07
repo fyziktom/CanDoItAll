@@ -1,0 +1,44 @@
+{
+  "utc": "2026-09-07T21:02:04.259185+00:00",
+  "componentsPackagesPacked": 7,
+  "primaryPackageBuild": "BLOCKED_UNAVAILABLE_FILETOOLS_PACKAGES",
+  "diagnostics": [
+    {
+      "code": "NU1101",
+      "package": "CanDoItAll.FileTools.FileInteraction.Spreadsheet"
+    },
+    {
+      "code": "NU1102",
+      "package": "CanDoItAll.FileTools.Abstractions"
+    },
+    {
+      "code": "NU1102",
+      "package": "CanDoItAll.FileTools.Desktop"
+    },
+    {
+      "code": "NU1102",
+      "package": "CanDoItAll.FileTools.FileBrowser.Components"
+    },
+    {
+      "code": "NU1102",
+      "package": "CanDoItAll.FileTools.FileBrowser.Core"
+    },
+    {
+      "code": "NU1102",
+      "package": "CanDoItAll.FileTools.FileInteraction.Components"
+    },
+    {
+      "code": "NU1102",
+      "package": "CanDoItAll.FileTools.FileInteraction.Core"
+    },
+    {
+      "code": "NU1102",
+      "package": "CanDoItAll.FileTools.FileInteraction.Markdown"
+    }
+  ],
+  "filetoolsVersionRequired": "0.3.0",
+  "availableVersionObserved": "0.1.18 for listed existing public packages; Spreadsheet package absent",
+  "filetoolsSourceChanged": false,
+  "packagePublished": false,
+  "conclusion": "Actual optional package-mode restore cannot complete with the available feed graph. Source-mode builds and the packed external BaseLib consumer remain passing independent proofs."
+}

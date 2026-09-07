@@ -1,0 +1,47 @@
+[
+  {
+    "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:19:38.129114+00:00"
+  },
+  {
+    "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:19:57.468912+00:00"
+  },
+  {
+    "project": ".mcp-state/overview-browser-fixture/OverviewBrowser.csproj",
+    "args": [
+      "dotnet",
+      "build",
+      ".mcp-state/overview-browser-fixture/OverviewBrowser.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1",
+      "/p:UseSharedCompilation=false"
+    ],
+    "exit": 0,
+    "utc": "2026-09-07T12:20:20.036325+00:00"
+  }
+]

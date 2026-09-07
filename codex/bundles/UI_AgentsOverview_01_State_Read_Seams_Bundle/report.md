@@ -126,3 +126,5 @@ After the manifest-checked Overview closure at 16:39:40 UTC, [Governance-01](../
 | Production bookmarkability | Unchanged; no routing implementation or new readiness claim |
 | Governance preparation | PREPARED ONLY after verified Overview closure; G00 is next after owner authorization |
 | Repository merge readiness | Not claimed; historical documentation debt and uncommitted sibling dependency remain |
+
+Post-push delivery status is tracked separately in [the delivery follow-up](delivery-follow-up.md); historical execution claims above are unchanged.

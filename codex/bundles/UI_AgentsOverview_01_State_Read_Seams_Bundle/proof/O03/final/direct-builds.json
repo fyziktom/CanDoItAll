@@ -1,0 +1,220 @@
+[
+  {
+    "project": "src/MAF/Common/CanDoItAll.AgentFramework.Usage/CanDoItAll.AgentFramework.Usage.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Usage/CanDoItAll.AgentFramework.Usage.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:27:22.961188+00:00",
+    "finishedUtc": "2026-09-07T14:27:25.410832+00:00"
+  },
+  {
+    "project": "src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:27:25.411566+00:00",
+    "finishedUtc": "2026-09-07T14:27:27.649776+00:00"
+  },
+  {
+    "project": "C:/repositories/CanDoItAll.Components/src/CanDoItAll.Components.Charts/CanDoItAll.Components.Charts.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "C:/repositories/CanDoItAll.Components/src/CanDoItAll.Components.Charts/CanDoItAll.Components.Charts.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:27:27.651805+00:00",
+    "finishedUtc": "2026-09-07T14:27:29.076307+00:00"
+  },
+  {
+    "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:27:29.076307+00:00",
+    "finishedUtc": "2026-09-07T14:27:35.635040+00:00"
+  },
+  {
+    "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:27:35.635040+00:00",
+    "finishedUtc": "2026-09-07T14:28:39.827996+00:00"
+  },
+  {
+    "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:28:39.829000+00:00",
+    "finishedUtc": "2026-09-07T14:29:34.817679+00:00"
+  },
+  {
+    "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+    "mode": "Parity",
+    "command": [
+      "dotnet",
+      "build",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q",
+      "-p:CatalogAssetMode=Parity"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:29:34.818679+00:00",
+    "finishedUtc": "2026-09-07T14:29:41.523786+00:00"
+  },
+  {
+    "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+    "mode": "Fast",
+    "command": [
+      "dotnet",
+      "build",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q",
+      "-p:CatalogAssetMode=Fast"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:29:41.524785+00:00",
+    "finishedUtc": "2026-09-07T14:29:48.823564+00:00"
+  },
+  {
+    "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:29:48.824564+00:00",
+    "finishedUtc": "2026-09-07T14:30:39.797288+00:00"
+  },
+  {
+    "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:30:39.798288+00:00",
+    "finishedUtc": "2026-09-07T14:31:16.445760+00:00"
+  },
+  {
+    "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:31:16.445760+00:00",
+    "finishedUtc": "2026-09-07T14:31:57.641336+00:00"
+  },
+  {
+    "project": ".mcp-state/overview-browser-fixture/OverviewBrowser.csproj",
+    "mode": null,
+    "command": [
+      "dotnet",
+      "build",
+      ".mcp-state/overview-browser-fixture/OverviewBrowser.csproj",
+      "-c",
+      "Release",
+      "--nologo",
+      "/m:1",
+      "/p:UseSharedCompilation=false",
+      "-v:q"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:31:57.641336+00:00",
+    "finishedUtc": "2026-09-07T14:32:31.811301+00:00"
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "name": "isolated-CanDoItAll.Modules.AgentFramework",
+    "command": [
+      "dotnet",
+      "build",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "-p:UseSharedCompilation=false",
+      "-v:q",
+      "-p:UseLocalCanDoItAllLibraries=true",
+      "-p:CanDoItAllComponentsRepositoryRoot=Q:\\CanDoItAll.Components",
+      "-p:CanDoItAllFileToolsRepositoryRoot=Q:\\CanDoItAll.FileTools"
+    ],
+    "cwd": "Q:\\CanDoItAll",
+    "exit": 0,
+    "startedUtc": "2026-09-07T19:28:03.639510+00:00",
+    "finishedUtc": "2026-09-07T19:33:03.170544+00:00"
+  },
+  {
+    "name": "isolated-CanDoItAll.Web",
+    "command": [
+      "dotnet",
+      "build",
+      "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "-c",
+      "Release",
+      "/m:1",
+      "-p:UseSharedCompilation=false",
+      "-v:q",
+      "-p:UseLocalCanDoItAllLibraries=true",
+      "-p:CanDoItAllComponentsRepositoryRoot=Q:\\CanDoItAll.Components",
+      "-p:CanDoItAllFileToolsRepositoryRoot=Q:\\CanDoItAll.FileTools"
+    ],
+    "cwd": "Q:\\CanDoItAll",
+    "exit": 0,
+    "startedUtc": "2026-09-07T19:33:03.171543+00:00",
+    "finishedUtc": "2026-09-07T19:34:51.519462+00:00"
+  },
+  {
+    "name": "pack-Common",
+    "command": [
+      "dotnet",
+      "pack",
+      "src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj",
+      "-c",
+      "Release",
+      "-o",
+      "Q:\\feed",
+      "-p:Version=0.3.0-overview01d.20260907193451",
+      "-p:PackageVersion=0.3.0-overview01d.20260907193451",
+      "/m:1",
+      "-v:q"
+    ],
+    "cwd": "Q:\\CanDoItAll.Components",
+    "exit": 0,
+    "startedUtc": "2026-09-07T19:34:51.520462+00:00",
+    "finishedUtc": "2026-09-07T19:34:56.405842+00:00"
+  },
+  {
+    "name": "pack-BaseLib",
+    "command": [
+      "dotnet",
+      "pack",
+      "src/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj",
+      "-c",
+      "Release",
+      "-o",
+      "Q:\\feed",
+      "-p:Version=0.3.0-overview01d.20260907193451",
+      "-p:PackageVersion=0.3.0-overview01d.20260907193451",
+      "/m:1",
+      "-v:q"
+    ],
+    "cwd": "Q:\\CanDoItAll.Components",
+    "exit": 0,
+    "startedUtc": "2026-09-07T19:34:56.406843+00:00",
+    "finishedUtc": "2026-09-07T19:35:03.880813+00:00"
+  },
+  {
+    "name": "external-restore",
+    "command": [
+      "dotnet",
+      "restore",
+      "Consumer.csproj",
+      "--source",
+      "Q:\\feed",
+      "--source",
+      "https://api.nuget.org/v3/index.json"
+    ],
+    "cwd": "Q:\\consumer",
+    "exit": 1,
+    "startedUtc": "2026-09-07T19:35:03.881821+00:00",
+    "finishedUtc": "2026-09-07T19:35:05.270278+00:00"
+  }
+]

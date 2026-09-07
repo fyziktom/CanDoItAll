@@ -1,0 +1,14 @@
+{
+  "expectedModes": [
+    "Parity",
+    "Fast"
+  ],
+  "expectedScenariosPerMode": 18,
+  "expectedCapturesPerMode": 25,
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "scriptSha256": "b72ff2e72cf88850ea17175f08750d6d95a7914b09313474c4c11758d6ac9b49",
+  "purpose": "Fresh compatibility smoke, not watch measurement."
+}

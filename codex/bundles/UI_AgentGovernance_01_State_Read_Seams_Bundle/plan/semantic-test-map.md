@@ -1,6 +1,6 @@
 # Exact future witnesses and semantic coverage
 
-**Planned, not implemented or executed.** Proposed class: `CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests`. Each row below is one intended `[Fact]` with the exact method suffix shown. Prefer Facts for explicit sequences. G00 must compile the actual tests, list discovered FQNs and freeze arguments before running; this proposed inventory does not substitute for compiled discovery. Correct names/maps together if source evidence requires a different public seam. Never call a setup error RED.
+**G00 current-panel witnesses compiled; execution receipts retained under proof/G00.** Proposed class: `CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests`. Each row below is one intended `[Fact]` with the exact method suffix shown. Prefer Facts for explicit sequences. G00 must compile the actual tests, list discovered FQNs and freeze arguments before running; this proposed inventory does not substitute for compiled discovery. Correct names/maps together if source evidence requires a different public seam. Never call a setup error RED.
 
 | Exact future method | Expected current result from source | Semantic expectation |
 |---|---|---|
@@ -46,3 +46,5 @@ G02 class `CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTest
 G03 freezes exact sandbox query/render tests after specimen design and current runtime-dialog consumer discovery; no filename, partial count or test-count architecture assertions. Browser/read races are proven through public fixtures and rendered input/button events, never private-field reflection.
 
 Existing owner inventory is [separate](../inventory/existing-tests.json). Preserve Overview `Aggregate_failure_cannot_override_ready_selection_access(tab: Governance)` and the actual page/context suite; that callback test alone is not a Governance verification lifecycle proof.
+
+G00 added exact methods: Empty_guid_is_invalid_and_never_publishes_all_agents (Fact); Canceled_owner_allows_delayed_token_registration_without_late_publication (false/true); Governance_timestamps_are_explicit_UTC_independent_of_culture_and_offset (en-US/+120 and cs-CZ/-240); Forbidden_execution_payloads_and_raw_runtime_prose_never_render (Fact); Runtime_details_shared_children_use_UTC_and_omit_raw_timeline_message (Fact). Initial exact discovery: 34 cases. This count describes this checkpoint, not architecture. Timestamp/payload/shared-child rendering cases remain owned through G02; all current-panel lifetime cases must pass G01. Optional timestamps and DST pairs gain direct public value-policy tests in G01/G02.

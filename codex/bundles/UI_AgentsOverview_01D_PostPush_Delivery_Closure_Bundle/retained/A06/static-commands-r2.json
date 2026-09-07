@@ -1,0 +1,53 @@
+[
+  {
+    "name": "tool-tests-final",
+    "command": [
+      "python",
+      "tools/Validation/bundles/test_delivery_tools.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T19:54:31.659064+00:00",
+    "finishedUtc": "2026-09-07T19:54:33.757270+00:00"
+  },
+  {
+    "name": "portability-scan-r2",
+    "command": [
+      "python",
+      "tools/Validation/Portability/scan_portability.py",
+      "--repo-root",
+      ".",
+      "--output",
+      ".mcp-state/overview01d/portability-final-r2.json",
+      "--include-untracked"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T19:54:33.757270+00:00",
+    "finishedUtc": "2026-09-07T19:55:47.645292+00:00"
+  },
+  {
+    "name": "portability-review-r2",
+    "command": [
+      "python",
+      "tools/Validation/Portability/enforce_portability_baseline.py",
+      "--scan",
+      ".mcp-state/overview01d/portability-final-r2.json",
+      "--baseline",
+      "tools/Validation/Portability/portability-risk-baseline.json"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T19:55:47.645292+00:00",
+    "finishedUtc": "2026-09-07T19:55:48.370872+00:00"
+  },
+  {
+    "name": "documentation-r2",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-File",
+      "tools/Validation/Test-Documentation.ps1"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T19:55:48.371873+00:00",
+    "finishedUtc": "2026-09-07T19:55:53.436430+00:00"
+  }
+]

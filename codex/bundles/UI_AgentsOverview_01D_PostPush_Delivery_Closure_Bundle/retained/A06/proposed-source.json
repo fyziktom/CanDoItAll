@@ -1,0 +1,150 @@
+{
+  "utc": "2026-09-07T20:54:15.339486+00:00",
+  "scope": "All non-bundle owned changes. Bundle artifacts are sealed separately by their root manifests; source inventory excludes its own proof bundle to avoid recursive hashes.",
+  "entries": [
+    {
+      "repository": "primary",
+      "path": ".gitattributes",
+      "bytes": 967,
+      "rawSha256": "e5b644f8946fe79abc4c275b9d44e41caa2b1f392af1a97fa979282d1bb7525e",
+      "proposedGitSha256": "e5b644f8946fe79abc4c275b9d44e41caa2b1f392af1a97fa979282d1bb7525e",
+      "gitBlob": "f6ae21df3a3e91c6a88922cb625e2a26fcdccacf",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": ".gitignore",
+      "bytes": 4722,
+      "rawSha256": "55b4f0b6b2edd5acc25f51ff93fcb695abd99c099f509328f8d795f35ecc0a05",
+      "proposedGitSha256": "55b4f0b6b2edd5acc25f51ff93fcb695abd99c099f509328f8d795f35ecc0a05",
+      "gitBlob": "c131a2c7cc751afc615b9e66ede86887073031bb",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentFrameworkAgentsChatContextBuilder.cs",
+      "bytes": 9849,
+      "rawSha256": "e13366215daab16ad1658ed4b05f974fef722da3ca46b82755ef906f9bec8789",
+      "proposedGitSha256": "e13366215daab16ad1658ed4b05f974fef722da3ca46b82755ef906f9bec8789",
+      "gitBlob": "7dbd9075678767c48c62220d3410bc1df16798fe",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamDetailsDialog.razor",
+      "bytes": 6181,
+      "rawSha256": "e3f26034673404ed75707a8981eab47273aba79e4f263ddfddaab753a3cd63d9",
+      "proposedGitSha256": "e3f26034673404ed75707a8981eab47273aba79e4f263ddfddaab753a3cd63d9",
+      "gitBlob": "3fd74939292a6b6526beebb8c330b443b7922d8d",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentsOverviewEffectLifecycleTests.cs",
+      "bytes": 22619,
+      "rawSha256": "4e864102087d1bd760959a57eac1aa3b15c38cdf2180fc54bc7238d80e393b15",
+      "proposedGitSha256": "4e864102087d1bd760959a57eac1aa3b15c38cdf2180fc54bc7238d80e393b15",
+      "gitBlob": "0218a8e347b82733e64ae410ce4849752678018a",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsOverviewSessionTests.cs",
+      "bytes": 19886,
+      "rawSha256": "fb6a4f48789a195a8c9ccbd179c4b6c02c0cbf4870bada78fd7732cd41e6a917",
+      "proposedGitSha256": "fb6a4f48789a195a8c9ccbd179c4b6c02c0cbf4870bada78fd7732cd41e6a917",
+      "gitBlob": "124a8de70b4d41e7e68c79e63bbb666d34b1d044",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkModuleChatContextBuilderTests.cs",
+      "bytes": 12958,
+      "rawSha256": "e002d8c6bbe389ce9af100de401773f3912349328cb88bf4ee6f8f35afd0b730",
+      "proposedGitSha256": "e002d8c6bbe389ce9af100de401773f3912349328cb88bf4ee6f8f35afd0b730",
+      "gitBlob": "d157b7809d9c4c8acfd9cfbf124f9772a86ed004",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "tools/Validation/Portability/portability-risk-baseline.json",
+      "bytes": 3372261,
+      "rawSha256": "c47e1b2aa3d5e23555d30d45e1f6b5a64a5450e6e416e4ef4a4789d83e0b4231",
+      "proposedGitSha256": "c47e1b2aa3d5e23555d30d45e1f6b5a64a5450e6e416e4ef4a4789d83e0b4231",
+      "gitBlob": "7cee17a4bf87a4ee7613962183db4364df2e95fc",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "tools/Validation/bundles/scan_text_encoding.py",
+      "bytes": 3175,
+      "rawSha256": "66f7fe218ba365ced2e18bc62cbfdc3b5aac9c0c73ed6d062a85e5c2469dd3c9",
+      "proposedGitSha256": "66f7fe218ba365ced2e18bc62cbfdc3b5aac9c0c73ed6d062a85e5c2469dd3c9",
+      "gitBlob": "48327a778e7134f0faa94cd906fdc978e25013f5",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "tools/Validation/bundles/test_delivery_tools.py",
+      "bytes": 6090,
+      "rawSha256": "3c35e32706fb7edaa7b8197379c3cc42ccae95c8a94b1b51a502caeef658498e",
+      "proposedGitSha256": "3c35e32706fb7edaa7b8197379c3cc42ccae95c8a94b1b51a502caeef658498e",
+      "gitBlob": "545fa808bfd1490de061c6678b8aaff550d7efcc",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "primary",
+      "path": "tools/Validation/bundles/validate_bundle_delivery.py",
+      "bytes": 6299,
+      "rawSha256": "dae32d3f47b166e278679da303fb799c6d5738d20887a49d8b503ddff048af34",
+      "proposedGitSha256": "dae32d3f47b166e278679da303fb799c6d5738d20887a49d8b503ddff048af34",
+      "gitBlob": "9b08c2faacd5e0cfc5ecfd0372de72e6bc3e9362",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "Components",
+      "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs",
+      "bytes": 9550,
+      "rawSha256": "b2b27da94e22cbcc57cc174956f47e4a90d2f130cdec7abf99d8eba65ce00007",
+      "proposedGitSha256": "b2b27da94e22cbcc57cc174956f47e4a90d2f130cdec7abf99d8eba65ce00007",
+      "gitBlob": "a0ad3986d8989e4b4346088a705713b196d88611",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "Components",
+      "path": "src/CanDoItAll.Components.BaseLib/README.md",
+      "bytes": 23687,
+      "rawSha256": "b26d4f9b9f8b54ddea3367f576a3f41b87154402a2a7a031a1d8fe8f3acfee76",
+      "proposedGitSha256": "b26d4f9b9f8b54ddea3367f576a3f41b87154402a2a7a031a1d8fe8f3acfee76",
+      "gitBlob": "2ea68544762e3264602f756fdac93951316e71bb",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "Components",
+      "path": "tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+      "bytes": 7486,
+      "rawSha256": "c574995c6892db6af1ee2b91cddfa46a29df34f4265d4c699118776d163cd8f7",
+      "proposedGitSha256": "c574995c6892db6af1ee2b91cddfa46a29df34f4265d4c699118776d163cd8f7",
+      "gitBlob": "e61d2f94a17d3c11d0cb02b85089dec2c022917e",
+      "cleanFilterChangesBytes": false
+    },
+    {
+      "repository": "Components",
+      "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json",
+      "bytes": 263748,
+      "rawSha256": "0c67ffcb9fefb622cd842f8b774d5cc3c321ed03397892750f3b922bc7c74cd5",
+      "proposedGitSha256": "da3075ec0b4d56b816c946d16b33dfab334800f2ccfbf4e811bc7f312d9507f8",
+      "gitBlob": "f46b25ed882c66a7d75cb0c05267fbec95d2f68c",
+      "cleanFilterChangesBytes": true
+    },
+    {
+      "repository": "Components",
+      "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt",
+      "bytes": 64390,
+      "rawSha256": "28e6535d6429e9562d8849253f21d88b7e9323049dde721f6a086cb7f894d75f",
+      "proposedGitSha256": "8e76cae9e082457e2727a5ba6006092ceafe2fe5a8827fb0ddad9245a6e16bde",
+      "gitBlob": "5b984a3ed1a8f6f0bd9f166b19e4b1835fdd6294",
+      "cleanFilterChangesBytes": true
+    }
+  ]
+}

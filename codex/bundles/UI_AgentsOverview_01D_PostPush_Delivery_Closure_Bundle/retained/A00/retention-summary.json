@@ -1,0 +1,17 @@
+{
+  "utc": "2026-09-07T18:28:51.451115+00:00",
+  "summaries": [
+    {
+      "bundle": "UI_AgentsOverview_01_State_Read_Seams_Bundle",
+      "manifestEntries": 1186,
+      "localFiles": 1187,
+      "missingGit": 1152
+    },
+    {
+      "bundle": "UI_AgentGovernance_01_State_Read_Seams_Bundle",
+      "manifestEntries": 33,
+      "localFiles": 34,
+      "missingGit": 10
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "command": [
+      "dotnet",
+      "restore",
+      "CanDoItAll.slnx"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:59:17.405285+00:00",
+    "finishedUtc": "2026-09-07T14:59:26.344799+00:00"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "CanDoItAll.slnx",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T14:59:26.345801+00:00",
+    "finishedUtc": "2026-09-07T15:00:01.227174+00:00"
+  },
+  {
+    "command": [
+      "dotnet",
+      "restore",
+      "tests/Solutions/CanDoItAll.Tests.Stable.slnx"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T15:00:01.228183+00:00",
+    "finishedUtc": "2026-09-07T15:00:11.681738+00:00"
+  },
+  {
+    "command": [
+      "dotnet",
+      "build",
+      "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+      "-c",
+      "Release",
+      "--no-restore",
+      "/m:1"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T15:00:11.682737+00:00",
+    "finishedUtc": "2026-09-07T15:00:42.298863+00:00"
+  }
+]

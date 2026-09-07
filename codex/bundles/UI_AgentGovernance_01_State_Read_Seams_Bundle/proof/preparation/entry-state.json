@@ -1,0 +1,45 @@
+{
+  "utc": "2026-09-07T16:54:40.489749+00:00",
+  "branch": "components-decoupling",
+  "head": "ad2ded645e65b8b205959f6fed816d082b99a7be",
+  "tree": "3c9d3eb3eded55bf3e1aea83225dbccf8635dc66",
+  "remote": "ad2ded645e65b8b205959f6fed816d082b99a7be\trefs/heads/components-decoupling",
+  "aheadBehind": "0\t0",
+  "index": "",
+  "nonBundlePathCount": 5402,
+  "nonBundleDigest": "993eb482bfadd623813e616a0158d321d369700241f393721f2b2a03a51312de",
+  "worktree": "M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/MANIFEST.sha256\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/README.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/00-csharp-current-state-inventory.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/01-csharp-boundary-map.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/architecture/02-csharp-dependency-direction.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/execution.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/semantic-test-map.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/validation.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/requirements.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O00.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O01.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O02.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O03.md\n M codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/traceability.md\n M codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/MANIFEST.sha256\n M codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/README.md\n M codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/architecture/02-state-intent-and-routing-readiness.md\n M codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/architecture/04-sandboxability-and-future-project-boundaries.md\n M src/Modules/CanDoItAll.Modules.AgentFramework/AgentFrameworkAgentsChatContextBuilder.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.css\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDialog.razor\n D src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDisplay.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor\n D src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageConsumerList.razor\n M src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageDialog.razor\n M src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs\n M src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor\n M src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj\n M src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor\n M src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/_Imports.razor\n M src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs\n M src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md\n M src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs\n M src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/sandbox.css\n M src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj\n M src/UI/CanDoItAll.AgentFramework.UI/README.md\n M src/UI/CanDoItAll.AgentFramework.UI/_Imports.razor\n M src/UI/CanDoItAll.AppComponents/README.md\n M tests/Components/CanDoItAll.Tests.Components/AgentAvatarRenderingTests.cs\n M tests/Integration/CanDoItAll.Tests.Integration/AgentsWorkspaceQueryTests.cs\n M tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsWorkspaceQueryTests.cs\n M tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkModuleChatContextBuilderTests.cs\n M tools/Validation/Portability/portability-risk-baseline.json\n?? codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/closure.md\n?? codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inputs/02-implementation-authorization.md\n?? codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/execution-decisions.md\n?? codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/plan/o03-execution-protocol.md\n?? codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/preparation-traceability.md\n?? codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/report.md\n?? codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/reviews/execution-csharp-architecture-gate.md\n?? codex/bundles/UI_Component_Seams_Shared_Architecture_Bundle/reviews/14-independent-read-lanes-and-owned-effects.md\n?? src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsOverviewSession.cs\n?? src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/OverviewSpecimen.razor\n?? src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Fixtures/overview.json\n?? src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxContext.cs\n?? src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxFixture.cs\n?? src/UI/CanDoItAll.AgentFramework.UI/Overview/\n?? tests/Components/CanDoItAll.Tests.Components/AgentsOverviewEffectLifecycleTests.cs\n?? tests/Components/CanDoItAll.Tests.Components/AgentsOverviewReadLifecycleTests.cs\n?? tests/Components/CanDoItAll.Tests.Components/AgentsOverviewSurfaceTests.cs\n?? tests/Components/CanDoItAll.Tests.Components/OverviewSandboxTests.cs\n?? tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsOverviewPresentationTests.cs\n?? tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsOverviewSessionTests.cs\n?? tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/OverviewSandboxContextTests.cs",
+  "siblings": [
+    {
+      "repository": "CanDoItAll.Components",
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "branch": "codex/original-ui-refactoring-release",
+      "status": "M src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt\n?? tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+      "files": [
+        {
+          "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs",
+          "sha256": "732db7916ec82c577302f47fabf4f2192a83d80225ca67f06471c6d86577719f"
+        },
+        {
+          "path": "tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+          "sha256": "c9c5e632c533e99a033339c9bde59cde677544a879af9ac7b572824c8cbfb18d"
+        },
+        {
+          "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json",
+          "sha256": "0c67ffcb9fefb622cd842f8b774d5cc3c321ed03397892750f3b922bc7c74cd5"
+        },
+        {
+          "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt",
+          "sha256": "62fbf2a57b8bbfc90f1e5e353069640708f434a133202d77e69e695f6d74473d"
+        }
+      ]
+    },
+    {
+      "repository": "CanDoItAll.FileTools",
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "branch": "",
+      "status": "",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "name": "portability-self",
+    "command": [
+      "python",
+      "tools/Validation/Portability/test_enforce_portability_baseline.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T20:43:35.840764+00:00",
+    "finishedUtc": "2026-09-07T20:43:36.019851+00:00"
+  },
+  {
+    "name": "secret-self",
+    "command": [
+      "python",
+      "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T20:43:36.020427+00:00",
+    "finishedUtc": "2026-09-07T20:43:36.610478+00:00"
+  },
+  {
+    "name": "delivery-self",
+    "command": [
+      "python",
+      "tools/Validation/bundles/test_delivery_tools.py"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T20:43:36.611082+00:00",
+    "finishedUtc": "2026-09-07T20:43:40.367087+00:00"
+  },
+  {
+    "name": "portability-scan",
+    "command": [
+      "python",
+      "tools/Validation/Portability/scan_portability.py",
+      "--repo-root",
+      ".",
+      "--output",
+      "C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\portability-final-r3.json"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T20:43:40.367087+00:00",
+    "finishedUtc": "2026-09-07T20:44:58.781979+00:00"
+  },
+  {
+    "name": "portability-enforcement",
+    "command": [
+      "python",
+      "tools/Validation/Portability/enforce_portability_baseline.py",
+      "--scan",
+      "C:\\repositories\\CanDoItAll\\.mcp-state\\overview01d\\portability-final-r3.json",
+      "--baseline",
+      "tools/Validation/Portability/portability-risk-baseline.json"
+    ],
+    "exit": 0,
+    "startedUtc": "2026-09-07T20:44:58.782561+00:00",
+    "finishedUtc": "2026-09-07T20:44:59.440937+00:00"
+  },
+  {
+    "name": "documentation",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "tools/Validation/Test-Documentation.ps1"
+    ],
+    "exit": 1,
+    "startedUtc": "2026-09-07T20:44:59.441915+00:00",
+    "finishedUtc": "2026-09-07T20:45:03.609505+00:00"
+  }
+]
