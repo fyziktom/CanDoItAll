@@ -2,7 +2,7 @@
 @using System.Collections.Immutable
 @using static CanDoItAll.AgentFramework.UI.Governance.GovernancePresentationMapping
 
-<div class="governance-surface">
+<div class="governance-surface" data-testid="agents-governance-surface">
 <ListDetailShell ListPaneWidth="24rem" data-testid="agents-governance-panel">
     <ListHeader>
         <Stack GapScale="LayoutGap.Small">
@@ -45,8 +45,8 @@
                 </div>
             }
             @if (State.Catalog.IsBusy || State.List.IsBusy) {
-                <div role="status" aria-live="polite">
-                    <TextBlock Value="@(State.Catalog.IsBusy ? "Loading technical agentsĂ˘â‚¬Â¦" : "Loading execution runsĂ˘â‚¬Â¦")" />
+                <div role="status" aria-live="polite" data-testid="@(State.Catalog.IsBusy ? "agents-governance-catalog-loading" : "agents-governance-list-loading")">
+                    <TextBlock Value="@(State.Catalog.IsBusy ? "Loading technical agents…" : "Loading execution runs…")" />
                 </div>
             }
             @if (Presentation.Runs.Length == 0 && State.AgentResolved && State.List.Phase == GovernanceReadPhase.Ready) {
@@ -86,7 +86,7 @@
         <Stack GapScale="LayoutGap.Large">
             @if (State.Detail.IsBusy) {
                 <div role="status" aria-live="polite" data-testid="agents-governance-detail-loading">
-                    <TextBlock Value="Loading selected execution detailsĂ˘â‚¬Â¦" />
+                    <TextBlock Value="Loading selected execution details…" />
                 </div>
             }
             @if (State.Detail.Phase == GovernanceReadPhase.Unavailable) {

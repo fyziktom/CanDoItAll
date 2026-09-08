@@ -6,7 +6,7 @@ const { chromium } = require(process.env.GOV_PLAYWRIGHT);
 const root = path.resolve(process.argv[2]);
 const mode = process.argv[3] || 'web';
 assert(['web', 'Parity', 'Fast'].includes(mode));
-const raw = path.join(root, '.artifacts/governance-final');
+const raw = path.join(root, '.artifacts/diagnostics-seams');
 const captures = path.join(raw, 'screenshots');
 fs.mkdirSync(captures, { recursive: true });
 const base = 'http://127.0.0.1:' + (mode === 'web' ? 5285 : mode === 'Parity' ? 5395 : 5396);
@@ -48,6 +48,10 @@ async function title(expected) {
 async function safe(name) {
     const text = await page.locator('body').innerText();
     assert(!text.includes(denied), 'A denied value was rendered.');
+    const accessible = await page.locator('body').ariaSnapshot();
+    for (const value of ['governance-poison-', '\uFFFD', '\u0102\u02D8\u00e2\u201a\u00ac\u00c2\u00a6']) {
+        assert(!text.includes(value) && !accessible.includes(value), 'Forbidden or corrupted content: ' + value);
+    }
     assert.equal(await page.locator('#governance-injected').count(), 0);
     assert.equal(await page.locator('#sandbox-governance-injected').count(), 0);
     const refresh = page.getByRole('button', { name: 'Refresh', exact: true });
@@ -97,6 +101,7 @@ async function webScenarios() {
     await setMode('HoldDetail');
     await page.getByTestId('agents-governance-run-item').nth(0).click();
     await page.getByTestId('agents-governance-detail-loading').waitFor();
+    assert.equal(await page.getByTestId('agents-governance-detail-loading').innerText(), 'Loading selected execution details\u2026');
     assert.equal(await page.getByTestId('agents-governance-run-item').count(), 2);
     await setMode('Normal');
     await page.getByTestId('agents-governance-run-item').nth(1).click();
@@ -109,6 +114,7 @@ async function webScenarios() {
     await setMode('HoldList');
     await page.getByRole('button', { name: 'Refresh', exact: true }).click();
     await until(async () => (await page.getByTestId('agents-governance-panel').innerText()).includes('Loading execution runs'), 'pending list');
+    assert.equal(await page.getByTestId('agents-governance-list-loading').innerText(), 'Loading execution runs\u2026');
     await filter.selectOption(agentB);
     await title('Governance run B');
     await setMode('Normal');
@@ -158,6 +164,10 @@ async function webScenarios() {
     await page.getByRole('button', { name: 'Refresh', exact: true }).click();
     await title('Governance run 2');
     await safe('removed selected run stays explicit and can reappear');
+    await setMode('Poison');
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await until(async () => (await page.getByTestId('agents-governance-panel').innerText()).includes('Private artifact'), 'production poison projection');
+    await safe('real domain poison mapped through production allowlist');
     await setMode('Long');
     await page.getByRole('button', { name: 'Refresh', exact: true }).click();
     await until(async () => (await page.getByTestId('agents-governance-detail-title').innerText()).includes('<img'), 'encoded adversarial title');
@@ -181,6 +191,10 @@ async function sandboxScenarios() {
     for (const choice of choices) {
         await scenario.selectOption(choice);
         await until(async () => await page.getByTestId('sandbox-governance-specimen').getAttribute('data-scenario') === choice, 'accepted sandbox scenario');
+        for (const [id, expected] of [['catalog', 'Loading technical agents\u2026'], ['list', 'Loading execution runs\u2026'], ['detail', 'Loading selected execution details\u2026']]) {
+            const loading = page.getByTestId('agents-governance-' + id + '-loading');
+            if (await loading.count()) assert.equal(await loading.innerText(), expected);
+        }
         await safe('sandbox ' + choice);
     }
     await scenario.selectOption('selected-agent');

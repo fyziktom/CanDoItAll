@@ -24,6 +24,16 @@ class EncodingTests(unittest.TestCase):
             with self.subTest(text=ascii(text)):
                 self.assertIn("mojibake", [f["kind"] for f in inspect_bytes("text.md", text.encode())])
 
+    def test_governance_and_cp1252_corruption_are_rejected(self):
+        for text in ["Loading technical agents\u0102\u02d8\u00e2\u201a\u00ac\u00c2\u00a6",
+                     "\u00c2\u20ac", "\u00c3\u0153", "\u0102\u02db", "\u00e2\u20ac", "\u201a\u00ac"]:
+            with self.subTest(text=ascii(text)):
+                self.assertIn("mojibake", [f["kind"] for f in inspect_bytes("surface.razor", text.encode())])
+
+    def test_legitimate_unicode_and_punctuation_remain_valid(self):
+        text = "\u00c2ngela; \u0102sta; \u010cesk\u00fd; fran\u00e7ais; S\u00e3o; \u4e2d\u6587; \u2026 \u2014 \u2018ready\u2019"
+        self.assertEqual([], inspect_bytes("surface.razor", text.encode()))
+
     def test_replacement_and_c1_are_rejected(self):
         self.assertEqual(["replacement-character", "c1-control"], [f["kind"] for f in inspect_bytes("a.cs", "\ufffd\u0085".encode())])
 

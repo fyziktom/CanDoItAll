@@ -49,7 +49,7 @@ public static class GovernancePresentationMapping {
     public static GovernanceRunPresentation Run(ExecutionRunRecord run, string agentLabel)
         => new(run.Id, run.AgentId, Text(run.Title), Text(agentLabel), run.State.ToString(), run.Outcome?.ToString(),
             RunTone(run.State, run.Outcome), Timestamp(run.UpdatedAtUtc), Text(run.ProviderName), Text(run.Model),
-            Text($"{run.State} / {run.ProviderName} / {run.Model}", SummaryLimit), Text(run.SourceKind, 64),
+            Text($"{run.State} / {run.ProviderName} / {run.Model}. Input and result content omitted.", SummaryLimit), Text(run.SourceKind, 64),
             Reference(run.SourceId), Reference(run.ProcessRunId), Reference(run.ProcessStepId),
             !string.IsNullOrWhiteSpace(run.ProcessRunId));
 
@@ -73,7 +73,7 @@ public static class GovernancePresentationMapping {
                     Number(item.PendingApprovalIds.Count) + " pending approval id(s)")).ToImmutableArray(),
             detail.ToolReceipts.OrderByDescending(item => item.CompletedAtUtc).Take(SectionRowLimit)
                 .Select(item => new GovernanceEntry(Text(item.ToolName), Text(item.ToolFamily), Timestamp(item.CompletedAtUtc),
-                    Text($"{item.RiskClass} / {item.InvocationOutcome} / {item.EffectState}", SummaryLimit))).ToImmutableArray(),
+                    Text($"{item.RiskClass} / {item.InvocationOutcome} / {item.EffectState}. Request and exit text omitted.", SummaryLimit))).ToImmutableArray(),
             Timeline(detail.ExecutionLog), Metrics(detail.Metrics));
 
     public static ImmutableArray<GovernanceEntry> Timeline(IEnumerable<ExecutionLogEntry> entries)
@@ -95,9 +95,17 @@ public static class GovernancePresentationMapping {
         if (string.IsNullOrWhiteSpace(value)) {
             return "Artifact path not recorded";
         }
-        var path = value.Replace('\\', '/');
-        if (path.StartsWith('/') || path.Contains(':') || path.Contains('?') || path.Contains('#')
-            || path.Split('/').Any(part => part is ".." or ".") || path.Any(char.IsControl)) {
+        string path;
+        try {
+            path = value.Normalize(NormalizationForm.FormC).Trim().Replace('\\', '/');
+        } catch (ArgumentException) {
+            return "Artifact path omitted";
+        }
+        if (value.EnumerateRunes().Any(rune => Rune.IsControl(rune)
+                || Rune.GetUnicodeCategory(rune) == UnicodeCategory.Format)
+            || path.StartsWith('/') || path.IndexOfAny([':', '?', '#', '%']) >= 0
+            || path.IndexOfAny(['\u2044', '\u2215', '\u2216', '\u29F5', '\u29F8', '\u29F9', '\uFE68', '\uFF0F', '\uFF3C']) >= 0
+            || path.Split('/').Any(part => part.Length == 0 || part is "." or ".." || part != part.Trim())) {
             return "Artifact path omitted";
         }
         return Text(path, SummaryLimit);

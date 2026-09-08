@@ -116,3 +116,55 @@ Primary-relative paths follow. The reviewed portability baseline additionally ch
 - `tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentGovernanceSessionTests.cs`
 - `tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/GovernancePresentationTests.cs`
 - `tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/GovernanceSandboxTests.cs`
+
+
+## Owner-authorized final hardening (current follow-up)
+
+Entry: components-decoupling at 385af21d8b72a1de3514911d013145d429b0750b. The earlier report and proof above remain historical. The current owner authorizes A1-A7, followed only after its owned green gate by Diagnostics B0-B6. The existing unpublished Components patch and a repeated unchanged-source workspace-alias flake with a passing exact retry are delivery limitations, not blockers to the bounded next implementation. No sibling, CI or history changes are planned.
+
+Architecture: retain Module session/effects and UI pure rendering. Add a per-session accepted-agent observation revision with structural record/collection comparison; release canceled request sources only in their operation completion path. No new public controller, bus, project reference or cancellation framework. Path validation normalizes display-only relative paths before acceptance. Scope is Behavioral, with direct public regressions, owning builds/tests and real Web/Parity/Fast checks. No historical proof is relabeled.
+
+Frozen regression topics: exact loading text; same-ID changed/identical agent observation; disappearance, failed refresh and reappearance; stale refresh; canceled token registration and WaitHandle lifetime; late success/failure/cancellation; synchronous failure; normalized/ambiguous artifact paths; real domain poison projection through Surface and sandbox. Expected discovery is frozen from these exact methods and data rows before execution; one broad gate follows final Diagnostics source freeze.
+
+The Components MCP returned Transport closed for recommendation and contract reads. Current shared source and existing real usage remain the fallback evidence; no sibling implementation change is inferred. CodeAnalytics entry snapshot snap-20260908102009-5b76a6e7 loaded UI with 17 documents and zero diagnostics. Its narrow graph omits transitive references; final MSBuild evaluation supplies dependency proof.
+
+### Final-hardening parity and security adjudication
+
+The comparison uses the actual pre-extraction Razor at `039a3a4` and the current mapper, not a presentation-only fixture. This follow-up supersedes the earlier request-disposal and same-ID publication descriptions; historical executions above remain historical.
+
+| Previously visible category | Decision | Current product contract |
+|---|---|---|
+| Input/result summary | Replace | State/provider/model overview; explicitly says execution input/result content is omitted. Raw output may contain arguments, credentials or paths. |
+| Approval details | Intentionally omit | Keep tool label, kind, status and UTC; explicitly omit arguments and runtime details. |
+| Artifact path | Retain safe projection | Normalize Unicode, trim, canonicalize backslashes, then reject ambiguous/rooted/URI/query/fragment/dot/empty/control/format paths. Render a bounded relative path or an omission label. |
+| Timeline message | Replace | Phase/state/UTC and an explicit execution-message omission label. |
+| Tool receipt exit summary | Replace | Risk/outcome/effect summary; request and exit text are explicitly omitted. No working directory or receipt payload crosses the boundary. |
+| Source/process/step identity | Retain safe projection | Canonical GUID, Not recorded, or External reference. Opaque source strings never become displayed identifiers. |
+| Status/outcome/provider/model/timestamps | Retain safe projection | Typed status/outcome, bounded encoded labels, invariant UTC. Producer-authored labels are not treated as a substitute for secret classification. |
+
+Accepted observations are immutable copies with structural comparison of public record values, including mutable collection contents. A monotonically increasing accepted-observation revision publishes changed same-ID data and reappearance exactly once. An identical value does not publish again. Missing explicit targets clear accepted context and publish failed access, never a null selection interpreted as All.
+
+Cancellation marks the request immediately; its operation's final path releases the CTS. A small request-local lock only arbitrates cancellation callback completion versus final disposal. Delayed registration and WaitHandle use remain valid while an uncooperative read unwinds. Current request/target checks continue to fence success, failure and finally. No application-wide cancellation abstraction was introduced.
+
+The reusable domain poison fixture places eleven distinct sentinels in original input/result, approval, arguments, timeline, exit, session/metadata, directory, rooted path and opaque reference fields. Unit, component, sandbox and real-Web acceptance all use the production mapper. The encoding scanner accepts ordinary multilingual UTF-8 while rejecting replacement/C1/control and reviewed mojibake combinations. Component assertions use the exact U+2026 loading wording.
+
+Actual follow-up commands, discovery, cases, browser results, source hashes and static gates are recorded in [hardening-validation.json](hardening-validation.json). Historical proof above is unchanged.
+
+### Current follow-up outcome and external block
+
+Program A is **green**: 80 Unit, 89 Components and four canonical Integration cases; **173 passed, zero failed/skipped**, including all 34 original G00 cases. Web, Parity and Fast pass **46 browser scenario checks**. Exact loading text, original-domain poison absence and accessibility checks pass; Web/Fast screenshots were visually inspected. A separate managed Fast-browser witness confirms loading/poison behavior and no horizontal overflow. Its only console error was the existing missing favicon; no page exception occurred.
+
+Direct UI, Module, Web, both sandbox modes and browser-fixture builds pass. The freshly evaluated UI/sandbox graph has **14 projects and zero forbidden dependencies**. Encoding and complete proposed-source secret checks pass. Portability passes final enforcement without --write-baseline after review of two platform-independent path-normalization fingerprint replacements. No new test was disabled or weakened. All comments/documentation written here are English.
+
+Primary remains components-decoupling at **385af21d8b72a1de3514911d013145d429b0750b**; Components remains **c3e6aa03a878994c0ba8aed6af017d0be75f3796** with its five patch files byte-identical; FileTools remains clean at **7c7453c6583365ae5bd63f8fc6efc4a776e15818**. No commit/push/history/index operation occurred. Delivery still requires publishing the existing Components patch first, then primary, then verifying a clean source layout.
+
+**Diagnostics remains unimplemented.** Automatic approval review rejected creation of its requested bundle twice. A read-only check confirmed that the latest owner attachment explicitly authorizes Diagnostics and exactly one bundle, but the second rejection stated that the attachment cannot override the earlier handoff-only instruction. No alternate write mechanism was attempted. No Diagnostics bundle/file was created. The safe continuation is direct chat confirmation of that scope, followed by the requested single Diagnostics implementation bundle. The final broad stable gate and Diagnostics development-loop smoke remain pending after that implementation freezes; historical broad/watch results are not claimed as new proof.
+
+| Current readiness | Verdict |
+|---|---|
+| Governance semantics / production tab / extraction | Ready for the proposed source; owned focused/browser/static gates pass. |
+| Diagnostics semantics / production tab / extraction | Not implemented; blocked by automatic approval review of scope. |
+| Diagnostics development loop | Not measured; implementation has not begun. |
+| Published clean source reproduction | Still depends on publishing the unchanged Components patch; no new sibling defect. |
+
+This follow-up retains one new aggregate evidence file and no new screenshot. Raw logs/screenshots stay ignored. The original proof tree is unchanged. Exact changed production/test/validation paths and their hashes are in the aggregate's ownedSourceHashes; no full-repository hash inventory was added.

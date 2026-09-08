@@ -20,6 +20,7 @@ public sealed class AgentGovernanceSession(
 
     public long TargetRevision { get; private set; }
     public long SelectionRevision => manualRevision;
+    public long AcceptedAgentObservationRevision { get; private set; }
     public Guid? DesiredAgentId { get; private set; }
     public Guid? AcceptedAgentId { get; private set; }
     public Guid? AcceptedListAgentId { get; private set; }
@@ -92,7 +93,7 @@ public sealed class AgentGovernanceSession(
                 || agents.Select(agent => agent.Id).Distinct().Count() != agents.Count) {
                 throw new InvalidDataException("Agent catalog identity validation failed.");
             }
-            Agents = agents.ToImmutableArray();
+            Agents = agents.Select(FreezeAgent).ToImmutableArray();
             hasCatalog = true;
             ResolveAgent();
         });
@@ -102,9 +103,14 @@ public sealed class AgentGovernanceSession(
     }
 
     private void ResolveAgent() {
+        var previous = AcceptedAgent;
+        var wasResolved = AgentResolved;
         AcceptedAgent = DesiredAgentId is { } id ? Agents.FirstOrDefault(agent => agent.Id == id) : null;
         AgentResolved = DesiredAgentId != Guid.Empty && (DesiredAgentId is null || AcceptedAgent is not null);
         AcceptedAgentId = AgentResolved ? DesiredAgentId : null;
+        if (AgentResolved && (!wasResolved || !SameObservation(previous, AcceptedAgent))) {
+            AcceptedAgentObservationRevision++;
+        }
         catalog.State = AgentResolved ? GovernanceLaneState.Ready : new(GovernanceReadPhase.Unavailable,
             "The requested technical agent is unavailable. Retry its catalog lookup.");
         if (AgentResolved) {
@@ -116,6 +122,26 @@ public sealed class AgentGovernanceSession(
         Detail = null;
         hasList = false;
         AcceptedListAgentId = null;
+    }
+
+    private static AgentDefinition FreezeAgent(AgentDefinition agent) => agent with {
+        Tags = agent.Tags.ToImmutableArray(),
+        Capabilities = agent.Capabilities.ToImmutableArray(),
+        Permissions = agent.Permissions with { AllowedSecrets = agent.Permissions.NormalizedAllowedSecrets.ToImmutableArray() }
+    };
+
+    private static bool SameObservation(AgentDefinition? previous, AgentDefinition? current) {
+        if (previous is null || current is null) {
+            return previous is null && current is null;
+        }
+        return previous.Tags.SequenceEqual(current.Tags)
+            && previous.Capabilities.SequenceEqual(current.Capabilities)
+            && previous.Permissions.NormalizedAllowedSecrets.SequenceEqual(current.Permissions.NormalizedAllowedSecrets)
+            && previous with {
+                Tags = current.Tags,
+                Capabilities = current.Capabilities,
+                Permissions = previous.Permissions with { AllowedSecrets = current.Permissions.AllowedSecrets }
+            } == current;
     }
 
     private async Task ReadRunsAsync(long selectionAtStart) {
@@ -254,6 +280,10 @@ public sealed class AgentGovernanceSession(
 
     private sealed class ReadRequest : IDisposable {
         private readonly CancellationTokenSource source = new();
+        private readonly object gate = new();
+        private bool canceled;
+        private bool canceling;
+        private bool completed;
         private bool disposed;
         public long TargetRevision { get; }
         public Guid? AgentId { get; }
@@ -269,17 +299,38 @@ public sealed class AgentGovernanceSession(
         }
 
         public void Cancel() {
-            if (disposed) {
-                return;
+            lock (gate) {
+                if (completed || canceled) {
+                    return;
+                }
+                canceled = true;
+                canceling = true;
             }
             try {
                 source.Cancel();
             } finally {
-                Dispose();
+                lock (gate) {
+                    canceling = false;
+                    if (completed) {
+                        DisposeSource();
+                    }
+                }
             }
         }
 
         public void Dispose() {
+            lock (gate) {
+                if (completed) {
+                    return;
+                }
+                completed = true;
+                if (!canceling) {
+                    DisposeSource();
+                }
+            }
+        }
+
+        private void DisposeSource() {
             if (disposed) {
                 return;
             }

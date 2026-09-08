@@ -133,6 +133,41 @@ public sealed class AgentGovernanceSurfaceTests {
         Assert.NotNull(cut.Find($"label[for='{select.Id}']"));
     }
 
+    [Theory]
+    [InlineData(RetryLane.Catalog, "Loading technical agents\u2026")]
+    [InlineData(RetryLane.List, "Loading execution runs\u2026")]
+    [InlineData(RetryLane.Detail, "Loading selected execution details\u2026")]
+    public void Loading_text_is_exact_and_valid_Unicode(RetryLane lane, string expected) {
+        using var context = Context();
+        var loading = new GovernanceLaneState(GovernanceReadPhase.Loading);
+        var state = lane switch {
+            RetryLane.Catalog => GovernanceViewState.Initial,
+            RetryLane.List => Ready() with { List = loading },
+            _ => Ready() with { Detail = loading }
+        };
+        var cut = Render(context, Presentation() with { Detail = null }, state);
+        var selector = lane switch {
+            RetryLane.Catalog => "agents-governance-catalog-loading",
+            RetryLane.List => "agents-governance-list-loading",
+            _ => "agents-governance-detail-loading"
+        };
+        Assert.Equal(expected, cut.Find($"[data-testid='{selector}']").TextContent.Trim());
+        Assert.DoesNotContain("\uFFFD", cut.Markup);
+    }
+
+    [Fact]
+    public void Reusable_poison_domain_fixture_is_absent_from_markup_and_accessibility_text() {
+        using var context = Context();
+        var source = CanDoItAll.AgentFramework.UiSandbox.GovernancePoisonFixture.Create();
+        var mapped = GovernancePresentationMapping.Detail(source, "Fixture agent");
+        var cut = Render(context, Presentation() with { Detail = mapped, Runs = [mapped.Run] });
+        foreach (var sentinel in CanDoItAll.AgentFramework.UiSandbox.GovernancePoisonFixture.Sentinels) {
+            Assert.DoesNotContain(sentinel, cut.Markup);
+            Assert.DoesNotContain(sentinel, cut.Find("[data-testid='agents-governance-surface']").TextContent);
+        }
+        Assert.Contains("Artifact path omitted", cut.Markup);
+    }
+
     private static BunitContext Context() {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;

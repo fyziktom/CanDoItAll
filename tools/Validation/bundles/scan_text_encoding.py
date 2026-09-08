@@ -10,9 +10,10 @@ from validate_bundle_delivery import Inventory, git
 
 
 BINARY_SUFFIXES = frozenset(".png .jpg .jpeg .gif .webp .ico .pdf .zip .gz .7z .nupkg .snupkg .dll .exe .pdb .woff .woff2 .ttf .eot .mp3 .mp4 .wav .xlsx .docx .pptx .bin .db .sqlite".split())
+CP1252_PUNCTUATION = r"\u20ac\u201a\u0192\u201e\u2026\u2020\u2021\u02c6\u2030\u0160\u2039\u0152\u017d\u2018\u2019\u201c\u201d\u2022\u2013\u2014\u02dc\u2122\u0161\u203a\u0153\u017e\u0178"
 MOJIBAKE = re.compile(
-    r"\u00c2[\u0080-\u00bf]|\u00c3[\u0080-\u00bf]|"
-    r"\u00e2[\u0080\u20ac\u201a]|\u0102[\u02d8\u013d\u015f]|"
+    rf"[\u00c2\u00c3][\u0080-\u00bf{CP1252_PUNCTUATION}]|"
+    r"\u00e2[\u0080\u20ac\u201a]|\u0102[\u02d8\u02db\u02dd\u02c7\u013d\u015f]|"
     r"\u02d8\u00e2|\u201a\u00ac")
 
 

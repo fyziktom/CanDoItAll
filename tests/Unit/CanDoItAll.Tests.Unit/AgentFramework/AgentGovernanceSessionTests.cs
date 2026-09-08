@@ -181,6 +181,7 @@ public sealed class AgentGovernanceSessionTests {
         var delayed = 0;
         using var laterRegistration = captured.Register(() => delayed++);
         Assert.Equal(1, delayed);
+        Assert.True(captured.WaitHandle.WaitOne(0));
         var before = notifications;
         if (fail) {
             completion.SetException(new IOException("Late fixture failure"));
@@ -191,6 +192,121 @@ public sealed class AgentGovernanceSessionTests {
         Assert.Equal(before, notifications);
         Assert.Null(session.Detail);
         Assert.Throws<ObjectDisposedException>(() => captured.WaitHandle);
+    }
+
+    [Theory]
+    [InlineData(Lane.Catalog)]
+    [InlineData(Lane.List)]
+    [InlineData(Lane.Detail)]
+    public async Task Late_cancellation_releases_resources_only_after_read_completion(Lane lane) {
+        var pending = new TaskCompletionSource();
+        var reads = new Reads();
+        CancellationToken captured = default;
+        async Task<T> Read<T>(CancellationToken token, T value) {
+            captured = token;
+            await pending.Task;
+            token.ThrowIfCancellationRequested();
+            return value;
+        }
+        switch (lane) {
+            case Lane.Catalog:
+                reads.Catalog = token => Read(token, Reads.Agents);
+                break;
+            case Lane.List:
+                reads.List = (_, token) => Read<IReadOnlyList<ExecutionRunRecord>>(token, [Reads.First]);
+                break;
+            case Lane.Detail:
+                reads.Detail = (_, token) => Read(token, Reads.DetailValue(Reads.First));
+                break;
+        }
+        using var session = Create(reads);
+        var load = session.SetAgentAsync(Reads.AgentId);
+        session.Dispose();
+        session.Dispose();
+        Assert.True(captured.WaitHandle.WaitOne(0));
+        pending.SetResult();
+        await load;
+        Assert.Throws<ObjectDisposedException>(() => captured.WaitHandle);
+        Assert.Null(session.Detail);
+    }
+
+    [Theory]
+    [InlineData(Lane.Catalog)]
+    [InlineData(Lane.List)]
+    [InlineData(Lane.Detail)]
+    public async Task Synchronous_read_failure_disposes_completed_request(Lane lane) {
+        var reads = new Reads();
+        CancellationToken captured = default;
+        Task<T> Fail<T>(CancellationToken token) {
+            captured = token;
+            throw new IOException("private synchronous failure");
+        }
+        switch (lane) {
+            case Lane.Catalog:
+                reads.Catalog = Fail<IReadOnlyList<AgentDefinition>>;
+                break;
+            case Lane.List:
+                reads.List = (_, token) => Fail<IReadOnlyList<ExecutionRunRecord>>(token);
+                break;
+            case Lane.Detail:
+                reads.Detail = (_, token) => Fail<ExecutionRunDetail>(token);
+                break;
+        }
+        using var session = Create(reads);
+        await session.SetAgentAsync(Reads.AgentId);
+        Assert.False(session.IsBusy);
+        Assert.Throws<ObjectDisposedException>(() => captured.WaitHandle);
+        session.Dispose();
+        session.Dispose();
+    }
+
+    [Fact]
+    public async Task Superseded_catalog_owns_its_token_until_noncooperative_read_finishes() {
+        var pending = new TaskCompletionSource<IReadOnlyList<AgentDefinition>>();
+        var reads = new Reads();
+        CancellationToken oldToken = default;
+        reads.Catalog = token => {
+            oldToken = token;
+            return pending.Task;
+        };
+        using var session = Create(reads);
+        var first = session.SetAgentAsync(Reads.AgentId);
+        reads.Catalog = _ => Task.FromResult(Reads.Agents);
+        await session.RefreshAsync();
+        Assert.True(oldToken.WaitHandle.WaitOne(0));
+        pending.SetResult([]);
+        await first;
+        Assert.True(session.AgentResolved);
+        Assert.Equal(Reads.AgentId, session.AcceptedAgentId);
+        Assert.Throws<ObjectDisposedException>(() => oldToken.WaitHandle);
+    }
+
+    [Fact]
+    public async Task Accepted_observation_changes_only_on_current_success_and_reappears_after_absence() {
+        var reads = new Reads();
+        using var session = Create(reads);
+        await session.SetAgentAsync(Reads.AgentId);
+        var first = session.AcceptedAgentObservationRevision;
+        reads.Catalog = _ => Task.FromResult<IReadOnlyList<AgentDefinition>>([Reads.Agent with { Tags = [], Capabilities = [] }]);
+        await session.RefreshAsync();
+        Assert.Equal(first, session.AcceptedAgentObservationRevision);
+        reads.Catalog = _ => Task.FromResult<IReadOnlyList<AgentDefinition>>([Reads.Agent with { Name = "Updated" }]);
+        await session.RefreshAsync();
+        Assert.Equal(first + 1, session.AcceptedAgentObservationRevision);
+        reads.Catalog = _ => Task.FromResult<IReadOnlyList<AgentDefinition>>([]);
+        await session.RefreshAsync();
+        Assert.False(session.AgentResolved);
+        Assert.Null(session.AcceptedAgent);
+        Assert.Equal(Reads.AgentId, session.DesiredAgentId);
+        var absent = session.AcceptedAgentObservationRevision;
+        reads.Catalog = _ => Task.FromException<IReadOnlyList<AgentDefinition>>(new IOException("private"));
+        await session.RefreshAsync();
+        Assert.Null(session.AcceptedAgent);
+        Assert.Equal(absent, session.AcceptedAgentObservationRevision);
+        reads.Catalog = _ => Task.FromResult(Reads.Agents);
+        await session.RefreshAsync();
+        Assert.Equal(absent + 1, session.AcceptedAgentObservationRevision);
+        Assert.Equal(Reads.AgentId, session.AcceptedAgentId);
     }
 
     private static AgentGovernanceSession Create(Reads reads) => new(reads, NullLogger<AgentGovernanceSession>.Instance);

@@ -84,6 +84,11 @@ public sealed class GovernanceSandboxFixture {
                 State = State with { DesiredRunId = Run2, AcceptedRunId = null,
                     Detail = new(GovernanceReadPhase.Unavailable, "The selected execution run is no longer in this result. Choose another run or refresh.") };
                 break;
+            case GovernanceSandboxScenario.DeniedPayloads:
+                var poison = GovernancePoisonFixture.Create();
+                var projected = GovernancePresentationMapping.Detail(poison, "Governance agent A");
+                Presentation = new(agents, [projected.Run], projected);
+                break;
             case GovernanceSandboxScenario.LongText:
                 var run = Presentation.Runs[0] with {
                     Title = GovernancePresentationMapping.Text("<img src=x onerror=alert(1)> " + new string('W', 2000)),

@@ -27,8 +27,7 @@ public partial class AgentGovernancePanel : IDisposable {
     private GovernanceViewState state = GovernanceViewState.Initial;
     private AgentChatContextAccessState? publishedAccess;
     private long? publishedAccessRevision;
-    private Guid? publishedAgentId;
-    private long? publishedSelectionRevision;
+    private long? publishedAgentObservation;
     private bool disposed;
     private bool preferredApplied;
     private Guid? appliedPreferred;
@@ -59,6 +58,8 @@ public partial class AgentGovernancePanel : IDisposable {
             return;
         }
         var revision = session.TargetRevision;
+        var observation = session.AcceptedAgentObservationRevision;
+        var acceptedAgent = session.AcceptedAgent;
         string AgentLabel(Guid id) => session.Agents.FirstOrDefault(agent => agent.Id == id)?.Name ?? "Unavailable agent";
         presentation = new(session.Agents.OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(agent => new GovernanceAgentOption(agent.Id, GovernancePresentationMapping.Text(agent.Name))).ToImmutableArray(),
@@ -72,13 +73,12 @@ public partial class AgentGovernancePanel : IDisposable {
             publishedAccess = session.AccessState;
             await ContextAccessStateChanged.InvokeAsync(publishedAccess.Value);
         }
-        if (disposed || revision != session.TargetRevision || !session.AgentResolved) {
+        if (disposed || revision != session.TargetRevision || observation != session.AcceptedAgentObservationRevision || !session.AgentResolved) {
             return;
         }
-        if (publishedSelectionRevision != revision || publishedAgentId != session.AcceptedAgentId) {
-            publishedSelectionRevision = revision;
-            publishedAgentId = session.AcceptedAgentId;
-            await SelectedAgentChanged.InvokeAsync(session.AcceptedAgent);
+        if (publishedAgentObservation != observation) {
+            publishedAgentObservation = observation;
+            await SelectedAgentChanged.InvokeAsync(acceptedAgent);
         }
     });
 

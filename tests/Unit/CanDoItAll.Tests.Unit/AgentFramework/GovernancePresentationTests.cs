@@ -92,7 +92,7 @@ public sealed class GovernancePresentationTests {
         var result = GovernancePresentationMapping.Text(value);
         Assert.True(result.Length <= GovernancePresentationMapping.LabelLimit);
         Assert.EndsWith("…", result);
-        Assert.DoesNotContain("�", result);
+        Assert.DoesNotContain("\uFFFD", result);
         Assert.Equal("safe label", GovernancePresentationMapping.Text("  safe  label\u202E"));
     }
 
@@ -125,6 +125,49 @@ public sealed class GovernancePresentationTests {
     [InlineData("artifacts/result.txt", true)]
     public void Artifact_paths_accept_relative_display_only(string path, bool allowed)
         => Assert.Equal(allowed ? path : "Artifact path omitted", GovernancePresentationMapping.RelativeArtifactPath(path));
+
+    [Theory]
+    [InlineData("  /private/output.txt  ")]
+    [InlineData("  C:\\private\\output.txt ")]
+    [InlineData(" \\host\\share\\output.txt ")]
+    [InlineData("file:///private/output.txt")]
+    [InlineData("//host/share/output.txt")]
+    [InlineData("https://host/output?token=fixture")]
+    [InlineData("output/file?query")]
+    [InlineData("output/file#fragment")]
+    [InlineData("output/./file")]
+    [InlineData("output/../file")]
+    [InlineData("output//file")]
+    [InlineData("output/file/")]
+    [InlineData("output/ .. /file")]
+    [InlineData("output/\u202efile")]
+    [InlineData("output/file\t")]
+    [InlineData("\uff0fprivate\uff0ffile")]
+    [InlineData("output\u2215file")]
+    [InlineData("\u2044private/file")]
+    [InlineData("\uff3cprivate\\file")]
+    [InlineData("%2Fprivate/file")]
+    public void Ambiguous_artifact_paths_are_omitted(string value)
+        => Assert.Equal("Artifact path omitted", GovernancePresentationMapping.RelativeArtifactPath(value));
+
+    [Theory]
+    [InlineData("  artifacts/report.txt  ", "artifacts/report.txt")]
+    [InlineData("artifacts\\report.txt", "artifacts/report.txt")]
+    [InlineData("reports/quarter one.txt", "reports/quarter one.txt")]
+    [InlineData("reports/re\u0301sume\u0301.txt", "reports/r\u00e9sum\u00e9.txt")]
+    public void Relative_artifact_paths_are_normalized_before_display(string value, string expected)
+        => Assert.Equal(expected, GovernancePresentationMapping.RelativeArtifactPath(value));
+
+    [Fact]
+    public void Reusable_poison_domain_fixture_cannot_enter_any_presentation_record() {
+        var source = CanDoItAll.AgentFramework.UiSandbox.GovernancePoisonFixture.Create();
+        var sourceJson = JsonSerializer.Serialize(source);
+        var mapped = JsonSerializer.Serialize(GovernancePresentationMapping.Detail(source, "Fixture agent"));
+        foreach (var sentinel in CanDoItAll.AgentFramework.UiSandbox.GovernancePoisonFixture.Sentinels) {
+            Assert.Contains(sentinel, sourceJson);
+            Assert.DoesNotContain(sentinel, mapped);
+        }
+    }
 
     private static ExecutionRunRecord Run() => new(Guid.NewGuid(), Guid.NewGuid(), null, "Run", "manual", "", "", "", "", "",
         "{}", "Input", "Result", "Provider", "model", ExecutionState.Completed, RunOutcome.Succeeded,

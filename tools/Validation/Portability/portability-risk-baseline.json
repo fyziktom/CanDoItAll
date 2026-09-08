@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-08T02:24:14.412119+00:00",
+  "generated_utc": "2026-09-08T11:19:57.393225+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -70036,13 +70036,13 @@
     {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
       "category": "path-normalization",
-      "source_fingerprint": "365823a369ff5774d171c4b7b00b4666bb3f52598e0f79d06ee44f10ed736ed0",
+      "source_fingerprint": "240bfa3e465171150f4d06e2da30472d90f62f62ca5f5fdce65111a1914860b0",
       "count": 1
     },
     {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
       "category": "windows-path",
-      "source_fingerprint": "e11d4ddf6d5817a42a2f0274ad9c24088966b3fc2ca15ebdff990ed1d5650196",
+      "source_fingerprint": "b08805c72ce13fb912b156dc3313df2cf1317af8282801bfa55937f757acff7f",
       "count": 1
     },
     {

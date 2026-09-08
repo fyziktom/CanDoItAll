@@ -13,6 +13,9 @@ public sealed class GovernanceSandboxTests {
         var sample = new GovernanceSandboxFixture();
         sample.SetScenario(scenario);
         Assert.DoesNotContain("governance-denied-payload", JsonSerializer.Serialize(sample.Presentation), StringComparison.Ordinal);
+        foreach (var sentinel in GovernancePoisonFixture.Sentinels) {
+            Assert.DoesNotContain(sentinel, JsonSerializer.Serialize(sample.Presentation), StringComparison.Ordinal);
+        }
         Assert.All(sample.Presentation.Runs, run => {
             Assert.True(run.Title.Length <= 160);
             Assert.EndsWith(" UTC", run.Updated);

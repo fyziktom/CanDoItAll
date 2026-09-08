@@ -1,0 +1,2064 @@
+{
+  "scope": "Governance Program A follow-up only; Diagnostics blocked by automatic approval review",
+  "observedUtc": "2026-09-08T11:26:07.442267+00:00",
+  "identities": {
+    "primary": "385af21d8b72a1de3514911d013145d429b0750b",
+    "components": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+    "fileTools": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+    "componentsOverlay": [
+      {
+        "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs",
+        "sha256": "b2b27da94e22cbcc57cc174956f47e4a90d2f130cdec7abf99d8eba65ce00007"
+      },
+      {
+        "path": "src/CanDoItAll.Components.BaseLib/README.md",
+        "sha256": "b26d4f9b9f8b54ddea3367f576a3f41b87154402a2a7a031a1d8fe8f3acfee76"
+      },
+      {
+        "path": "tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs",
+        "sha256": "c574995c6892db6af1ee2b91cddfa46a29df34f4265d4c699118776d163cd8f7"
+      },
+      {
+        "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json",
+        "sha256": "0c67ffcb9fefb622cd842f8b774d5cc3c321ed03397892750f3b922bc7c74cd5"
+      },
+      {
+        "path": "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt",
+        "sha256": "28e6535d6429e9562d8849253f21d88b7e9323049dde721f6a086cb7f894d75f"
+      }
+    ],
+    "inputSha256": "bda4ace9d2dd04430e8846a7c052b0fd2acfc82103c2f37cca741df253a8e71c"
+  },
+  "headUnchanged": true,
+  "componentsOverlayUnchanged": true,
+  "fileToolsUnchanged": true,
+  "commands": [
+    {
+      "name": "encoding-red",
+      "command": [
+        "python",
+        "tools/Validation/bundles/test_delivery_tools.py"
+      ],
+      "exit": 1,
+      "seconds": 3.453
+    },
+    {
+      "name": "governance-unit-red-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 268.016
+    },
+    {
+      "name": "governance-unit-red-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests",
+        "/m:1"
+      ],
+      "exit": 0,
+      "seconds": 2.172,
+      "discovery": [
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.List_is_accepted_before_detail_completes",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Refresh_cannot_repeat_detail_after_newer_manual_selection_during_catalog",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Older_catalog_continuation_cannot_start_a_list_for_newer_request",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Older_list_finally_cannot_clear_newer_refresh",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.List_retry_does_not_repeat_catalog_or_context_effects",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Removed_run_can_reappear_without_changing_selection",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Accepted_list_owns_its_collection",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Canceled_current_read_surfaces_failure_when_owner_did_not_cancel",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Catalog, fail: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Catalog, fail: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: List, fail: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: List, fail: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Detail, fail: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Detail, fail: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: Catalog)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: List)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: Detail)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: Catalog)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: List)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: Detail)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Superseded_catalog_owns_its_token_until_noncooperative_read_finishes",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Presentation_contract_contains_only_explicit_immutable_value_types",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Opaque_domain_values_are_omitted_from_every_projected_section",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Mutable_domain_collections_cannot_change_a_presentation",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Section_and_timeline_limits_preserve_total_counts",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Label_truncation_is_bounded_and_does_not_split_unicode",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"en-US\", offsetMinutes: 840)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"cs-CZ\", offsetMinutes: -720)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"en-US\", offsetMinutes: -240)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"cs-CZ\", offsetMinutes: 120)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Missing_timestamp_is_explicit",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"/private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"Z:/private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"//host/private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"https://example.invalid/result\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"artifacts/../private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"artifacts/result.txt\", allowed: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"  /private/output.txt  \")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\u2044private/file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output\u2215file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\uff0fprivate\uff0ffile\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file\\t\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/\u202efile\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/ .. /file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file/\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output//file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/../file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/./file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file#fragment\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file?query\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"https://host/output?token=fixture\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"//host/share/output.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"file:///private/output.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \" \\\\host\\\\share\\\\output.txt \")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"  C:\\\\private\\\\output.txt \")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\uff3cprivate\\\\file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"%2Fprivate/file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"  artifacts/report.txt  \", expected: \"artifacts/report.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"artifacts\\\\report.txt\", expected: \"artifacts/report.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"reports/quarter one.txt\", expected: \"reports/quarter one.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"reports/re\u0301sume\u0301.txt\", expected: \"reports/r\u00e9sum\u00e9.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Reusable_poison_domain_fixture_cannot_enter_any_presentation_record"
+      ],
+      "count": 62
+    },
+    {
+      "name": "governance-unit-red",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests",
+        "--logger",
+        "trx;LogFileName=governance-unit-red.trx",
+        "--results-directory",
+        ".artifacts/diagnostics-seams",
+        "/m:1"
+      ],
+      "exit": 1,
+      "seconds": 2.422
+    },
+    {
+      "name": "governance-components-red-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 34.391
+    },
+    {
+      "name": "governance-components-red-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "/m:1"
+      ],
+      "exit": 0,
+      "seconds": 1.735,
+      "discovery": [
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Same_target_changed_agent_observation_is_published(metadataOnly: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Same_target_changed_agent_observation_is_published(metadataOnly: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Disappeared_agent_reappears_after_failed_refresh_without_target_change",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Identical_catalog_observation_does_not_publish_again",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Failed_catalog_refresh_does_not_publish_fresh_observation(canceled: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Failed_catalog_refresh_does_not_publish_fresh_observation(canceled: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Late_catalog_refresh_cannot_replace_a_newer_observation",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Accepted_new_route_target_resolves_parent_loading_access",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Returning_to_valid_agent_after_missing_request_republishes_accepted_context",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Surface_without_workspace_services_renders_all_sections",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Selection_intents_do_not_mutate_controlled_parameters",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: Catalog)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: List)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: Detail)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Surface_encodes_HTML_like_runtime_labels",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.List_is_usable_while_selected_detail_loads",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Removed_target_remains_explicit_without_a_replacement_detail",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Forbidden_sentinel_is_absent_after_domain_projection",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Long_labels_are_bounded_and_selected_state_is_accessible",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: Catalog, expected: \"Loading technical agents\u2026\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: List, expected: \"Loading execution runs\u2026\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: Detail, expected: \"Loading selected execution details\u2026\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Reusable_poison_domain_fixture_is_absent_from_markup_and_accessibility_text"
+      ],
+      "count": 23
+    },
+    {
+      "name": "governance-components-red",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--logger",
+        "trx;LogFileName=governance-components-red.trx",
+        "--results-directory",
+        ".artifacts/diagnostics-seams",
+        "/m:1"
+      ],
+      "exit": 1,
+      "seconds": 2.454
+    },
+    {
+      "name": "encoding-green",
+      "command": [
+        "python",
+        "tools/Validation/bundles/test_delivery_tools.py"
+      ],
+      "exit": 0,
+      "seconds": 3.063
+    },
+    {
+      "name": "governance-unit-green-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 91.953
+    },
+    {
+      "name": "governance-unit-green",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests",
+        "--logger",
+        "trx;LogFileName=governance-unit-green.trx",
+        "--results-directory",
+        ".artifacts/diagnostics-seams",
+        "/m:1"
+      ],
+      "exit": 0,
+      "seconds": 2.515
+    },
+    {
+      "name": "governance-components-green-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 28.0
+    },
+    {
+      "name": "governance-components-green",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--logger",
+        "trx;LogFileName=governance-components-green.trx",
+        "--results-directory",
+        ".artifacts/diagnostics-seams",
+        "/m:1"
+      ],
+      "exit": 1,
+      "seconds": 2.313
+    },
+    {
+      "name": "governance-components-corrected-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--no-restore",
+        "-m:1",
+        "-p:UseSharedCompilation=false"
+      ],
+      "exit": 0,
+      "seconds": 252.328
+    },
+    {
+      "name": "governance-components-corrected",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--logger",
+        "trx;LogFileName=governance-components-corrected.trx",
+        "--results-directory",
+        ".artifacts/diagnostics-seams"
+      ],
+      "exit": 0,
+      "seconds": 2.563
+    },
+    {
+      "name": "A-assets-parity",
+      "command": [
+        "npm.cmd",
+        "run",
+        "tailwind:build"
+      ],
+      "exit": 0,
+      "seconds": 1.14
+    },
+    {
+      "name": "A-assets-fast",
+      "command": [
+        "npm.cmd",
+        "run",
+        "catalog:css:build"
+      ],
+      "exit": 0,
+      "seconds": 0.844
+    },
+    {
+      "name": "A-direct-UI",
+      "command": [
+        "dotnet",
+        "build",
+        "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 5.765
+    },
+    {
+      "name": "A-direct-Module",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 19.5
+    },
+    {
+      "name": "A-direct-Web",
+      "command": [
+        "dotnet",
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 24.687
+    },
+    {
+      "name": "A-Unit-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 41.625
+    },
+    {
+      "name": "A-Unit-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests|FullyQualifiedName~GovernanceSandboxTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "seconds": 2.031,
+      "discovery": [
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.List_is_accepted_before_detail_completes",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Refresh_cannot_repeat_detail_after_newer_manual_selection_during_catalog",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Older_catalog_continuation_cannot_start_a_list_for_newer_request",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Older_list_finally_cannot_clear_newer_refresh",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.List_retry_does_not_repeat_catalog_or_context_effects",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Removed_run_can_reappear_without_changing_selection",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Accepted_list_owns_its_collection",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Canceled_current_read_surfaces_failure_when_owner_did_not_cancel",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Catalog, fail: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Catalog, fail: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: List, fail: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: List, fail: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Detail, fail: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Detail, fail: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: Catalog)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: List)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: Detail)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: Catalog)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: List)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: Detail)",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Superseded_catalog_owns_its_token_until_noncooperative_read_finishes",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Accepted_observation_changes_only_on_current_success_and_reappears_after_absence",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Presentation_contract_contains_only_explicit_immutable_value_types",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Opaque_domain_values_are_omitted_from_every_projected_section",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Mutable_domain_collections_cannot_change_a_presentation",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Section_and_timeline_limits_preserve_total_counts",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Label_truncation_is_bounded_and_does_not_split_unicode",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"en-US\", offsetMinutes: 840)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"cs-CZ\", offsetMinutes: -720)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"en-US\", offsetMinutes: -240)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"cs-CZ\", offsetMinutes: 120)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Missing_timestamp_is_explicit",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"/private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"Z:/private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"//host/private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"https://example.invalid/result\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"artifacts/../private/result.txt\", allowed: False)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"artifacts/result.txt\", allowed: True)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"  /private/output.txt  \")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\u2044private/file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output\u2215file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\uff0fprivate\uff0ffile\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file\\t\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/\u202efile\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/ .. /file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file/\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output//file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/../file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/./file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file#fragment\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file?query\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"https://host/output?token=fixture\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"//host/share/output.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"file:///private/output.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \" \\\\host\\\\share\\\\output.txt \")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"  C:\\\\private\\\\output.txt \")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\uff3cprivate\\\\file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"%2Fprivate/file\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"  artifacts/report.txt  \", expected: \"artifacts/report.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"artifacts\\\\report.txt\", expected: \"artifacts/report.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"reports/quarter one.txt\", expected: \"reports/quarter one.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"reports/re\u0301sume\u0301.txt\", expected: \"reports/r\u00e9sum\u00e9.txt\")",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Reusable_poison_domain_fixture_cannot_enter_any_presentation_record",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: Loading)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: AllAgents)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: SelectedAgent)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: MissingAgent)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: EmptyRuns)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: DetailLoading)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: DetailFailure)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: StaleRefresh)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: RunTransition)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: RemovedRun)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: ApprovalsArtifacts)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: LongText)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: UtcTimestamp)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: DeniedPayloads)",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Controlled_selection_changes_sample_and_records_typed_intent",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Detail_retry_preserves_sample_list_and_selected_target",
+        "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Missing_sample_target_does_not_become_all_agents_on_retry"
+      ],
+      "count": 80
+    },
+    {
+      "name": "A-Unit",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests|FullyQualifiedName~GovernanceSandboxTests",
+        "--logger",
+        "trx;LogFileName=A-Unit.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\diagnostics-seams"
+      ],
+      "exit": 0,
+      "seconds": 2.375
+    },
+    {
+      "name": "A-Components-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 25.516
+    },
+    {
+      "name": "A-Components-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests|FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentChatModalTests.Runtime_details_dialog_",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "seconds": 1.437,
+      "discovery": [
+        "CanDoItAll.Tests.Components.AgentFramework.AgentChatModalTests.Runtime_details_dialog_projects_the_hidden_right_rail_content",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentChatModalTests.Runtime_details_dialog_marks_legacy_runs_without_compatibility_evidence",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Same_target_changed_agent_observation_is_published(metadataOnly: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Same_target_changed_agent_observation_is_published(metadataOnly: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Disappeared_agent_reappears_after_failed_refresh_without_target_change",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Identical_catalog_observation_does_not_publish_again",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Failed_catalog_refresh_does_not_publish_fresh_observation(canceled: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Failed_catalog_refresh_does_not_publish_fresh_observation(canceled: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Late_catalog_refresh_cannot_replace_a_newer_observation",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Accepted_new_route_target_resolves_parent_loading_access",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Returning_to_valid_agent_after_missing_request_republishes_accepted_context",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Requested_agent_A_list_late_success_cannot_replace_B",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Requested_agent_A_late_failure_cannot_fault_B",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Stale_callbacks_cannot_publish_A_or_failed_access_after_B",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Catalog_completion_cannot_overwrite_a_newer_agent_request",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Run_R1_detail_late_success_cannot_replace_R2",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Run_R1_detail_late_failure_cannot_fault_R2",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Replacing_agent_cancels_pending_list_read",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Replacing_run_cancels_pending_detail_read",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Disposing_panel_cancels_pending_catalog_read",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Disposing_panel_cancels_pending_list_and_detail_reads",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Noncooperative_completion_after_disposal_publishes_nothing",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Old_detail_finally_cannot_clear_newer_busy_state",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Refresh_detail_cannot_override_newer_manual_run_selection",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Accepted_list_remains_visible_when_automatic_detail_fails",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Missing_requested_agent_does_not_fall_back_to_all_agents",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Missing_agent_retry_keeps_target_through_real_page_echo",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Same_preferred_agent_echo_preserves_manual_run_selection",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Explicit_all_agents_then_same_requested_agent_reloads_target",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Detail_failure_keeps_validated_agent_context_ready",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Wrong_run_identity_in_detail_is_rejected",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Wrong_agent_identity_in_detail_is_rejected",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Same_target_failed_refresh_retains_explicit_stale_list",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Different_agent_loading_hides_previous_agent_rows",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Removed_selected_run_remains_explicitly_unavailable",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Retry_detail_does_not_reload_catalog_or_run_list",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Initial_read_failure_shows_bounded_error_and_retry",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Synchronous_reads_and_repeated_echo_do_not_duplicate_loads",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Empty_guid_is_invalid_and_never_publishes_all_agents",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Canceled_owner_allows_delayed_token_registration_without_late_publication(fail: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Canceled_owner_allows_delayed_token_registration_without_late_publication(fail: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Governance_timestamps_are_explicit_UTC_independent_of_culture_and_offset(culture: \"en-US\", offsetMinutes: 120)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Governance_timestamps_are_explicit_UTC_independent_of_culture_and_offset(culture: \"cs-CZ\", offsetMinutes: -240)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Forbidden_execution_payloads_and_raw_runtime_prose_never_render",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Runtime_details_shared_children_use_UTC_and_omit_raw_timeline_message",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Surface_without_workspace_services_renders_all_sections",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Selection_intents_do_not_mutate_controlled_parameters",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: Catalog)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: List)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: Detail)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Surface_encodes_HTML_like_runtime_labels",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.List_is_usable_while_selected_detail_loads",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Removed_target_remains_explicit_without_a_replacement_detail",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Forbidden_sentinel_is_absent_after_domain_projection",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Long_labels_are_bounded_and_selected_state_is_accessible",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: Catalog, expected: \"Loading technical agents\u2026\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: List, expected: \"Loading execution runs\u2026\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: Detail, expected: \"Loading selected execution details\u2026\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Reusable_poison_domain_fixture_is_absent_from_markup_and_accessibility_text",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Hr_agent_avatar_action_remains_in_the_page_header_across_module_tabs",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chat_inner_view_is_restored_from_the_typed_query_state",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Latest_usage_scope_wins_even_when_the_old_read_finishes_last(routeReplacement: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Latest_usage_scope_wins_even_when_the_old_read_finishes_last(routeReplacement: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Late_usage_failure_does_not_replace_newer_success",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Disposal_cancels_each_owned_aggregate_read(usageLane: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Disposal_cancels_each_owned_aggregate_read(usageLane: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Entering_history_cancels_pending_aggregates(usageLane: False)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Entering_history_cancels_pending_aggregates(usageLane: True)",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"agents\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"chat\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"capabilities\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"governance\")",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Overview_failure_preserves_independently_loaded_hr_action",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Bound_failure_preserves_hr_and_accepted_overview",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Usage_failure_is_not_an_overview_failure",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Header_failure_does_not_poison_accepted_overview",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Initial_failure_has_no_invented_facts_and_keeps_workspace_context_ready",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Explicit_overview_retry_only_reads_its_own_lane",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Overview_refresh_failure_retains_accepted_data_with_stale_state",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Usage_refresh_failure_retains_same_scope_data_with_stale_state",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Failed_requested_scope_never_exposes_previous_scope_as_current",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Partial_matching_scope_remains_usable_with_visible_warning",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Old_finally_cannot_clear_newer_usage_loading_owner",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Same_pending_route_echo_reuses_usage_read",
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.One_accepted_overview_drives_header_and_metrics"
+      ],
+      "count": 89
+    },
+    {
+      "name": "A-Components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests|FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentChatModalTests.Runtime_details_dialog_",
+        "--logger",
+        "trx;LogFileName=A-Components.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\diagnostics-seams"
+      ],
+      "exit": 0,
+      "seconds": 98.047
+    },
+    {
+      "name": "A-Integration-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 37.906
+    },
+    {
+      "name": "A-Integration-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "seconds": 1.672,
+      "discovery": [
+        "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Registered_reads_filter_agent_and_preserve_canonical_order_and_take",
+        "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Registered_detail_reads_preserve_run_identity_and_governance_sections",
+        "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Registered_read_cancellation_propagates_without_execution_effects",
+        "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Missing_canonical_run_remains_unavailable_without_fallback_selection"
+      ],
+      "count": 4
+    },
+    {
+      "name": "A-Integration",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--logger",
+        "trx;LogFileName=A-Integration.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\diagnostics-seams"
+      ],
+      "exit": 0,
+      "seconds": 31.734
+    },
+    {
+      "name": "A-sandbox-Parity",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:CatalogAssetMode=Parity"
+      ],
+      "exit": 0,
+      "seconds": 3.875
+    },
+    {
+      "name": "A-sandbox-Fast",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:CatalogAssetMode=Fast"
+      ],
+      "exit": 0,
+      "seconds": 5.703
+    },
+    {
+      "name": "A-browser-fixture",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 1,
+      "seconds": 29.266
+    },
+    {
+      "name": "A-browser-fixture-corrected",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 1,
+      "seconds": 27.047
+    },
+    {
+      "name": "A-encoding",
+      "command": [
+        "python",
+        "tools/Validation/bundles/scan_text_encoding.py",
+        "--repo-root",
+        ".",
+        "--changed-since",
+        "385af21d8b72a1de3514911d013145d429b0750b",
+        "--output",
+        ".artifacts/diagnostics-seams/encoding-A.json"
+      ],
+      "exit": 0,
+      "seconds": 1.469
+    },
+    {
+      "name": "A-browser-fixture-linked",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 27.5
+    },
+    {
+      "name": "A-browser-web",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        ".",
+        "web"
+      ],
+      "exit": 1,
+      "seconds": 7.937
+    },
+    {
+      "name": "A-browser-web-installed",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        ".",
+        "web"
+      ],
+      "exit": 0,
+      "seconds": 14.703
+    },
+    {
+      "name": "A-browser-Parity-installed",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        ".",
+        "Parity"
+      ],
+      "exit": 0,
+      "seconds": 6.093
+    },
+    {
+      "name": "A-browser-Fast-installed",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        ".",
+        "Fast"
+      ],
+      "exit": 0,
+      "seconds": 5.921
+    },
+    {
+      "name": "A-portability-self-tests",
+      "command": [
+        "python",
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "exit": 0,
+      "seconds": 0.094
+    },
+    {
+      "name": "A-secret-self-tests",
+      "command": [
+        "python",
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "exit": 0,
+      "seconds": 0.453
+    },
+    {
+      "name": "A-portability-scan",
+      "command": [
+        "python",
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/diagnostics-seams/portability.json",
+        "--include-untracked"
+      ],
+      "exit": 0,
+      "seconds": 64.797
+    },
+    {
+      "name": "A-portability-enforce",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/diagnostics-seams/portability.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "exit": 1,
+      "seconds": 0.516
+    },
+    {
+      "name": "A-source-secrets",
+      "command": [
+        "python",
+        ".artifacts/diagnostics-seams/scan-source.py"
+      ],
+      "exit": 0,
+      "seconds": 38.609
+    },
+    {
+      "name": "A-portability-reviewed-refresh",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/diagnostics-seams/portability.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json",
+        "--write-baseline"
+      ],
+      "exit": 0,
+      "seconds": 0.469
+    },
+    {
+      "name": "A-portability-final",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/diagnostics-seams/portability.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "exit": 0,
+      "seconds": 0.5
+    },
+    {
+      "name": "A-evaluated-graph",
+      "command": [
+        "python",
+        ".artifacts/diagnostics-seams/evaluate-graph.py"
+      ],
+      "exit": 0,
+      "seconds": 10.781
+    },
+    {
+      "name": "A-final-encoding",
+      "command": [
+        "python",
+        "tools/Validation/bundles/scan_text_encoding.py",
+        "--repo-root",
+        ".",
+        "--changed-since",
+        "385af21d8b72a1de3514911d013145d429b0750b",
+        "--scope",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/GovernancePoisonFixture.cs",
+        "--scope",
+        "codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/hardening-validation.json",
+        "--output",
+        ".artifacts/diagnostics-seams/encoding-final.json"
+      ],
+      "exit": 0,
+      "seconds": 1.984
+    },
+    {
+      "name": "A-final-source-secrets",
+      "command": [
+        "python",
+        ".artifacts/diagnostics-seams/scan-source.py"
+      ],
+      "exit": 0,
+      "seconds": 42.656
+    },
+    {
+      "name": "A-final-diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0,
+      "seconds": 0.125
+    }
+  ],
+  "executedFocused": [
+    {
+      "assembly": "Unit",
+      "counts": {
+        "total": "80",
+        "executed": "80",
+        "passed": "80",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Catalog, fail: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Accepted_list_owns_its_collection",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"  C:\\\\private\\\\output.txt \")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: List)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Section_and_timeline_limits_preserve_total_counts",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Canceled_current_read_surfaces_failure_when_owner_did_not_cancel",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: UtcTimestamp)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"cs-CZ\", offsetMinutes: 120)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"artifacts/result.txt\", allowed: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Detail_retry_preserves_sample_list_and_selected_target",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"  /private/output.txt  \")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: SelectedAgent)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: List, fail: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/\u202efile\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: StaleRefresh)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Mutable_domain_collections_cannot_change_a_presentation",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"reports/quarter one.txt\", expected: \"reports/quarter one.txt\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"en-US\", offsetMinutes: 840)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Older_list_finally_cannot_clear_newer_refresh",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file?query\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Opaque_domain_values_are_omitted_from_every_projected_section",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output//file\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/./file\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: Detail)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"  artifacts/report.txt  \", expected: \"artifacts/report.txt\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"artifacts/../private/result.txt\", allowed: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"//host/share/output.txt\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"file:///private/output.txt\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Superseded_catalog_owns_its_token_until_noncooperative_read_finishes",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"/private/result.txt\", allowed: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: EmptyRuns)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"%2Fprivate/file\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: DeniedPayloads)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: DetailLoading)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/ .. /file\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: AllAgents)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output\u2215file\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"en-US\", offsetMinutes: -240)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"artifacts\\\\report.txt\", expected: \"artifacts/report.txt\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \" \\\\host\\\\share\\\\output.txt \")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: RunTransition)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.List_is_accepted_before_detail_completes",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.List_retry_does_not_repeat_catalog_or_context_effects",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"https://example.invalid/result\", allowed: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\uff0fprivate\uff0ffile\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Reusable_poison_domain_fixture_cannot_enter_any_presentation_record",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Missing_sample_target_does_not_become_all_agents_on_retry",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Timestamp_is_UTC_and_culture_independent(culture: \"cs-CZ\", offsetMinutes: -720)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Controlled_selection_changes_sample_and_records_typed_intent",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Accepted_observation_changes_only_on_current_success_and_reappears_after_absence",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: DetailFailure)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: Catalog)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: LongText)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/../file\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file\\t\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: MissingAgent)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: List)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Missing_timestamp_is_explicit",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"https://host/output?token=fixture\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Detail, fail: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Late_cancellation_releases_resources_only_after_read_completion(lane: Catalog)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: ApprovalsArtifacts)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"Z:/private/result.txt\", allowed: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file/\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Artifact_paths_accept_relative_display_only(path: \"//host/private/result.txt\", allowed: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Removed_run_can_reappear_without_changing_selection",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Older_catalog_continuation_cannot_start_a_list_for_newer_request",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\uff3cprivate\\\\file\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Refresh_cannot_repeat_detail_after_newer_manual_selection_during_catalog",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Relative_artifact_paths_are_normalized_before_display(value: \"reports/re\u0301sume\u0301.txt\", expected: \"reports/r\u00e9sum\u00e9.txt\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"output/file#fragment\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Catalog, fail: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: RemovedRun)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Label_truncation_is_bounded_and_does_not_split_unicode",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: List, fail: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Presentation_contract_contains_only_explicit_immutable_value_types",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Synchronous_read_failure_disposes_completed_request(lane: Detail)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentGovernanceSessionTests.Disposal_cancels_each_lane_and_fences_noncooperative_completion(lane: Detail, fail: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernanceSandboxTests.Representative_sample_uses_only_allowlisted_bounded_values(scenario: Loading)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.AgentFramework.GovernancePresentationTests.Ambiguous_artifact_paths_are_omitted(value: \"\u2044private/file\")",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "assembly": "Components",
+      "counts": {
+        "total": "89",
+        "executed": "89",
+        "passed": "89",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Noncooperative_completion_after_disposal_publishes_nothing",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Wrong_run_identity_in_detail_is_rejected",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Disappeared_agent_reappears_after_failed_refresh_without_target_change",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentChatModalTests.Runtime_details_dialog_marks_legacy_runs_without_compatibility_evidence",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Governance_timestamps_are_explicit_UTC_independent_of_culture_and_offset(culture: \"en-US\", offsetMinutes: 120)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Initial_failure_has_no_invented_facts_and_keeps_workspace_context_ready",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Header_failure_does_not_poison_accepted_overview",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Entering_history_cancels_pending_aggregates(usageLane: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Old_finally_cannot_clear_newer_usage_loading_owner",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Explicit_overview_retry_only_reads_its_own_lane",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Disposal_cancels_each_owned_aggregate_read(usageLane: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Identical_catalog_observation_does_not_publish_again",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Different_agent_loading_hides_previous_agent_rows",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Failed_catalog_refresh_does_not_publish_fresh_observation(canceled: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Latest_usage_scope_wins_even_when_the_old_read_finishes_last(routeReplacement: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Accepted_list_remains_visible_when_automatic_detail_fails",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Initial_read_failure_shows_bounded_error_and_retry",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: Catalog)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: Catalog, expected: \"Loading technical agents\u2026\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Missing_requested_agent_does_not_fall_back_to_all_agents",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Canceled_owner_allows_delayed_token_registration_without_late_publication(fail: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Same_pending_route_echo_reuses_usage_read",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.List_is_usable_while_selected_detail_loads",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Disposal_cancels_each_owned_aggregate_read(usageLane: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"capabilities\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Empty_guid_is_invalid_and_never_publishes_all_agents",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Latest_usage_scope_wins_even_when_the_old_read_finishes_last(routeReplacement: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Missing_agent_retry_keeps_target_through_real_page_echo",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Surface_encodes_HTML_like_runtime_labels",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Overview_refresh_failure_retains_accepted_data_with_stale_state",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Usage_failure_is_not_an_overview_failure",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Accepted_new_route_target_resolves_parent_loading_access",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Requested_agent_A_list_late_success_cannot_replace_B",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Entering_history_cancels_pending_aggregates(usageLane: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: Detail, expected: \"Loading selected execution details\u2026\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Selection_intents_do_not_mutate_controlled_parameters",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Returning_to_valid_agent_after_missing_request_republishes_accepted_context",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: Detail)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Disposing_panel_cancels_pending_catalog_read",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Synchronous_reads_and_repeated_echo_do_not_duplicate_loads",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Loading_text_is_exact_and_valid_Unicode(lane: List, expected: \"Loading execution runs\u2026\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Requested_agent_A_late_failure_cannot_fault_B",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Usage_refresh_failure_retains_same_scope_data_with_stale_state",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Failed_requested_scope_never_exposes_previous_scope_as_current",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Removed_target_remains_explicit_without_a_replacement_detail",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Removed_selected_run_remains_explicitly_unavailable",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.One_accepted_overview_drives_header_and_metrics",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Old_detail_finally_cannot_clear_newer_busy_state",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Detail_failure_keeps_validated_agent_context_ready",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Same_target_changed_agent_observation_is_published(metadataOnly: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chat_inner_view_is_restored_from_the_typed_query_state",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"agents\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Same_target_changed_agent_observation_is_published(metadataOnly: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Overview_failure_preserves_independently_loaded_hr_action",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Surface_without_workspace_services_renders_all_sections",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Retry_detail_does_not_reload_catalog_or_run_list",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Failed_catalog_refresh_does_not_publish_fresh_observation(canceled: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Replacing_agent_cancels_pending_list_read",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Stale_callbacks_cannot_publish_A_or_failed_access_after_B",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Refresh_detail_cannot_override_newer_manual_run_selection",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentChatModalTests.Runtime_details_dialog_projects_the_hidden_right_rail_content",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Catalog_completion_cannot_overwrite_a_newer_agent_request",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Bound_failure_preserves_hr_and_accepted_overview",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Forbidden_sentinel_is_absent_after_domain_projection",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Partial_matching_scope_remains_usable_with_visible_warning",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Simple_chats_follows_agents_and_renders_both_nested_workspaces",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Late_usage_failure_does_not_replace_newer_success",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Retry_intent_addresses_only_its_lane(lane: List)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Replacing_run_cancels_pending_detail_read",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Long_labels_are_bounded_and_selected_state_is_accessible",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Disposing_panel_cancels_pending_list_and_detail_reads",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Runtime_details_shared_children_use_UTC_and_omit_raw_timeline_message",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceSurfaceTests.Reusable_poison_domain_fixture_is_absent_from_markup_and_accessibility_text",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"governance\")",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Explicit_all_agents_then_same_requested_agent_reloads_target",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Canceled_owner_allows_delayed_token_registration_without_late_publication(fail: True)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Run_R1_detail_late_success_cannot_replace_R2",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Hr_agent_avatar_action_remains_in_the_page_header_across_module_tabs",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Run_R1_detail_late_failure_cannot_fault_R2",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Forbidden_execution_payloads_and_raw_runtime_prose_never_render",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Wrong_agent_identity_in_detail_is_rejected",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Same_target_failed_refresh_retains_explicit_stale_list",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceContextRevisionTests.Late_catalog_refresh_cannot_replace_a_newer_observation",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Governance_timestamps_are_explicit_UTC_independent_of_culture_and_offset(culture: \"cs-CZ\", offsetMinutes: -240)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests.Same_preferred_agent_echo_preserves_manual_run_selection",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.AgentFramework.AgentsOverviewReadLifecycleTests.Aggregate_failure_cannot_override_ready_selection_access(tab: \"chat\")",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "assembly": "Integration",
+      "counts": {
+        "total": "4",
+        "executed": "4",
+        "passed": "4",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Registered_detail_reads_preserve_run_identity_and_governance_sections",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Registered_reads_filter_agent_and_preserve_canonical_order_and_take",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Registered_read_cancellation_propagates_without_execution_effects",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.Missing_canonical_run_remains_unavailable_without_fallback_selection",
+          "outcome": "Passed"
+        }
+      ]
+    }
+  ],
+  "focusedTotal": 173,
+  "originalG00Passed": 34,
+  "browserChecks": {
+    "web": {
+      "mode": "web",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "scenarios": [
+        "real registration, canonical data, all sections, explicit UTC",
+        "keyboard selection and accessible current state",
+        "noncooperative R1 completion cannot replace R2",
+        "noncooperative A list completion cannot replace B",
+        "manual selection preserved across refresh",
+        "bounded detail failure with accepted list",
+        "detail-only retry",
+        "stale list and scoped recovery",
+        "removed selected run stays explicit and can reappear",
+        "real domain poison mapped through production allowlist",
+        "bounded adversarial content",
+        "responsive layout at 768 pixels"
+      ],
+      "errors": [],
+      "browser": "149.0.7827.55",
+      "circuitFrames": 178
+    },
+    "Parity": {
+      "mode": "Parity",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "scenarios": [
+        "sandbox loading",
+        "sandbox all-agents",
+        "sandbox selected-agent",
+        "sandbox missing-agent",
+        "sandbox empty-runs",
+        "sandbox detail-loading",
+        "sandbox detail-failure",
+        "sandbox stale-refresh",
+        "sandbox run-transition",
+        "sandbox removed-run",
+        "sandbox approvals-artifacts",
+        "sandbox long-text",
+        "sandbox utc",
+        "sandbox denied-payloads",
+        "controlled sample selection and intent log",
+        "sample detail retry",
+        "responsive long-content sample"
+      ],
+      "errors": [],
+      "browser": "149.0.7827.55",
+      "circuitFrames": 47
+    },
+    "Fast": {
+      "mode": "Fast",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "scenarios": [
+        "sandbox loading",
+        "sandbox all-agents",
+        "sandbox selected-agent",
+        "sandbox missing-agent",
+        "sandbox empty-runs",
+        "sandbox detail-loading",
+        "sandbox detail-failure",
+        "sandbox stale-refresh",
+        "sandbox run-transition",
+        "sandbox removed-run",
+        "sandbox approvals-artifacts",
+        "sandbox long-text",
+        "sandbox utc",
+        "sandbox denied-payloads",
+        "controlled sample selection and intent log",
+        "sample detail retry",
+        "responsive long-content sample"
+      ],
+      "errors": [],
+      "browser": "149.0.7827.55",
+      "circuitFrames": 49
+    }
+  },
+  "browserTotal": 46,
+  "visualReview": {
+    "webNormal": "Passed: aligned header/action, readable labels, preserved sections, no overlap.",
+    "sandboxFast": "Passed: representative sections and status; page geometry matches controlled layout.",
+    "responsive": "768px DOM overflow assertions passed in Web/Parity/Fast.",
+    "retainedScreenshots": 0
+  },
+  "managedBrowserWitness": {
+    "assetMode": "Fast",
+    "viewport": [
+      1600,
+      1000
+    ],
+    "exactLoadingText": true,
+    "originalPoisonAbsentFromTextAndAccessibility": true,
+    "horizontalOverflow": false,
+    "consoleLimitation": "One inherited favicon.ico 404; no page exception.",
+    "ownedHostStopped": true
+  },
+  "encoding": {
+    "scannedTextFiles": 16,
+    "findings": [],
+    "passed": true
+  },
+  "portability": {
+    "summary": {
+      "candidate_files": 9451,
+      "scanned_files": 6954,
+      "skipped_large_or_binary": 2497,
+      "finding_count": 55257,
+      "truncated": false,
+      "by_severity": {
+        "critical": 857,
+        "high": 25405,
+        "low": 4168,
+        "medium": 24827
+      },
+      "by_category": {
+        "absolute-path-field": 5536,
+        "atomic-write": 751,
+        "case-policy": 6225,
+        "dataprotection": 40,
+        "direct-process-host": 34,
+        "dpapi": 10,
+        "environment": 227,
+        "external-tool": 3479,
+        "filesystem-enumeration": 181,
+        "link-reparse": 287,
+        "manager-discovery": 1244,
+        "mcp": 11194,
+        "os-branch": 283,
+        "path-api": 3704,
+        "path-normalization": 318,
+        "permissions": 320,
+        "process-domain": 1557,
+        "process-start": 154,
+        "secret-provider": 847,
+        "shell-elevation": 1504,
+        "windows-executable": 756,
+        "windows-path": 16606
+      },
+      "by_owner_domain": {
+        "Agent Framework": 4522,
+        "Application Composition": 289,
+        "CI": 36,
+        "Development Manager": 347,
+        "FileTools Integration": 396,
+        "Foundation Infrastructure": 681,
+        "Installation": 293,
+        "Plugins": 107,
+        "Processes": 797,
+        "Processes Module": 916,
+        "Security": 333,
+        "Security Abstractions": 6,
+        "Tests": 14059,
+        "Unassigned": 31076,
+        "Workbench": 1399
+      },
+      "unassigned_owner_count": 31076
+    },
+    "includeUntracked": true,
+    "review": "Two artifact-path normalization/Windows-syntax fingerprints replaced their stale entries. These are platform-independent string validation, covered by 24 direct path cases. No host OS path interpretation.",
+    "finalEnforcement": "Passed without --write-baseline"
+  },
+  "secrets": {
+    "scope": "All proposed Git text, tracked plus untracked, all suffixes, without size truncation",
+    "textFiles": 7245,
+    "binaryFiles": 2259,
+    "totalMatches": 245,
+    "added": [],
+    "removed": []
+  },
+  "projectGraph": {
+    "projects": 14,
+    "nodes": {
+      "CanDoItAll.AgentFramework.UiSandbox.csproj": [
+        "CanDoItAll.AgentFramework.UI.csproj"
+      ],
+      "CanDoItAll.AgentFramework.UI.csproj": [
+        "CanDoItAll.AgentFramework.Usage.csproj",
+        "CanDoItAll.AgentFramework.Models.csproj",
+        "CanDoItAll.Conversations.Components.csproj",
+        "CanDoItAll.Components.BaseLib.csproj",
+        "CanDoItAll.Components.Charts.csproj"
+      ],
+      "CanDoItAll.AgentFramework.Usage.csproj": [
+        "CanDoItAll.AgentFramework.Models.csproj"
+      ],
+      "CanDoItAll.AgentFramework.Models.csproj": [
+        "CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+        "CanDoItAll.Memory.Abstractions.csproj",
+        "CanDoItAll.SharedKernel.csproj",
+        "CanDoItAll.Infrastructure.Abstractions.csproj",
+        "CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj"
+      ],
+      "CanDoItAll.Conversations.Components.csproj": [
+        "CanDoItAll.Components.BaseLib.csproj",
+        "CanDoItAll.Components.OverlayLib.csproj"
+      ],
+      "CanDoItAll.Components.BaseLib.csproj": [
+        "CanDoItAll.Components.Common.csproj"
+      ],
+      "CanDoItAll.Components.Charts.csproj": [],
+      "CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj": [],
+      "CanDoItAll.Memory.Abstractions.csproj": [],
+      "CanDoItAll.SharedKernel.csproj": [],
+      "CanDoItAll.Infrastructure.Abstractions.csproj": [],
+      "CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj": [],
+      "CanDoItAll.Components.OverlayLib.csproj": [
+        "CanDoItAll.Components.BaseLib.csproj"
+      ],
+      "CanDoItAll.Components.Common.csproj": []
+    },
+    "forbiddenDependencies": []
+  },
+  "ownedSourceHashes": {
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentGovernanceSession.cs": "ceb59def96c050d91184811cef42aeebd6725b71e65d27b75640f2433fb2877e",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor.cs": "efcdd06eaadc59175a2437a842247e6c2f65a071dd7db46317a482809c68e8c5",
+    "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/GovernancePoisonFixture.cs": "4e0c136fda41692d36eef57c760bc6c177a94e6d1435390d58fb79a915732104",
+    "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/GovernanceSandboxFixture.cs": "c67c2e72ad1be7e5fa314501b968bede18a1412be2c6deab29c48ab86d176607",
+    "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor": "431f24833a3c671d55a4478a65e3c39572eba83e2805f438469f576fd2c63e1a",
+    "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs": "04486c12eed9ad6520216b80b08cb4802c908176fe5bd6dda4e6cbe7f1bdea97",
+    "tests/Components/CanDoItAll.Tests.Components/AgentGovernanceContextRevisionTests.cs": "24e470a491f2ca0cbb15658fa4045bc611f32c479f09390b88f3765a22238a63",
+    "tests/Components/CanDoItAll.Tests.Components/AgentGovernanceSurfaceTests.cs": "c5c00907e537958fecc1ccfd9eeb487ff990a91df8b946ca233dfed46aa9c2f8",
+    "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj": "e985e43f9c3b964d207e06b808f37e035cc17bc019a3560ab1647c8fb0c6aaa9",
+    "tests/Playwright/GovernanceBrowserFixture/Program.cs": "c25d0dcd9fa5471f2596e5503d975226a8f6efa8345c3ce20a9bfc2636312970",
+    "tests/Playwright/GovernanceBrowserFixture/browser.cjs": "89d5e4c4cc5289784e4b112b5c9eec2d95e485eec7227b01f64550f76efea0fc",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentGovernanceSessionTests.cs": "c0fd54ed3ac1e4b234d062a3bea99253441bce7e6895c73240d111cc335f17ac",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/GovernancePresentationTests.cs": "b452efcfea0322f734475d9c1e2790d88985eeb127186975fe6c112c2d536513",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/GovernanceSandboxTests.cs": "09c4eff31d31de859e657a306c45f2db604affe50d7286123cb14d28a0a365e8",
+    "tools/Validation/Portability/portability-risk-baseline.json": "1bc9180a5458f0521c7d561adb6bcaa0c8be9c30200beed50cc8f50341999356",
+    "tools/Validation/bundles/scan_text_encoding.py": "b9cc18ac0f878ee8f43b506d6896ac67a1795288ad31d3651f31c63d065b2d20",
+    "tools/Validation/bundles/test_delivery_tools.py": "be3aeb1939906b821a30e2ba9e8ff2c35d80f615932287a4d169f6bec6354101"
+  },
+  "adjudications": [
+    "RED Unit: 39 passed/23 failed of 62. RED Components: 15 passed/8 failed of 23. These are historical failing-first results; final owning selections are green.",
+    "New component selector setup was aligned with explicit loading/root test IDs; actual corrupted Razor attribute literals were repaired. No original G00 assertion/name/trait was changed.",
+    "Browser executable reference caused Program/static-asset collisions; sharing the single fixture source through Compile links avoids merging executable graphs.",
+    "Initial Playwright module had no matching browser installed; selected the verified installed package/browser pair, without changing dependencies.",
+    "Console printing of Unicode RED output failed after TRX and receipt were saved. UTF-8 diagnostic output was repaired; the actual RED test result is preserved.",
+    "No final broad gate or Diagnostics watch smoke ran: Diagnostics implementation is blocked before it could begin. No new intentional RED checkpoint remains."
+  ],
+  "blocker": {
+    "action": "Create the single requested Diagnostics bundle and begin implementation after Governance passes",
+    "attempts": 2,
+    "lastReason": "Automatic approval review says the attachment cannot override the earlier handoff-only scope.",
+    "latestRequestExplicitlyAuthorizesIt": true,
+    "noDiagnosticsFilesCreated": true,
+    "nextSafeAction": "Owner confirms Diagnostics implementation and bundle creation directly in chat; resume without repeating completed Governance work."
+  },
+  "finalEncoding": {
+    "scannedTextFiles": 20,
+    "findings": [],
+    "passed": true
+  },
+  "finalSourceAndEvidenceSecrets": {
+    "scope": "All proposed Git text, tracked plus untracked, all suffixes, without size truncation",
+    "textFiles": 7246,
+    "binaryFiles": 2259,
+    "totalMatches": 245,
+    "added": [],
+    "removed": []
+  },
+  "retainedBudget": {
+    "newEvidenceFiles": 1,
+    "changedEvidenceFiles": 3,
+    "newScreenshots": 0,
+    "historicalProofChanged": false
+  }
+}

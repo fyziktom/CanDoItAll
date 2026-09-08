@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UiSandbox;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -122,7 +123,7 @@ internal sealed class GovernanceBrowserApplication(string repository, Governance
     }
 }
 
-internal enum GovernanceBrowserMode { Normal, HoldDetail, HoldList, FailDetail, FailList, Long, Removed }
+internal enum GovernanceBrowserMode { Normal, HoldDetail, HoldList, FailDetail, FailList, Long, Removed, Poison }
 
 internal sealed class GovernanceBrowserState {
     public const string Denied = "governance-denied-payload";
@@ -186,12 +187,14 @@ internal sealed class GovernanceBrowserReads(IAgentGovernanceReads inner, Govern
         if (mode == GovernanceBrowserMode.FailDetail) {
             throw new IOException(GovernanceBrowserState.Denied);
         }
-        return detail with { Run = Transform(detail.Run, mode) };
+        return mode == GovernanceBrowserMode.Poison
+            ? GovernancePoisonFixture.Create(detail.Run)
+            : detail with { Run = Transform(detail.Run, mode) };
     }
 
     private static ExecutionRunRecord Transform(ExecutionRunRecord run, GovernanceBrowserMode mode)
         => mode == GovernanceBrowserMode.Long ? run with {
             Title = "<img id='governance-injected' src=x> " + new string('x', 1800),
             ProviderName = "<strong>Provider</strong> " + new string('p', 1800)
-        } : run;
+        } : mode == GovernanceBrowserMode.Poison ? GovernancePoisonFixture.Create(run).Run : run;
 }
