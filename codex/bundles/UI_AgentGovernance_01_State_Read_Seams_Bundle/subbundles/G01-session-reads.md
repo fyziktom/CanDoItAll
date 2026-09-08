@@ -1,6 +1,6 @@
 # G01 — Accepted target and independent read lanes
 
-Status: PLANNED, NOT EXECUTED. Critical foundation. Prerequisite: G00 written closure and exact semantic RED. Keep all new owners inside existing Module.
+Status: IMPLEMENTED; focused proof green. Final aggregate closure is recorded in [the report](../report.md). Critical foundation. Prerequisite: G00 written closure and exact semantic RED. Keep all new owners inside existing Module.
 
 Create one per-panel session and one coherent read seam (or G00's explicitly proven simpler equivalent). The production adapter delegates to the registered current-profile workspace: catalog, filtered execution-run list and exact run detail. It does not copy persistence, provider-native receipt enrichment, runtime execution or approval policy.
 

@@ -48,3 +48,56 @@ G03 freezes exact sandbox query/render tests after specimen design and current r
 Existing owner inventory is [separate](../inventory/existing-tests.json). Preserve Overview `Aggregate_failure_cannot_override_ready_selection_access(tab: Governance)` and the actual page/context suite; that callback test alone is not a Governance verification lifecycle proof.
 
 G00 added exact methods: Empty_guid_is_invalid_and_never_publishes_all_agents (Fact); Canceled_owner_allows_delayed_token_registration_without_late_publication (false/true); Governance_timestamps_are_explicit_UTC_independent_of_culture_and_offset (en-US/+120 and cs-CZ/-240); Forbidden_execution_payloads_and_raw_runtime_prose_never_render (Fact); Runtime_details_shared_children_use_UTC_and_omit_raw_timeline_message (Fact). Initial exact discovery: 34 cases. This count describes this checkpoint, not architecture. Timestamp/payload/shared-child rendering cases remain owned through G02; all current-panel lifetime cases must pass G01. Optional timestamps and DST pairs gain direct public value-policy tests in G01/G02.
+
+## G01 implementation witnesses frozen before execution
+
+`AgentGovernanceSessionTests` contains 14 cases: List_is_accepted_before_detail_completes;
+Refresh_cannot_repeat_detail_after_newer_manual_selection_during_catalog;
+Older_catalog_continuation_cannot_start_a_list_for_newer_request;
+Older_list_finally_cannot_clear_newer_refresh; List_retry_does_not_repeat_catalog_or_context_effects;
+Removed_run_can_reappear_without_changing_selection; Accepted_list_owns_its_collection;
+Canceled_current_read_surfaces_failure_when_owner_did_not_cancel; and
+Disposal_cancels_each_lane_and_fences_noncooperative_completion (Catalog/List/Detail × success/failure).
+These supplement the unchanged 34-case G00 selection. Discovery must verify this inventory;
+the case count is an execution expectation, not an architecture invariant.
+
+`GovernancePresentationTests` freezes 16 direct cases before execution: immutable public
+contract allowlist; denied domain fields; collection independence; bounded rows with
+retained totals; Unicode truncation; four UTC/culture/offset combinations; missing timestamp;
+and six relative/absolute artifact path examples. The Unit selection is exactly these two
+classes (30 cases). No raw runtime exception or payload string is an accepted UI summary.
+
+`AgentGovernanceSurfaceTests` freezes ten in-place cases: service-free complete sections;
+controlled selection intents; three lane retry intents; encoded HTML-like labels;
+usable list during detail loading; removed target; denied sentinel; bounded labels and
+accessible current selection. G00 initially reached 32/34; the two failures exposed
+incorrect retry-button DOM attributes. Production attributes were corrected, with no
+G00 assertion changes. The next Components selection contains G00 plus Surface (44 cases).
+
+The second in-place execution passed all 34 unchanged G00 cases and all 30 Unit cases.
+Two new Surface assertions accidentally selected the list heading. They now target the
+explicit detail heading, and the long-label assertion also requires the truncation marker.
+No G00 test required correction. The four previously named registered-read integration
+cases are now implemented with real application registration and PostgreSQL test profiles;
+canonical execution data is stored by the production profile-scoped file execution store.
+
+## Accepted context revision follow-up
+
+Frozen before execution: `AgentGovernanceContextRevisionTests.Returning_to_valid_agent_after_missing_request_republishes_accepted_context` (1 case). An accepted target must be republished after an intervening failed target; no missing target is published as All agents.
+
+## Sandbox cases frozen before execution
+
+GovernanceSandboxTests: Representative_sample_uses_only_allowlisted_bounded_values (14 scenarios), Controlled_selection_changes_sample_and_records_typed_intent, Detail_retry_preserves_sample_list_and_selected_target, Missing_sample_target_does_not_become_all_agents_on_retry. Expected discovery: 17 cases. Counts describe this execution inventory, not architecture invariants.
+
+## Affected existing consumers
+
+Frozen owning selection: AgentsHomePageTests (6), AgentsOverviewReadLifecycleTests (24), AgentChatModalTests.Runtime_details_dialog_* (2), AgentFrameworkModuleChatContextBuilderTests (11). Exact filtered compiled discovery is checked before execution. These cover the real page, accepted context, retained Overview behavior, and both runtime-details consumers.
+
+Frozen additional context case: `AgentGovernanceContextRevisionTests.Accepted_new_route_target_resolves_parent_loading_access`. The actual AgentsWorkspaceState.ApplyRoute resets access for B; accepting cached B must restore Ready through the host callback. Context class discovery is now 2 cases.
+
+Browser failing-first: the explicit requested agent option exists after circuit attachment, but the native select displays All agents. Preserve option identity while replacing the pending target placeholder with the loaded catalog. The browser checks native value as well as accepted rows; bUnit alone does not model native select behavior.
+
+
+## Final visual and documentation adjudication
+
+The browser fixture additionally freezes `Refresh text must fit inside its button` as a DOM range predicate. It failed on the extracted header, then passed in Web, Parity and Fast after the description moved below the title/action row. No Components layout change was made. Existing G00 assertions remain unchanged. The browser fixture project now has its required README; the documentation gate has only its 118 inherited tracked-log paths remaining.

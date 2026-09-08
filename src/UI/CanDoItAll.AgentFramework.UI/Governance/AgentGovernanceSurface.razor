@@ -1,0 +1,196 @@
+@namespace CanDoItAll.AgentFramework.UI.Governance
+@using System.Collections.Immutable
+@using static CanDoItAll.AgentFramework.UI.Governance.GovernancePresentationMapping
+
+<div class="governance-surface">
+<ListDetailShell ListPaneWidth="24rem" data-testid="agents-governance-panel">
+    <ListHeader>
+        <Stack GapScale="LayoutGap.Small">
+        <ListPanelHeader Title="Execution runs">
+            <Actions>
+                <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Class="whitespace-nowrap shrink-0"
+                        Disabled="@State.IsBusy" Click="@(() => EmitAsync(new GovernanceIntent.Refresh()))" />
+            </Actions>
+        </ListPanelHeader>
+        <TextBlock TextStyle="TextStyle.Body2" Value="Inspect durable execution state, approvals, artifacts, checkpoints, and receipts." />
+        </Stack>
+    </ListHeader>
+    <ListContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <SurfaceCard Soft="true">
+                <label class="cda-field-label" for="@filterId">Agent filter</label>
+                <InputSelect TValue="Guid?" id="@filterId" Value="@State.DesiredAgentId"
+                             ValueChanged="SelectAgentAsync" ValueExpression="@(() => State.DesiredAgentId)" class="cda-input">
+                    <option value="">All technical agents</option>
+                    @if (State.DesiredAgentId is { } missing && Presentation.Agents.All(agent => agent.Id != missing)) {
+                        <option @key="missing" value="@missing">Requested technical agent</option>
+                    }
+                    @foreach (var agent in Presentation.Agents) {
+                        <option @key="agent.Id" value="@agent.Id">@agent.Label</option>
+                    }
+                </InputSelect>
+            </SurfaceCard>
+            @if (State.Catalog.Error is { } catalogError) {
+                <div role="alert" data-testid="agents-governance-catalog-error">
+                    <TextBlock Value="@catalogError" />
+                    <Button Text="Retry agent catalog" data-testid="agents-governance-catalog-retry"
+                            Disabled="@State.Catalog.IsBusy" Click="@(() => EmitAsync(new GovernanceIntent.RetryCatalog()))" />
+                </div>
+            }
+            @if (State.List.Error is { } listError) {
+                <div role="alert" data-testid="@(State.List.Phase == GovernanceReadPhase.Stale ? "agents-governance-list-stale" : "agents-governance-list-error")">
+                    <TextBlock Value="@listError" />
+                    <Button Text="Retry run list" data-testid="agents-governance-list-retry"
+                            Disabled="@State.List.IsBusy" Click="@(() => EmitAsync(new GovernanceIntent.RetryList()))" />
+                </div>
+            }
+            @if (State.Catalog.IsBusy || State.List.IsBusy) {
+                <div role="status" aria-live="polite">
+                    <TextBlock Value="@(State.Catalog.IsBusy ? "Loading technical agentsĂ˘â‚¬Â¦" : "Loading execution runsĂ˘â‚¬Â¦")" />
+                </div>
+            }
+            @if (Presentation.Runs.Length == 0 && State.AgentResolved && State.List.Phase == GovernanceReadPhase.Ready) {
+                <EmptyState Eyebrow="No runs" Title="No execution runs match the current filter"
+                            Description="Dispatch an agent task or use the chat and scenario tabs to create durable execution state." />
+            }
+            @foreach (var run in Presentation.Runs) {
+                <SelectionListItem @key="run.Id" Title="@run.Title" Eyebrow="@run.AgentLabel" Meta="@run.Updated"
+                                   Summary="@run.Summary" IsSelected="@(State.DesiredRunId == run.Id)"
+                                   OnSelect="@(() => EmitAsync(new GovernanceIntent.SelectRun(run.Id)))"
+                                   DataTestId="agents-governance-run-item" aria-current="@(State.DesiredRunId == run.Id ? "true" : null)">
+                    <ChildContent>
+                        @if (State.DesiredRunId == run.Id) {
+                            <span class="sr-only">Selected execution run</span>
+                        }
+                    </ChildContent>
+                    <Status>
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="@Tone(run.Tone)" Text="@run.State" />
+                            @if (run.Outcome is { } outcome) {
+                                <StatusBadge Tone="neutral" Text="@outcome" />
+                            }
+                        </Cluster>
+                    </Status>
+                </SelectionListItem>
+            }
+        </Stack>
+    </ListContent>
+    <DetailHeader>
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Governance detail" />
+            <h2 class="text-xl font-semibold" data-testid="agents-governance-detail-title">@DetailTitle</h2>
+            <TextBlock TextStyle="TextStyle.Body2" Value="Durable details remain available across the originating process, scenario, and chat." />
+        </Stack>
+    </DetailHeader>
+    <DetailContent>
+        <Stack GapScale="LayoutGap.Large">
+            @if (State.Detail.IsBusy) {
+                <div role="status" aria-live="polite" data-testid="agents-governance-detail-loading">
+                    <TextBlock Value="Loading selected execution detailsĂ˘â‚¬Â¦" />
+                </div>
+            }
+            @if (State.Detail.Phase == GovernanceReadPhase.Unavailable) {
+                <div role="status" data-testid="agents-governance-detail-unavailable">
+                    <EmptyState Eyebrow="Selected run unavailable" Title="The selected execution run is no longer in this result"
+                                Description="Choose another run or refresh. Your selected target has been retained." />
+                </div>
+            } else if (State.Detail.Error is { } detailError) {
+                <div role="alert" data-testid="agents-governance-detail-error">
+                    <TextBlock Value="@detailError" />
+                    <Button Text="Retry selected detail" data-testid="agents-governance-detail-retry"
+                            Disabled="@State.Detail.IsBusy" Click="@(() => EmitAsync(new GovernanceIntent.RetryDetail()))" />
+                </div>
+            }
+            @if (Presentation.Detail is { } detail) {
+                <CompactStatStrip>
+                    <CompactStat Label="approvals" Value="@Number(detail.ApprovalCount)" TooltipText="Pending and resolved approvals." Tone="warning" />
+                    <CompactStat Label="artifacts" Value="@Number(detail.ArtifactCount)" TooltipText="Durable run artifacts." Tone="success" />
+                    <CompactStat Label="checkpoints" Value="@Number(detail.CheckpointCount)" TooltipText="Resumable checkpoints." Tone="info" />
+                    <CompactStat Label="receipts" Value="@Number(detail.ReceiptCount)" TooltipText="Controlled tool execution receipts." />
+                </CompactStatStrip>
+                <SurfaceCard Soft="true">
+                    <Stack GapScale="LayoutGap.Small">
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="@Tone(detail.Run.Tone)" Text="@detail.Run.State" />
+                            @if (detail.Run.Outcome is { } outcome) {
+                                <StatusBadge Tone="info" Text="@outcome" />
+                            }
+                            <StatusBadge Tone="neutral" Text="@detail.Run.SourceKind" />
+                            @if (detail.Run.ProcessLinked) {
+                                <StatusBadge Tone="warning" Text="Process-linked" />
+                            }
+                        </Cluster>
+                        <TextBlock Value="@detail.Run.Summary" />
+                        <TextBlock TextStyle="TextStyle.Caption" Value="Execution content is omitted from this overview." />
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Source {detail.Run.SourceIdentity}")" />
+                        @if (detail.Run.ProcessLinked) {
+                            <TextBlock TextStyle="TextStyle.Caption" Value="@($"Process run {detail.Run.ProcessIdentity} / Step {detail.Run.StepIdentity}")" />
+                        }
+                    </Stack>
+                </SurfaceCard>
+                <Grid Gap="LayoutGap.Large" ColumnTemplateXl="repeat(2,minmax(0,1fr))">
+                    @foreach (var section in Sections(detail)) {
+                        <SurfaceCard Soft="true">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="@section.Title" />
+                            @if (section.Rows.Length == 0) {
+                                <TextBlock TextStyle="TextStyle.Body2" Value="@section.Empty" />
+                            } else {
+                                <Stack GapScale="LayoutGap.Small">
+                                    @foreach (var row in section.Rows) {
+                                        <SelectionListItem Title="@row.Title" Eyebrow="@row.Eyebrow" Meta="@row.Timestamp" Summary="@row.Summary">
+                                            <Status>
+                                                @if (!string.IsNullOrEmpty(row.Status)) {
+                                                    <StatusBadge Tone="@Tone(row.Tone)" Text="@row.Status" />
+                                                }
+                                            </Status>
+                                        </SelectionListItem>
+                                    }
+                                    @if (section.Total > section.Rows.Length) {
+                                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Showing {Number(section.Rows.Length)} of {Number(section.Total)} entries.")" />
+                                    }
+                                </Stack>
+                            }
+                        </SurfaceCard>
+                    }
+                </Grid>
+                <Grid Gap="LayoutGap.Large" ColumnTemplateXl="repeat(2,minmax(0,1fr))">
+                    <ExecutionTimelinePanel Entries="@detail.Timeline" />
+                    <MetricSummaryPanel Metrics="@detail.Metrics" />
+                </Grid>
+            } else if (State.Detail.Phase == GovernanceReadPhase.Idle && State.AgentResolved) {
+                <EmptyState Eyebrow="No run selected" Title="Choose an execution run from the list"
+                            Description="Its approvals, artifacts, checkpoints, and receipts appear here." />
+            }
+        </Stack>
+    </DetailContent>
+</ListDetailShell>
+</div>
+
+@code {
+    private string DetailTitle => Presentation.Detail?.Run.Title ?? State.Detail.Phase switch {
+        GovernanceReadPhase.Loading => "Loading selected execution details",
+        GovernanceReadPhase.Failed or GovernanceReadPhase.Stale => "Selected execution details unavailable",
+        GovernanceReadPhase.Unavailable => "Selected execution run unavailable",
+        _ => "Select an execution run"
+    };
+
+    [Parameter, EditorRequired]
+    public GovernancePresentation Presentation { get; set; } = GovernancePresentation.Empty;
+
+    [Parameter, EditorRequired]
+    public GovernanceViewState State { get; set; } = GovernanceViewState.Initial;
+
+    [Parameter]
+    public EventCallback<GovernanceIntent> OnIntent { get; set; }
+
+    private readonly string filterId = "governance-agent-" + Guid.NewGuid().ToString("N");
+    private Task EmitAsync(GovernanceIntent intent) => OnIntent.InvokeAsync(intent);
+    private Task SelectAgentAsync(Guid? agentId) => EmitAsync(new GovernanceIntent.SelectAgent(agentId));
+
+    private static IEnumerable<(string Title, string Empty, int Total, ImmutableArray<GovernanceEntry> Rows)> Sections(GovernanceDetailPresentation detail) {
+        yield return ("Approvals", "No tool approvals were captured for this run.", detail.ApprovalCount, detail.Approvals);
+        yield return ("Artifacts", "No artifacts were persisted for this run.", detail.ArtifactCount, detail.Artifacts);
+        yield return ("Checkpoints", "No resumable checkpoints were emitted.", detail.CheckpointCount, detail.Checkpoints);
+        yield return ("Tool receipts", "No tool receipts were captured for this run.", detail.ReceiptCount, detail.Receipts);
+    }
+}

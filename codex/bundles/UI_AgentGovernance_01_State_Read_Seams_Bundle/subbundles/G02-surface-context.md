@@ -1,6 +1,6 @@
 # G02 — Controlled real surface and host effects
 
-Status: PLANNED, NOT EXECUTED. Prerequisite: G01 closed with canonical-read and public lifetime proof. Keep rendering in Module until this child closes.
+Status: IMPLEMENTED; focused proof green. Final aggregate closure is recorded in [the report](../report.md). Prerequisite: G01 closed with canonical-read and public lifetime proof. Keep rendering in Module until this child closes.
 
 Extract the real ListDetailShell and its full current subtree into AgentGovernanceSurface. Inputs are immutable presentation and typed intents for SelectAgent, SelectRun, Refresh and lane-specific Retry. Names are implementation judgment; semantic selection remains controlled. A local visual expansion may be surface-owned only if not route/workspace meaning. No injected workspace/query/navigation/dialog/notification/runtime service, no second selected identity and no forwarding controller.
 

@@ -438,6 +438,7 @@ internal sealed class GovernancePanelFixture : IAsyncDisposable {
         var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, GovernanceWorkspaceProxy>();
         Reads = (GovernanceWorkspaceProxy)(object)workspace;
         Context.Services.AddSingleton(workspace);
+        Context.Services.AddScoped<IAgentGovernanceReads, AgentGovernanceReads>();
     }
 
     public IRenderedComponent<AgentGovernancePanel> Render(Guid? id) => Context.Render<AgentGovernancePanel>(p => p

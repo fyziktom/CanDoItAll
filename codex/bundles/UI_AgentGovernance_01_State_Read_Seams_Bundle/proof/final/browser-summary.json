@@ -1,0 +1,118 @@
+{
+  "scope": "Real Web with registered canonical fixture and explicit fault decorator; service-free controlled Parity/Fast specimens",
+  "results": [
+    {
+      "mode": "web",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "scenarios": [
+        "real registration, canonical data, all sections, explicit UTC",
+        "keyboard selection and accessible current state",
+        "noncooperative R1 completion cannot replace R2",
+        "noncooperative A list completion cannot replace B",
+        "manual selection preserved across refresh",
+        "bounded detail failure with accepted list",
+        "detail-only retry",
+        "stale list and scoped recovery",
+        "removed selected run stays explicit and can reappear",
+        "bounded adversarial content",
+        "responsive layout at 768 pixels"
+      ],
+      "errors": [],
+      "screenshots": [
+        "web-normal.jpeg",
+        "web-detail-failure.jpeg",
+        "web-long.jpeg",
+        "web-responsive.jpeg"
+      ],
+      "browser": "149.0.7827.55",
+      "filterDiagnostic": {
+        "value": "83cbd161-4bcb-45f9-9cb7-130000000001",
+        "valueAttribute": null,
+        "expectedPresent": true,
+        "selected": [
+          {
+            "value": "83cbd161-4bcb-45f9-9cb7-130000000001",
+            "text": "Governance agent A"
+          }
+        ]
+      },
+      "circuitFrames": 158
+    },
+    {
+      "mode": "Parity",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "scenarios": [
+        "sandbox loading",
+        "sandbox all-agents",
+        "sandbox selected-agent",
+        "sandbox missing-agent",
+        "sandbox empty-runs",
+        "sandbox detail-loading",
+        "sandbox detail-failure",
+        "sandbox stale-refresh",
+        "sandbox run-transition",
+        "sandbox removed-run",
+        "sandbox approvals-artifacts",
+        "sandbox long-text",
+        "sandbox utc",
+        "sandbox denied-payloads",
+        "controlled sample selection and intent log",
+        "sample detail retry",
+        "responsive long-content sample"
+      ],
+      "errors": [],
+      "screenshots": [
+        "sandbox-parity.jpeg"
+      ],
+      "browser": "149.0.7827.55",
+      "circuitFrames": 51
+    },
+    {
+      "mode": "Fast",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "scenarios": [
+        "sandbox loading",
+        "sandbox all-agents",
+        "sandbox selected-agent",
+        "sandbox missing-agent",
+        "sandbox empty-runs",
+        "sandbox detail-loading",
+        "sandbox detail-failure",
+        "sandbox stale-refresh",
+        "sandbox run-transition",
+        "sandbox removed-run",
+        "sandbox approvals-artifacts",
+        "sandbox long-text",
+        "sandbox utc",
+        "sandbox denied-payloads",
+        "controlled sample selection and intent log",
+        "sample detail retry",
+        "responsive long-content sample"
+      ],
+      "errors": [],
+      "screenshots": [
+        "sandbox-fast.jpeg"
+      ],
+      "browser": "149.0.7827.55",
+      "circuitFrames": 45
+    }
+  ],
+  "totalScenarioChecks": 45,
+  "visualReview": "Six representative captures reviewed; final header fits, partial failure retains list, encoded long text remains contained at desktop and 768px.",
+  "adjudications": [
+    "Native agent options needed stable keys to retain requested selection after asynchronous catalog population.",
+    "A current-target access callback must republish after a route revision even when Ready is unchanged.",
+    "Refresh text overflow reproduced with an exact DOM range check; Governance description moved below title/action row; all modes pass.",
+    "Sandbox assertions wait for accepted data-scenario and intent state, not only the dropdown value.",
+    "Fixture seeding now supplies valid positive pricing; no provider production change."
+  ]
+}

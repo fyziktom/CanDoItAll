@@ -1,0 +1,2682 @@
+{
+  "scope": "This execution only; historical G00 RED is not relabeled. Counts are observations, not architecture invariants.",
+  "focused": {
+    "format": "Merged executed TRX; passing output omitted; original command receipts in validation-summary.json",
+    "total": 161,
+    "sources": [
+      {
+        "source": "extracted-unit.trx",
+        "sha256": "69ed73ba160a2ad616b32a1678f9dfae6cccb1a87169af84fe5bf9f4993a5170",
+        "counts": {
+          "total": "47",
+          "executed": "47",
+          "passed": "47",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "source": "final-access-green.trx",
+        "sha256": "103dcf70c15311ef2b324e9dd58bac77913b3d9f73074c0d353317aa2424b8e3",
+        "counts": {
+          "total": "46",
+          "executed": "46",
+          "passed": "46",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "source": "extracted-integration.trx",
+        "sha256": "21d988c7cccb7a7d5ff3379abf175552f9d26e3f9a19dc2c89a886d0b1750f20",
+        "counts": {
+          "total": "4",
+          "executed": "4",
+          "passed": "4",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "source": "owning-unit.trx",
+        "sha256": "4741cb33558447147c1fd8361e8489915946a6b3e2a6ec8249fcf8fa266c9053",
+        "counts": {
+          "total": "11",
+          "executed": "11",
+          "passed": "11",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "source": "final-owning-components.trx",
+        "sha256": "6931aeb9a47e9347215b3249dce91e1e8569c2c1ff02dacfb128b908bf6964d6",
+        "counts": {
+          "total": "32",
+          "executed": "32",
+          "passed": "32",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "source": "components.trx",
+        "sha256": "37956be449ff2d46b43f0790c2768ecc23b2ac1357d9b94903daed04b28e31f7",
+        "counts": {
+          "total": "21",
+          "executed": "21",
+          "passed": "21",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      }
+    ]
+  },
+  "primaryFocusedCases": 140,
+  "componentsSiblingCases": 21,
+  "g00ExistingCases": 34,
+  "g00PreviouslyRedNowPassing": 29,
+  "broad": {
+    "assemblies": [
+      {
+        "file": "lucys_LUCYSPOWER_2026-09-07_23_32_32_net10.0.trx",
+        "sha256": "081648f7b130c97a1941a480821dbef21710823902cef446c4c3a39e30f25ac6",
+        "counts": {
+          "total": 1562,
+          "executed": 1562,
+          "passed": 1562,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": "lucys_LUCYSPOWER_2026-09-07_23_58_52_net10.0.trx",
+        "sha256": "e3d89fed2e4ad1329b23429df0daf3e1e489e8c37c80ca7f5a5b442494b1fefa",
+        "counts": {
+          "total": 1409,
+          "executed": 1409,
+          "passed": 1409,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": "lucys_LUCYSPOWER_2026-09-08_00_57_01_net10.0.trx",
+        "sha256": "3d611762c1c288219386a567793b2af05b21a767d3293801312d28264d24aae2",
+        "counts": {
+          "total": 22,
+          "executed": 22,
+          "passed": 22,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": "lucys_LUCYSPOWER_2026-09-08_00_57_03_net10.0.trx",
+        "sha256": "c2954b88804e6483e0aae177153cb2e923478090c45488682e0d9d69da7d34fd",
+        "counts": {
+          "total": 196,
+          "executed": 196,
+          "passed": 196,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": "lucys_LUCYSPOWER_2026-09-08_00_57_20_net10.0.trx",
+        "sha256": "f4c915d75cc1f3f31e60dceaae059d39fa92341bdf0bb6b0eabfeea646c42b3b",
+        "counts": {
+          "total": 7162,
+          "executed": 7162,
+          "passed": 7161,
+          "failed": 1,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      }
+    ],
+    "total": 10351,
+    "passed": 10350,
+    "failed": 1,
+    "skipped": 0,
+    "gatePassed": false,
+    "failureAdjudication": "broad-failure.json",
+    "compiledDiscovery": 10296,
+    "discoveryReconciliation": {
+      "passed": true,
+      "compiledRows": 10296,
+      "executedCases": 10351,
+      "allMethodIdentitiesAccounted": true,
+      "additionalRuntimeCases": 55,
+      "adjudicatedMethods": [
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.Capability_mismatch_denial_is_consistent_for_all_handler_callers",
+          "discoveredRows": 1,
+          "executedRows": 5,
+          "source": "tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationHandlerTests.cs",
+          "sourceSha256": "17f5e033dec5a883579f80ee7a206b236621636959312afc7d63f9ed26ff069e",
+          "classification": "Deferred MemberData with a nonserializable typed argument; one discovery entry expands at execution."
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.No_provider_denial_is_consistent_for_all_handler_callers",
+          "discoveredRows": 1,
+          "executedRows": 5,
+          "source": "tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationHandlerTests.cs",
+          "sourceSha256": "17f5e033dec5a883579f80ee7a206b236621636959312afc7d63f9ed26ff069e",
+          "classification": "Deferred MemberData with a nonserializable typed argument; one discovery entry expands at execution."
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Security.MemoryOperationAccessAuthorizerTests.Any_changed_ownership_dimension_is_denied",
+          "discoveredRows": 1,
+          "executedRows": 9,
+          "source": "tests/Memory/CanDoItAll.Memory.Tests/MemoryOperationAccessAuthorizerTests.cs",
+          "sourceSha256": "aaaee90111dcb50c7cbd292e9ac58d8809ac5b0fca3b4921f5dc92f1905298ed",
+          "classification": "Deferred MemberData with a nonserializable typed argument; one discovery entry expands at execution."
+        },
+        {
+          "method": "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects",
+          "discoveredRows": 1,
+          "executedRows": 6,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs",
+          "sourceSha256": "7664880eafefbce1fdf56aaa413e31e49efdc7afd80f50d1ab5c3de1ab7ada02",
+          "classification": "Deferred MemberData with a nonserializable typed argument; one discovery entry expands at execution."
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+          "discoveredRows": 1,
+          "executedRows": 8,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/FloatingAgentChatArchitectureTests.cs",
+          "sourceSha256": "0685274c44a20a32b7dc1a965baf7051442ea5083caf544fc55f26e85fac3699",
+          "classification": "Deferred MemberData with a nonserializable typed argument; one discovery entry expands at execution."
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+          "discoveredRows": 1,
+          "executedRows": 8,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/MafFinalizerToolFactorySchemaCharacterizationTests.cs",
+          "sourceSha256": "2a754a87e8bfae6431a2b21e550de8dc41e3e7afdf4c44bbd851e2c64cf51173",
+          "classification": "Deferred MemberData with a nonserializable typed argument; one discovery entry expands at execution."
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+          "discoveredRows": 1,
+          "executedRows": 21,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/ProcessRuntimeToolPreflightServiceTests.cs",
+          "sourceSha256": "3b5a8eb62f1338f041426dcd6bb6ff9c2cb7f3fc3029cd96bcfc98199858dfb6",
+          "classification": "Deferred MemberData with a nonserializable typed argument; one discovery entry expands at execution."
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.Detail_bound_preserves_unicode",
+          "discoveredRows": 4,
+          "executedRows": 4,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/ProviderHistoryLifecycleTests.cs",
+          "sourceSha256": "d390b81605ec074ebda56888b823980a80d5b1ba4ff27cbd2ba9473c863c63b8",
+          "classification": "VSTest Unicode surrogate display"
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.ProviderHistoryLifecycleTests.Stream_byte_count_handles_split_surrogate_pairs",
+          "discoveredRows": 2,
+          "executedRows": 2,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/ProviderHistoryLifecycleTests.cs",
+          "sourceSha256": "d390b81605ec074ebda56888b823980a80d5b1ba4ff27cbd2ba9473c863c63b8",
+          "classification": "VSTest Unicode surrogate display"
+        }
+      ],
+      "qualification": "Fresh compiled discovery and fresh executed TRX matched; existing deferred-data/display differences require unchanged owning source. No historical runtime result is reused."
+    },
+    "discoverySha256": "aafbecf9fc658cc4600e6b8414eeade4709f54d8186e9926d9d29811a379be15",
+    "executionCount": 1,
+    "invalidationReason": "Pure timeline/metrics assembly movement, both real consumers, new session/adapter and Agents context boundary require final stable consumer validation."
+  },
+  "commands": [
+    {
+      "receipt": "access-green-plan-results.json",
+      "name": "access-green-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 46,
+      "exit": 0,
+      "durationSeconds": 93.875,
+      "discovered": 46
+    },
+    {
+      "receipt": "access-green-plan-results.json",
+      "name": "access-green",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\access-green.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\access-green.trx",
+      "exit": 0,
+      "durationSeconds": 16.14,
+      "counts": {
+        "total": "46",
+        "executed": "46",
+        "passed": "46",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "access-red-plan-results.json",
+      "name": "access-red-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 2,
+      "exit": 0,
+      "durationSeconds": 49.062,
+      "discovered": 2
+    },
+    {
+      "receipt": "access-red-plan-results.json",
+      "name": "access-red",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\access-red.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\access-red.trx",
+      "exit": 1,
+      "durationSeconds": 1.86,
+      "counts": {
+        "total": "2",
+        "executed": "2",
+        "passed": "1",
+        "failed": "1",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "before-header-watch-final-plan-results.json",
+      "name": "post-web-watch-smoke",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/smoke.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "post"
+      ],
+      "exit": 0,
+      "durationSeconds": 449.75
+    },
+    {
+      "receipt": "before-header-watch-final-plan-results.json",
+      "name": "sandbox-watch-smoke",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/smoke.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "sandbox"
+      ],
+      "exit": 0,
+      "durationSeconds": 86.406
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "watch-final-byte-restoration",
+      "command": [
+        "python",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\verify-freeze.py"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.078
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-direct-ui",
+      "command": [
+        "dotnet",
+        "build",
+        "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.422
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-direct-shared-components",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 6.781
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-direct-module",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 28.453
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-direct-web",
+      "command": [
+        "dotnet",
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 37.156
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-product-restore",
+      "command": [
+        "dotnet",
+        "restore",
+        "CanDoItAll.slnx"
+      ],
+      "exit": 0,
+      "durationSeconds": 12.328
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-product-build",
+      "command": [
+        "dotnet",
+        "build",
+        "CanDoItAll.slnx",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "-p:UseSharedCompilation=false"
+      ],
+      "exit": 0,
+      "durationSeconds": 43.235
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-stable-restore",
+      "command": [
+        "dotnet",
+        "restore",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx"
+      ],
+      "exit": 0,
+      "durationSeconds": 16.062
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "frozen-stable-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "-p:UseSharedCompilation=false"
+      ],
+      "exit": 0,
+      "durationSeconds": 110.562
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "stable-frozen-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "/m:1",
+        "--list-tests"
+      ],
+      "exit": 0,
+      "durationSeconds": 6.469
+    },
+    {
+      "receipt": "broad-final-plan-results.json",
+      "name": "stable-final-execution",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "/m:1",
+        "--logger",
+        "trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\stable"
+      ],
+      "exit": 1,
+      "durationSeconds": 5288.781
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "owning-unit-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentFrameworkModuleChatContextBuilderTests",
+        "--no-build",
+        "--no-restore",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Unit.AgentFramework",
+      "expectedDiscovery": 11,
+      "exit": 0,
+      "durationSeconds": 1.937,
+      "discovered": 11
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "owning-unit",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentFrameworkModuleChatContextBuilderTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\owning-unit.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\owning-unit.trx",
+      "exit": 0,
+      "durationSeconds": 2.11,
+      "counts": {
+        "total": "11",
+        "executed": "11",
+        "passed": "11",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "owning-components-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentChatModalTests.Runtime_details_dialog_",
+        "--no-build",
+        "--no-restore",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 32,
+      "exit": 0,
+      "durationSeconds": 1.343,
+      "discovered": 32
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "owning-components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentChatModalTests.Runtime_details_dialog_",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\owning-components.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\owning-components.trx",
+      "exit": 0,
+      "durationSeconds": 128.375,
+      "counts": {
+        "total": "32",
+        "executed": "32",
+        "passed": "32",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "assets-parity",
+      "command": [
+        "npm.cmd",
+        "run",
+        "tailwind:build"
+      ],
+      "exit": 0,
+      "durationSeconds": 1.235
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "assets-fast",
+      "command": [
+        "npm.cmd",
+        "run",
+        "catalog:css:build"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.843
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "browser-web-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 34.016
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "browser-sandbox-parity-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:CatalogAssetMode=Parity"
+      ],
+      "exit": 0,
+      "durationSeconds": 3.828
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "browser-sandbox-fast-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:CatalogAssetMode=Fast"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.985
+    },
+    {
+      "receipt": "browser-build-plan-results.json",
+      "name": "browser-browser-fixture-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 39.156
+    },
+    {
+      "receipt": "browser-filter-keyed-plan-results.json",
+      "name": "filter-ui-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.719
+    },
+    {
+      "receipt": "browser-filter-keyed-plan-results.json",
+      "name": "filter-browser-fixture-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 36.485
+    },
+    {
+      "receipt": "browser-filter-keyed-plan-results.json",
+      "name": "browser-web-interactive-acceptance",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "exit": 0,
+      "durationSeconds": 46.875
+    },
+    {
+      "receipt": "browser-fixture-r2-plan-results.json",
+      "name": "browser-fixture-r2-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 45.844
+    },
+    {
+      "receipt": "browser-fixture-r2-plan-results.json",
+      "name": "browser-fixture-r2-prepare",
+      "command": [
+        "dotnet",
+        "tests/Playwright/GovernanceBrowserFixture/bin/Release/net10.0/GovernanceBrowserFixture.dll",
+        "prepare",
+        "C:\\repositories\\CanDoItAll"
+      ],
+      "exit": 0,
+      "durationSeconds": 18.156
+    },
+    {
+      "receipt": "browser-web-plan-results.json",
+      "name": "browser-web-acceptance",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "exit": 1,
+      "durationSeconds": 130.218
+    },
+    {
+      "receipt": "browser-web-r3-plan-results.json",
+      "name": "access-final-module-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 26.735
+    },
+    {
+      "receipt": "browser-web-r3-plan-results.json",
+      "name": "access-final-browser-fixture-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 36.969
+    },
+    {
+      "receipt": "browser-web-r3-plan-results.json",
+      "name": "browser-web-acceptance",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "exit": 1,
+      "durationSeconds": 40.14
+    },
+    {
+      "receipt": "browser-web-r4-plan-results.json",
+      "name": "browser-web-interactive-acceptance",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "exit": 1,
+      "durationSeconds": 42.016
+    },
+    {
+      "receipt": "components-plan-results.json",
+      "name": "components-build",
+      "cwd": "C:/repositories/CanDoItAll.Components",
+      "command": [
+        "dotnet",
+        "build",
+        "src/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 14.188
+    },
+    {
+      "receipt": "components-plan-results.json",
+      "name": "components-discovery",
+      "cwd": "C:/repositories/CanDoItAll.Components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/CanDoItAll.Components.BaseLib.Tests/CanDoItAll.Components.BaseLib.Tests.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~DialogNavigationOwnershipTests|FullyQualifiedName~StandardPublishingApprovalTests",
+        "--list-tests"
+      ],
+      "expectedDiscovery": 21,
+      "namespace": "CanDoItAll.Components.BaseLib.Tests",
+      "exit": 0,
+      "durationSeconds": 33.0,
+      "discovered": 21
+    },
+    {
+      "receipt": "components-plan-results.json",
+      "name": "components-owning",
+      "cwd": "C:/repositories/CanDoItAll.Components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/CanDoItAll.Components.BaseLib.Tests/CanDoItAll.Components.BaseLib.Tests.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~DialogNavigationOwnershipTests|FullyQualifiedName~StandardPublishingApprovalTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\components.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\components.trx",
+      "exit": 0,
+      "durationSeconds": 4.0,
+      "counts": {
+        "total": "21",
+        "executed": "21",
+        "passed": "21",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "context-green-plan-results.json",
+      "name": "context-green-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 45,
+      "exit": 0,
+      "durationSeconds": 55.64,
+      "discovered": 45
+    },
+    {
+      "receipt": "context-green-plan-results.json",
+      "name": "context-green",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\context-green.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\context-green.trx",
+      "exit": 0,
+      "durationSeconds": 12.61,
+      "counts": {
+        "total": "45",
+        "executed": "45",
+        "passed": "45",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "context-red-plan-results.json",
+      "name": "context-red-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 1,
+      "exit": 0,
+      "durationSeconds": 96.063,
+      "discovered": 1
+    },
+    {
+      "receipt": "context-red-plan-results.json",
+      "name": "context-red",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\context-red.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\context-red.trx",
+      "exit": 1,
+      "durationSeconds": 2.203,
+      "counts": {
+        "total": "1",
+        "executed": "1",
+        "passed": "0",
+        "failed": "1",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-ui",
+      "command": [
+        "dotnet",
+        "build",
+        "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 9.312
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-shared-components",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 22.532
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-module",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 125.437
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-unit-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests|FullyQualifiedName~GovernanceSandboxTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Unit.AgentFramework",
+      "expectedDiscovery": 47,
+      "exit": 0,
+      "durationSeconds": 130.094,
+      "discovered": 47
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-unit",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests|FullyQualifiedName~GovernanceSandboxTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\extracted-unit.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\extracted-unit.trx",
+      "exit": 0,
+      "durationSeconds": 2.156,
+      "counts": {
+        "total": "47",
+        "executed": "47",
+        "passed": "47",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-components-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests|FullyQualifiedName~AgentGovernanceContextRevisionTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 45,
+      "exit": 0,
+      "durationSeconds": 51.937,
+      "discovered": 45
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests|FullyQualifiedName~AgentGovernanceContextRevisionTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\extracted-components.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\extracted-components.trx",
+      "exit": 0,
+      "durationSeconds": 13.89,
+      "counts": {
+        "total": "45",
+        "executed": "45",
+        "passed": "45",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-integration-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Integration.AgentFramework",
+      "expectedDiscovery": 4,
+      "exit": 0,
+      "durationSeconds": 53.969,
+      "discovered": 4
+    },
+    {
+      "receipt": "extracted-plan-results.json",
+      "name": "extracted-integration",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\extracted-integration.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\extracted-integration.trx",
+      "exit": 0,
+      "durationSeconds": 46.625,
+      "counts": {
+        "total": "4",
+        "executed": "4",
+        "passed": "4",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-extracted-ui",
+      "command": [
+        "dotnet",
+        "build",
+        "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.5
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-extracted-shared-components",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 9.172
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-extracted-module",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 79.766
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-access-green-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 46,
+      "exit": 0,
+      "durationSeconds": 83.297,
+      "discovered": 46
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-access-green",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\final-access-green.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\final-access-green.trx",
+      "exit": 0,
+      "durationSeconds": 12.594,
+      "counts": {
+        "total": "46",
+        "executed": "46",
+        "passed": "46",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-owning-components-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentChatModalTests.Runtime_details_dialog_",
+        "--no-build",
+        "--no-restore",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 32,
+      "exit": 0,
+      "durationSeconds": 1.39,
+      "discovered": 32
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-owning-components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~AgentsOverviewReadLifecycleTests|FullyQualifiedName~AgentChatModalTests.Runtime_details_dialog_",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\final-owning-components.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\final-owning-components.trx",
+      "exit": 0,
+      "durationSeconds": 105.266,
+      "counts": {
+        "total": "32",
+        "executed": "32",
+        "passed": "32",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-assets-parity",
+      "command": [
+        "npm.cmd",
+        "run",
+        "tailwind:build"
+      ],
+      "exit": 0,
+      "durationSeconds": 1.203
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-assets-fast",
+      "command": [
+        "npm.cmd",
+        "run",
+        "catalog:css:build"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.891
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-browser-web-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 35.062
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-browser-sandbox-parity-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:CatalogAssetMode=Parity"
+      ],
+      "exit": 0,
+      "durationSeconds": 3.875
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-browser-sandbox-fast-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:CatalogAssetMode=Fast"
+      ],
+      "exit": 0,
+      "durationSeconds": 6.156
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-browser-browser-fixture-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 38.594
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-browser-web-interactive-acceptance",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "exit": 0,
+      "durationSeconds": 16.765
+    },
+    {
+      "receipt": "final-focused-browser-plan-results.json",
+      "name": "final-browser-parity-acceptance",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Parity"
+      ],
+      "exit": 1,
+      "durationSeconds": 2.282
+    },
+    {
+      "receipt": "header-green-plan-results.json",
+      "name": "header-fixture-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 128.422
+    },
+    {
+      "receipt": "header-green-plan-results.json",
+      "name": "header-web-browser",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "exit": 0,
+      "durationSeconds": 17.625
+    },
+    {
+      "receipt": "header-green-plan-results.json",
+      "name": "header-sandbox-parity-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.531
+    },
+    {
+      "receipt": "header-green-plan-results.json",
+      "name": "header-sandbox-parity-browser",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Parity"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.875
+    },
+    {
+      "receipt": "header-green-plan-results.json",
+      "name": "header-sandbox-fast-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-p:CatalogAssetMode=Fast",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.562
+    },
+    {
+      "receipt": "header-green-plan-results.json",
+      "name": "header-sandbox-fast-browser",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Fast"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.922
+    },
+    {
+      "receipt": "header-red-plan-results.json",
+      "name": "header-bounds-red",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "exit": 1,
+      "durationSeconds": 12.219
+    },
+    {
+      "receipt": "inplace-plan-results.json",
+      "name": "inplace-models",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 13.031
+    },
+    {
+      "receipt": "inplace-plan-results.json",
+      "name": "inplace-shared-components",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 50.782
+    },
+    {
+      "receipt": "inplace-plan-results.json",
+      "name": "inplace-module",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 211.968
+    },
+    {
+      "receipt": "inplace-plan-results.json",
+      "name": "g00-inplace-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests",
+        "--list-tests"
+      ],
+      "expectedDiscovery": 34,
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "exit": 0,
+      "durationSeconds": 144.516,
+      "discovered": 34
+    },
+    {
+      "receipt": "inplace-plan-results.json",
+      "name": "g00-inplace",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentGovernanceReadLifecycleTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\g00-inplace.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\g00-inplace.trx",
+      "exit": 1,
+      "durationSeconds": 16.516,
+      "counts": {
+        "total": "34",
+        "executed": "34",
+        "passed": "32",
+        "failed": "2",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "inplace-r2-plan-results.json",
+      "name": "inplace-r2-models",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 4.953
+    },
+    {
+      "receipt": "inplace-r2-plan-results.json",
+      "name": "inplace-r2-module",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 57.969
+    },
+    {
+      "receipt": "inplace-r2-plan-results.json",
+      "name": "inplace-r2-unit-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Unit.AgentFramework",
+      "expectedDiscovery": 30,
+      "exit": 0,
+      "durationSeconds": 139.609,
+      "discovered": 30
+    },
+    {
+      "receipt": "inplace-r2-plan-results.json",
+      "name": "inplace-r2-unit",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r2-unit.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r2-unit.trx",
+      "exit": 0,
+      "durationSeconds": 2.5,
+      "counts": {
+        "total": "30",
+        "executed": "30",
+        "passed": "30",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "inplace-r2-plan-results.json",
+      "name": "inplace-r2-components-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 44,
+      "exit": 0,
+      "durationSeconds": 61.688,
+      "discovered": 44
+    },
+    {
+      "receipt": "inplace-r2-plan-results.json",
+      "name": "inplace-r2-components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r2-components.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r2-components.trx",
+      "exit": 1,
+      "durationSeconds": 16.875,
+      "counts": {
+        "total": "44",
+        "executed": "44",
+        "passed": "42",
+        "failed": "2",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "inplace-r3-plan-results.json",
+      "name": "inplace-r3-module",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 53.219
+    },
+    {
+      "receipt": "inplace-r3-plan-results.json",
+      "name": "inplace-r3-components-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Components.AgentFramework",
+      "expectedDiscovery": 44,
+      "exit": 0,
+      "durationSeconds": 59.328,
+      "discovered": 44
+    },
+    {
+      "receipt": "inplace-r3-plan-results.json",
+      "name": "inplace-r3-components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceSurfaceTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r3-components.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r3-components.trx",
+      "exit": 0,
+      "durationSeconds": 15.922,
+      "counts": {
+        "total": "44",
+        "executed": "44",
+        "passed": "44",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "inplace-r3-plan-results.json",
+      "name": "inplace-r3-integration-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Integration.AgentFramework",
+      "expectedDiscovery": 4,
+      "exit": 0,
+      "durationSeconds": 71.593,
+      "discovered": 4
+    },
+    {
+      "receipt": "inplace-r3-plan-results.json",
+      "name": "inplace-r3-integration",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r3-integration.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r3-integration.trx",
+      "exit": 1,
+      "durationSeconds": 55.079,
+      "counts": {
+        "total": "4",
+        "executed": "4",
+        "passed": "3",
+        "failed": "1",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "inplace-r4-plan-results.json",
+      "name": "inplace-r4-integration-discovery",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--list-tests"
+      ],
+      "namespace": "CanDoItAll.Tests.Integration.AgentFramework",
+      "expectedDiscovery": 4,
+      "exit": 0,
+      "durationSeconds": 67.016,
+      "discovered": 4
+    },
+    {
+      "receipt": "inplace-r4-plan-results.json",
+      "name": "inplace-r4-integration",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "--filter",
+        "FullyQualifiedName~AgentGovernanceReadsTests",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r4-integration.trx"
+      ],
+      "trx": "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\inplace-r4-integration.trx",
+      "exit": 0,
+      "durationSeconds": 55.344,
+      "counts": {
+        "total": "4",
+        "executed": "4",
+        "passed": "4",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      }
+    },
+    {
+      "receipt": "inplace-r4-plan-results.json",
+      "name": "browser-fixture-build",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 52.532
+    },
+    {
+      "receipt": "inplace-r4-plan-results.json",
+      "name": "browser-fixture-prepare",
+      "command": [
+        "dotnet",
+        "tests/Playwright/GovernanceBrowserFixture/bin/Release/net10.0/GovernanceBrowserFixture.dll",
+        "prepare",
+        "C:\\repositories\\CanDoItAll"
+      ],
+      "exit": 3762504530,
+      "durationSeconds": 22.797
+    },
+    {
+      "receipt": "sandbox-final-plan-results.json",
+      "name": "sandbox-final-parity-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 6.313
+    },
+    {
+      "receipt": "sandbox-final-plan-results.json",
+      "name": "sandbox-final-parity-browser",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Parity"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.875
+    },
+    {
+      "receipt": "sandbox-final-plan-results.json",
+      "name": "sandbox-final-fast-build",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-p:CatalogAssetMode=Fast",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.219
+    },
+    {
+      "receipt": "sandbox-final-plan-results.json",
+      "name": "sandbox-final-fast-browser",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/browser.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Fast"
+      ],
+      "exit": 0,
+      "durationSeconds": 5.812
+    },
+    {
+      "receipt": "static-closure-plan-results.json",
+      "name": "portability-closure-scan",
+      "command": [
+        "python",
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts\\governance-final\\portability-final-scan.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 130.546
+    },
+    {
+      "receipt": "static-closure-plan-results.json",
+      "name": "portability-closure-enforcement",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts\\governance-final\\portability-final-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.657
+    },
+    {
+      "receipt": "static-closure-plan-results.json",
+      "name": "documentation-closure-gate",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "exit": 1,
+      "durationSeconds": 16.765
+    },
+    {
+      "receipt": "static-final-plan-results.json",
+      "name": "portability-final-scan",
+      "command": [
+        "python",
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts\\governance-final\\portability-final-scan.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 88.672
+    },
+    {
+      "receipt": "static-final-plan-results.json",
+      "name": "portability-reviewed-refresh",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts\\governance-final\\portability-final-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json",
+        "--write-baseline"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.515
+    },
+    {
+      "receipt": "static-final-plan-results.json",
+      "name": "portability-final-enforcement",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts\\governance-final\\portability-final-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.485
+    },
+    {
+      "receipt": "static-review-plan-results.json",
+      "name": "portability-self-tests",
+      "command": [
+        "python",
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.14
+    },
+    {
+      "receipt": "static-review-plan-results.json",
+      "name": "secret-scanner-self-tests",
+      "command": [
+        "python",
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.438
+    },
+    {
+      "receipt": "static-review-plan-results.json",
+      "name": "portability-full-scan",
+      "command": [
+        "python",
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts\\governance-final\\portability-scan.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 89.547
+    },
+    {
+      "receipt": "static-review-plan-results.json",
+      "name": "portability-review",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts\\governance-final\\portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "exit": 1,
+      "durationSeconds": 0.5
+    },
+    {
+      "receipt": "watch-final-plan-results.json",
+      "name": "post-web-watch-smoke",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/smoke.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "post"
+      ],
+      "exit": 0,
+      "durationSeconds": 441.328
+    },
+    {
+      "receipt": "watch-final-plan-results.json",
+      "name": "sandbox-watch-smoke",
+      "command": [
+        "node",
+        "tests/Playwright/GovernanceBrowserFixture/smoke.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "sandbox"
+      ],
+      "exit": 0,
+      "durationSeconds": 90.75
+    },
+    {
+      "receipt": "precheck-commands.json",
+      "name": "clean-source-build",
+      "command": [
+        "dotnet",
+        "build",
+        "CanDoItAll.slnx",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "-p:CanDoItAllComponentsRepositoryRoot=Q:/CanDoItAll.Components",
+        "-p:CanDoItAllFileToolsRepositoryRoot=Q:/CanDoItAll.FileTools"
+      ],
+      "cwd": "Q:\\CanDoItAll",
+      "exit": 1,
+      "durationSeconds": 395.188
+    },
+    {
+      "receipt": "precheck-commands.json",
+      "name": "proposed-clean-source-build",
+      "command": [
+        "dotnet",
+        "build",
+        "CanDoItAll.slnx",
+        "-c",
+        "Release",
+        "/m:1",
+        "-p:UseSharedCompilation=false",
+        "-v:q",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "-p:CanDoItAllComponentsRepositoryRoot=Q:/CanDoItAll.Components",
+        "-p:CanDoItAllFileToolsRepositoryRoot=Q:/CanDoItAll.FileTools"
+      ],
+      "cwd": "Q:\\CanDoItAll",
+      "exit": 0,
+      "durationSeconds": 208.14
+    },
+    {
+      "receipt": "documentation-final-result.json",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "exit": 1,
+      "durationSeconds": 6.359
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "record-blocked-governance",
+      "command": [
+        "python",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\record-blocked-governance.py"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.813
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "final-frozen-source-check",
+      "command": [
+        "python",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\verify-freeze.py"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.078
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "final-proposed-portability-scan",
+      "command": [
+        "python",
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\portability-sealed-scan.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 90.954
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "final-proposed-portability-enforcement",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\portability-sealed-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.515
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "final-documentation",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "exit": 1,
+      "durationSeconds": 5.203
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "final-source-secret-scan",
+      "command": [
+        "python",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\scan-source.py"
+      ],
+      "exit": 0,
+      "durationSeconds": 56.766
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "final-retained-secret-scan",
+      "command": [
+        "python",
+        "codex/bundles/UI_AgentsOverview_01D_PostPush_Delivery_Closure_Bundle/retained/A06/tools/scan-retained.py",
+        "C:\\repositories\\CanDoItAll\\codex\\bundles\\UI_AgentGovernance_01_State_Read_Seams_Bundle\\proof\\final",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\retained-secret-scan.json"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.234
+    },
+    {
+      "receipt": "sealing-results.json",
+      "name": "final-encoding-and-literal-review",
+      "command": [
+        "python",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\governance-final\\encoding-check.py"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.516
+    }
+  ]
+}

@@ -1,0 +1,1151 @@
+{
+  "purpose": "Catastrophic-regression and watcher-functionality smoke, not a general benchmark",
+  "protocol": {
+    "sdk": "10.0.303",
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "agentId": "83cbd161-4bcb-45f9-9cb7-130000000001",
+    "coldStarts": 3,
+    "warmRepetitions": 2,
+    "readyTimeoutMs": 360000,
+    "editTimeoutMs": 90000,
+    "preFiles": {
+      "razor": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernanceSurface.razor",
+      "csharp": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Presentation/GovernancePresentationMapping.cs",
+      "css": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernanceSurface.razor.css"
+    },
+    "preHashes": {
+      "razor": "9aa35e8a8dfba05b07d59cc4477a87e190f9430d5667284803ae45775a37f544",
+      "csharp": "6d7df4f10b446fea66b40bc6897730a913b1f4706db5c369376aa616299088e9",
+      "css": "4ea27bcf99177150e39786e1ceb08822d08c4a91538807de9423dd138ba546f2"
+    },
+    "postFiles": {
+      "razor": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor",
+      "csharp": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+      "css": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor.css"
+    }
+  },
+  "command": "Set GOV_PLAYWRIGHT to the installed Playwright module, reconstruct .artifacts/governance-final/smoke-plan.json from protocol, prepare the isolated fixture, then run node tests/Playwright/GovernanceBrowserFixture/smoke.cjs <repository> pre|post|sandbox sequentially. The pre owner no longer exists in the final source.",
+  "constraints": [
+    "Same Windows machine, SDK 10.0.303, Node 24.19.0, Chromium 149.0.7827.55, 1600x1000; live sibling source mode.",
+    "Pre-extraction baseline was captured in place before moving source; later route/option/header corrections are disclosed. This is not an isolated causal performance comparison.",
+    "Web uses production assets; the final sandbox measurement uses Parity. Fast has browser acceptance, not a speed claim.",
+    "Process-cold with existing restore and filesystem caches; profile confirmations remain in observations.",
+    "No parallel builds/tests during each smoke. No manual browser reload. Each edit restored exact original bytes."
+  ],
+  "acceptedRuns": [
+    {
+      "host": "pre",
+      "sdk": "10.0.303",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "sourceFiles": {
+        "razor": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernanceSurface.razor",
+        "csharp": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Presentation/GovernancePresentationMapping.cs",
+        "css": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernanceSurface.razor.css"
+      },
+      "sourceHashes": {
+        "razor": "9aa35e8a8dfba05b07d59cc4477a87e190f9430d5667284803ae45775a37f544",
+        "csharp": "6d7df4f10b446fea66b40bc6897730a913b1f4706db5c369376aa616299088e9",
+        "css": "4ea27bcf99177150e39786e1ceb08822d08c4a91538807de9423dd138ba546f2"
+      },
+      "classification": "process-cold-with-existing-restore-and-filesystem-cache",
+      "assetMode": "Production",
+      "browser": "149.0.7827.55",
+      "node": "v24.19.0",
+      "cold": [
+        {
+          "repetition": 1,
+          "visibleMs": 245182,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 12004,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-pre-1"
+          },
+          "profileConfirmations": 0
+        },
+        {
+          "repetition": 2,
+          "visibleMs": 119034,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 63444,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-pre-2"
+          },
+          "profileConfirmations": 0
+        },
+        {
+          "repetition": 3,
+          "visibleMs": 125539,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-pre-3"
+          },
+          "profileConfirmations": 0
+        }
+      ],
+      "coldSummary": {
+        "minimumMs": 119034,
+        "maximumMs": 245182,
+        "rangeMs": 126148,
+        "medianMs": 125539
+      },
+      "warm": [
+        {
+          "kind": "razor",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-pre-3"
+          },
+          "classification": "hot-reload",
+          "editToVisibleMs": 39889,
+          "after": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-pre-3"
+          },
+          "success": true,
+          "profileConfirmations": 1
+        },
+        {
+          "kind": "razor",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 1,
+            "ownerId": "governance-pre-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 3054,
+          "after": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 2,
+            "ownerId": "governance-pre-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "csharp",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 3,
+            "ownerId": "governance-pre-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 2862,
+          "after": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 4,
+            "ownerId": "governance-pre-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "csharp",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 5,
+            "ownerId": "governance-pre-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 2850,
+          "after": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 6,
+            "ownerId": "governance-pre-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "css",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 7,
+            "ownerId": "governance-pre-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 12550,
+          "after": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-pre-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "css",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-pre-3"
+          },
+          "classification": "hot-reload",
+          "editToVisibleMs": 8984,
+          "after": {
+            "isReady": true,
+            "runtimePid": 70332,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-pre-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        }
+      ],
+      "warmSummary": {
+        "razor": {
+          "minimumMs": 3054,
+          "maximumMs": 39889,
+          "rangeMs": 36835,
+          "medianMs": 21471.5
+        },
+        "csharp": {
+          "minimumMs": 2850,
+          "maximumMs": 2862,
+          "rangeMs": 12,
+          "medianMs": 2856.0
+        },
+        "css": {
+          "minimumMs": 8984,
+          "maximumMs": 12550,
+          "rangeMs": 3566,
+          "medianMs": 10767.0
+        }
+      },
+      "failures": []
+    },
+    {
+      "host": "post",
+      "sdk": "10.0.303",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "sourceFiles": {
+        "razor": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor",
+        "csharp": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+        "css": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor.css"
+      },
+      "sourceHashes": {
+        "razor": "30d7f9a57ab37848ab2bea2ec99fdda44fe9f80144b26a72cd202b3c069eb287",
+        "csharp": "554b308452aacdba38989a79c78de699bce239e80060b19acc773e229e561ad0",
+        "css": "4ea27bcf99177150e39786e1ceb08822d08c4a91538807de9423dd138ba546f2"
+      },
+      "classification": "process-cold-with-existing-restore-and-filesystem-cache",
+      "assetMode": "Production",
+      "browser": "149.0.7827.55",
+      "node": "v24.19.0",
+      "cold": [
+        {
+          "repetition": 1,
+          "visibleMs": 149029,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 54728,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-post-1"
+          },
+          "profileConfirmations": 0
+        },
+        {
+          "repetition": 2,
+          "visibleMs": 96551,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 69052,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-post-2"
+          },
+          "profileConfirmations": 0
+        },
+        {
+          "repetition": 3,
+          "visibleMs": 97528,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-post-3"
+          },
+          "profileConfirmations": 0
+        }
+      ],
+      "coldSummary": {
+        "minimumMs": 96551,
+        "maximumMs": 149029,
+        "rangeMs": 52478,
+        "medianMs": 97528
+      },
+      "warm": [
+        {
+          "kind": "razor",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-post-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 31824,
+          "after": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 1,
+            "ownerId": "governance-post-3"
+          },
+          "success": true,
+          "profileConfirmations": 1
+        },
+        {
+          "kind": "razor",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 1,
+            "ownerId": "governance-post-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 2139,
+          "after": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 2,
+            "ownerId": "governance-post-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "csharp",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 3,
+            "ownerId": "governance-post-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 2191,
+          "after": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 4,
+            "ownerId": "governance-post-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "csharp",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 5,
+            "ownerId": "governance-post-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 1448,
+          "after": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 6,
+            "ownerId": "governance-post-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "css",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 7,
+            "ownerId": "governance-post-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 9513,
+          "after": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-post-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "css",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-post-3"
+          },
+          "classification": "hot-reload",
+          "editToVisibleMs": 6726,
+          "after": {
+            "isReady": true,
+            "runtimePid": 64048,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-post-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        }
+      ],
+      "warmSummary": {
+        "razor": {
+          "minimumMs": 2139,
+          "maximumMs": 31824,
+          "rangeMs": 29685,
+          "medianMs": 16981.5
+        },
+        "csharp": {
+          "minimumMs": 1448,
+          "maximumMs": 2191,
+          "rangeMs": 743,
+          "medianMs": 1819.5
+        },
+        "css": {
+          "minimumMs": 6726,
+          "maximumMs": 9513,
+          "rangeMs": 2787,
+          "medianMs": 8119.5
+        }
+      },
+      "failures": []
+    },
+    {
+      "host": "sandbox",
+      "sdk": "10.0.303",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "sourceFiles": {
+        "razor": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor",
+        "csharp": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+        "css": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor.css"
+      },
+      "sourceHashes": {
+        "razor": "30d7f9a57ab37848ab2bea2ec99fdda44fe9f80144b26a72cd202b3c069eb287",
+        "csharp": "554b308452aacdba38989a79c78de699bce239e80060b19acc773e229e561ad0",
+        "css": "4ea27bcf99177150e39786e1ceb08822d08c4a91538807de9423dd138ba546f2"
+      },
+      "classification": "process-cold-with-existing-restore-and-filesystem-cache",
+      "assetMode": "Parity",
+      "browser": "149.0.7827.55",
+      "node": "v24.19.0",
+      "cold": [
+        {
+          "repetition": 1,
+          "visibleMs": 22401,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 69160,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-sandbox-1"
+          },
+          "profileConfirmations": 0
+        },
+        {
+          "repetition": 2,
+          "visibleMs": 16850,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 41820,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-sandbox-2"
+          },
+          "profileConfirmations": 0
+        },
+        {
+          "repetition": 3,
+          "visibleMs": 17120,
+          "runtime": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-sandbox-3"
+          },
+          "profileConfirmations": 0
+        }
+      ],
+      "coldSummary": {
+        "minimumMs": 16850,
+        "maximumMs": 22401,
+        "rangeMs": 5551,
+        "medianMs": 17120
+      },
+      "warm": [
+        {
+          "kind": "razor",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 0,
+            "ownerId": "governance-sandbox-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 11852,
+          "after": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 1,
+            "ownerId": "governance-sandbox-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "razor",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 2,
+            "ownerId": "governance-sandbox-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 1419,
+          "after": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 3,
+            "ownerId": "governance-sandbox-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "csharp",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 4,
+            "ownerId": "governance-sandbox-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 317,
+          "after": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 5,
+            "ownerId": "governance-sandbox-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "csharp",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 6,
+            "ownerId": "governance-sandbox-3"
+          },
+          "classification": "browser-reload",
+          "editToVisibleMs": 159,
+          "after": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 7,
+            "ownerId": "governance-sandbox-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "css",
+          "repetition": 1,
+          "before": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-sandbox-3"
+          },
+          "classification": "hot-reload",
+          "editToVisibleMs": 1705,
+          "after": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-sandbox-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        },
+        {
+          "kind": "css",
+          "repetition": 2,
+          "before": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-sandbox-3"
+          },
+          "classification": "hot-reload",
+          "editToVisibleMs": 1351,
+          "after": {
+            "isReady": true,
+            "runtimePid": 69188,
+            "watchIteration": 1,
+            "hotReloadGeneration": 8,
+            "ownerId": "governance-sandbox-3"
+          },
+          "success": true,
+          "profileConfirmations": 0
+        }
+      ],
+      "warmSummary": {
+        "razor": {
+          "minimumMs": 1419,
+          "maximumMs": 11852,
+          "rangeMs": 10433,
+          "medianMs": 6635.5
+        },
+        "csharp": {
+          "minimumMs": 159,
+          "maximumMs": 317,
+          "rangeMs": 158,
+          "medianMs": 238.0
+        },
+        "css": {
+          "minimumMs": 1351,
+          "maximumMs": 1705,
+          "rangeMs": 354,
+          "medianMs": 1528.0
+        }
+      },
+      "failures": []
+    }
+  ],
+  "supersededRuns": {
+    "reason": "Header overflow identified visually after these successful measurements; both affected hosts rerun after the fix. No samples discarded as outliers.",
+    "runs": [
+      {
+        "host": "post",
+        "sdk": "10.0.303",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "sourceFiles": {
+          "razor": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor",
+          "csharp": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+          "css": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor.css"
+        },
+        "sourceHashes": {
+          "razor": "5a3fcbe146e4904064dba7b06b42b1a47c57d1db4493bb52712e81a71fbbe36e",
+          "csharp": "554b308452aacdba38989a79c78de699bce239e80060b19acc773e229e561ad0",
+          "css": "4ea27bcf99177150e39786e1ceb08822d08c4a91538807de9423dd138ba546f2"
+        },
+        "classification": "process-cold-with-existing-restore-and-filesystem-cache",
+        "assetMode": "Production",
+        "browser": "149.0.7827.55",
+        "node": "v24.19.0",
+        "cold": [
+          {
+            "repetition": 1,
+            "visibleMs": 179791,
+            "runtime": {
+              "isReady": true,
+              "runtimePid": 68900,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-post-1"
+            },
+            "profileConfirmations": 0
+          },
+          {
+            "repetition": 2,
+            "visibleMs": 96940,
+            "runtime": {
+              "isReady": true,
+              "runtimePid": 68840,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-post-2"
+            },
+            "profileConfirmations": 0
+          },
+          {
+            "repetition": 3,
+            "visibleMs": 93484,
+            "runtime": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-post-3"
+            },
+            "profileConfirmations": 0
+          }
+        ],
+        "coldSummary": {
+          "minimumMs": 93484,
+          "maximumMs": 179791,
+          "rangeMs": 86307,
+          "medianMs": 96940
+        },
+        "warm": [
+          {
+            "kind": "razor",
+            "repetition": 1,
+            "before": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-post-3"
+            },
+            "classification": "hot-reload",
+            "editToVisibleMs": 5645,
+            "after": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-post-3"
+            },
+            "success": true,
+            "profileConfirmations": 1
+          },
+          {
+            "kind": "razor",
+            "repetition": 2,
+            "before": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 1,
+              "ownerId": "governance-post-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 2614,
+            "after": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 2,
+              "ownerId": "governance-post-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "csharp",
+            "repetition": 1,
+            "before": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 3,
+              "ownerId": "governance-post-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 2314,
+            "after": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 4,
+              "ownerId": "governance-post-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "csharp",
+            "repetition": 2,
+            "before": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 5,
+              "ownerId": "governance-post-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 1803,
+            "after": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 6,
+              "ownerId": "governance-post-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "css",
+            "repetition": 1,
+            "before": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 7,
+              "ownerId": "governance-post-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 11299,
+            "after": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 8,
+              "ownerId": "governance-post-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "css",
+            "repetition": 2,
+            "before": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 8,
+              "ownerId": "governance-post-3"
+            },
+            "classification": "hot-reload",
+            "editToVisibleMs": 6540,
+            "after": {
+              "isReady": true,
+              "runtimePid": 69288,
+              "watchIteration": 1,
+              "hotReloadGeneration": 8,
+              "ownerId": "governance-post-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          }
+        ],
+        "warmSummary": {
+          "razor": {
+            "minimumMs": 2614,
+            "maximumMs": 5645,
+            "rangeMs": 3031,
+            "medianMs": 4129.5
+          },
+          "csharp": {
+            "minimumMs": 1803,
+            "maximumMs": 2314,
+            "rangeMs": 511,
+            "medianMs": 2058.5
+          },
+          "css": {
+            "minimumMs": 6540,
+            "maximumMs": 11299,
+            "rangeMs": 4759,
+            "medianMs": 8919.5
+          }
+        },
+        "failures": []
+      },
+      {
+        "host": "sandbox",
+        "sdk": "10.0.303",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "sourceFiles": {
+          "razor": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor",
+          "csharp": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+          "css": "src/UI/CanDoItAll.AgentFramework.UI/Governance/AgentGovernanceSurface.razor.css"
+        },
+        "sourceHashes": {
+          "razor": "5a3fcbe146e4904064dba7b06b42b1a47c57d1db4493bb52712e81a71fbbe36e",
+          "csharp": "554b308452aacdba38989a79c78de699bce239e80060b19acc773e229e561ad0",
+          "css": "4ea27bcf99177150e39786e1ceb08822d08c4a91538807de9423dd138ba546f2"
+        },
+        "classification": "process-cold-with-existing-restore-and-filesystem-cache",
+        "assetMode": "Parity",
+        "browser": "149.0.7827.55",
+        "node": "v24.19.0",
+        "cold": [
+          {
+            "repetition": 1,
+            "visibleMs": 21537,
+            "runtime": {
+              "isReady": true,
+              "runtimePid": 14184,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-sandbox-1"
+            },
+            "profileConfirmations": 0
+          },
+          {
+            "repetition": 2,
+            "visibleMs": 16814,
+            "runtime": {
+              "isReady": true,
+              "runtimePid": 30340,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-sandbox-2"
+            },
+            "profileConfirmations": 0
+          },
+          {
+            "repetition": 3,
+            "visibleMs": 16992,
+            "runtime": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-sandbox-3"
+            },
+            "profileConfirmations": 0
+          }
+        ],
+        "coldSummary": {
+          "minimumMs": 16814,
+          "maximumMs": 21537,
+          "rangeMs": 4723,
+          "medianMs": 16992
+        },
+        "warm": [
+          {
+            "kind": "razor",
+            "repetition": 1,
+            "before": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 0,
+              "ownerId": "governance-sandbox-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 9864,
+            "after": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 1,
+              "ownerId": "governance-sandbox-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "razor",
+            "repetition": 2,
+            "before": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 2,
+              "ownerId": "governance-sandbox-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 1248,
+            "after": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 3,
+              "ownerId": "governance-sandbox-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "csharp",
+            "repetition": 1,
+            "before": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 4,
+              "ownerId": "governance-sandbox-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 325,
+            "after": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 5,
+              "ownerId": "governance-sandbox-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "csharp",
+            "repetition": 2,
+            "before": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 6,
+              "ownerId": "governance-sandbox-3"
+            },
+            "classification": "browser-reload",
+            "editToVisibleMs": 325,
+            "after": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 7,
+              "ownerId": "governance-sandbox-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "css",
+            "repetition": 1,
+            "before": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 8,
+              "ownerId": "governance-sandbox-3"
+            },
+            "classification": "hot-reload",
+            "editToVisibleMs": 1483,
+            "after": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 8,
+              "ownerId": "governance-sandbox-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          },
+          {
+            "kind": "css",
+            "repetition": 2,
+            "before": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 8,
+              "ownerId": "governance-sandbox-3"
+            },
+            "classification": "hot-reload",
+            "editToVisibleMs": 1311,
+            "after": {
+              "isReady": true,
+              "runtimePid": 43576,
+              "watchIteration": 1,
+              "hotReloadGeneration": 8,
+              "ownerId": "governance-sandbox-3"
+            },
+            "success": true,
+            "profileConfirmations": 0
+          }
+        ],
+        "warmSummary": {
+          "razor": {
+            "minimumMs": 1248,
+            "maximumMs": 9864,
+            "rangeMs": 8616,
+            "medianMs": 5556.0
+          },
+          "csharp": {
+            "minimumMs": 325,
+            "maximumMs": 325,
+            "rangeMs": 0,
+            "medianMs": 325.0
+          },
+          "css": {
+            "minimumMs": 1311,
+            "maximumMs": 1483,
+            "rangeMs": 172,
+            "medianMs": 1397.0
+          }
+        },
+        "failures": []
+      }
+    ]
+  },
+  "verdict": "Final nine process-cold starts and eighteen warm edits passed; no universal speed improvement or Fast superiority claimed."
+}

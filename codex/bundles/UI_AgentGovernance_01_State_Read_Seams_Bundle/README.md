@@ -1,21 +1,13 @@
 # Agent Governance state/read seams
 
-Reference: **CDA-UI-SEAMS-AGENT-GOVERNANCE-01**. Status: **G00 CLOSED; G01 BLOCKED BY AUTOMATIC APPROVAL REVIEW**. [New authorization](inputs/02-implementation-authorization.json) permits sequential G00-G03 after Phase A. No commits, pushes, FileTools changes, or Diagnostics implementation.
+Reference: **CDA-UI-SEAMS-AGENT-GOVERNANCE-01**. **G01-G03 implemented; formal closure is blocked.** All 34 original G00 cases pass, including the 29 previously RED cases. The final stable execution returned 10,350 passed, 1 failed and zero skipped. Its unchanged exact failed case passed on one isolated retry; the broad result remains failed.
 
-Prepare a predictable read-only run inspector without changing execution, approvals or production routes. The current panel partially fences agent-list work but does not own manual run-detail lifetime. Keep its existing correct behavior, repair proven races in Module, then extract only the real controlled rendering closure after a fresh pre-move baseline.
+The latest inline owner request superseded the historical preparation/approval stopping point. [G00 proof](proof/G00/closure.md) remains unchanged. No commits, pushes, history changes or FileTools edits occurred.
 
-The prerequisite [Overview closure receipt](proof/preparation/overview-entry-manifest-verification.json) passed at 2026-09-07 16:39:40 UTC. This preparation began afterward. The preparation observation was ad2ded645e65b8b205959f6fed816d082b99a7be; it is historical, not current execution identity. [Entry state](proof/preparation/entry-state.json) identifies the necessary four-file Components patch and clean FileTools sibling. These are observations, not revision pins; rediscover before future execution.
+Read the [implementation and blocker report](report.md), [ledger](execution.md), [semantic test map](plan/semantic-test-map.md), [validation](proof/final/validation-summary.json), [browser evidence](proof/final/browser-summary.json), [graph](proof/final/evaluated-dependency-graph.json) and [watch smoke](proof/final/development-loop-summary.json). Earlier requirements and boundary decisions remain context where the latest inline scope did not replace them.
 
-Read [requirements](requirements.md), [adjudication](reviews/findings-adjudication.md), [boundary](architecture/01-csharp-boundary-map.md), [semantic test map](plan/semantic-test-map.md), [validation](plan/validation.md), [UI composition](plan/ui-composition.md) and [execution ledger](execution.md). [Preparation review](reviews/csharp-architecture-gate.md) assesses the plan, not future runtime results. [Traceability](traceability.md) maps every Phase C requirement.
+Module owns the per-panel session, three read lifetimes and accepted context effects. UI owns immutable allowlisted presentation, controlled rendering and the single timeline/metrics implementations. The existing sandbox now includes Governance without production services.
 
-```mermaid
-flowchart LR
-    Overview[Overview manifest-checked closure] --> G00[Characterization and semantic RED]
-    G00 --> G01[Accepted target and independent read lanes]
-    G01 --> G02[Controlled surface and context effects]
-    G02 --> G03[Pre-move baseline then extraction and sandbox]
-```
+**Delivery limitation:** published sibling bytes still lack the dialog lease required by existing /agents consumers. The exact existing five-file Components patch passes its build and 21 owning tests and was unchanged by this task. Publish Components first, then update CANDOITALL_COMPONENTS_COMMIT to the resulting real commit and deliver primary. No unpublished SHA is invented. The documentation gate separately retains its 118 historical tracked-log findings.
 
-Each child requires its own review, exact compiled discovery, proof and byte manifest before the next begins. G03 begins with baseline collection, not source movement. Overview/Capabilities/Catalog historical timings and tests are not Governance proof. Implementation is now authorized after Phase A. [Fresh entry](proof/G00/entry-repositories.json), [source hashes](proof/G00/entry-source.json), [Phase A seal](proof/G00/phase-a-entry-seal.json), and [G00 decisions](reviews/G00-ownership-and-presentation.md) govern execution. Primary entry is 2f3a6020e805deb02a6dcfbdfb52f352eb59ce61 plus proposed Phase A bytes. The five-file Components dependency remains unpublished; inherited documentation debt still blocks merge readiness. Proof is retainable under Phase A scoped ignore/attribute rules.
-
-The production write and its authorization-evidenced retry were rejected before execution. [Stopping-point receipt](proof/G00/implementation-approval-block.json) proves that Governance production remains unchanged. [Delivery and execution report](report.md) separates completed work from gated work. Direct owner confirmation in chat is required to resolve the approval block; no alternative write route will be used.
+Diagnostics remains gated. No next-diagnostics.md was created because the final broad gate did not pass. Diagnose the unrelated process-start failure in its owner and resolve delivery prerequisites before declaring closure.

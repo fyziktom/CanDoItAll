@@ -1,0 +1,32 @@
+@namespace CanDoItAll.AgentFramework.UI.Governance
+@using static CanDoItAll.AgentFramework.UI.Governance.GovernancePresentationMapping
+
+<SectionCard Title="Metrics" Description="Recorded outcomes, token estimates, and provider usage.">
+    <CompactStatStrip>
+        <CompactStat Label="runs" Value="@Number(Metrics.Totals.Runs)" TooltipText="Recorded run metrics." />
+        <CompactStat Label="succeeded" Value="@Number(Metrics.Totals.Succeeded)" TooltipText="Successful runs." Tone="success" />
+        <CompactStat Label="failed" Value="@Number(Metrics.Totals.Failed)" TooltipText="Failed runs." Tone="danger" />
+        <CompactStat Label="input tokens" Value="@Number(Metrics.Totals.InputTokens)" TooltipText="Estimated input tokens." Tone="info" />
+        <CompactStat Label="output tokens" Value="@Number(Metrics.Totals.OutputTokens)" TooltipText="Estimated output tokens." Tone="info" />
+        <CompactStat Label="tool calls" Value="@Number(Metrics.Totals.ToolCalls)" TooltipText="Tool invocations." Tone="warning" />
+    </CompactStatStrip>
+    @if (Metrics.Rows.Length == 0) {
+        <EmptyState Eyebrow="Metrics" Title="No metrics recorded yet"
+                    Description="Send a prompt to capture run metrics." />
+    } else {
+        <Stack GapScale="LayoutGap.Small">
+            @foreach (var metric in Metrics.Rows) {
+                <SelectionListItem Title="@metric.Title" Eyebrow="@metric.Eyebrow" Meta="@metric.Status" Summary="@metric.Summary">
+                    <Status>
+                        <StatusBadge Tone="@Tone(metric.Tone)" Text="@metric.Timestamp" />
+                    </Status>
+                </SelectionListItem>
+            }
+        </Stack>
+    }
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ExecutionMetricsPresentation Metrics { get; set; } = ExecutionMetricsPresentation.Empty;
+}

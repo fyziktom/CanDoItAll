@@ -1,3 +1,4 @@
+@using CanDoItAll.AgentFramework.UI.Governance
 <div class="agent-runtime-details-dialog" data-testid="agent-runtime-details-dialog-body">
     <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
         <SurfaceCard Soft="true">
@@ -15,7 +16,7 @@
                         {
                             <StatusBadge Tone="info" Text="@Run.Outcome.Value.ToString()" />
                         }
-                        <StatusBadge Tone="neutral" Text="@Run.UpdatedAtUtc.LocalDateTime.ToString("g")" />
+                        <StatusBadge Tone="neutral" Text="@GovernancePresentationMapping.Timestamp(Run.UpdatedAtUtc)" />
                     </Cluster>
                     <TextBlock TextStyle="TextStyle.Body2" Value="@Run.Title" />
                     <TextBlock TextStyle="TextStyle.Caption" Value="@($"Entry provider {Run.ProviderName} / {Run.Model}")" />
@@ -48,8 +49,8 @@
         </SurfaceCard>
 
         <Grid Gap="LayoutGap.Large" ColumnTemplate="minmax(0,1.35fr) minmax(18rem,0.65fr)">
-            <ExecutionTimelinePanel Entries="@ExecutionLog" />
-            <MetricSummaryPanel Metrics="@Metrics" />
+            <ExecutionTimelinePanel Entries="@GovernancePresentationMapping.Timeline(ExecutionLog)" />
+            <MetricSummaryPanel Metrics="@GovernancePresentationMapping.Metrics(Metrics)" />
         </Grid>
     </Stack>
 </div>

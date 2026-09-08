@@ -7,6 +7,9 @@
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Overview) {
     <OverviewSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" UsageScopeQuery="@UsageScopeQuery" />
 }
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Governance) {
+    <GovernanceSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" />
+}
 else {
     <CatalogSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" TeamQuery="@TeamQuery" />
 }

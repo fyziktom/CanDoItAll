@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-07T20:08:05.147269+00:00",
+  "generated_utc": "2026-09-08T02:24:14.412119+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14388,
+  "allowance_count": 14391,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -41876,15 +41876,9 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor.cs",
       "category": "case-policy",
-      "source_fingerprint": "01f9fa4efd4450e82eeca640d3855f7d6a858ad5110d53457ac21cb6f8d09070",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "4ae117f98db3ba6e3dbcd744fe2639199d50bc890c6334571b4c63eec5544c83",
+      "source_fingerprint": "56e36c822e20a1de4b5e5e3cdfc052f1fda71a48bc23a0c66cb1de15309e5f8b",
       "count": 1
     },
     {
@@ -69830,6 +69824,12 @@
       "count": 9
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/GovernanceSandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "948dc21a10ee43bc013b328dae3c59704d2713652aae4bb16b3af8c60520a734",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/OverviewSandboxContext.cs",
       "category": "case-policy",
       "source_fingerprint": "6686bb23039df7f4ad544f6bb5f02ca19ca6e565efb1335d48e86aa8eaffde14",
@@ -70025,6 +70025,24 @@
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "9f598a733c82e45484578e095ba3f8f13bdb0e908cdd32d17a0cd1c4e43ff116",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b23691633965d0f153d7d7a0ef71c4bf6d517a69213f44c7a3999589394ed66d",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+      "category": "path-normalization",
+      "source_fingerprint": "365823a369ff5774d171c4b7b00b4666bb3f52598e0f79d06ee44f10ed736ed0",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Governance/GovernancePresentationMapping.cs",
+      "category": "windows-path",
+      "source_fingerprint": "e11d4ddf6d5817a42a2f0274ad9c24088966b3fc2ca15ebdff990ed1d5650196",
       "count": 1
     },
     {

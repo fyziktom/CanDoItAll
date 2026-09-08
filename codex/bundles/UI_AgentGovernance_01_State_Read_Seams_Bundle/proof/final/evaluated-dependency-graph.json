@@ -1,0 +1,390 @@
+{
+  "root": "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\CanDoItAll.AgentFramework.UiSandbox.csproj",
+  "nodes": {
+    "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\CanDoItAll.AgentFramework.UiSandbox.csproj": {
+      "project": "CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "framework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI\\CanDoItAll.AgentFramework.UI.csproj"
+      ]
+    },
+    "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI\\CanDoItAll.AgentFramework.UI.csproj": {
+      "project": "CanDoItAll.AgentFramework.UI.csproj",
+      "framework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Usage\\CanDoItAll.AgentFramework.Usage.csproj",
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+        "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Components\\CanDoItAll.Conversations.Components.csproj",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\CanDoItAll.Components.BaseLib.csproj",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts\\CanDoItAll.Components.Charts.csproj"
+      ]
+    },
+    "C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Usage\\CanDoItAll.AgentFramework.Usage.csproj": {
+      "project": "CanDoItAll.AgentFramework.Usage.csproj",
+      "framework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj"
+      ]
+    },
+    "C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj": {
+      "project": "CanDoItAll.AgentFramework.Models.csproj",
+      "framework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions\\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+        "C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Abstractions\\CanDoItAll.Memory.Abstractions.csproj",
+        "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.SharedKernel\\CanDoItAll.SharedKernel.csproj",
+        "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure.Abstractions\\CanDoItAll.Infrastructure.Abstractions.csproj",
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj"
+      ]
+    },
+    "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Components\\CanDoItAll.Conversations.Components.csproj": {
+      "project": "CanDoItAll.Conversations.Components.csproj",
+      "framework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\CanDoItAll.Components.BaseLib.csproj",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib\\CanDoItAll.Components.OverlayLib.csproj"
+      ]
+    },
+    "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\CanDoItAll.Components.BaseLib.csproj": {
+      "project": "CanDoItAll.Components.BaseLib.csproj",
+      "framework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Common\\CanDoItAll.Components.Common.csproj"
+      ]
+    },
+    "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts\\CanDoItAll.Components.Charts.csproj": {
+      "project": "CanDoItAll.Components.Charts.csproj",
+      "framework": "net10.0",
+      "references": []
+    },
+    "C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions\\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj": {
+      "project": "CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+      "framework": "net10.0",
+      "references": []
+    },
+    "C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Abstractions\\CanDoItAll.Memory.Abstractions.csproj": {
+      "project": "CanDoItAll.Memory.Abstractions.csproj",
+      "framework": "net10.0",
+      "references": []
+    },
+    "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.SharedKernel\\CanDoItAll.SharedKernel.csproj": {
+      "project": "CanDoItAll.SharedKernel.csproj",
+      "framework": "net10.0",
+      "references": []
+    },
+    "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure.Abstractions\\CanDoItAll.Infrastructure.Abstractions.csproj": {
+      "project": "CanDoItAll.Infrastructure.Abstractions.csproj",
+      "framework": "net10.0",
+      "references": []
+    },
+    "C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj": {
+      "project": "CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj",
+      "framework": "net10.0",
+      "references": []
+    },
+    "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib\\CanDoItAll.Components.OverlayLib.csproj": {
+      "project": "CanDoItAll.Components.OverlayLib.csproj",
+      "framework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\CanDoItAll.Components.BaseLib.csproj"
+      ]
+    },
+    "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Common\\CanDoItAll.Components.Common.csproj": {
+      "project": "CanDoItAll.Components.Common.csproj",
+      "framework": "net10.0",
+      "references": []
+    }
+  },
+  "forbiddenDependencies": [],
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\Sandboxes\\CanDoItAll.AgentFramework.UiSandbox\\CanDoItAll.AgentFramework.UiSandbox.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.672
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI\\CanDoItAll.AgentFramework.UI.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.656
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Usage\\CanDoItAll.AgentFramework.Usage.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.64
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Models\\CanDoItAll.AgentFramework.Models.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.641
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.Conversations.Components\\CanDoItAll.Conversations.Components.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.625
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\CanDoItAll.Components.BaseLib.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.672
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts\\CanDoItAll.Components.Charts.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.734
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\Capabilities\\CanDoItAll.AgentFramework.Capabilities.Abstractions\\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.594
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\Memory\\CanDoItAll.Memory.Abstractions\\CanDoItAll.Memory.Abstractions.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.593
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.SharedKernel\\CanDoItAll.SharedKernel.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.594
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure.Abstractions\\CanDoItAll.Infrastructure.Abstractions.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.61
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll\\src\\MAF\\ProviderHistory\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.578
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib\\CanDoItAll.Components.OverlayLib.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.625
+    },
+    {
+      "command": [
+        "dotnet",
+        "msbuild",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Common\\CanDoItAll.Components.Common.csproj",
+        "-getItem:ProjectReference",
+        "-getProperty:MSBuildProjectFullPath,TargetFramework",
+        "-p:CatalogAssetMode=Parity",
+        "-v:q"
+      ],
+      "exit": 0,
+      "durationSeconds": 0.578
+    }
+  ],
+  "durationSeconds": 8.828,
+  "architecture": {
+    "snapshotId": "snap-20260908014937-d295e557",
+    "scope": {
+      "solutionPath": "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI\\CanDoItAll.AgentFramework.UI.csproj",
+      "scopeProjectNames": [
+        "CanDoItAll.AgentFramework.UI"
+      ],
+      "scopeNamespacePrefixes": [],
+      "includeDi": true,
+      "includePersistence": false,
+      "includeRisks": true,
+      "includeXmlDocs": false,
+      "includeMermaidExports": false
+    },
+    "loaded": {
+      "name": "CanDoItAll.AgentFramework.UI",
+      "path": "C:\\repositories\\CanDoItAll\\src\\UI\\CanDoItAll.AgentFramework.UI\\CanDoItAll.AgentFramework.UI.csproj",
+      "projectCount": 1,
+      "documentCount": 17
+    },
+    "diagnostics": [],
+    "governanceFindings": [
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-ui-ca-c71a7e96e461",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.UI.Governance.GovernanceDetailPresentation exposes 12 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-ui-candoitall-agentf-92a49bd3b23d"
+        ],
+        "source": {
+          "path": "Governance/GovernancePresentation.cs",
+          "line": 63,
+          "column": 1,
+          "endLine": 74,
+          "endColumn": 43
+        }
+      },
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-ui-ca-927543bae5cd",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.UI.Governance.GovernancePresentationMapping exposes 14 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-ui-candoitall-agentf-77630a363030"
+        ],
+        "source": {
+          "path": "Governance/GovernancePresentationMapping.cs",
+          "line": 8,
+          "column": 1,
+          "endLine": 114,
+          "endColumn": 2
+        }
+      },
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-ui-ca-4c2fda1f12ae",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.UI.Governance.GovernanceRunPresentation exposes 17 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-ui-candoitall-agentf-ccfd8d892294"
+        ],
+        "source": {
+          "path": "Governance/GovernancePresentation.cs",
+          "line": 38,
+          "column": 1,
+          "endLine": 54,
+          "endColumn": 25
+        }
+      },
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-ui-ca-50759369469b",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.UI.Governance.GovernanceViewState exposes 11 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-ui-candoitall-agentf-20d0c94ca92d"
+        ],
+        "source": {
+          "path": "Governance/GovernancePresentation.cs",
+          "line": 14,
+          "column": 1,
+          "endLine": 26,
+          "endColumn": 2
+        }
+      }
+    ],
+    "cycles": [],
+    "limitations": "Single-project scoped CodeAnalytics omits external project edges and generated Razor. The evaluated transitive project graph and component tests provide the boundary proof."
+  }
+}
