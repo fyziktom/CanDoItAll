@@ -16,6 +16,9 @@ else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Diagnostics) {
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.History) {
     <HistorySpecimen ScenarioQuery="@ScenarioQuery" />
 }
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatDefinitions) {
+    <DefinitionCatalogSpecimen ScenarioQuery="@ScenarioQuery" />
+}
 else {
     <CatalogSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" TeamQuery="@TeamQuery" />
 }

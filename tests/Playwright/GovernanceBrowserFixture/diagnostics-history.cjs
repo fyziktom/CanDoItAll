@@ -85,7 +85,7 @@ async function diagnostics() {
         }
         return await dismiss.count() === 0;
     }, 'owned notifications dismissed');
-    await page.screenshot({ path: path.join(raw, 'diagnostics-' + mode + '.png') });
+    if (process.env.UI_SEAMS_SCREENSHOTS === 'all') await page.screenshot({ path: path.join(raw, 'diagnostics-' + mode + '.png') });
 }
 async function historySafe(name) {
     const text = await page.locator('body').innerText();
@@ -126,7 +126,7 @@ async function historyScenarios() {
         await historySafe('explicit synthetic content and paging');
         await page.getByTestId('history-content-close').click();
         await until(async () => await page.getByTestId('history-content-text').count() === 0, 'content closed');
-        await page.screenshot({ path: path.join(raw, 'history-' + mode + '.png') });
+        if (process.env.UI_SEAMS_SCREENSHOTS === 'all') await page.screenshot({ path: path.join(raw, 'history-' + mode + '.png') });
         return;
     }
     const counters = async () => (await fetch(control + '/fixture/history')).json();
@@ -161,7 +161,7 @@ async function historyScenarios() {
     await page.getByTestId('history-load-content').waitFor();
     assert.equal((await counters()).metadataReads, 1);
     assert.equal((await counters()).contentReads, 0);
-    await page.screenshot({ path: path.join(raw, 'history-web-metadata.png') });
+    if (process.env.UI_SEAMS_SCREENSHOTS === 'all') await page.screenshot({ path: path.join(raw, 'history-web-metadata.png') });
     await page.getByTestId('history-load-content').click();
     await page.getByTestId('history-content-text').first().waitFor();
     const input = await page.getByTestId('history-content-text').first().inputValue();
@@ -197,6 +197,101 @@ async function historyScenarios() {
     await until(async () => await page.getByTestId('history-detail-dialog').count() === 0, 'closed metadata cannot reappear');
     await historySafe('close during metadata read');
 }
+async function definitionsScenarios() {
+    const catalog = page.getByTestId('llm-chat-definition-catalog');
+    const cards = () => catalog.locator('article');
+    const idA = '31000000-0000-0000-0000-000000000001';
+    const idB = '31000000-0000-0000-0000-000000000002';
+    const inspect = async name => {
+        assert(!(await catalog.innerText()).includes('definition-browser-private-prompt'));
+        assert(!(await catalog.ariaSnapshot()).includes('definition-browser-private-prompt'));
+        assert.equal(await page.locator('#definitions-injected').count(), 0);
+        assert.equal(await catalog.evaluate(e => e.scrollWidth > e.clientWidth + 2), false);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false);
+        result.scenarios.push(name);
+    };
+    if (mode !== 'web') {
+        await page.goto(base + '/agents?specimen=simple-chat-definitions');
+        await until(async () => circuitFrames > 2, 'interactive definitions sandbox');
+        const scenarios = page.locator('#definition-catalog-scenario');
+        for (const value of await scenarios.locator('option').evaluateAll(options => options.map(option => option.value))) {
+            await scenarios.selectOption(value);
+            await inspect('sandbox ' + value);
+        }
+        await scenarios.selectOption('Paged');
+        await catalog.getByTestId('llm-chat-definition-load-more').click();
+        await until(async () => await cards().count() === 2, 'controlled append');
+        await catalog.getByTestId('llm-chat-definition-create').click();
+        await until(async () => (await page.getByTestId('sandbox-intent').innerText()).includes('CreateDefinition'), 'controlled create');
+        assert.equal(await page.getByTestId('llm-chat-definition-editor-dialog').count(), 0);
+        await inspect('controlled paging and editor intent only');
+        return;
+    }
+    const counters = async () => (await fetch(control + '/fixture/definitions')).json();
+    const changeMode = async mode => assert((await fetch(control + '/fixture/definitions/' + mode, { method: 'POST' })).ok);
+    await openWebTab(/^Simple Chats/);
+    await until(async () => await cards().count() === 24, 'automatic first catalog page');
+    await inspect('automatic load and adversarial cards');
+    await catalog.getByTestId('llm-chat-definition-load-more').click();
+    await until(async () => await cards().count() === 27, 'server cursor append');
+    const search = catalog.getByTestId('llm-chat-definition-search');
+    const beforeSearch = (await counters()).listReads;
+    await search.fill('Research');
+    await search.fill('Operations');
+    await until(async () => await cards().count() === 1 && (await counters()).search === 'Operations', 'debounced server search');
+    assert.equal((await counters()).listReads, beforeSearch + 1);
+    await catalog.getByTestId('llm-chat-definition-filter-reset').click();
+    await until(async () => await cards().count() === 24, 'reset search');
+    await catalog.getByTestId('llm-chat-definition-tag-filter-input').fill('operations');
+    await catalog.getByTestId('llm-chat-definition-tag-filter-input').press('Enter');
+    await until(async () => await cards().count() === 1 && (await counters()).tags.includes('operations'), 'server tag filter');
+    await catalog.getByTestId('llm-chat-definition-filter-reset').click();
+    await until(async () => await cards().count() === 24, 'reset tags');
+    await catalog.getByTestId('llm-chat-definition-status-filter').selectOption('3');
+    await until(async () => await cards().count() === 1 && (await counters()).status === 2, 'server suspended status filter');
+    await catalog.getByTestId('llm-chat-definition-filter-reset').click();
+    await until(async () => await cards().count() === 24, 'reset status');
+    await inspect('debounce tags status reset and paging');
+    await page.screenshot({ path: path.join(raw, 'definitions-catalog.png') });
+    await catalog.getByTestId('llm-chat-definition-edit-' + idA).click();
+    const editor = page.getByTestId('llm-chat-definition-editor-dialog');
+    await until(async () => await editor.getByTestId('llm-chat-definition-name').inputValue() === 'Research assistant', 'open route target A');
+    await until(async () => new URL(page.url()).searchParams.get('definitionId') === idA, 'route owns target A');
+    const routeB = new URL(page.url());
+    routeB.searchParams.set('definitionId', idB);
+    await page.evaluate(url => {
+        const link = document.createElement('a');
+        link.href = url;
+        document.body.append(link);
+        link.click();
+        link.remove();
+    }, routeB.href);
+    await until(async () => await editor.getByTestId('llm-chat-definition-name').inputValue() === 'Operations assistant', 'same component route target B');
+    assert.equal(await page.getByTestId('llm-chat-definition-editor-dialog').count(), 1);
+    await page.screenshot({ path: path.join(raw, 'definitions-editor.png') });
+    await editor.getByTestId('llm-chat-definition-editor-cancel').click();
+    await until(async () => await editor.count() === 0 && !new URL(page.url()).searchParams.has('definitionId'), 'close clears route target');
+    await catalog.getByTestId('llm-chat-definition-create').click();
+    await editor.getByTestId('llm-chat-definition-name').fill('Saved catalog specimen');
+    await editor.getByTestId('llm-chat-definition-name').press('Tab');
+    await editor.getByTestId('llm-chat-definition-tab-runtime').click();
+    await editor.getByTestId('llm-chat-definition-provider').selectOption('0');
+    const beforeSave = await counters();
+    await editor.getByTestId('llm-chat-definition-editor-save').click();
+    await until(async () => await editor.count() === 0 && (await catalog.innerText()).includes('Saved catalog specimen'), 'safe fixture save and first page reload');
+    assert.equal((await counters()).saves, beforeSave.saves + 1);
+    assert.equal((await counters()).listReads, beforeSave.listReads + 1);
+    await inspect('A to B close local Create and save reload once');
+    await changeMode('ReadOnly');
+    const beforeReadOnly = (await counters()).editorReads;
+    await page.goto(base + '/agents?tab=simple-chats&definitionId=' + idA);
+    await until(async () => await cards().count() === 24, 'read-only catalog');
+    assert.equal(await catalog.getByTestId('llm-chat-definition-create').count(), 0);
+    assert.equal(await catalog.locator('[data-testid^="llm-chat-definition-edit-"]').count(), 0);
+    assert.equal((await counters()).editorReads, beforeReadOnly);
+    assert.equal(await editor.count(), 0);
+    await inspect('read-only route performs no editor read');
+}
 async function governanceSmoke() {
     if (mode === 'web') {
         await openWebTab(/^Governance/);
@@ -212,7 +307,7 @@ async function governanceSmoke() {
 }
 (async () => {
     const log = fs.createWriteStream(path.join(raw, 'browser-runtime.log'), { flags: 'a' });
-    const args = mode === 'web' ? [path.join(root, 'tests/Playwright/GovernanceBrowserFixture/bin/Release/net10.0/GovernanceBrowserFixture.dll'), feature === 'history' ? 'serve-history' : 'serve', root]
+    const args = mode === 'web' ? [path.join(root, 'tests/Playwright/GovernanceBrowserFixture/bin/Release/net10.0/GovernanceBrowserFixture.dll'), feature === 'history' ? 'serve-history' : feature === 'definitions' ? 'serve-definitions' : 'serve', root]
         : [path.join(root, 'src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/bin', mode, 'Release/net10.0/CanDoItAll.AgentFramework.UiSandbox.dll')];
     child = spawn('dotnet', args, { cwd: mode === 'web' ? root : path.join(root, 'src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox'),
         env: { ...process.env, ASPNETCORE_ENVIRONMENT: 'Development', DOTNET_ENVIRONMENT: 'Development', ASPNETCORE_URLS: base },
@@ -231,6 +326,8 @@ async function governanceSmoke() {
     });
     if (feature === 'history') {
         await historyScenarios();
+    } else if (feature === 'definitions') {
+        await definitionsScenarios();
     } else if (feature === 'governance') {
         await governanceSmoke();
     } else {
@@ -239,7 +336,7 @@ async function governanceSmoke() {
     assert.equal(result.errors.length, 0);
 })().catch(async error => {
     result.failure = error.message;
-    result.failedState = await page?.getByTestId(feature === 'history' ? 'history-results-surface' : 'agents-' + feature + '-panel').innerText({ timeout: 1000 }).catch(() => 'Unavailable');
+    result.failedState = await page?.getByTestId(feature === 'history' ? 'history-results-surface' : feature === 'definitions' ? 'llm-chat-definition-catalog' : 'agents-' + feature + '-panel').innerText({ timeout: 1000 }).catch(() => 'Unavailable');
     process.exitCode = 1;
 }).finally(async () => {
     await browser?.close();

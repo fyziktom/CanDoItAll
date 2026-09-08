@@ -1,4 +1,4 @@
-# CDA-UI-SEAMS-PROVIDER-REQUEST-HISTORY-01
+# CDA-UI-SEAMS-SIMPLE-CHATS-DEFINITIONS-01
 
 Status: implementation complete; broad-gate closure conditional on the additional PostgreSQL setup timeout. See [report.md](report.md) for scope, results and the published-source delivery dependency.
 

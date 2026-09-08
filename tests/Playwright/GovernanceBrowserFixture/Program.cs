@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -10,8 +11,8 @@ using Npgsql;
 
 internal static class GovernanceBrowserEntry {
     public static async Task Main(string[] args) {
-        if (args.Length != 2 || args[0] is not ("prepare" or "serve" or "serve-history")) {
-            throw new ArgumentException("Use prepare, serve or serve-history followed by the repository root.");
+        if (args.Length != 2 || args[0] is not ("prepare" or "serve" or "serve-history" or "serve-definitions")) {
+            throw new ArgumentException("Use prepare, serve, serve-history or serve-definitions followed by the repository root.");
         }
         var repository = Path.GetFullPath(args[1]);
         var output = Path.Combine(repository, ".artifacts", "governance-final", "browser-data");
@@ -24,7 +25,7 @@ internal static class GovernanceBrowserEntry {
         foreach (var pair in environment) {
             Environment.SetEnvironmentVariable(pair.Key, pair.Value);
         }
-        var fixture = new GovernanceBrowserState();
+        var fixture = new GovernanceBrowserState { DefinitionsEnabled = args[0] == "serve-definitions" };
         var stop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [], EnvironmentName = "Development" });
         builder.Logging.ClearProviders();
@@ -48,6 +49,14 @@ internal static class GovernanceBrowserEntry {
         }));
         control.MapPost("/fixture/release", () => {
             fixture.Release();
+            return Results.Ok();
+        });
+        control.MapGet("/fixture/definitions", () => Results.Json(new {
+            fixture.Definitions.ListReads, fixture.Definitions.EditorReads, fixture.Definitions.Saves,
+            fixture.Definitions.Search, fixture.Definitions.Tags, fixture.Definitions.Status
+        }));
+        control.MapPost("/fixture/definitions/{mode}", (DefinitionCatalogBrowserMode mode) => {
+            fixture.Definitions.Mode = mode;
             return Results.Ok();
         });
         control.MapGet("/fixture/state", () => Results.Json(new {
@@ -134,6 +143,13 @@ internal sealed class GovernanceBrowserApplication(string repository, Governance
         builder.UseEnvironment("Development");
         builder.UseContentRoot(Path.Combine(repository, "src", "App", "CanDoItAll.Web"));
         builder.ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
+        if (fixture.DefinitionsEnabled) {
+            builder.ConfigureServices(services => {
+                services.AddSingleton<ILlmChatDefinitionUiGateway>(fixture.Definitions);
+                services.AddSingleton<ILlmChatUiAuthorizationFacade>(fixture.Definitions);
+                services.AddSingleton<ILlmChatProviderUiGateway>(fixture.Definitions);
+            });
+        }
         builder.ConfigureServices(services => services.AddScoped<IProviderRequestHistory>(provider =>
             new HistoryBrowserReads(ActivatorUtilities.CreateInstance<ProviderRequestHistoryService>(provider), fixture)));
         builder.ConfigureServices(services => services.AddScoped<IAgentDiagnosticsReads>(provider =>
@@ -146,6 +162,8 @@ internal sealed class GovernanceBrowserApplication(string repository, Governance
 internal enum GovernanceBrowserMode { Normal, HoldDetail, HoldList, FailDetail, FailList, Long, Removed, Poison }
 
 internal sealed class GovernanceBrowserState {
+    public bool DefinitionsEnabled { get; init; }
+    public DefinitionCatalogBrowserFixture Definitions { get; } = new();
     public const string Denied = "governance-denied-payload";
     public static readonly Guid AgentA = Guid.Parse("83cbd161-4bcb-45f9-9cb7-130000000001");
     public static readonly Guid AgentB = Guid.Parse("83cbd161-4bcb-45f9-9cb7-130000000002");

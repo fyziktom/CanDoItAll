@@ -163,6 +163,20 @@ Do not use `--write-baseline` to conceal an unexplained result, weaken scanner p
 or defer the update to a later change. `ADDED` and `STALE` findings both block closure
 until the code and reviewed baseline agree and the final no-write enforcement passes.
 
+## Documentation evidence validation
+
+`./tools/Validation/Test-Documentation.ps1` rejects tracked runtime logs. Durable `.log`
+evidence inside a bundle below `codex/bundles` is accepted only when the owning tracked
+`MANIFEST.sha256` contains exactly one matching path and its hash matches the current
+file. Untracked manifests, modified logs and unsealed logs do not qualify; `.pid` and
+`.pyc` files remain forbidden. This implements the shared documentation standard's
+durable bundle evidence exception without altering historical proof. New task-specific
+evidence limits still apply.
+
+Run `./tools/Validation/Test-DocumentationEvidence.ps1` to check the acceptance and
+rejection cases, then run the canonical documentation validator. Both commands only
+validate; the evidence tests create and remove their own temporary fixture.
+
 ## Focused HTTP Integration
 
 For CRM/HR API changes, build the affected production project and run the real HTTP-host

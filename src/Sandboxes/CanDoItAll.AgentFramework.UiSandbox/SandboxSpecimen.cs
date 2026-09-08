@@ -6,7 +6,8 @@ public enum SandboxSpecimen {
     Overview,
     Governance,
     Diagnostics,
-    History
+    History,
+    SimpleChatDefinitions
 }
 
 public static class SandboxSpecimens {
@@ -14,6 +15,7 @@ public static class SandboxSpecimens {
         "capabilities" => SandboxSpecimen.Capabilities,
         "overview" => SandboxSpecimen.Overview,
         "history" => SandboxSpecimen.History,
+        "simple-chat-definitions" => SandboxSpecimen.SimpleChatDefinitions,
         "diagnostics" => SandboxSpecimen.Diagnostics,
         "governance" => SandboxSpecimen.Governance,
         _ => SandboxSpecimen.Catalog

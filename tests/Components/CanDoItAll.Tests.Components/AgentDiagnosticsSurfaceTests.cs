@@ -68,14 +68,37 @@ public sealed class AgentDiagnosticsSurfaceTests {
     }
 
     private sealed class DeferredReads : IAgentDiagnosticsReads {
+        public bool FailDashboard { get; set; }
         public TaskCompletionSource<IReadOnlyList<ExecutionRunRecord>> Pending { get; } = new();
         public CancellationToken Token { get; private set; }
-        public Task<SandboxDashboardSnapshot> ReadDashboardAsync(CancellationToken token) => Task.FromResult(DiagnosticsSandboxFixture.Dashboard());
+        public Task<SandboxDashboardSnapshot> ReadDashboardAsync(CancellationToken token) => FailDashboard
+            ? Task.FromException<SandboxDashboardSnapshot>(new InvalidOperationException("private failure"))
+            : Task.FromResult(DiagnosticsSandboxFixture.Dashboard());
         public Task<IReadOnlyList<AgentDefinition>> ReadAgentsAsync(CancellationToken token) => Task.FromResult<IReadOnlyList<AgentDefinition>>([]);
         public Task<IReadOnlyList<ExecutionRunRecord>> ReadRecentRunsAsync(CancellationToken token) {
             Token = token;
             return Pending.Task;
         }
+    }
+
+    [Fact]
+    public async Task Dashboard_retry_does_not_claim_global_success_while_refresh_runs_are_pending() {
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var reads = new DeferredReads { FailDashboard = true };
+        context.Services.AddSingleton<IAgentDiagnosticsReads>(reads);
+        var cut = context.Render<AgentDiagnosticsPanel>();
+        var notices = context.Services.GetRequiredService<NotificationService>();
+        Assert.Empty(notices.Messages);
+        reads.FailDashboard = false;
+        await cut.FindAll("button").Single(button => button.TextContent.Contains("Retry dashboard", StringComparison.Ordinal)).ClickAsync();
+        Assert.True(cut.Find("[data-testid='diagnostics-refresh']").HasAttribute("disabled"));
+        Assert.Equal("Dashboard diagnostics refreshed from the integrated runtime.", Assert.Single(notices.Messages).Detail);
+        await cut.InvokeAsync(() => reads.Pending.SetResult([]));
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='diagnostics-refresh']").HasAttribute("disabled")));
+        Assert.Single(notices.Messages);
     }
 
     [Fact]

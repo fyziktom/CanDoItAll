@@ -28,7 +28,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
 
     public Task SearchAsync(ProviderRequestHistoryQuery query) {
         ObjectDisposedException.ThrowIf(disposed, this);
-        Reset();
+        ResetCore();
         AppliedQuery = query with { Cursor = null };
         return ReadAsync(AppliedQuery);
     }
@@ -62,16 +62,29 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
     }
 
     public void Cancel() {
-        var owner = active;
-        active = null;
-        IsLoading = false;
+        if (disposed || active is null) {
+            return;
+        }
+        StopRequest();
         WasCanceled = true;
-        owner?.Cancel();
         Changed?.Invoke();
     }
 
+    private void StopRequest() {
+        var owner = active;
+        active = null;
+        IsLoading = false;
+        owner?.Cancel();
+    }
+
     public void Reset() {
-        Cancel();
+        ObjectDisposedException.ThrowIf(disposed, this);
+        ResetCore();
+        Changed?.Invoke();
+    }
+
+    private void ResetCore() {
+        StopRequest();
         AppliedQuery = null;
         Page = null;
         Error = null;
@@ -81,12 +94,11 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
         currentCursor = null;
         PageNumber = 1;
         HasEarlierPages = false;
-        Changed?.Invoke();
     }
 
     private async Task ReadAsync(ProviderRequestHistoryQuery query, Action? accepted = null) {
         ObjectDisposedException.ThrowIf(disposed, this);
-        Cancel();
+        StopRequest();
         using var cancellation = new CancellationTokenSource();
         active = cancellation;
         IsLoading = true;
@@ -102,10 +114,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
             }
             accepted?.Invoke();
             Page = page with { Entries = page.Entries.ToImmutableArray() };
-        } catch (OperationCanceledException) {
-            if (ReferenceEquals(active, cancellation)) {
-                WasCanceled = true;
-            }
+        } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
         } catch (ProviderHistoryException exception) {
             if (ReferenceEquals(active, cancellation)) {
                 Failure = exception.Failure;
@@ -139,6 +148,6 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
         }
         disposed = true;
         Changed = null;
-        Cancel();
+        StopRequest();
     }
 }

@@ -1,0 +1,9 @@
+.definition-catalog-surface {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.definition-catalog-surface ::deep .agent-selection-card {
+    min-width: 0;
+    max-width: 100%;
+}

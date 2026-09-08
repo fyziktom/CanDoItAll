@@ -222,6 +222,54 @@ public sealed class ProviderHistorySearchStateTests {
 
     private static ProviderHistorySearchState Create(Backend backend) => new(backend, NullLogger<ProviderHistorySearchState>.Instance);
 
+    [Fact]
+    public async Task Search_replacement_publishes_only_loading_then_current_result() {
+        var pending = new TaskCompletionSource<HistoryPage>();
+        var backend = new Backend { Read = (_, _) => pending.Task };
+        using var state = Create(backend);
+        var changes = new List<HistorySearchPhase>();
+        state.Changed += () => changes.Add(state.Presentation(false).Phase);
+        var old = state.SearchAsync(Query);
+        var token = backend.LastToken;
+        backend.Read = (_, _) => Task.FromResult(new HistoryPage([], null, new(HistoryCoverageState.Current, Now), Now));
+        await state.SearchAsync(Query);
+        Assert.True(token.IsCancellationRequested);
+        Assert.True(token.WaitHandle.WaitOne(0));
+        pending.SetException(new InvalidOperationException("superseded"));
+        await old;
+        Assert.Equal([HistorySearchPhase.Loading, HistorySearchPhase.Loading, HistorySearchPhase.Ready], changes);
+        Assert.False(state.WasCanceled);
+    }
+
+    [Theory]
+    [InlineData(StopKind.Cancel)]
+    [InlineData(StopKind.Reset)]
+    [InlineData(StopKind.Dispose)]
+    public async Task Stop_publishes_one_final_transition_only_for_user_visible_actions(StopKind stop) {
+        var pending = new TaskCompletionSource<HistoryPage>();
+        var backend = new Backend { Read = (_, _) => pending.Task };
+        using var state = Create(backend);
+        var changes = new List<HistorySearchPhase>();
+        state.Changed += () => changes.Add(state.Presentation(false).Phase);
+        var operation = state.SearchAsync(Query);
+        switch (stop) {
+            case StopKind.Cancel:
+                state.Cancel();
+                break;
+            case StopKind.Reset:
+                state.Reset();
+                break;
+            case StopKind.Dispose:
+                state.Dispose();
+                break;
+        }
+        pending.SetCanceled();
+        await operation;
+        Assert.Equal(stop == StopKind.Cancel, state.WasCanceled);
+        Assert.Equal(stop == StopKind.Dispose ? [HistorySearchPhase.Loading]
+            : new[] { HistorySearchPhase.Loading, stop == StopKind.Cancel ? HistorySearchPhase.Canceled : HistorySearchPhase.NotRequested }, changes);
+    }
+
     private sealed class Backend : IProviderRequestHistory {
         internal List<ProviderRequestHistoryQuery> Calls { get; } = [];
         internal CancellationToken LastToken { get; private set; }

@@ -35,8 +35,14 @@ public partial class AgentDiagnosticsPanel : IDisposable {
         if (disposed || revision != intentRevision) {
             return;
         }
-        if (Enum.GetValues<DiagnosticsLane>().Any(lane => session.Presentation.ReadState(lane).Error is not null)) {
+        var lanes = intent is DiagnosticsIntent.Retry retryIntent ? [retryIntent.Lane] : Enum.GetValues<DiagnosticsLane>();
+        if (lanes.Any(lane => session.Presentation.ReadState(lane).IsBusy)) {
+            return;
+        }
+        if (lanes.Any(lane => session.Presentation.ReadState(lane).Error is not null)) {
             NotificationService.Error("Attention", "Some diagnostics could not be refreshed. Review the affected section and retry.");
+        } else if (intent is DiagnosticsIntent.Retry retry) {
+            NotificationService.Success("Ready", $"{retry.Lane} diagnostics refreshed from the integrated runtime.");
         } else {
             NotificationService.Success("Ready", "Diagnostics refreshed from the integrated runtime.");
         }

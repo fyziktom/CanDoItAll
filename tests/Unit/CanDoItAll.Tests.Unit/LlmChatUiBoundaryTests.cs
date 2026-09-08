@@ -622,11 +622,28 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
                 "CanDoItAll.AgentFramework.Components",
                 "CanDoItAll.AgentFramework.Llm.SimpleChats.Application",
                 "CanDoItAll.AgentFramework.Llm.SimpleChats.Core",
+                "CanDoItAll.AgentFramework.Llm.SimpleChats.UI",
                 "CanDoItAll.AppComponents",
                 "CanDoItAll.Conversations.Components",
                 "CanDoItAll.Conversations.Shell"
             ],
             references);
+
+        var presentationDirectory = Path.Combine(root, "src", "MAF", "SimpleChats", "CanDoItAll.AgentFramework.Llm.SimpleChats.UI");
+        var presentationProject = XDocument.Load(Path.Combine(presentationDirectory, "CanDoItAll.AgentFramework.Llm.SimpleChats.UI.csproj"));
+        Assert.Equal(["CanDoItAll.Conversations.Components"], presentationProject.Descendants("ProjectReference")
+            .Select(element => ResolveProjectReferenceName(presentationDirectory, element)));
+        Assert.Equal(["CanDoItAll.Components.BaseLib", "Microsoft.AspNetCore.Components.Web"], presentationProject.Descendants("PackageReference")
+            .Select(element => element.Attribute("Include")!.Value).Order(StringComparer.Ordinal));
+        var presentationSource = string.Join('\n', Directory.EnumerateFiles(presentationDirectory, "*.*", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => Path.GetExtension(path) is ".cs" or ".razor")
+            .Select(File.ReadAllText));
+        Assert.DoesNotContain("@inject", presentationSource, StringComparison.OrdinalIgnoreCase);
+        foreach (var forbidden in new[] { "SimpleChats.Application", "SimpleChats.Core", "SimpleChats.Runtime", "AgentFramework.Components", "CanDoItAll.Modules", "ILlmChatDefinitionUiGateway" }) {
+            Assert.DoesNotContain(forbidden, presentationSource, StringComparison.Ordinal);
+        }
 
         var sourcePaths = Directory.EnumerateFiles(projectDirectory, "*.*", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))

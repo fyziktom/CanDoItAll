@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-08T11:19:57.393225+00:00",
+  "generated_utc": "2026-09-08T19:30:23.761157+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14391,
+  "allowance_count": 14397,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -36248,18 +36248,6 @@
       "count": 1
     },
     {
-      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "9d12fd7c3c98cf6ca9de5a463a6c9046b557aca7559b1698a300412e4613412e",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "bec2ee10a2a2569b767f6417340d5a5d0f9f3019d05fd464d6dbb81c76924303",
-      "count": 1
-    },
-    {
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
       "category": "case-policy",
       "source_fingerprint": "d26e7f30f32d307f6ac71c823c87c11ff207da22032257125b67ebc73ebd4366",
@@ -36407,6 +36395,24 @@
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime/README.md",
       "category": "windows-executable",
       "source_fingerprint": "aa96be967ce0d0e127149bf85b7789c80cbf594bcf8ddae133ec0fdabbc0f6e4",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionCatalogSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "8ddde6f834914b8c4776e4ac76c064d31c498c9350c7df205ebf50d2c66f208d",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "67e3c03a878ee21a961f6f9e60bcf9c3efb0c48b8387190f51d659a7c644824e",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "fdc110f4089b80df5f2f57934f667ece87f554a1f8d3ccbea0c83bf97336fe16",
       "count": 1
     },
     {
@@ -41861,12 +41867,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "category": "mcp",
       "source_fingerprint": "d6dcbdf96b9ef8834b5f542dd10d446a75b19e3e59f34d260fb67d6dfcfa1b1c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDiagnosticsPanel.razor",
-      "category": "mcp",
-      "source_fingerprint": "c90363a0dc6acf45e4c13f0271d6813b2b8f3ae281c261d007c2ba9d8517ee84",
       "count": 1
     },
     {
@@ -75741,6 +75741,12 @@
     },
     {
       "path": "tools/Validation/Test-Documentation.ps1",
+      "category": "path-normalization",
+      "source_fingerprint": "e2ed0cd1ac2f58125c1eb2d03af04c02231b31a6668a42cd3270baeae1d9a767",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/Test-Documentation.ps1",
       "category": "shell-elevation",
       "source_fingerprint": "6957bb5760d2a2cfc6cb2751e61e9ecc3ff570d03846699e846096124cdeecdb",
       "count": 1
@@ -75761,6 +75767,36 @@
       "path": "tools/Validation/Test-Documentation.ps1",
       "category": "windows-path",
       "source_fingerprint": "91e34053af8b0566ac6ba64394462c84edf96e3f1d2b58792721014f1f35197f",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/Test-DocumentationEvidence.ps1",
+      "category": "manager-discovery",
+      "source_fingerprint": "6947c1ef22d62faabe0cafd224cac40d292e312acfa825eb591017d5c44136f4",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/Test-DocumentationEvidence.ps1",
+      "category": "manager-discovery",
+      "source_fingerprint": "f87ba79b06a279dff83d187730416745f729909ca39acb2755f43c63e527a926",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/Test-DocumentationEvidence.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "1c6231de0ecf3b6fd969afb6f2e26e101d41e7cd226754ee52fed421ea80b0ae",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/Test-DocumentationEvidence.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "82f797f9f65265752903ecfa5f5543758835a499cbc69ffacc5bbe9293bc5b79",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/Test-DocumentationEvidence.ps1",
+      "category": "windows-executable",
+      "source_fingerprint": "ea48e7e62b8157e1c3e681528a90910c9d0ba43577f3ab8459a985164adea8a0",
       "count": 1
     },
     {
