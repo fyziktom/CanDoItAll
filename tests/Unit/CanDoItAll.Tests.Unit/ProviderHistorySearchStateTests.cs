@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.History;
 using System.ComponentModel.DataAnnotations;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Modules.AgentFramework.Pages.Components.History;
@@ -128,6 +129,95 @@ public sealed class ProviderHistorySearchStateTests {
         Assert.Equal("Missing tariff", ProviderHistoryPresentation.Price(new(HistoryPriceState.MissingTariff)));
         Assert.Equal("Caller unavailable", ProviderHistoryPresentation.Caller(new(HistoryAuthenticationKind.Unknown)));
         Assert.Equal("Legacy identity · client", ProviderHistoryPresentation.Caller(new(HistoryAuthenticationKind.LegacyAuthenticated, Subject: "client")));
+    }
+
+    [Theory]
+    [InlineData(HistoryFailure.Denied)]
+    [InlineData(HistoryFailure.InvalidQuery)]
+    [InlineData(HistoryFailure.StaleContext)]
+    [InlineData(HistoryFailure.InvalidCursor)]
+    [InlineData(HistoryFailure.Unavailable)]
+    [InlineData(HistoryFailure.TimedOut)]
+    [InlineData(HistoryFailure.Conflict)]
+    public async Task Typed_failure_never_exposes_backend_message(HistoryFailure failure) {
+        var backend = new Backend { Read = (_, _) => throw new ProviderHistoryException(failure, "history-api-key-sentinel") };
+        using var state = Create(backend);
+        await state.SearchAsync(Query);
+        Assert.Equal(failure, state.Failure);
+        Assert.Equal(HistoryPublicErrors.Message(failure), state.Error);
+        Assert.DoesNotContain("history-api-key-sentinel", state.Error);
+        Assert.Equal(HistorySearchPhase.Failed, state.Presentation(false).Phase);
+    }
+
+    [Fact]
+    public async Task Accepted_page_owns_backend_collection_and_publication_is_explicit() {
+        var entries = new List<HistoryEntry> { CanDoItAll.AgentFramework.UiSandbox.HistorySandboxFixture.Entry };
+        var backend = new Backend { Read = (_, _) => Task.FromResult(new HistoryPage(entries, null, new(HistoryCoverageState.Partial, Now), Now)) };
+        using var state = Create(backend);
+        var changes = new List<HistorySearchPhase>();
+        state.Changed += () => changes.Add(state.Presentation(false).Phase);
+        await state.SearchAsync(Query);
+        entries.Clear();
+        Assert.Single(state.Page!.Entries);
+        Assert.Single(state.Presentation(false).Entries);
+        Assert.Contains(HistorySearchPhase.Loading, changes);
+        Assert.Equal(HistorySearchPhase.Ready, changes[^1]);
+    }
+
+    public enum StopKind { Cancel, Reset, Dispose }
+    [Theory]
+    [InlineData(StopKind.Cancel)]
+    [InlineData(StopKind.Reset)]
+    [InlineData(StopKind.Dispose)]
+    public async Task Stop_retains_token_resources_and_fences_late_publication(StopKind stop) {
+        var pending = new TaskCompletionSource<HistoryPage>();
+        var backend = new Backend { Read = (_, _) => pending.Task };
+        using var state = Create(backend);
+        var operation = state.SearchAsync(Query);
+        var token = backend.LastToken;
+        switch (stop) {
+            case StopKind.Cancel:
+                state.Cancel();
+                break;
+            case StopKind.Reset:
+                state.Reset();
+                break;
+            case StopKind.Dispose:
+                state.Dispose();
+                state.Dispose();
+                break;
+        }
+        Assert.True(token.IsCancellationRequested);
+        using (token.Register(() => { })) {
+            Assert.True(token.WaitHandle.WaitOne(0));
+        }
+        var changes = 0;
+        state.Changed += () => changes++;
+        pending.SetResult(new([], "late-cursor", new(HistoryCoverageState.Current, Now), Now));
+        await operation;
+        Assert.Null(state.Page);
+        Assert.Equal(0, changes);
+        Assert.False(state.IsLoading);
+        Assert.Throws<ObjectDisposedException>(() => token.WaitHandle);
+    }
+
+    [Fact]
+    public async Task Old_finally_cannot_clear_new_search_busy_state() {
+        var first = new TaskCompletionSource<HistoryPage>();
+        var second = new TaskCompletionSource<HistoryPage>();
+        var backend = new Backend { Read = (_, _) => first.Task };
+        using var state = Create(backend);
+        var old = state.SearchAsync(Query);
+        backend.Read = (_, _) => second.Task;
+        var current = state.SearchAsync(Query with { Model = new("second") });
+        first.SetException(new InvalidOperationException("old failure"));
+        await old;
+        Assert.True(state.IsLoading);
+        Assert.Null(state.Error);
+        second.SetResult(new([], null, new(HistoryCoverageState.Current, Now), Now));
+        await current;
+        Assert.False(state.IsLoading);
+        Assert.Equal("second", state.AppliedQuery!.Model!.Value.Value);
     }
 
     private static ProviderHistorySearchState Create(Backend backend) => new(backend, NullLogger<ProviderHistorySearchState>.Instance);

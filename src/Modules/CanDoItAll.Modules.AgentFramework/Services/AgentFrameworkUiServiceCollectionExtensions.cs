@@ -12,6 +12,7 @@ public static class AgentFrameworkUiServiceCollectionExtensions
         services.AddCascadingAuthenticationState();
         services.TryAddScoped<IAgentsWorkspaceQuery, AgentsWorkspaceQuery>();
         services.TryAddScoped<IAgentGovernanceReads, AgentGovernanceReads>();
+        services.TryAddScoped<IAgentDiagnosticsReads, AgentDiagnosticsReads>();
         services.TryAddScoped<IAgentCatalogOperations, AgentCatalogOperations>();
         services.TryAddScoped<IAgentCapabilitiesReads, AgentCapabilitiesReads>();
         services.TryAddScoped<IAgentCapabilityCommands, AgentCapabilityCommands>();

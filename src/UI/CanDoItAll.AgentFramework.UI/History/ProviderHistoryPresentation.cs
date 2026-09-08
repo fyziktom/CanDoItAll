@@ -1,7 +1,7 @@
 using System.Globalization;
 using CanDoItAll.AgentFramework.ProviderHistory;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components.History;
+namespace CanDoItAll.AgentFramework.UI.History;
 
 public static class ProviderHistoryPresentation {
     public static string Time(DateTimeOffset value) => value.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + " UTC";

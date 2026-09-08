@@ -1,0 +1,80 @@
+@namespace CanDoItAll.AgentFramework.UI.Diagnostics
+@using static CanDoItAll.AgentFramework.UI.Governance.GovernancePresentationMapping
+
+<div class="diagnostics-surface" data-testid="agents-diagnostics-panel" data-dashboard-revision="@Presentation.DashboardState.AcceptedRevision">
+<Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+    <Split Gap="LayoutGap.Small">
+        <div>
+            <TextBlock TextStyle="TextStyle.Subtitle2" Value="Runtime diagnostics" />
+            <TextBlock TextStyle="TextStyle.Body2" Value="Runtime counts, reviewed execution boundary and the latest twelve runs. Sections refresh independently." />
+        </div>
+        <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Disabled="@Presentation.IsBusy"
+                data-testid="diagnostics-refresh" Click="@(() => OnIntent.InvokeAsync(new DiagnosticsIntent.Refresh()))" />
+    </Split>
+    @foreach (var lane in Enum.GetValues<DiagnosticsLane>()) {
+        var state = Presentation.ReadState(lane);
+        @if (state.IsBusy || state.Error is not null) {
+            <div role="@(state.Error is null ? "status" : "alert")" data-testid="@($"diagnostics-{lane.ToString().ToLowerInvariant()}-state")">
+                <TextBlock Value="@($"{lane}: {(state.Error ?? (state.Phase == DiagnosticsReadPhase.Refreshing ? "Refreshing previous snapshot…" : "Loading…"))}")" />
+                @if (state.Error is not null) {
+                    <Button Text="@($"Retry {lane.ToString().ToLowerInvariant()}")" Size="ButtonSize.Small"
+                            Click="@(() => OnIntent.InvokeAsync(new DiagnosticsIntent.Retry(lane)))" />
+                }
+            </div>
+        }
+    }
+    @if (Presentation.Dashboard is { } dashboard) {
+        <CompactStatStrip>
+            <CompactStat Label="agents" Value="@Number(dashboard.Agents)" TooltipText="@($"{Number(dashboard.Templates)} template(s)")" Tone="info" />
+            <CompactStat Label="providers" Value="@Number(dashboard.Providers)" TooltipText="Integrated provider runtime views." Tone="success" />
+            <CompactStat Label="capabilities" Value="@Number(dashboard.Capabilities)" TooltipText="Attached runtime surfaces." Tone="warning" />
+            <CompactStat Label="active / failed runs" Value="@($"{Number(dashboard.ActiveRuns)} / {Number(dashboard.FailedRuns)}")"
+                         TooltipText="Dashboard totals across the runtime; failures can exceed the recent twelve-run window." Tone="danger" />
+        </CompactStatStrip>
+        <SurfaceCard>
+            <TextBlock TextStyle="TextStyle.Subtitle2" Value="Execution boundary" />
+            <TextBlock Value="@dashboard.Boundary.Host" />
+            <Grid Gap="LayoutGap.Medium" ColumnTemplateXl="repeat(4,minmax(0,1fr))">
+                <FormField Text="Mode"><TextBlock Value="@dashboard.Boundary.Mode" /></FormField>
+                <FormField Text="Filesystem"><TextBlock Value="@dashboard.Boundary.Filesystem" /></FormField>
+                <FormField Text="Network"><TextBlock Value="@dashboard.Boundary.Network" /></FormField>
+                <FormField Text="Credentials"><TextBlock Value="@dashboard.Boundary.Credentials" /></FormField>
+            </Grid>
+            <TextBlock Value="@dashboard.Boundary.Notes" />
+        </SurfaceCard>
+    }
+    <Grid Gap="LayoutGap.Large" ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+        @foreach (var failuresOnly in new[] { false, true }) {
+            var rows = failuresOnly ? Presentation.Failures : Presentation.Runs;
+            <SurfaceCard Soft="true">
+                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@(failuresOnly ? "Recent failures (within latest twelve runs)" : "Recent execution activity")" />
+                @if (rows.IsEmpty && Presentation.RunsState.AcceptedRevision.HasValue) {
+                    <TextBlock Value="@(failuresOnly ? "No failures in the accepted recent-run window." : "No execution runs have been recorded yet.")" />
+                }
+                <Stack GapScale="LayoutGap.Small">
+                    @foreach (var run in rows) {
+                        <SelectionListItem @key="run.Id" Title="@run.Title" Eyebrow="@($"{run.Agent} / {run.Provider}")"
+                                           Meta="@run.Updated" Summary="@($"{run.Model}. Input and result content omitted.")">
+                            <Status>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@run.Tone" Text="@run.State" />
+                                    @if (run.Outcome is { } outcome) {
+                                        <StatusBadge Tone="neutral" Text="@outcome" />
+                                    }
+                                </Cluster>
+                            </Status>
+                        </SelectionListItem>
+                    }
+                </Stack>
+            </SurfaceCard>
+        }
+    </Grid>
+</Stack>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public DiagnosticsPresentation Presentation { get; set; } = DiagnosticsPresentation.Initial;
+    [Parameter]
+    public EventCallback<DiagnosticsIntent> OnIntent { get; set; }
+}

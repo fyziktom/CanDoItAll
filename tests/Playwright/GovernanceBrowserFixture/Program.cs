@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.UiSandbox;
@@ -9,8 +10,8 @@ using Npgsql;
 
 internal static class GovernanceBrowserEntry {
     public static async Task Main(string[] args) {
-        if (args.Length != 2 || args[0] is not ("prepare" or "serve")) {
-            throw new ArgumentException("Use prepare or serve followed by the repository root.");
+        if (args.Length != 2 || args[0] is not ("prepare" or "serve" or "serve-history")) {
+            throw new ArgumentException("Use prepare, serve or serve-history followed by the repository root.");
         }
         var repository = Path.GetFullPath(args[1]);
         var output = Path.Combine(repository, ".artifacts", "governance-final", "browser-data");
@@ -33,12 +34,24 @@ internal static class GovernanceBrowserEntry {
             fixture.Mode = mode;
             return Results.Ok();
         });
+        control.MapPost("/fixture/diagnostics/{mode}", (DiagnosticsBrowserMode mode) => {
+            fixture.DiagnosticsMode = mode;
+            return Results.Ok();
+        });
+        control.MapPost("/fixture/history/{mode}", (HistoryBrowserMode mode) => {
+            fixture.History.Mode = mode;
+            return Results.Ok();
+        });
+        control.MapGet("/fixture/history", () => Results.Json(new {
+            fixture.History.Mode, fixture.History.Model, fixture.History.Ready,
+            fixture.History.Searches, fixture.History.MetadataReads, fixture.History.ContentReads
+        }));
         control.MapPost("/fixture/release", () => {
             fixture.Release();
             return Results.Ok();
         });
         control.MapGet("/fixture/state", () => Results.Json(new {
-            fixture.Mode, fixture.CatalogReads, fixture.ListReads, fixture.DetailReads, fixture.OwnerCanceled
+            fixture.Mode, fixture.CatalogReads, fixture.ListReads, fixture.DetailReads, fixture.OwnerCanceled, fixture.DiagnosticsDashboardReads
         }));
         control.MapPost("/fixture/stop", () => {
             fixture.Release();
@@ -49,6 +62,9 @@ internal static class GovernanceBrowserEntry {
         await using var app = new GovernanceBrowserApplication(repository, fixture);
         app.UseKestrel(5285);
         using var client = app.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        if (args[0] == "serve-history") {
+            await HistoryBrowserReads.SeedAsync(app.Services, fixture.History);
+        }
         Console.WriteLine("Governance browser fixture ready.");
         await stop.Task;
         await control.StopAsync();
@@ -118,6 +134,10 @@ internal sealed class GovernanceBrowserApplication(string repository, Governance
         builder.UseEnvironment("Development");
         builder.UseContentRoot(Path.Combine(repository, "src", "App", "CanDoItAll.Web"));
         builder.ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
+        builder.ConfigureServices(services => services.AddScoped<IProviderRequestHistory>(provider =>
+            new HistoryBrowserReads(ActivatorUtilities.CreateInstance<ProviderRequestHistoryService>(provider), fixture)));
+        builder.ConfigureServices(services => services.AddScoped<IAgentDiagnosticsReads>(provider =>
+            new DiagnosticsBrowserReads(new AgentDiagnosticsReads(provider.GetRequiredService<IAgentFrameworkWorkspaceService>()), fixture)));
         builder.ConfigureServices(services => services.AddScoped<IAgentGovernanceReads>(provider =>
             new GovernanceBrowserReads(new AgentGovernanceReads(provider.GetRequiredService<IAgentFrameworkWorkspaceService>()), fixture)));
     }
@@ -135,7 +155,10 @@ internal sealed class GovernanceBrowserState {
     public static readonly DateTimeOffset Observed = new(2026, 3, 29, 1, 30, 0, TimeSpan.Zero);
     private TaskCompletionSource held = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private CancellationToken owner;
+    public HistoryBrowserState History { get; } = new();
     public GovernanceBrowserMode Mode { get; set; }
+    public DiagnosticsBrowserMode DiagnosticsMode { get; set; }
+    public int DiagnosticsDashboardReads;
     public int CatalogReads;
     public int ListReads;
     public int DetailReads;

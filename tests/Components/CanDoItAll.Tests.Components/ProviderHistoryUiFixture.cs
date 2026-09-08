@@ -12,6 +12,7 @@ internal sealed class ProviderHistoryUiFixture : IProviderRequestHistory {
     internal int MetadataReads { get; private set; }
     internal List<CanonicalEvidenceReference?> ContentReads { get; } = [];
     internal Func<ProviderRequestHistoryQuery, CancellationToken, Task<HistoryPage>>? Search { get; set; }
+    internal Func<HistoryEntryId, CancellationToken, Task<HistoryMetadata?>>? Metadata { get; set; }
     internal Func<CancellationToken, Task<HistoryDetail>>? Content { get; set; }
     internal HistoryEntry Entry { get; set; } = new(
         HistoryEntryId.New(), new(Guid.NewGuid(), Guid.NewGuid(), "test"), ProviderRequestId.New(), ProviderAttemptId.New(),
@@ -42,7 +43,7 @@ internal sealed class ProviderHistoryUiFixture : IProviderRequestHistory {
 
     public Task<HistoryMetadata?> GetMetadataAsync(HistoryEntryId entryId, CancellationToken cancellationToken) {
         MetadataReads++;
-        return Task.FromResult<HistoryMetadata?>(new(Entry, Owners));
+        return Metadata?.Invoke(entryId, cancellationToken) ?? Task.FromResult<HistoryMetadata?>(new(Entry, Owners));
     }
 
     public Task<HistoryDetail> GetDetailAsync(HistoryEntryId entryId, CanonicalEvidenceReference? owner, CancellationToken cancellationToken) {

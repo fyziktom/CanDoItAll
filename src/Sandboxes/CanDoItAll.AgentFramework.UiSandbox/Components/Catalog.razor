@@ -10,6 +10,12 @@ else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Overview) {
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Governance) {
     <GovernanceSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" />
 }
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Diagnostics) {
+    <DiagnosticsSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.History) {
+    <HistorySpecimen ScenarioQuery="@ScenarioQuery" />
+}
 else {
     <CatalogSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" TeamQuery="@TeamQuery" />
 }
