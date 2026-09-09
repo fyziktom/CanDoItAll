@@ -985,6 +985,10 @@ public sealed class LlmChatConversationWorkspaceTests
 
         public string? CreatedTitle { get; private set; }
 
+        public int CreateCalls { get; private set; }
+
+        public CancellationToken CreateToken { get; private set; }
+
         public string? RenamedTitle { get; private set; }
 
         public long? RenameExpectedConcurrencyToken { get; private set; }
@@ -1023,6 +1027,8 @@ public sealed class LlmChatConversationWorkspaceTests
             string title,
             CancellationToken cancellationToken = default)
         {
+            CreateCalls++;
+            CreateToken = cancellationToken;
             CreatedDefinitionId = definitionId;
             CreatedTitle = title;
             return Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(CreatedView!));
@@ -1059,6 +1065,7 @@ public sealed class LlmChatConversationWorkspaceTests
 
         public LlmChatOperationView Current { get; set; } = CreateOperationView();
         public Func<Guid, LlmChatOperationView>? Read { get; set; }
+        public Func<Guid, CancellationToken, Task<LlmChatUiResult<LlmChatOperationView>>>? ReadAsync { get; set; }
 
         public LlmChatUiResult<LlmChatOperationView>? ReconcileResult { get; set; }
 
@@ -1087,7 +1094,7 @@ public sealed class LlmChatConversationWorkspaceTests
         public Task<LlmChatUiResult<LlmChatOperationView>> GetAsync(
             Guid operationId,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(LlmChatUiResult<LlmChatOperationView>.Success(
+            => ReadAsync?.Invoke(operationId, cancellationToken) ?? Task.FromResult(LlmChatUiResult<LlmChatOperationView>.Success(
                 Read?.Invoke(operationId) ?? Current with { OperationId = operationId }));
 
         public Task<LlmChatUiResult<LlmChatOperationView>> CancelAsync(

@@ -15,6 +15,71 @@ public sealed class ConversationWorkspaceSessionTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Create_selection_supersedes_pending_transcript_or_operation_restore_without_replaying_mutation(bool restoringOperation) {
+        var operationId = Guid.NewGuid();
+        var a = CreateConversation(activeOperationId: operationId);
+        var b = CreateConversation(Guid.NewGuid(), "Created B");
+        var gateway = Gateway(a);
+        gateway.CreatedView = CreateView(b, [CreateMessage(LlmMessageRole.Assistant, "B content")]);
+        var operations = new StubOperationGateway {
+            Current = CreateOperationView(operationId, LlmChatOperationStatus.RecoveryRequired)
+        };
+        using var context = CreateContext(gateway, operations);
+        var callbacks = new List<Guid?>();
+        var cut = context.Render<LlmChatConversationWorkspace>(p => p.Add(x => x.InitialConversationId, a.ConversationId)
+            .Add(x => x.SelectedConversationIdChanged, value => callbacks.Add(value)));
+        cut.WaitForElement("[data-testid='llm-chat-selected-title']");
+        var pendingTranscript = new TaskCompletionSource<LlmChatUiResult<LlmChatConversationView>>();
+        var pendingOperation = new TaskCompletionSource<LlmChatUiResult<LlmChatOperationView>>();
+        CancellationToken oldRead = default;
+        gateway.Read = (_, _, token) => {
+            if (restoringOperation) {
+                return Task.FromResult(Success(CreateView(a, [])));
+            }
+            oldRead = token;
+            return pendingTranscript.Task;
+        };
+        if (restoringOperation) {
+            operations.ReadAsync = (_, token) => {
+                oldRead = token;
+                return pendingOperation.Task;
+            };
+        }
+        var surface = cut.FindComponent<LlmChatConversationSurface>();
+        var generation = surface.Instance.Presentation.Generation;
+        var reload = cut.InvokeAsync(() => surface.Instance.Intent.InvokeAsync(new(generation, ConversationWorkspaceAction.ReloadSelected, a.ConversationId)));
+        cut.WaitForAssertion(() => Assert.True(oldRead.CanBeCanceled));
+        await cut.InvokeAsync(() => surface.Instance.Intent.InvokeAsync(new(generation, ConversationWorkspaceAction.NewConversation, a.ConversationId)));
+        cut.Find("[data-testid^='llm-chat-start-definition-'][data-testid$='11111111-1111-1111-1111-111111111111']").Click();
+        cut.Find("[data-testid='llm-chat-start-title']").Change("Created B");
+        await cut.Find("[data-testid='llm-chat-start-confirm']").ClickAsync(new());
+        Assert.Equal("Created B", cut.Find("[data-testid='llm-chat-selected-title']").TextContent);
+        Assert.Equal([b.ConversationId], callbacks);
+        if (restoringOperation) {
+            pendingOperation.SetResult(LlmChatUiResult<LlmChatOperationView>.Success(operations.Current));
+        } else {
+            pendingTranscript.SetResult(Success(CreateView(a, [CreateMessage(LlmMessageRole.Assistant, "obsolete A content")])));
+        }
+        await reload;
+        Assert.Equal("Created B", cut.Find("[data-testid='llm-chat-selected-title']").TextContent);
+        Assert.Contains("B content", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("obsolete A content", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(surface.Instance.Presentation.ErrorMessage);
+        Assert.Null(surface.Instance.Presentation.OperationStatus);
+        Assert.Empty(surface.Instance.Presentation.TransientMessages);
+        Assert.Equal([b.ConversationId], callbacks);
+        Assert.True(oldRead.IsCancellationRequested);
+        Assert.False(gateway.CreateToken.IsCancellationRequested);
+        Assert.Equal(1, gateway.CreateCalls);
+        var reads = gateway.TranscriptTargets.Count;
+        cut.Render(p => p.Add(x => x.InitialConversationId, b.ConversationId));
+        Assert.Equal(reads, gateway.TranscriptTargets.Count);
+        Assert.Equal([b.ConversationId], callbacks);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void Initial_selection_does_not_echo_a_route_callback_during_prerender(bool requested) {
         var a = CreateConversation();
         using var context = CreateContext(Gateway(a), new StubOperationGateway());

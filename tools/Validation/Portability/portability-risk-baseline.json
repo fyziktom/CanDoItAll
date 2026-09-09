@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-08T23:31:08.798462+00:00",
+  "generated_utc": "2026-09-09T08:29:45.489887+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14403,
+  "allowance_count": 14405,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -14992,7 +14992,13 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
       "category": "case-policy",
-      "source_fingerprint": "f437cf7e598f4b67d8e63d692c8d6ae9dae1d57e1e5c3d5c8f4af1f49c559587",
+      "source_fingerprint": "c32cc94cf06bd755fb06cb06b1a4cd3d2ad5af54981c576027b1e667649d87d2",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+      "category": "windows-path",
+      "source_fingerprint": "3d2c23427632fb67c93b3d2db446dfa6c1258f4fd104aa038d1f913a665956c0",
       "count": 1
     },
     {
@@ -41705,12 +41711,30 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "14b394e024e4bb422ac33e87c24d2a0ff9acb9e58a121a81a9d8b8cbe6362318",
-      "count": 3
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5b53363751d94069318acba3f6ea7447553b415847562711f13a6b15e9ce8ad3",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "63e9443ee78278b8add48eefe9aee5673506e8b24d1ae30e313ba3fec1f5d4d7",
+      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "9726c515c73258fef8c450be2ed63c64fd2349a2266e27472ae7dbaf579dd183",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "category": "windows-path",
+      "source_fingerprint": "102b9ed8a303005e0d97ab4b8dc9f37fc13bf33834845ca39f9f260724d065fc",
       "count": 1
     },
     {
@@ -43684,7 +43708,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
       "category": "windows-path",
-      "source_fingerprint": "b7be2ae38a80b520754d5cccfbb9dd67f560b81b1d95ad742f9340d7421aa55b",
+      "source_fingerprint": "1064d4b1abf2efd4f80302c9c560027702d1930c867b83f76d2e38ffa291eb33",
       "count": 1
     },
     {

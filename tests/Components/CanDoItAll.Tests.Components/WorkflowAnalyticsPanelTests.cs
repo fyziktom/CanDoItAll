@@ -123,8 +123,8 @@ public sealed class WorkflowAnalyticsPanelTests
             "WorkflowsPage.razor.cs"));
         var analyticsTab = Slice(
             pageMarkup,
-            "<TabsItem Text=\"Analytics\"",
-            "</TabsItem>");
+            "<Analytics>",
+            "</Analytics>");
 
         Assert.Contains("WorkflowAnalyticsPanel", analyticsTab, StringComparison.Ordinal);
         Assert.Contains("QueryService=\"AnalyticsQueryService\"", analyticsTab, StringComparison.Ordinal);
@@ -189,6 +189,45 @@ public sealed class WorkflowAnalyticsPanelTests
             "22",
             cut.Find("[data-testid='workflow-analytics-run-count']").TextContent,
             StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Hidden_analytics_cancel_the_pending_scope_and_ignore_a_late_failure_before_reentry() {
+        using var context = CreateContext();
+        var service = new ControllableWorkflowAnalyticsQueryService();
+        var cut = context.Render<WorkflowAnalyticsPanel>(parameters => parameters
+            .Add(component => component.QueryService, service).Add(component => component.Workflows, CreateWorkflowOptions())
+            .Add(component => component.IsActive, true));
+        cut.WaitForAssertion(() => Assert.Single(service.Requests));
+        cut.Render(parameters => parameters.Add(component => component.IsActive, false));
+        Assert.True(service.Requests[0].CancellationToken.IsCancellationRequested);
+        service.Requests[0].Completion.SetException(new InvalidOperationException("PRIVATE_ANALYTICS"));
+        cut.Render(parameters => parameters.Add(component => component.IsActive, true));
+        cut.WaitForAssertion(() => Assert.Equal(2, service.Requests.Count));
+        service.Requests[1].Completion.SetResult(CreateSnapshot() with { RunCount = 42 });
+        cut.WaitForAssertion(() => Assert.Contains("42", cut.Find("[data-testid='workflow-analytics-run-count']").TextContent, StringComparison.Ordinal));
+        Assert.DoesNotContain("PRIVATE_ANALYTICS", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Analytics_keep_accepted_provider_and_run_collections_when_the_service_mutates_its_result() {
+        using var context = CreateContext();
+        var original = CreateSnapshot();
+        var providers = original.ProviderModels.ToList();
+        var runs = original.RecentRuns.ToList();
+        var service = new RecordingWorkflowAnalyticsQueryService(original with { ProviderModels = providers, RecentRuns = runs });
+        var cut = context.Render<WorkflowAnalyticsPanel>(parameters => parameters
+            .Add(component => component.QueryService, service).Add(component => component.Workflows, CreateWorkflowOptions())
+            .Add(component => component.IsActive, true));
+        cut.WaitForElement("[data-testid='workflow-analytics-content']");
+        var runCount = cut.FindAll("[data-testid='workflow-analytics-recent-run']").Count;
+        var providerCount = cut.FindAll("[data-testid='workflow-analytics-provider-model']").Count;
+        providers.Clear();
+        runs.Clear();
+        cut.Render(parameters => parameters.Add(component => component.IsActive, true));
+        Assert.Equal(runCount, cut.FindAll("[data-testid='workflow-analytics-recent-run']").Count);
+        Assert.Equal(providerCount, cut.FindAll("[data-testid='workflow-analytics-provider-model']").Count);
+        Assert.Single(service.Queries);
     }
 
     private static BunitContext CreateContext(ILogger<WorkflowAnalyticsPanel>? logger = null)

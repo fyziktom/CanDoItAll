@@ -1,0 +1,123 @@
+<Grid Gap="LayoutGap.Large"
+                          Class="workflows-layout"
+                          ColumnTemplateXl="minmax(18rem,0.85fr) minmax(0,1.45fr)">
+                        <SurfaceCard data-testid="workflows-catalog">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Catalog" />
+                                    <h2 class="workflows-card-title">Workflow definitions</h2>
+                                </div>
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End">
+                                    <StatusBadge Tone="info" Text="@Presentation.DefinitionCount.ToString()" />
+                                    <Button Text="Templates"
+                                            Icon="content_copy"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="OpenTemplatesAsync"
+                                            Disabled="@Presentation.IsBusy"
+                                            data-testid="workflows-open-template-catalogue" />
+                                </Cluster>
+                            </Split>
+
+                            @if (Presentation.DefinitionCount == 0) {
+                                <EmptyState Eyebrow="No workflows"
+                                            Title="Create a starter workflow"
+                                            Description="The workflow catalog is empty. Create the starter definition to validate the page and runtime wiring." />
+                            } else {
+                                <div class="mt-4 max-h-[34rem] overflow-y-auto pr-1"
+                                     style="scrollbar-gutter:stable;"
+                                     data-testid="workflows-tree-scroll">
+                                    <TreeView Items="@TreeNodes"
+                                              Style="TreeViewStyle.Workbench"
+                                              AriaLabel="Workflow definitions by lifecycle"
+                                              EmptyText="No workflows are available."
+                                              OnSelect="SelectTreeAsync"
+                                              OnToggle="ToggleTreeAsync" />
+                                </div>
+                            }
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="workflows-detail">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition" />
+                                    <h2 class="workflows-card-title">@(Presentation.Definition?.Name ?? "Workflow detail")</h2>
+                                </div>
+                                <StatusBadge Tone="@Presentation.ValidationTone" Text="@Presentation.ValidationText" />
+                            </Split>
+
+                            @if (selectedDefinition is null) {
+                                @if (Presentation.Definition is { } summary) {
+                                    <p class="workflows-muted mt-3">@summary.Description</p>
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Wrap="FlexWrap.Wrap"
+                                             Class="mt-4">
+                                        <StatusBadge Tone="secondary" Text="@($"Status {summary.Status}")" />
+                                        <StatusBadge Tone="info" Text="@($"Backend {summary.Backend}")" />
+                                        <StatusBadge Tone="neutral" Text="@(Presentation.DetailUnavailable ? "Unavailable" : "Detail loading")" />
+                                    </Cluster>
+                                } else {
+                                    <EmptyState Eyebrow="Select workflow"
+                                                Title="No workflow selected"
+                                                Description="Choose a workflow definition to inspect validation, settings, and runtime state." />
+                                }
+                            } else {
+                                <p class="workflows-muted mt-3">@selectedDefinition.Description</p>
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap"
+                                         Class="mt-4">
+                                    <StatusBadge Tone="@Presentation.ValidationTone" Text="@($"Status {selectedDefinition.Status}")" />
+                                    <StatusBadge Tone="info" Text="@($"Backend {selectedDefinition.Backend}")" />
+                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.NodeCount} node(s)")" />
+                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.EdgeCount} edge(s)")" />
+                                    @if (selectedDefinition.CanPublish) {
+                                        <Button Text="Publish"
+                                                Icon="publish"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Click="PublishAsync"
+                                                Disabled="@(Presentation.IsBusy || Presentation.Issues.Length > 0)"
+                                                IsBusy="@Presentation.IsBusy"
+                                                title="@(Presentation.Issues.IsEmpty ? "Publish this workflow for production runs." : "Resolve validation issues before publishing.")"
+                                                data-testid="workflows-publish" />
+                                    }
+                                </Cluster>
+
+                                <div class="workflows-section">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Validation" />
+                                    @if (Presentation.Issues.Length == 0) {
+                                        <p class="workflows-muted">Definition is valid for the current component library and settings.</p>
+                                    } else {
+                                        <Stack GapScale="LayoutGap.Small">
+                                            @foreach (var issue in Presentation.Issues) {
+                                                <div class="workflows-issue" data-testid="workflows-validation-issue">
+                                                    <strong>@issue.Code</strong>
+                                                    <span>@issue.Message</span>
+                                                </div>
+                                            }
+                                        </Stack>
+                                    }
+                                </div>
+
+                                <div class="workflows-section">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Settings" />
+                                    <p class="workflows-muted">@Presentation.SettingsSummary</p>
+                                </div>
+                            }
+                        </SurfaceCard>
+                    </Grid>
+
+@code {
+    [Parameter, EditorRequired] public WorkflowCatalogPresentation Presentation { get; set; } = new();
+    [Parameter] public EventCallback<WorkflowIntent> Intent { get; set; }
+    private WorkflowDefinitionView? selectedDefinition => Presentation.DetailLoading || Presentation.DetailUnavailable ? null : Presentation.Definition;
+    private IReadOnlyList<TreeViewNode> TreeNodes => Presentation.Tree.Select(MapTree).ToImmutableArray();
+    private static TreeViewNode MapTree(WorkflowTreeEntry entry) => new() {
+        Id = entry.Key.Value, Text = entry.Text, Icon = entry.Icon, Tooltip = entry.Tooltip, IsExpanded = entry.Expanded,
+        IsSelected = entry.Selected, IsDisabled = entry.Disabled, IsSelectable = entry.Selectable, BadgeText = entry.Badge,
+        DataTestId = entry.TestId, ChildrenDataTestId = entry.ChildrenTestId, Children = entry.Children.Select(MapTree).ToImmutableArray()
+    };
+    private Task SelectTreeAsync(string key) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.SelectDefinition, TreeKey: new(key)));
+    private Task ToggleTreeAsync(string key) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.ToggleTree, TreeKey: new(key)));
+    private Task OpenTemplatesAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.OpenTemplates));
+    private Task PublishAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.Publish, Presentation.Definition?.Id));
+}

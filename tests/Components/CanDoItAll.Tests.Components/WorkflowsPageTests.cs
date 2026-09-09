@@ -2001,11 +2001,11 @@ public sealed class WorkflowsPageTests
         services.AddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
     }
 
-    private static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(
+    internal static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(
         CanDoItAllTestEnvironment environment,
         Action<IServiceCollection>? configureServices = null)
     {
-        var profile = environment.CreateInMemoryProfile("primary");
+        var profile = environment.CreateInMemoryProfile("primary", databaseName: Guid.NewGuid().ToString("N"));
         return ComponentTestHarness.CreateAsync(configureServices, new TestHarnessOptions
         {
             TestEnvironment = environment,
@@ -2136,7 +2136,7 @@ public sealed class WorkflowsPageTests
         var method = typeof(WorkflowsPage).GetMethod(
             "SelectRunAsync",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [runId, true, null, null]));
+        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [runId, true, null, null, null]));
     }
 
     private static WorkflowDefinition? ReadSelectedDefinition(WorkflowsPage page)
@@ -2376,7 +2376,7 @@ public sealed class WorkflowsPageTests
                 ExposeAzureFunctionsMcpTool: false)));
     }
 
-    private static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
+    internal static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
     {
         var start = new WorkflowNodeId("start");
         var end = new WorkflowNodeId("end");

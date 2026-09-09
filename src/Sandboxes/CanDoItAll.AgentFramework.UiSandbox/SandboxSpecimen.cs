@@ -11,7 +11,9 @@ public enum SandboxSpecimen {
     SimpleChatDefinitionEditor,
     SimpleChatConversation,
     VoiceSettings,
-    FloatingChatSettings
+    FloatingChatSettings,
+    AgentChat,
+    Workflows
 }
 
 public static class SandboxSpecimens {
@@ -24,6 +26,8 @@ public static class SandboxSpecimens {
         "simple-chat-conversation" => SandboxSpecimen.SimpleChatConversation,
         "voice-settings" => SandboxSpecimen.VoiceSettings,
         "floating-chat-settings" => SandboxSpecimen.FloatingChatSettings,
+        "agent-chat" => SandboxSpecimen.AgentChat,
+        "workflows" => SandboxSpecimen.Workflows,
         "diagnostics" => SandboxSpecimen.Diagnostics,
         "governance" => SandboxSpecimen.Governance,
         _ => SandboxSpecimen.Catalog

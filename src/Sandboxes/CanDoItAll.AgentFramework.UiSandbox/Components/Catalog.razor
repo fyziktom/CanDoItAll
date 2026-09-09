@@ -22,6 +22,12 @@ else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatDefi
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatDefinitionEditor) {
     <DefinitionEditorSpecimen ScenarioQuery="@ScenarioQuery" />
 }
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Workflows) {
+    <WorkflowSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.AgentChat) {
+    <AgentChatSpecimen ScenarioQuery="@ScenarioQuery" />
+}
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatConversation) {
     <ConversationWorkspaceSpecimen ScenarioQuery="@ScenarioQuery" />
 }

@@ -8,6 +8,7 @@
     <DefineConstants Condition="'$(CatalogAssetMode)' == 'Fast'">$(DefineConstants);CATALOG_FAST_ASSETS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj" />
     <ProjectReference Include="../../MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/CanDoItAll.AgentFramework.Llm.SimpleChats.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <EmbeddedResource Include="Fixtures/catalog.json" LogicalName="CatalogFixture.json" />

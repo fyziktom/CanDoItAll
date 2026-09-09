@@ -1,0 +1,252 @@
+@if (Presentation.IsLoading) {
+    <StatusBadge Tone="info" Text="Loading workflow history" />
+}
+@if (Presentation.RunUnavailable) {
+    <EmptyState Eyebrow="Run unavailable" Title="The requested run is unavailable" Description="Select another run or refresh the history." />
+}
+
+                    <Grid Gap="LayoutGap.Large"
+                          Class="workflows-layout workflows-history-layout"
+                          ColumnTemplateXl="minmax(18rem,0.72fr) minmax(0,1.35fr) minmax(18rem,0.78fr)">
+                        <SurfaceCard Class="workflows-history-card"
+                                     data-testid="workflows-test-run">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Test run" />
+                            <h2 class="workflows-card-title">Preview execution</h2>
+                            <p class="workflows-muted">Runs use the requested in-process preview backend unless the selected workflow requires a different backend.</p>
+
+                            <label class="workflows-field mt-4">
+                                <span>Input JSON</span>
+                                <textarea class="cda-input cda-input--textarea workflows-input"
+                                          value="@Presentation.TestInputJson" @onchange="ChangeInputAsync"
+                                          data-testid="workflows-test-input"></textarea>
+                            </label>
+
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+                                <Button Icon="play_arrow"
+                                        Class="cda-button--quick"
+                                        title="Run test"
+                                        aria-label="Run test"
+                                        Click="RunTestAsync"
+                                        Disabled="@(!Presentation.CanTest || Presentation.IsRunningTest)"
+                                        IsBusy="@Presentation.IsRunningTest"
+                                        data-testid="workflows-run-test" />
+                                <Button Icon="stop"
+                                        Class="cda-button--quick"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        title="Cancel selected run"
+                                        aria-label="Cancel selected run"
+                                        Click="CancelRunAsync"
+                                        Disabled="@(Presentation.SelectedRun?.CanCancel != true)"
+                                        data-testid="workflows-cancel-run" />
+                            </Cluster>
+
+                            @if (Presentation.TestSucceeded.HasValue) {
+                                <div class="workflows-section" data-testid="workflows-test-result">
+                                    <StatusBadge Tone="@(Presentation.TestSucceeded == true ? "success" : "danger")"
+                                                 Text="@(Presentation.TestSucceeded == true ? "Succeeded" : "Failed")" />
+                                    @if (!string.IsNullOrWhiteSpace(Presentation.TestMessage)) {
+                                        <p class="workflows-muted mt-2">@Presentation.TestMessage</p>
+                                    }
+                                </div>
+                            }
+                        </SurfaceCard>
+
+                        <SurfaceCard Class="workflows-history-card workflows-history-card--timeline"
+                                     data-testid="workflows-runs">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run history" />
+                                    <h2 class="workflows-card-title">Runtime timeline</h2>
+                                </div>
+                                <StatusBadge Tone="@Presentation.RunTone" Text="@Presentation.RunText" />
+                            </Split>
+
+                            @if (Presentation.Runs.Length == 0) {
+                                <EmptyState Eyebrow="No runs"
+                                            Title="No workflow runs yet"
+                                            Description="Run a workflow test to populate the runtime timeline." />
+                            } else {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-4 workflows-run-list workflows-history-scroll">
+                                    @foreach (var run in Presentation.Runs) {
+                                        <div class="workflows-run-item @(run.IsSelected ? "workflows-run-item--selected" : string.Empty)"
+                                             data-testid="workflows-run-item">
+                                            <button type="button"
+                                                    class="workflows-run-item__select"
+                                                    @onclick="@(() => EmitAsync(WorkflowAction.SelectRun, run.Id))">
+                                                <span class="workflows-run-item__title">
+                                                    <StatusBadge Tone="@run.Tone" Text="@run.State" />
+                                                    <small>@run.Backend · @run.UpdatedAt</small>
+                                                </span>
+                                                <span class="workflows-clamped-text">@run.Summary</span>
+                                            </button>
+                                            <Button Icon="open_in_full"
+                                                    Size="ButtonSize.Small"
+                                                    Class="cda-button--quick"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    title="Open run details"
+                                                    aria-label="Open run details"
+                                                    Click="@(() => EmitAsync(WorkflowAction.RunDetails, run.Id))"
+                                                    data-testid="workflows-run-detail" />
+                                        </div>
+                                    }
+                                </Stack>
+
+                                <div class="workflows-pager"
+                                     data-testid="workflows-run-pager">
+                                    <span>@Presentation.RunPage.Text</span>
+                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
+                                        <Button Icon="chevron_left"
+                                                Size="ButtonSize.Small"
+                                                Class="cda-button--quick"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                title="Previous run page"
+                                                aria-label="Previous run page"
+                                                Disabled="@(!Presentation.RunPage.HasPrevious)"
+                                                Click="@(() => EmitAsync(WorkflowAction.RunPage, delta: -1))"
+                                                data-testid="workflows-run-page-previous" />
+                                        <Button Icon="chevron_right"
+                                                Size="ButtonSize.Small"
+                                                Class="cda-button--quick"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                title="Next run page"
+                                                aria-label="Next run page"
+                                                Disabled="@(!Presentation.RunPage.HasNext)"
+                                                Click="@(() => EmitAsync(WorkflowAction.RunPage, delta: 1))"
+                                                data-testid="workflows-run-page-next" />
+                                    </Cluster>
+                                </div>
+                            }
+
+                            <div class="workflows-section workflows-events-section">
+                                <Split Gap="LayoutGap.Small" AlignItems="AlignItems.Center">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Events" />
+                                        <p class="workflows-muted">@Presentation.EventPage.Text</p>
+                                    </div>
+                                    @if (Presentation.SelectedRun is not null) {
+                                        <StatusBadge Tone="@Presentation.RunTone" Text="@Presentation.SelectedRun.Id.ToString("N")[..8]" />
+                                    }
+                                </Split>
+
+                                @if (Presentation.Events.Length == 0) {
+                                    <EmptyState Eyebrow="No events"
+                                                Title="No events on this run"
+                                                Description="Runtime events appear here after a run starts producing timeline records." />
+                                } else {
+                                    <Stack GapScale="LayoutGap.Small" Class="mt-3 workflows-history-scroll workflows-event-list">
+                                        @foreach (var workflowEvent in Presentation.Events) {
+                                            <div class="workflows-event" data-testid="workflows-run-event">
+                                                <div class="workflows-event__summary">
+                                                    <StatusBadge Tone="@workflowEvent.Tone" Text="@workflowEvent.Kind" />
+                                                    <small>@workflowEvent.CreatedAt</small>
+                                                    <span class="workflows-clamped-text">@workflowEvent.Summary</span>
+                                                </div>
+                                                <Button Icon="open_in_full"
+                                                        Size="ButtonSize.Small"
+                                                        Class="cda-button--quick"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        title="Open event details"
+                                                        aria-label="Open event details"
+                                                        Click="@(() => EmitAsync(WorkflowAction.EventDetails, workflowEvent.Id))"
+                                                        data-testid="workflows-event-detail" />
+                                            </div>
+                                        }
+                                    </Stack>
+
+                                    <div class="workflows-pager"
+                                         data-testid="workflows-event-pager">
+                                        <span>@Presentation.EventPage.Text</span>
+                                        <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
+                                            <Button Icon="chevron_left"
+                                                    Size="ButtonSize.Small"
+                                                    Class="cda-button--quick"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    title="Previous event page"
+                                                    aria-label="Previous event page"
+                                                    Disabled="@(!Presentation.EventPage.HasPrevious)"
+                                                    Click="@(() => EmitAsync(WorkflowAction.EventPage, delta: -1))"
+                                                    data-testid="workflows-event-page-previous" />
+                                            <Button Icon="chevron_right"
+                                                    Size="ButtonSize.Small"
+                                                    Class="cda-button--quick"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    title="Next event page"
+                                                    aria-label="Next event page"
+                                                    Disabled="@(!Presentation.EventPage.HasNext)"
+                                                    Click="@(() => EmitAsync(WorkflowAction.EventPage, delta: 1))"
+                                                    data-testid="workflows-event-page-next" />
+                                        </Cluster>
+                                    </div>
+                                }
+                            </div>
+                        </SurfaceCard>
+
+                        <Stack GapScale="LayoutGap.Large" Class="workflows-history-side">
+                            <SurfaceCard Class="workflows-history-card workflows-history-card--side"
+                                         data-testid="workflows-artifacts">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Artifacts" />
+                                <h2 class="workflows-card-title">Captured outputs</h2>
+                                @if (Presentation.Artifacts.Length == 0) {
+                                    <EmptyState Eyebrow="No artifacts"
+                                                Title="No workflow artifacts"
+                                                Description="Artifacts produced by workflow steps will appear here after runs capture them." />
+                                } else {
+                                    <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                        @foreach (var artifact in Presentation.Artifacts) {
+                                            <div class="workflows-artifact" data-testid="workflows-artifact">
+                                                <strong>@artifact.Name</strong>
+                                                <span>@artifact.Kind · @artifact.ContentType</span>
+                                                <small>@artifact.Summary</small>
+                                            </div>
+                                        }
+                                    </Stack>
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard Class="workflows-history-card workflows-history-card--side"
+                                         data-testid="workflows-pending-requests">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Human-in-loop" />
+                                <h2 class="workflows-card-title">Pending requests</h2>
+                                @if (Presentation.Requests.Length == 0) {
+                                    <EmptyState Eyebrow="No pending input"
+                                                Title="No workflow is waiting"
+                                                Description="RequestPort and human approval waits will appear here when a workflow pauses for input." />
+                                } else {
+                                    <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                        @foreach (var request in Presentation.Requests) {
+                                            <div class="workflows-request" data-testid="workflows-pending-request">
+                                                <StatusBadge Tone="warning" Text="@request.Kind" />
+                                                <strong>@request.EventName</strong>
+                                                <small>@request.RequestJson</small>
+                                                <label class="workflows-field">
+                                                    <span>Response JSON</span>
+                                                    <textarea class="cda-input cda-input--textarea workflows-request-response"
+                                                              value="@request.ResponseJson" @onchange="@(args => ChangeResponseAsync(request.Id, args))"
+                                                              data-testid="workflows-pending-response"></textarea>
+                                                </label>
+                                                <Button Icon="send"
+                                                        Size="ButtonSize.Small"
+                                                        Class="cda-button--quick"
+                                                        title="Respond"
+                                                        aria-label="Respond"
+                                                        Click="@(() => EmitAsync(WorkflowAction.Respond, request.Id))"
+                                                        Disabled="@(Presentation.IsBusy || request.IsBusy)"
+                                                        data-testid="workflows-respond-request" />
+                                            </div>
+                                        }
+                                    </Stack>
+                                }
+                            </SurfaceCard>
+                        </Stack>
+                    </Grid>
+
+@code {
+    [Parameter, EditorRequired] public WorkflowHistoryPresentation Presentation { get; set; } = new();
+    [Parameter] public EventCallback<WorkflowIntent> Intent { get; set; }
+    private Task EmitAsync(WorkflowAction action, Guid? id = null, int delta = 0, string? text = null)
+        => Intent.InvokeAsync(new(Presentation.Revision, action, id, text, delta));
+    private Task ChangeInputAsync(ChangeEventArgs args) => EmitAsync(WorkflowAction.TestInputChanged, text: args.Value?.ToString() ?? "");
+    private Task ChangeResponseAsync(Guid id, ChangeEventArgs args) => EmitAsync(WorkflowAction.ResponseChanged, id, text: args.Value?.ToString() ?? "");
+    private Task RunTestAsync() => EmitAsync(WorkflowAction.RunTest);
+    private Task CancelRunAsync() => EmitAsync(WorkflowAction.CancelRun, Presentation.SelectedRun?.Id);
+}

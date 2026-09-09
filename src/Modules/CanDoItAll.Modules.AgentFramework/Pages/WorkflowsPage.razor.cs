@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -10,11 +11,12 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
+using System.Collections.Immutable;
+using CanDoItAll.AgentFramework.Workflows.UI;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
-public partial class WorkflowsPage
-{
+public partial class WorkflowsPage : IDisposable {
     private const int HistoryRunPageSize = 8;
     private const int HistoryEventPageSize = 8;
     private const int DashboardTabIndex = 0;
@@ -76,6 +78,9 @@ public partial class WorkflowsPage
     public NavigationManager Navigation { get; set; } = default!;
 
     [Inject]
+    public ILogger<WorkflowsPage> Logger { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
@@ -119,7 +124,6 @@ public partial class WorkflowsPage
     private IReadOnlyList<WorkflowArtifactRecord> runDetailArtifacts = [];
     private WorkflowTestRunResult? testResult;
     private string testInputJson = WorkflowPreviewInputSupport.DefaultInputJson;
-    private string pendingResponseJson = "{\"approved\":true}";
     private WorkflowPreviewInputState previewInputState = new();
     private IReadOnlyList<ProjectStructureRuntimeProjectSummary> previewProjectOptions = [];
     private string previewInputErrorMessage = string.Empty;
@@ -136,6 +140,8 @@ public partial class WorkflowsPage
     private bool isBusy;
     private bool isOpeningWorkflowCurator;
     private bool isRunningTest;
+    private bool isPreparingTest;
+    private Task? definitionLoadTask;
     private bool isPreviewInputDialogOpen;
     private bool isTemplateCatalogueDialogOpen;
     private bool isTemplateCatalogueLoading;
@@ -189,8 +195,7 @@ public partial class WorkflowsPage
                 new("runId", RequestedRunId?.ToString("D"))
             ]);
 
-    private Task HandleCanvasSelectedNodeChangedAsync(WorkflowAgentChatNodeSelection? selection)
-    {
+    private Task HandleCanvasSelectedNodeChangedAsync(WorkflowAgentChatNodeSelection? selection) {
         selectedCanvasNode = selection;
         return Task.CompletedTask;
     }
@@ -217,11 +222,6 @@ public partial class WorkflowsPage
 
     private string SelectedDefinitionTitle => selectedDefinition?.Name ?? SelectedDefinitionSummary?.Name ?? "Workflow detail";
 
-    private string PublishButtonTitle
-        => validationIssues.Count == 0
-            ? "Publish this workflow for production runs."
-            : "Resolve validation issues before publishing.";
-
     private bool IsSelectedDefinitionDetailPending
         => CurrentDefinitionId.HasValue && !selectedDefinitionDetailLoaded && !selectedDefinitionDetailUnavailable;
 
@@ -245,23 +245,17 @@ public partial class WorkflowsPage
 
     private string PendingRequestCountText => historyLoaded ? pendingRequests.Count.ToString() : "-";
 
-    private string ArtifactCountText => historyLoaded ? artifacts.Count.ToString() : "-";
-
     private IReadOnlyList<WorkflowTemplateDefinition> WorkflowTemplates => templatePack?.Workflows ?? [];
 
     private string WorkflowTemplateSeedText => templatePack?.Manifest.SeedVersion ?? "-";
 
-    private IReadOnlyList<WorkflowTemplateDefinition> FilteredWorkflowTemplates
-    {
-        get
-        {
-            if (templatePack is null)
-            {
+    private IReadOnlyList<WorkflowTemplateDefinition> FilteredWorkflowTemplates {
+        get {
+            if (templatePack is null) {
                 return [];
             }
 
-            if (string.IsNullOrWhiteSpace(templateSearchText))
-            {
+            if (string.IsNullOrWhiteSpace(templateSearchText)) {
                 return templatePack.Workflows;
             }
 
@@ -272,14 +266,11 @@ public partial class WorkflowsPage
         }
     }
 
-    private WorkflowTemplateDefinition? SelectedWorkflowTemplate
-    {
-        get
-        {
+    private WorkflowTemplateDefinition? SelectedWorkflowTemplate {
+        get {
             var templates = FilteredWorkflowTemplates;
             if (selectedTemplate is not null &&
-                templates.Any(template => IsSameWorkflowTemplate(template, selectedTemplate)))
-            {
+                templates.Any(template => IsSameWorkflowTemplate(template, selectedTemplate))) {
                 return selectedTemplate;
             }
 
@@ -294,20 +285,17 @@ public partial class WorkflowsPage
 
     private IReadOnlyList<CanvasWorkbenchStat> TemplatePreviewCanvasStats =>
     [
-        new()
-        {
+        new() {
             Label = "Nodes",
             Value = templatePreviewDefinition?.Graph.Nodes.Count.ToString() ?? "0",
             Tone = "info"
         },
-        new()
-        {
+        new() {
             Label = "Edges",
             Value = templatePreviewDefinition?.Graph.Edges.Count.ToString() ?? "0",
             Tone = "secondary"
         },
-        new()
-        {
+        new() {
             Label = "Inputs",
             Value = templatePreviewDefinition?.InputParameters.Count.ToString() ?? "0",
             Tone = "accent"
@@ -342,6 +330,187 @@ public partial class WorkflowsPage
 
     private string RunTone => !historyLoaded || selectedRun is null ? "neutral" : ResolveRunTone(selectedRun.State);
 
+    private long presentationRevision;
+    private bool disposed;
+    private long tabGeneration;
+    private long targetGeneration;
+    private long overlayGeneration;
+    private long templateGeneration;
+    private long effectSequence;
+    private long? activeTestOperation;
+    private CancellationTokenSource pageReadCancellation = new();
+    private CancellationTokenSource selectionReadCancellation = new();
+    private CancellationTokenSource runReadCancellation = new();
+    private CancellationTokenSource overlayReadCancellation = new();
+    private readonly CancellationTokenSource lifetimeCancellation = new();
+    private bool runUnavailable;
+    private readonly Dictionary<(WorkflowExternalRequestId Id, WorkflowExternalRequestVersion Version), string> responseDrafts = [];
+    private readonly HashSet<(WorkflowExternalRequestId Id, WorkflowExternalRequestVersion Version)> respondingRequests = [];
+
+    private WorkflowShellPresentation ShellPresentation => new() {
+        Revision = presentationRevision,
+        ActiveTab = (WorkflowTab)activeWorkflowTabIndex,
+        IsLoading = isLoading,
+        IsBusy = isBusy || isLoading,
+        ErrorMessage = errorMessage,
+        DefinitionCount = definitions.Count.ToString(),
+        ComponentCount = ComponentCountText,
+        RunCount = HistoryRunCountText,
+        PendingCount = PendingRequestCountText,
+        Backend = settings.DefaultRuntimePolicy.PreferredBackend.ToString(),
+        EditorTitle = SelectedDefinitionTitle,
+        EditorLoading = IsSelectedDefinitionDetailPending,
+        EditorUnavailable = IsSelectedDefinitionDetailUnavailable
+    };
+
+    private WorkflowCatalogPresentation CatalogPresentation => new() {
+        Revision = presentationRevision,
+        IsBusy = isBusy || isLoading,
+        DefinitionCount = definitions.Count,
+        Tree = WorkflowDefinitionTreeNodes.Select(MapTreeEntry).ToImmutableArray(),
+        Definition = selectedDefinition is { } definition
+            ? new(definition.Id.Value, definition.Name, definition.Description, definition.Status.ToString(),
+                definition.RuntimePolicy.PreferredBackend.ToString(), definition.Graph.Nodes.Count,
+                definition.Graph.Edges.Count, definition.Status == WorkflowLifecycleStatus.Draft)
+            : SelectedDefinitionSummary is { } summary
+                ? new(summary.Id.Value, summary.Name, summary.Description, summary.Status.ToString(),
+                    summary.PreferredBackend.ToString(), 0, 0, false)
+                : null,
+        DetailLoading = IsSelectedDefinitionDetailPending,
+        DetailUnavailable = IsSelectedDefinitionDetailUnavailable,
+        ValidationText = ValidationText,
+        ValidationTone = ValidationTone,
+        Issues = validationIssues.Select(issue => new WorkflowValidationView(issue.Code.ToString(), FormatWorkflowMessage(issue.Message))).ToImmutableArray(),
+        SettingsSummary = BuildSettingsSummary()
+    };
+
+    private WorkflowHistoryPresentation HistoryPresentation => new() {
+        Revision = presentationRevision,
+        IsBusy = isBusy || isLoading,
+        IsLoading = isRunsPageLoading || isRunSelectionLoading,
+        RunUnavailable = runUnavailable,
+        CanTest = CurrentDefinitionId.HasValue && !selectedDefinitionDetailUnavailable && !hasRouteIdentityFailure && !isBusy && !isLoading,
+        IsRunningTest = isRunningTest || isPreparingTest,
+        TestInputJson = testInputJson,
+        TestSucceeded = testResult?.Succeeded,
+        TestMessage = testResult is null ? "" : FormatWorkflowMessage(testResult.ErrorMessage),
+        RunText = RunText,
+        RunTone = RunTone,
+        SelectedRun = selectedRun is null ? null : MapRun(selectedRun),
+        Runs = runs.Select(MapRun).ToImmutableArray(),
+        Events = runEvents.Select(item => new WorkflowEventView(item.Id, item.Kind.ToString(),
+            ResolveEventTone(item.Kind), FormatDate(item.CreatedAtUtc), Truncate(ResolveEventDisplayMessage(item), 140))).ToImmutableArray(),
+        Artifacts = artifacts.Select(item => new WorkflowArtifactView(item.Name, item.Kind.ToString(), item.ContentType,
+            FormatWorkflowMessage(item.Summary))).ToImmutableArray(),
+        Requests = pendingRequests.Select(item => new WorkflowRequestView(item.Id.Value, item.Kind.ToString(), item.EventName,
+            item.RequestJson, ResponseDraft(item), respondingRequests.Contains((item.Id, item.Version)))).ToImmutableArray(),
+        RunPage = new(historyRunPageIndex, HistoryRunTotalPages, historyRunTotalCount,
+            FormatPageLabel(historyRunPageIndex, HistoryRunTotalPages, historyRunTotalCount, "runs")),
+        EventPage = new(historyEventPageIndex, HistoryEventTotalPages, historyEventTotalCount,
+            FormatPageLabel(historyEventPageIndex, HistoryEventTotalPages, historyEventTotalCount, "events"))
+    };
+
+    private WorkflowTemplatePresentation TemplatePresentation => new() {
+        Revision = presentationRevision,
+        IsLoading = isTemplateCatalogueLoading,
+        ErrorMessage = templateCatalogueErrorMessage,
+        Search = templateSearchText,
+        Seed = WorkflowTemplateSeedText,
+        TotalCount = WorkflowTemplates.Count,
+        Templates = FilteredWorkflowTemplates.Select(MapTemplate).ToImmutableArray(),
+        Selected = SelectedWorkflowTemplate is { } template ? MapTemplate(template) : null
+    };
+
+    private static WorkflowTreeEntry MapTreeEntry(TreeViewNode node) => new(new(node.Id), node.Text, node.Icon,
+        node.IsExpanded, node.IsSelected, node.Children.Select(MapTreeEntry).ToImmutableArray(), node.Tooltip,
+        node.IsDisabled, node.IsSelectable, node.BadgeText, node.DataTestId, node.ChildrenDataTestId);
+
+    private WorkflowRunView MapRun(WorkflowRunSnapshot run) => new(run.RunId.Value, run.State.ToString(),
+        ResolveRunTone(run.State), run.Backend.ToString(), FormatDate(run.UpdatedAtUtc), Truncate(ResolveRunDisplaySummary(run), 120),
+        selectedRun?.RunId == run.RunId, !IsTerminalRun(run));
+
+    private WorkflowTemplateView MapTemplate(WorkflowTemplateDefinition template) => new(new(template.Key), template.Name,
+        template.Description, BuildTemplateNodeKindSummary(template), template.Graph.Nodes.Count, template.Graph.Edges.Count,
+        template.InputParameters.Count, templatePack?.RuntimePolicy.PreferredBackend.ToString() ?? "-",
+        template.InputParameters.Take(4).Select(input => new WorkflowTemplateInput(input.Label, input.Description,
+            input.Key, input.Kind.ToString(), input.Required)).ToImmutableArray(),
+        SelectedWorkflowTemplate is { } selected && IsSameWorkflowTemplate(template, selected));
+
+    private string ResponseDraft(WorkflowExternalRequestRecord request)
+        => responseDrafts.GetValueOrDefault((request.Id, request.Version), "{\"approved\":true}");
+
+    private async Task HandleIntentAsync(WorkflowIntent intent) {
+        if (disposed || intent.Action != WorkflowAction.ChangeTab && intent.Revision != presentationRevision) {
+            return;
+        }
+
+        switch (intent.Action) {
+            case WorkflowAction.Refresh:
+                await RefreshAsync();
+                break;
+            case WorkflowAction.CreateStarter:
+                await CreateStarterWorkflowAsync();
+                break;
+            case WorkflowAction.OpenAgents:
+                OpenAgents();
+                break;
+            case WorkflowAction.ChangeTab:
+                await HandleWorkflowTabChangedAsync((int)intent.Tab);
+                break;
+            case WorkflowAction.SelectDefinition when intent.TreeKey is { } key:
+                await HandleWorkflowTreeSelectAsync(key.Value);
+                break;
+            case WorkflowAction.ToggleTree when intent.TreeKey is { } key:
+                await HandleWorkflowTreeToggleAsync(key.Value);
+                break;
+            case WorkflowAction.OpenTemplates:
+                await OpenTemplateCatalogueDialogAsync();
+                break;
+            case WorkflowAction.Publish when intent.TargetId == CurrentDefinitionId?.Value:
+                await PublishSelectedDefinitionAsync();
+                break;
+            case WorkflowAction.TestInputChanged:
+                testInputJson = intent.Text ?? "";
+                break;
+            case WorkflowAction.RunTest:
+                await RunSelectedWorkflowAsync();
+                break;
+            case WorkflowAction.CancelRun when intent.TargetId == selectedRun?.RunId.Value:
+                await CancelSelectedRunAsync();
+                break;
+            case WorkflowAction.SelectRun when runs.FirstOrDefault(run => run.RunId.Value == intent.TargetId) is { } run:
+                await SelectRunAsync(run.RunId);
+                break;
+            case WorkflowAction.RunDetails when runs.FirstOrDefault(run => run.RunId.Value == intent.TargetId) is { } run:
+                await OpenRunDetailDialogAsync(run);
+                break;
+            case WorkflowAction.EventDetails when runEvents.FirstOrDefault(item => item.Id == intent.TargetId) is { } item:
+                OpenEventDetailDialog(item);
+                break;
+            case WorkflowAction.RunPage:
+                await ChangeRunPageAsync(intent.Delta);
+                break;
+            case WorkflowAction.EventPage:
+                await ChangeEventPageAsync(intent.Delta);
+                break;
+            case WorkflowAction.ResponseChanged when pendingRequests.FirstOrDefault(request => request.Id.Value == intent.TargetId) is { } request:
+                responseDrafts[(request.Id, request.Version)] = intent.Text ?? "";
+                break;
+            case WorkflowAction.Respond when pendingRequests.FirstOrDefault(request => request.Id.Value == intent.TargetId) is { } request:
+                await RespondToRequestAsync(request);
+                break;
+            case WorkflowAction.TemplateSearch:
+                HandleWorkflowTemplateSearchChanged(new() { Value = intent.Text });
+                break;
+            case WorkflowAction.SelectTemplate when WorkflowTemplates.FirstOrDefault(item => item.Key == intent.TemplateKey?.Value) is { } template:
+                SelectWorkflowTemplate(template);
+                break;
+            case WorkflowAction.PreviewTemplate when WorkflowTemplates.FirstOrDefault(item => item.Key == intent.TemplateKey?.Value) is { } template:
+                await OpenTemplatePreviewDialogAsync(template);
+                break;
+        }
+    }
+
     private IReadOnlyList<TreeViewNode> WorkflowDefinitionTreeNodes
         => WorkflowDefinitionTreeNodeBuilder.Build(
             definitions,
@@ -352,19 +521,9 @@ public partial class WorkflowsPage
 
     private int HistoryEventTotalPages => CalculateTotalPages(historyEventTotalCount, HistoryEventPageSize);
 
-    private bool CanGoToPreviousRunPage => historyRunPageIndex > 0;
-
-    private bool CanGoToNextRunPage => historyRunPageIndex + 1 < HistoryRunTotalPages;
-
-    private bool CanGoToPreviousEventPage => historyEventPageIndex > 0;
-
-    private bool CanGoToNextEventPage => historyEventPageIndex + 1 < HistoryEventTotalPages;
-
-    protected override async Task OnParametersSetAsync()
-    {
+    protected override async Task OnParametersSetAsync() {
         var navigation = AgentChatNavigationFence;
-        if (hasObservedNavigation && observedNavigation == navigation)
-        {
+        if (hasObservedNavigation && observedNavigation == navigation) {
             return;
         }
 
@@ -376,10 +535,8 @@ public partial class WorkflowsPage
             RequestedRunId), navigation);
     }
 
-    private async Task RefreshAsync()
-    {
-        if (isBusy)
-        {
+    private async Task RefreshAsync() {
+        if (isBusy) {
             return;
         }
 
@@ -399,8 +556,7 @@ public partial class WorkflowsPage
 
     private async Task RefreshRouteAsync(
         WorkflowRouteRequest route,
-        AgentChatNavigationIdentity navigation)
-    {
+        AgentChatNavigationIdentity navigation) {
         var generation = BeginPageLoad(clearSelection: true);
         await ExecutePageLoadAsync(
             route.WorkflowId,
@@ -410,16 +566,16 @@ public partial class WorkflowsPage
             navigation);
     }
 
-    private long BeginPageLoad(bool clearSelection)
-    {
+    private long BeginPageLoad(bool clearSelection) {
         var generation = ++pageLoadGeneration;
+        RenewRead(ref pageReadCancellation);
+        InvalidateSelectionEffects();
         isBusy = true;
         isLoading = true;
         errorMessage = string.Empty;
         hasRouteIdentityFailure = false;
         selectedRouteProject = null;
-        if (clearSelection)
-        {
+        if (clearSelection) {
             ClearSelectedDefinitionState();
             ClearHistoryState(markLoaded: false);
         }
@@ -432,11 +588,9 @@ public partial class WorkflowsPage
         WorkflowRunId? preferredRunId,
         WorkflowRouteRequest? requiredRoute,
         long generation,
-        AgentChatNavigationIdentity navigation)
-    {
+        AgentChatNavigationIdentity navigation) {
         var pageLoadCompleted = false;
-        try
-        {
+        try {
             await LoadPageCoreAsync(
                 preferredDefinitionId,
                 preferredRunId,
@@ -444,33 +598,25 @@ public partial class WorkflowsPage
                 generation,
                 navigation);
             pageLoadCompleted = true;
-        }
-        catch (Exception exception)
-        {
-            if (!IsCurrentPageLoad(generation, navigation))
-            {
+        } catch (Exception exception) {
+            if (!IsCurrentPageLoad(generation, navigation)) {
                 return;
             }
 
             errorMessage = FormatWorkflowException(exception);
-            if (requiredRoute is not null)
-            {
+            if (requiredRoute is not null) {
                 FailRouteIdentity(errorMessage);
             }
 
             NotificationService.Error("Workflow refresh failed", errorMessage);
-        }
-        finally
-        {
-            if (IsCurrentPageLoad(generation, navigation))
-            {
+        } finally {
+            if (IsCurrentPageLoad(generation, navigation)) {
                 isLoading = false;
                 isBusy = false;
             }
         }
 
-        if (!pageLoadCompleted || !IsCurrentPageLoad(generation, navigation))
-        {
+        if (!pageLoadCompleted || !IsCurrentPageLoad(generation, navigation)) {
             return;
         }
 
@@ -480,14 +626,17 @@ public partial class WorkflowsPage
 
     private Task LoadPageAsync(
         WorkflowId? preferredDefinitionId = null,
-        WorkflowRunId? preferredRunId = null)
-    {
+        WorkflowRunId? preferredRunId = null) {
         var navigation = AgentChatNavigationFence;
         var generation = ++pageLoadGeneration;
+        var targetDefinition = preferredDefinitionId ?? CurrentDefinitionId;
+        var route = selectedRouteProject is { } project && targetDefinition == CurrentDefinitionId
+            ? WorkflowRouteRequest.Create(project.ProjectId, targetDefinition?.Value, preferredRunId?.Value)
+            : null;
         return LoadPageCoreAsync(
-            preferredDefinitionId,
+            targetDefinition,
             preferredRunId,
-            requiredRoute: null,
+            requiredRoute: route,
             generation,
             navigation);
     }
@@ -497,15 +646,14 @@ public partial class WorkflowsPage
         WorkflowRunId? preferredRunId,
         WorkflowRouteRequest? requiredRoute,
         long generation,
-        AgentChatNavigationIdentity navigation)
-    {
+        AgentChatNavigationIdentity navigation) {
         analyticsRefreshVersion++;
-        var settingsTask = SettingsService.GetSettingsAsync();
-        var definitionsTask = CatalogService.ListDefinitionsAsync();
+        var cancellation = pageReadCancellation.Token;
+        var settingsTask = SettingsService.GetSettingsAsync(cancellation);
+        var definitionsTask = CatalogService.ListDefinitionsAsync(cancellation);
         await Task.WhenAll(settingsTask, definitionsTask);
 
-        if (!IsCurrentPageLoad(generation, navigation))
-        {
+        if (!IsCurrentPageLoad(generation, navigation)) {
             return;
         }
 
@@ -515,17 +663,14 @@ public partial class WorkflowsPage
         var routeError = requiredRoute?.ValidationError ?? string.Empty;
         if (string.IsNullOrEmpty(routeError) &&
             requiredRoute?.WorkflowId is { } requiredDefinitionId &&
-            loadedDefinitions.All(definition => definition.Id != requiredDefinitionId))
-        {
+            loadedDefinitions.All(definition => definition.Id != requiredDefinitionId)) {
             routeError = $"Workflow definition '{requiredDefinitionId}' was not found.";
         }
 
         if (string.IsNullOrEmpty(routeError) &&
-            requiredRoute is { ProjectId: { } projectId, WorkflowId: { } workflowId })
-        {
-            var projectValidation = await ValidateProjectWorkflowRelationAsync(projectId, workflowId);
-            if (!IsCurrentPageLoad(generation, navigation))
-            {
+            requiredRoute is { ProjectId: { } projectId, WorkflowId: { } workflowId }) {
+            var projectValidation = await ValidateProjectWorkflowRelationAsync(projectId, workflowId, cancellation);
+            if (!IsCurrentPageLoad(generation, navigation)) {
                 return;
             }
 
@@ -534,9 +679,8 @@ public partial class WorkflowsPage
         }
 
         settings = loadedSettings;
-        definitions = loadedDefinitions;
-        if (!string.IsNullOrEmpty(routeError))
-        {
+        definitions = loadedDefinitions.ToImmutableArray();
+        if (!string.IsNullOrEmpty(routeError)) {
             FailRouteIdentity(routeError);
             return;
         }
@@ -547,25 +691,19 @@ public partial class WorkflowsPage
                            preferredDefinitionId ??
                            CurrentDefinitionId ??
                            definitions.FirstOrDefault()?.Id;
-        if (definitionId.HasValue)
-        {
+        if (definitionId.HasValue) {
             SetSelectedDefinitionPlaceholder(definitionId.Value);
-        }
-        else
-        {
+        } else {
             ClearSelectedDefinitionState();
         }
 
-        if (requiredRoute?.WorkflowId.HasValue == true)
-        {
+        if (requiredRoute?.WorkflowId.HasValue == true) {
             await EnsureSelectedDefinitionLoadedAsync();
-            if (!IsCurrentPageLoad(generation, navigation))
-            {
+            if (!IsCurrentPageLoad(generation, navigation)) {
                 return;
             }
 
-            if (selectedDefinition?.Id != definitionId)
-            {
+            if (selectedDefinition?.Id != definitionId) {
                 FailRouteIdentity(errorMessage.Length > 0
                     ? errorMessage
                     : $"Workflow definition '{definitionId}' could not be loaded.");
@@ -573,8 +711,7 @@ public partial class WorkflowsPage
             }
         }
 
-        if (ShouldLoadHistory(preferredRunId))
-        {
+        if (ShouldLoadHistory(preferredRunId)) {
             var definitionGeneration = selectedDefinitionGeneration;
             await EnsureSelectedDefinitionLoadedAsync();
             await LoadRunsPageAsync(
@@ -582,151 +719,146 @@ public partial class WorkflowsPage
                 pageIndex: 0,
                 preferredRunId,
                 definitionGeneration);
-            if (!IsCurrentPageLoad(generation, navigation))
-            {
+            if (!IsCurrentPageLoad(generation, navigation)) {
                 return;
             }
 
-            if (requiredRoute?.RunId is { } requiredRunId && selectedRun?.RunId != requiredRunId)
-            {
+            if (requiredRoute?.RunId is { } requiredRunId && selectedRun?.RunId != requiredRunId) {
                 FailRouteIdentity(
                     $"Workflow run '{requiredRunId}' was not found for workflow '{definitionId}'.");
                 return;
             }
-        }
-        else
-        {
+        } else {
             ClearHistoryState(markLoaded: false);
         }
 
-        if (componentLibraryLoaded)
-        {
+        if (componentLibraryLoaded) {
             await RefreshComponentLibraryAsync();
         }
     }
 
-    private async Task SelectDefinitionAsync(WorkflowId definitionId)
-    {
+    private async Task SelectDefinitionAsync(WorkflowId definitionId) {
+        var projectId = selectedRouteProject?.ProjectId;
+        selectedRouteProject = null;
         errorMessage = string.Empty;
         SetSelectedDefinitionPlaceholder(definitionId);
         var selectionGeneration = selectedDefinitionGeneration;
         isDefinitionSelectionLoading = true;
         StateHasChanged();
-        try
-        {
+        try {
+            if (projectId.HasValue) {
+                var relation = await ValidateProjectWorkflowRelationAsync(projectId.Value, definitionId, selectionReadCancellation.Token);
+                if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
+                    return;
+                }
+
+                if (relation.Project is null) {
+                    FailRouteIdentity(relation.ErrorMessage);
+                    return;
+                }
+
+                selectedRouteProject = relation.Project;
+            }
+
             await EnsureSelectedDefinitionLoadedAsync();
-            if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration))
-            {
+            if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
                 return;
             }
 
-            if (historyLoaded || WorkflowTabRequiresHistory(activeWorkflowTabIndex))
-            {
+            if (historyLoaded || WorkflowTabRequiresHistory(activeWorkflowTabIndex)) {
                 await LoadRunsPageAsync(
                     definitionId,
                     pageIndex: 0,
                     expectedDefinitionGeneration: selectionGeneration);
-            }
-            else
-            {
+            } else {
                 ClearHistoryState(markLoaded: false);
             }
-        }
-        finally
-        {
-            if (IsCurrentDefinitionSelection(definitionId, selectionGeneration))
-            {
+        } catch (Exception exception) {
+            if (IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
+                FailRouteIdentity(FormatWorkflowException(exception));
+            }
+        } finally {
+            if (IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
                 isDefinitionSelectionLoading = false;
                 StateHasChanged();
             }
         }
     }
 
-    private async Task HandleWorkflowTreeSelectAsync(string nodeId)
-    {
-        if (!WorkflowDefinitionTreeNodeBuilder.TryReadDefinitionId(nodeId, out var definitionId))
-        {
+    private async Task HandleWorkflowTreeSelectAsync(string nodeId) {
+        if (!WorkflowDefinitionTreeNodeBuilder.TryReadDefinitionId(nodeId, out var definitionId)) {
             return;
         }
 
         await SelectDefinitionAsync(definitionId);
     }
 
-    private Task HandleWorkflowTreeToggleAsync(string nodeId)
-    {
-        if (!expandedWorkflowTreeNodeIds.Add(nodeId))
-        {
+    private Task HandleWorkflowTreeToggleAsync(string nodeId) {
+        if (!expandedWorkflowTreeNodeIds.Add(nodeId)) {
             expandedWorkflowTreeNodeIds.Remove(nodeId);
         }
 
         return Task.CompletedTask;
     }
 
-    private async Task OpenTemplateCatalogueDialogAsync()
-    {
-        if (isTemplateCatalogueLoading)
-        {
+    private async Task OpenTemplateCatalogueDialogAsync() {
+        if (isTemplateCatalogueLoading) {
             return;
         }
 
         isTemplateCatalogueDialogOpen = true;
         templateCatalogueErrorMessage = string.Empty;
 
-        if (templatePack is not null)
-        {
+        if (templatePack is not null) {
             SelectDefaultWorkflowTemplate();
             return;
         }
 
         isTemplateCatalogueLoading = true;
-        try
-        {
+        try {
             await EnsureTemplatePackLoadedAsync();
             SelectDefaultWorkflowTemplate();
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) {
             templateCatalogueErrorMessage = FormatWorkflowException(exception);
             NotificationService.Error("Template catalogue failed", templateCatalogueErrorMessage);
-        }
-        finally
-        {
+        } finally {
             isTemplateCatalogueLoading = false;
         }
     }
 
-    private void CloseTemplateCatalogueDialog()
-    {
+    private void CloseTemplateCatalogueDialog() {
+        templateGeneration++;
         isTemplateCatalogueDialogOpen = false;
         templateCatalogueErrorMessage = string.Empty;
     }
 
-    private void SelectWorkflowTemplate(WorkflowTemplateDefinition template)
-    {
+    private void SelectWorkflowTemplate(WorkflowTemplateDefinition template) {
+        presentationRevision++;
+        templateGeneration++;
         selectedTemplate = template;
     }
 
-    private void HandleWorkflowTemplateSearchChanged(ChangeEventArgs args)
-    {
+    private void HandleWorkflowTemplateSearchChanged(ChangeEventArgs args) {
+        presentationRevision++;
+        templateGeneration++;
         templateSearchText = args.Value?.ToString() ?? string.Empty;
         SelectDefaultWorkflowTemplate();
     }
 
-    private void SelectDefaultWorkflowTemplate()
-    {
+    private void SelectDefaultWorkflowTemplate() {
         selectedTemplate = SelectedWorkflowTemplate ?? FilteredWorkflowTemplates.FirstOrDefault();
     }
 
-    private async Task OpenTemplatePreviewDialogAsync(WorkflowTemplateDefinition template)
-    {
+    private async Task OpenTemplatePreviewDialogAsync(WorkflowTemplateDefinition template) {
+        var owner = CaptureOwner();
+        var generation = ++templateGeneration;
+        presentationRevision++;
         selectedTemplate = template;
         templatePreviewErrorMessage = string.Empty;
 
-        try
-        {
+        try {
             await EnsureTemplatePackLoadedAsync();
-            if (templatePack is null)
-            {
+            if (!Owns(owner) || generation != templateGeneration || templatePack is null) {
                 return;
             }
 
@@ -743,16 +875,18 @@ public partial class WorkflowsPage
             templatePreviewSelectedNodeId = definition.Graph.StartNodeId.Value;
             templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState(templatePreviewSelectedNodeId);
             isTemplatePreviewDialogOpen = true;
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) {
+            if (!Owns(owner) || generation != templateGeneration) {
+                return;
+            }
+
             templatePreviewErrorMessage = FormatWorkflowException(exception);
             NotificationService.Error("Template preview failed", templatePreviewErrorMessage);
         }
     }
 
-    private void CloseTemplatePreviewDialog()
-    {
+    private void CloseTemplatePreviewDialog() {
+        templateGeneration++;
         isTemplatePreviewDialogOpen = false;
         templatePreviewErrorMessage = string.Empty;
         templatePreviewTemplate = null;
@@ -762,31 +896,35 @@ public partial class WorkflowsPage
         templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState(templatePreviewSelectedNodeId);
     }
 
-    private async Task AddSelectedTemplateToDraftsAsync()
-    {
+    private async Task AddSelectedTemplateToDraftsAsync() {
         if (isBusy ||
             templatePack is null ||
-            templatePreviewTemplate is null)
-        {
+            templatePreviewTemplate is null) {
             return;
         }
 
+        var owner = CaptureOwner();
+        var generation = templateGeneration;
+        var pack = templatePack;
+        var template = templatePreviewTemplate;
+        var draftName = ResolveTemplateDraftName(template.Name, definitions);
         isBusy = true;
         templatePreviewErrorMessage = string.Empty;
 
-        try
-        {
+        try {
             await EnsureComponentLibraryLoadedAsync();
-            var draftName = ResolveTemplateDraftName(templatePreviewTemplate.Name, definitions);
+            if (!componentLibraryLoaded || !Owns(owner) || generation != templateGeneration) {
+                return;
+            }
             var providerOption = ResolveTemplateProviderOption();
             var component = await ComponentLibrary.SaveComponentAsync(CreateTemplateComponentSaveRequest(
-                templatePack,
-                templatePreviewTemplate,
+                pack,
+                template,
                 draftName,
                 providerOption));
             var definition = CreateTemplateWorkflowDefinition(
-                templatePack,
-                templatePreviewTemplate,
+                pack,
+                template,
                 component,
                 draftName,
                 WorkflowLifecycleStatus.Draft);
@@ -797,52 +935,51 @@ public partial class WorkflowsPage
                 Description: definition.Description,
                 Status: WorkflowLifecycleStatus.Draft,
                 Graph: definition.Graph,
-                RuntimePolicy: definition.RuntimePolicy)
-            {
+                RuntimePolicy: definition.RuntimePolicy) {
                 InputParameters = definition.InputParameters
             });
+
+            if (!Owns(owner) || generation != templateGeneration) {
+                return;
+            }
 
             NotificationService.Success("Template added to drafts", saved.Name);
             CloseTemplatePreviewDialog();
             CloseTemplateCatalogueDialog();
+            isBusy = false;
             await LoadPageAsync(preferredDefinitionId: saved.Id);
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) {
+            if (!Owns(owner) || generation != templateGeneration) {
+                return;
+            }
+
             templatePreviewErrorMessage = FormatWorkflowException(exception);
             NotificationService.Error("Template add failed", templatePreviewErrorMessage);
-        }
-        finally
-        {
-            isBusy = false;
+        } finally {
+            if (Owns(owner)) {
+                isBusy = false;
+            }
         }
     }
 
-    private Task HandleTemplatePreviewCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
-    {
+    private Task HandleTemplatePreviewCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args) {
         templatePreviewSelectedNodeId = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
         return Task.CompletedTask;
     }
 
-    private Task HandleTemplatePreviewCanvasStateChangedAsync(string stateJson)
-    {
+    private Task HandleTemplatePreviewCanvasStateChangedAsync(string stateJson) {
         templatePreviewCanvasUiState = CanvasWorkbenchUiState.Parse(stateJson);
         return Task.CompletedTask;
     }
 
     private async Task LoadDefinitionAsync(
         WorkflowId definitionId,
-        long selectionGeneration)
-    {
+        long selectionGeneration) {
         WorkflowDefinitionDetail? detail;
-        try
-        {
-            detail = await CatalogService.GetDefinitionAsync(definitionId);
-        }
-        catch (Exception exception)
-        {
-            if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration))
-            {
+        try {
+            detail = await CatalogService.GetDefinitionAsync(definitionId, cancellationToken: selectionReadCancellation.Token);
+        } catch (Exception exception) {
+            if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
                 return;
             }
 
@@ -851,16 +988,15 @@ public partial class WorkflowsPage
             selectedDefinitionDetailLoaded = false;
             selectedDefinitionDetailUnavailable = true;
             errorMessage = FormatWorkflowException(exception);
-            throw;
-        }
-
-        if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration))
-        {
+            NotificationService.Error("Workflow detail failed", errorMessage);
             return;
         }
 
-        if (detail is null)
-        {
+        if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
+            return;
+        }
+
+        if (detail is null || detail.Definition.Id != definitionId) {
             selectedDefinitionId = definitionId;
             selectedDefinition = null;
             validationIssues = [];
@@ -870,26 +1006,27 @@ public partial class WorkflowsPage
             return;
         }
 
-        selectedDefinition = detail.Definition;
-        validationIssues = detail.Validation.Issues;
+        selectedDefinition = FreezeDefinition(detail.Definition);
+        validationIssues = detail.Validation.Issues.ToImmutableArray();
         selectedDefinitionId = detail.Definition.Id;
         selectedDefinitionDetailLoaded = true;
         selectedDefinitionDetailUnavailable = false;
     }
 
-    private async Task CreateStarterWorkflowAsync()
-    {
-        if (isBusy)
-        {
+    private async Task CreateStarterWorkflowAsync() {
+        if (isBusy) {
             return;
         }
 
+        var owner = CaptureOwner();
         isBusy = true;
         errorMessage = string.Empty;
 
-        try
-        {
+        try {
             await EnsureComponentLibraryLoadedAsync();
+            if (!componentLibraryLoaded || !Owns(owner)) {
+                return;
+            }
             var providerOption = ResolveDefaultProviderOption();
             var component = await ComponentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
                 Id: null,
@@ -920,83 +1057,99 @@ public partial class WorkflowsPage
                     ExposeAzureFunctionsStatusEndpoint: false,
                     ExposeAzureFunctionsMcpTool: false)));
 
+            if (!Owns(owner)) {
+                return;
+            }
+
+            isBusy = false;
             NotificationService.Success("Workflow created", "Starter workflow and LLM component were created.");
             await LoadPageAsync(preferredDefinitionId: definition.Id);
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) {
+            if (!Owns(owner)) {
+                return;
+            }
+
             errorMessage = FormatWorkflowException(exception);
             NotificationService.Error("Workflow create failed", errorMessage);
-        }
-        finally
-        {
-            isBusy = false;
+        } finally {
+            if (Owns(owner)) {
+                isBusy = false;
+            }
         }
     }
 
-    private async Task PublishSelectedDefinitionAsync()
-    {
-        if (isBusy || selectedDefinition is not { Status: WorkflowLifecycleStatus.Draft } draft)
-        {
+    private async Task PublishSelectedDefinitionAsync() {
+        if (isBusy || selectedDefinition is not { Status: WorkflowLifecycleStatus.Draft } draft) {
             return;
         }
 
+        var owner = CaptureOwner();
         isBusy = true;
         errorMessage = string.Empty;
 
-        try
-        {
+        try {
             var published = await CatalogService.ChangeDefinitionStatusAsync(
                 new WorkflowDefinitionStatusChangeRequest(
                     draft.Id,
                     draft.VersionId,
                     WorkflowLifecycleStatus.Active));
 
+            if (!Owns(owner)) {
+                return;
+            }
+
+            isBusy = false;
             NotificationService.Success(
                 "Workflow published",
                 $"{published.Name} is ready for production runs.");
-            ClearSelectedDefinitionState();
+            selectedDefinitionDetailLoaded = false;
             await LoadPageAsync(preferredDefinitionId: published.Id);
-            await EnsureSelectedDefinitionLoadedAsync();
-        }
-        catch (Exception exception)
-        {
+            if (!disposed && CurrentDefinitionId == published.Id) {
+                await EnsureSelectedDefinitionLoadedAsync();
+            }
+        } catch (Exception exception) {
+            if (!Owns(owner)) {
+                return;
+            }
+
             errorMessage = FormatWorkflowException(exception);
             NotificationService.Error("Workflow publish failed", errorMessage);
-        }
-        finally
-        {
-            isBusy = false;
+        } finally {
+            if (Owns(owner)) {
+                isBusy = false;
+            }
         }
     }
 
-    private async Task RunSelectedWorkflowAsync()
-    {
-        if (isRunningTest)
-        {
+    private async Task RunSelectedWorkflowAsync() {
+        if (disposed || isRunningTest || isPreparingTest) {
             return;
         }
 
-        await EnsureSelectedDefinitionLoadedAsync();
-        if (selectedDefinition is null)
-        {
-            return;
-        }
+        var owner = CaptureOwner();
+        isPreparingTest = true;
+        try {
+            await EnsureSelectedDefinitionLoadedAsync();
+            if (!Owns(owner) || selectedDefinition is null) {
+                return;
+            }
 
-        var requirements = WorkflowPreviewInputSupport.Analyze(selectedDefinition, ExecutorCatalog.ListExecutors());
-        if (requirements.NeedsPreviewDialog)
-        {
-            await OpenSelectedWorkflowPreviewInputDialogAsync(requirements);
-            return;
-        }
+            var requirements = WorkflowPreviewInputSupport.Analyze(selectedDefinition, ExecutorCatalog.ListExecutors());
+            if (requirements.NeedsPreviewDialog) {
+                await OpenSelectedWorkflowPreviewInputDialogAsync(requirements);
+                return;
+            }
 
-        await RunSelectedWorkflowCoreAsync(testInputJson, draftDefinition: null, WorkflowPreviewSimulationPlan.Empty);
+            await RunSelectedWorkflowCoreAsync(testInputJson, draftDefinition: null, WorkflowPreviewSimulationPlan.Empty);
+        } finally {
+            if (Owns(owner)) {
+                isPreparingTest = false;
+            }
+        }
     }
 
-    private async Task OpenSelectedWorkflowPreviewInputDialogAsync(WorkflowPreviewRequirements requirements)
-    {
-        previewInputState = new WorkflowPreviewInputState
-        {
+    private async Task OpenSelectedWorkflowPreviewInputDialogAsync(WorkflowPreviewRequirements requirements) {
+        previewInputState = new WorkflowPreviewInputState {
             InputJson = testInputJson,
             ProjectId = WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.projectId") ??
                         WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.project.id") ??
@@ -1012,32 +1165,33 @@ public partial class WorkflowsPage
         await LoadPreviewProjectOptionsAsync();
     }
 
-    private async Task LoadPreviewProjectOptionsAsync()
-    {
-        try
-        {
-            previewProjectOptions = await ProjectStructureGateway.ListProjectsAsync();
+    private async Task LoadPreviewProjectOptionsAsync() {
+        var state = previewInputState;
+        var owner = CaptureOwner();
+        try {
+            var projects = await ProjectStructureGateway.ListProjectsAsync(selectionReadCancellation.Token);
+            if (!Owns(owner) || !isPreviewInputDialogOpen || !ReferenceEquals(state, previewInputState)) {
+                return;
+            }
+
+            previewProjectOptions = projects.ToImmutableArray();
             if (string.IsNullOrWhiteSpace(previewInputState.ProjectId) &&
-                previewProjectOptions.Count == 1)
-            {
+                previewProjectOptions.Count == 1) {
                 previewInputState.ProjectId = previewProjectOptions[0].Id.ToString("D");
             }
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException)
-        {
-            previewInputState.ProjectLoadError = $"Project list unavailable: {exception.Message}";
+        } catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException) {
+            if (Owns(owner) && isPreviewInputDialogOpen && ReferenceEquals(state, previewInputState)) {
+                previewInputState.ProjectLoadError = FormatWorkflowException(exception);
+            }
         }
     }
 
-    private async Task StartSelectedWorkflowPreviewFromDialogAsync()
-    {
-        if (selectedDefinition is null)
-        {
+    private async Task StartSelectedWorkflowPreviewFromDialogAsync() {
+        if (selectedDefinition is null) {
             return;
         }
 
-        if (!WorkflowPreviewInputSupport.TryBuildInputJson(previewInputState, out var inputJson, out var inputError))
-        {
+        if (!WorkflowPreviewInputSupport.TryBuildInputJson(previewInputState, out var inputJson, out var inputError)) {
             previewInputErrorMessage = inputError;
             NotificationService.Error("Preview input needs attention", inputError);
             return;
@@ -1049,14 +1203,12 @@ public partial class WorkflowsPage
         await RunSelectedWorkflowCoreAsync(inputJson, draftDefinition: null, simulationPlan);
     }
 
-    private void ClosePreviewInputDialog()
-    {
+    private void ClosePreviewInputDialog() {
         isPreviewInputDialogOpen = false;
         previewInputErrorMessage = string.Empty;
     }
 
-    private void HandlePreviewProjectChanged(ChangeEventArgs args)
-    {
+    private void HandlePreviewProjectChanged(ChangeEventArgs args) {
         previewInputState.ProjectId = args.Value?.ToString() ?? string.Empty;
     }
 
@@ -1065,13 +1217,11 @@ public partial class WorkflowsPage
 
     private void HandlePreviewSimulationChanged(
         WorkflowPreviewSimulationRequirement requirement,
-        ChangeEventArgs args)
-    {
+        ChangeEventArgs args) {
         var enabled = args.Value is bool value
             ? value
             : bool.TryParse(args.Value?.ToString(), out var parsed) && parsed;
-        if (enabled)
-        {
+        if (enabled) {
             previewInputState.SimulatedNodeIds.Add(requirement.NodeId.Value);
             return;
         }
@@ -1085,60 +1235,56 @@ public partial class WorkflowsPage
     private async Task RunSelectedWorkflowCoreAsync(
         string inputJson,
         WorkflowDefinition? draftDefinition,
-        WorkflowPreviewSimulationPlan simulationPlan)
-    {
-        if (selectedDefinition is null || isRunningTest)
-        {
+        WorkflowPreviewSimulationPlan simulationPlan) {
+        if (disposed || selectedDefinition is not { } definition || isRunningTest) {
             return;
         }
 
+        var owner = CaptureOwner();
+        var operation = ++effectSequence;
+        activeTestOperation = operation;
         isRunningTest = true;
         errorMessage = string.Empty;
+        var request = new WorkflowTestRunRequest(definition.Id, definition.VersionId,
+            DraftDefinition: draftDefinition is null ? null : FreezeDefinition(draftDefinition),
+            InputJson: inputJson, RequestedBackend: WorkflowRuntimeBackendKind.InProcess, ValidateOnly: false) {
+            PreviewSimulationPlan = simulationPlan with { Steps = simulationPlan.Steps.ToImmutableArray() }
+        };
+        try {
+            var result = await TestRunner.RunAsync(request);
+            if (!Owns(owner) || activeTestOperation != operation) {
+                return;
+            }
 
-        try
-        {
-            testResult = await TestRunner.RunAsync(new WorkflowTestRunRequest(
-                selectedDefinition.Id,
-                selectedDefinition.VersionId,
-                DraftDefinition: draftDefinition,
-                InputJson: inputJson,
-                RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
-                ValidateOnly: false)
-            {
-                PreviewSimulationPlan = simulationPlan
-            });
-            if (!testResult.Succeeded)
-            {
-                errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage);
+            testResult = result;
+            if (!result.Succeeded) {
+                errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(result.ErrorMessage);
+                NotificationService.Error("Workflow test failed", errorMessage);
+            } else {
+                NotificationService.Success("Workflow test completed", FormatWorkflowMessage(result.Run?.Summary ?? "Workflow run completed."));
+            }
+
+            if (result.Run is { } run && run.WorkflowId != definition.Id) {
+                errorMessage = "The test returned a run for a different workflow.";
+                return;
+            }
+
+            analyticsRefreshVersion++;
+            await LoadRunsPageAsync(definition.Id, pageIndex: 0, preferredRunId: result.Run?.RunId,
+                expectedDefinitionGeneration: selectedDefinitionGeneration);
+            if (Owns(owner) && activeTestOperation == operation && result.Run is { } completed) {
+                await OpenRunDetailDialogAsync(selectedRun ?? completed);
+            }
+        } catch (Exception exception) {
+            if (Owns(owner) && activeTestOperation == operation) {
+                errorMessage = FormatWorkflowException(exception);
                 NotificationService.Error("Workflow test failed", errorMessage);
             }
-            else
-            {
-                NotificationService.Success("Workflow test completed", testResult.Run?.Summary ?? "Workflow run completed.");
+        } finally {
+            if (activeTestOperation == operation) {
+                activeTestOperation = null;
+                isRunningTest = false;
             }
-
-            if (testResult.Run is not null)
-            {
-                analyticsRefreshVersion++;
-            }
-
-            await LoadRunsPageAsync(
-                selectedDefinition.Id,
-                pageIndex: 0,
-                preferredRunId: testResult.Run?.RunId);
-            if (testResult.Run is not null)
-            {
-                await OpenRunDetailDialogAsync(selectedRun ?? testResult.Run);
-            }
-        }
-        catch (Exception exception)
-        {
-            errorMessage = FormatWorkflowException(exception);
-            NotificationService.Error("Workflow test failed", errorMessage);
-        }
-        finally
-        {
-            isRunningTest = false;
         }
     }
 
@@ -1146,62 +1292,73 @@ public partial class WorkflowsPage
         WorkflowRunId runId,
         bool resetEventPage = true,
         WorkflowId? expectedDefinitionId = null,
-        long? expectedDefinitionGeneration = null)
-    {
+        long? expectedDefinitionGeneration = null,
+        int? requestedEventPage = null) {
         var definitionId = expectedDefinitionId ?? CurrentDefinitionId;
         var definitionGeneration = expectedDefinitionGeneration ?? selectedDefinitionGeneration;
+        if (!IsCurrentDefinitionSelection(definitionId, definitionGeneration)) {
+            return;
+        }
+
+        RenewRead(ref runReadCancellation);
+        var cancellation = runReadCancellation.Token;
+        if (selectedRun?.RunId != runId) {
+            ClearSelectedRunState();
+        }
+
+        presentationRevision++;
+        runUnavailable = false;
         var runGeneration = ++selectedRunGeneration;
         selectedRunRequestId = runId;
         isRunSelectionLoading = true;
         StateHasChanged();
 
-        try
-        {
-            var run = await RuntimeManager.GetRunAsync(runId);
-            if (!IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
-            {
+        try {
+            var run = await RuntimeManager.GetRunAsync(runId, cancellation);
+            if (!IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration)) {
                 return;
             }
 
-            if (run is null || definitionId.HasValue && run.WorkflowId != definitionId.Value)
-            {
+            if (run is null || run.RunId != runId || definitionId.HasValue && run.WorkflowId != definitionId.Value) {
                 ClearSelectedRunState();
+                runUnavailable = true;
+                errorMessage = $"Workflow run '{runId}' was not found for the selected workflow.";
                 return;
             }
 
-            var eventPageIndex = resetEventPage ? 0 : historyEventPageIndex;
+            var eventPageIndex = requestedEventPage ?? (resetEventPage ? 0 : historyEventPageIndex);
             var eventsTask = RunStore.ListEventPageAsync(new WorkflowEventPageRequest(
                 runId,
                 eventPageIndex,
-                HistoryEventPageSize));
-            var artifactsTask = RunStore.ListArtifactsAsync(runId);
-            var pendingRequestsTask = RunStore.ListPendingExternalRequestsAsync(runId);
+                HistoryEventPageSize), cancellation);
+            var artifactsTask = RunStore.ListArtifactsAsync(runId, cancellation);
+            var pendingRequestsTask = RunStore.ListPendingExternalRequestsAsync(runId, cancellation);
             await Task.WhenAll(eventsTask, artifactsTask, pendingRequestsTask);
 
-            if (!IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
-            {
+            if (!IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration)) {
                 return;
             }
 
             var eventPage = await eventsTask;
             selectedRun = run;
-            runEvents = eventPage.Items;
+            runEvents = eventPage.Items.Where(item => item.RunId == runId).ToImmutableArray();
             historyEventPageIndex = eventPage.PageIndex;
             historyEventTotalCount = eventPage.TotalCount;
-            artifacts = await artifactsTask;
-            pendingRequests = await pendingRequestsTask;
-        }
-        catch
-        {
-            if (IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
-            {
-                throw;
+            artifacts = (await artifactsTask).Where(item => item.RunId == runId).ToImmutableArray();
+            pendingRequests = (await pendingRequestsTask).Where(item => item.RunId == runId).ToImmutableArray();
+            presentationRevision++;
+        } catch (Exception exception) {
+            if (IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration)) {
+                if (selectedRun?.RunId != runId) {
+                    ClearSelectedRunState();
+                    runUnavailable = true;
+                }
+
+                errorMessage = FormatWorkflowException(exception);
+                NotificationService.Error("Workflow run failed", errorMessage);
             }
-        }
-        finally
-        {
-            if (IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
-            {
+        } finally {
+            if (IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration)) {
                 isRunSelectionLoading = false;
                 StateHasChanged();
             }
@@ -1212,12 +1369,10 @@ public partial class WorkflowsPage
         WorkflowId? workflowId,
         int pageIndex,
         WorkflowRunId? preferredRunId = null,
-        long? expectedDefinitionGeneration = null)
-    {
+        long? expectedDefinitionGeneration = null) {
         var definitionGeneration = expectedDefinitionGeneration ?? selectedDefinitionGeneration;
         var pageGeneration = ++runPageGeneration;
-        if (!IsCurrentDefinitionSelection(workflowId, definitionGeneration))
-        {
+        if (!IsCurrentDefinitionSelection(workflowId, definitionGeneration)) {
             return;
         }
 
@@ -1227,22 +1382,20 @@ public partial class WorkflowsPage
         isRunsPageLoading = true;
         StateHasChanged();
 
-        try
-        {
+        try {
             var runPage = await RunStore.ListRunPageAsync(new WorkflowRunPageRequest(
                 workflowId,
                 null,
                 null,
                 string.Empty,
                 pageIndex,
-                HistoryRunPageSize));
+                HistoryRunPageSize), selectionReadCancellation.Token);
 
-            if (!IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration))
-            {
+            if (!IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration)) {
                 return;
             }
 
-            runs = runPage.Items;
+            runs = runPage.Items.Where(run => !workflowId.HasValue || run.WorkflowId == workflowId).ToImmutableArray();
             historyRunPageIndex = runPage.PageIndex;
             historyRunTotalCount = runPage.TotalCount;
             historyLoaded = true;
@@ -1253,8 +1406,7 @@ public partial class WorkflowsPage
             var runId = preferredRunId ??
                         retainedRunId ??
                         runs.FirstOrDefault()?.RunId;
-            if (runId.HasValue)
-            {
+            if (runId.HasValue) {
                 await SelectRunAsync(
                     runId.Value,
                     expectedDefinitionId: workflowId,
@@ -1263,134 +1415,159 @@ public partial class WorkflowsPage
             }
 
             ClearSelectedRunState();
-        }
-        catch
-        {
-            if (IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration))
-            {
-                throw;
+        } catch (Exception exception) {
+            if (IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration)) {
+                errorMessage = FormatWorkflowException(exception);
+                NotificationService.Error("Workflow history failed", errorMessage);
             }
-        }
-        finally
-        {
-            if (IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration))
-            {
+        } finally {
+            if (IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration)) {
                 isRunsPageLoading = false;
                 StateHasChanged();
             }
         }
     }
 
-    private async Task ChangeRunPageAsync(int delta)
-    {
+    private async Task ChangeRunPageAsync(int delta) {
         var nextPage = Math.Clamp(historyRunPageIndex + delta, 0, Math.Max(0, HistoryRunTotalPages - 1));
-        if (nextPage == historyRunPageIndex)
-        {
+        if (nextPage == historyRunPageIndex) {
             return;
         }
 
         await LoadRunsPageAsync(CurrentDefinitionId, nextPage);
     }
 
-    private async Task ChangeEventPageAsync(int delta)
-    {
-        if (selectedRun is null)
-        {
+    private async Task ChangeEventPageAsync(int delta) {
+        if (selectedRun is null) {
             return;
         }
 
         var nextPage = Math.Clamp(historyEventPageIndex + delta, 0, Math.Max(0, HistoryEventTotalPages - 1));
-        if (nextPage == historyEventPageIndex)
-        {
+        if (nextPage == historyEventPageIndex) {
             return;
         }
 
-        historyEventPageIndex = nextPage;
-        await SelectRunAsync(selectedRun.RunId, resetEventPage: false);
+        await SelectRunAsync(selectedRun.RunId, resetEventPage: false, requestedEventPage: nextPage);
     }
 
-    private async Task OpenRunDetailDialogAsync(WorkflowRunSnapshot run)
-    {
+    private async Task OpenRunDetailDialogAsync(WorkflowRunSnapshot run) {
+        var owner = CaptureOwner();
+        var generation = ++overlayGeneration;
+        RenewRead(ref overlayReadCancellation);
+        var cancellation = overlayReadCancellation.Token;
         runDetail = run;
-        var eventsTask = RuntimeManager.ListEventsAsync(run.RunId);
-        var artifactsTask = RunStore.ListArtifactsAsync(run.RunId);
-        await Task.WhenAll(eventsTask, artifactsTask);
-        runDetailEvents = await eventsTask;
-        runDetailArtifacts = await artifactsTask;
+        runDetailEvents = [];
+        runDetailArtifacts = [];
+        try {
+            var eventsTask = RuntimeManager.ListEventsAsync(run.RunId, cancellation);
+            var artifactsTask = RunStore.ListArtifactsAsync(run.RunId, cancellation);
+            await Task.WhenAll(eventsTask, artifactsTask);
+            if (!Owns(owner) || generation != overlayGeneration || runDetail?.RunId != run.RunId) {
+                return;
+            }
+
+            runDetailEvents = (await eventsTask).Where(item => item.RunId == run.RunId).ToImmutableArray();
+            runDetailArtifacts = (await artifactsTask).Where(item => item.RunId == run.RunId).ToImmutableArray();
+        } catch (Exception exception) {
+            if (Owns(owner) && generation == overlayGeneration) {
+                errorMessage = FormatWorkflowException(exception);
+                NotificationService.Error("Workflow details failed", errorMessage);
+            }
+        }
     }
 
-    private void CloseRunDetailDialog()
-    {
+    private void CloseRunDetailDialog() {
+        overlayGeneration++;
+        if (!disposed) {
+            RenewRead(ref overlayReadCancellation);
+        }
+
         runDetail = null;
         runDetailEvents = [];
         runDetailArtifacts = [];
     }
 
-    private void OpenEventDetailDialog(WorkflowEventRecord workflowEvent)
-    {
+    private void OpenEventDetailDialog(WorkflowEventRecord workflowEvent) {
         eventDetail = workflowEvent;
     }
 
-    private void CloseEventDetailDialog()
-    {
+    private void CloseEventDetailDialog() {
         eventDetail = null;
     }
 
-    private async Task CancelSelectedRunAsync()
-    {
-        if (selectedRun is null || IsTerminalRun(selectedRun))
-        {
+    private async Task CancelSelectedRunAsync() {
+        if (disposed || isBusy || selectedRun is not { } run || IsTerminalRun(run)) {
             return;
         }
 
-        try
-        {
-            selectedRun = await RuntimeManager.CancelAsync(selectedRun.RunId);
-            NotificationService.Success("Workflow run cancelled", selectedRun.Summary);
-            await LoadPageAsync(preferredDefinitionId: CurrentDefinitionId, preferredRunId: selectedRun.RunId);
-        }
-        catch (Exception exception)
-        {
-            errorMessage = FormatWorkflowException(exception);
-            NotificationService.Error("Workflow cancel failed", errorMessage);
+        var owner = CaptureOwner();
+        var runGeneration = selectedRunGeneration;
+        isBusy = true;
+        try {
+            var cancelled = await RuntimeManager.CancelAsync(run.RunId);
+            if (!Owns(owner) || runGeneration != selectedRunGeneration) {
+                return;
+            }
+
+            if (cancelled.RunId != run.RunId || cancelled.WorkflowId != run.WorkflowId) {
+                errorMessage = "Cancellation returned a different workflow run.";
+                return;
+            }
+
+            NotificationService.Success("Workflow run cancelled", FormatWorkflowMessage(cancelled.Summary));
+            await LoadRunsPageAsync(run.WorkflowId, historyRunPageIndex, run.RunId, selectedDefinitionGeneration);
+        } catch (Exception exception) {
+            if (Owns(owner) && runGeneration == selectedRunGeneration) {
+                errorMessage = FormatWorkflowException(exception);
+                NotificationService.Error("Workflow cancel failed", errorMessage);
+            }
+        } finally {
+            if (Owns(owner)) {
+                isBusy = false;
+            }
         }
     }
 
-    private async Task RespondToRequestAsync(WorkflowExternalRequestRecord request)
-    {
-        try
-        {
-            using var responseDocument = JsonDocument.Parse(pendingResponseJson);
+    private async Task RespondToRequestAsync(WorkflowExternalRequestRecord request) {
+        var key = (request.Id, request.Version);
+        if (disposed || selectedRun?.RunId != request.RunId || !respondingRequests.Add(key)) {
+            return;
+        }
+
+        var owner = CaptureOwner();
+        var runGeneration = selectedRunGeneration;
+        var responseJson = ResponseDraft(request);
+        try {
+            using var responseDocument = JsonDocument.Parse(responseJson);
             var actorContext = await ExternalResponseActorContextProvider.GetCurrentAsync();
-            var result = await ExternalResponseService.SubmitAsync(
-                new WorkflowExternalResponseCommand(
-                    actorContext,
-                    request.Id,
-                    request.Version,
-                    responseDocument.RootElement,
-                    WorkflowExternalResponseCallerRequestFactory.CreateUiIdempotencyKey(
-                        request.Id,
-                        request.Version),
-                    WorkflowExternalResponseCallerRequestFactory.CreateUiCorrelationId(
-                        request.Id,
-                        request.Version)));
-            if (!IsAcceptedExternalResponseOutcome(result.Outcome))
-            {
-                errorMessage = result.SafeMessage;
+            var result = await ExternalResponseService.SubmitAsync(new WorkflowExternalResponseCommand(
+                actorContext, request.Id, request.Version, responseDocument.RootElement.Clone(),
+                WorkflowExternalResponseCallerRequestFactory.CreateUiIdempotencyKey(request.Id, request.Version),
+                WorkflowExternalResponseCallerRequestFactory.CreateUiCorrelationId(request.Id, request.Version)));
+            if (!Owns(owner) || runGeneration != selectedRunGeneration || selectedRun?.RunId != request.RunId) {
+                return;
+            }
+
+            if (!IsAcceptedExternalResponseOutcome(result.Outcome)) {
+                errorMessage = FormatWorkflowMessage(result.SafeMessage);
                 NotificationService.Error("Workflow response failed", errorMessage);
                 return;
             }
 
-            selectedRun = result.Run;
-            NotificationService.Success("Workflow request answered", result.SafeMessage);
-            await LoadPageAsync(
-                preferredDefinitionId: CurrentDefinitionId,
-                preferredRunId: result.Run?.RunId ?? request.RunId);
-        }
-        catch (Exception exception)
-        {
-            errorMessage = FormatWorkflowException(exception);
-            NotificationService.Error("Workflow response failed", errorMessage);
+            if (result.Run is { } run && (run.RunId != request.RunId || run.WorkflowId != owner.DefinitionId)) {
+                errorMessage = "The response returned a different workflow run.";
+                return;
+            }
+
+            NotificationService.Success("Workflow request answered", FormatWorkflowMessage(result.SafeMessage));
+            await LoadPageAsync(preferredDefinitionId: owner.DefinitionId, preferredRunId: request.RunId);
+        } catch (Exception exception) {
+            if (Owns(owner) && runGeneration == selectedRunGeneration) {
+                errorMessage = FormatWorkflowException(exception);
+                NotificationService.Error("Workflow response failed", errorMessage);
+            }
+        } finally {
+            respondingRequests.Remove(key);
         }
     }
 
@@ -1401,93 +1578,132 @@ public partial class WorkflowsPage
             WorkflowExternalResponseServiceOutcome.Denied or
             WorkflowExternalResponseServiceOutcome.Resuming;
 
-    private async Task HandleCanvasDefinitionSavedAsync(WorkflowDefinition definition)
-    {
-        await LoadPageAsync(preferredDefinitionId: definition.Id, preferredRunId: selectedRun?.RunId);
+    private async Task HandleCanvasDefinitionSavedAsync(WorkflowDefinition definition) {
+        if (!disposed && (CurrentDefinitionId is null || CurrentDefinitionId == definition.Id)) {
+            await LoadPageAsync(preferredDefinitionId: definition.Id, preferredRunId: selectedRun?.RunId);
+        }
     }
 
-    private async Task HandleCanvasPreviewRunCompletedAsync(WorkflowRunSnapshot run)
-    {
+    private async Task HandleCanvasPreviewRunCompletedAsync(WorkflowRunSnapshot run) {
+        var owner = CaptureOwner();
+        if (disposed || owner.DefinitionId.HasValue && run.WorkflowId != owner.DefinitionId) {
+            return;
+        }
+
         analyticsRefreshVersion++;
-        await LoadRunsPageAsync(run.WorkflowId, pageIndex: 0, preferredRunId: run.RunId);
-        await OpenRunDetailDialogAsync(selectedRun ?? run);
+        if (owner.DefinitionId.HasValue) {
+            await LoadRunsPageAsync(run.WorkflowId, pageIndex: 0, preferredRunId: run.RunId);
+        }
+
+        if (Owns(owner)) {
+            await OpenRunDetailDialogAsync(selectedRun ?? run);
+        }
     }
 
-    private async Task HandleWorkflowTabChangedAsync(int index)
-    {
+    private async Task HandleWorkflowTabChangedAsync(int index) {
+        if (disposed || index == activeWorkflowTabIndex || !Enum.IsDefined((WorkflowTab)index)) {
+            return;
+        }
+
         activeWorkflowTabIndex = index;
-        if (WorkflowTabRequiresDefinitionDetail(index))
-        {
+        presentationRevision++;
+        var generation = ++tabGeneration;
+        definitionLoadTask = null;
+        componentLibraryLoadTask = null;
+        RenewRead(ref selectionReadCancellation);
+        RenewRead(ref runReadCancellation);
+        selectedDefinitionGeneration++;
+        runPageGeneration++;
+        selectedRunGeneration++;
+        selectedRunRequestId = null;
+        isDefinitionSelectionLoading = false;
+        isRunsPageLoading = false;
+        isRunSelectionLoading = false;
+        if (WorkflowTabRequiresDefinitionDetail(index)) {
             await EnsureSelectedDefinitionLoadedAsync();
         }
 
-        if (WorkflowTabRequiresComponentLibrary(index))
-        {
+        if (disposed || generation != tabGeneration) {
+            return;
+        }
+
+        if (WorkflowTabRequiresComponentLibrary(index)) {
             await EnsureComponentLibraryLoadedAsync();
         }
 
-        if (WorkflowTabRequiresHistory(index))
-        {
+        if (disposed || generation != tabGeneration) {
+            return;
+        }
+
+        if (WorkflowTabRequiresHistory(index)) {
             await EnsureHistoryLoadedAsync();
         }
     }
 
-    private async Task EnsureHistoryLoadedAsync()
-    {
-        if (historyLoaded)
-        {
+    private async Task EnsureHistoryLoadedAsync() {
+        if (historyLoaded) {
+            return;
+        }
+
+        if (CurrentDefinitionId is null) {
+            ClearHistoryState(markLoaded: true);
             return;
         }
 
         await LoadRunsPageAsync(CurrentDefinitionId, pageIndex: 0);
     }
 
-    private async Task EnsureComponentLibraryLoadedAsync()
-    {
-        if (componentLibraryLoaded)
-        {
+    private Task EnsureComponentLibraryLoadedAsync() {
+        if (disposed || componentLibraryLoaded) {
+            return Task.CompletedTask;
+        }
+
+        return componentLibraryLoadTask is { IsCompleted: false } pending ? pending : componentLibraryLoadTask = LoadComponentLibraryAsync();
+    }
+
+    private async Task RefreshComponentLibraryAsync() {
+        if (disposed) {
             return;
         }
 
-        componentLibraryLoadTask ??= LoadComponentLibraryAsync();
-        try
-        {
+        var pending = componentLibraryLoadTask;
+        if (pending is not null) {
+            await pending;
+        }
+
+        if (!disposed) {
+            componentLibraryLoaded = false;
+            componentLibraryLoadTask = LoadComponentLibraryAsync();
             await componentLibraryLoadTask;
+        }
+    }
+
+    private async Task LoadComponentLibraryAsync() {
+        var owner = CaptureOwner();
+        var cancellation = selectionReadCancellation.Token;
+        try {
+            var loadedComponents = await ComponentLibrary.ListComponentsAsync(cancellation);
+            var loadedProviders = await ComponentLibrary.ListProviderOptionsAsync(cancellation);
+            if (!Owns(owner) || cancellation.IsCancellationRequested) {
+                return;
+            }
+
+            components = loadedComponents.ToImmutableArray();
+            providerOptions = loadedProviders.ToImmutableArray();
             componentLibraryLoaded = true;
-        }
-        finally
-        {
-            componentLibraryLoadTask = null;
-        }
-    }
-
-    private async Task RefreshComponentLibraryAsync()
-    {
-        if (componentLibraryLoadTask is not null)
-        {
-            await componentLibraryLoadTask;
-        }
-
-        componentLibraryLoadTask = LoadComponentLibraryAsync();
-        try
-        {
-            await componentLibraryLoadTask;
-            componentLibraryLoaded = true;
-        }
-        finally
-        {
-            componentLibraryLoadTask = null;
+        } catch (Exception exception) {
+            if (Owns(owner) && !cancellation.IsCancellationRequested) {
+                errorMessage = FormatWorkflowException(exception);
+                NotificationService.Error("Workflow library failed", errorMessage);
+            }
+        } finally {
+            if (Owns(owner)) {
+                componentLibraryLoadTask = null;
+            }
         }
     }
 
-    private async Task LoadComponentLibraryAsync()
-    {
-        components = await ComponentLibrary.ListComponentsAsync();
-        providerOptions = await ComponentLibrary.ListProviderOptionsAsync();
-    }
-
-    private Task EnsureTemplatePackLoadedAsync()
-    {
+    private Task EnsureTemplatePackLoadedAsync() {
         templatePack ??= TemplatePackLoader.Load();
         return Task.CompletedTask;
     }
@@ -1499,32 +1715,32 @@ public partial class WorkflowsPage
         => index == HistoryTabIndex;
 
     private static bool WorkflowTabRequiresDefinitionDetail(int index)
-        => index is WorkflowsTabIndex or EditorTabIndex;
+        => index is WorkflowsTabIndex or EditorTabIndex or HistoryTabIndex;
 
     private bool ShouldLoadHistory(WorkflowRunId? preferredRunId)
         => preferredRunId.HasValue ||
            historyLoaded ||
            WorkflowTabRequiresHistory(activeWorkflowTabIndex);
 
-    private async Task EnsureSelectedDefinitionLoadedAsync()
-    {
+    private async Task EnsureSelectedDefinitionLoadedAsync() {
         if (selectedDefinitionDetailLoaded ||
             selectedDefinitionDetailUnavailable ||
-            CurrentDefinitionId is not { } definitionId)
-        {
+            CurrentDefinitionId is not { } definitionId) {
             return;
         }
 
         var selectionGeneration = selectedDefinitionGeneration;
-        await LoadDefinitionAsync(definitionId, selectionGeneration);
-        if (IsCurrentDefinitionSelection(definitionId, selectionGeneration))
-        {
+        var load = definitionLoadTask ??= LoadDefinitionAsync(definitionId, selectionGeneration);
+        await load;
+        if (IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
             StateHasChanged();
         }
     }
 
-    private void SetSelectedDefinitionPlaceholder(WorkflowId definitionId)
-    {
+    private void SetSelectedDefinitionPlaceholder(WorkflowId definitionId) {
+        InvalidateSelectionEffects();
+        RenewRead(ref selectionReadCancellation);
+        RenewRead(ref runReadCancellation);
         selectedDefinitionGeneration++;
         selectedDefinitionNavigation = AgentChatNavigationFence;
         runPageGeneration++;
@@ -1533,12 +1749,12 @@ public partial class WorkflowsPage
         isDefinitionSelectionLoading = false;
         isRunsPageLoading = false;
         isRunSelectionLoading = false;
-        if (selectedDefinition?.Id == definitionId && selectedDefinitionDetailLoaded)
-        {
+        if (selectedDefinition?.Id == definitionId && selectedDefinitionDetailLoaded) {
             selectedDefinitionId = definitionId;
             return;
         }
 
+        ClearHistoryState(markLoaded: historyLoaded);
         selectedDefinitionId = definitionId;
         selectedDefinition = null;
         validationIssues = [];
@@ -1546,8 +1762,10 @@ public partial class WorkflowsPage
         selectedDefinitionDetailUnavailable = false;
     }
 
-    private void ClearSelectedDefinitionState()
-    {
+    private void ClearSelectedDefinitionState() {
+        InvalidateSelectionEffects();
+        RenewRead(ref selectionReadCancellation);
+        RenewRead(ref runReadCancellation);
         selectedDefinitionGeneration++;
         selectedDefinitionNavigation = default;
         runPageGeneration++;
@@ -1566,14 +1784,14 @@ public partial class WorkflowsPage
     private bool IsCurrentDefinitionSelection(
         WorkflowId? definitionId,
         long selectionGeneration)
-        => selectedDefinitionGeneration == selectionGeneration &&
+        => !disposed && selectedDefinitionGeneration == selectionGeneration &&
            selectedDefinitionNavigation == AgentChatNavigationFence &&
            CurrentDefinitionId == definitionId;
 
     private bool IsCurrentPageLoad(
         long generation,
         AgentChatNavigationIdentity navigation)
-        => pageLoadGeneration == generation &&
+        => !disposed && pageLoadGeneration == generation &&
            navigation == AgentChatNavigationFence;
 
     private bool IsCurrentRunsPage(
@@ -1592,8 +1810,7 @@ public partial class WorkflowsPage
            selectedRunRequestId == runId &&
            IsCurrentDefinitionSelection(definitionId, definitionGeneration);
 
-    private void ClearHistoryState(bool markLoaded)
-    {
+    private void ClearHistoryState(bool markLoaded) {
         runPageGeneration++;
         isRunsPageLoading = false;
         runs = [];
@@ -1603,11 +1820,15 @@ public partial class WorkflowsPage
         historyLoaded = markLoaded;
     }
 
-    private void ClearSelectedRunState()
-    {
+    private void ClearSelectedRunState() {
+        presentationRevision++;
+        CloseRunDetailDialog();
+        CloseEventDetailDialog();
         selectedRunGeneration++;
         selectedRunRequestId = null;
         isRunSelectionLoading = false;
+        runUnavailable = false;
+        responseDrafts.Clear();
         selectedRun = null;
         runEvents = [];
         artifacts = [];
@@ -1616,8 +1837,7 @@ public partial class WorkflowsPage
         historyEventTotalCount = 0;
     }
 
-    private void FailRouteIdentity(string message)
-    {
+    private void FailRouteIdentity(string message) {
         hasRouteIdentityFailure = true;
         errorMessage = message;
         selectedRouteProject = null;
@@ -1627,33 +1847,30 @@ public partial class WorkflowsPage
 
     private async Task<ProjectWorkflowRouteValidation> ValidateProjectWorkflowRelationAsync(
         Guid projectId,
-        WorkflowId workflowId)
-    {
-        var projectsTask = ProjectStructureGateway.ListProjectsAsync();
+        WorkflowId workflowId,
+        CancellationToken cancellation) {
+        var projectsTask = ProjectStructureGateway.ListProjectsAsync(cancellation);
         var structureTask = ProjectStructureGateway.ReadStructureAsync(
             projectId,
             new ProjectStructureRuntimeReadRequest(
                 ObjectTypes: [ProjectObjectType.WorkflowDefinition],
-                IncludeMetadata: true));
+                IncludeMetadata: true), cancellation);
         await Task.WhenAll(projectsTask, structureTask);
 
         var projects = await projectsTask;
         var project = projects.FirstOrDefault(item => item.Id == projectId);
-        if (project is null)
-        {
+        if (project is null) {
             return ProjectWorkflowRouteValidation.Failed(
                 $"Project '{projectId:D}' was not found.");
         }
 
         var structure = await structureTask;
-        if (structure.ProjectId != projectId)
-        {
+        if (structure.ProjectId != projectId) {
             return ProjectWorkflowRouteValidation.Failed(
                 $"Project structure returned project '{structure.ProjectId:D}' for requested project '{projectId:D}'.");
         }
 
-        if (!structure.Nodes.Any(node => IsWorkflowNodeForDefinition(node, workflowId)))
-        {
+        if (!structure.Nodes.Any(node => IsWorkflowNodeForDefinition(node, workflowId))) {
             return ProjectWorkflowRouteValidation.Failed(
                 $"Workflow '{workflowId}' is not attached to project '{projectId:D}'.");
         }
@@ -1665,35 +1882,23 @@ public partial class WorkflowsPage
 
     private static bool IsWorkflowNodeForDefinition(
         ProjectStructureRuntimeNodeSummary node,
-        WorkflowId workflowId)
-    {
-        if (node.ObjectType != ProjectObjectType.WorkflowDefinition)
-        {
+        WorkflowId workflowId) {
+        if (node.ObjectType != ProjectObjectType.WorkflowDefinition) {
             return false;
         }
 
-        try
-        {
+        try {
             return ProjectObjectMetadataSerializer.Parse(node.MetadataJson).Workflow?.WorkflowId == workflowId;
-        }
-        catch (InvalidOperationException)
-        {
+        } catch (InvalidOperationException) {
             return false;
         }
     }
 
-    private bool IsSelectedDefinition(WorkflowCatalogItem item)
-    {
-        return CurrentDefinitionId == item.Id;
-    }
-
-    private static bool IsTerminalRun(WorkflowRunSnapshot? run)
-    {
+    private static bool IsTerminalRun(WorkflowRunSnapshot? run) {
         return run?.State is WorkflowRunState.Completed or WorkflowRunState.Failed or WorkflowRunState.Cancelled;
     }
 
-    private string BuildSettingsSummary()
-    {
+    private string BuildSettingsSummary() {
         var artifactPolicy = settings.ArtifactPolicy.CaptureNodeOutputs
             ? $"captures node outputs up to {settings.ArtifactPolicy.MaxInlinePayloadCharacters:N0} characters"
             : "does not capture node outputs";
@@ -1701,17 +1906,6 @@ public partial class WorkflowsPage
             ? $"allows human input with {settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes} minute timeout"
             : "disables human input nodes";
         return $"Default backend is {settings.DefaultRuntimePolicy.PreferredBackend}; artifact policy {artifactPolicy}; human-in-loop policy {humanPolicy}.";
-    }
-
-    private string BuildProviderOptionsSummary()
-    {
-        if (providerOptions.Count == 0)
-        {
-            return "No agent chat providers are available; new components use an unbound preview model.";
-        }
-
-        var enabledCount = providerOptions.Count(option => option.IsEnabled);
-        return $"{enabledCount} enabled chat provider(s) available from the agent provider registry.";
     }
 
     private static bool WorkflowTemplateMatchesSearch(WorkflowTemplateDefinition template, string query)
@@ -1724,10 +1918,8 @@ public partial class WorkflowsPage
         WorkflowTemplateDefinition right)
         => string.Equals(left.Key, right.Key, StringComparison.OrdinalIgnoreCase);
 
-    private static string BuildTemplateNodeKindSummary(WorkflowTemplateDefinition template)
-    {
-        if (template.Graph.Nodes.Count == 0)
-        {
+    private static string BuildTemplateNodeKindSummary(WorkflowTemplateDefinition template) {
+        if (template.Graph.Nodes.Count == 0) {
             return "No nodes";
         }
 
@@ -1744,11 +1936,9 @@ public partial class WorkflowsPage
         WorkflowTemplateDefinition template,
         LlmCallComponent component,
         string name,
-        WorkflowLifecycleStatus status)
-    {
+        WorkflowLifecycleStatus status) {
         var definition = templatePack.CreateDefinition(template, component);
-        return definition with
-        {
+        return definition with {
             Name = name,
             Description = template.Description,
             Status = status,
@@ -1759,8 +1949,7 @@ public partial class WorkflowsPage
 
     private static LlmCallComponent CreateTransientTemplateComponent(
         WorkflowTemplatePack templatePack,
-        WorkflowTemplateDefinition template)
-    {
+        WorkflowTemplateDefinition template) {
         var now = DateTimeOffset.UtcNow;
         return new LlmCallComponent(
             WorkflowComponentId.New(),
@@ -1802,10 +1991,8 @@ public partial class WorkflowsPage
            providerOptions.FirstOrDefault(provider => provider.IsEnabled && provider.SupportsStructuredOutput) ??
            ResolveDefaultProviderOption();
 
-    private static string ResolveTemplateModel(WorkflowProviderOption? providerOption)
-    {
-        if (providerOption is null)
-        {
+    private static string ResolveTemplateModel(WorkflowProviderOption? providerOption) {
+        if (providerOption is null) {
             return ManagedSeedProviderFallbacks.OpenAiDefaultModel;
         }
 
@@ -1815,8 +2002,7 @@ public partial class WorkflowsPage
     }
 
     private static AgentPermissionsPolicy CreateTemplateComponentPermissions()
-        => AgentPermissionsPolicy.Default with
-        {
+        => AgentPermissionsPolicy.Default with {
             CanUseTools = false,
             CanAskOtherAgents = false,
             CanEscalateToHuman = false,
@@ -1825,22 +2011,18 @@ public partial class WorkflowsPage
 
     private static string ResolveTemplateDraftName(
         string baseName,
-        IReadOnlyList<WorkflowCatalogItem> existingDefinitions)
-    {
+        IReadOnlyList<WorkflowCatalogItem> existingDefinitions) {
         var normalizedBaseName = NormalizeTemplateDraftBaseName(baseName);
         var existingNames = existingDefinitions
             .Select(definition => definition.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!existingNames.Contains(normalizedBaseName))
-        {
+        if (!existingNames.Contains(normalizedBaseName)) {
             return normalizedBaseName;
         }
 
-        for (var index = 1; index <= 999; index++)
-        {
+        for (var index = 1; index <= 999; index++) {
             var candidate = $"{index:00} {normalizedBaseName}";
-            if (!existingNames.Contains(candidate))
-            {
+            if (!existingNames.Contains(candidate)) {
                 return candidate;
             }
         }
@@ -1848,11 +2030,9 @@ public partial class WorkflowsPage
         throw new InvalidOperationException($"No available draft name remains for template '{normalizedBaseName}'.");
     }
 
-    private static string NormalizeTemplateDraftBaseName(string name)
-    {
+    private static string NormalizeTemplateDraftBaseName(string name) {
         var trimmed = name.Trim();
-        if (string.IsNullOrWhiteSpace(trimmed))
-        {
+        if (string.IsNullOrWhiteSpace(trimmed)) {
             throw new InvalidOperationException("Workflow template name is required before it can be added to drafts.");
         }
 
@@ -1864,8 +2044,7 @@ public partial class WorkflowsPage
         LlmCallComponent component,
         IReadOnlyList<WorkflowExecutorDescriptor> executors,
         CanvasWorkbenchUiState uiState,
-        string? selectedNodeId)
-    {
+        string? selectedNodeId) {
         var document = WorkflowCanvasDefinitionMapper.FromDefinition(definition, [component]);
         var surface = WorkflowCanvasDefinitionMapper.BuildSurface(
             document,
@@ -1879,8 +2058,7 @@ public partial class WorkflowsPage
         surface.Chrome.ShowQuickCreateRail = false;
         surface.Chrome.QuickCreateActions.Clear();
         surface.Chrome.GroupContextActions.Clear();
-        foreach (var node in surface.Nodes)
-        {
+        foreach (var node in surface.Nodes) {
             node.ContextActions.Clear();
         }
 
@@ -1888,8 +2066,7 @@ public partial class WorkflowsPage
     }
 
     private static CanvasWorkbenchUiState CreateTemplatePreviewCanvasUiState(string? selectedNodeId)
-        => new()
-        {
+        => new() {
             ActiveInspectorTab = "workflow",
             Zoom = 0.48,
             PanX = 144,
@@ -1897,19 +2074,7 @@ public partial class WorkflowsPage
             SelectedNodeIds = string.IsNullOrWhiteSpace(selectedNodeId) ? [] : [selectedNodeId]
         };
 
-    private string ResolveComponentProviderLabel(LlmCallComponent component)
-    {
-        if (!component.ProviderProfileId.HasValue)
-        {
-            return "No provider";
-        }
-
-        var provider = providerOptions.FirstOrDefault(option => option.ProviderProfileId == component.ProviderProfileId.Value);
-        return provider?.Name ?? "Provider missing";
-    }
-
-    private static WorkflowGraph CreateStarterGraph(WorkflowComponentId componentId)
-    {
+    private static WorkflowGraph CreateStarterGraph(WorkflowComponentId componentId) {
         var start = new WorkflowNodeId("start");
         var llm = new WorkflowNodeId("llm");
         var end = new WorkflowNodeId("end");
@@ -1945,8 +2110,7 @@ public partial class WorkflowsPage
         WorkflowNodeKind kind,
         WorkflowComponentId? componentId = null,
         WorkflowValueShape? inputShape = null,
-        WorkflowValueShape? resultShape = null)
-    {
+        WorkflowValueShape? resultShape = null) {
         return new WorkflowNode(
             id,
             kind,
@@ -1962,10 +2126,8 @@ public partial class WorkflowsPage
                 ResultShape: resultShape ?? WorkflowValueShape.Text));
     }
 
-    private static string ResolveRunTone(WorkflowRunState state)
-    {
-        return state switch
-        {
+    private static string ResolveRunTone(WorkflowRunState state) {
+        return state switch {
             WorkflowRunState.Completed => "success",
             WorkflowRunState.Failed => "danger",
             WorkflowRunState.Cancelled => "neutral",
@@ -1975,10 +2137,8 @@ public partial class WorkflowsPage
         };
     }
 
-    private static string ResolveEventTone(WorkflowEventKind kind)
-    {
-        return kind switch
-        {
+    private static string ResolveEventTone(WorkflowEventKind kind) {
+        return kind switch {
             WorkflowEventKind.Completed or WorkflowEventKind.Output or WorkflowEventKind.ExecutorCompleted => "success",
             WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed => "danger",
             WorkflowEventKind.WaitingForInput => "warning",
@@ -1987,32 +2147,25 @@ public partial class WorkflowsPage
         };
     }
 
-    private static string FormatDate(DateTimeOffset value)
-    {
+    private static string FormatDate(DateTimeOffset value) {
         return value.ToLocalTime().ToString("MMM d, HH:mm");
     }
 
-    private static string FormatFullDate(DateTimeOffset value)
-    {
+    private static string FormatFullDate(DateTimeOffset value) {
         return value.ToLocalTime().ToString("MMM d, yyyy HH:mm:ss");
     }
 
-    private static string ResolveRunResultPayload(IReadOnlyList<WorkflowEventRecord> events)
-    {
-        foreach (var outputEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.Output))
-        {
+    private static string ResolveRunResultPayload(IReadOnlyList<WorkflowEventRecord> events) {
+        foreach (var outputEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.Output)) {
             var payloadJson = ResolveEventPayloadJson(outputEvent);
-            if (!string.IsNullOrWhiteSpace(payloadJson))
-            {
+            if (!string.IsNullOrWhiteSpace(payloadJson)) {
                 return payloadJson;
             }
         }
 
-        foreach (var completedEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.ExecutorCompleted))
-        {
+        foreach (var completedEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.ExecutorCompleted)) {
             var payloadJson = ResolveEventPayloadJson(completedEvent);
-            if (!string.IsNullOrWhiteSpace(payloadJson))
-            {
+            if (!string.IsNullOrWhiteSpace(payloadJson)) {
                 return payloadJson;
             }
         }
@@ -2020,10 +2173,8 @@ public partial class WorkflowsPage
         return string.Empty;
     }
 
-    private static string ResolveEventPayloadJson(WorkflowEventRecord workflowEvent)
-    {
-        if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
-        {
+    private static string ResolveEventPayloadJson(WorkflowEventRecord workflowEvent) {
+        if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson)) {
             return workflowEvent.PayloadJson;
         }
 
@@ -2032,93 +2183,73 @@ public partial class WorkflowsPage
             : string.Empty;
     }
 
-    private static bool TryExtractLegacyPayloadJson(string message, out string payloadJson)
-    {
+    private static bool TryExtractLegacyPayloadJson(string message, out string payloadJson) {
         payloadJson = string.Empty;
         const string marker = "PayloadJson = ";
         var start = message.LastIndexOf(marker, StringComparison.Ordinal);
-        if (start < 0)
-        {
+        if (start < 0) {
             return false;
         }
 
         start += marker.Length;
-        while (start < message.Length && char.IsWhiteSpace(message[start]))
-        {
+        while (start < message.Length && char.IsWhiteSpace(message[start])) {
             start++;
         }
 
-        if (start >= message.Length || message[start] is not ('{' or '['))
-        {
+        if (start >= message.Length || message[start] is not ('{' or '[')) {
             return false;
         }
 
         var stack = new Stack<char>();
         var inString = false;
         var escaped = false;
-        for (var index = start; index < message.Length; index++)
-        {
+        for (var index = start; index < message.Length; index++) {
             var character = message[index];
-            if (inString)
-            {
-                if (escaped)
-                {
+            if (inString) {
+                if (escaped) {
                     escaped = false;
-                }
-                else if (character == '\\')
-                {
+                } else if (character == '\\') {
                     escaped = true;
-                }
-                else if (character == '"')
-                {
+                } else if (character == '"') {
                     inString = false;
                 }
 
                 continue;
             }
 
-            if (character == '"')
-            {
+            if (character == '"') {
                 inString = true;
                 continue;
             }
 
-            if (character == '{')
-            {
+            if (character == '{') {
                 stack.Push('}');
                 continue;
             }
 
-            if (character == '[')
-            {
+            if (character == '[') {
                 stack.Push(']');
                 continue;
             }
 
-            if (character is not ('}' or ']'))
-            {
+            if (character is not ('}' or ']')) {
                 continue;
             }
 
-            if (stack.Count == 0 || stack.Pop() != character)
-            {
+            if (stack.Count == 0 || stack.Pop() != character) {
                 return false;
             }
 
-            if (stack.Count != 0)
-            {
+            if (stack.Count != 0) {
                 continue;
             }
 
             var candidate = message[start..(index + 1)];
-            try
-            {
+            try {
                 using var _ = JsonDocument.Parse(candidate);
                 payloadJson = candidate;
                 return true;
-            }
-            catch (JsonException)
-            {
+            } catch (JsonException) {
                 return false;
             }
         }
@@ -2126,60 +2257,45 @@ public partial class WorkflowsPage
         return false;
     }
 
-    private static string ResolveRunResultPreview(string payloadJson)
-    {
-        if (string.IsNullOrWhiteSpace(payloadJson))
-        {
+    private static string ResolveRunResultPreview(string payloadJson) {
+        if (string.IsNullOrWhiteSpace(payloadJson)) {
             return string.Empty;
         }
 
-        try
-        {
+        try {
             using var document = JsonDocument.Parse(payloadJson);
-            if (TryFindResultPreviewText(document.RootElement, out var value))
-            {
+            if (TryFindResultPreviewText(document.RootElement, out var value)) {
                 return TruncatePreservingWhitespace(value, 3000);
             }
-        }
-        catch (JsonException)
-        {
+        } catch (JsonException) {
             return TruncatePreservingWhitespace(payloadJson, 3000);
         }
 
         return TruncatePreservingWhitespace(payloadJson, 3000);
     }
 
-    private static bool TryFindResultPreviewText(JsonElement element, out string value)
-    {
+    private static bool TryFindResultPreviewText(JsonElement element, out string value) {
         value = string.Empty;
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var propertyName in RunResultPreviewPropertyNames)
-            {
+        if (element.ValueKind == JsonValueKind.Object) {
+            foreach (var propertyName in RunResultPreviewPropertyNames) {
                 if (element.TryGetProperty(propertyName, out var property) &&
                     property.ValueKind == JsonValueKind.String &&
-                    !string.IsNullOrWhiteSpace(property.GetString()))
-                {
+                    !string.IsNullOrWhiteSpace(property.GetString())) {
                     value = property.GetString()!;
                     return true;
                 }
             }
 
-            foreach (var property in element.EnumerateObject())
-            {
-                if (TryFindResultPreviewText(property.Value, out value))
-                {
+            foreach (var property in element.EnumerateObject()) {
+                if (TryFindResultPreviewText(property.Value, out value)) {
                     return true;
                 }
             }
         }
 
-        if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-            {
-                if (TryFindResultPreviewText(item, out value))
-                {
+        if (element.ValueKind == JsonValueKind.Array) {
+            foreach (var item in element.EnumerateArray()) {
+                if (TryFindResultPreviewText(item, out value)) {
                     return true;
                 }
             }
@@ -2188,10 +2304,8 @@ public partial class WorkflowsPage
         return false;
     }
 
-    private static string TruncatePreservingWhitespace(string value, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
+    private static string TruncatePreservingWhitespace(string value, int maxLength) {
+        if (string.IsNullOrWhiteSpace(value)) {
             return string.Empty;
         }
 
@@ -2201,25 +2315,20 @@ public partial class WorkflowsPage
             : $"{trimmed[..Math.Max(0, maxLength - 3)]}...";
     }
 
-    private static int CalculateTotalPages(int totalCount, int pageSize)
-    {
+    private static int CalculateTotalPages(int totalCount, int pageSize) {
         return totalCount <= 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
     }
 
-    private static string FormatPageLabel(int pageIndex, int totalPages, int totalCount, string noun)
-    {
-        if (totalCount == 0)
-        {
+    private static string FormatPageLabel(int pageIndex, int totalPages, int totalCount, string noun) {
+        if (totalCount == 0) {
             return $"0 {noun}";
         }
 
         return $"Page {pageIndex + 1} of {totalPages} - {totalCount:N0} {noun}";
     }
 
-    private static string Truncate(string value, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
+    private static string Truncate(string value, int maxLength) {
+        if (string.IsNullOrWhiteSpace(value)) {
             return "No message.";
         }
 
@@ -2240,10 +2349,8 @@ public partial class WorkflowsPage
     private static string ResolveEventDisplayMessage(WorkflowEventRecord workflowEvent)
         => WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent);
 
-    private static bool HasTechnicalEventMessage(WorkflowEventRecord workflowEvent)
-    {
-        if (WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail))
-        {
+    private static bool HasTechnicalEventMessage(WorkflowEventRecord workflowEvent) {
+        if (WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail)) {
             return !string.Equals(
                 ResolveEventDisplayMessage(workflowEvent),
                 technicalDetail,
@@ -2267,41 +2374,33 @@ public partial class WorkflowsPage
         WorkflowId? WorkflowId,
         WorkflowRunId? RunId,
         bool HasExplicitSelection,
-        string ValidationError)
-    {
+        string ValidationError) {
         public static WorkflowRouteRequest Create(
             Guid? projectId,
             Guid? workflowId,
-            Guid? runId)
-        {
+            Guid? runId) {
             var hasExplicitSelection = projectId.HasValue || workflowId.HasValue || runId.HasValue;
-            if (!hasExplicitSelection)
-            {
+            if (!hasExplicitSelection) {
                 return new WorkflowRouteRequest(null, null, null, false, string.Empty);
             }
 
-            if (projectId == Guid.Empty)
-            {
+            if (projectId == Guid.Empty) {
                 return Invalid("The projectId query value cannot be empty.");
             }
 
-            if (workflowId == Guid.Empty)
-            {
+            if (workflowId == Guid.Empty) {
                 return Invalid("The workflowId query value cannot be empty.");
             }
 
-            if (runId == Guid.Empty)
-            {
+            if (runId == Guid.Empty) {
                 return Invalid("The runId query value cannot be empty.");
             }
 
-            if (!workflowId.HasValue && projectId.HasValue)
-            {
+            if (!workflowId.HasValue && projectId.HasValue) {
                 return Invalid("A projectId workflow route also requires workflowId.");
             }
 
-            if (!workflowId.HasValue && runId.HasValue)
-            {
+            if (!workflowId.HasValue && runId.HasValue) {
                 return Invalid("A runId workflow route also requires workflowId.");
             }
 
@@ -2319,8 +2418,7 @@ public partial class WorkflowsPage
 
     private sealed record ProjectWorkflowRouteValidation(
         WorkflowAgentChatProjectSelection? Project,
-        string ErrorMessage)
-    {
+        string ErrorMessage) {
         public static ProjectWorkflowRouteValidation Succeeded(WorkflowAgentChatProjectSelection project)
             => new(project, string.Empty);
 
@@ -2328,28 +2426,27 @@ public partial class WorkflowsPage
             => new(null, errorMessage);
     }
 
-    private static string FormatWorkflowException(Exception exception)
-        => WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+    private string FormatWorkflowException(Exception exception) {
+        Logger.LogWarning("Workflow operation failed for workflow {WorkflowId}, run {RunId}, page generation {PageGeneration}, and failure type {FailureType}.",
+            CurrentDefinitionId?.Value, selectedRun?.RunId.Value, pageLoadGeneration, exception.GetBaseException().GetType().Name);
+        return exception is JsonException ? "Enter valid JSON and try again."
+            : "The workflow operation could not be completed. Refresh the workspace and try again.";
+    }
 
-    private static string FormatShortId(Guid value)
-    {
+    private static string FormatShortId(Guid value) {
         return value.ToString("N")[..8];
     }
 
-    private WorkflowProviderOption? ResolveDefaultProviderOption()
-    {
+    private WorkflowProviderOption? ResolveDefaultProviderOption() {
         return providerOptions.FirstOrDefault(option => option.IsEnabled);
     }
 
-    private static string ResolveDefaultModel(WorkflowProviderOption? providerOption)
-    {
-        if (providerOption is null)
-        {
+    private static string ResolveDefaultModel(WorkflowProviderOption? providerOption) {
+        if (providerOption is null) {
             return ManagedSeedProviderFallbacks.OpenAiDefaultModel;
         }
 
-        if (!string.IsNullOrWhiteSpace(providerOption.DefaultModel))
-        {
+        if (!string.IsNullOrWhiteSpace(providerOption.DefaultModel)) {
             return providerOption.DefaultModel;
         }
 
@@ -2357,93 +2454,142 @@ public partial class WorkflowsPage
                ManagedSeedProviderFallbacks.OpenAiDefaultModel;
     }
 
-    private void OpenAgents()
-    {
+    private void OpenAgents() {
         Navigation.NavigateTo("/agents");
     }
 
-    private async Task OpenWorkflowCuratorAsync()
-    {
+    private async Task OpenWorkflowCuratorAsync() {
         if (isOpeningWorkflowCurator ||
             workflowCuratorAgent is null ||
             !WorkflowCuratorAgentIdentity.Matches(workflowCuratorAgent) ||
-            AgentChatAccessState != AgentChatContextAccessState.Ready)
-        {
+            AgentChatAccessState != AgentChatContextAccessState.Ready) {
             return;
         }
 
+        var owner = CaptureOwner();
+        var curatorId = workflowCuratorAgent.Id;
         isOpeningWorkflowCurator = true;
-        try
-        {
-            await AgentChatLauncher.StartNewChatAsync(workflowCuratorAgent.Id);
+        try {
+            await AgentChatLauncher.StartNewChatAsync(curatorId);
+            if (!Owns(owner)) {
+                return;
+            }
+
             NotificationService.Success("Workflow Curator ready", "Opened a new managed workflow chat.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Unable to open Workflow Curator", FormatWorkflowException(exception));
-        }
-        finally
-        {
+        } catch (Exception exception) {
+            if (Owns(owner)) {
+                NotificationService.Error("Unable to open Workflow Curator", FormatWorkflowException(exception));
+            }
+        } finally {
             isOpeningWorkflowCurator = false;
         }
     }
 
-    private async Task<(AgentDefinition? Agent, string? ErrorMessage)> TryResolveWorkflowCuratorAgentAsync()
-    {
-        try
-        {
-            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+    private async Task<(AgentDefinition? Agent, string? ErrorMessage)> TryResolveWorkflowCuratorAgentAsync() {
+        try {
+            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken: lifetimeCancellation.Token);
             var agent = agents.SingleOrDefault(WorkflowCuratorAgentIdentity.Matches);
             return agent is null
                 ? (null, $"The managed agent '{WorkflowCuratorAgentIdentity.AgentId:D}' is not available.")
                 : (agent, null);
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) {
             return (null, FormatWorkflowException(exception));
         }
     }
 
-    private async Task EnsureWorkflowCuratorAgentAsync()
-    {
-        if (workflowCuratorAgent is not null)
-        {
+    private async Task EnsureWorkflowCuratorAgentAsync() {
+        if (workflowCuratorAgent is not null) {
             return;
         }
 
         var resolutionTask = workflowCuratorResolutionTask;
-        if (resolutionTask is null)
-        {
+        if (resolutionTask is null) {
             resolutionTask = ResolveWorkflowCuratorAgentAsync();
             workflowCuratorResolutionTask = resolutionTask;
         }
 
-        try
-        {
+        try {
             await resolutionTask;
-        }
-        finally
-        {
-            if (ReferenceEquals(workflowCuratorResolutionTask, resolutionTask))
-            {
+        } finally {
+            if (ReferenceEquals(workflowCuratorResolutionTask, resolutionTask)) {
                 workflowCuratorResolutionTask = null;
             }
         }
     }
 
-    private async Task ResolveWorkflowCuratorAgentAsync()
-    {
+    private async Task ResolveWorkflowCuratorAgentAsync() {
         var resolution = await TryResolveWorkflowCuratorAgentAsync();
+        if (disposed) {
+            return;
+        }
+
         workflowCuratorAgent = resolution.Agent;
-        if (resolution.ErrorMessage is { } curatorError)
-        {
+        if (resolution.ErrorMessage is { } curatorError) {
             NotificationService.Warning("Workflow Curator unavailable", curatorError);
         }
     }
 
-    private Task HandleAgentChatExecutionCompletedAsync(AgentChatExecutionCompleted notification)
-    {
+    private Task HandleAgentChatExecutionCompletedAsync(AgentChatExecutionCompleted notification) {
         ArgumentNullException.ThrowIfNull(notification);
         return RefreshAsync();
+    }
+
+    private readonly record struct PageOwner(long PageGeneration, long TargetGeneration,
+        WorkflowId? DefinitionId, AgentChatNavigationIdentity Navigation);
+
+    private PageOwner CaptureOwner() => new(pageLoadGeneration, targetGeneration, CurrentDefinitionId, AgentChatNavigationFence);
+
+    private bool Owns(PageOwner owner) => !disposed && owner.PageGeneration == pageLoadGeneration
+        && owner.TargetGeneration == targetGeneration && owner.DefinitionId == CurrentDefinitionId
+        && owner.Navigation == AgentChatNavigationFence;
+
+    private void InvalidateSelectionEffects() {
+        targetGeneration++;
+        presentationRevision++;
+        activeTestOperation = null;
+        isRunningTest = false;
+        isPreparingTest = false;
+        definitionLoadTask = null;
+        testResult = null;
+        testInputJson = WorkflowPreviewInputSupport.DefaultInputJson;
+        isBusy = false;
+        componentLibraryLoadTask = null;
+        CloseRunDetailDialog();
+        CloseEventDetailDialog();
+        ClosePreviewInputDialog();
+        CloseTemplatePreviewDialog();
+        CloseTemplateCatalogueDialog();
+    }
+
+    private static void RenewRead(ref CancellationTokenSource source) {
+        var previous = source;
+        source = new();
+        previous.Cancel();
+        previous.Dispose();
+    }
+
+    private static WorkflowDefinition FreezeDefinition(WorkflowDefinition definition) => definition with {
+        Graph = definition.Graph with {
+            Nodes = definition.Graph.Nodes.Select(node => node with { Ports = node.Ports.ToImmutableArray() }).ToImmutableArray(),
+            Edges = definition.Graph.Edges.ToImmutableArray()
+        },
+        InputParameters = definition.InputParameters.ToImmutableArray()
+    };
+
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+
+        disposed = true;
+        InvalidateSelectionEffects();
+        foreach (var cancellation in new[] { pageReadCancellation, selectionReadCancellation, runReadCancellation,
+            overlayReadCancellation, lifetimeCancellation }) {
+            cancellation.Cancel();
+            cancellation.Dispose();
+        }
+
+        responseDrafts.Clear();
+        GC.SuppressFinalize(this);
     }
 }

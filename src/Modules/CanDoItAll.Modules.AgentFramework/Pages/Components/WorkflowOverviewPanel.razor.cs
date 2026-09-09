@@ -1,53 +1,24 @@
+using CanDoItAll.AgentFramework.Core;
+using System.Collections.Immutable;
+using CanDoItAll.AgentFramework.Workflows.UI;
 using System.Globalization;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
-using CanDoItAll.Components.Charts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class WorkflowOverviewPanel : IDisposable
-{
+public partial class WorkflowOverviewPanel : IDisposable {
     private const int RecentRunCount = 6;
     private const int TopWorkflowCount = 5;
     private const string LoadFailureMessage = "Workflow dashboard data is temporarily unavailable. Retry the query.";
 
     private static readonly WorkflowLifecycleStatus[] LifecycleStatuses = Enum.GetValues<WorkflowLifecycleStatus>();
 
-    private static readonly CdaChartOptions RunStateChartOptions = new()
-    {
-        Type = CdaChartType.Bar,
-        XAxisType = CdaChartAxisType.Category,
-        Unit = "runs",
-        YAxisTitle = "Executions",
-        ShowToolbar = false,
-        EnableZoom = false,
-        ShowLegend = false,
-        ValuePrecision = 0,
-        TooltipPrecision = 0,
-        Palette = CdaChartPalette.Calm
-    };
-
-    private static readonly CdaChartOptions BackendChartOptions = new()
-    {
-        Type = CdaChartType.Donut,
-        XAxisType = CdaChartAxisType.Category,
-        Unit = "runs",
-        ShowToolbar = false,
-        EnableZoom = false,
-        ShowLegend = true,
-        ShowDataLabels = true,
-        ValuePrecision = 0,
-        TooltipPrecision = 0,
-        LegendPosition = CdaChartLegendPosition.Bottom,
-        Palette = CdaChartPalette.Energetic
-    };
-
     private WorkflowOverviewSnapshot? snapshot;
-    private IReadOnlyList<CdaChartSeries> runStateSeries = [];
-    private IReadOnlyList<CdaChartSeries> backendSeries = [];
     private bool isLoading;
+    private bool disposed;
     private bool loadAttempted;
     private string loadError = string.Empty;
     private long appliedRefreshVersion = long.MinValue;
@@ -66,16 +37,21 @@ public partial class WorkflowOverviewPanel : IDisposable
     [Inject]
     public ILogger<WorkflowOverviewPanel> Logger { get; set; } = default!;
 
-    private IReadOnlyList<CdaChartSeries> RunStateSeries
-        => runStateSeries;
 
-    private IReadOnlyList<CdaChartSeries> BackendSeries
-        => backendSeries;
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!IsActive || loadAttempted && appliedRefreshVersion == RefreshVersion)
-        {
+    protected override async Task OnParametersSetAsync() {
+        if (!IsActive) {
+            Interlocked.Increment(ref queryVersion);
+            Interlocked.Exchange(ref activeQueryCancellation, null)?.Cancel();
+            if (isLoading) {
+                loadAttempted = false;
+            }
+
+            isLoading = false;
+            return;
+        }
+
+        if (disposed || loadAttempted && appliedRefreshVersion == RefreshVersion) {
             return;
         }
 
@@ -83,17 +59,16 @@ public partial class WorkflowOverviewPanel : IDisposable
     }
 
     public Task RefreshAsync()
-        => IsActive ? LoadSnapshotAsync() : Task.CompletedTask;
+        => !disposed && IsActive ? LoadSnapshotAsync() : Task.CompletedTask;
 
-    public void Dispose()
-    {
+    public void Dispose() {
+        disposed = true;
         Interlocked.Increment(ref queryVersion);
         Interlocked.Exchange(ref activeQueryCancellation, null)?.Cancel();
         GC.SuppressFinalize(this);
     }
 
-    private async Task LoadSnapshotAsync()
-    {
+    private async Task LoadSnapshotAsync() {
         var requestVersion = Interlocked.Increment(ref queryVersion);
         using var queryCancellation = new CancellationTokenSource();
         var previousCancellation = Interlocked.Exchange(ref activeQueryCancellation, queryCancellation);
@@ -104,54 +79,39 @@ public partial class WorkflowOverviewPanel : IDisposable
         isLoading = true;
         loadError = string.Empty;
 
-        try
-        {
+        try {
             var result = await QueryService.QueryAsync(
                 new WorkflowOverviewQuery(
                     RecentTake: RecentRunCount,
                     TopWorkflowTake: TopWorkflowCount),
                 queryCancellation.Token);
-            if (!IsCurrentQuery(requestVersion, queryCancellation))
-            {
+            if (!IsCurrentQuery(requestVersion, queryCancellation)) {
                 return;
             }
 
-            snapshot = result;
-            runStateSeries = BuildSeries(
-                result.RunsByState,
-                CdaChartType.Bar,
-                "Workflow runs",
-                static state => FormatRunState(state));
-            backendSeries = BuildSeries(
-                result.RunsByBackend,
-                CdaChartType.Donut,
-                "Runtime backends",
-                static backend => FormatBackend(backend));
-        }
-        catch (OperationCanceledException) when (queryCancellation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            if (!IsCurrentQuery(requestVersion, queryCancellation))
-            {
+            snapshot = result with {
+                DefinitionsByStatus = result.DefinitionsByStatus.ToImmutableDictionary(),
+                RunsByState = result.RunsByState.ToImmutableDictionary(),
+                RunsByBackend = result.RunsByBackend.ToImmutableDictionary(),
+                TopWorkflows = result.TopWorkflows.ToImmutableArray(),
+                RecentlyUpdatedDefinitions = result.RecentlyUpdatedDefinitions.ToImmutableArray(),
+                RecentRuns = result.RecentRuns.ToImmutableArray()
+            };
+        } catch (OperationCanceledException) when (queryCancellation.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (!IsCurrentQuery(requestVersion, queryCancellation)) {
                 return;
             }
 
             snapshot = null;
-            runStateSeries = [];
-            backendSeries = [];
             loadError = LoadFailureMessage;
             Logger.LogError(
                 "Workflow overview query failed for refresh version {RefreshVersion}, request version {RequestVersion}, and failure type {FailureType}.",
                 requestedRefreshVersion,
                 requestVersion,
                 exception.GetType().Name);
-        }
-        finally
-        {
-            if (IsCurrentQuery(requestVersion, queryCancellation))
-            {
+        } finally {
+            if (IsCurrentQuery(requestVersion, queryCancellation)) {
                 isLoading = false;
                 Interlocked.CompareExchange(ref activeQueryCancellation, null, queryCancellation);
             }
@@ -159,37 +119,7 @@ public partial class WorkflowOverviewPanel : IDisposable
     }
 
     private bool IsCurrentQuery(long requestVersion, CancellationTokenSource cancellation)
-        => requestVersion == Interlocked.Read(ref queryVersion) && !cancellation.IsCancellationRequested;
-
-    private static IReadOnlyList<CdaChartSeries> BuildSeries<TKey>(
-        IReadOnlyDictionary<TKey, int>? values,
-        CdaChartType chartType,
-        string name,
-        Func<TKey, string> formatLabel)
-        where TKey : notnull
-    {
-        if (values is null || values.Count == 0)
-        {
-            return [];
-        }
-
-        var points = values
-            .Where(pair => pair.Value > 0)
-            .OrderBy(pair => pair.Key)
-            .Select(pair => new CdaChartPoint(formatLabel(pair.Key), pair.Value))
-            .ToArray();
-        return points.Length == 0
-            ? []
-            :
-            [
-                new CdaChartSeries
-                {
-                    Name = name,
-                    Type = chartType,
-                    Points = points
-                }
-            ];
-    }
+        => !disposed && IsActive && requestVersion == Interlocked.Read(ref queryVersion) && !cancellation.IsCancellationRequested;
 
     private static string FormatSuccessRate(decimal? value)
         => value.HasValue
@@ -203,16 +133,14 @@ public partial class WorkflowOverviewPanel : IDisposable
         => value.ToString("N0", CultureInfo.InvariantCulture);
 
     private static string FormatRunState(WorkflowRunState state)
-        => state switch
-        {
+        => state switch {
             WorkflowRunState.NotStarted => "Not started",
             WorkflowRunState.WaitingForInput => "Waiting for input",
             _ => state.ToString()
         };
 
     private static string FormatBackend(WorkflowRuntimeBackendKind backend)
-        => backend switch
-        {
+        => backend switch {
             WorkflowRuntimeBackendKind.InProcess => "In process",
             WorkflowRuntimeBackendKind.DurableTask => "Durable task",
             WorkflowRuntimeBackendKind.AzureFunctions => "Azure Functions",
@@ -220,8 +148,7 @@ public partial class WorkflowOverviewPanel : IDisposable
         };
 
     private static string ResolveLifecycleTone(WorkflowLifecycleStatus? status)
-        => status switch
-        {
+        => status switch {
             WorkflowLifecycleStatus.Active => "success",
             WorkflowLifecycleStatus.Draft => "info",
             WorkflowLifecycleStatus.Suspended => "warning",
@@ -231,8 +158,7 @@ public partial class WorkflowOverviewPanel : IDisposable
         };
 
     private static string ResolveRunTone(WorkflowRunState state)
-        => state switch
-        {
+        => state switch {
             WorkflowRunState.Completed => "success",
             WorkflowRunState.Failed => "danger",
             WorkflowRunState.Running => "info",
@@ -242,4 +168,41 @@ public partial class WorkflowOverviewPanel : IDisposable
             WorkflowRunState.NotStarted => "neutral",
             _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unsupported workflow run state.")
         };
+    private WorkflowOverviewPresentation Presentation => new() {
+        Revision = queryVersion,
+        State = !IsActive ? WorkflowQueryState.Inactive : isLoading ? WorkflowQueryState.Loading
+            : loadError.Length > 0 ? WorkflowQueryState.Failed : WorkflowQueryState.Ready,
+        Error = loadError,
+        Metrics = snapshot is null ? [] : [
+            new("Definitions", FormatCount(snapshot.DefinitionCount), "workflow-overview-definition-count"),
+            new("Active", FormatCount(snapshot.ActiveDefinitionCount), "workflow-overview-active-count"),
+            new("Runs", FormatCount(snapshot.RunCount), "workflow-overview-run-count"),
+            new("Running", FormatCount(snapshot.RunningRunCount), "workflow-overview-running-count"),
+            new("Waiting", FormatCount(snapshot.WaitingForInputRunCount), "workflow-overview-waiting-count"),
+            new("Completed", FormatCount(snapshot.CompletedRunCount), "workflow-overview-completed-count"),
+            new("Failed", FormatCount(snapshot.FailedRunCount), "workflow-overview-failed-count"),
+            new("Success rate", FormatSuccessRate(snapshot.SuccessRatePercent), "workflow-overview-success-rate")
+        ],
+        AsOf = snapshot?.AsOfUtc.LocalDateTime.ToString("g") ?? "",
+        TopWorkflows = snapshot?.TopWorkflows.Select(row => new WorkflowRankedView(row.Name, row.Status?.ToString() ?? "Deleted",
+            ResolveLifecycleTone(row.Status), row.LastRunAtUtc.LocalDateTime.ToString("g"), FormatCount(row.RunCount), FormatFailureCount(row.FailedRunCount))).ToImmutableArray() ?? [],
+        RecentRuns = snapshot?.RecentRuns.Select(row => new WorkflowActivityView(row.WorkflowName,
+            WorkflowFailureDisplayFormatter.ToUserMessage(row.Run.Summary), row.Run.UpdatedAtUtc.LocalDateTime.ToString("g"), FormatRunState(row.Run.State), ResolveRunTone(row.Run.State))).ToImmutableArray() ?? [],
+        RecentlyUpdatedDefinitions = snapshot?.RecentlyUpdatedDefinitions.Select(row => new WorkflowActivityView(row.Name,
+            row.Description, row.UpdatedAtUtc.LocalDateTime.ToString("g"), row.Status.ToString(), ResolveLifecycleTone(row.Status), FormatBackend(row.PreferredBackend))).ToImmutableArray() ?? [],
+        Lifecycle = snapshot is null ? [] : LifecycleStatuses.Select(status => new WorkflowBadge(
+            $"{status}: {FormatCount(snapshot.DefinitionsByStatus.GetValueOrDefault(status))}", ResolveLifecycleTone(status))).ToImmutableArray(),
+        RunStates = snapshot?.RunsByState.Where(pair => pair.Value > 0).OrderBy(pair => pair.Key)
+            .Select(pair => new WorkflowChartPointView(FormatRunState(pair.Key), pair.Value)).ToImmutableArray() ?? [],
+        Backends = snapshot?.RunsByBackend.Where(pair => pair.Value > 0).OrderBy(pair => pair.Key)
+            .Select(pair => new WorkflowChartPointView(FormatBackend(pair.Key), pair.Value)).ToImmutableArray() ?? []
+    };
+
+    private async Task HandleIntentAsync(WorkflowQueryIntent intent) {
+        if (!IsActive || intent.Revision != queryVersion) {
+            return;
+        }
+
+        await RefreshAsync();
+    }
 }

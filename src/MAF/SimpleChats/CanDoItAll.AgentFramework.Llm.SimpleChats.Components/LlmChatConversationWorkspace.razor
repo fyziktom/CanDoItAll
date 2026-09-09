@@ -342,11 +342,11 @@
         if (owner != dialogGeneration || !startDialogOpen || selectedStartDefinitionId is not { } id) {
             return;
         }
-        var generation = controller!.SelectionGeneration;
-        if (await controller.CreateAsync(id, startTitle, CancellationToken.None) && controller.IsCurrentSelection(generation) && owner == dialogGeneration) {
+        if (await controller!.CreateAsync(id, startTitle, CancellationToken.None) && !disposed && owner == dialogGeneration) {
+            routeGeneration++;
             CloseOwnedDialog(owner);
             ClearComposer();
-            await AcceptSelectionAsync(generation);
+            await AcceptSelectionAsync(controller.SelectionGeneration);
         }
     }
     private async Task RenameConversationAsync(long owner) {

@@ -1,0 +1,255 @@
+
+@if (Presentation.State == WorkflowQueryState.Inactive) {
+    <Stack data-testid="workflow-analytics-inactive">
+        <EmptyState Eyebrow="Analytics"
+                    Title="Analytics load on demand"
+                    Description="Open the Analytics tab to query the typed workflow analytics projection." />
+    </Stack>
+} else if (Presentation.State == WorkflowQueryState.Loading) {
+    <Stack data-testid="workflow-analytics-loading">
+        <LoadingState Eyebrow="Workflow analytics"
+                      Title="Loading workflow analytics"
+                      Description="Reading aggregate usage, duration, state, backend, and recent-run projections." />
+    </Stack>
+} else if (Presentation.State == WorkflowQueryState.Failed) {
+    <Stack GapScale="LayoutGap.Medium"
+           data-testid="workflow-analytics-error">
+        <EmptyState Eyebrow="Analytics unavailable"
+                    Title="Workflow analytics could not be loaded"
+                    Description="@Presentation.Error" />
+        <Cluster JustifyContent="JustifyContent.End">
+            <Button Text="Retry"
+                    Icon="refresh"
+                    Variant="Variant.Outlined"
+                    Click="RefreshAsync"
+                    data-testid="workflow-analytics-retry" />
+        </Cluster>
+    </Stack>
+} else if (Presentation.State == WorkflowQueryState.Ready) {
+    <Stack GapScale="LayoutGap.Large"
+           data-testid="workflow-analytics-content">
+        <SurfaceCard Soft="true">
+            <Cluster Gap="LayoutGap.Large"
+                     AlignItems="AlignItems.End"
+                     JustifyContent="JustifyContent.SpaceBetween"
+                     Wrap="FlexWrap.Wrap">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow analytics" />
+                    <TextBlock Value="Typed aggregates across the complete filtered run set." />
+                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="info" Text="@Presentation.ScopeDescription" />
+                        <StatusBadge Tone="neutral" Text="@($"As of {Presentation.AsOf}")" />
+                    </Cluster>
+                </Stack>
+
+                <Cluster Gap="LayoutGap.Medium"
+                         AlignItems="AlignItems.End"
+                         Wrap="FlexWrap.Wrap">
+                    <FormField Text="Scope">
+                        <InputSelect TValue="WorkflowAnalyticsScopeKind"
+                                     Value="@Presentation.Scope"
+                                     ValueChanged="HandleScopeChangedAsync"
+                                     ValueExpression="@(() => Presentation.Scope)"
+                                     class="cda-input"
+                                     data-testid="workflow-analytics-scope">
+                            <option value="@WorkflowAnalyticsScopeKind.All">All workflows</option>
+                            @if (Presentation.Workflows.Length > 0) {
+                                <option value="@WorkflowAnalyticsScopeKind.SelectedWorkflow">Selected workflow</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+
+                    @if (Presentation.Scope == WorkflowAnalyticsScopeKind.SelectedWorkflow) {
+                        <FormField Text="Workflow">
+                            <InputSelect TValue="Guid?"
+                                         Value="@Presentation.SelectedWorkflow"
+                                         ValueChanged="HandleSelectedWorkflowChangedAsync"
+                                         ValueExpression="@(() => Presentation.SelectedWorkflow)"
+                                         class="cda-input"
+                                         data-testid="workflow-analytics-workflow">
+                                @foreach (var workflow in Presentation.Workflows) {
+                                    <option value="@workflow.Id">@workflow.Name</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                    }
+
+                    <Button Text="Refresh analytics"
+                            Icon="refresh"
+                            Variant="Variant.Outlined"
+                            Click="RefreshAsync"
+                            data-testid="workflow-analytics-refresh" />
+                </Cluster>
+            </Cluster>
+        </SurfaceCard>
+
+        <SectionCard Title="Inventory and runtime"
+                     Description="Definition and run totals are queried from the full typed projection, not the recent-run window.">
+            <Grid Gap="LayoutGap.Medium" ColumnsLg="4" ColumnsXl="6">
+                @foreach (var metric in Presentation.RuntimeMetrics) {
+                <MetricCard Label="@metric.Label" Value="@metric.Value" data-testid="@metric.TestId" />
+            }
+            </Grid>
+        </SectionCard>
+
+        <SectionCard Title="Tokens, observations, and pricing"
+                     Description="Known cost excludes observations without pricing while preserving their token and completeness counts.">
+            <Grid Gap="LayoutGap.Medium" ColumnsLg="4" ColumnsXl="5">
+                @foreach (var metric in Presentation.UsageMetrics) {
+                <MetricCard Label="@metric.Label" Value="@metric.Value" data-testid="@metric.TestId" />
+            }
+            </Grid>
+        </SectionCard>
+
+        <SectionCard Title="Duration"
+                     Description="Active durations are measured at the snapshot time; final durations use the persisted terminal timestamp.">
+            <Grid Gap="LayoutGap.Medium" ColumnsLg="4" ColumnsXl="6">
+                @foreach (var metric in Presentation.DurationMetrics) {
+                <MetricCard Label="@metric.Label" Value="@metric.Value" data-testid="@metric.TestId" />
+            }
+            </Grid>
+        </SectionCard>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsLg="2">
+            <SectionCard Title="Run distribution"
+                         Description="State and runtime-backend totals across the selected scope.">
+                @if (Presentation.Distribution.Length == 0) {
+                    <EmptyState Eyebrow="No runs"
+                                Title="No distribution is available"
+                                Description="Run state and backend rows appear after workflows execute." />
+                } else {
+                    <DataGrid TItem="WorkflowDistributionView"
+                              Data="@Presentation.Distribution"
+                              AllowPaging="false"
+                              data-testid="workflow-analytics-distribution-grid">
+                        <Columns>
+                            <DataGridColumn TItem="WorkflowDistributionView" Title="Dimension">
+                                <Template Context="row">
+                                    <TextBlock Value="@row.Dimension" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowDistributionView" Title="Value">
+                                <Template Context="row">
+                                    <StatusBadge Tone="@row.Tone" Text="@row.Label" NoWrap="true" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowDistributionView" Title="Runs">
+                                <Template Context="row">
+                                    <TextBlock Value="@row.Count" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                }
+            </SectionCard>
+
+            <SectionCard Title="Provider and model usage"
+                         Description="Usage and pricing completeness remain separate for every provider-model pair.">
+                @if (Presentation.Providers.Length == 0) {
+                    <EmptyState Eyebrow="No provider usage"
+                                Title="No provider-model observations"
+                                Description="Provider-model rows appear after workflow nodes report typed usage observations." />
+                } else {
+                    <DataGrid TItem="WorkflowProviderUsageView"
+                              Data="@Presentation.Providers"
+                              AllowPaging="false"
+                              data-testid="workflow-analytics-provider-model-grid">
+                        <Columns>
+                            <DataGridColumn TItem="WorkflowProviderUsageView" Title="Provider / model">
+                                <Template Context="row">
+                                    <Stack GapScale="LayoutGap.Tiny"
+                                           data-testid="workflow-analytics-provider-model">
+                                        <TextBlock Value="@row.ProviderName" />
+                                        <TextBlock Value="@row.Model" />
+                                        @if (row.ProviderKind is not null) {
+                                            <StatusBadge Tone="info" Text="@row.ProviderKind" NoWrap="true" />
+                                        }
+                                    </Stack>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderUsageView" Title="Observations">
+                                <Template Context="row">
+                                    <TextBlock Value="@row.Observations" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderUsageView" Title="Tokens">
+                                <Template Context="row">
+                                    <TextBlock Value="@row.Tokens" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderUsageView" Title="Known cost">
+                                <Template Context="row">
+                                    <TextBlock Value="@row.Cost" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderUsageView" Title="Unknown pricing">
+                                <Template Context="row">
+                                    <TextBlock Value="@row.UnknownPricing" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                }
+            </SectionCard>
+        </Grid>
+
+        <SectionCard Title="Recent runs"
+                     Description="The recent window is intentionally bounded to eight rows and never supplies aggregate totals.">
+            @if (Presentation.RecentRuns.Length == 0) {
+                <EmptyState Eyebrow="No recent runs"
+                            Title="No workflow runs in this scope"
+                            Description="Recent runs appear after a workflow starts." />
+            } else {
+                <DataGrid TItem="WorkflowRunView"
+                          Data="@Presentation.RecentRuns"
+                          AllowPaging="false"
+                          data-testid="workflow-analytics-recent-runs-grid">
+                    <Columns>
+                        <DataGridColumn TItem="WorkflowRunView" Title="Run">
+                            <Template Context="run">
+                                <Stack GapScale="LayoutGap.Tiny"
+                                       data-testid="workflow-analytics-recent-run">
+                                    <TextBlock Value="@run.Summary" />
+                                    <TextBlock Value="@run.Id.ToString("N")[..8]" />
+                                </Stack>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunView" Title="State">
+                            <Template Context="run">
+                                <StatusBadge Tone="@run.Tone"
+                                             Text="@run.State"
+                                             NoWrap="true" />
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunView" Title="Backend">
+                            <Template Context="run">
+                                <TextBlock Value="@run.Backend" />
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunView" Title="Duration">
+                            <Template Context="run">
+                                <TextBlock Value="@run.Duration" />
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunView" Title="Updated">
+                            <Template Context="run">
+                                <TextBlock Value="@run.UpdatedAt" />
+                            </Template>
+                        </DataGridColumn>
+                    </Columns>
+                </DataGrid>
+            }
+        </SectionCard>
+    </Stack>
+}
+
+@code {
+    [Parameter, EditorRequired] public WorkflowAnalyticsPresentation Presentation { get; set; } = new();
+    [Parameter] public EventCallback<WorkflowQueryIntent> Intent { get; set; }
+    private Task RefreshAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowQueryAction.Refresh));
+    private Task HandleScopeChangedAsync(WorkflowAnalyticsScopeKind scope)
+        => Intent.InvokeAsync(new(Presentation.Revision, WorkflowQueryAction.Scope, Scope: scope));
+    private Task HandleSelectedWorkflowChangedAsync(Guid? id)
+        => Intent.InvokeAsync(new(Presentation.Revision, WorkflowQueryAction.Workflow, WorkflowId: id));
+}

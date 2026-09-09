@@ -1,0 +1,131 @@
+<div class="workflows-template-dialog">
+                            @if (Presentation.IsLoading) {
+                                <SurfaceCard Soft="true"
+                                             data-testid="workflows-template-catalogue-loading">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                                    <h2 class="workflows-card-title">Loading templates</h2>
+                                    <p class="workflows-muted">Reading workflow template pack metadata.</p>
+                                </SurfaceCard>
+                            } else if (!string.IsNullOrWhiteSpace(Presentation.ErrorMessage)) {
+                                <p class="workflows-error-note"
+                                   data-testid="workflows-template-catalogue-error">@Presentation.ErrorMessage</p>
+                            } else {
+                                <Grid Gap="LayoutGap.Large"
+                                      Class="workflows-template-catalogue-grid"
+                                      ColumnTemplateLg="minmax(20rem,0.85fr) minmax(0,1.25fr)">
+                                    <SurfaceCard Soft="true"
+                                                 Class="workflows-template-catalogue-list">
+                                        <Split Gap="LayoutGap.Small">
+                                            <div>
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Examples" />
+                                                <h2 class="workflows-card-title">Choose a starting point</h2>
+                                            </div>
+                                            <StatusBadge Tone="info" Text="@($"{Presentation.TotalCount} examples")" />
+                                        </Split>
+                                        <p class="workflows-muted mt-3">Seed @Presentation.Seed</p>
+
+                                        <label class="workflows-field mt-4">
+                                            <span>Search</span>
+                                            <input class="cda-input"
+                                                   value="@Presentation.Search"
+                                                   @onchange="SearchAsync"
+                                                   data-testid="workflows-template-catalogue-search" />
+                                        </label>
+
+                                        @if (Presentation.Templates.Length == 0) {
+                                            <EmptyState Eyebrow="No matches"
+                                                        Title="No templates found"
+                                                        Description="Adjust the search term to see workflow examples." />
+                                        } else {
+                                            <Stack GapScale="LayoutGap.Small" Class="workflows-template-catalogue-results mt-4">
+                                                @foreach (var template in Presentation.Templates) {
+                                                    var isSelectedTemplate = template.IsSelected;
+                                                    <div class="workflows-template-catalogue-item @(isSelectedTemplate ? "workflows-template-catalogue-item--selected" : string.Empty)"
+                                                         data-testid="workflows-template-catalogue-item">
+                                                        <button type="button"
+                                                                class="workflows-template-catalogue-item__select"
+                                                                @onclick="@(() => SelectAsync(template.Key))">
+                                                            <strong>@template.Name</strong>
+                                                            <span>@template.Description</span>
+                                                            <small>@template.Key.Value</small>
+                                                        </button>
+                                                        <Button Text="Preview"
+                                                                Icon="visibility"
+                                                                Size="ButtonSize.Small"
+                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Click="@(() => PreviewAsync(template.Key))"
+                                                                data-testid="workflows-template-preview" />
+                                                    </div>
+                                                }
+                                            </Stack>
+                                        }
+                                    </SurfaceCard>
+
+                                    <SurfaceCard Soft="true"
+                                                 data-testid="workflows-template-catalogue-detail">
+                                        @if (currentTemplate is null) {
+                                            <EmptyState Eyebrow="Select template"
+                                                        Title="No template selected"
+                                                        Description="Choose a workflow example to inspect its basic structure." />
+                                        } else {
+                                            <Split Gap="LayoutGap.Small">
+                                                <div>
+                                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template preview" />
+                                                    <h2 class="workflows-card-title">@currentTemplate.Name</h2>
+                                                </div>
+                                                <StatusBadge Tone="secondary" Text="@currentTemplate.Key.Value" />
+                                            </Split>
+                                            <p class="workflows-muted mt-3">@currentTemplate.Description</p>
+
+                                            <Grid Gap="LayoutGap.Small" ColumnsLg="4" Class="mt-4">
+                                                <div class="workflows-fact">
+                                                    <span>Nodes</span>
+                                                    <strong>@currentTemplate.NodeCount</strong>
+                                                </div>
+                                                <div class="workflows-fact">
+                                                    <span>Edges</span>
+                                                    <strong>@currentTemplate.EdgeCount</strong>
+                                                </div>
+                                                <div class="workflows-fact">
+                                                    <span>Inputs</span>
+                                                    <strong>@currentTemplate.InputCount</strong>
+                                                </div>
+                                                <div class="workflows-fact">
+                                                    <span>Backend</span>
+                                                    <strong>@currentTemplate.Backend</strong>
+                                                </div>
+                                            </Grid>
+
+                                            <div class="workflows-section">
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Flow shape" />
+                                                <p class="workflows-muted">@currentTemplate.NodeKinds</p>
+                                            </div>
+
+                                            @if (currentTemplate.InputCount > 0) {
+                                                <div class="workflows-section">
+                                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Expected input" />
+                                                    <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                                        @foreach (var parameter in currentTemplate.Inputs) {
+                                                            <div class="workflows-artifact">
+                                                                <strong>@parameter.Label</strong>
+                                                                <span>@parameter.Description</span>
+                                                                <small>@parameter.Key · @parameter.Kind · @(parameter.Required ? "Required" : "Optional")</small>
+                                                            </div>
+                                                        }
+                                                    </Stack>
+                                                </div>
+                                            }
+                                        }
+                                    </SurfaceCard>
+                                </Grid>
+                            }
+                        </div>
+
+@code {
+    [Parameter, EditorRequired] public WorkflowTemplatePresentation Presentation { get; set; } = new();
+    [Parameter] public EventCallback<WorkflowIntent> Intent { get; set; }
+    private WorkflowTemplateView? currentTemplate => Presentation.Selected;
+    private Task SearchAsync(ChangeEventArgs args) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.TemplateSearch, Text: args.Value?.ToString() ?? ""));
+    private Task SelectAsync(WorkflowTemplateKey key) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.SelectTemplate, TemplateKey: key));
+    private Task PreviewAsync(WorkflowTemplateKey key) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.PreviewTemplate, TemplateKey: key));
+}

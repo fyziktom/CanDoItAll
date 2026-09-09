@@ -1,180 +1,18 @@
+@using System.Collections.Immutable
+@using CanDoItAll.AgentFramework.UI.Chat
 @inject DialogService DialogService
+@implements IDisposable
 
-<ConversationWorkspacePanel>
-    <Header>
-        <ConversationHeader Presentation="@HeaderPresentation"
-                            Actions="@HeaderActions">
-            <TitleContent>
-                @if (Session is null)
-                {
-                    <p class="chat-panel-header__empty-title">Select or create a thread</p>
-                }
-                else
-                {
-                    <Editable TItem="EditableThreadTitleModel"
-                              Item="@titleEditor"
-                              ItemChanged="HandleSessionTitleChangedAsync"
-                              ParameterName="@nameof(EditableThreadTitleModel.Title)"
-                              Placeholder="Thread title"
-                              EmptyText="Untitled thread"
-                              Class="chat-thread-title-edit" />
-                }
-            </TitleContent>
-        </ConversationHeader>
-    </Header>
-
-    <Transcript>
-
-        <ConversationTranscript Messages="@MessagePresentations"
-                                TransientMessages="@TransientMessagePresentations"
-                                EmptyState="@TranscriptEmptyState">
-            <AfterMessages>
-                @{
-                    var executionEntries = ResolveActiveExecutionEntries();
-                    var hasExecutionStream = executionEntries.Count > 0;
-                    var shouldCollapseExecutionStream = hasExecutionStream && ShouldCollapseExecutionStream(executionEntries);
-                    var visibleExecutionEntries = shouldCollapseExecutionStream
-                        ? Array.Empty<ExecutionLogEntry>()
-                        : ResolveVisibleExecutionEntries(executionEntries);
-                }
-
-                @if (hasExecutionStream)
-                {
-                    <div class="agent-execution-stream" data-testid="chat-execution-stream">
-                        @if (shouldCollapseExecutionStream)
-                        {
-                            <button type="button"
-                                    class="agent-execution-stream__summary"
-                                    @onclick="@(() => OpenExecutionHistoryDialogAsync(executionEntries))"
-                                    data-testid="chat-execution-summary">
-                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                    <StatusBadge Tone="@ResolveExecutionTone(ResolveLatestExecutionState(executionEntries))"
-                                                 Text="@BuildWorkedForLabel(executionEntries)" />
-                                    <StatusBadge Tone="neutral" Text="@($"{executionEntries.Count} steps")" />
-                                    <TextBlock TextStyle="TextStyle.Caption"
-                                               Value="@BuildEntryPreview(executionEntries[^1])" />
-                                </Cluster>
-                            </button>
-                        }
-                        else
-                        {
-                            @foreach (var entry in visibleExecutionEntries)
-                            {
-                                <button type="button"
-                                        class="agent-execution-stream__item"
-                                        @onclick="@(() => OpenExecutionEntryDialogAsync(entry))"
-                                        data-testid="chat-execution-entry">
-                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                        <StatusBadge Tone="@ResolveExecutionTone(entry.State)" Text="@entry.State.ToString()" />
-                                        <span class="agent-execution-stream__phase">@entry.Phase</span>
-                                        <span class="agent-execution-stream__time">@entry.CreatedAtUtc.LocalDateTime.ToString("t")</span>
-                                    </Cluster>
-                                    <span class="agent-execution-stream__preview">@BuildEntryPreview(entry)</span>
-                                </button>
-                            }
-
-                            @if (executionEntries.Count > visibleExecutionEntries.Count)
-                            {
-                                <button type="button"
-                                        class="agent-execution-stream__history"
-                                        @onclick="@(() => OpenExecutionHistoryDialogAsync(executionEntries))"
-                                        data-testid="chat-execution-history">
-                                    View @executionEntries.Count work steps...
-                                </button>
-                            }
-                        }
-                    </div>
-                }
-            </AfterMessages>
-            <AfterPendingMessage>
-                @if (HasPendingApprovals)
-                {
-                    <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50/80 p-4">
-                        <Stack GapScale="LayoutGap.Medium">
-                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                <StatusBadge Tone="warning" Text="Approval required" />
-                                <TextBlock TextStyle="TextStyle.Body2"
-                                           Value="The agent is waiting on tool approval before the thread can continue." />
-                            </Cluster>
-
-                            @foreach (var approval in PendingApprovals)
-                            {
-                                var approvalId = approval.ApprovalId;
-                                var argumentSummary = FormatApprovalArguments(approval.ArgumentsJson);
-                                <div class="rounded-[1.2rem] border border-amber-200 bg-white px-4 py-3">
-                                    <Stack GapScale="LayoutGap.Small">
-                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                            <StatusBadge Tone="info" Text="@approval.ToolKind" />
-                                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@approval.ToolName" />
-                                            @if (TryGetApprovalChoice(approvalId, out var choice))
-                                            {
-                                                <StatusBadge Tone="@(choice ? "success" : "warning")"
-                                                             Text="@(choice ? "Will approve" : "Will reject")" />
-                                            }
-                                        </Cluster>
-
-                                        @if (!string.IsNullOrWhiteSpace(approval.Details))
-                                        {
-                                            <TextBlock TextStyle="TextStyle.Body2" Value="@approval.Details" />
-                                        }
-
-                                        @if (!string.IsNullOrWhiteSpace(argumentSummary))
-                                        {
-                                            <TextBlock TextStyle="TextStyle.Caption" Value="@argumentSummary" />
-                                        }
-
-                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                            <Button Text="Approve"
-                                                    ButtonStyle="@(IsApprovalChoice(approvalId, true) ? ButtonStyle.Primary : ButtonStyle.Light)"
-                                                    Size="ButtonSize.Small"
-                                                    Disabled="@IsBusy"
-                                                    Click="@(() => SetApprovalChoice(approvalId, true))"
-                                                    data-testid="@($"chat-approval-approve-{approvalId}")" />
-                                            <Button Text="Reject"
-                                                    ButtonStyle="@(IsApprovalChoice(approvalId, false) ? ButtonStyle.Primary : ButtonStyle.Light)"
-                                                    Size="ButtonSize.Small"
-                                                    Disabled="@IsBusy"
-                                                    Click="@(() => SetApprovalChoice(approvalId, false))"
-                                                    data-testid="@($"chat-approval-reject-{approvalId}")" />
-                                        </Cluster>
-                                    </Stack>
-                                </div>
-                            }
-
-                            @if (PendingApprovals.Count > 1)
-                            {
-                                <Button Text="Submit decisions"
-                                        Disabled="@(IsBusy || !AllApprovalChoicesMade)"
-                                        IsBusy="@IsBusy"
-                                        Click="SubmitApprovalChoicesAsync"
-                                        data-testid="chat-submit-approval-decisions-button" />
-                            }
-                        </Stack>
-                    </div>
-                }
-            </AfterPendingMessage>
-        </ConversationTranscript>
-    </Transcript>
-
-    <MiddleContent>
-        @if (ActivityStreamId is not null)
-        {
+<AgentChatSurface Presentation="@MapPresentation()" Intent="HandleIntentAsync" Navigation="@Navigation" NavigationIntent="@NavigationIntent"
+                  HeaderActions="@HeaderActions" ComposerActions="@ComposerActions">
+    <ActivityContent>
+        @if (ActivityStreamId is not null) {
             <AgentExecutionActivityStatus @key="ActivityStreamId"
                                           StreamId="@ActivityStreamId" />
         }
-    </MiddleContent>
-
-    <Composer>
-        <ConversationComposer DraftPrompt="@DraftPrompt"
-                              DraftPromptChanged="@DraftPromptChanged"
-                              SendRequested="@SendRequested"
-                              IsBusy="@IsBusy"
-                              IsSendDisabled="@(IsBusy || HasPendingApprovals)"
-                              ComposerKey="@ComposerKey">
-            <LeadingActions>
-                    @ComposerActions
-                    @if (AttachmentFilesSelected.HasDelegate)
-                    {
+    </ActivityContent>
+    <AttachmentPicker>
+                    @if (AttachmentFilesSelected.HasDelegate) {
                         <label for="@ResolveAttachmentInputId()"
                                class="@ResolveAttachmentUploadButtonClass()"
                                aria-label="Attach image file"
@@ -192,113 +30,8 @@
                                    disabled="@IsBusy"
                                    data-testid="chat-image-attachment-input" />
                     }
-                    <Button Icon="add"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@IsBusy"
-                            Class="chat-composer__icon-button"
-                            Click="@(async () => await AttachmentRequested.InvokeAsync())"
-                            aria-label="Attach workspace artifact"
-                            title="Attach workspace artifact"
-                            data-testid="chat-attachment-button" />
-            </LeadingActions>
-            <TrailingActions>
-                    <Button Icon="@(IsVoiceRecording ? "stop" : "mic")"
-                            ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
-                            Size="ButtonSize.Small"
-                            Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceTranscribing || HasPendingApprovals)"
-                            IsBusy="@IsVoiceTranscribing"
-                            Class="chat-composer__icon-button"
-                            Click="ToggleVoiceRecordingAsync"
-                            aria-label="@ResolveVoiceRecordingLabel()"
-                            title="@ResolveVoiceRecordingLabel()"
-                            data-testid="chat-voice-record-button" />
-                    <Button Icon="volume_up"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceSpeaking)"
-                            IsBusy="@IsVoiceSpeaking"
-                            Class="chat-composer__icon-button"
-                            Click="@(async () => await SpeakLatestAssistantMessageRequested.InvokeAsync())"
-                            aria-label="Speak latest assistant message"
-                            title="Speak latest assistant message"
-                            data-testid="chat-voice-speak-button" />
-                    <Button Icon="hearing"
-                            ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
-                            Size="ButtonSize.Small"
-                            Disabled="@(!CanUseVoiceMode || IsBusy)"
-                            Class="chat-composer__icon-button"
-                            Click="ToggleVoiceModeAsync"
-                            aria-label="Toggle audio mode"
-                            title="Toggle audio mode"
-                            data-testid="chat-voice-mode-button" />
-            </TrailingActions>
-            <Footer>
-
-        @if (DraftAttachmentPaths.Count > 0)
-        {
-            <div class="mt-4 rounded-[1.35rem] border border-emerald-200 bg-emerald-50/80 px-4 py-3">
-                <Stack GapScale="LayoutGap.Small">
-                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                        <StatusBadge Tone="success" Text="@($"{DraftAttachmentPaths.Count} staged")" />
-                        <TextBlock TextStyle="TextStyle.Body2"
-                                   Value="These files are queued for the next prompt and their workspace paths will be included automatically." />
-                    </Cluster>
-
-                    @foreach (var attachmentPath in DraftAttachmentPaths)
-                    {
-                        <div class="flex items-start justify-between gap-3 rounded-[1rem] border border-emerald-200 bg-white/75 px-3 py-2">
-                            <p class="min-w-0 flex-1 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@attachmentPath</p>
-                            <CopyButton Value="@attachmentPath"
-                                        DisplayMode="CopyButtonDisplayMode.IconOnly"
-                                        Size="CopyButtonSize.ExtraSmall"
-                                        AriaLabel="Copy staged attachment path" />
-                        </div>
-                    }
-                </Stack>
-            </div>
-        }
-
-        @if (ShouldRenderComposerStatusRow())
-        {
-            <div class="chat-composer-status">
-            <TextBlock TextStyle="TextStyle.Eyebrow"
-                       Value="@ResolveComposerGuidance()" />
-
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                @if (!string.IsNullOrWhiteSpace(VoiceStatusText))
-                {
-                    <StatusBadge Tone="@VoiceStatusTone" Text="@VoiceStatusText" />
-                }
-                @if (HasPendingApprovals)
-                {
-                    @if (!IsAutoApprovalActive())
-                    {
-                        <Button Text="Approve remaining in this run"
-                                Disabled="@IsBusy"
-                                IsBusy="@IsBusy"
-                                Click="@(async () => await ApprovalDecisionForConversationRequested.InvokeAsync())"
-                                data-testid="chat-approve-conversation-button" />
-                    }
-                    <Button Text="@(PendingApprovals.Count > 1 ? "Approve all once" : "Approve once")"
-                            ButtonStyle="ButtonStyle.Light"
-                            Disabled="@IsBusy"
-                            IsBusy="@IsBusy"
-                            Click="@(() => SubmitUniformDecisionAsync(true))"
-                            data-testid="chat-approve-once-button" />
-                    <Button Text="@(PendingApprovals.Count > 1 ? "Reject all and continue" : "Reject and continue")"
-                            ButtonStyle="ButtonStyle.Light"
-                            Disabled="@IsBusy"
-                            Click="@(() => SubmitUniformDecisionAsync(false))"
-                            data-testid="chat-reject-button" />
-                }
-            </Cluster>
-            </div>
-        }
-            </Footer>
-        </ConversationComposer>
-    </Composer>
-</ConversationWorkspacePanel>
+    </AttachmentPicker>
+</AgentChatSurface>
 
 @code {
     [Parameter]
@@ -370,10 +103,6 @@
     [Parameter]
     public EventCallback SendRequested { get; set; }
 
-    /// <summary>
-    /// Emits one explicit decision per pending approval (exact coverage). The
-    /// host submits the list unchanged; no bool is expanded across proposals.
-    /// </summary>
     [Parameter]
     public EventCallback<IReadOnlyList<PendingToolApprovalDecision>> ApprovalDecisionsRequested { get; set; }
 
@@ -414,13 +143,10 @@
                 PendingUserPrompt,
                 DateTimeOffset.Now)];
 
-    private ConversationEmptyStatePresentation? TranscriptEmptyState
-    {
-        get
-        {
+    private ConversationEmptyStatePresentation? TranscriptEmptyState {
+        get {
             var hasPendingPrompt = !string.IsNullOrWhiteSpace(PendingUserPrompt);
-            if (Session is null && !hasPendingPrompt)
-            {
+            if (Session is null && !hasPendingPrompt) {
                 return new(
                     "Conversation",
                     "Nothing is open in the center panel",
@@ -430,8 +156,7 @@
             if (Session?.Messages.Count > 0 ||
                 HasPendingApprovals ||
                 hasPendingPrompt ||
-                ResolveActiveExecutionEntries().Count > 0)
-            {
+                ResolveActiveExecutionEntries().Count > 0) {
                 return null;
             }
 
@@ -442,42 +167,34 @@
         }
     }
 
-    private IReadOnlyList<PresentationBadge> BuildHeaderBadges()
-    {
-        var badges = new List<PresentationBadge>
-        {
+    private IReadOnlyList<PresentationBadge> BuildHeaderBadges() {
+        var badges = new List<PresentationBadge> {
             new(ResolveSessionBadge(), AgentConversationPresentationMapper.MapTone(ResolveSessionTone()))
         };
-        if (!string.IsNullOrWhiteSpace(RunStateText))
-        {
+        if (!string.IsNullOrWhiteSpace(RunStateText)) {
             badges.Add(new(
                 RunStateText,
                 AgentConversationPresentationMapper.MapTone(RunStateTone),
                 testId: "agent-chat-run-state"));
         }
 
-        if (IsAutoApprovalActive())
-        {
+        if (IsAutoApprovalActive()) {
             badges.Add(new(ResolveAutoApproveBadgeText(), PresentationTone.Success));
         }
 
-        if (Session is not null)
-        {
+        if (Session is not null) {
             badges.Add(new($"{Session.Messages.Count} messages"));
         }
 
-        if (HasPendingApprovals)
-        {
+        if (HasPendingApprovals) {
             badges.Add(new($"{PendingApprovals.Count} approvals", PresentationTone.Warning));
         }
 
-        if (IsVoiceModeEnabled)
-        {
+        if (IsVoiceModeEnabled) {
             badges.Add(new("Audio mode", PresentationTone.Accent));
         }
 
-        if (Session is not null)
-        {
+        if (Session is not null) {
             badges.Add(new(
                 Session.UpdatedAtUtc.LocalDateTime.ToString("g"),
                 PresentationTone.Accent));
@@ -491,102 +208,24 @@
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
 
-    private readonly Dictionary<string, bool> approvalChoices = new(StringComparer.Ordinal);
-
-    private bool AllApprovalChoicesMade =>
-        PendingApprovals.Count > 0 &&
-        PendingApprovals.All(approval => approvalChoices.ContainsKey(approval.ApprovalId));
-
-    private bool TryGetApprovalChoice(string approvalId, out bool approved)
-        => approvalChoices.TryGetValue(approvalId, out approved);
-
-    private bool IsApprovalChoice(string approvalId, bool approved)
-        => approvalChoices.TryGetValue(approvalId, out var choice) && choice == approved;
-
-    private Task SetApprovalChoice(string approvalId, bool approved)
-    {
-        approvalChoices[approvalId] = approved;
-        // A single pending approval needs no separate submit step — the
-        // explicit per-proposal choice is already the complete decision set.
-        return PendingApprovals.Count == 1 && AllApprovalChoicesMade
-            ? SubmitApprovalChoicesAsync()
-            : Task.CompletedTask;
-    }
-
-    private Task SubmitApprovalChoicesAsync()
-    {
-        if (!AllApprovalChoicesMade)
-        {
-            return Task.CompletedTask;
-        }
-
-        var decisions = PendingApprovals
-            .Select(approval => new PendingToolApprovalDecision(
-                approval.ApprovalId,
-                approvalChoices[approval.ApprovalId]))
-            .ToArray();
-        return ApprovalDecisionsRequested.InvokeAsync(decisions);
-    }
-
-    private Task SubmitUniformDecisionAsync(bool approved)
-    {
-        // Explicit whole-set action: the user chose to apply one decision to
-        // every pending proposal.
-        var decisions = PendingApprovals
-            .Select(approval => new PendingToolApprovalDecision(approval.ApprovalId, approved))
-            .ToArray();
-        return decisions.Length == 0
-            ? Task.CompletedTask
-            : ApprovalDecisionsRequested.InvokeAsync(decisions);
-    }
-
-    private void PruneStaleApprovalChoices()
-    {
-        if (approvalChoices.Count == 0)
-        {
-            return;
-        }
-
-        var pendingIds = PendingApprovals
-            .Select(approval => approval.ApprovalId)
-            .ToHashSet(StringComparer.Ordinal);
-        foreach (var staleId in approvalChoices.Keys.Where(id => !pendingIds.Contains(id)).ToList())
-        {
-            approvalChoices.Remove(staleId);
-        }
-    }
-
-    /// <summary>
-    /// Display-safe projection of the proposal's arguments: values for
-    /// sensitive-looking keys are masked and long values are truncated, so the
-    /// user sees exactly which tool and targets are requested without the raw
-    /// argument payload leaking secrets into the UI.
-    /// </summary>
-    internal static string FormatApprovalArguments(string? argumentsJson)
-    {
-        if (string.IsNullOrWhiteSpace(argumentsJson) || argumentsJson.Trim() == "{}")
-        {
+    internal static string FormatApprovalArguments(string? argumentsJson) {
+        if (string.IsNullOrWhiteSpace(argumentsJson) || argumentsJson.Trim() == "{}") {
             return string.Empty;
         }
 
-        try
-        {
+        try {
             using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
-            {
+            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object) {
                 return string.Empty;
             }
 
             var parts = new List<string>();
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
+            foreach (var property in document.RootElement.EnumerateObject()) {
                 parts.Add($"{property.Name}: {FormatApprovalArgumentValue(property.Name, property.Value)}");
             }
 
             return string.Join(" · ", parts);
-        }
-        catch (System.Text.Json.JsonException)
-        {
+        } catch (System.Text.Json.JsonException) {
             return string.Empty;
         }
     }
@@ -603,16 +242,13 @@
         "connectionstring"
     ];
 
-    private static string FormatApprovalArgumentValue(string key, System.Text.Json.JsonElement value)
-    {
+    private static string FormatApprovalArgumentValue(string key, System.Text.Json.JsonElement value) {
         if (SensitiveArgumentKeyMarkers.Any(marker =>
-                key.Contains(marker, StringComparison.OrdinalIgnoreCase)))
-        {
+                key.Contains(marker, StringComparison.OrdinalIgnoreCase))) {
             return "•••";
         }
 
-        var text = value.ValueKind switch
-        {
+        var text = value.ValueKind switch {
             System.Text.Json.JsonValueKind.String => value.GetString() ?? string.Empty,
             System.Text.Json.JsonValueKind.Number or
             System.Text.Json.JsonValueKind.True or
@@ -625,33 +261,6 @@
             ? text
             : $"{text[..maximumDisplayLength]}… ({text.Length} chars)";
     }
-    private readonly EditableThreadTitleModel titleEditor = new();
-    private readonly string attachmentInputId = $"chat-attachment-file-input-{Guid.NewGuid():N}";
-    private Guid? titleEditorSessionId;
-    private string titleEditorSessionTitle = string.Empty;
-
-    protected override void OnParametersSet()
-    {
-        PruneStaleApprovalChoices();
-        if (Session is null)
-        {
-            titleEditorSessionId = null;
-            titleEditorSessionTitle = string.Empty;
-            titleEditor.Title = string.Empty;
-            return;
-        }
-
-        if (titleEditorSessionId == Session.Id &&
-            string.Equals(titleEditorSessionTitle, Session.Title, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        titleEditorSessionId = Session.Id;
-        titleEditorSessionTitle = Session.Title;
-        titleEditor.Title = Session.Title;
-    }
-
     private Task HandleAttachmentFilesSelectedAsync(InputFileChangeEventArgs args)
         => AttachmentFilesSelected.InvokeAsync(args);
 
@@ -663,35 +272,8 @@
             ? "chat-attachment-upload-button chat-attachment-upload-button--disabled"
             : "chat-attachment-upload-button";
 
-    private Task ToggleVoiceModeAsync()
-        => VoiceModeChanged.InvokeAsync(!IsVoiceModeEnabled);
-
-    private Task ToggleVoiceRecordingAsync()
-        => VoiceRecordingToggled.InvokeAsync();
-
-    private string ResolveVoiceRecordingLabel()
-        => IsVoiceRecording ? "Stop voice recording" : "Start voice recording";
-
-    private async Task HandleSessionTitleChangedAsync(EditableThreadTitleModel editor)
-    {
-        if (Session is null)
-        {
-            return;
-        }
-
-        var nextTitle = editor.Title.Trim();
-        if (string.Equals(Session.Title, nextTitle, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        await SessionTitleChanged.InvokeAsync(nextTitle);
-    }
-
-    private IReadOnlyList<ExecutionLogEntry> ResolveActiveExecutionEntries()
-    {
-        if (ActiveRun is not null)
-        {
+    private IReadOnlyList<ExecutionLogEntry> ResolveActiveExecutionEntries() {
+        if (ActiveRun is not null) {
             return ExecutionLog
                 .Where(item => item.ExecutionRunId == ActiveRun.Id)
                 .OrderBy(item => item.CreatedAtUtc)
@@ -703,8 +285,7 @@
             .Select(item => item.ExecutionRunId)
             .FirstOrDefault();
 
-        if (latestRunId == Guid.Empty)
-        {
+        if (latestRunId == Guid.Empty) {
             return [];
         }
 
@@ -715,8 +296,7 @@
     }
 
     private static IReadOnlyList<ExecutionLogEntry> ResolveVisibleExecutionEntries(
-        IReadOnlyList<ExecutionLogEntry> entries)
-    {
+        IReadOnlyList<ExecutionLogEntry> entries) {
         const int visibleEntryCount = 6;
 
         return entries
@@ -724,8 +304,7 @@
             .ToList();
     }
 
-    private bool ShouldCollapseExecutionStream(IReadOnlyList<ExecutionLogEntry> entries)
-    {
+    private bool ShouldCollapseExecutionStream(IReadOnlyList<ExecutionLogEntry> entries) {
         var latestState = ResolveLatestExecutionState(entries);
 
         return ActiveRun?.State is ExecutionState.Completed or ExecutionState.Failed ||
@@ -735,47 +314,39 @@
     private static ExecutionState ResolveLatestExecutionState(IReadOnlyList<ExecutionLogEntry> entries)
         => entries.Count == 0 ? ExecutionState.Idle : entries[^1].State;
 
-    private string BuildWorkedForLabel(IReadOnlyList<ExecutionLogEntry> entries)
-    {
-        if (entries.Count == 0)
-        {
+    private string BuildWorkedForLabel(IReadOnlyList<ExecutionLogEntry> entries) {
+        if (entries.Count == 0) {
             return "Worked";
         }
 
         var startedAtUtc = ActiveRun?.StartedAtUtc ?? ActiveRun?.CreatedAtUtc ?? entries[0].CreatedAtUtc;
         var completedAtUtc = ActiveRun?.CompletedAtUtc ?? entries[^1].CreatedAtUtc;
         var duration = completedAtUtc - startedAtUtc;
-        if (duration < TimeSpan.Zero)
-        {
+        if (duration < TimeSpan.Zero) {
             duration = TimeSpan.Zero;
         }
 
         return $"Worked for {FormatDuration(duration)}";
     }
 
-    private static string FormatDuration(TimeSpan duration)
-    {
-        if (duration.TotalHours >= 1)
-        {
+    private static string FormatDuration(TimeSpan duration) {
+        if (duration.TotalHours >= 1) {
             return $"{(int)duration.TotalHours}h {duration.Minutes:D2}m";
         }
 
-        if (duration.TotalMinutes >= 1)
-        {
+        if (duration.TotalMinutes >= 1) {
             return $"{(int)duration.TotalMinutes}m {duration.Seconds:D2}s";
         }
 
         return $"{Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds))}s";
     }
 
-    private static string BuildEntryPreview(ExecutionLogEntry entry)
-    {
+    private static string BuildEntryPreview(ExecutionLogEntry entry) {
         var summary = NormalizeInlineText($"{entry.Phase}. {entry.Message}");
         var preview = TakeFirstSentences(summary, maxSentences: 2);
         const int maxLength = 190;
 
-        if (preview.Length > maxLength)
-        {
+        if (preview.Length > maxLength) {
             preview = preview[..maxLength].TrimEnd();
         }
 
@@ -785,26 +356,21 @@
             : $"{preview}...";
     }
 
-    private static string NormalizeInlineText(string value)
-    {
+    private static string NormalizeInlineText(string value) {
         return string.Join(
             ' ',
             value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
-    private static string TakeFirstSentences(string value, int maxSentences)
-    {
+    private static string TakeFirstSentences(string value, int maxSentences) {
         var sentenceCount = 0;
-        for (var index = 0; index < value.Length; index++)
-        {
-            if (value[index] is not ('.' or '!' or '?'))
-            {
+        for (var index = 0; index < value.Length; index++) {
+            if (value[index] is not ('.' or '!' or '?')) {
                 continue;
             }
 
             sentenceCount++;
-            if (sentenceCount >= maxSentences)
-            {
+            if (sentenceCount >= maxSentences) {
                 return value[..(index + 1)];
             }
         }
@@ -812,11 +378,9 @@
         return value;
     }
 
-    private Task OpenExecutionEntryDialogAsync(ExecutionLogEntry entry)
-    {
+    private Task OpenExecutionEntryDialogAsync(ExecutionLogEntry entry) {
         var entries = ResolveActiveExecutionEntries();
-        if (entries.Count == 0)
-        {
+        if (entries.Count == 0) {
             entries = [entry];
         }
 
@@ -829,8 +393,7 @@
         return Task.CompletedTask;
     }
 
-    private Task OpenExecutionHistoryDialogAsync(IReadOnlyList<ExecutionLogEntry> entries)
-    {
+    private Task OpenExecutionHistoryDialogAsync(IReadOnlyList<ExecutionLogEntry> entries) {
         OpenExecutionDialog(
             title: "Agent work history",
             entries,
@@ -844,18 +407,15 @@
         string title,
         IReadOnlyList<ExecutionLogEntry> entries,
         Guid? highlightEntryId,
-        ModalSize size)
-    {
+        ModalSize size) {
         _ = DialogService.OpenAsync<AgentExecutionLogDialog>(
             title,
-            new Dictionary<string, object?>
-            {
+            new Dictionary<string, object?> {
                 [nameof(AgentExecutionLogDialog.Run)] = ActiveRun,
                 [nameof(AgentExecutionLogDialog.Entries)] = entries,
                 [nameof(AgentExecutionLogDialog.HighlightEntryId)] = highlightEntryId
             },
-            new DialogOptions
-            {
+            new DialogOptions {
                 Eyebrow = "Agent work",
                 Subtitle = BuildExecutionDialogSubtitle(entries),
                 Size = size,
@@ -863,35 +423,30 @@
                 TestId = "agent-execution-log-dialog",
                 AriaLabel = title,
                 Style = "max-height:calc(100vh - 2rem);"
-            });
+            },
+            dialogLifetime.Token);
     }
 
-    private string BuildExecutionDialogSubtitle(IReadOnlyList<ExecutionLogEntry> entries)
-    {
-        if (entries.Count == 0)
-        {
+    private string BuildExecutionDialogSubtitle(IReadOnlyList<ExecutionLogEntry> entries) {
+        if (entries.Count == 0) {
             return "No execution steps are available for the selected run.";
         }
 
         return $"{entries.Count} step(s) captured from {entries[0].CreatedAtUtc.LocalDateTime:g} to {entries[^1].CreatedAtUtc.LocalDateTime:g}.";
     }
 
-    private string ResolveComposerGuidance()
-    {
-        if (HasPendingApprovals)
-        {
+    private string ResolveComposerGuidance() {
+        if (HasPendingApprovals) {
             return IsAutoApprovalActive()
                 ? "A pending tool call still needs confirmation once, then the active run policy will keep the remaining approvals moving."
                 : "Approve once, approve the rest of this run, or reject before sending the next prompt.";
         }
 
-        if (ActiveRun?.AutoApprovePendingToolCalls == true)
-        {
+        if (ActiveRun?.AutoApprovePendingToolCalls == true) {
             return "The active run is allowed to auto-approve its remaining tool calls.";
         }
 
-        if (Agent?.Permissions.AutoApproveExternalCallsByDefault == true)
-        {
+        if (Agent?.Permissions.AutoApproveExternalCallsByDefault == true) {
             return "This agent auto-approves external tool calls by default.";
         }
 
@@ -902,25 +457,20 @@
         => HasPendingApprovals ||
            !string.IsNullOrWhiteSpace(VoiceStatusText);
 
-    private string ResolveSessionBadge()
-    {
-        if (Session is null)
-        {
+    private string ResolveSessionBadge() {
+        if (Session is null) {
             return "Idle";
         }
 
-        if (HasPendingApprovals)
-        {
+        if (HasPendingApprovals) {
             return "Waiting";
         }
 
         return Session.Messages.Count == 0 ? "Ready" : "Active";
     }
 
-    private string ResolveSessionTone()
-    {
-        if (Session is null)
-        {
+    private string ResolveSessionTone() {
+        if (Session is null) {
             return "neutral";
         }
 
@@ -933,10 +483,8 @@
     private string ResolveAutoApproveBadgeText()
         => ActiveRun?.AutoApprovePendingToolCalls == true ? "Run Auto Approve" : "Auto Approve";
 
-    private static string ResolveExecutionTone(ExecutionState state)
-    {
-        return state switch
-        {
+    private static string ResolveExecutionTone(ExecutionState state) {
+        return state switch {
             ExecutionState.Completed => "success",
             ExecutionState.WaitingOnTool => "warning",
             ExecutionState.Failed => "danger",
@@ -945,8 +493,92 @@
         };
     }
 
-    private sealed class EditableThreadTitleModel
-    {
-        public string Title { get; set; } = string.Empty;
+
+    [Parameter] public AgentChatNavigationPresentation? Navigation { get; set; }
+    [Parameter] public EventCallback<AgentChatNavigationIntent> NavigationIntent { get; set; }
+    [Parameter] public long SelectionGeneration { get; set; }
+    private long presentationRevision;
+    private (Guid? Agent, Guid? Session, Guid? Run, long Generation) observedTarget;
+    private CancellationTokenSource dialogLifetime = new();
+    private readonly string attachmentInputId = $"chat-attachment-file-input-{Guid.NewGuid():N}";
+    private bool disposed;
+
+    protected override void OnParametersSet() {
+        var target = (Agent?.Id, Session?.Id, ActiveRun?.Id, SelectionGeneration);
+        if (observedTarget == target) {
+            return;
+        }
+        observedTarget = target;
+        presentationRevision++;
+        var old = dialogLifetime;
+        dialogLifetime = new();
+        old.Cancel();
+        old.Dispose();
+    }
+
+    private ChatWorkspacePresentation MapPresentation() {
+        var entries = ResolveActiveExecutionEntries();
+        return new() {
+            Revision = presentationRevision,
+            Header = HeaderPresentation,
+            Session = Session is null ? null : new(Session.Id, Session.Title),
+            Messages = MessagePresentations.ToImmutableArray(),
+            TransientMessages = TransientMessagePresentations.ToImmutableArray(),
+            EmptyState = TranscriptEmptyState,
+            Approvals = PendingApprovals.Select(item => new ChatApprovalPresentation(item.ApprovalId, item.ToolKind,
+                item.ToolName, item.Details, FormatApprovalArguments(item.ArgumentsJson))).ToImmutableArray(),
+            ExecutionSteps = ResolveVisibleExecutionEntries(entries).Select(item => new ChatExecutionStep(item.Id,
+                item.State.ToString(), ResolveExecutionTone(item.State), BoundExecutionText(item.Phase),
+                item.CreatedAtUtc.LocalDateTime.ToString("t"), BuildEntryPreview(item))).ToImmutableArray(),
+            ExecutionStepCount = entries.Count,
+            CollapseExecution = ShouldCollapseExecutionStream(entries),
+            ExecutionSummary = BuildWorkedForLabel(entries),
+            ExecutionTone = ResolveExecutionTone(ResolveLatestExecutionState(entries)),
+            ExecutionPreview = entries.Count == 0 ? "" : BuildEntryPreview(entries[^1]),
+            DraftPrompt = DraftPrompt,
+            ComposerKey = ComposerKey,
+            IsBusy = IsBusy,
+            AutoApproval = IsAutoApprovalActive(),
+            ComposerGuidance = ResolveComposerGuidance(),
+            Attachments = DraftAttachmentPaths.Where(IsRelativeAttachment).ToImmutableArray(),
+            CanUseVoiceMode = CanUseVoiceMode,
+            IsVoiceModeEnabled = IsVoiceModeEnabled,
+            IsVoiceRecording = IsVoiceRecording,
+            IsVoiceTranscribing = IsVoiceTranscribing,
+            IsVoiceSpeaking = IsVoiceSpeaking,
+            VoiceStatusText = VoiceStatusText,
+            VoiceStatusTone = VoiceStatusTone
+        };
+    }
+
+    private static bool IsRelativeAttachment(string value) => !string.IsNullOrWhiteSpace(value)
+        && !value.StartsWith('/') && !value.StartsWith('\\') && !value.Contains(':');
+    private static string BoundExecutionText(string value) => value.Length <= 240 ? value : value[..240] + "…";
+
+    private Task HandleIntentAsync(ChatWorkspaceIntent intent) {
+        if (disposed || intent.Revision != presentationRevision) {
+            return Task.CompletedTask;
+        }
+        return intent.Action switch {
+            ChatWorkspaceAction.DraftChanged => DraftPromptChanged.InvokeAsync(intent.Text ?? ""),
+            ChatWorkspaceAction.Send => SendRequested.InvokeAsync(),
+            ChatWorkspaceAction.Approvals => ApprovalDecisionsRequested.InvokeAsync(intent.Decisions
+                .Select(item => new PendingToolApprovalDecision(item.ApprovalId, item.Approved)).ToImmutableArray()),
+            ChatWorkspaceAction.ApproveRemaining => ApprovalDecisionForConversationRequested.InvokeAsync(),
+            ChatWorkspaceAction.AttachArtifacts => AttachmentRequested.InvokeAsync(),
+            ChatWorkspaceAction.SessionTitleChanged => SessionTitleChanged.InvokeAsync(intent.Text ?? ""),
+            ChatWorkspaceAction.VoiceModeChanged => VoiceModeChanged.InvokeAsync(intent.Enabled),
+            ChatWorkspaceAction.ToggleRecording => VoiceRecordingToggled.InvokeAsync(),
+            ChatWorkspaceAction.SpeakLatest => SpeakLatestAssistantMessageRequested.InvokeAsync(),
+            ChatWorkspaceAction.ExecutionEntry when ExecutionLog.FirstOrDefault(item => item.Id == intent.EntryId) is { } entry => OpenExecutionEntryDialogAsync(entry),
+            ChatWorkspaceAction.ExecutionHistory => OpenExecutionHistoryDialogAsync(ResolveActiveExecutionEntries()),
+            _ => Task.CompletedTask
+        };
+    }
+
+    public void Dispose() {
+        disposed = true;
+        dialogLifetime.Cancel();
+        dialogLifetime.Dispose();
     }
 }

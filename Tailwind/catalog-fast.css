@@ -3,4 +3,5 @@
 @source "../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox";
 @source "../src/UI/CanDoItAll.Conversations.Components";
 @source "../src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI";
+@source "../src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI";
 @import "./main/component-layout-utilities.css";

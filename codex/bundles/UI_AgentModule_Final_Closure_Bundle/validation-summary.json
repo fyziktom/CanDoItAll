@@ -1,0 +1,2239 @@
+{
+  "reference": "CDA-UI-SEAMS-AGENT-FINAL-CLOSURE",
+  "status": "Completed",
+  "workstreams": {
+    "A": "Solved",
+    "B": "Solved",
+    "C": "Solved",
+    "D": "Solved"
+  },
+  "inputSha256": "61a41a7dc63489f3552ff8f14ea30d3994c480d1090de3eeaf6a0f853d2a23d5",
+  "entry": {
+    "localHead": "74f88b5b8d98a61efb55defbe9f5e9b48448841d",
+    "remoteHead": "74f88b5b8d98a61efb55defbe9f5e9b48448841d",
+    "parent": "49117eec760d82e884b193cec7200d4ccc4ade7b",
+    "tree": "78f4bac5025694bae4dd44b1b96ecacc95fa095c",
+    "branch": "components-decoupling",
+    "clean": true
+  },
+  "predecessor": {
+    "committedFilesMatching": 42,
+    "manifest": "Pass",
+    "focused": {
+      "total": "31",
+      "executed": "31",
+      "passed": "31",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    }
+  },
+  "simpleChatsCorrection": {
+    "finding": "Confirmed",
+    "before": {
+      "total": "2",
+      "executed": "2",
+      "passed": "0",
+      "failed": "2",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "after": {
+      "total": "35",
+      "executed": "35",
+      "passed": "35",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "proof": "Deferred non-cooperative transcript and operation reads after real Create; accepted B, one callback, one mutation, parent echo"
+  },
+  "dependencies": {
+    "CanDoItAll.Components": {
+      "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+      "status": " M src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs\n M src/CanDoItAll.Components.BaseLib/README.md\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json\n M tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt\n?? tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs\n",
+      "hashes": {
+        "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogService.cs": "b2b27da94e22cbcc57cc174956f47e4a90d2f130cdec7abf99d8eba65ce00007",
+        "src/CanDoItAll.Components.BaseLib/README.md": "b26d4f9b9f8b54ddea3367f576a3f41b87154402a2a7a031a1d8fe8f3acfee76",
+        "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-public-api.metadata.approved.json": "0c67ffcb9fefb622cd842f8b774d5cc3c321ed03397892750f3b922bc7c74cd5",
+        "tests/CanDoItAll.Components.BaseLib.Tests/fixtures/approvals/standard-source-package-inputs.approved.txt": "28e6535d6429e9562d8849253f21d88b7e9323049dde721f6a086cb7f894d75f",
+        "tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs": "c574995c6892db6af1ee2b91cddfa46a29df34f4265d4c699118776d163cd8f7"
+      }
+    },
+    "CanDoItAll.FileTools": {
+      "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+      "status": "",
+      "hashes": {}
+    }
+  },
+  "agentChat": {
+    "focused": {
+      "total": "146",
+      "executed": "146",
+      "passed": "146",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "voice": {
+      "total": "29",
+      "executed": "29",
+      "passed": "29",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "expected": 146,
+    "web": {
+      "mode": "web",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "checks": [
+        "Web full chat and transcript",
+        "Web runtime details and metrics",
+        "Web thread selection, create, rename, Send, execution history, artifacts and upload",
+        "Web synthetic recording, transcription and speech",
+        "Web individual approvals, remaining, approve once and reject once",
+        "Web durable failed execution",
+        "Web favorite and agent switch",
+        "Web stale workspace and detached execution",
+        "Web long encoded message",
+        "Web Prompt Gallery insertion",
+        "Web focused floating Chat",
+        "Web floating Send, operation coordination and New thread"
+      ],
+      "errors": [],
+      "counters": {
+        "sends": 5,
+        "approvals": 4,
+        "creates": 3,
+        "renames": 1,
+        "uploads": 1,
+        "transcriptions": 1,
+        "speech": 2,
+        "workspaces": 25,
+        "favoriteSaves": 1
+      }
+    },
+    "sandboxes": [
+      {
+        "mode": "Parity",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Parity Agent Chat Loading",
+          "Parity Agent Chat NoAgents",
+          "Parity Agent Chat MissingAgent",
+          "Parity Agent Chat Threads",
+          "Parity Agent Chat Transcript",
+          "Parity Agent Chat Executing",
+          "Parity Agent Chat Approvals",
+          "Parity Agent Chat Attachments",
+          "Parity Agent Chat Voice",
+          "Parity Agent Chat Focused",
+          "Parity Agent Chat Failed",
+          "Parity Agent Chat Adversarial"
+        ],
+        "errors": []
+      },
+      {
+        "mode": "Fast",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Fast Agent Chat Loading",
+          "Fast Agent Chat NoAgents",
+          "Fast Agent Chat MissingAgent",
+          "Fast Agent Chat Threads",
+          "Fast Agent Chat Transcript",
+          "Fast Agent Chat Executing",
+          "Fast Agent Chat Approvals",
+          "Fast Agent Chat Attachments",
+          "Fast Agent Chat Voice",
+          "Fast Agent Chat Focused",
+          "Fast Agent Chat Failed",
+          "Fast Agent Chat Adversarial"
+        ],
+        "errors": []
+      }
+    ],
+    "consumerOwners": [
+      "AgentChatPanel",
+      "ContextualAgentWorkspaceWindows",
+      "ProcessWorkspaceShell"
+    ],
+    "productionStatus": "Solved; final frozen validation completed"
+  },
+  "workflows": {
+    "expected": 78,
+    "focused": {
+      "total": "78",
+      "executed": "78",
+      "passed": "78",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "web": {
+      "mode": "web",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "checks": [
+        "Web workflow dashboard",
+        "Web exact Curator identity and one flight across route change",
+        "Web project/workflow identity and browser back/forward",
+        "Web delayed A definition cannot replace B",
+        "Web Publish, template search, preview canvas and add draft",
+        "Web starter, original Canvas editor, component library, validation and save",
+        "Web bounded run/event paging, full details and artifacts",
+        "Web delayed R1 cannot replace R2 and run route back/forward",
+        "Web exact human response draft and cancellation",
+        "Web preview input, simulation options and synthetic test execution",
+        "Web detached test cannot overwrite the new workflow",
+        "Web workflow analytics scope and refresh",
+        "Web safe failures and explicit missing workflow"
+      ],
+      "errors": [],
+      "counters": {
+        "definitionReads": 22,
+        "runReads": 15,
+        "eventReads": 14,
+        "pages": 14,
+        "saves": 3,
+        "publishes": 1,
+        "cancellations": 1,
+        "curatorStarts": 1,
+        "overviewReads": 4,
+        "analyticsReads": 6,
+        "tests": 2,
+        "responses": 1,
+        "lastTestWorkflow": "53000000-0000-0000-0000-000000000001",
+        "lastTestInput": "{\"prompt\":\"Summarize this workflow input.\"}",
+        "lastResponseRequest": "53000000-0000-0000-0000-000000000901",
+        "lastResponse": "{\"approved\":false,\"note\":\"captured browser response\"}"
+      }
+    },
+    "sandboxes": [
+      {
+        "mode": "Parity",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Parity Workflows Loading",
+          "Parity Workflows EmptyDefinitions",
+          "Parity Workflows CatalogReady",
+          "Parity Workflows DefinitionLoading",
+          "Parity Workflows DefinitionUnavailable",
+          "Parity Workflows ValidationIssues",
+          "Parity Workflows PublishedDefinition",
+          "Parity Workflows EmptyHistory",
+          "Parity Workflows RunHistory",
+          "Parity Workflows PendingInput",
+          "Parity Workflows Templates",
+          "Parity Workflows DashboardAnalytics",
+          "Parity existing specimen catalog",
+          "Parity existing specimen capabilities",
+          "Parity existing specimen overview",
+          "Parity existing specimen governance",
+          "Parity existing specimen diagnostics",
+          "Parity existing specimen history",
+          "Parity existing specimen simple-chat-definitions",
+          "Parity existing specimen simple-chat-definition-editor",
+          "Parity existing specimen simple-chat-conversation",
+          "Parity existing specimen voice-settings",
+          "Parity existing specimen floating-chat-settings",
+          "Parity existing specimen agent-chat"
+        ],
+        "errors": []
+      },
+      {
+        "mode": "Fast",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Fast Workflows Loading",
+          "Fast Workflows EmptyDefinitions",
+          "Fast Workflows CatalogReady",
+          "Fast Workflows DefinitionLoading",
+          "Fast Workflows DefinitionUnavailable",
+          "Fast Workflows ValidationIssues",
+          "Fast Workflows PublishedDefinition",
+          "Fast Workflows EmptyHistory",
+          "Fast Workflows RunHistory",
+          "Fast Workflows PendingInput",
+          "Fast Workflows Templates",
+          "Fast Workflows DashboardAnalytics",
+          "Fast existing specimen catalog",
+          "Fast existing specimen capabilities",
+          "Fast existing specimen overview",
+          "Fast existing specimen governance",
+          "Fast existing specimen diagnostics",
+          "Fast existing specimen history",
+          "Fast existing specimen simple-chat-definitions",
+          "Fast existing specimen simple-chat-definition-editor",
+          "Fast existing specimen simple-chat-conversation",
+          "Fast existing specimen voice-settings",
+          "Fast existing specimen floating-chat-settings",
+          "Fast existing specimen agent-chat"
+        ],
+        "errors": []
+      }
+    ],
+    "productionStatus": "Solved; final frozen validation completed",
+    "project": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj",
+    "residual": "Original WorkflowCanvasEditor and template preview canvas remain explicit Module-owned effectful children."
+  },
+  "graph": {
+    "passed": true,
+    "projects": 142,
+    "roots": 123,
+    "cycles": [],
+    "boundaries": {
+      "CanDoItAll.AgentFramework.Workflows.UI": [
+        "CanDoItAll.AgentFramework.Workflows.UI",
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.Charts",
+        "CanDoItAll.Components.Common"
+      ],
+      "CanDoItAll.AgentFramework.UI": [
+        "CanDoItAll.AgentFramework.Capabilities.Abstractions",
+        "CanDoItAll.AgentFramework.Models",
+        "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
+        "CanDoItAll.AgentFramework.UI",
+        "CanDoItAll.AgentFramework.Usage",
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.Charts",
+        "CanDoItAll.Components.Common",
+        "CanDoItAll.Components.OverlayLib",
+        "CanDoItAll.Conversations.Components",
+        "CanDoItAll.Infrastructure.Abstractions",
+        "CanDoItAll.Memory.Abstractions",
+        "CanDoItAll.SharedKernel"
+      ],
+      "CanDoItAll.AgentFramework.Llm.SimpleChats.UI": [
+        "CanDoItAll.AgentFramework.Llm.SimpleChats.UI",
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.Common",
+        "CanDoItAll.Components.OverlayLib",
+        "CanDoItAll.Conversations.Components"
+      ],
+      "CanDoItAll.AgentFramework.UiSandbox": [
+        "CanDoItAll.AgentFramework.Capabilities.Abstractions",
+        "CanDoItAll.AgentFramework.Llm.SimpleChats.UI",
+        "CanDoItAll.AgentFramework.Models",
+        "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
+        "CanDoItAll.AgentFramework.UI",
+        "CanDoItAll.AgentFramework.UiSandbox",
+        "CanDoItAll.AgentFramework.Usage",
+        "CanDoItAll.AgentFramework.Workflows.UI",
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.Charts",
+        "CanDoItAll.Components.Common",
+        "CanDoItAll.Components.OverlayLib",
+        "CanDoItAll.Conversations.Components",
+        "CanDoItAll.Infrastructure.Abstractions",
+        "CanDoItAll.Memory.Abstractions",
+        "CanDoItAll.SharedKernel"
+      ]
+    },
+    "workflowDirect": {
+      "path": "C:\\repositories\\CanDoItAll\\src\\MAF\\Workflows\\CanDoItAll.AgentFramework.Workflows.UI\\CanDoItAll.AgentFramework.Workflows.UI.csproj",
+      "name": "CanDoItAll.AgentFramework.Workflows.UI",
+      "sha256": "9270f777e235f598365f3ba260112c86a367205031e659b67aeeb8844d48aaaf",
+      "targetFramework": "net10.0",
+      "references": [
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib\\CanDoItAll.Components.BaseLib.csproj",
+        "C:\\repositories\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts\\CanDoItAll.Components.Charts.csproj"
+      ],
+      "packages": [
+        {
+          "name": "Microsoft.AspNetCore.Components.Web",
+          "version": "10.0.10"
+        }
+      ]
+    },
+    "moduleDirectReferences": [
+      "CanDoItAll.AgentFramework.Workflows.UI",
+      "CanDoItAll.AgentFramework.UI",
+      "CanDoItAll.AppComponents",
+      "CanDoItAll.Conversations.Shell",
+      "CanDoItAll.AgentFramework.Components",
+      "CanDoItAll.AgentFramework.Capabilities.Abstractions",
+      "CanDoItAll.AgentFramework.Capabilities.Access",
+      "CanDoItAll.AgentFramework.Capabilities.Templates",
+      "CanDoItAll.AgentFramework.Core",
+      "CanDoItAll.AgentFramework.Usage",
+      "CanDoItAll.AgentFramework.Llm.SimpleChats.Components",
+      "CanDoItAll.AgentFramework.WorkflowExecutors.Core",
+      "CanDoItAll.AgentFramework.WorkflowExecutors.Standard",
+      "CanDoItAll.AgentFramework.Workflows.Core",
+      "CanDoItAll.AgentFramework.Workflows.Abstractions",
+      "CanDoItAll.AgentFramework.Workflows.MafAdapter",
+      "CanDoItAll.AgentFramework.Workflows.Runtime",
+      "CanDoItAll.AgentFramework.Workflows.Templates",
+      "CanDoItAll.AgentFramework.Hosting",
+      "CanDoItAll.AgentFramework.Llm.Conversations",
+      "CanDoItAll.AgentFramework.Maf",
+      "CanDoItAll.AgentFramework.Mcp",
+      "CanDoItAll.AgentFramework.Mcp.Abstractions",
+      "CanDoItAll.AgentFramework.Models",
+      "CanDoItAll.AgentFramework.Memory",
+      "CanDoItAll.AgentFramework.Persistence",
+      "CanDoItAll.AgentFramework.Tooling",
+      "CanDoItAll.AgentFramework.Tools.Abstractions",
+      "CanDoItAll.AgentFramework.Tools",
+      "CanDoItAll.AgentFramework.Voice",
+      "CanDoItAll.Memory.Abstractions",
+      "CanDoItAll.Memory.Application",
+      "CanDoItAll.Infrastructure",
+      "CanDoItAll.SharedProviders.Abstractions",
+      "CanDoItAll.AgentFramework.ProviderHistory.Persistence",
+      "CanDoItAll.Modules.Collaboration",
+      "CanDoItAll.Modules.CrmHr",
+      "CanDoItAll.Modules.Projects",
+      "CanDoItAll.Modules.Prompts",
+      "CanDoItAll.Modules.Security",
+      "CanDoItAll.Modules.Workbench",
+      "CanDoItAll.Modules.Workspace",
+      "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+      "CanDoItAll.SharedKernel",
+      "CanDoItAll.Tools.Documents",
+      "CanDoItAll.Components.BaseLib",
+      "CanDoItAll.Components.Charts",
+      "CanDoItAll.Components.OverlayLib"
+    ]
+  },
+  "completedUtc": "2026-09-09T10:36:43.738677+00:00",
+  "finalIdentity": {
+    "localHead": "74f88b5b8d98a61efb55defbe9f5e9b48448841d",
+    "remoteHead": "74f88b5b8d98a61efb55defbe9f5e9b48448841d",
+    "branch": "components-decoupling",
+    "committedTreeUnchanged": true,
+    "delivery": "Uncommitted validated working-tree delta; no history mutation"
+  },
+  "sourceFreeze": {
+    "checkpoint": "Agent final closure: frozen source and validation checkpoint",
+    "utc": "2026-09-09T09:04:56.017851+00:00",
+    "sha256": "f1b46c2ed94b3035c77932e6b53b58af66638c489fa86bdc23a786e19820c244",
+    "filesUnchanged": true,
+    "pathCount": 62,
+    "files": {
+      "CanDoItAll.slnx": "741b32e9fdada86cb5e69cb4291a752d80ba0c4b156c731f131b7f386e69ab6b",
+      "Tailwind/catalog-fast.css": "fbf2af8a9a75ea858139f4d08fc3c5646cb4eb58ed6a001ebeb823935eb2988e",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor": "f7f2935785943c4492425eb7e65c73223b7ea112e8640a8be0705e4c0815b474",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor.css": "deleted",
+      "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatConversationWorkspace.razor": "1cd4d405537d5fa09b7aee444ae12fca6700737c06e7b7032941b645c8447c93",
+      "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatConversationWorkspaceController.cs": "ec4e9e2754afcb2ece59377e87dd4c4c0419f41ff45f6723b745b72afd5698a0",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj": "9270f777e235f598365f3ba260112c86a367205031e659b67aeeb8844d48aaaf",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/README.md": "f941546ec734d5262a52b62eede50895d7cef621eca88ac677586cb97782a1a3",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowAnalyticsSurface.razor": "33e599cb4df8e76662f715d50d83ef66f7c84925c1c6784a80903a611640b675",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowCatalogSurface.razor": "1cd0218e8a5e4830571bacdbde25d552124b211f0e9e8c896ab3fb6f89e38600",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowHistorySurface.razor": "c28f1443d75db65284f35f335949b700cd036e30b3977a9c8578ad7a3b299160",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowOverviewSurface.razor": "22a61fb33c665686d15722941d7bf19e047c1fda7b4f60fb3b7b2883bb1838ee",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowOverviewSurface.razor.css": "f99d22422f27f69e0c50223f1e67ac3d42f2da5c730e6561038e7396e8c875aa",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowPresentation.cs": "656b2d3949d27f505a09ecccd446243c2d758b83aef0b880cce01b2b393bc0ef",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowQueryPresentation.cs": "91fce52839b5ae481d6f88203edcb663fd0c4d0aa812c7aca37400ffa9be45b2",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowShellSurface.razor": "22beacb6979d3a356ea46ff32abfe657671f7647c6caf35cf8130115846d10e5",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowTemplateCatalogSurface.razor": "f38eda94f0392ee4a9a472f2116f81fad201d110d6c314576a4c4b388fa15156",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/_Imports.razor": "c1ec6b29c29103d39defcc8c77aa67d5c17bd296da73b59ad10502989ac412ab",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css": "8ac6e9f47639e8f0bb44c4dce94a9d3bb0ebaf1a5daefbd79822c477aef7a20e",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj": "e4fce7b54ef181c737c895e9e871d1c2d4d3c6e074b9e5d7db77da47e3529f6e",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor": "1edac4db1e9277e781c15e335e32bbea1f75adb60c79ab2c686e447ec41f34aa",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs": "c5d1d0bc3a603f5b0b69fecb0ed8540d02f21b49e17a64604037d19ab86be96e",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.css": "deleted",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatSession.cs": "9f2c28e346c6587ae1c133c10da0db76238c01e17cc1555d9793b325017cfdf7",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowAnalyticsPanel.razor": "3012ab370ce8224cb3077fa8496a8b5c2d165d625a40f403fe2818a4b9510cfc",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowAnalyticsPanel.razor.cs": "a1b0829e65baa9ff4a77296af7e51f560396cefe126a8d57d0c707178f3742d7",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowOverviewPanel.razor": "5274c587ad82f627e837534bb33c785cddbb9cdf7de13294c1e6046466402098",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowOverviewPanel.razor.cs": "1ebd171a19b92ad8231c6822c083d7a327953a41cdec361bd6ed7be0879a6730",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowOverviewPanel.razor.css": "deleted",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor": "f70b90000a00c6dad9c52991626bc7257822eb7d59fed4722347e713a191daa1",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs": "ae89767c96b0dbd228d8048fc23dd6d1c8055fdb1b08015cac510dd3388727f7",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.css": "deleted",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/AgentChatSandboxFixture.cs": "d658ed5fdc94d51899205e1bba4c4e4fa1e39c84957ee7e3365d2095a730ecdd",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj": "aa3b961aed162859779fce524c18aa16b1fcc8795d3e76f3102e883260c83ff5",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentChatSpecimen.razor": "2068684a7cae89e8a3c098148aeb92fe949363241e2c516303bbdc2a16e97985",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor": "521fca4420ac84e3364e5c52db34e61991ec6d014fc99add03c1d03c515b0ad5",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/WorkflowSpecimen.razor": "6e1c63054f0c1c8ce1ec5c02ba7a0ba1bb2296d0334912092a85cd9560c69224",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs": "5051a0bfa5e8445bf5cb1f6594cd9b8b308e8e76ee4784b2bb406251f1ffbfe3",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/WorkflowSandboxFixture.cs": "93abd04867848a2b80d1030806ce39075be00268a26e9540507f75387b19a82f",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor": "e3e90161f0e87fdcffe4b004ebf3950bb3985a494e83b19dc5ce8ff73552f9ea",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor.css": "629e04589016a95096d7e6d8e12743e0598b268f8191dcb009ab2d48109de828",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatThreadTitleDraft.cs": "20b34b57edf4156e2c198f844c391a32c18f788c2ef69322fb3196ad3a5a55e2",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspacePresentation.cs": "9ebbbe42c1ba87850b5d1b1a1046a609c54f3c7fa306077d1013d47491307d0a",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor": "a0af269e38f7d155904f60bb569f0f61bafea9a06d54e74611e6fcec9895d800",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor.css": "ee0db0d81a3156c6fbc5d6f73553bb374fb587ae2391e39c1b9e167b6a87bcae",
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatEffectOwnershipTests.cs": "adf72bd15be3d10cfca50db97233dda60905e1923545a270955b712dbb87e835",
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.cs": "87b078fc74a05aa41c6affbecda5124da61a2a071bde6e1355b5de02625a997e",
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatSessionTests.cs": "1b703683342656369f7a5a16b273c0ef9fa2292f3aae3cdeb9856b34f4cd3ce7",
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatSurfaceTests.cs": "ff254220481abfabe06182e3ae1ab8975dcd8f7c2b112aebbe788ee8bdcd10e9",
+      "tests/Components/CanDoItAll.Tests.Components/AgentPanelSelectionFailClosedTests.cs": "6df5ff8a724a92041f8ca3f2c59d7b7467a5b197881f80778c22df61cdd0af5b",
+      "tests/Components/CanDoItAll.Tests.Components/ConversationWorkspaceSessionTests.cs": "07c48aff83cfa31ec73bd2edc5c1a53774005cedf313bc61068ebf51b980777f",
+      "tests/Components/CanDoItAll.Tests.Components/LlmChatConversationWorkspaceTests.cs": "43098417f4e1c2c7cf7ba18f86176a649c99299fa4267f846f6fed52107abdf3",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowAnalyticsPanelTests.cs": "50caf78f880abd98674724a4dc74b93485fc51fe5b7751ae2f20777deb4b6c5f",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowOverviewPanelTests.cs": "2b90980fbfafd50634558fe71718d99acbd6366abbc9ddc13ab7e358eafa477f",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowOwnershipTests.cs": "dd51346e0c71fbe059a5fd63f6e985999fc3f88628224d6d22f02f4b11138603",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowSurfaceTests.cs": "44dbb73b156f65ab170a283a9584e50597b133b8f7082ec8993d0fa89691f4a3",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowsPageTests.cs": "51e4f00fdd4be2aeef647e2d04cc7c43b44e90e04583c74e8d3c3aa32a188fa8",
+      "tests/Playwright/GovernanceBrowserFixture/AgentChatBrowserFixture.cs": "832b8ddf3d8dd8c14b9c279eedd502b347c85716f334d5580c95b2adfe47aedc",
+      "tests/Playwright/GovernanceBrowserFixture/Program.cs": "8d6821e7ab925c0bc748d72dcb8a4d3d75249ecd7b3ffed09cdcb2fa643fd84a",
+      "tests/Playwright/GovernanceBrowserFixture/WorkflowBrowserFixture.cs": "929479b5e1c5473b5b898e01c80322534ee305a0db14c674aadb443cad4a5105",
+      "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs": "32f12bbda5f254cdae1fec5aa43c762aab8c900c32ec7ff6984d6c0abbb2eab6",
+      "tools/Validation/Portability/portability-risk-baseline.json": "4b49a47078f2247f31ed7b14069e62674cb98f6a5024889bb490963e5a35bcf1"
+    }
+  },
+  "preBroadFixtureRepair": {
+    "originalFocused": {
+      "total": 725,
+      "passed": 724,
+      "failed": 1,
+      "skipped": 0
+    },
+    "test": "WorkflowOverviewPanelTests.Workflows_page_dashboard_executes_persistent_bounded_projection",
+    "originalAssertion": "Two fixture runs expected; six shared named-database runs observed",
+    "isolatedOriginalRetry": "Pass, 1/1",
+    "cause": "Two Workflows fixtures used the default primary-inmemory database name; EF shares named in-memory stores inside a process.",
+    "repair": "Unique database name per owning fixture; no production change or broader test infrastructure change",
+    "broadRunsBeforeRepair": 0
+  },
+  "finalFocused": {
+    "selections": {
+      "Unit": {
+        "discovered": 222,
+        "expected": 229,
+        "expansion": [
+          {
+            "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+            "discovered": 1,
+            "executed": 8
+          }
+        ],
+        "actual": {
+          "total": 229,
+          "executed": 229,
+          "passed": 229,
+          "failed": 0,
+          "notExecuted": 0
+        }
+      },
+      "Components": {
+        "discovered": 725,
+        "expected": 725,
+        "expansion": [],
+        "actual": {
+          "total": 725,
+          "executed": 725,
+          "passed": 725,
+          "failed": 0,
+          "notExecuted": 0
+        }
+      },
+      "Integration": {
+        "discovered": 11,
+        "expected": 11,
+        "expansion": [],
+        "actual": {
+          "total": 11,
+          "executed": 11,
+          "passed": 11,
+          "failed": 0,
+          "notExecuted": 0
+        }
+      }
+    },
+    "filters": [
+      {
+        "name": "unit",
+        "filter": "FullyQualifiedName~AgentDiagnosticsTests|FullyQualifiedName~ProviderHistorySearchStateTests|FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests|FullyQualifiedName~AgentFrameworkSimpleChatsRouteTests|FullyQualifiedName~GovernanceSandboxTests|FullyQualifiedName~AgentVoiceTests|FullyQualifiedName~FloatingAgentChatSettingsValidatorTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~CapabilityContractsTests|FullyQualifiedName~LlmChatUiBoundaryTests|FullyQualifiedName~AgentChatExternalTargetAccessAttachmentTests|FullyQualifiedName~AgentChatContextAttachmentFreshnessPolicyTests|FullyQualifiedName~AgentFrameworkModuleChatContextBuilderTests|FullyQualifiedName~WorkflowPreviewSimulationTests"
+      },
+      {
+        "name": "components",
+        "filter": "FullyQualifiedName~AgentDiagnosticsSurfaceTests|FullyQualifiedName~ProviderHistorySeamTests|FullyQualifiedName~ProviderRequestHistoryPanelTests|FullyQualifiedName~AgentGovernanceSurfaceTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~DefinitionCatalog|FullyQualifiedName~LlmChatDefinitionUiTests|FullyQualifiedName~DefinitionEditorSessionTests|FullyQualifiedName~DefinitionEditorSurfaceTests|FullyQualifiedName~ConversationWorkspace|FullyQualifiedName~AgentSettingsSessionTests|FullyQualifiedName~AgentSettingsSurfaceTests|FullyQualifiedName~FloatingAgentChatSettingsPanelTests|FullyQualifiedName~AgentChat|FullyQualifiedName~ChatWorkspacePanelTests|FullyQualifiedName~FloatingAgentChatHostLifecycleTests|FullyQualifiedName~AgentPanelSelectionFailClosedTests|FullyQualifiedName~ContextualAgentWorkspaceWindowsFailureTests|FullyQualifiedName~ProcessWorkspaceShellTests|FullyQualifiedName~WorkflowsPageTests|FullyQualifiedName~WorkflowOwnershipTests|FullyQualifiedName~WorkflowSurfaceTests|FullyQualifiedName~WorkflowOverviewPanelTests|FullyQualifiedName~WorkflowAnalyticsPanelTests|FullyQualifiedName~AgentsOverview|FullyQualifiedName~AgentCatalogBoundaryTests|FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCapabilities|FullyQualifiedName~ProviderProfilesSeamTests|FullyQualifiedName~SharedProviderOwnedEffectsTests|FullyQualifiedName~SharedProviderLifetimeRegressionTests|FullyQualifiedName~SharedProviderDeliveryHardeningTests|FullyQualifiedName~AgentSeamFinalizationTests"
+      },
+      {
+        "name": "integration",
+        "filter": "FullyQualifiedName~AgentDiagnosticsReadsTests|FullyQualifiedName~AgentGovernanceReadsTests|FullyQualifiedName~AgentsWorkspaceQueryTests|FullyQualifiedName~AgentEditorReadCompositionTests"
+      }
+    ],
+    "total": 965
+  },
+  "broad": {
+    "checkpoint": "Agent final closure: frozen source and validation checkpoint",
+    "trigger": "Explicit owner requirement after final Agent module closure source freeze",
+    "startedUtc": "2026-09-09T09:23:57.105833+00:00",
+    "expected": {
+      "discovered": 10574,
+      "expected": 10629,
+      "expansion": [
+        {
+          "method": "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects",
+          "discovered": 1,
+          "executed": 6
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Security.MemoryOperationAccessAuthorizerTests.Any_changed_ownership_dimension_is_denied",
+          "discovered": 1,
+          "executed": 9
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.No_provider_denial_is_consistent_for_all_handler_callers",
+          "discovered": 1,
+          "executed": 5
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.Capability_mismatch_denial_is_consistent_for_all_handler_callers",
+          "discovered": 1,
+          "executed": 5
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+          "discovered": 1,
+          "executed": 21
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+          "discovered": 1,
+          "executed": 8
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+          "discovered": 1,
+          "executed": 8
+        }
+      ]
+    },
+    "filter": "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+    "executions": 1,
+    "discoveryDisplayReconciliation": {
+      "reason": "VSTest truncates long theory argument displays: six duplicate display groups across five unchanged methods account for eight additional discovery entries. Every entry is retained.",
+      "uniqueDisplayNames": 10566,
+      "discoveryEntries": 10574,
+      "unchangedSourceHashes": {
+        "tests/Unit/CanDoItAll.Tests.Unit/ProviderModelThinkingConfigurationTests.cs": "f62f34425f12fdbab6ddd6dd20789c765c1d985bb986f58418b4abe7e16a31e9",
+        "tests/Unit/CanDoItAll.Tests.Unit/SharedProviderImageResponseTests.cs": "460ddd62747c2e712a5c10920a72af26433b17f69e47e3f89b4b56c85f5364e3",
+        "tests/Unit/CanDoItAll.Tests.Unit/MemoryWorkflowExecutorTests.cs": "3569562a39e4a893e258c79173f73eb54d36fc2aba6d3f77cf7fa07513d00ff7",
+        "tests/Unit/CanDoItAll.Tests.Unit/ProcessAcceptanceCriteriaModelsTests.cs": "e15652e475e5fcc5d7f2608bc17bc0a3428cfadf05c5d3072ff0dbb8b315d00e",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs": "3ade0164192df82ea6ff97ad2d603edec4d17355af25245b5f98df0e7194051f"
+      },
+      "broadHadNotStarted": true,
+      "duplicateMethodGroups": [
+        {
+          "method": "CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities",
+          "entries": 3
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.ProviderModelThinkingConfigurationTests.Save_rejects_invalid_manual_capabilities",
+          "entries": 2
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.SharedProviderImageResponseTests.Invalid_or_private_metadata_is_rejected",
+          "entries": 3
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.Memory.MemoryWorkflowExecutorTests.Invalid_workflow_assignment_is_typed_and_never_dispatched",
+          "entries": 2
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.Processes.ProcessAcceptanceCriteriaModelsTests.Invalid_json_contracts_are_rejected",
+          "entries": 2
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.AgentToolInvocationPolicyTests.EvaluateAsync_denies_analyze_images_atomically_for_non_string_json_array_member",
+          "entries": 2
+        }
+      ]
+    },
+    "originalExit": 1,
+    "originalVerdict": "Fail",
+    "aggregate": {
+      "total": 10629,
+      "executed": 10629,
+      "passed": 10628,
+      "failed": 1,
+      "notExecuted": 0
+    },
+    "projects": {
+      "stable-final_net10.0_20260909054534.trx": {
+        "total": 1775,
+        "executed": 1775,
+        "passed": 1774,
+        "failed": 1,
+        "notExecuted": 0
+      },
+      "stable-final_net10.0_20260909063329.trx": {
+        "total": 1410,
+        "executed": 1410,
+        "passed": 1410,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "stable-final_net10.0_20260909063331.trx": {
+        "total": 22,
+        "executed": 22,
+        "passed": 22,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "stable-final_net10.0_20260909063352.trx": {
+        "total": 196,
+        "executed": 196,
+        "passed": 196,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "stable-final_net10.0_20260909063601.trx": {
+        "total": 7226,
+        "executed": 7226,
+        "passed": 7226,
+        "failed": 0,
+        "notExecuted": 0
+      }
+    },
+    "retries": [
+      {
+        "test": "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs",
+        "passed": true,
+        "sourceUnchanged": true,
+        "source": "tests/Components/CanDoItAll.Tests.Components/AgentsHomePageTests.cs",
+        "sha256": "ad125fb0406179d4946c6b70809e09f8de00e9cfd64eb0d890e9f57a3d651a58",
+        "classification": "Unchanged bUnit detail-dialog render wait exceeded its existing ten-second bound in the broad process; the frozen focused case and exact isolated retry passed. Classified as a timing-sensitive broad-only failure; the original failure remains.",
+        "originalProject": "stable-final_net10.0_20260909054534.trx",
+        "originalDuration": "00:00:12.9247080",
+        "originalFailure": "Bunit.Extensions.WaitForHelpers.WaitForFailedException : The state predicate did not pass before the timeout period passed.\n\nIf this test does not fail consistently, the reason may be that\nthe wait timeout is too short, and the runtime did not have enough\ntime to complete the necessary number of renders of the component under test.\nThis can happen on highly utilized or slower hardware, for example.\n\nTo determine if this is the cause, compare the check and render count(s) below\nand see if they match what is expected. If they do not,\nconsider increasing the timeout, either at the individual\nmethod call level, e.g. WaitForElement(\"div\", TimeSpan.FromSeconds(15)),\nor via the static TestContext.DefaultWaitTimeout property.\n\nCheck count: 1.\nComponent render count: 1.\nTotal render count across all components: 0.",
+        "retryTrx": "broad-retry-1.trx",
+        "expected": 1,
+        "actual": {
+          "total": 1,
+          "executed": 1,
+          "passed": 1,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        },
+        "command": [
+          "dotnet",
+          "test",
+          "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+          "-c",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "--filter",
+          "FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests.Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs",
+          "/m:1"
+        ]
+      }
+    ]
+  },
+  "finalBrowser": {
+    "chat": {
+      "web": {
+        "mode": "web",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Web full chat and transcript",
+          "Web runtime details and metrics",
+          "Web thread selection, create, rename, Send, execution history, artifacts and upload",
+          "Web synthetic recording, transcription and speech",
+          "Web individual approvals, remaining, approve once and reject once",
+          "Web durable failed execution",
+          "Web favorite and agent switch",
+          "Web stale workspace and detached execution",
+          "Web long encoded message",
+          "Web Prompt Gallery insertion",
+          "Web focused floating Chat",
+          "Web floating Send, operation coordination and New thread"
+        ],
+        "errors": [],
+        "counters": {
+          "sends": 5,
+          "approvals": 4,
+          "creates": 3,
+          "renames": 1,
+          "uploads": 1,
+          "transcriptions": 1,
+          "speech": 2,
+          "workspaces": 25,
+          "favoriteSaves": 1
+        }
+      },
+      "Parity": {
+        "mode": "Parity",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Parity Agent Chat Loading",
+          "Parity Agent Chat NoAgents",
+          "Parity Agent Chat MissingAgent",
+          "Parity Agent Chat Threads",
+          "Parity Agent Chat Transcript",
+          "Parity Agent Chat Executing",
+          "Parity Agent Chat Approvals",
+          "Parity Agent Chat Attachments",
+          "Parity Agent Chat Voice",
+          "Parity Agent Chat Focused",
+          "Parity Agent Chat Failed",
+          "Parity Agent Chat Adversarial"
+        ],
+        "errors": []
+      },
+      "Fast": {
+        "mode": "Fast",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Fast Agent Chat Loading",
+          "Fast Agent Chat NoAgents",
+          "Fast Agent Chat MissingAgent",
+          "Fast Agent Chat Threads",
+          "Fast Agent Chat Transcript",
+          "Fast Agent Chat Executing",
+          "Fast Agent Chat Approvals",
+          "Fast Agent Chat Attachments",
+          "Fast Agent Chat Voice",
+          "Fast Agent Chat Focused",
+          "Fast Agent Chat Failed",
+          "Fast Agent Chat Adversarial"
+        ],
+        "errors": []
+      }
+    },
+    "workflows": {
+      "web": {
+        "mode": "web",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Web workflow dashboard",
+          "Web exact Curator identity and one flight across route change",
+          "Web project/workflow identity and browser back/forward",
+          "Web delayed A definition cannot replace B",
+          "Web Publish, template search, preview canvas and add draft",
+          "Web starter, original Canvas editor, component library, validation and save",
+          "Web bounded run/event paging, full details and artifacts",
+          "Web delayed R1 cannot replace R2 and run route back/forward",
+          "Web exact human response draft and cancellation",
+          "Web preview input, simulation options and synthetic test execution",
+          "Web detached test cannot overwrite the new workflow",
+          "Web workflow analytics scope and refresh",
+          "Web safe failures and explicit missing workflow"
+        ],
+        "errors": [],
+        "counters": {
+          "definitionReads": 22,
+          "runReads": 15,
+          "eventReads": 14,
+          "pages": 14,
+          "saves": 3,
+          "publishes": 1,
+          "cancellations": 1,
+          "curatorStarts": 1,
+          "overviewReads": 4,
+          "analyticsReads": 6,
+          "tests": 2,
+          "responses": 1,
+          "lastTestWorkflow": "53000000-0000-0000-0000-000000000001",
+          "lastTestInput": "{\"prompt\":\"Summarize this workflow input.\"}",
+          "lastResponseRequest": "53000000-0000-0000-0000-000000000901",
+          "lastResponse": "{\"approved\":false,\"note\":\"captured browser response\"}"
+        }
+      },
+      "Parity": {
+        "mode": "Parity",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Parity Workflows Loading",
+          "Parity Workflows EmptyDefinitions",
+          "Parity Workflows CatalogReady",
+          "Parity Workflows DefinitionLoading",
+          "Parity Workflows DefinitionUnavailable",
+          "Parity Workflows ValidationIssues",
+          "Parity Workflows PublishedDefinition",
+          "Parity Workflows EmptyHistory",
+          "Parity Workflows RunHistory",
+          "Parity Workflows PendingInput",
+          "Parity Workflows Templates",
+          "Parity Workflows DashboardAnalytics",
+          "Parity existing specimen catalog",
+          "Parity existing specimen capabilities",
+          "Parity existing specimen overview",
+          "Parity existing specimen governance",
+          "Parity existing specimen diagnostics",
+          "Parity existing specimen history",
+          "Parity existing specimen simple-chat-definitions",
+          "Parity existing specimen simple-chat-definition-editor",
+          "Parity existing specimen simple-chat-conversation",
+          "Parity existing specimen voice-settings",
+          "Parity existing specimen floating-chat-settings",
+          "Parity existing specimen agent-chat"
+        ],
+        "errors": []
+      },
+      "Fast": {
+        "mode": "Fast",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "checks": [
+          "Fast Workflows Loading",
+          "Fast Workflows EmptyDefinitions",
+          "Fast Workflows CatalogReady",
+          "Fast Workflows DefinitionLoading",
+          "Fast Workflows DefinitionUnavailable",
+          "Fast Workflows ValidationIssues",
+          "Fast Workflows PublishedDefinition",
+          "Fast Workflows EmptyHistory",
+          "Fast Workflows RunHistory",
+          "Fast Workflows PendingInput",
+          "Fast Workflows Templates",
+          "Fast Workflows DashboardAnalytics",
+          "Fast existing specimen catalog",
+          "Fast existing specimen capabilities",
+          "Fast existing specimen overview",
+          "Fast existing specimen governance",
+          "Fast existing specimen diagnostics",
+          "Fast existing specimen history",
+          "Fast existing specimen simple-chat-definitions",
+          "Fast existing specimen simple-chat-definition-editor",
+          "Fast existing specimen simple-chat-conversation",
+          "Fast existing specimen voice-settings",
+          "Fast existing specimen floating-chat-settings",
+          "Fast existing specimen agent-chat"
+        ],
+        "errors": []
+      }
+    }
+  },
+  "watcher": {
+    "hosts": [
+      {
+        "host": "Web",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "edits": [
+          {
+            "surface": "chat",
+            "kind": "razor",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor",
+            "originalHash": "e3e90161f0e87fdcffe4b004ebf3950bb3985a494e83b19dc5ce8ff73552f9ea",
+            "restoredHash": "e3e90161f0e87fdcffe4b004ebf3950bb3985a494e83b19dc5ce8ff73552f9ea",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "chat",
+            "kind": "csharp",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatThreadTitleDraft.cs",
+            "originalHash": "20b34b57edf4156e2c198f844c391a32c18f788c2ef69322fb3196ad3a5a55e2",
+            "restoredHash": "20b34b57edf4156e2c198f844c391a32c18f788c2ef69322fb3196ad3a5a55e2",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "chat",
+            "kind": "css",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor.css",
+            "originalHash": "629e04589016a95096d7e6d8e12743e0598b268f8191dcb009ab2d48109de828",
+            "restoredHash": "629e04589016a95096d7e6d8e12743e0598b268f8191dcb009ab2d48109de828",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Static asset changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "razor",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowHistorySurface.razor",
+            "originalHash": "c28f1443d75db65284f35f335949b700cd036e30b3977a9c8578ad7a3b299160",
+            "restoredHash": "c28f1443d75db65284f35f335949b700cd036e30b3977a9c8578ad7a3b299160",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "csharp",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowPresentation.cs",
+            "originalHash": "656b2d3949d27f505a09ecccd446243c2d758b83aef0b880cce01b2b393bc0ef",
+            "restoredHash": "656b2d3949d27f505a09ecccd446243c2d758b83aef0b880cce01b2b393bc0ef",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "css",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
+            "originalHash": "8ac6e9f47639e8f0bb44c4dce94a9d3bb0ebaf1a5daefbd79822c477aef7a20e",
+            "restoredHash": "8ac6e9f47639e8f0bb44c4dce94a9d3bb0ebaf1a5daefbd79822c477aef7a20e",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Static asset changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          }
+        ],
+        "failures": [],
+        "command": [
+          "dotnet",
+          "watch",
+          "--verbose",
+          "--non-interactive",
+          "--project",
+          "tests/Playwright/GovernanceBrowserFixture",
+          "--no-launch-profile",
+          "--property:CatalogAssetMode=Parity",
+          "--",
+          "serve-final",
+          "C:\\repositories\\CanDoItAll"
+        ],
+        "pid": 72084,
+        "stoppedOwnedProcess": true
+      },
+      {
+        "host": "Parity",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "edits": [
+          {
+            "surface": "chat",
+            "kind": "razor",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor",
+            "originalHash": "e3e90161f0e87fdcffe4b004ebf3950bb3985a494e83b19dc5ce8ff73552f9ea",
+            "restoredHash": "e3e90161f0e87fdcffe4b004ebf3950bb3985a494e83b19dc5ce8ff73552f9ea",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "chat",
+            "kind": "csharp",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatThreadTitleDraft.cs",
+            "originalHash": "20b34b57edf4156e2c198f844c391a32c18f788c2ef69322fb3196ad3a5a55e2",
+            "restoredHash": "20b34b57edf4156e2c198f844c391a32c18f788c2ef69322fb3196ad3a5a55e2",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "chat",
+            "kind": "css",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor.css",
+            "originalHash": "629e04589016a95096d7e6d8e12743e0598b268f8191dcb009ab2d48109de828",
+            "restoredHash": "629e04589016a95096d7e6d8e12743e0598b268f8191dcb009ab2d48109de828",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Static asset changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "razor",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowHistorySurface.razor",
+            "originalHash": "c28f1443d75db65284f35f335949b700cd036e30b3977a9c8578ad7a3b299160",
+            "restoredHash": "c28f1443d75db65284f35f335949b700cd036e30b3977a9c8578ad7a3b299160",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "csharp",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowPresentation.cs",
+            "originalHash": "656b2d3949d27f505a09ecccd446243c2d758b83aef0b880cce01b2b393bc0ef",
+            "restoredHash": "656b2d3949d27f505a09ecccd446243c2d758b83aef0b880cce01b2b393bc0ef",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "css",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
+            "originalHash": "8ac6e9f47639e8f0bb44c4dce94a9d3bb0ebaf1a5daefbd79822c477aef7a20e",
+            "restoredHash": "8ac6e9f47639e8f0bb44c4dce94a9d3bb0ebaf1a5daefbd79822c477aef7a20e",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Static asset changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          }
+        ],
+        "failures": [],
+        "command": [
+          "dotnet",
+          "watch",
+          "--verbose",
+          "--non-interactive",
+          "--project",
+          "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+          "--no-launch-profile",
+          "--property:CatalogAssetMode=Parity"
+        ],
+        "pid": 55920,
+        "stoppedOwnedProcess": true
+      },
+      {
+        "host": "Fast",
+        "viewport": {
+          "width": 1600,
+          "height": 1000
+        },
+        "edits": [
+          {
+            "surface": "chat",
+            "kind": "razor",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor",
+            "originalHash": "e3e90161f0e87fdcffe4b004ebf3950bb3985a494e83b19dc5ce8ff73552f9ea",
+            "restoredHash": "e3e90161f0e87fdcffe4b004ebf3950bb3985a494e83b19dc5ce8ff73552f9ea",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "chat",
+            "kind": "csharp",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatThreadTitleDraft.cs",
+            "originalHash": "20b34b57edf4156e2c198f844c391a32c18f788c2ef69322fb3196ad3a5a55e2",
+            "restoredHash": "20b34b57edf4156e2c198f844c391a32c18f788c2ef69322fb3196ad3a5a55e2",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "chat",
+            "kind": "css",
+            "source": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor.css",
+            "originalHash": "629e04589016a95096d7e6d8e12743e0598b268f8191dcb009ab2d48109de828",
+            "restoredHash": "629e04589016a95096d7e6d8e12743e0598b268f8191dcb009ab2d48109de828",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Static asset changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "razor",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowHistorySurface.razor",
+            "originalHash": "c28f1443d75db65284f35f335949b700cd036e30b3977a9c8578ad7a3b299160",
+            "restoredHash": "c28f1443d75db65284f35f335949b700cd036e30b3977a9c8578ad7a3b299160",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "csharp",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowPresentation.cs",
+            "originalHash": "656b2d3949d27f505a09ecccd446243c2d758b83aef0b880cce01b2b393bc0ef",
+            "restoredHash": "656b2d3949d27f505a09ecccd446243c2d758b83aef0b880cce01b2b393bc0ef",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Refreshing browser.",
+              "C# and Razor changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          },
+          {
+            "surface": "workflows",
+            "kind": "css",
+            "source": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
+            "originalHash": "8ac6e9f47639e8f0bb44c4dce94a9d3bb0ebaf1a5daefbd79822c477aef7a20e",
+            "restoredHash": "8ac6e9f47639e8f0bb44c4dce94a9d3bb0ebaf1a5daefbd79822c477aef7a20e",
+            "passed": true,
+            "sameProcess": true,
+            "nativeApply": [
+              "Static asset changes applied"
+            ],
+            "navigation": "Explicit same-page navigation after native update"
+          }
+        ],
+        "failures": [],
+        "command": [
+          "dotnet",
+          "watch",
+          "--verbose",
+          "--non-interactive",
+          "--project",
+          "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+          "--no-launch-profile",
+          "--property:CatalogAssetMode=Fast"
+        ],
+        "pid": 72660,
+        "stoppedOwnedProcess": true
+      }
+    ],
+    "checks": 18,
+    "restored": true,
+    "ownedProcessesStopped": true
+  },
+  "visual": {
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "reviews": [
+      {
+        "surface": "Agent Chat normal",
+        "sha256": "e363b771a8e655c11d5171cbaf240ba92e8a4790a5b9e326cc897cfb7f28232b",
+        "verdict": "Reopened: thread rail header uses viewport Split; actions squeezed vertically. Fixed with full-width Stack and browser button dimensions."
+      },
+      {
+        "surface": "Workflows run detail overlay",
+        "sha256": "f7b504b206776404abd42c9d198179044bd59162d0d5b22f596ef6e3d91105fa",
+        "verdict": "Pass: wide owned dialog, close action visible, summary/artifact/event payloads encoded and readable, dialog body owns vertical scrolling, no horizontal overflow."
+      },
+      {
+        "surface": "Agent Chat normal after rail repair",
+        "sha256": "a021124d8837e29311463acfdb8aef5c57c5ef12b4223f9d022fcae032e70acb",
+        "verdict": "Pass: stacked rail header keeps Switch/Refresh/New readable in two action rows; thread cards, transcript and composer fit first viewport; rail and transcript own scrolling."
+      },
+      {
+        "surface": "Agent Chat final owned runtime overlay",
+        "sha256": "40725f94301f186afc43383b012040e3fa33be1eee1fb1a6696cca136152f3c7",
+        "verdict": "Pass: close action visible, selected execution identity is clear, timeline and metrics readable in constrained columns; owned dialog body provides scrolling for longer evidence."
+      },
+      {
+        "surface": "Workflows final normal analytics",
+        "sha256": "b7b462fa3f017081db65a86ef71189abac705ea7af82f3e7ebba3ffcf5a79e03",
+        "verdict": "Pass: all primary tabs, scope/refresh controls and complete runtime/token/duration metric groups are readable in the first viewport; no toast obscures them; page body owns further vertical content and has no horizontal overflow."
+      }
+    ],
+    "retainedScreenshotPaths": [
+      {
+        "path": "chat.png",
+        "sha256": "40725f94301f186afc43383b012040e3fa33be1eee1fb1a6696cca136152f3c7",
+        "bytes": 109076
+      },
+      {
+        "path": "workflows.png",
+        "sha256": "b7b462fa3f017081db65a86ef71189abac705ea7af82f3e7ebba3ffcf5a79e03",
+        "bytes": 197665
+      }
+    ]
+  },
+  "static": {
+    "graphProjects": 142,
+    "graphRoots": 123,
+    "cycles": [],
+    "portability": "Pass without --write-baseline after complete proposed-source scan",
+    "portabilityReview": {
+      "reviewedAdded": 6,
+      "reviewedStale": 3,
+      "staleOccurrenceCount": 4,
+      "genuineDefects": 0,
+      "decisions": [
+        "Case-insensitive secret-key matching retains existing public-argument redaction policy; rewritten predicate has a new fingerprint.",
+        "Attachment deduplication preserves the existing case-insensitive policy and now copies to immutable arrays; two old occurrences replaced, one remains.",
+        "Both relative-attachment guards explicitly reject Unix roots, Windows roots and colon-bearing absolute/URI strings on every host.",
+        "The workflow JSON excerpt parser still recognizes backslash escapes; only cuddled-brace formatting changed its fingerprint."
+      ],
+      "baselineDiff": {
+        "addedLines": 29,
+        "removedLines": 5,
+        "allowanceCountBefore": 14403,
+        "allowanceCountAfter": 14405
+      },
+      "finalEnforcement": "Without --write-baseline; PASS; repeat full proposed source scan after final rail markup change."
+    },
+    "encoding": {
+      "scannedTextFiles": 62,
+      "findings": [],
+      "passed": true
+    },
+    "sourceSecrets": {
+      "utc": "2026-09-09T09:04:00.546594+00:00",
+      "baseline": "74f88b5b8d98a61efb55defbe9f5e9b48448841d",
+      "scope": "All proposed Git text, tracked plus untracked, all suffixes, without size truncation",
+      "textFiles": 7352,
+      "binaryFiles": 2259,
+      "totalMatches": 245,
+      "added": [],
+      "removed": []
+    },
+    "retainedEvidenceSecrets": "Pass; final sealed members scanned after completion",
+    "documentation": "Pass; final four-file sealing rechecked after completion"
+  },
+  "finalCommands": [
+    {
+      "name": "final-watch-Web",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\watch-smoke.cjs",
+        "Web"
+      ],
+      "startedUtc": "2026-09-09T08:37:53.555678+00:00",
+      "seconds": 113.17200000002049,
+      "exit": 0
+    },
+    {
+      "name": "final-watch-Parity",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\watch-smoke.cjs",
+        "Parity"
+      ],
+      "startedUtc": "2026-09-09T08:39:46.728662+00:00",
+      "seconds": 42.70299999997951,
+      "exit": 0
+    },
+    {
+      "name": "final-watch-Fast",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\watch-smoke.cjs",
+        "Fast"
+      ],
+      "startedUtc": "2026-09-09T08:40:29.431352+00:00",
+      "seconds": 42.81299999996554,
+      "exit": 0
+    },
+    {
+      "name": "final-diff-check",
+      "command": [
+        "git",
+        "-c",
+        "core.safecrlf=false",
+        "diff",
+        "--check"
+      ],
+      "startedUtc": "2026-09-09T08:41:49.090800+00:00",
+      "seconds": 0.125,
+      "exit": 0
+    },
+    {
+      "name": "final-portability-full",
+      "command": [
+        "python",
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\portability-final.json"
+      ],
+      "startedUtc": "2026-09-09T09:02:08.971389+00:00",
+      "seconds": 67.81299999996554,
+      "exit": 0
+    },
+    {
+      "name": "final-portability-enforcement",
+      "command": [
+        "python",
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\portability-final.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "startedUtc": "2026-09-09T09:03:16.791141+00:00",
+      "seconds": 0.6400000000139698,
+      "exit": 0
+    },
+    {
+      "name": "final-encoding",
+      "command": [
+        "python",
+        "tools/Validation/bundles/scan_text_encoding.py",
+        "--repo-root",
+        ".",
+        "--changed-since",
+        "HEAD",
+        "--output",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\encoding-final.json",
+        "--scope",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/MANIFEST.sha256",
+        "--scope",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/README.md",
+        "--scope",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/report.md",
+        "--scope",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/validation-summary.json",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/README.md",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowAnalyticsSurface.razor",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowCatalogSurface.razor",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowHistorySurface.razor",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowOverviewSurface.razor",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowOverviewSurface.razor.css",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowPresentation.cs",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowQueryPresentation.cs",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowShellSurface.razor",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowTemplateCatalogSurface.razor",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/_Imports.razor",
+        "--scope",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
+        "--scope",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatSession.cs",
+        "--scope",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/AgentChatSandboxFixture.cs",
+        "--scope",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentChatSpecimen.razor",
+        "--scope",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/WorkflowSpecimen.razor",
+        "--scope",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/WorkflowSandboxFixture.cs",
+        "--scope",
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor",
+        "--scope",
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor.css",
+        "--scope",
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatThreadTitleDraft.cs",
+        "--scope",
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspacePresentation.cs",
+        "--scope",
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
+        "--scope",
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor.css",
+        "--scope",
+        "tests/Components/CanDoItAll.Tests.Components/AgentChatEffectOwnershipTests.cs",
+        "--scope",
+        "tests/Components/CanDoItAll.Tests.Components/AgentChatSessionTests.cs",
+        "--scope",
+        "tests/Components/CanDoItAll.Tests.Components/AgentChatSurfaceTests.cs",
+        "--scope",
+        "tests/Components/CanDoItAll.Tests.Components/WorkflowOwnershipTests.cs",
+        "--scope",
+        "tests/Components/CanDoItAll.Tests.Components/WorkflowSurfaceTests.cs",
+        "--scope",
+        "tests/Playwright/GovernanceBrowserFixture/AgentChatBrowserFixture.cs",
+        "--scope",
+        "tests/Playwright/GovernanceBrowserFixture/WorkflowBrowserFixture.cs",
+        "--scope",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs"
+      ],
+      "startedUtc": "2026-09-09T09:03:17.544515+00:00",
+      "seconds": 2.327999999979511,
+      "exit": 0
+    },
+    {
+      "name": "final-source-secrets",
+      "command": [
+        "python",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\scan-source.py"
+      ],
+      "startedUtc": "2026-09-09T09:03:19.858927+00:00",
+      "seconds": 40.75,
+      "exit": 0
+    },
+    {
+      "name": "final-retained-secrets-preclose",
+      "command": [
+        "python",
+        "tools/Validation/Portability/scan_artifacts_for_secrets.py",
+        "--root",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle",
+        "--output",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\retained-secrets-preclose.json"
+      ],
+      "startedUtc": "2026-09-09T09:04:00.608425+00:00",
+      "seconds": 0.0940000000409782,
+      "exit": 0
+    },
+    {
+      "name": "final-docs-preclose-complete",
+      "command": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "startedUtc": "2026-09-09T09:04:00.707821+00:00",
+      "seconds": 5.64000000001397,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.AgentFramework.UI",
+      "command": [
+        "dotnet",
+        "build",
+        "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:04:56.219602+00:00",
+      "seconds": 2.405999999959022,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.AgentFramework.Components",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:04:58.627442+00:00",
+      "seconds": 4.0,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.AgentFramework.Llm.SimpleChats.UI",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/CanDoItAll.AgentFramework.Llm.SimpleChats.UI.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:05:02.634668+00:00",
+      "seconds": 1.5630000000819564,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.AgentFramework.Llm.SimpleChats.Components",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:05:04.186847+00:00",
+      "seconds": 5.75,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.AgentFramework.Workflows.UI",
+      "command": [
+        "dotnet",
+        "build",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:05:09.944464+00:00",
+      "seconds": 1.390999999945052,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.Modules.AgentFramework",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:05:11.336294+00:00",
+      "seconds": 14.734000000054948,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.Web",
+      "command": [
+        "dotnet",
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:05:26.070703+00:00",
+      "seconds": 18.218999999924563,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.Tests.Unit",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:05:44.290562+00:00",
+      "seconds": 19.93700000003446,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.Tests.Components",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:06:04.221551+00:00",
+      "seconds": 19.20299999997951,
+      "exit": 0
+    },
+    {
+      "name": "final-build-CanDoItAll.Tests.Integration",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:06:23.425994+00:00",
+      "seconds": 20.391000000061467,
+      "exit": 0
+    },
+    {
+      "name": "final-build-GovernanceBrowserFixture",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Playwright/GovernanceBrowserFixture/GovernanceBrowserFixture.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q"
+      ],
+      "startedUtc": "2026-09-09T09:06:43.811872+00:00",
+      "seconds": 19.015999999945052,
+      "exit": 0
+    },
+    {
+      "name": "final-build-sandbox-Parity",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q",
+        "-p:CatalogAssetMode=Parity"
+      ],
+      "startedUtc": "2026-09-09T09:07:02.833675+00:00",
+      "seconds": 3.0929999999934807,
+      "exit": 0
+    },
+    {
+      "name": "final-build-sandbox-Fast",
+      "command": [
+        "dotnet",
+        "build",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox",
+        "-c",
+        "Release",
+        "--no-restore",
+        "/m:1",
+        "/v:q",
+        "-p:CatalogAssetMode=Fast"
+      ],
+      "startedUtc": "2026-09-09T09:07:05.930604+00:00",
+      "seconds": 3.0320000000065193,
+      "exit": 0
+    },
+    {
+      "name": "final-discover-Unit",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentDiagnosticsTests|FullyQualifiedName~ProviderHistorySearchStateTests|FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests|FullyQualifiedName~AgentFrameworkSimpleChatsRouteTests|FullyQualifiedName~GovernanceSandboxTests|FullyQualifiedName~AgentVoiceTests|FullyQualifiedName~FloatingAgentChatSettingsValidatorTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~CapabilityContractsTests|FullyQualifiedName~LlmChatUiBoundaryTests|FullyQualifiedName~AgentChatExternalTargetAccessAttachmentTests|FullyQualifiedName~AgentChatContextAttachmentFreshnessPolicyTests|FullyQualifiedName~AgentFrameworkModuleChatContextBuilderTests|FullyQualifiedName~WorkflowPreviewSimulationTests",
+        "/m:1",
+        "--list-tests"
+      ],
+      "startedUtc": "2026-09-09T09:07:08.952681+00:00",
+      "seconds": 1.952999999979511,
+      "exit": 0
+    },
+    {
+      "name": "final-focused-Unit",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentDiagnosticsTests|FullyQualifiedName~ProviderHistorySearchStateTests|FullyQualifiedName~AgentGovernanceSessionTests|FullyQualifiedName~GovernancePresentationTests|FullyQualifiedName~AgentFrameworkSimpleChatsRouteTests|FullyQualifiedName~GovernanceSandboxTests|FullyQualifiedName~AgentVoiceTests|FullyQualifiedName~FloatingAgentChatSettingsValidatorTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~CapabilityContractsTests|FullyQualifiedName~LlmChatUiBoundaryTests|FullyQualifiedName~AgentChatExternalTargetAccessAttachmentTests|FullyQualifiedName~AgentChatContextAttachmentFreshnessPolicyTests|FullyQualifiedName~AgentFrameworkModuleChatContextBuilderTests|FullyQualifiedName~WorkflowPreviewSimulationTests",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=final-Unit.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure"
+      ],
+      "startedUtc": "2026-09-09T09:07:10.999376+00:00",
+      "seconds": 2.594000000040978,
+      "exit": 0
+    },
+    {
+      "name": "final-discover-Components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentDiagnosticsSurfaceTests|FullyQualifiedName~ProviderHistorySeamTests|FullyQualifiedName~ProviderRequestHistoryPanelTests|FullyQualifiedName~AgentGovernanceSurfaceTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~DefinitionCatalog|FullyQualifiedName~LlmChatDefinitionUiTests|FullyQualifiedName~DefinitionEditorSessionTests|FullyQualifiedName~DefinitionEditorSurfaceTests|FullyQualifiedName~ConversationWorkspace|FullyQualifiedName~AgentSettingsSessionTests|FullyQualifiedName~AgentSettingsSurfaceTests|FullyQualifiedName~FloatingAgentChatSettingsPanelTests|FullyQualifiedName~AgentChat|FullyQualifiedName~ChatWorkspacePanelTests|FullyQualifiedName~FloatingAgentChatHostLifecycleTests|FullyQualifiedName~AgentPanelSelectionFailClosedTests|FullyQualifiedName~ContextualAgentWorkspaceWindowsFailureTests|FullyQualifiedName~ProcessWorkspaceShellTests|FullyQualifiedName~WorkflowsPageTests|FullyQualifiedName~WorkflowOwnershipTests|FullyQualifiedName~WorkflowSurfaceTests|FullyQualifiedName~WorkflowOverviewPanelTests|FullyQualifiedName~WorkflowAnalyticsPanelTests|FullyQualifiedName~AgentsOverview|FullyQualifiedName~AgentCatalogBoundaryTests|FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCapabilities|FullyQualifiedName~ProviderProfilesSeamTests|FullyQualifiedName~SharedProviderOwnedEffectsTests|FullyQualifiedName~SharedProviderLifetimeRegressionTests|FullyQualifiedName~SharedProviderDeliveryHardeningTests|FullyQualifiedName~AgentSeamFinalizationTests",
+        "/m:1",
+        "--list-tests"
+      ],
+      "startedUtc": "2026-09-09T09:07:13.609565+00:00",
+      "seconds": 1.547000000020489,
+      "exit": 0
+    },
+    {
+      "name": "final-focused-Components",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentDiagnosticsSurfaceTests|FullyQualifiedName~ProviderHistorySeamTests|FullyQualifiedName~ProviderRequestHistoryPanelTests|FullyQualifiedName~AgentGovernanceSurfaceTests|FullyQualifiedName~AgentGovernanceReadLifecycleTests|FullyQualifiedName~AgentGovernanceContextRevisionTests|FullyQualifiedName~AgentsHomePageTests|FullyQualifiedName~DefinitionCatalog|FullyQualifiedName~LlmChatDefinitionUiTests|FullyQualifiedName~DefinitionEditorSessionTests|FullyQualifiedName~DefinitionEditorSurfaceTests|FullyQualifiedName~ConversationWorkspace|FullyQualifiedName~AgentSettingsSessionTests|FullyQualifiedName~AgentSettingsSurfaceTests|FullyQualifiedName~FloatingAgentChatSettingsPanelTests|FullyQualifiedName~AgentChat|FullyQualifiedName~ChatWorkspacePanelTests|FullyQualifiedName~FloatingAgentChatHostLifecycleTests|FullyQualifiedName~AgentPanelSelectionFailClosedTests|FullyQualifiedName~ContextualAgentWorkspaceWindowsFailureTests|FullyQualifiedName~ProcessWorkspaceShellTests|FullyQualifiedName~WorkflowsPageTests|FullyQualifiedName~WorkflowOwnershipTests|FullyQualifiedName~WorkflowSurfaceTests|FullyQualifiedName~WorkflowOverviewPanelTests|FullyQualifiedName~WorkflowAnalyticsPanelTests|FullyQualifiedName~AgentsOverview|FullyQualifiedName~AgentCatalogBoundaryTests|FullyQualifiedName~AgentCatalogPanelTests|FullyQualifiedName~AgentCapabilities|FullyQualifiedName~ProviderProfilesSeamTests|FullyQualifiedName~SharedProviderOwnedEffectsTests|FullyQualifiedName~SharedProviderLifetimeRegressionTests|FullyQualifiedName~SharedProviderDeliveryHardeningTests|FullyQualifiedName~AgentSeamFinalizationTests",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=final-Components.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure"
+      ],
+      "startedUtc": "2026-09-09T09:07:15.166608+00:00",
+      "seconds": 462.4220000000205,
+      "exit": 0
+    },
+    {
+      "name": "final-discover-Integration",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentDiagnosticsReadsTests|FullyQualifiedName~AgentGovernanceReadsTests|FullyQualifiedName~AgentsWorkspaceQueryTests|FullyQualifiedName~AgentEditorReadCompositionTests",
+        "/m:1",
+        "--list-tests"
+      ],
+      "startedUtc": "2026-09-09T09:14:57.592853+00:00",
+      "seconds": 1.515999999945052,
+      "exit": 0
+    },
+    {
+      "name": "final-focused-Integration",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~AgentDiagnosticsReadsTests|FullyQualifiedName~AgentGovernanceReadsTests|FullyQualifiedName~AgentsWorkspaceQueryTests|FullyQualifiedName~AgentEditorReadCompositionTests",
+        "/m:1",
+        "--logger",
+        "trx;LogFileName=final-Integration.trx",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure"
+      ],
+      "startedUtc": "2026-09-09T09:14:59.109806+00:00",
+      "seconds": 55.01500000001397,
+      "exit": 0
+    },
+    {
+      "name": "final-browser-chat-web",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web"
+      ],
+      "startedUtc": "2026-09-09T09:15:54.143861+00:00",
+      "seconds": 15.875,
+      "exit": 0
+    },
+    {
+      "name": "final-browser-chat-Parity",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Parity"
+      ],
+      "startedUtc": "2026-09-09T09:16:10.026636+00:00",
+      "seconds": 4.625,
+      "exit": 0
+    },
+    {
+      "name": "final-browser-chat-Fast",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Fast"
+      ],
+      "startedUtc": "2026-09-09T09:16:14.650073+00:00",
+      "seconds": 4.530999999959022,
+      "exit": 0
+    },
+    {
+      "name": "final-browser-workflows-web",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "web",
+        "--workflows"
+      ],
+      "startedUtc": "2026-09-09T09:16:19.173752+00:00",
+      "seconds": 14.719000000040978,
+      "exit": 0
+    },
+    {
+      "name": "final-browser-workflows-Parity",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Parity",
+        "--workflows"
+      ],
+      "startedUtc": "2026-09-09T09:16:33.902407+00:00",
+      "seconds": 19.25,
+      "exit": 0
+    },
+    {
+      "name": "final-browser-workflows-Fast",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs",
+        "C:\\repositories\\CanDoItAll",
+        "Fast",
+        "--workflows"
+      ],
+      "startedUtc": "2026-09-09T09:16:53.147594+00:00",
+      "seconds": 19.108999999938533,
+      "exit": 0
+    },
+    {
+      "name": "final-restore-production",
+      "command": [
+        "dotnet",
+        "restore",
+        "CanDoItAll.slnx"
+      ],
+      "startedUtc": "2026-09-09T09:17:12.432336+00:00",
+      "seconds": 9.391000000061467,
+      "exit": 0
+    },
+    {
+      "name": "final-build-production",
+      "command": [
+        "dotnet",
+        "build",
+        "CanDoItAll.slnx",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "/m:1"
+      ],
+      "startedUtc": "2026-09-09T09:17:21.813059+00:00",
+      "seconds": 29.780999999959022,
+      "exit": 0
+    },
+    {
+      "name": "final-restore-stable",
+      "command": [
+        "dotnet",
+        "restore",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx"
+      ],
+      "startedUtc": "2026-09-09T09:17:51.598735+00:00",
+      "seconds": 9.437999999965541,
+      "exit": 0
+    },
+    {
+      "name": "final-build-stable",
+      "command": [
+        "dotnet",
+        "build",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "/m:1"
+      ],
+      "startedUtc": "2026-09-09T09:18:01.032376+00:00",
+      "seconds": 35.31200000003446,
+      "exit": 0
+    },
+    {
+      "name": "final-discover-stable",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "/m:1",
+        "--list-tests"
+      ],
+      "startedUtc": "2026-09-09T09:18:36.345742+00:00",
+      "seconds": 7.140999999945052,
+      "exit": 0
+    },
+    {
+      "name": "final-broad-stable",
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "/m:1",
+        "--logger",
+        "trx;LogFilePrefix=stable-final",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\agent-final-closure\\stable"
+      ],
+      "startedUtc": "2026-09-09T09:23:57.106833+00:00",
+      "seconds": 4324.530999999959,
+      "exit": 1
+    }
+  ],
+  "changedFiles": {
+    "production": [
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor.css",
+      "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatConversationWorkspace.razor",
+      "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatConversationWorkspaceController.cs",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/README.md",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowAnalyticsSurface.razor",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowCatalogSurface.razor",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowHistorySurface.razor",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowOverviewSurface.razor",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowOverviewSurface.razor.css",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowPresentation.cs",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowQueryPresentation.cs",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowShellSurface.razor",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowTemplateCatalogSurface.razor",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/_Imports.razor",
+      "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.css",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatSession.cs",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowAnalyticsPanel.razor",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowAnalyticsPanel.razor.cs",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowOverviewPanel.razor",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowOverviewPanel.razor.cs",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowOverviewPanel.razor.css",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.css",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/AgentChatSandboxFixture.cs",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentChatSpecimen.razor",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Catalog.razor",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/WorkflowSpecimen.razor",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/SandboxSpecimen.cs",
+      "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/WorkflowSandboxFixture.cs",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor.css",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatThreadTitleDraft.cs",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspacePresentation.cs",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
+      "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor.css"
+    ],
+    "tests": [
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatEffectOwnershipTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatSessionTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/AgentChatSurfaceTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/AgentPanelSelectionFailClosedTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/ConversationWorkspaceSessionTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/LlmChatConversationWorkspaceTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowAnalyticsPanelTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowOverviewPanelTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowOwnershipTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowSurfaceTests.cs",
+      "tests/Components/CanDoItAll.Tests.Components/WorkflowsPageTests.cs",
+      "tests/Playwright/GovernanceBrowserFixture/AgentChatBrowserFixture.cs",
+      "tests/Playwright/GovernanceBrowserFixture/Program.cs",
+      "tests/Playwright/GovernanceBrowserFixture/WorkflowBrowserFixture.cs",
+      "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs"
+    ],
+    "buildValidation": [
+      "CanDoItAll.slnx",
+      "Tailwind/catalog-fast.css",
+      "tools/Validation/Portability/portability-risk-baseline.json"
+    ],
+    "deleted": [
+      "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor.css",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.css",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowOverviewPanel.razor.css",
+      "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.css"
+    ]
+  },
+  "architectureGate": {
+    "status": "Pass",
+    "responsibilities": "Real rendering moved; one Agent Chat session and cohesive existing Workflows owner",
+    "projectDirection": "Evaluated transitive graph is cycle-free; Workflows.UI has four pure projects",
+    "partialClasses": "No new production partial cluster",
+    "testability": "Independent pure render tests plus deferred-read and detached-effect host tests"
+  },
+  "inputClosure": [
+    {
+      "workstream": "A",
+      "status": "Solved"
+    },
+    {
+      "workstream": "B",
+      "status": "Solved"
+    },
+    {
+      "workstream": "C",
+      "status": "Solved"
+    },
+    {
+      "workstream": "D",
+      "status": "Solved"
+    }
+  ],
+  "readiness": {
+    "agentChat": "Ready",
+    "workflows": "Ready",
+    "completeAgentModule": "Ready at the authorized component boundary",
+    "architectureFoundationHandoff": "Ready for owner delivery and new branch; Foundation unimplemented"
+  },
+  "limitations": [
+    "Components sibling DialogService patch must be delivered with CI/source alignment; its entry bytes are unchanged.",
+    "FileTools local clean HEAD remains 7c7453c6583365ae5bd63f8fc6efc4a776e15818 while CI pins 498b36825bd5a5222429972af120b04becf4b3f6; neither changed.",
+    "Original WorkflowCanvasEditor, accepted AgentDetails and provider/shared-provider effectful children remain explicit hosts.",
+    "Broad Module references, owner contracts, receipts/idempotency and other-module management gaps remain for Architecture Foundation.",
+    "No non-Agent module refactor, Foundation implementation, future component bundle, new branch or history mutation occurred."
+  ],
+  "evidencePolicy": {
+    "files": [
+      "README.md",
+      "report.md",
+      "validation-summary.json",
+      "MANIFEST.sha256"
+    ],
+    "maxBytes": 4194304,
+    "retainedBytes": 150947,
+    "rawDirectory": ".artifacts/agent-final-closure",
+    "screenshotsInBundle": 0,
+    "rawScreenshotPaths": 2
+  }
+}

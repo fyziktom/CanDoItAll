@@ -11,7 +11,7 @@ using Npgsql;
 
 internal static class GovernanceBrowserEntry {
     public static async Task Main(string[] args) {
-        if (args.Length != 2 || args[0] is not ("prepare" or "serve" or "serve-history" or "serve-definitions" or "serve-completion")) {
+        if (args.Length != 2 || args[0] is not ("prepare" or "serve" or "serve-history" or "serve-definitions" or "serve-completion" or "serve-final")) {
             throw new ArgumentException("Use prepare, serve, serve-history, serve-definitions or serve-completion followed by the repository root.");
         }
         var repository = Path.GetFullPath(args[1]);
@@ -25,7 +25,7 @@ internal static class GovernanceBrowserEntry {
         foreach (var pair in environment) {
             Environment.SetEnvironmentVariable(pair.Key, pair.Value);
         }
-        var fixture = new GovernanceBrowserState { DefinitionsEnabled = args[0] is "serve-definitions" or "serve-completion", CompletionEnabled = args[0] == "serve-completion" };
+        var fixture = new GovernanceBrowserState { DefinitionsEnabled = args[0] is "serve-definitions" or "serve-completion" or "serve-final", CompletionEnabled = args[0] is "serve-completion" or "serve-final", FinalEnabled = args[0] == "serve-final" };
         fixture.Definitions.ExecutionEnabled = fixture.CompletionEnabled;
         var stop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [], EnvironmentName = "Development" });
@@ -73,8 +73,28 @@ internal static class GovernanceBrowserEntry {
             return Results.Ok();
         });
         control.MapPost("/fixture/stop", () => {
+            fixture.Chat.Release();
+            fixture.Workflows.Release();
             fixture.Release();
             stop.TrySetResult();
+            return Results.Ok();
+        });
+        control.MapGet("/fixture/chat", () => Results.Json(fixture.Chat.Counters));
+        control.MapPost("/fixture/chat/{mode}", (AgentChatBrowserMode mode) => {
+            fixture.Chat.Mode = mode;
+            return Results.Ok();
+        });
+        control.MapPost("/fixture/chat-release", () => {
+            fixture.Chat.Release();
+            return Results.Ok();
+        });
+        control.MapGet("/fixture/workflows", () => Results.Json(fixture.Workflows.Counters));
+        control.MapPost("/fixture/workflows/{mode}", (WorkflowBrowserMode mode) => {
+            fixture.Workflows.Mode = mode;
+            return Results.Ok();
+        });
+        control.MapPost("/fixture/workflows-release", () => {
+            fixture.Workflows.Release();
             return Results.Ok();
         });
         await control.StartAsync();
@@ -163,6 +183,12 @@ internal sealed class GovernanceBrowserApplication(string repository, Governance
         if (fixture.CompletionEnabled) {
             builder.ConfigureServices(services => AgentCompletionBrowserServices.Register(services, fixture));
         }
+        if (fixture.FinalEnabled) {
+            builder.ConfigureServices(services => {
+                AgentChatBrowserFixture.Register(services, fixture.Chat);
+                WorkflowBrowserFixture.Register(services, fixture.Workflows);
+            });
+        }
         builder.ConfigureServices(services => services.AddScoped<IProviderRequestHistory>(provider =>
             new HistoryBrowserReads(ActivatorUtilities.CreateInstance<ProviderRequestHistoryService>(provider), fixture)));
         builder.ConfigureServices(services => services.AddScoped<IAgentDiagnosticsReads>(provider =>
@@ -177,6 +203,9 @@ internal enum GovernanceBrowserMode { Normal, HoldDetail, HoldList, FailDetail, 
 internal sealed class GovernanceBrowserState {
     public bool DefinitionsEnabled { get; init; }
     public bool CompletionEnabled { get; init; }
+    public bool FinalEnabled { get; init; }
+    public AgentChatBrowserFixture Chat { get; } = new();
+    public WorkflowBrowserFixture Workflows { get; } = new();
     public ConversationBrowserFixture Conversations { get; } = new();
     public AgentSettingsBrowserFixture Settings { get; } = new();
     public DefinitionCatalogBrowserFixture Definitions { get; } = new();

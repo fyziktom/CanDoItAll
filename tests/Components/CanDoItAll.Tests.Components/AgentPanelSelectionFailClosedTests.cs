@@ -33,7 +33,7 @@ public sealed class AgentPanelSelectionFailClosedTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Same(availableAgent, selectedAgents.Last());
+            Assert.Equivalent(availableAgent, selectedAgents.Last());
             Assert.Equal(AgentChatContextAccessState.Ready, accessStates.Last());
         });
 

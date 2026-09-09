@@ -783,7 +783,7 @@ public sealed class AgentChatPanelResponsivenessTests
         Assert.Equal(2, workspace.WorkspaceRequestCount);
     }
 
-    private static BunitContext CreateContext(
+    internal static BunitContext CreateContext(
         IAgentFrameworkWorkspaceService workspaceService,
         IAgentChatExecutionOrchestrator orchestratorService)
     {
@@ -876,7 +876,7 @@ public sealed class AgentChatPanelResponsivenessTests
             .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating)));
     }
 
-    private static AgentDefinition CreateAgent()
+    internal static AgentDefinition CreateAgent()
     {
         var now = DateTimeOffset.UtcNow;
         return new AgentDefinition(
@@ -933,7 +933,7 @@ public sealed class AgentChatPanelResponsivenessTests
             content);
     }
 
-    private static ChatSessionRecord CreateSession(Guid agentId)
+    internal static ChatSessionRecord CreateSession(Guid agentId)
     {
         var now = DateTimeOffset.UtcNow;
         return new ChatSessionRecord(
@@ -945,7 +945,7 @@ public sealed class AgentChatPanelResponsivenessTests
             Messages: []);
     }
 
-    private static ChatAgentWorkspaceSnapshot CreateWorkspace(
+    internal static ChatAgentWorkspaceSnapshot CreateWorkspace(
         Guid agentId,
         ChatSessionRecord session,
         ExecutionRunRecord? selectedRun = null)
@@ -1007,7 +1007,7 @@ public sealed class AgentChatPanelResponsivenessTests
             ]);
     }
 
-    private static ExecutionRunRecord CreateRunningRun(Guid agentId, Guid sessionId)
+    internal static ExecutionRunRecord CreateRunningRun(Guid agentId, Guid sessionId)
     {
         var now = DateTimeOffset.UtcNow;
         return new ExecutionRunRecord(
@@ -1037,7 +1037,7 @@ public sealed class AgentChatPanelResponsivenessTests
             PendingApprovals: []);
     }
 
-    private static AgentChatRunResult CreateRunResult(Guid agentId, Guid sessionId)
+    internal static AgentChatRunResult CreateRunResult(Guid agentId, Guid sessionId)
     {
         var now = DateTimeOffset.UtcNow;
         var runId = Guid.NewGuid();
@@ -1070,7 +1070,7 @@ public sealed class AgentChatPanelResponsivenessTests
         };
     }
 
-    private static AgentExecutionActivityStreamId CreateActivityStreamId()
+    internal static AgentExecutionActivityStreamId CreateActivityStreamId()
     {
         var profileId = Guid.NewGuid();
         return new AgentExecutionActivityStreamId(

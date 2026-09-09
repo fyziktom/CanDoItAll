@@ -162,7 +162,7 @@ internal sealed class LlmChatConversationWorkspaceController(
             : normalized is { } id && !sameAccepted ? LoadTranscriptAsync(id, false, cancellationToken) : Task.FromResult(true);
     }
 
-    private void ObserveDesired(Guid? id, bool fromRoute, bool allowDefault) {
+    private void ObserveDesired(Guid? id, bool fromRoute, bool allowDefault, bool preserveMutation = false) {
         desiredObserved = true;
         DesiredConversationId = id == Guid.Empty ? null : id;
         routeOwned = fromRoute;
@@ -170,7 +170,9 @@ internal sealed class LlmChatConversationWorkspaceController(
         SelectionGeneration++;
         Stop(ref transcriptRead);
         Stop(ref operationRead);
-        Stop(ref mutation);
+        if (!preserveMutation) {
+            Stop(ref mutation);
+        }
         SelectedConversation = null;
         transcriptPage.Clear();
         operationState.Reset();
@@ -556,7 +558,7 @@ internal sealed class LlmChatConversationWorkspaceController(
         using var request = Begin(ref mutation, cancellationToken);
         ClearFailure();
         try {
-            return await action(request.Token) && Owns(mutation, request) && IsCurrentSelection(generation);
+            return await action(request.Token) && Owns(mutation, request);
         } catch (OperationCanceledException) when (request.IsCancellationRequested) {
             return false;
         } catch (Exception exception) {
@@ -571,14 +573,11 @@ internal sealed class LlmChatConversationWorkspaceController(
     }
 
     private void SelectView(LlmChatConversationView view) {
-        DesiredConversationId = view.Conversation.ConversationId;
-        routeOwned = false;
-        chooseDefault = false;
+        ObserveDesired(view.Conversation.ConversationId, fromRoute: false, allowDefault: false, preserveMutation: true);
         transcriptPage.Replace(
             view.Messages.Where(message => message.Role is LlmMessageRole.User or LlmMessageRole.Assistant),
             view.NextMessageCursor);
         SelectedConversation = view.Conversation;
-        operationState.Reset();
     }
 
     private async Task<bool> MutateActiveOperationAsync(
