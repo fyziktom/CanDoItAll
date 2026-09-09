@@ -195,6 +195,10 @@ public partial class AgentsHomePage : IDisposable {
     private Task RetryHeaderAsync() => session.RetryHeaderAsync();
 
     private async Task FeedDefaultsAsync() {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (disposed || isConfirmingDefaults || isFeedingDefaults) {
             return;
         }
@@ -211,7 +215,7 @@ public partial class AgentsHomePage : IDisposable {
                     DenseChrome = true,
                     AriaLabel = "Confirm loading default agents and providers",
                     TestId = "agents-feed-defaults-confirmation"
-                }, cancellationToken: lifetime.Token);
+                }, cancellationToken: request.Token);
             if (disposed) {
                 return;
             }
@@ -222,7 +226,7 @@ public partial class AgentsHomePage : IDisposable {
 
             isFeedingDefaults = true;
             ClearStatusMessage();
-            await CatalogWarmupService.WarmupAsync(lifetime.Token);
+            await CatalogWarmupService.WarmupAsync(request.Token);
             if (disposed) {
                 return;
             }
@@ -504,6 +508,10 @@ public partial class AgentsHomePage : IDisposable {
     }
 
     private async Task OpenHrAgentAsync() {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (disposed || isOpeningHrAgent || !IsHrReady ||
             hrAgent is null || hrAgent.Id != HrAgentIdentity.AgentId) {
             return;
@@ -511,7 +519,7 @@ public partial class AgentsHomePage : IDisposable {
 
         isOpeningHrAgent = true;
         try {
-            await AgentChatLauncher.StartNewChatAsync(hrAgent.Id, lifetime.Token);
+            await AgentChatLauncher.StartNewChatAsync(hrAgent.Id, request.Token);
             if (disposed) {
                 return;
             }

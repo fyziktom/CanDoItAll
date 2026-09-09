@@ -14,6 +14,12 @@
             <h3 class="agent-team-details-dialog__title">Loading team details</h3>
         </SurfaceCard>
     }
+    else if (loadFailed)
+    {
+        <Alert AlertStyle="AlertStyle.Danger">Team details could not be loaded. Retry before editing this team.</Alert>
+        <Button Text="Retry" Click="LoadAsync" />
+        <Button Text="Close" Click="CancelAsync" />
+    }
     else
     {
         <Stack GapScale="LayoutGap.Medium">
@@ -75,21 +81,35 @@
 
     private AgentTeamEditorModel editorModel = new();
     private bool isLoading = true;
+    private bool loadFailed;
     private bool isBusy;
     private readonly CancellationTokenSource lifetime = new();
     private CancellationToken ownerToken;
     private bool disposed;
 
-    protected override async Task OnInitializedAsync() {
+    protected override Task OnInitializedAsync() {
         ownerToken = lifetime.Token;
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync() {
+        if (disposed) {
+            return;
+        }
+        isLoading = true;
+        loadFailed = false;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         try
         {
-            var loaded = await WorkspaceService.GetAgentTeamEditorAsync(TeamId, ownerToken);
+            var loaded = await WorkspaceService.GetAgentTeamEditorAsync(TeamId, request.Token);
             if (!disposed) {
                 editorModel = loaded;
             }
         }
-        catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
+        catch (Exception) when (ownerToken.IsCancellationRequested) {
+        } catch (Exception) {
+            loadFailed = true;
+            NotificationService.Error("Team details unavailable", "Team details could not be loaded. Retry before editing this team.");
         } finally {
             if (!disposed) {
                 isLoading = false;
@@ -98,6 +118,10 @@
     }
 
     private async Task SaveAsync() {
+        if (disposed || isLoading || loadFailed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         if (disposed || isBusy) {
             return;
         }
@@ -105,7 +129,7 @@
         try
         {
             editorModel.Icon = AgentTeamIconCatalog.Normalize(editorModel.Icon);
-            var teamId = await WorkspaceService.SaveAgentTeamAsync(editorModel, ownerToken);
+            var teamId = await WorkspaceService.SaveAgentTeamAsync(editorModel, request.Token);
             if (disposed) {
                 return;
             }
@@ -115,10 +139,10 @@
                 await DialogReference.CloseAsync(new AgentTeamDetailsDialogResult(teamId));
             }
         }
-        catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
-        } catch (Exception exception) {
+        catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
             if (!disposed) {
-                NotificationService.Error("Team save failed", exception.Message);
+                NotificationService.Error("Team save failed", "The save result could not be confirmed. Check the team catalog before trying again.");
             }
         } finally {
             if (!disposed) {
@@ -131,6 +155,10 @@
         => DialogReference?.CloseAsync() ?? Task.CompletedTask;
 
     private async Task OpenIconPickerAsync() {
+        if (disposed || isLoading || loadFailed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         if (disposed) {
             return;
         }
@@ -147,11 +175,11 @@
                     DenseChrome = true,
                     AriaLabel = "Choose team icon",
                     TestId = "material-icon-picker-dialog-shell"
-                }, ownerToken);
+                }, request.Token);
             if (!disposed && result is string icon) {
                 editorModel.Icon = AgentTeamIconCatalog.Normalize(icon);
             }
-        } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
         }
     }
 

@@ -794,7 +794,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 return;
             }
             draftAttachmentPaths = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath)).OfType<string>()
-                .Distinct(StringComparer.OrdinalIgnoreCase).ToImmutableArray();
+                .Distinct(StringComparer.Ordinal).ToImmutableArray();
             var omitted = detail.Artifacts.Count - draftAttachmentPaths.Count;
             SetMessage("Ready", omitted > 0 || draftAttachmentPaths.Count == 0 ? "warning" : "success", omitted > 0
                 ? $"Staged {draftAttachmentPaths.Count} artifact path(s). Unsafe or duplicate references were omitted."
@@ -835,7 +835,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 }
                 stagedPaths.Add(relativePath);
             }
-            draftAttachmentPaths = stagedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToImmutableArray();
+            draftAttachmentPaths = stagedPaths.Distinct(StringComparer.Ordinal).ToImmutableArray();
             SetMessage("Ready", "success", $"Staged {draftAttachmentPaths.Count} attachment path(s) for the next prompt.");
         } catch (Exception exception) {
             if (chatSession.IsCurrent(generation) && !request.IsCancellationRequested) {

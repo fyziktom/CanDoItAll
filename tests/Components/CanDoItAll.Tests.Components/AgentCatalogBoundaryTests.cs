@@ -11,6 +11,27 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentCatalogBoundaryTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Catalog_mutation_and_launch_failures_do_not_disclose_backend_details(bool launch) {
+        const string poison = "CATALOG_PRIVATE_SENTINEL api_key=test-only-private-catalog /srv/private/catalog at Internal.Save()";
+        var agent = AgentCatalogPanelTests.CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
+        var team = new AgentTeamDefinition(Guid.NewGuid(), "Retained team", "", [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+        var operations = new RecordingCatalogOperations { Snapshot = new([agent], [team], new Dictionary<Guid, bool>()),
+            NextMutation = Task.FromException(new IOException(poison)) };
+        var launcher = new PendingChatLauncher();
+        launcher.Pending.SetException(new IOException(poison));
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IAgentCatalogOperations>(operations);
+            services.AddSingleton<IAgentChatLauncher>(launcher);
+        });
+        var cut = harness.Context.Render<AgentCatalogHost>(parameters => parameters.Add(component => component.RequestedTeamId, launch ? null : team.Id));
+        await cut.Find(launch ? "[data-testid='agents-hr-agent-open']" : "[data-testid='agents-team-delete']").ClickAsync();
+        var notifications = harness.Context.Services.GetRequiredService<NotificationService>().Messages;
+        Assert.Contains(notifications, message => message.Summary == (launch ? "Unable to open managed agent chat" : "Team delete failed"));
+        Assert.DoesNotContain(notifications, message => (message.Detail ?? "").Contains("CATALOG_PRIVATE_SENTINEL", StringComparison.Ordinal));
+    }
     [Fact]
     public void Controlled_panel_search_and_selection_emit_intents_without_services() {
         var first = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog first", "");
@@ -228,6 +249,10 @@ public sealed class AgentCatalogBoundaryTests {
         var count = states.Count;
         await cut.InvokeAsync(() => {
             cut.Instance.Dispose();
+            var callbacks = 0;
+            using var registration = operations.LastToken.Register(() => callbacks++);
+            Assert.Equal(1, callbacks);
+            Assert.True(operations.LastToken.WaitHandle.WaitOne(0));
             if (fail) {
                 pending.SetException(new IOException("Late catalog error."));
             } else {
@@ -304,6 +329,10 @@ public sealed class AgentCatalogBoundaryTests {
         Assert.Equal(1, operations.MemberWrites + operations.DeletedTeams.Count);
         await cut.InvokeAsync(() => {
             cut.Instance.Dispose();
+            var callbacks = 0;
+            using var registration = operations.LastToken.Register(() => callbacks++);
+            Assert.Equal(1, callbacks);
+            Assert.True(operations.LastToken.WaitHandle.WaitOne(0));
             pending.SetResult();
         });
         await action;
@@ -332,6 +361,10 @@ public sealed class AgentCatalogBoundaryTests {
         cut.WaitForAssertion(() => Assert.True(launcher.Token.CanBeCanceled));
         await cut.InvokeAsync(() => {
             cut.Instance.Dispose();
+            var callbacks = 0;
+            using var registration = launcher.Token.Register(() => callbacks++);
+            Assert.Equal(1, callbacks);
+            Assert.True(launcher.Token.WaitHandle.WaitOne(0));
             if (fail) {
                 launcher.Pending.SetException(new IOException("Late chat failure."));
             } else {

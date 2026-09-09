@@ -50,6 +50,7 @@ public sealed class AgentsOverviewSessionTests {
             var callbacks = 0;
             using var delayed = tokens[index].Register(() => callbacks++);
             Assert.Equal(1, callbacks);
+            Assert.True(tokens[index].WaitHandle.WaitOne(0));
         }
         Finish(h, Reads.HeaderValue(), tokens[0]);
         Finish(o, AgentOverviewSnapshot.Empty, tokens[1]);

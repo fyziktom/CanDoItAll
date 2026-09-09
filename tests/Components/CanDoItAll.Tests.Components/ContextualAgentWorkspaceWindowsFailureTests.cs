@@ -13,6 +13,187 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ContextualAgentWorkspaceWindowsFailureTests
 {
+    private const string PrivateDetail = "CONTEXT_PRIVATE_SENTINEL api_key=test-only-context-private C:\\private\\context /srv/private/context at Internal.Load()";
+
+    [Fact]
+    public async Task Highlighting_another_catalog_card_does_not_change_the_open_chat_mutation_target() {
+        var harness = CreateHarness();
+        var other = CreateAgent(harness.ProjectId, "Highlighted catalog agent");
+        harness.ReferenceData.Agents.Add(other);
+        using var context = harness.Context;
+        var cut = Render(context, harness, []);
+        await OpenChatAsync(cut, harness.Agent);
+        cut.Find($"[data-testid='context-agents-agent-{other.Id:N}-open']").Click();
+        Assert.Equal(harness.Agent.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.Agent!.Id);
+        cut.Find("[data-testid='chat-prompt-input']").Input("Keep the displayed target");
+        await cut.Find("[data-testid='chat-send-button']").ClickAsync();
+        Assert.NotNull(harness.Workspace.LastRequest);
+        Assert.Equal(harness.Agent.Id, harness.Workspace.LastRequest.AgentId);
+        Assert.Equal(harness.Workspace.Session.Id, harness.Workspace.LastRequest.ChatSessionId);
+    }
+
+    [Fact]
+    public async Task Old_send_finally_cannot_clear_the_new_target_pending_message_or_busy_state() {
+        var harness = CreateHarness();
+        var newer = CreateAgent(harness.ProjectId, "New pending target");
+        var newerSession = CreateSession(newer.Id);
+        harness.ReferenceData.Agents.Add(newer);
+        harness.Workspace.SessionsByAgent[newer.Id] = newerSession;
+        harness.Workspace.AgentWorkspaces[newer.Id] = CreateWorkspace(newer.Id, newerSession);
+        var oldResult = new TaskCompletionSource<ExecutionRunResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var newResult = new TaskCompletionSource<ExecutionRunResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        harness.Workspace.DeferredExecution = oldResult;
+        using var context = harness.Context;
+        var cut = Render(context, harness, []);
+        await OpenChatAsync(cut, harness.Agent);
+        cut.Find("[data-testid='chat-prompt-input']").Input("Old pending message");
+        var old = cut.Find("[data-testid='chat-send-button']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.Equal(harness.Agent.Id, harness.Workspace.LastRequest?.AgentId));
+        await OpenChatAsync(cut, newer);
+        harness.Workspace.DeferredExecution = newResult;
+        cut.Find("[data-testid='chat-prompt-input']").Input("Current pending message");
+        var current = cut.Find("[data-testid='chat-send-button']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.Equal(newer.Id, harness.Workspace.LastRequest?.AgentId));
+        oldResult.SetResult(CreateCompletedExecutionResult(harness.Agent.Id, harness.Workspace.Session.Id));
+        await old;
+        try {
+            Assert.True(cut.FindComponent<ChatWorkspacePanel>().Instance.IsBusy);
+            Assert.Equal("Current pending message", cut.FindComponent<ChatWorkspacePanel>().Instance.PendingUserPrompt);
+        } finally {
+            newResult.SetResult(CreateCompletedExecutionResult(newer.Id, newerSession.Id));
+            await current;
+        }
+    }
+
+    [Fact]
+    public async Task Late_voice_transcription_cannot_send_into_a_new_agent_target() {
+        var harness = CreateHarness();
+        var speaking = harness.Agent with { ConfigurationJson = AgentVoiceAccessMetadata.Write(harness.Agent.ConfigurationJson,
+            new AgentVoiceAccessSettings { CanUseVoiceMode = true }) };
+        var newer = CreateAgent(harness.ProjectId, "Voice replacement target");
+        var newerSession = CreateSession(newer.Id);
+        harness.ReferenceData.Agents.Clear();
+        harness.ReferenceData.Agents.Add(speaking);
+        harness.ReferenceData.Agents.Add(newer);
+        harness.Workspace.SessionsByAgent[newer.Id] = newerSession;
+        harness.Workspace.AgentWorkspaces[newer.Id] = CreateWorkspace(newer.Id, newerSession);
+        using var context = harness.Context;
+        var voiceService = DispatchProxy.Create<CanDoItAll.AgentFramework.Voice.IAgentVoiceService, DelayedVoiceProxy>();
+        var voice = (DelayedVoiceProxy)(object)voiceService;
+        context.Services.AddSingleton(voiceService);
+        context.JSInterop.Setup<CanDoItAll.AgentFramework.Voice.BrowserVoiceRecording>("CanDoItAll.agentFramework.voice.stopRecordingForOwner", _ => true)
+            .SetResult(new() { Base64 = "AA==" });
+        var cut = Render(context, harness, []);
+        await OpenChatAsync(cut, speaking);
+        await cut.InvokeAsync(() => cut.FindComponent<ChatWorkspacePanel>().Instance.VoiceRecordingToggled.InvokeAsync());
+        var voiceOwner = Assert.IsType<string>(Assert.Single(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.startRecordingForOwner"]).Arguments[0]);
+        var transcription = cut.InvokeAsync(() => cut.FindComponent<ChatWorkspacePanel>().Instance.VoiceRecordingToggled.InvokeAsync());
+        cut.WaitForAssertion(() => Assert.True(voice.Started));
+        await OpenChatAsync(cut, newer);
+        Assert.Contains(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.disposeOwner"], invocation => Equals(invocation.Arguments[0], voiceOwner));
+        Assert.True(voice.Token.IsCancellationRequested);
+        var callbacks = 0;
+        using var registration = voice.Token.Register(() => callbacks++);
+        Assert.Equal(1, callbacks);
+        Assert.True(voice.Token.WaitHandle.WaitOne(0));
+        voice.Pending.SetResult(new("OLD_VOICE_TARGET_SENTINEL", "fixture"));
+        await transcription;
+        Assert.Null(harness.Workspace.LastRequest);
+        Assert.DoesNotContain("OLD_VOICE_TARGET_SENTINEL", cut.Markup, StringComparison.Ordinal);
+        Assert.Throws<ObjectDisposedException>(() => voice.Token.WaitHandle);
+    }
+
+    public class DelayedVoiceProxy : DispatchProxy {
+        public bool Started { get; private set; }
+        public CancellationToken Token { get; private set; }
+        public TaskCompletionSource<CanDoItAll.AgentFramework.Voice.AgentVoiceTranscriptionResult> Pending { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
+            Assert.Equal(nameof(CanDoItAll.AgentFramework.Voice.IAgentVoiceService.TranscribeAsync), targetMethod?.Name);
+            Started = true;
+            Token = args!.OfType<CancellationToken>().SingleOrDefault();
+            return Pending.Task;
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Delayed_thread_open_cannot_replace_a_newer_selection_or_publish_after_disposal(bool dispose) {
+        var harness = CreateHarness();
+        var newer = CreateAgent(harness.ProjectId, "Current contextual target");
+        var newerSession = CreateSession(newer.Id);
+        harness.ReferenceData.Agents.Add(newer);
+        harness.Workspace.SessionsByAgent[newer.Id] = newerSession;
+        harness.Workspace.AgentWorkspaces[newer.Id] = CreateWorkspace(newer.Id, newerSession);
+        var pending = new TaskCompletionSource<ChatSessionRecord>(TaskCreationOptions.RunContinuationsAsynchronously);
+        harness.Workspace.PendingSessions[harness.Agent.Id] = pending;
+        using var context = harness.Context;
+        var cut = Render(context, harness, []);
+        var old = OpenChatAsync(cut, harness.Agent);
+        cut.WaitForAssertion(() => Assert.Equal(1, harness.Workspace.SessionRequests));
+        var token = harness.Workspace.SessionToken;
+        if (dispose) {
+            await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        } else {
+            await OpenChatAsync(cut, newer);
+        }
+        Assert.True(token.IsCancellationRequested);
+        var callbacks = 0;
+        using var registration = token.Register(() => callbacks++);
+        Assert.Equal(1, callbacks);
+        Assert.True(token.WaitHandle.WaitOne(0));
+        var notifications = context.Services.GetRequiredService<NotificationService>().Messages.Count;
+        pending.SetResult(harness.Workspace.Session);
+        await old;
+        Assert.Throws<ObjectDisposedException>(() => token.WaitHandle);
+        Assert.Equal(notifications, context.Services.GetRequiredService<NotificationService>().Messages.Count);
+        if (!dispose) {
+            Assert.Equal(newer.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.Agent!.Id);
+            Assert.Equal(newerSession.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.Session!.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Thread_open_failure_does_not_publish_private_detail() {
+        var harness = CreateHarness();
+        harness.Workspace.PendingSessions[harness.Agent.Id] = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        harness.Workspace.PendingSessions[harness.Agent.Id].SetException(new IOException(PrivateDetail));
+        using var context = harness.Context;
+        var cut = Render(context, harness, []);
+        await OpenChatAsync(cut, harness.Agent);
+        Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary == "Unable to open agent chat");
+        Assert.DoesNotContain(context.Services.GetRequiredService<NotificationService>().Messages,
+            message => (message.Detail ?? "").Contains("CONTEXT_PRIVATE_SENTINEL", StringComparison.Ordinal));
+        Assert.DoesNotContain("CONTEXT_PRIVATE_SENTINEL", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Artifact_staging_rejects_unsafe_paths_before_prompt_construction() {
+        var harness = CreateHarness();
+        harness.Workspace.InitialWorkspace = harness.Workspace.InitialWorkspace with { SelectedRun = harness.FailedRun };
+        harness.Workspace.FailedRunDetail = harness.Workspace.FailedRunDetail with {
+            Artifacts = [
+                new(Guid.NewGuid(), harness.FailedRun.Id, "text", "Safe report", " reports\\safe.txt ", "text/plain", "fixture", "Safe summary", DateTimeOffset.UnixEpoch),
+                new(Guid.NewGuid(), harness.FailedRun.Id, "text", "Distinct case", "reports/Safe.txt", "text/plain", "fixture", "Safe summary", DateTimeOffset.UnixEpoch),
+                new(Guid.NewGuid(), harness.FailedRun.Id, "text", "Hidden reference", "/srv/private/CONTEXT_PATH_SENTINEL", "text/plain", "fixture", "Retained summary", DateTimeOffset.UnixEpoch)
+            ]
+        };
+        using var context = harness.Context;
+        var cut = Render(context, harness, []);
+        await OpenChatAsync(cut, harness.Agent);
+        var panel = cut.FindComponent<ChatWorkspacePanel>();
+        await cut.InvokeAsync(() => panel.Instance.AttachmentRequested.InvokeAsync());
+        Assert.Equal(["reports/safe.txt", "reports/Safe.txt"], panel.Instance.DraftAttachmentPaths);
+        cut.Find("[data-testid='chat-prompt-input']").Input("Use the report");
+        await cut.Find("[data-testid='chat-send-button']").ClickAsync();
+        Assert.NotNull(harness.Workspace.LastRequest);
+        Assert.Equal(["reports/safe.txt", "reports/Safe.txt"], harness.Workspace.LastRequest.InputAttachmentPaths);
+        Assert.Contains("reports/safe.txt", harness.Workspace.LastRequest.Prompt, StringComparison.Ordinal);
+        Assert.Contains("reports/Safe.txt", harness.Workspace.LastRequest.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("CONTEXT_PATH_SENTINEL", harness.Workspace.LastRequest.Prompt, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Project_structure_failure_selects_the_exact_persisted_run()
     {
@@ -779,9 +960,16 @@ public sealed class ContextualAgentWorkspaceWindowsFailureTests
         public Dictionary<Guid, ChatAgentWorkspaceSnapshot> AgentWorkspaces { get; } = [];
 
         public List<Guid> ExecutionRunDetailRequests { get; } = [];
+        public Dictionary<Guid, TaskCompletionSource<ChatSessionRecord>> PendingSessions { get; } = [];
+        public CancellationToken SessionToken { get; private set; }
+        public int SessionRequests { get; private set; }
+        public ExecutionRunRequest? LastRequest { get; private set; }
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
+            if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.ExecuteRunAsync)) {
+                LastRequest = (ExecutionRunRequest)args![0]!;
+            }
             return targetMethod?.Name switch
             {
                 "add_ExecutionUpdated" => AddExecutionUpdated((EventHandler<ExecutionLogEntry>)args![0]!),
@@ -814,6 +1002,11 @@ public sealed class ContextualAgentWorkspaceWindowsFailureTests
         private Task<ChatSessionRecord> GetSession(object?[] args)
         {
             var agentId = Assert.IsType<Guid>(args[0]);
+            SessionRequests++;
+            SessionToken = args.OfType<CancellationToken>().SingleOrDefault();
+            if (PendingSessions.TryGetValue(agentId, out var pending)) {
+                return pending.Task;
+            }
             return Task.FromResult(
                 SessionsByAgent.TryGetValue(agentId, out var session)
                     ? session

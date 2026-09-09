@@ -809,11 +809,11 @@
                                          Text="@(testResult.Succeeded ? "Succeeded" : "Failed")" />
                             @if (testResult.Run is not null)
                             {
-                                <span>@testResult.Run.Summary</span>
+                                <span>@WorkflowEventPresentationPolicy.RunSummary(testResult.Run.State, testResult.Run.Summary)</span>
                             }
                             @if (!string.IsNullOrWhiteSpace(testResult.ErrorMessage))
                             {
-                                <span>@WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage)</span>
+                                <span>The preview could not be completed. Review the workflow configuration and event diagnostics.</span>
                             }
                         </div>
                     }

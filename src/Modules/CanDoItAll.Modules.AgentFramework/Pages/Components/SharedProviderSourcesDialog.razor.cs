@@ -53,11 +53,12 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         if (disposed) {
             return;
         }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         var read = ++readGeneration;
         isLoading = true;
         loadError = string.Empty;
         try {
-            var result = await ManagementService.ListSourcesAsync(ownerToken);
+            var result = await ManagementService.ListSourcesAsync(request.Token);
             if (!disposed && read == readGeneration) {
                 sources = result;
             }
@@ -187,11 +188,12 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             return;
         }
         Recovery.BeginSource(attempt);
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         var operation = ++generation;
         operationBusy = true;
         SharedProviderChange? committed = null;
         try {
-            var change = await mutation(ownerToken);
+            var change = await mutation(request.Token);
             committed = change;
             Recovery.RecordCommit(attempt.AttemptId, change);
             if (!IsCurrent(operation)) {
@@ -369,11 +371,12 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             return null;
         }
         Recovery.BeginSource(attempt);
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         var operation = ++generation;
         operationBusy = true;
         SharedProviderChange? committed = null;
         try {
-            var result = await run(ownerToken);
+            var result = await run(request.Token);
             committed = result.Change;
             Recovery.RecordCommit(attempt.AttemptId, result.Change);
             if (!IsCurrent(operation)) {
@@ -420,6 +423,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         if (disposed || operationBusy || Recovery.Source is not { } attempt) {
             return;
         }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         var operation = ++generation;
         operationBusy = true;
         try {
@@ -431,7 +435,7 @@ public partial class SharedProviderSourcesDialog : IDisposable {
                 }
                 return;
             }
-            var result = await ManagementService.VerifySourceAsync(attempt, ownerToken);
+            var result = await ManagementService.VerifySourceAsync(attempt, request.Token);
             if (!IsCurrent(operation) || result.SourceId != attempt.SourceId || Recovery.Source?.AttemptId != attempt.AttemptId) {
                 return;
             }

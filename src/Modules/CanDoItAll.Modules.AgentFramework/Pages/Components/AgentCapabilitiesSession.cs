@@ -38,7 +38,9 @@ public sealed class AgentCapabilitiesSession(IAgentCapabilitiesReads reads) : ID
 
     public async Task<bool> LoadAsync(Guid? requestedAgentId) {
         var preferred = requestedAgentId ?? SelectedAgent?.Id;
-        var (generation, token) = BeginRead(preferred);
+        var (generation, request) = BeginRead(preferred);
+        using var operation = request;
+        var token = request.Token;
         hasCatalog = false;
         try {
             var catalog = await reads.LoadCatalogAsync(token);
@@ -74,7 +76,9 @@ public sealed class AgentCapabilitiesSession(IAgentCapabilitiesReads reads) : ID
         }
 
         var target = requestedAgentId ?? SelectedAgent?.Id ?? agents.FirstOrDefault()?.Id;
-        var (generation, token) = BeginRead(target);
+        var (generation, request) = BeginRead(target);
+        using var operation = request;
+        var token = request.Token;
         try {
             return await ReadTargetAsync(generation, token);
         }
@@ -94,7 +98,7 @@ public sealed class AgentCapabilitiesSession(IAgentCapabilitiesReads reads) : ID
 
     public Task<bool> RefreshAsync() => LoadAsync(TargetAgentId);
 
-    private (long Generation, CancellationToken Token) BeginRead(Guid? target) {
+    private (long Generation, CancellationTokenSource Request) BeginRead(Guid? target) {
         ObjectDisposedException.ThrowIf(disposed, this);
         Generation++;
         CancelRead();
@@ -104,7 +108,7 @@ public sealed class AgentCapabilitiesSession(IAgentCapabilitiesReads reads) : ID
         Draft = null;
         LoadState = AgentCapabilitiesLoadState.Loading;
         LoadError = null;
-        return (Generation, readCancellation.Token);
+        return (Generation, readCancellation);
     }
 
     private async Task<bool> ReadTargetAsync(long generation, CancellationToken token) {
@@ -146,7 +150,6 @@ public sealed class AgentCapabilitiesSession(IAgentCapabilitiesReads reads) : ID
             return;
         }
 
-        readCancellation?.Dispose();
         readCancellation = null;
     }
 
@@ -158,7 +161,6 @@ public sealed class AgentCapabilitiesSession(IAgentCapabilitiesReads reads) : ID
         }
 
         cancellation.Cancel();
-        cancellation.Dispose();
     }
 
     public void Dispose() {

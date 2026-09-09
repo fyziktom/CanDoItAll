@@ -47,6 +47,7 @@ public partial class CapabilityDetailsDialog : IDisposable
     private string rawConfigurationJson = string.Empty;
     private int selectedTabIndex;
     private bool isLoading = true;
+    private bool loadFailed;
     private bool isBusy;
 
     private bool IsKindLocked => editorModel.IsBuiltIn;
@@ -72,10 +73,12 @@ public partial class CapabilityDetailsDialog : IDisposable
 
     private async Task LoadAsync()
     {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         isLoading = true;
+        loadFailed = false;
         try
         {
-            var loaded = await WorkspaceService.GetCapabilityEditorAsync(CapabilityId, lifetime.Token);
+            var loaded = await WorkspaceService.GetCapabilityEditorAsync(CapabilityId, request.Token);
             if (!IsCurrent) {
                 return;
             }
@@ -86,9 +89,10 @@ public partial class CapabilityDetailsDialog : IDisposable
         }
         catch (Exception) when (!IsCurrent) {
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            NotificationService.Error("Capability details failed to load", exception.Message);
+            loadFailed = true;
+            NotificationService.Error("Capability details failed to load", "The requested capability could not be loaded. Retry or close the editor.");
         }
         finally
         {
@@ -129,7 +133,7 @@ public partial class CapabilityDetailsDialog : IDisposable
 
     private async Task SaveAsync()
     {
-        if (!IsCurrent || isBusy)
+        if (!IsCurrent || isBusy || isLoading || loadFailed)
         {
             return;
         }
@@ -158,9 +162,9 @@ public partial class CapabilityDetailsDialog : IDisposable
         }
         catch (Exception) when (!IsCurrent) {
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            NotificationService.Error("Capability save failed", exception.Message);
+            NotificationService.Error("Capability save failed", "The save result could not be confirmed. Check the capability catalog before trying again.");
         }
         finally
         {
@@ -238,11 +242,12 @@ public partial class CapabilityDetailsDialog : IDisposable
 
     private async Task TestSetupAsync()
     {
-        if (!IsCurrent || isBusy || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
+        if (!IsCurrent || isBusy || isLoading || loadFailed || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
         {
             return;
         }
 
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         isBusy = true;
         try
         {
@@ -259,7 +264,7 @@ public partial class CapabilityDetailsDialog : IDisposable
                 {
                     Capability = editorModel,
                     JsonInput = string.IsNullOrWhiteSpace(toolState.TestInputJson) ? "{}" : toolState.TestInputJson
-                }, lifetime.Token);
+                }, request.Token);
                 if (!IsCurrent) {
                     return;
                 }
@@ -271,7 +276,7 @@ public partial class CapabilityDetailsDialog : IDisposable
                 var result = await CapabilitySetupFlowService.TestMcpSetupAsync(new CapabilityMcpSetupTestRequest
                 {
                     Capability = editorModel
-                }, lifetime.Token);
+                }, request.Token);
                 if (!IsCurrent) {
                     return;
                 }
@@ -281,9 +286,9 @@ public partial class CapabilityDetailsDialog : IDisposable
         }
         catch (Exception) when (!IsCurrent) {
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            NotificationService.Error("Setup test failed", exception.Message);
+            NotificationService.Error("Setup test failed", "The setup test could not be completed. Review the configuration before trying again.");
         }
         finally
         {

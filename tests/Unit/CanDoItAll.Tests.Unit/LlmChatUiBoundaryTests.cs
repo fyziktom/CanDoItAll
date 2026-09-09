@@ -307,12 +307,14 @@ public sealed class LlmChatOperationUiGatewayTests
         var gateway = new LlmChatOperationUiGateway(
             operations,
             new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: true),
-            new StubWorkspaceScopeAccessor("Workspace context is still updating."));
+            new StubWorkspaceScopeAccessor("SCOPE_PRIVATE_SENTINEL /agents?token=private-scope"));
 
         var result = await gateway.SendAsync(Guid.NewGuid(), Guid.NewGuid(), 2, "hello");
 
         Assert.True(result.IsFailure);
         Assert.Equal(LlmChatUiFailureCodes.InvalidInput, Assert.Single(result.Failures).Code);
+        Assert.Equal("Workspace context is unavailable. Wait for the current page context to finish updating and retry.", Assert.Single(result.Failures).Message);
+        Assert.DoesNotContain("SCOPE_PRIVATE_SENTINEL", Assert.Single(result.Failures).Message, StringComparison.Ordinal);
         Assert.Equal(0, operations.SendCount);
     }
 

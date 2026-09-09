@@ -156,6 +156,50 @@ public sealed class AgentCapabilitiesSessionTests {
         Assert.Empty(session.Snapshot.SelectedCapabilityIds);
     }
 
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(false, 1)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 1)]
+    [InlineData(true, 2)]
+    public async Task Canceled_read_retains_token_until_late_operation_finishes(bool dispose, int outcome) {
+        var reads = new Reads();
+        var pending = new TaskCompletionSource<AgentEditorModel>(TaskCreationOptions.RunContinuationsAsynchronously);
+        reads.Read = (id, _) => id == reads.Alpha.Id ? pending.Task : Task.FromResult(AgentEditorModel.FromDefinition(reads.Beta));
+        using var session = new AgentCapabilitiesSession(reads);
+        var old = session.LoadAsync(reads.Alpha.Id);
+        var token = reads.LastToken;
+        if (dispose) {
+            session.Dispose();
+        } else {
+            await session.SelectAsync(reads.Beta.Id);
+        }
+        Assert.True(token.IsCancellationRequested);
+        var callbacks = 0;
+        using var delayed = token.Register(() => callbacks++);
+        Assert.Equal(1, callbacks);
+        Assert.True(token.WaitHandle.WaitOne(0));
+        switch (outcome) {
+            case 0:
+                pending.SetResult(AgentEditorModel.FromDefinition(reads.Alpha));
+                break;
+            case 1:
+                pending.SetException(new IOException("Late read failure"));
+                break;
+            default:
+                pending.SetException(new OperationCanceledException(token));
+                break;
+        }
+        Assert.False(await old);
+        Assert.Throws<ObjectDisposedException>(() => token.WaitHandle);
+        Assert.Null(session.LoadError);
+        if (!dispose) {
+            Assert.Equal(reads.Beta.Id, session.SelectedAgent?.Id);
+            Assert.Equal(AgentCapabilitiesLoadState.Ready, session.LoadState);
+        }
+    }
+
     private static void AssertFailed(AgentCapabilitiesSession session, Guid target) {
         Assert.Equal(target, session.TargetAgentId);
         Assert.Null(session.Selection.AgentId);

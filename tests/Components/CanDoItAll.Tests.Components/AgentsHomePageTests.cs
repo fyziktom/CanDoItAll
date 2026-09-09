@@ -21,6 +21,26 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class AgentsHomePageTests
 {
     [Fact]
+    public async Task Header_chat_launch_retains_its_canceled_token_until_completion() {
+        var launcher = new RecordingAgentChatLauncher { Pending = new(TaskCreationOptions.RunContinuationsAsynchronously) };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IAgentChatLauncher>(launcher));
+        var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForDashboardLoaded();
+        var launch = cut.Find("[data-testid='agents-hr-agent-open-header']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.NotNull(launcher.StartedAgentId));
+        await cut.InvokeAsync(cut.Instance.Dispose);
+        Assert.True(launcher.Token.IsCancellationRequested);
+        var callbacks = 0;
+        using var registration = launcher.Token.Register(() => callbacks++);
+        Assert.Equal(1, callbacks);
+        Assert.True(launcher.Token.WaitHandle.WaitOne(0));
+        launcher.Pending.SetException(new IOException("Private late header launch"));
+        await launch;
+        Assert.Throws<ObjectDisposedException>(() => launcher.Token.WaitHandle);
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary is "HR Agent ready" or "Unable to open HR Agent");
+    }
+    [Fact]
     public async Task Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -242,6 +262,8 @@ public sealed class AgentsHomePageTests
     private sealed class RecordingAgentChatLauncher : IAgentChatLauncher
     {
         public Guid? StartedAgentId { get; private set; }
+        public TaskCompletionSource<ActiveAgentChat>? Pending { get; init; }
+        public CancellationToken Token { get; private set; }
 
         public void ShowCatalog(AgentChatCatalogTab tab = AgentChatCatalogTab.Agents)
         {
@@ -253,7 +275,8 @@ public sealed class AgentsHomePageTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             StartedAgentId = agentId;
-            return Task.FromResult(CreateActiveChat(agentId, chatSessionId: null));
+            Token = cancellationToken;
+            return Pending?.Task ?? Task.FromResult(CreateActiveChat(agentId, chatSessionId: null));
         }
 
         public Task<ActiveAgentChat> OpenChatAsync(

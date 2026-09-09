@@ -94,12 +94,17 @@ public sealed class ProviderEditorOperationsTests {
             session.Draft.Name = "New target";
         }
         Assert.True(token.IsCancellationRequested);
+        var callbacks = 0;
+        using var delayed = token.Register(() => callbacks++);
+        Assert.Equal(1, callbacks);
+        Assert.True(token.WaitHandle.WaitOne(0));
         if (fails) {
             pending.SetException(new IOException("Late failure"));
         } else {
             pending.SetResult(new(ProviderWriteDisposition.Committed, reads.Id));
         }
         Assert.Null(await save);
+        Assert.Throws<ObjectDisposedException>(() => token.WaitHandle);
         Assert.False(operations.IsBusy);
         Assert.False(operations.HasPendingReconciliation);
         if (!dispose) {

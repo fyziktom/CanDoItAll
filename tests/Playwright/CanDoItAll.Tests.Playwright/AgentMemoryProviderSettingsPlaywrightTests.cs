@@ -22,14 +22,7 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
             }
         });
         var page = await context.NewPageAsync();
-        var screenshotRoot = Path.Combine(
-            PlaywrightTestHostPaths.RepositoryRoot,
-            "codex",
-            "bundles",
-            "candoitall-memory-provider-extraction-bundle",
-            "proof",
-            "regression",
-            "screenshots");
+        var screenshotRoot = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(screenshotRoot);
 
         try
@@ -51,11 +44,13 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
 
             await page.GetByTestId("agents-catalog-memory-mode").SelectOptionAsync("ExplicitDirective");
             await Assertions.Expect(page.GetByTestId("agents-catalog-memory-tools")).ToBeDisabledAsync();
-            await page.ScreenshotAsync(new PageScreenshotOptions
+            if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+                await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "agent-memory-multiple-providers-explicit-desktop.png"),
                 FullPage = false
             });
+            }
 
             await page.SetViewportSizeAsync(390, 900);
             var lastRemove = page.GetByTestId("agents-catalog-memory-remove-programming-memory");
@@ -76,19 +71,23 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
             await AssertInsideViewportAsync(page.GetByTestId("agents-catalog-memory-down-programming-memory"), 390);
             await AssertInsideViewportAsync(lastRemove, 390);
 
-            await page.ScreenshotAsync(new PageScreenshotOptions
+            if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+                await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "agent-memory-multiple-providers-explicit-mobile.png"),
                 FullPage = false
             });
+            }
         }
         catch
         {
-            await page.ScreenshotAsync(new PageScreenshotOptions
+            if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+                await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "agent-memory-multiple-providers-failure-state.png"),
                 FullPage = true
             });
+            }
             throw;
         }
         finally

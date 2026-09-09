@@ -51,7 +51,7 @@ internal static class LlmChatConversationPresentationMapper
             ToKey(conversation.ConversationId),
             conversation.Title,
             conversation.UpdatedAtUtc,
-            conversation.UpdatedAtUtc.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture),
+            CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(conversation.UpdatedAtUtc),
             $"{conversation.DefinitionName} · Revision {conversation.DefinitionRevision}",
             ResolvePreview(conversation),
             searchText: string.Join(' ', conversation.Title, conversation.DefinitionName, conversation.Status),
@@ -115,7 +115,7 @@ internal static class LlmChatConversationPresentationMapper
             "You",
             PresentationTone.Accent,
             message,
-            admittedAtUtc.ToLocalTime().ToString("t", System.Globalization.CultureInfo.CurrentCulture),
+            CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(admittedAtUtc),
             state: ConversationMessageState.Pending);
 
     public static ConversationMessagePresentation ToStreaming(
@@ -128,7 +128,7 @@ internal static class LlmChatConversationPresentationMapper
             "Assistant",
             PresentationTone.Info,
             content,
-            startedAtUtc.ToLocalTime().ToString("t", System.Globalization.CultureInfo.CurrentCulture),
+            CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(startedAtUtc),
             state: ConversationMessageState.Streaming);
 
     public static ConversationEmptyStatePresentation ToEmptyState(bool hasSelection)
@@ -170,7 +170,7 @@ internal static class LlmChatConversationPresentationMapper
             isUser ? "You" : "Assistant",
             isUser ? PresentationTone.Accent : PresentationTone.Info,
             message.Text,
-            message.CreatedAtUtc.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture),
+            CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(message.CreatedAtUtc),
             copyValue: message.Text,
             copyAriaLabel: isUser ? "Copy your message" : "Copy assistant response");
     }

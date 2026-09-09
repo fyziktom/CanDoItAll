@@ -210,8 +210,8 @@ else {
             }
             if (ReferenceEquals(readCancellation, owner)) {
                 readCancellation = null;
-                owner.Dispose();
             }
+            owner.Dispose();
         }
 
         bool IsCurrent() => !disposed && generation == requestGeneration && Selection == request && !token.IsCancellationRequested;
@@ -223,11 +223,7 @@ else {
         if (owner is null) {
             return;
         }
-        try {
-            owner.Cancel();
-        } finally {
-            owner.Dispose();
-        }
+        owner.Cancel();
     }
 
     public void Dispose() {

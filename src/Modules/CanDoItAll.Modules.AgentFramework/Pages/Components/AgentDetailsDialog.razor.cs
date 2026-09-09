@@ -100,12 +100,13 @@ public partial class AgentDetailsDialog : IDisposable
         : null;
 
     private async Task RefreshRuntimeProvidersAsync(AgentEditorSession owner) {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         if (!IsCurrent(owner)) {
-            throw new OperationCanceledException(owner.CancellationToken);
+            throw new OperationCanceledException(request.Token);
         }
-        var refreshedProviders = await EditorReads.ReadProvidersAsync(owner.CancellationToken);
+        var refreshedProviders = await EditorReads.ReadProvidersAsync(request.Token);
         if (!IsCurrent(owner)) {
-            throw new OperationCanceledException(owner.CancellationToken);
+            throw new OperationCanceledException(request.Token);
         }
         providers = refreshedProviders;
         areProvidersLoaded = true;
@@ -240,10 +241,11 @@ public partial class AgentDetailsDialog : IDisposable
 
     private async Task LoadAsync() {
         var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         loadState = AgentEditorLoadState.Loading;
         coreLoadError = null;
         try {
-            var loaded = await EditorReads.LoadAsync(owner.Target, InitialProviders, owner.CancellationToken);
+            var loaded = await EditorReads.LoadAsync(owner.Target, InitialProviders, request.Token);
             if (!IsCurrent(owner)) {
                 return;
             }
@@ -259,22 +261,22 @@ public partial class AgentDetailsDialog : IDisposable
             areProvidersLoaded = loaded.Providers.Error is null;
             areSecretsLoaded = loaded.Secrets.Error is null;
             ApplyDerivedEditorState();
-            if (loaded.Providers.Error is { } providerError) {
-                providerLoadErrorMessage = $"Failed to load providers. {providerError}";
-                NotificationService.Error("Providers failed to load", providerError);
+            if (loaded.Providers.Error is not null) {
+                providerLoadErrorMessage = "Provider references are unavailable. Retry loading the editor.";
+                NotificationService.Error("Providers failed to load", providerLoadErrorMessage);
             }
-            if (loaded.Secrets.Error is { } secretError) {
-                secretsErrorMessage = $"Failed to load secrets. {secretError}";
-                NotificationService.Error("Secrets failed to load", secretError);
+            if (loaded.Secrets.Error is not null) {
+                secretsErrorMessage = "Secret references are unavailable. Retry loading the editor.";
+                NotificationService.Error("Secrets failed to load", secretsErrorMessage);
             }
             loadState = AgentEditorLoadState.Ready;
             await TargetChanged.InvokeAsync(owner.Target);
-        } catch (OperationCanceledException) when (owner.CancellationToken.IsCancellationRequested) {
-        } catch (Exception exception) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
                 loadState = AgentEditorLoadState.Failed;
-                coreLoadError = exception.Message;
-                NotificationService.Error("Agent editor failed to load", exception.Message);
+                coreLoadError = "The requested agent editor could not be loaded. Retry or close the editor.";
+                NotificationService.Error("Agent editor failed to load", coreLoadError);
             }
         }
     }
@@ -336,19 +338,20 @@ public partial class AgentDetailsDialog : IDisposable
 
     private async Task LoadProjectStructureProjectsAsync() {
         var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         isLoadingProjectStructureProjects = true;
         projectStructureProjectsErrorMessage = null;
         await InvokeAsync(StateHasChanged);
         try {
-            var projects = await EditorReads.ReadProjectsAsync(owner.CancellationToken);
+            var projects = await EditorReads.ReadProjectsAsync(request.Token);
             if (IsCurrent(owner)) {
                 projectStructureProjects = projects;
                 areProjectStructureProjectsLoaded = true;
             }
-        } catch (Exception exception) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                projectStructureProjectsErrorMessage = $"Failed to load projects. {exception.Message}";
-                NotificationService.Error("Project list failed to load", exception.Message);
+                projectStructureProjectsErrorMessage = "The project list could not be loaded. Retry without changing your selections.";
+                NotificationService.Error("Project list failed to load", projectStructureProjectsErrorMessage);
             }
         } finally {
             if (IsCurrent(owner)) {
@@ -369,10 +372,11 @@ public partial class AgentDetailsDialog : IDisposable
             return false;
         }
         var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         isBusy = true;
         try {
             var submission = AgentEditorDraftPolicy.Capture(owner.Draft, tagValues, providers);
-            var outcome = await EditorCommands.SaveAsync(submission.Request, owner.CancellationToken);
+            var outcome = await EditorCommands.SaveAsync(submission.Request, request.Token);
             if (!IsCurrent(owner)) {
                 return false;
             }
@@ -389,9 +393,9 @@ public partial class AgentDetailsDialog : IDisposable
                     owner.SetCommitWarning(committed.Warning);
                     try {
                         await TargetChanged.InvokeAsync(owner.Target);
-                    } catch (Exception exception) {
+                    } catch (Exception) {
                         if (IsCurrent(owner)) {
-                            NotificationService.Error("Agent saved, but the editor target update failed", exception.Message);
+                            NotificationService.Error("Agent saved, but the editor target update failed", "The save was acknowledged. Reload the catalog to continue with the saved agent.");
                         }
                     }
                     if (!IsCurrent(owner)) {
@@ -401,11 +405,11 @@ public partial class AgentDetailsDialog : IDisposable
                 default:
                     throw new InvalidOperationException("Unknown agent save outcome.");
             }
-        } catch (OperationCanceledException) when (owner.CancellationToken.IsCancellationRequested) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
             return false;
-        } catch (Exception exception) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                NotificationService.Error(failureTitle, exception.Message);
+                NotificationService.Error(failureTitle, "The operation result could not be confirmed. Check the catalog before retrying. Your draft is preserved.");
             }
             return false;
         } finally {
@@ -416,19 +420,20 @@ public partial class AgentDetailsDialog : IDisposable
     }
 
     private async Task<bool> ReconcileSaveAsync(AgentEditorSession owner, string successTitle, string successDetail) {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         var pending = owner.PendingRefresh ?? throw new InvalidOperationException("There is no acknowledged save to refresh.");
         try {
-            var refreshed = await EditorCommands.ReconcileAsync(pending.AgentId, providers, owner.CancellationToken);
+            var refreshed = await EditorCommands.ReconcileAsync(pending.AgentId, providers, request.Token);
             if (!IsCurrent(owner)) {
                 return false;
             }
             ApplyReconciledEditor(owner, pending.Submission, refreshed);
             owner.CompleteReconciliation();
-        } catch (Exception exception) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
                 NotificationService.Error(pending.Kind == AgentEditorMutationKind.Save
                     ? "Agent saved, but the editor refresh failed"
-                    : "Capability verified, but the editor refresh failed", exception.Message);
+                    : "Capability verified, but the editor refresh failed", "The operation was acknowledged, but its current state could not be loaded. Retry the refresh without repeating the operation.");
             }
             return false;
         }
@@ -440,9 +445,9 @@ public partial class AgentDetailsDialog : IDisposable
         }
         try {
             await Saved.InvokeAsync(new AgentDetailsDialogResult(pending.AgentId, Deleted: false));
-        } catch (Exception exception) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                NotificationService.Error("Agent saved, but the catalog refresh failed", exception.Message);
+                NotificationService.Error("Agent saved, but the catalog refresh failed", "The save was acknowledged. Reload the catalog to see its current state.");
             }
         }
         return true;
@@ -486,6 +491,7 @@ public partial class AgentDetailsDialog : IDisposable
             return;
         }
         var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         var deletedAgentId = owner.Draft.Id!.Value;
         var deletedAgentName = string.IsNullOrWhiteSpace(owner.Draft.Name) ? "Unnamed agent" : owner.Draft.Name.Trim();
         var confirmed = false;
@@ -503,10 +509,10 @@ public partial class AgentDetailsDialog : IDisposable
                     DenseChrome = true,
                     AriaLabel = $"Confirm deletion of agent {deletedAgentName}",
                     TestId = "agents-catalog-delete-confirmation"
-                }, owner.CancellationToken) is true;
-        } catch (Exception exception) {
+                }, request.Token) is true;
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                NotificationService.Error("Agent delete confirmation failed", exception.Message);
+                NotificationService.Error("Agent delete confirmation failed", "The confirmation dialog could not be opened. No deletion was requested.");
             }
         } finally {
             if (IsCurrent(owner)) {
@@ -518,10 +524,10 @@ public partial class AgentDetailsDialog : IDisposable
         }
         isBusy = true;
         try {
-            await EditorCommands.DeleteAsync(deletedAgentId, owner.CancellationToken);
-        } catch (Exception exception) {
+            await EditorCommands.DeleteAsync(deletedAgentId, request.Token);
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                NotificationService.Error("Agent delete failed", exception.Message);
+                NotificationService.Error("Agent delete failed", "The deletion result could not be confirmed. Reload the catalog before retrying.");
             }
             return;
         } finally {
@@ -540,9 +546,9 @@ public partial class AgentDetailsDialog : IDisposable
             } else {
                 await Saved.InvokeAsync(result);
             }
-        } catch (Exception exception) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                NotificationService.Error("Agent deleted, but the catalog refresh failed", exception.Message);
+                NotificationService.Error("Agent deleted, but the catalog refresh failed", "The deletion was acknowledged. Reload the catalog to see its current state.");
             }
         }
     }
@@ -631,6 +637,7 @@ public partial class AgentDetailsDialog : IDisposable
             return;
         }
         var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         isOpeningCapabilityWizard = true;
         var created = false;
         try {
@@ -647,13 +654,13 @@ public partial class AgentDetailsDialog : IDisposable
                     DenseChrome = true,
                     AriaLabel = "Capability setup wizard",
                     TestId = "agents-details-capability-setup-dialog"
-                }, owner.CancellationToken);
+                }, request.Token);
             if (!IsCurrent(owner) || result is not CapabilityDetailsDialogResult capability) {
                 return;
             }
             created = true;
             isBusy = true;
-            var refreshedCapabilities = await EditorReads.ReadCapabilitiesAsync(owner.CancellationToken);
+            var refreshedCapabilities = await EditorReads.ReadCapabilitiesAsync(request.Token);
             if (!IsCurrent(owner)) {
                 return;
             }
@@ -675,9 +682,9 @@ public partial class AgentDetailsDialog : IDisposable
                 NotificationService.Success("Capability created",
                     "Capability was created and staged for assignment when the new agent is saved.");
             }
-        } catch (Exception exception) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                NotificationService.Error(created ? "Capability created, but assignment setup failed" : "Capability setup failed", exception.Message);
+                NotificationService.Error(created ? "Capability created, but assignment setup failed" : "Capability setup failed", created ? "The capability was created. Reload the capability catalog before assigning it." : "The capability setup could not be completed. Check the capability catalog before retrying.");
             }
         } finally {
             if (IsCurrent(owner)) {
@@ -736,18 +743,19 @@ public partial class AgentDetailsDialog : IDisposable
             return;
         }
         var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         isBusy = true;
         try {
             var submission = AgentEditorDraftPolicy.Capture(owner.Draft, tagValues, providers);
-            await EditorCommands.VerifyCapabilityAsync(owner.Draft.Id!.Value, capabilityId, owner.CancellationToken);
+            await EditorCommands.VerifyCapabilityAsync(owner.Draft.Id!.Value, capabilityId, request.Token);
             if (!IsCurrent(owner)) {
                 return;
             }
             owner.AcknowledgeMutation(owner.Draft.Id.Value, submission, AgentEditorMutationKind.CapabilityVerification);
             await ReconcileSaveAsync(owner, "Capability verified", "Capability verification completed.");
-        } catch (Exception exception) {
+        } catch (Exception) {
             if (IsCurrent(owner)) {
-                NotificationService.Error("Capability verification failed", exception.Message);
+                NotificationService.Error("Capability verification failed", "The verification result could not be confirmed. Refresh the capability evidence before retrying.");
             }
         } finally {
             if (IsCurrent(owner)) {
@@ -1305,6 +1313,7 @@ public partial class AgentDetailsDialog : IDisposable
         }
 
         var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         isConfirmingAutoApproval = true;
         var confirmed = false;
         try
@@ -1319,7 +1328,7 @@ public partial class AgentDetailsDialog : IDisposable
                     DenseChrome = true,
                     AriaLabel = "Confirm automatic approval for agent tool calls",
                     TestId = "agents-auto-approval-confirmation"
-                }, cancellationToken: owner.CancellationToken) is true;
+                }, cancellationToken: request.Token) is true;
             if (confirmed && IsCurrent(owner))
             {
                 editorModel.Permissions = editorModel.Permissions with
@@ -1328,10 +1337,10 @@ public partial class AgentDetailsDialog : IDisposable
                 };
             }
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             if (IsCurrent(owner)) {
-                NotificationService.Error("Auto-approval confirmation failed", exception.Message);
+                NotificationService.Error("Auto-approval confirmation failed", "The confirmation could not be completed. Auto-approval was not enabled.");
             }
         }
         finally

@@ -54,7 +54,7 @@ public static class ProviderProfileDisplayAdapter
         ArgumentNullException.ThrowIfNull(provider);
 
         var checkedAt = provider.LastCheckedAtUtc.HasValue
-            ? $" Last checked {provider.LastCheckedAtUtc.Value.LocalDateTime:g}."
+            ? $" Last checked {CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(provider.LastCheckedAtUtc.Value)}."
             : " Health has not been checked.";
         return $"{provider.Kind} / {provider.Transport} / {NormalizeHealthStatus(provider.HealthStatus)}.{checkedAt}";
     }

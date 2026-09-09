@@ -29,7 +29,7 @@ internal static class AgentThreadPresentationMapper
             key: ThreadKey(session.Id),
             title: session.Title,
             updatedAtUtc: session.UpdatedAtUtc,
-            updatedAtDisplay: session.UpdatedAtUtc.LocalDateTime.ToString("dd.MM HH:mm"),
+            updatedAtDisplay: CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(session.UpdatedAtUtc),
             metadata: metadata,
             preview: preview,
             searchText: string.Join(' ', session.Title, session.LastMessagePreview, metadata),

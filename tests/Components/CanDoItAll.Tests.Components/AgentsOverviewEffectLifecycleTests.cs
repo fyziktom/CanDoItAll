@@ -40,6 +40,7 @@ public sealed class AgentsOverviewEffectLifecycleTests {
             await release.Task;
             try {
                 using var registration = token.Register(() => callbacks++);
+                Assert.True(token.WaitHandle.WaitOne(0));
                 registered.SetResult();
             } catch (Exception error) {
                 registered.SetException(error);

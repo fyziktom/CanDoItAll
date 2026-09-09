@@ -4,7 +4,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright.Quarantined;
+namespace CanDoItAll.Tests.Playwright;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class AiAgentFlowTests
@@ -17,12 +17,8 @@ public sealed class AiAgentFlowTests
     }
 
     [Fact]
-    [Trait("Category", "Quarantined")]
     public async Task Agentframework_catalog_projects_agents_into_crm_hr_directory()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b09";
-        Directory.CreateDirectory(evidenceDirectory);
-
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize
@@ -35,17 +31,20 @@ public sealed class AiAgentFlowTests
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
         var providerName = $"B09 Provider {suffix}";
         var agentName = $"B09 Agent {suffix}";
-        var seededDependencies = await SeedAgentDependenciesAsync(providerName);
+        await SeedAgentDependenciesAsync(providerName);
 
         await page.GotoAsync($"{fixture.BaseUrl}/agents?tab=agents");
         await DismissStartupModalIfPresentAsync(page);
+        await page.GetByTestId("agents-catalog-new").ClickAsync();
         await page.GetByTestId("agents-catalog-name").WaitForAsync();
 
         await page.GetByTestId("agents-catalog-name").FillAsync(agentName);
         await page.GetByTestId("agents-catalog-role").FillAsync("Delivery analyst");
         await page.GetByTestId("agents-catalog-summary").FillAsync("Coordinates structured analysis and guarded delivery support.");
         await page.GetByTestId("agents-catalog-instructions").FillAsync("Review the brief, keep the runtime explicit, and create durable delivery evidence.");
-        await page.GetByTestId("agents-catalog-provider").SelectOptionAsync(new[] { seededDependencies.ProviderId.ToString() });
+        await page.GetByRole(AriaRole.Tab, new() { Name = "Runtime", Exact = true }).ClickAsync();
+        await Assertions.Expect(page.GetByTestId("agents-catalog-provider")).ToContainTextAsync(providerName);
+        await page.GetByTestId("agents-catalog-provider").SelectOptionAsync(new SelectOptionValue { Label = providerName });
         await page.GetByTestId("agents-catalog-model-override").CheckAsync();
         await page.GetByTestId("agents-catalog-model").FillAsync("llama3.2");
         await page.GetByTestId("agents-catalog-save").ClickAsync();
@@ -53,32 +52,27 @@ public sealed class AiAgentFlowTests
         await ExpectTextContainsAsync(page.Locator("body"), "Technical agent saved.");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "agentframework-agents-b09-desktop.png"),
-            FullPage = true
-        });
 
         await page.SetViewportSizeAsync(1100, 900);
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "agentframework-agents-b09-tablet.png"),
-            FullPage = true
-        });
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/agents");
+        await DismissStartupModalIfPresentAsync(page);
         await page.GetByTestId("crmhr-agent-search").WaitForAsync();
         await page.GetByTestId("crmhr-agent-search").FillAsync(agentName);
-        await page.GetByText(agentName, new PageGetByTextOptions { Exact = true }).First.ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent"), "1 matching record(s)");
+        await page.GetByTestId("crmhr-agent-item-shell").Filter(new() { HasText = agentName }).GetByTestId("crmhr-agent-item").ClickAsync();
         await page.GetByTestId("crmhr-agent-open-technical-record").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-summary-provider"), providerName);
         await page.GetByTestId("crmhr-agent-open-technical-record").ClickAsync();
         await WaitForUrlContainsAsync(page, "/agents?tab=agents&agentId=");
         await ExpectInputValueContainsAsync(page.GetByTestId("agents-catalog-name"), agentName);
+        await page.GetByRole(AriaRole.Tab, new() { Name = "Runtime", Exact = true }).ClickAsync();
         await ExpectInputValueContainsAsync(page.GetByTestId("agents-catalog-model"), "llama3.2");
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/agents");
+        await DismissStartupModalIfPresentAsync(page);
         await page.GetByTestId("crmhr-agent-search").FillAsync(agentName);
-        await page.GetByText(agentName, new PageGetByTextOptions { Exact = true }).First.ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent"), "1 matching record(s)");
+        await page.GetByTestId("crmhr-agent-item-shell").Filter(new() { HasText = agentName }).GetByTestId("crmhr-agent-item").ClickAsync();
         await page.GetByTestId("crmhr-agent-open-directory-record").ClickAsync();
         await WaitForUrlContainsAsync(page, "/crm-hr/directory?partyId=");
         await page.GetByTestId("crmhr-party-display-name").WaitForAsync();
@@ -104,6 +98,10 @@ public sealed class AiAgentFlowTests
         {
             Name = providerName,
             ConnectorPluginKey = ProviderConnectorKeys.OllamaRemote,
+            ModelPrices = [
+                new() { Model = "llama3.1", TariffKind = CanDoItAll.AgentFramework.Models.ProviderTariffKind.ExplicitFree },
+                new() { Model = "llama3.2", TariffKind = CanDoItAll.AgentFramework.Models.ProviderTariffKind.ExplicitFree }
+            ],
             ConfigSchemaVersion = "1.0",
             Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -174,7 +172,8 @@ public sealed class AiAgentFlowTests
             await Task.Delay(200);
         }
 
-        throw new TimeoutException($"Timed out waiting for text '{expectedValue}'.");
+        var observed = await locator.InnerTextAsync();
+        throw new TimeoutException($"Timed out waiting for text '{expectedValue}'. Observed: {observed[..Math.Min(observed.Length, 5000)]}");
     }
 
     private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)

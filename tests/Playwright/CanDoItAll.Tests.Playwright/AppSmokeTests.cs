@@ -142,12 +142,8 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
-    [Trait("Category", "Quarantined")]
     public async Task Settings_page_supports_manifest_driven_provider_management()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\plugin-wave\v8";
-        Directory.CreateDirectory(evidenceDirectory);
-
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize
@@ -158,24 +154,36 @@ public sealed partial class AppSmokeTests
         });
         var page = await context.NewPageAsync();
 
-        var response = await page.GotoAsync($"{fixture.BaseUrl}/settings?tab=providers");
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/agents?tab=providers");
         Assert.NotNull(response);
-        Assert.True(response!.Ok, $"Expected /settings?tab=providers to return 2xx, got {(int)response.Status}.");
+        Assert.True(response!.Ok, $"Expected /agents?tab=providers to return 2xx, got {(int)response.Status}.");
         await DismissStartupModalIfPresentAsync(page);
-        await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).WaitForAsync();
-        await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).ClickAsync();
-        await page.GetByTestId("provider-plugin-select").SelectOptionAsync(ProviderConnectorKeys.Ollama);
-        await page.GetByTestId("provider-name-input").FillAsync("Playwright Ollama");
-        await page.GetByTestId("provider-base-url-input").FillAsync("http://127.0.0.1:11434");
-        await page.GetByTestId("provider-default-model-input").FillAsync("llama3.1");
-        await page.GetByTestId("provider-save-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Provider profile saved.");
-        await page.WaitForSelectorAsync("text=Playwright Ollama");
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "phase8-settings-providers-plugin-first.png"),
-            FullPage = true
-        });
+        await Assertions.Expect(page.GetByTestId("agents-hr-agent-open-header")).ToBeEnabledAsync();
+        await page.GetByTestId("providers-new").WaitForAsync();
+        await page.GetByTestId("providers-new").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("agents-provider-profiles-panel")).ToContainTextAsync("Draft provider profile.");
+        await page.GetByTestId("providers-kind-select").SelectOptionAsync("Ollama");
+        await Assertions.Expect(page.Locator("body")).ToContainTextAsync("Connection, models, prices and provider metadata were cleared.");
+        await page.GetByTestId("providers-name-input").FillAsync("Playwright Ollama");
+        await page.GetByTestId("providers-base-url-input").FillAsync("http://127.0.0.1:11434");
+        await page.GetByTestId("providers-model-input").FillAsync("llama3.1");
+        await page.GetByTestId("providers-save").ClickAsync();
+        await page.WaitForSelectorAsync("text=The committed provider state is current.");
+        await page.GetByTestId("providers-tree-tag-children-chat").GetByText("Playwright Ollama", new() { Exact = true }).WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("providers-name-input")).ToHaveValueAsync("Playwright Ollama");
+        await Assertions.Expect(page.GetByTestId("providers-model-input")).ToHaveValueAsync("llama3.1");
+        await page.GetByTestId("providers-connections").ClickAsync();
+        await page.GetByTestId("shared-provider-source-refresh").ClickAsync();
+        await page.GetByTestId("shared-provider-source-add").ClickAsync();
+        await page.GetByTestId("shared-provider-source-name").FillAsync("Uncommitted browser source");
+        await page.GetByTestId("shared-provider-source-uri").FillAsync("https://source.invalid/");
+        await page.GetByTestId("shared-provider-source-secret").SelectOptionAsync(Guid.Empty.ToString());
+        await page.GetByTestId("shared-provider-source-save").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("shared-provider-source-dialog")).ToContainTextAsync("Select a stored source credential.");
+        await page.GetByTestId("shared-provider-source-dialog").GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true }).ClickAsync();
+        await Assertions.Expect(page.GetByTestId("shared-provider-source-dialog")).Not.ToBeVisibleAsync();
+        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("shared-provider-connections-dialog")).Not.ToBeVisibleAsync();
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 

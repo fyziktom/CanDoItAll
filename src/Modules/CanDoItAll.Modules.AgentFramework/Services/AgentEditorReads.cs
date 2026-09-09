@@ -66,8 +66,8 @@ public sealed class AgentEditorReads(
             return new(await read());
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
-        } catch (Exception exception) {
-            return new([], exception.Message);
+        } catch (Exception) {
+            return new([], "Reference data could not be loaded. Retry without changing your draft.");
         }
     }
 }

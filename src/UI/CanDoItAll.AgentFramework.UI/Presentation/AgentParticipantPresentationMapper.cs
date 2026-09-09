@@ -149,7 +149,7 @@ public static class AgentParticipantPresentationMapper
 
         if (options.ShowUpdatedAt)
         {
-            metadata.Add(new($"Updated {agent.UpdatedAtUtc.LocalDateTime:g}"));
+            metadata.Add(new($"Updated {CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(agent.UpdatedAtUtc)}"));
         }
 
         return metadata;

@@ -21,6 +21,30 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 
 public sealed class LlmChatConversationWorkspaceTests
 {
+    [Theory]
+    [InlineData("cs-CZ", false)]
+    [InlineData("ar-SA", true)]
+    public void Simple_chat_thread_and_message_times_are_UTC_in_full_and_focused_views(string culture, bool focused) {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        try {
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var conversation = CreateConversation();
+            var conversations = new StubConversationGateway();
+            conversations.ListPages.Enqueue(new([conversation], null));
+            conversations.TranscriptPages.Enqueue(CreateView(conversation, [CreateMessage(LlmMessageRole.User, "Retained product message")]));
+            using var context = CreateContext(conversations, new StubOperationGateway());
+            var cut = context.Render<LlmChatConversationWorkspace>(parameters => parameters
+                .Add(component => component.InitialConversationId, conversation.ConversationId)
+                .Add(component => component.Focused, focused));
+            cut.WaitForAssertion(() => Assert.Contains("Retained product message", cut.Markup));
+            Assert.Contains("2026-08-16 12:01:00 UTC", cut.Markup, StringComparison.Ordinal);
+            if (!focused) {
+                Assert.Contains("2026-08-16 12:00:00 UTC", cut.Markup, StringComparison.Ordinal);
+            }
+        } finally {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
+    }
     private static readonly Guid ActiveDefinitionId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid DraftDefinitionId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly Guid ConversationId = Guid.Parse("33333333-3333-3333-3333-333333333333");

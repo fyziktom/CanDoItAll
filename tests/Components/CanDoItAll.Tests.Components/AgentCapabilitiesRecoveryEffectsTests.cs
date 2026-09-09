@@ -10,6 +10,37 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentCapabilitiesRecoveryEffectsTests {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Page_disposal_keeps_diagnostic_token_alive_until_its_operation_exits(int outcome) {
+        using var fixture = new AgentCapabilitiesHostFixture();
+        var agent = Attach(fixture);
+        var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationToken token = default;
+        fixture.Workspace.VerifyOperation = (_, _, received) => {
+            token = received;
+            return pending.Task;
+        };
+        var cut = fixture.Render(agent.Id);
+        var operation = cut.Find("[data-testid='agents-capability-verify']").ClickAsync();
+        Assert.Equal(1, fixture.Workspace.VerifyCalls);
+        await cut.InvokeAsync(cut.Instance.Dispose);
+        Assert.True(token.IsCancellationRequested);
+        var callbacks = 0;
+        using var registration = token.Register(() => callbacks++);
+        Assert.Equal(1, callbacks);
+        Assert.True(token.WaitHandle.WaitOne(0));
+        if (outcome == 0) {
+            pending.SetResult();
+        } else {
+            pending.SetException(outcome == 1 ? new IOException("Private delayed diagnostic") : new OperationCanceledException(token));
+        }
+        await operation;
+        Assert.Throws<ObjectDisposedException>(() => token.WaitHandle);
+        Assert.Empty(fixture.Context.Services.GetRequiredService<NotificationService>().Messages);
+    }
     [Fact]
     public async Task Proof_recovery_reconciles_canonical_evidence_without_another_diagnostic() {
         using var fixture = new AgentCapabilitiesHostFixture();

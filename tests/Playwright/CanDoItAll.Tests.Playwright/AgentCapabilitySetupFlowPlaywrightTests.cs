@@ -19,7 +19,7 @@ public sealed class AgentCapabilitySetupFlowPlaywrightTests
     [Fact]
     public async Task Capabilities_tab_supports_tool_setup_test_and_access_preview_on_large_screen()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\codex\bundles\skill-tool-mcp-isolation-template-migration\proof\regression";
+        var evidenceDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(evidenceDirectory);
 
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
@@ -64,11 +64,15 @@ public sealed class AgentCapabilitySetupFlowPlaywrightTests
         await setupDiagnostics.EvaluateAsync("element => element.scrollIntoView({ block: 'center', inline: 'nearest' })");
         await ExpectTextContainsAsync(setupDiagnostics, "JsonParse");
 
-        await page.ScreenshotAsync(new PageScreenshotOptions
+        if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+
+            await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(evidenceDirectory, "agent-capability-setup-flow-large.png"),
             FullPage = true
         });
+
+        }
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }

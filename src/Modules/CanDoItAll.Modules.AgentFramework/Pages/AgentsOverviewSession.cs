@@ -212,11 +212,7 @@ public sealed class AgentsOverviewSession(
             if (disposed) {
                 return;
             }
-            try {
-                cancellation.Cancel();
-            } finally {
-                Dispose();
-            }
+            cancellation.Cancel();
         }
 
         public void Dispose() {

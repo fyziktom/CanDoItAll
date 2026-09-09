@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
@@ -24,13 +25,7 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var seed = await SeedThinkingEffortAgentAsync(suffix);
-        var evidenceDirectory = Path.Combine(
-            PlaywrightTestHostPaths.RepositoryRoot,
-            "artifacts",
-            "bundles",
-            "agent-thinking-effort-configuration",
-            "evidence",
-            "Thinking effort acceptance");
+        var evidenceDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(evidenceDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -97,12 +92,19 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
             });
         await using var scope = serviceProvider.CreateAsyncScope();
         var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var secret = await scope.ServiceProvider.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {
+            Name = $"Thinking Effort Browser {suffix}",
+            Kind = SecretKind.ApiKey,
+            SecretValue = "browser-test-placeholder",
+            Scope = "workspace"
+        });
+        Assert.True(secret.IsSuccess);
         var providerId = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = $"Thinking Effort Browser {suffix}",
             Kind = ProviderKind.OpenAi,
             BaseUrl = $"https://api.openai.com/v1/playwright-thinking-effort/{suffix}",
-            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            ApiKeyEnvironmentVariable = $"secret:{secret.Value:D}",
             DefaultModel = SupportedModel,
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.Chat,
@@ -134,9 +136,11 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
         var response = await page.GotoAsync($"{fixture.BaseUrl}/agents?tab=agents");
         Assert.True(response?.Ok);
         await DismissStartupModalIfPresentAsync(page);
+        await Assertions.Expect(page.GetByTestId("agents-hr-agent-open-header")).ToBeEnabledAsync();
         var search = page.GetByTestId("agents-catalog-search");
         await search.WaitForAsync();
         await search.FillAsync(seed.AgentName);
+        await Assertions.Expect(page.GetByTestId("agents-catalog-card")).ToHaveCountAsync(1);
         var agentCard = page.GetByTestId("agents-catalog-card")
             .Filter(new LocatorFilterOptions { HasTextString = seed.AgentName });
         await Assertions.Expect(agentCard).ToHaveCountAsync(1);
@@ -203,10 +207,11 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
         => Assertions.Expect(selector.Locator("option:checked")).ToHaveTextAsync(expectedLabel);
 
     private static Task CaptureEvidenceAsync(IPage page, string evidenceDirectory, string fileName)
-        => page.ScreenshotAsync(new PageScreenshotOptions
+        => Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true"
+            ? page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(evidenceDirectory, fileName)
-        });
+        }) : Task.CompletedTask;
 
     private static async Task ExpectTextContainsAsync(ILocator locator, string expectedValue, int timeoutMs = 10_000)
     {

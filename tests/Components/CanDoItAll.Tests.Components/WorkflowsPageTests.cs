@@ -34,6 +34,38 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowsPageTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Canvas_preview_backend_failures_do_not_disclose_private_detail(int lane) {
+        const string poison = "CANVAS_PRIVATE_SENTINEL api_key=test-only-private-canvas /srv/private/canvas at Internal.Preview()";
+        var runner = new CapturingWorkflowTestRunner { Failure = lane == 1 ? new InvalidOperationException(poison) : null,
+            PublicFailure = lane == 2 ? poison : null };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IWorkflowTestRunner>(runner);
+            services.AddSingleton<IProjectStructureRuntimeGateway>(new PreviewProjectGateway(Guid.NewGuid()) {
+                Failure = lane == 0 ? new InvalidOperationException(poison) : null
+            });
+        });
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, lane == 0 ? CreateProjectStructurePreviewDefinition() : CreatePreviewProgressDefinition())
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+        await cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync();
+        if (lane == 0) {
+            Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-input-dialog']"));
+            Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-project-id']"));
+        } else {
+            Assert.NotNull(runner.LastRequest);
+            await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
+            Assert.Contains(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+                message => message.Summary == "Workflow preview failed");
+        }
+        Assert.DoesNotContain("CANVAS_PRIVATE_SENTINEL", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+            message => (message.Detail ?? "").Contains("CANVAS_PRIVATE_SENTINEL", StringComparison.Ordinal));
+    }
     [Fact]
     public async Task Workflows_page_opens_exact_workflow_curator_only_after_context_is_ready()
     {
@@ -3421,6 +3453,8 @@ public sealed class WorkflowsPageTests
 
     private sealed class CapturingWorkflowTestRunner : IWorkflowTestRunner
     {
+        public Exception? Failure { get; init; }
+        public string? PublicFailure { get; init; }
         public WorkflowTestRunRequest? LastRequest { get; private set; }
 
         public Task<WorkflowTestRunResult> RunAsync(
@@ -3428,6 +3462,9 @@ public sealed class WorkflowsPageTests
             CancellationToken cancellationToken = default)
         {
             LastRequest = request;
+            if (Failure is not null) {
+                return Task.FromException<WorkflowTestRunResult>(Failure);
+            }
             var definition = request.DraftDefinition ?? CreateProjectStructurePreviewDefinition();
             var now = DateTimeOffset.UtcNow;
             var run = new WorkflowRunSnapshot(
@@ -3441,13 +3478,13 @@ public sealed class WorkflowsPageTests
                 now,
                 now);
             return Task.FromResult(new WorkflowTestRunResult(
-                Succeeded: true,
+                Succeeded: PublicFailure is null,
                 WorkflowValidationResult.Success,
                 run,
                 Events: [],
                 Artifacts: [],
                 PendingExternalRequests: [],
-                ErrorMessage: string.Empty));
+                ErrorMessage: PublicFailure ?? string.Empty));
         }
     }
 
@@ -3598,8 +3635,10 @@ public sealed class WorkflowsPageTests
 
     private sealed class PreviewProjectGateway(Guid projectId) : IProjectStructureRuntimeGateway
     {
+        public Exception? Failure { get; init; }
         public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>(
+            => Failure is not null ? Task.FromException<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>(Failure)
+                : Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>(
             [
                 new ProjectStructureRuntimeProjectSummary(
                     projectId,

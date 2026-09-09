@@ -2270,5 +2270,813 @@
     "readiness": {"agentChat": "Ready", "workflows": "Ready", "completeAgentModule": "Ready at the accepted Agent boundary", "cleanSourceMode": "Pass for current declared working trees; clean committed-checkout reproducibility awaits sibling delivery/revision alignment and the owner post-push clean build", "architectureFoundationHandoff": "Ready for owner delivery sequence; branch creation remains gated by the exact final primary commit"},
     "handoff": {"program": "CanDoItAll_Architecture_Foundation_2026-09-08_v1.1_EN", "branchPoint": "Exact owner-created primary commit containing this frozen source and final four-file bundle after Components delivery; no future commit hash is invented", "deliveryOrder": ["Owner commits and pushes the existing five-file CanDoItAll.Components DialogService patch.", "Update and verify the primary repository against that available Components revision; retain explicit FileTools source/CI identity reconciliation.", "Owner commits and pushes this final Agent closure on components-decoupling.", "Perform one clean source-mode build from the exact delivered revisions.", "Owner creates the Architecture Foundation branch from that exact final primary commit."], "nextWork": ["owner-mediated cross-module commands and queries", "explicit data and mutation ownership", "receipts/idempotency", "reverse reads", "module contracts", "CRM/HR and Simple Chats management gaps", "Scheduler, Resources and Projects collaboration"], "implemented": false, "branchCreated": false},
     "scope": "No optional Components MCP calls, non-Agent refactor, execution/persistence redesign, Architecture Foundation implementation, new bundle or retained evidence file, screenshot or history mutation. Raw diagnostics remain ignored."
+  },
+  "independentAdversarialClosure": {
+    "status": "Ready at the validated Agent component boundary; owner delivery pending",
+    "instructionSha256": "9f5da31e0981b073630ed8ba7179d2af3fe5e38e6d78cbc4599168086c7f9f99",
+    "scope": {
+      "componentsMcpCalls": 0,
+      "nonAgentProductionChanges": 0,
+      "foundationImplementation": false,
+      "historyOperations": false,
+      "newBranch": false,
+      "siblingSourceChanges": false,
+      "newBundle": false
+    },
+    "entryUtc": "2026-09-09T16:43:36.745380+00:00",
+    "completedUtc": "2026-09-09T20:44:29.965524+00:00",
+    "entry": {
+      "head": "1a0a88f5e381fc971fa42f114499f940736c38be",
+      "tree": "0282752cfda619357f279e18d8708ee3d08323af",
+      "parent": "d2cebac447809c1a214ba28171919e3c79145a69",
+      "remote": "1a0a88f5e381fc971fa42f114499f940736c38be",
+      "remoteTree": "0282752cfda619357f279e18d8708ee3d08323af",
+      "development": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+      "mergeBase": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+      "programEntry": "68db2ee0e63a2ce6baa681e9722acc0a67877b21",
+      "index": "",
+      "working": "",
+      "untracked": []
+    },
+    "committedPredecessor": {
+      "historicalEntry": "d2cebac447809c1a214ba28171919e3c79145a69",
+      "historicalProposedSourceSha256": "5ed41b846e38f62de576b86206986b8adb15aec71b0d005752e62223720e366c",
+      "committedHead": "1a0a88f5e381fc971fa42f114499f940736c38be",
+      "sourceFiles": 35,
+      "exactBytes": 28,
+      "lineEndingNormalized": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowEventPresentationPolicy.cs",
+        "tests/Playwright/GovernanceBrowserFixture/WorkflowBrowserFixture.cs",
+        "tests/Playwright/GovernanceBrowserFixture/agent-final-chat.cjs",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentDeliveryPresentationPolicyTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/WorkflowAdoptionHardeningCheckpointTests.cs"
+      ],
+      "unexplained": [],
+      "mixedLineEndingProof": [
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/WorkflowAnalyticsPanelTests.cs",
+          "baseNewline": "b'\\r\\n'",
+          "differentNewlineLines": [
+            105,
+            106
+          ]
+        }
+      ],
+      "physicalMixedNewlineProof": [
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowHistorySurface.razor"
+      ]
+    },
+    "finalIdentity": {
+      "utc": "2026-09-09T20:43:41.446703+00:00",
+      "head": "1a0a88f5e381fc971fa42f114499f940736c38be",
+      "tree": "0282752cfda619357f279e18d8708ee3d08323af",
+      "remote": "1a0a88f5e381fc971fa42f114499f940736c38be",
+      "remoteTree": "0282752cfda619357f279e18d8708ee3d08323af",
+      "parent": "d2cebac447809c1a214ba28171919e3c79145a69",
+      "mergeBase": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+      "index": "",
+      "branch": "components-decoupling",
+      "sourceSha256": "e6136e653c08fb6bc07e1ad99ea0e1f96e4f92858633921651a3ac2986278db5",
+      "untracked": [
+        "tests/Components/CanDoItAll.Tests.Components/AgentChildAdversarialTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentEditorAdversarialTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentTimestampBoundaryTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AvatarPickerAdversarialTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentUiCompiledBoundaryTests.cs"
+      ],
+      "ignoredTaskRoot": ".artifacts/agent-independent",
+      "ignoredTaskFiles": 464,
+      "unchangedCommitIndexDependenciesAssets": true
+    },
+    "proposedSource": {
+      "utc": "2026-09-09T19:27:17.627470+00:00",
+      "head": "1a0a88f5e381fc971fa42f114499f940736c38be",
+      "proposedSourceSha256": "e6136e653c08fb6bc07e1ad99ea0e1f96e4f92858633921651a3ac2986278db5",
+      "algorithm": "SHA-256 of sorted UTF-8 path<TAB>mode<TAB>Git-filtered-blob-id<LF>; all proposed Git files excluding four-file closure bundle; no object/index write",
+      "files": 9619
+    },
+    "testIntegrity": {
+      "sourceMethods": 8775,
+      "conservativelyAgentRelatedSourceMethods": 7217,
+      "compiledDiscoveryEntries": 11347,
+      "owningProjects": {
+        "CanDoItAll.Tests.Unit": {
+          "sourceMethods": 5857,
+          "agentSourceMethods": 4845,
+          "discovered": 7693,
+          "selected": 6309,
+          "duplicateDisplayEntries": 8
+        },
+        "CanDoItAll.Tests.Components": {
+          "sourceMethods": 1458,
+          "agentSourceMethods": 1142,
+          "discovered": 1894,
+          "selected": 1542,
+          "duplicateDisplayEntries": 0
+        },
+        "CanDoItAll.Tests.Integration": {
+          "sourceMethods": 1191,
+          "agentSourceMethods": 1019,
+          "discovered": 1470,
+          "selected": 1281,
+          "duplicateDisplayEntries": 0
+        },
+        "CanDoItAll.Memory.Tests": {
+          "sourceMethods": 166,
+          "agentSourceMethods": 151,
+          "discovered": 181,
+          "selected": 165,
+          "duplicateDisplayEntries": 0
+        },
+        "CanDoItAll.AgentFramework.Memory.Tests": {
+          "sourceMethods": 19,
+          "agentSourceMethods": 19,
+          "discovered": 22,
+          "selected": 22,
+          "duplicateDisplayEntries": 0
+        },
+        "CanDoItAll.Tests.Playwright": {
+          "sourceMethods": 84,
+          "agentSourceMethods": 41,
+          "discovered": 87,
+          "selected": 12,
+          "duplicateDisplayEntries": 0
+        }
+      },
+      "sourceAbsentFromDiscovery": 0,
+      "unexplainedExecutionOmissions": 0,
+      "duplicateDisplayEntriesPreserved": 8,
+      "runtimeTheoryExpansion": [
+        {
+          "method": "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects",
+          "discovered": 1,
+          "executed": 6
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.Capability_mismatch_denial_is_consistent_for_all_handler_callers",
+          "discovered": 1,
+          "executed": 5
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Security.MemoryOperationAccessAuthorizerTests.Any_changed_ownership_dimension_is_denied",
+          "discovered": 1,
+          "executed": 9
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.No_provider_denial_is_consistent_for_all_handler_callers",
+          "discovered": 1,
+          "executed": 5
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+          "discovered": 1,
+          "executed": 21
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+          "discovered": 1,
+          "executed": 8
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+          "discovered": 1,
+          "executed": 8
+        }
+      ],
+      "historicalChangedMethods": 33,
+      "historicalRenamedMethod": 1,
+      "currentAuditAddedLogicalMethods": 32,
+      "currentAuditNamespaceMove": {
+        "from": "CanDoItAll.Tests.Playwright.Quarantined.AiAgentFlowTests.Agentframework_catalog_projects_agents_into_crm_hr_directory",
+        "to": "CanDoItAll.Tests.Playwright.AiAgentFlowTests.Agentframework_catalog_projects_agents_into_crm_hr_directory",
+        "protection": "Same Agent edit and CRM readback actions restored to active browser selection; no behavioral deletion."
+      },
+      "restoredWeakenedProviderGuards": 3,
+      "structuralClassification": {
+        "Durable behavior or compiled boundary": 153,
+        "Temporary migration guard": 138,
+        "Obsolete shape guard": 6
+      },
+      "remainingGatedMethods": 37,
+      "remainingGatedDiscoveryCases": 46,
+      "agentQuarantinedMethods": 0,
+      "detail": "Exact history, gate, baseline and structural adjudications are in the separated report section; raw inventories remain ignored."
+    },
+    "findings": [
+      {
+        "id": "A01",
+        "severity": "P0",
+        "disposition": "Confirmed and fixed: fixed public failure messages; typed conflict/validation/commit outcomes and useful product metadata retained."
+      },
+      {
+        "id": "A02",
+        "severity": "P0",
+        "disposition": "Confirmed and fixed: accepted chat identity is separate from catalog highlight; all actions capture the accepted target."
+      },
+      {
+        "id": "A03",
+        "severity": "P0/P1",
+        "disposition": "Confirmed and fixed: target generation, operation-owned children, identity checks, keyed workspace reconstruction and per-owner browser voice APIs. Execution cancellation is unchanged."
+      },
+      {
+        "id": "A04",
+        "severity": "P0",
+        "disposition": "Confirmed and fixed: Ordinal deduplication at five Agent/contextual staging and prompt boundaries. Three exact pre-fix failures; 103 owning cases pass."
+      },
+      {
+        "id": "A05",
+        "severity": "P1",
+        "disposition": "Confirmed and fixed: cancel immediately; each actual operation owns and disposes its token at completion; stale success/failure/finally cannot publish. No generic cancellation framework."
+      },
+      {
+        "id": "A06",
+        "severity": "P1",
+        "disposition": "Confirmed and fixed: public failed-load state, retry, blocked unsafe save; child operation ownership and late-result fencing."
+      },
+      {
+        "id": "A07",
+        "severity": "P1",
+        "disposition": "Confirmed and fixed: reuse invariant ChatPresentationTime UTC formatter; preserve existing stable pending-message timestamp capture."
+      },
+      {
+        "id": "T01",
+        "severity": "P1",
+        "disposition": "Confirmed and fixed: compiled provider-host injection/adapter constructor checks and evaluated Workspace reference exclusion restore the forbidden directions."
+      },
+      {
+        "id": "D01",
+        "severity": "Review",
+        "disposition": "Disproved for current entry: no raw technical fallback; classified bounded encoded product output/human JSON; approved structured redacted diagnostics only; unsafe artifact references omitted; UTC and request-owned CTS retained."
+      },
+      {
+        "id": "D02",
+        "severity": "Review",
+        "disposition": "Disproved for current committed hosts by delayed-token and poison behavior. Contextual sibling consumer defects are separately fixed in A02/A03. Canonical sanitizer and pure relative path policy remain single owners."
+      },
+      {
+        "id": "D03",
+        "severity": "Review",
+        "disposition": "Disproved test assumptions corrected without weakening production protection: CLR System.Runtime is not CanDoItAll runtime; Team filter fixture; new-editor IsNew guard; wizard transport fixture; disposed renderer markup inspection. Original failures and entry replay retained."
+      },
+      {
+        "id": "T02",
+        "severity": "Review",
+        "disposition": "Confirmed and fixed in tests: restore current New/Runtime/provider UI controls; typed secret reference; explicit-free fixture prices; exact model override and CRM round trip; await actual filtered state and starter completion; all original meaningful actions remain."
+      },
+      {
+        "id": "P01",
+        "severity": "P2",
+        "disposition": "Deferred to Agent Scenario Harness feature owner: no Route attribute or production consumer exists in current source/compiled closure. Must gain public failure/UTC policy before future activation; current routes do not render it."
+      },
+      {
+        "id": "P02",
+        "severity": "P2",
+        "disposition": "Disproved as actionable attachment identity defect: descriptive label only, no copy/link/content resolution/prompt use. Existing NFC behavior test retained. Future navigation must use the canonical resource-path policy."
+      },
+      {
+        "id": "P03",
+        "severity": "P2",
+        "disposition": "Deferred practical extension to the respective Agent editor feature owner: provider wrapper has no fields; fields/effects require Module and backend adapters. Broad sandbox reference/controller extraction would exceed this task. Public bUnit, production DI and real Web save/readback remain proof."
+      },
+      {
+        "id": "P04",
+        "severity": "P2",
+        "disposition": "Deferred to Workflow runtime/executor or Memory UI architecture test owner. These obsolete shape portions are not component-boundary evidence; preserve behavioral protection until the owner replaces the shape checks. No line-count-driven production split."
+      },
+      {
+        "id": "E01",
+        "severity": "External fixture",
+        "disposition": "Deferred to Plugins Docker fixture/catalog owner. Exact enabled test executed; isolated host has no plugin; no container created. Original failure remains, never counted as workflow proof."
+      },
+      {
+        "id": "E02",
+        "severity": "P2 outside Agent",
+        "disposition": "Deferred to Projects/Workbench browser owner. Source body performs no Agent action; it is not the Agent selection. Test unchanged, original failure retained, all Agent route actions independently exercised."
+      },
+      {
+        "id": "B01",
+        "severity": "Reviewed baseline",
+        "disposition": "Source correction attempted first: attachment case-fold bug fixed. Final minimal baseline delta adds one guarded CapabilityKind.McpServer occurrence and removes five stale occurrences; no scanner/allowlist weakening. Owner: Agent capability editor; remove allowance when guarded domain branch is removed."
+      }
+    ],
+    "redProof": {
+      "committedByteReplay": {
+        "cases": 138,
+        "failed": 106,
+        "passed": 32,
+        "sourceRestored": true
+      },
+      "caseDistinctAttachmentWitnesses": {
+        "red": 3,
+        "owningGreen": 103
+      },
+      "originalFailuresRetained": true
+    },
+    "focused": {
+      "method": "Frozen Stable intersection plus disjoint 409 Unit and 45 Integration supplemental cases",
+      "discovered": 9319,
+      "executed": 9374,
+      "projects": {
+        "CanDoItAll.Tests.Unit": {
+          "discovered": 6309,
+          "executed": 6343,
+          "outcomes": {
+            "Passed": 6343
+          },
+          "missing": [],
+          "expansion": [
+            {
+              "method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+              "discovered": 1,
+              "executed": 21
+            },
+            {
+              "method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+              "discovered": 1,
+              "executed": 8
+            },
+            {
+              "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+              "discovered": 1,
+              "executed": 8
+            }
+          ]
+        },
+        "CanDoItAll.Tests.Components": {
+          "discovered": 1542,
+          "executed": 1542,
+          "outcomes": {
+            "Passed": 1542
+          },
+          "missing": [],
+          "expansion": []
+        },
+        "CanDoItAll.Tests.Integration": {
+          "discovered": 1281,
+          "executed": 1286,
+          "outcomes": {
+            "Passed": 1286
+          },
+          "missing": [],
+          "expansion": [
+            {
+              "method": "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects",
+              "discovered": 1,
+              "executed": 6
+            }
+          ]
+        },
+        "CanDoItAll.Memory.Tests": {
+          "discovered": 165,
+          "executed": 181,
+          "outcomes": {
+            "Passed": 181
+          },
+          "missing": [],
+          "expansion": [
+            {
+              "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.Capability_mismatch_denial_is_consistent_for_all_handler_callers",
+              "discovered": 1,
+              "executed": 5
+            },
+            {
+              "method": "CanDoItAll.Memory.Tests.Security.MemoryOperationAccessAuthorizerTests.Any_changed_ownership_dimension_is_denied",
+              "discovered": 1,
+              "executed": 9
+            },
+            {
+              "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.No_provider_denial_is_consistent_for_all_handler_callers",
+              "discovered": 1,
+              "executed": 5
+            }
+          ]
+        },
+        "CanDoItAll.AgentFramework.Memory.Tests": {
+          "discovered": 22,
+          "executed": 22,
+          "outcomes": {
+            "Passed": 22
+          },
+          "missing": [],
+          "expansion": []
+        }
+      },
+      "failed": 0,
+      "unexplainedSkipped": 0,
+      "explainedEnvironmentEarlyReturnCases": 22,
+      "behaviorCasesExcludingEarlyReturns": 9352
+    },
+    "broad": {
+      "discovered": 10763,
+      "executed": 10818,
+      "outcomes": {
+        "Passed": 10818
+      },
+      "missing": [],
+      "extraMethods": [],
+      "expansion": [
+        {
+          "method": "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects",
+          "discovered": 1,
+          "executed": 6
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.Capability_mismatch_denial_is_consistent_for_all_handler_callers",
+          "discovered": 1,
+          "executed": 5
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Security.MemoryOperationAccessAuthorizerTests.Any_changed_ownership_dimension_is_denied",
+          "discovered": 1,
+          "executed": 9
+        },
+        {
+          "method": "CanDoItAll.Memory.Tests.Runtime.MemoryOperationHandlerTests.No_provider_denial_is_consistent_for_all_handler_callers",
+          "discovered": 1,
+          "executed": 5
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+          "discovered": 1,
+          "executed": 21
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+          "discovered": 1,
+          "executed": 8
+        },
+        {
+          "method": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+          "discovered": 1,
+          "executed": 8
+        }
+      ],
+      "uniqueExecutionIds": 10818,
+      "runs": [
+        {
+          "file": "stable-independent_net10.0_20260909155100.trx",
+          "counts": {
+            "total": "1894",
+            "executed": "1894",
+            "passed": "1894",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          }
+        },
+        {
+          "file": "stable-independent_net10.0_20260909164020.trx",
+          "counts": {
+            "total": "1410",
+            "executed": "1410",
+            "passed": "1410",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          }
+        },
+        {
+          "file": "stable-independent_net10.0_20260909164022.trx",
+          "counts": {
+            "total": "22",
+            "executed": "22",
+            "passed": "22",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          }
+        },
+        {
+          "file": "stable-independent_net10.0_20260909164036.trx",
+          "counts": {
+            "total": "196",
+            "executed": "196",
+            "passed": "196",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          }
+        },
+        {
+          "file": "stable-independent_net10.0_20260909164248.trx",
+          "counts": {
+            "total": "7296",
+            "executed": "7296",
+            "passed": "7296",
+            "failed": "0",
+            "error": "0",
+            "timeout": "0",
+            "aborted": "0",
+            "inconclusive": "0",
+            "passedButRunAborted": "0",
+            "notRunnable": "0",
+            "notExecuted": "0",
+            "disconnected": "0",
+            "warning": "0",
+            "completed": "0",
+            "inProgress": "0",
+            "pending": "0"
+          }
+        }
+      ],
+      "startedUtc": "2026-09-09T19:27:22.891736+00:00",
+      "seconds": 4525.780999999959,
+      "exit": 0
+    },
+    "browser": {
+      "dotnetCases": 12,
+      "passed": 12,
+      "failed": 0,
+      "nodeDrivers": 18,
+      "remainingSandboxDrivers": 2,
+      "surfacesCovered": 13,
+      "hosts": [
+        "isolated real Web",
+        "Parity",
+        "Fast"
+      ],
+      "pageErrors": 0,
+      "newScreenshots": 0,
+      "originalFailureClassification": "Obsolete/current-control fixture configuration and observed interactive-readiness races corrected without deleting actions or loosening exact outcomes. Original failures retained; provider corrected isolates 3/3; final complete Agent selection 12/12."
+    },
+    "watcher": {
+      "visibleEdits": 27,
+      "areas": [
+        "AgentFramework.UI",
+        "SimpleChats.UI",
+        "Workflows.UI"
+      ],
+      "editKinds": [
+        "Razor",
+        "C# presentation",
+        "CSS"
+      ],
+      "hosts": [
+        "Web",
+        "Parity",
+        "Fast"
+      ],
+      "exactBytesRestored": true,
+      "failure": "One Parity C# restoration encountered a Windows mapped-file error; owned process ended, exact bytes restored atomically and remaining eight checks passed. Original failure retained.",
+      "ownedProcessesStopped": true
+    },
+    "builds": {
+      "sourceModeSolutionRebuild": {
+        "command": "dotnet build CanDoItAll.slnx -c Release --no-restore -t:Rebuild /m:1",
+        "warnings": 0,
+        "errors": 0
+      },
+      "stableTests": {
+        "passed": true,
+        "unchangedWarnings": 8
+      },
+      "playwrightFixtureParityFast": "Pass",
+      "componentsPatchCases": 21
+    },
+    "static": {
+      "evaluatedProjects": 142,
+      "graphRoots": 123,
+      "cycles": [],
+      "primaryCompiledSurfaces": 19,
+      "primaryServiceInjections": 0,
+      "workspaceProviderManagementDirectReference": false,
+      "portability": {
+        "status": "Pass without --write-baseline",
+        "reviewedAllowances": 14403,
+        "historicalAddedEntriesReproduced": 178,
+        "historicalRemovedEntries": 55,
+        "currentDelta": {
+          "added": [
+            {
+              "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+              "category": "mcp",
+              "source_fingerprint": "10b62e00ae1ee0b7951dcb440dcf903e62d1497e974887c15c80fba0ea394de6",
+              "count": 1
+            }
+          ],
+          "removed": [
+            {
+              "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
+              "category": "case-policy",
+              "source_fingerprint": "28699095a3a2d8fd6e5c4ad439db95379cd408aebe0a1c1ede3ec061a0f58591",
+              "count": 2
+            },
+            {
+              "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+              "category": "case-policy",
+              "source_fingerprint": "5b53363751d94069318acba3f6ea7447553b415847562711f13a6b15e9ce8ad3",
+              "count": 1
+            },
+            {
+              "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+              "category": "case-policy",
+              "source_fingerprint": "63e9443ee78278b8add48eefe9aee5673506e8b24d1ae30e313ba3fec1f5d4d7",
+              "count": 1
+            },
+            {
+              "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+              "category": "mcp",
+              "source_fingerprint": "821a530e326156639533470b41f547f8403721ac313a6a262fcdbf2703cc023a",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "utf8": "Pass; frozen source and final four-file bundle",
+      "sourceSecrets": {
+        "status": "Pass; no new match",
+        "textFiles": 7364,
+        "binaryFiles": 2259,
+        "existingMatches": 245,
+        "added": []
+      },
+      "retainedEvidenceSecrets": "Pass; all four final members, bounded secret rules and unique synthetic poison sentinels",
+      "documentation": "Pass; 205 maintained Markdown files, 9 validator self-tests and proposed Git bundle links",
+      "manifest": "Pass; three exact SHA-256 members, no extra bundle file; Git clean filters preserve retained bytes",
+      "publicApi": "21 Components patch navigation/publishing approval tests pass; no sibling bytes changed."
+    },
+    "dependencies": {
+      "CanDoItAll.Components": {
+        "head": "c3e6aa03a878994c0ba8aed6af017d0be75f3796",
+        "tree": "8ee42b3f1f97fd4bb7b3b3f526029228d8ed6e23",
+        "patchSha256": "f81413a9e7a248d70b0aa86328a7cbdf74070f459ac15d49e4091a44ba42b43d"
+      },
+      "CanDoItAll.FileTools": {
+        "head": "7c7453c6583365ae5bd63f8fc6efc4a776e15818",
+        "tree": "6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d",
+        "patchSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      "unchangedFileToolsCiPin": "498b36825bd5a5222429972af120b04becf4b3f6"
+    },
+    "changedFiles": {
+      "production": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSwitchDialog.razor",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/AvatarPicker.razor",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/CapabilityProofPanel.razor",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/MemoryHistoryPanel.razor",
+        "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatConversationPresentationMapper.cs",
+        "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatOperationUiGateway.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsOverviewSession.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSession.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFrameworkStatusDisplayAdapters.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamDetailsDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentThreadPresentationMapper.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderRefreshButton.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorCommands.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorReads.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorOperations.cs",
+        "src/UI/CanDoItAll.AgentFramework.UI/Overview/AgentUsageDisplay.cs",
+        "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs"
+      ],
+      "tests": [
+        "tests/Components/CanDoItAll.Tests.Components/AgentCapabilitiesRecoveryEffectsTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentCatalogBoundaryTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentChatEffectOwnershipTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentChildAdversarialTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentEditorAdversarialTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentEditorSessionTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentTimestampBoundaryTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentsHomePageTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AgentsOverviewEffectLifecycleTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/AvatarPickerAdversarialTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/ContextualAgentWorkspaceWindowsFailureTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/ExternalWorkspaceRootSelectionFieldTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/LlmChatConversationWorkspaceTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/SharedProviderLifetimeRegressionTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/SharedProviderOwnedEffectsTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/SharedProviderRefreshButtonTests.cs",
+        "tests/Components/CanDoItAll.Tests.Components/WorkflowsPageTests.cs",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/AgentCapabilitySetupFlowPlaywrightTests.cs",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/AgentMemoryProviderSettingsPlaywrightTests.cs",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/AgentThinkingEffortSettingsPlaywrightTests.cs",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/AppSmokeTests.cs",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/ProviderHistoryPremergeUiTests.cs",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/WorkflowShellSmokeTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentCapabilitiesSessionTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentEditorCommandsTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/AgentsOverviewSessionTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/ProviderEditorOperationsTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/AgentUiCompiledBoundaryTests.cs",
+        "tests/Unit/CanDoItAll.Tests.Unit/LlmChatUiBoundaryTests.cs"
+      ],
+      "validation": [
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "bundle": [
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/README.md",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/report.md",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/validation-summary.json",
+        "codex/bundles/UI_AgentModule_Final_Closure_Bundle/MANIFEST.sha256"
+      ]
+    },
+    "limits": [
+      "Native Linux/Unix cases require an actual Linux host; Windows ignores per-process TZ for local timezone. Three cultures and positive/negative input offsets pass.",
+      "Enabled Docker proof fails plugins.not-found for candoitall.docker in its isolated fixture; Docker CLI/daemon are available. No container created. Not counted as workflow proof.",
+      "Paid/live provider, external two-instance and optional performance cases remain explicitly enumerated; no operator data mutation.",
+      "Provider Profile and Agent Details fields remain accepted Module effectful children; no disproportionate sandbox dependency added.",
+      "ScenarioHarnessPanel has no current route/consumer; legacy error/time presentation must be corrected before future activation.",
+      "Unchanged backend/adjacent feature source-shape tests are supplemental migration debt, not the evidence for component readiness."
+    ],
+    "readiness": {
+      "testIntegrity": "Ready; all exclusions and historical weakened guards adjudicated",
+      "adversarialSecurity": "Ready; no unresolved in-scope P0/P1",
+      "functionalParity": "Ready",
+      "practicalUiIteration": "Ready with explicit provider/Agent editor boundary decision",
+      "agentChat": "Ready",
+      "workflows": "Ready",
+      "completeAgentModule": "Ready at accepted component boundary",
+      "cleanSourceMode": "Locally reproducible with exact live siblings; clean remote reproduction requires owner delivery and FileTools pin reconciliation",
+      "architectureFoundationHandoff": "Ready for owner delivery; no branch created"
+    },
+    "handoff": {
+      "program": "CanDoItAll_Architecture_Foundation_2026-09-08_v1.1_EN",
+      "proposedPrimarySourceSha256": "e6136e653c08fb6bc07e1ad99ea0e1f96e4f92858633921651a3ac2986278db5",
+      "baseCommit": "1a0a88f5e381fc971fa42f114499f940736c38be",
+      "branchPoint": "The owner-created final components-decoupling commit containing this source identity and sealed four-file bundle, after sibling delivery; future commit SHA does not yet exist.",
+      "deliveryOrder": [
+        "Commit/push the existing five-file Components DialogService patch.",
+        "Verify primary source mode against that available Components revision and reconcile the existing FileTools local/CI identity.",
+        "Commit/push this final primary Agent closure.",
+        "Perform one clean source-mode build from those delivered revisions.",
+        "Create the Architecture Foundation branch from that exact final primary commit."
+      ],
+      "nextWork": [
+        "Owner-mediated cross-module commands and queries",
+        "Explicit mutation/data ownership",
+        "Receipts and idempotency",
+        "Reverse reads",
+        "Module-facing contracts",
+        "CRM/HR and Simple Chats management gaps",
+        "Scheduler, Resources, Projects and other-module collaboration"
+      ],
+      "scope": "No further component decoupling on this branch; no Foundation implementation, new branch or non-Agent production refactor."
+    },
+    "evidencePolicy": {
+      "retainedFiles": 4,
+      "newScreenshots": 0,
+      "newRetainedEvidenceLimitBytes": 4194304,
+      "rawRoot": ".artifacts/agent-independent",
+      "retainedBytes": 482256,
+      "addedBytes": 288886
+    }
   }
 }

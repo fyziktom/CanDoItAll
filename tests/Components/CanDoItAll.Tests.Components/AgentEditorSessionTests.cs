@@ -187,7 +187,7 @@ public sealed class AgentEditorSessionTests {
         cut.Render(parameters => parameters.Add(component => component.Section, AgentEditorSection.ProjectStructureAccess));
         Assert.Equal(0, reads.ProjectReads);
         cut.Find("[data-testid='agents-catalog-project-structure-load']").Click();
-        cut.WaitForAssertion(() => Assert.Contains("Project probe failure", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("The project list could not be loaded. Retry without changing your selections.", cut.Markup));
         cut.FindAll("button").Single(button => button.TextContent.Trim() == "Retry project list").Click();
         cut.WaitForElement("[data-testid='agents-catalog-project-structure-projects']");
         Assert.Equal(2, reads.ProjectReads);
@@ -196,14 +196,14 @@ public sealed class AgentEditorSessionTests {
         Assert.Contains(project.Name, cut.Markup);
     }
 
-    private static Task<ComponentTestHarness> CreateHarnessAsync(AgentEditorReadFixture reads, EmptyMemoryProfiles? memory = null)
+    internal static Task<ComponentTestHarness> CreateHarnessAsync(AgentEditorReadFixture reads, EmptyMemoryProfiles? memory = null)
         => ComponentTestHarness.CreateAsync(services => {
             services.AddSingleton<IAgentEditorReads>(reads);
             services.AddSingleton<IMemoryProviderProfileStore>(memory ?? new());
             services.RemoveAll<IMemoryProviderDriver>();
         });
 
-    private sealed class EmptyMemoryProfiles : IMemoryProviderProfileStore {
+    internal sealed class EmptyMemoryProfiles : IMemoryProviderProfileStore {
         public int Reads { get; private set; }
         public Task UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Editor rendering must not write a memory profile.");

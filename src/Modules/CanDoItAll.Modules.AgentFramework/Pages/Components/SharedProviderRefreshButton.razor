@@ -59,7 +59,8 @@
             return;
         }
         var operation = ++generation;
-        var token = owner.Token;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        var token = request.Token;
         var providerId = target;
         busy = true;
         message = null;
@@ -121,7 +122,8 @@
             return;
         }
         var operation = ++generation;
-        var token = owner.Token;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        var token = request.Token;
         busy = true;
         try {
             if (await DeliverAsync(attempt, operation, token) && IsCurrent(operation, token)) {

@@ -139,6 +139,10 @@ public partial class CapabilitySetupWizardDialog : IDisposable
 
     private async Task UploadSkillAsync(InputFileChangeEventArgs args)
     {
+        if (!IsCurrent) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (!IsCurrent || isBusy) {
             return;
         }
@@ -148,9 +152,9 @@ public partial class CapabilitySetupWizardDialog : IDisposable
 
         try
         {
-            await using var stream = file.OpenReadStream(MaxSkillUploadBytes, lifetime.Token);
+            await using var stream = file.OpenReadStream(MaxSkillUploadBytes, request.Token);
             using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            var content = await reader.ReadToEndAsync(lifetime.Token);
+            var content = await reader.ReadToEndAsync(request.Token);
             if (!IsCurrent) {
                 return;
             }
@@ -231,9 +235,9 @@ public partial class CapabilitySetupWizardDialog : IDisposable
         }
         catch (Exception) when (!IsCurrent) {
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            NotificationService.Error("Capability create failed", exception.Message);
+            NotificationService.Error("Capability create failed", "The create result could not be confirmed. Check the catalog before retrying.");
         }
         finally
         {

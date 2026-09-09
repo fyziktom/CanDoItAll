@@ -303,17 +303,20 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
         if (attempt is not null) {
             session.Recovery.Begin(attempt);
         }
-        return active = new(++generation, session.SelectionVersion, session.TargetCancellationToken,
+        return active = new(++generation, session.SelectionVersion, CancellationTokenSource.CreateLinkedTokenSource(session.TargetCancellationToken),
             attempt, submission, session.EditContext, session.State.Section);
     }
     private bool IsCurrent(Operation operation) => ReferenceEquals(active, operation) &&
         session.IsCurrentSelection(operation.Version) && !operation.Token.IsCancellationRequested;
     private void End(Operation operation) {
+        operation.Cancellation.Dispose();
         if (ReferenceEquals(active, operation)) {
             active = null;
         }
     }
-    private sealed record Operation(long Generation, long Version, CancellationToken Token,
-        ProviderMutationAttempt? Attempt, ProviderEditorSubmission? Submission, EditContext Context, ProviderEditorSection Section);
+    private sealed record Operation(long Generation, long Version, CancellationTokenSource Cancellation,
+        ProviderMutationAttempt? Attempt, ProviderEditorSubmission? Submission, EditContext Context, ProviderEditorSection Section) {
+        public CancellationToken Token { get; } = Cancellation.Token;
+    }
     private sealed record PendingCommit(long Version, Guid ProviderId, ProviderEditorSubmission? Submission, bool Deleted, bool RepairProjection);
 }

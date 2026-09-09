@@ -30,7 +30,7 @@ public static class AgentUsageDisplay
     public static string FormatLastUsed(DateTimeOffset? value)
     {
         return value.HasValue
-            ? value.Value.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)
+            ? CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(value.Value)
             : "Never";
     }
 

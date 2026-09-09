@@ -3,6 +3,7 @@
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Logging
+@using CanDoItAll.AgentFramework.UI.Chat
 @implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService WorkspaceService
 @inject IAgentReferenceDataProvider AgentReferenceDataProvider
@@ -101,7 +102,7 @@
                      data-testid="@($"{TestId}-agent-list")">
                     @foreach (var item in FilteredAgents)
                     {
-                        var isSelected = selectedAgentId == item.Agent.Id;
+                        var isSelected = catalogSelectedAgentId == item.Agent.Id;
                         <article class="contextual-agent-window__agent @(isSelected ? "is-selected" : string.Empty)"
                                  data-testid="@($"{TestId}-agent-{item.Agent.Id:N}")"
                                  @key="item.Agent.Id">
@@ -207,7 +208,7 @@
                           State="@chatWindowState"
                           StateChanged="HandleChatWindowStateChangedAsync">
         <div class="contextual-agent-chat-window" data-testid="@($"{TestId}-chat-content")">
-            <ChatWorkspacePanel Agent="@selectedAgent"
+            <ChatWorkspacePanel @key="targetGeneration" Agent="@selectedAgent"
                                 Session="@workspace?.SelectedSession"
                                 ActiveRun="@workspace?.SelectedRun"
                                 ExecutionLog="@executionLog"
@@ -346,9 +347,34 @@
     private IReadOnlyList<ExecutionLogEntry> executionLog = [];
     private IReadOnlyList<AgentRunMetric> metrics = [];
     private long workspaceLoadGeneration;
+    private long targetGeneration;
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource targetCancellation = new();
+    private bool disposed;
+    private string browserVoiceOwnerId = Guid.NewGuid().ToString("N");
+
+    private bool IsCurrentTarget(long generation) => !disposed && generation == targetGeneration;
+
+    private void RenewTarget() {
+        var previousVoiceOwner = browserVoiceOwnerId;
+        browserVoiceOwnerId = Guid.NewGuid().ToString("N");
+        _ = DisposeBrowserVoiceOwnerAsync(previousVoiceOwner);
+        targetGeneration++;
+        Interlocked.Increment(ref workspaceLoadGeneration);
+        targetCancellation.Cancel();
+        targetCancellation.Dispose();
+        targetCancellation = new();
+        pendingUserPrompt = string.Empty;
+        draftAttachmentPaths = [];
+        isChatBusy = false;
+        isVoiceRecording = false;
+        isVoiceTranscribing = false;
+        isVoiceSpeaking = false;
+    }
     private IReadOnlyList<string> draftAttachmentPaths = [];
     private AgentDefinition? selectedAgent;
     private Guid? selectedAgentId;
+    private Guid? catalogSelectedAgentId;
     private Guid? selectedSessionId;
     private string searchText = string.Empty;
     private string draftPrompt = string.Empty;
@@ -420,12 +446,18 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (disposed) {
+            return;
+        }
         var contextKey = BuildContextKey();
         if (string.Equals(contextKey, lastContextKey, StringComparison.Ordinal))
         {
             return;
         }
 
+        if (!string.IsNullOrEmpty(lastContextKey)) {
+            RenewTarget();
+        }
         lastContextKey = contextKey;
         ResolveAccessibleAgents();
         await CloseChatIfOutOfScopeAsync();
@@ -433,23 +465,31 @@
 
     private async Task LoadAgentsAsync()
     {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         isLoadingAgents = true;
         loadError = string.Empty;
 
         try
         {
             var referenceData = await AgentReferenceDataProvider.GetAsync(
-                new AgentReferenceDataRequest(AgentReferenceDataSections.Agents));
+                new AgentReferenceDataRequest(AgentReferenceDataSections.Agents), request.Token);
+            if (disposed) {
+                return;
+            }
             agents = referenceData.Agents;
             ResolveAccessibleAgents();
         }
-        catch (Exception exception)
+        catch (Exception) when (disposed) {
+        }
+        catch (Exception)
         {
-            loadError = exception.Message;
+            loadError = "Contextual agents could not be loaded. Reopen the workspace to retry.";
         }
         finally
         {
-            isLoadingAgents = false;
+            if (!disposed) {
+                isLoadingAgents = false;
+            }
         }
     }
 
@@ -499,7 +539,7 @@
 
     private void SelectAgent(Guid agentId)
     {
-        selectedAgentId = agentId;
+        catalogSelectedAgentId = agentId;
     }
 
     private async Task HandleAgentKeyDownAsync(KeyboardEventArgs args, ContextualAgentAccessSummary item)
@@ -514,6 +554,13 @@
 
     private async Task OpenAgentChatAsync(ContextualAgentAccessSummary item)
     {
+        if (disposed) {
+            return;
+        }
+        RenewTarget();
+        var generation = targetGeneration;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
+        catalogSelectedAgentId = item.Agent.Id;
         selectedAgentId = item.Agent.Id;
         selectedAgent = item.Agent;
         selectedSessionId = null;
@@ -526,81 +573,86 @@
 
         try
         {
-            var session = await WorkspaceService.GetOrCreateChatSessionAsync(item.Agent.Id);
-            await LoadWorkspaceAsync(item.Agent.Id, session.Id);
-            Notify("Thread ready", "success", $"Opened a new contextual thread with {ResolveAgentName(item.Agent)}.");
+            var session = await WorkspaceService.GetOrCreateChatSessionAsync(item.Agent.Id, cancellationToken: request.Token);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
+            if (session.AgentId != item.Agent.Id) {
+                throw new InvalidDataException("The contextual session belongs to a different agent.");
+            }
+            if (await LoadWorkspaceAsync(item.Agent.Id, session.Id) && IsCurrentTarget(generation)) {
+                Notify("Thread ready", "success", $"Opened a new contextual thread with {ResolveAgentName(item.Agent)}.");
+            }
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrentTarget(generation)) {
+        }
+        catch (Exception)
         {
-            Notify("Unable to open agent chat", "danger", exception.Message);
+            Notify("Unable to open agent chat", "danger", "The contextual thread could not be opened. Retry when the agent is available.");
         }
         finally
         {
-            isChatBusy = false;
+            if (IsCurrentTarget(generation)) {
+                isChatBusy = false;
+            }
         }
     }
 
-    private async Task OpenAgentThreadHistoryDialogAsync(ContextualAgentAccessSummary item)
-    {
-        selectedAgentId = item.Agent.Id;
-        selectedAgent = item.Agent;
-        IReadOnlyList<ChatSessionRecord> sessions;
-
+    private async Task OpenAgentThreadHistoryDialogAsync(ContextualAgentAccessSummary item) {
+        if (disposed || isChatBusy) {
+            return;
+        }
+        var generation = targetGeneration;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
+        catalogSelectedAgentId = item.Agent.Id;
         isChatBusy = true;
-        try
-        {
-            sessions = (await WorkspaceService.ListChatSessionsAsync(item.Agent.Id))
+        try {
+            var sessions = (await WorkspaceService.ListChatSessionsAsync(item.Agent.Id, request.Token))
                 .OrderByDescending(session => session.UpdatedAtUtc)
                 .Take(AgentThreadHistoryDialog.MaxThreadCount)
                 .ToList();
-        }
-        catch (Exception exception)
-        {
-            Notify("Unable to load thread history", "danger", exception.Message);
-            return;
-        }
-        finally
-        {
-            isChatBusy = false;
-        }
-
-        var result = await DialogService.OpenAsync<AgentThreadHistoryDialog>(
-            "Agent thread history",
-            new Dictionary<string, object?>
-            {
-                [nameof(AgentThreadHistoryDialog.Agent)] = item.Agent,
-                [nameof(AgentThreadHistoryDialog.Sessions)] = sessions,
-                [nameof(AgentThreadHistoryDialog.SelectedSessionId)] = selectedSessionId
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Contextual agent",
-                Subtitle = $"{ResolveAgentName(item.Agent)} / latest {sessions.Count} thread(s)",
-                Size = ModalSize.Wide,
-                DenseChrome = true,
-                TestId = $"{TestId}-agent-thread-history-dialog",
-                AriaLabel = "Agent thread history"
-            });
-
-        if (result is not Guid sessionId)
-        {
-            return;
-        }
-
-        isChatBusy = true;
-        try
-        {
-            await LoadWorkspaceAsync(item.Agent.Id, sessionId);
-            OpenChatWindow();
-            Notify("Thread opened", "success", $"Opened {ResolveChatSummary()} with {ResolveAgentName(item.Agent)}.");
-        }
-        catch (Exception exception)
-        {
-            Notify("Unable to open thread", "danger", exception.Message);
-        }
-        finally
-        {
-            isChatBusy = false;
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
+            var result = await DialogService.OpenAsync<AgentThreadHistoryDialog>(
+                "Agent thread history",
+                new Dictionary<string, object?> {
+                    [nameof(AgentThreadHistoryDialog.Agent)] = item.Agent,
+                    [nameof(AgentThreadHistoryDialog.Sessions)] = sessions,
+                    [nameof(AgentThreadHistoryDialog.SelectedSessionId)] = selectedSessionId
+                },
+                new DialogOptions {
+                    Eyebrow = "Contextual agent",
+                    Subtitle = $"{ResolveAgentName(item.Agent)} / latest {sessions.Count} thread(s)",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    TestId = $"{TestId}-agent-thread-history-dialog",
+                    AriaLabel = "Agent thread history"
+                }, request.Token);
+            if (!IsCurrentTarget(generation) || result is not Guid sessionId) {
+                return;
+            }
+            if (!sessions.Any(session => session.Id == sessionId && session.AgentId == item.Agent.Id)) {
+                throw new InvalidDataException("The selected contextual thread is unavailable.");
+            }
+            RenewTarget();
+            generation = targetGeneration;
+            selectedAgentId = item.Agent.Id;
+            selectedAgent = item.Agent;
+            selectedSessionId = sessionId;
+            workspace = null;
+            isChatBusy = true;
+            if (await LoadWorkspaceAsync(item.Agent.Id, sessionId) && IsCurrentTarget(generation)) {
+                OpenChatWindow();
+                Notify("Thread opened", "success", $"Opened {ResolveChatSummary()} with {ResolveAgentName(item.Agent)}.");
+            }
+        } catch (Exception) when (!IsCurrentTarget(generation)) {
+        } catch (Exception) {
+            Notify("Unable to open thread", "danger", "The requested thread history could not be loaded. Retry when the agent is available.");
+        } finally {
+            if (IsCurrentTarget(generation)) {
+                isChatBusy = false;
+            }
         }
     }
 
@@ -633,6 +685,9 @@
 
     private async Task SendMessageAsync()
     {
+        if (disposed || isChatBusy) {
+            return;
+        }
         if (!selectedAgentId.HasValue)
         {
             Notify("Select an agent", "warning", "Open a contextual agent before sending a prompt.");
@@ -646,6 +701,7 @@
             return;
         }
 
+        var operationGeneration = targetGeneration;
         var executionAgentId = selectedAgentId.Value;
         var executionSessionId = selectedSessionId;
         var executionLoadGeneration = Volatile.Read(ref workspaceLoadGeneration);
@@ -780,21 +836,27 @@
         }
         finally
         {
-            pendingUserPrompt = string.Empty;
-            isChatBusy = false;
+            if (IsCurrentTarget(operationGeneration)) {
+                pendingUserPrompt = string.Empty;
+                isChatBusy = false;
+            }
         }
     }
 
     private async Task<bool> TryReloadFailedWorkspaceAsync(
         AgentChatRunFailedException exception)
     {
+        if (disposed) {
+            return false;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
         var loadGeneration = Interlocked.Increment(ref workspaceLoadGeneration);
         try
         {
             var failedWorkspace = await WorkspaceService.GetChatAgentWorkspaceAsync(
                 exception.AgentId,
-                exception.ChatSessionId);
-            if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+                exception.ChatSessionId, request.Token);
+            if (disposed || loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
             {
                 return false;
             }
@@ -807,8 +869,8 @@
             }
 
             var failedRunDetail = await WorkspaceService.GetExecutionRunDetailAsync(
-                exception.ExecutionRunId);
-            if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+                exception.ExecutionRunId, request.Token);
+            if (disposed || loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
             {
                 return false;
             }
@@ -865,7 +927,7 @@
         Guid? chatSessionId,
         long loadGeneration)
     {
-        return loadGeneration == Volatile.Read(ref workspaceLoadGeneration) &&
+        return !disposed && loadGeneration == Volatile.Read(ref workspaceLoadGeneration) &&
                selectedAgentId == agentId &&
                selectedSessionId == chatSessionId;
     }
@@ -877,7 +939,7 @@
         long loadGeneration,
         bool executionCompleted)
     {
-        if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration) ||
+        if (disposed || loadGeneration != Volatile.Read(ref workspaceLoadGeneration) ||
             selectedAgentId != agentId)
         {
             return false;
@@ -965,11 +1027,12 @@
         IReadOnlyList<PendingToolApprovalDecision>? decisions,
         bool autoApprovePendingToolCalls)
     {
-        if (!selectedAgentId.HasValue || !selectedSessionId.HasValue)
+        if (disposed || isChatBusy || !selectedAgentId.HasValue || !selectedSessionId.HasValue)
         {
             return;
         }
 
+        var operationGeneration = targetGeneration;
         var executionAgentId = selectedAgentId.Value;
         var executionSessionId = selectedSessionId.Value;
         var executionLoadGeneration = Volatile.Read(ref workspaceLoadGeneration);
@@ -1103,110 +1166,163 @@
         }
         finally
         {
-            isChatBusy = false;
+            if (IsCurrentTarget(operationGeneration)) {
+                isChatBusy = false;
+            }
         }
     }
 
     private async Task StageAttachmentsAsync()
     {
+        if (disposed || isChatBusy) {
+            return;
+        }
         if (workspace?.SelectedRun is null)
         {
             Notify("No run artifacts", "warning", "Run a prompt first so the thread has execution artifacts to stage.");
             return;
         }
 
-        var detail = await WorkspaceService.GetExecutionRunDetailAsync(workspace.SelectedRun.Id);
-        var artifactPaths = detail.Artifacts
-            .Select(item => item.RelativePath)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (artifactPaths.Count == 0)
-        {
-            Notify("No artifacts", "warning", "The selected run does not have persisted artifacts yet.");
-            return;
+        var generation = targetGeneration;
+        var run = workspace.SelectedRun;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
+        isChatBusy = true;
+        try {
+            var detail = await WorkspaceService.GetExecutionRunDetailAsync(run.Id, request.Token);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
+            if (detail.Run.Id != run.Id || detail.Run.AgentId != selectedAgentId || detail.Run.ChatSessionId != selectedSessionId) {
+                throw new InvalidDataException("The artifacts belong to a different contextual thread.");
+            }
+            draftAttachmentPaths = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath))
+                .OfType<string>().Distinct(StringComparer.Ordinal).ToArray();
+            var omitted = detail.Artifacts.Count - draftAttachmentPaths.Count;
+            Notify("Artifacts staged", omitted > 0 ? "warning" : "success",
+                $"Staged {draftAttachmentPaths.Count} artifact path(s) for the next prompt." +
+                (omitted > 0 ? " Unsafe or duplicate references were omitted." : string.Empty));
+        } catch (Exception) when (!IsCurrentTarget(generation)) {
+        } catch (Exception) {
+            Notify("Attachment failed", "danger", "The thread artifacts could not be loaded.");
+        } finally {
+            if (IsCurrentTarget(generation)) {
+                isChatBusy = false;
+            }
         }
-
-        draftAttachmentPaths = artifactPaths;
-        Notify("Artifacts staged", "success", $"Staged {artifactPaths.Count} artifact path(s) for the next prompt.");
     }
 
     private async Task StageUploadedAttachmentFilesAsync(InputFileChangeEventArgs args)
     {
+        if (disposed || isChatBusy) {
+            return;
+        }
         const int maxFiles = 8;
-
+        var generation = targetGeneration;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
         isChatBusy = true;
         try
         {
             var stagedPaths = new List<string>(draftAttachmentPaths);
             foreach (var file in args.GetMultipleFiles(maxFiles))
             {
-                await using var stream = file.OpenReadStream(AgentChatAttachmentStagingService.MaxImageAttachmentBytes);
+                await using var stream = file.OpenReadStream(AgentChatAttachmentStagingService.MaxImageAttachmentBytes, request.Token);
                 var staged = await AttachmentStagingService.StageImageAsync(
                     file.Name,
                     file.ContentType,
                     file.Size,
-                    stream);
-                stagedPaths.Add(staged.RelativePath);
+                    stream, request.Token);
+                if (!IsCurrentTarget(generation)) {
+                    return;
+                }
+                if (!RelativeAttachmentPath.TryNormalize(staged.RelativePath, out var relativePath)) {
+                    throw new InvalidDataException("Attachment staging returned an unsafe relative reference.");
+                }
+                stagedPaths.Add(relativePath);
             }
 
             draftAttachmentPaths = stagedPaths
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(StringComparer.Ordinal)
                 .ToList();
             Notify("Attachments staged", "success", $"Staged {draftAttachmentPaths.Count} attachment path(s) for the next prompt.");
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrentTarget(generation)) {
+        }
+        catch (Exception)
         {
-            Notify("Attachment failed", "danger", exception.Message);
+            Notify("Attachment failed", "danger", "The image could not be staged. Check its type and size before trying again.");
         }
         finally
         {
-            isChatBusy = false;
+            if (IsCurrentTarget(generation)) {
+                isChatBusy = false;
+            }
         }
     }
 
     private async Task HandleSessionTitleChangedAsync(string title)
     {
-        if (!selectedAgentId.HasValue || !selectedSessionId.HasValue)
+        if (disposed || isChatBusy || !selectedAgentId.HasValue || !selectedSessionId.HasValue)
         {
             return;
         }
 
+        var agentId = selectedAgentId.Value;
+        var sessionId = selectedSessionId.Value;
+        var generation = targetGeneration;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
         isChatBusy = true;
         try
         {
             var session = await WorkspaceService.RenameChatSessionAsync(
-                selectedAgentId.Value,
-                selectedSessionId.Value,
-                title);
-            await LoadWorkspaceAsync(selectedAgentId.Value, session.Id);
-            Notify("Thread renamed", "success", "Thread title updated.");
+                agentId,
+                sessionId,
+                title, request.Token);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
+            if (session.AgentId != agentId || session.Id != sessionId) {
+                throw new InvalidDataException("The renamed contextual session does not match the requested target.");
+            }
+            if (await LoadWorkspaceAsync(agentId, sessionId) && IsCurrentTarget(generation)) {
+                Notify("Thread renamed", "success", "Thread title updated.");
+            }
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrentTarget(generation)) {
+        }
+        catch (Exception)
         {
-            Notify("Rename failed", "danger", exception.Message);
+            Notify("Rename failed", "danger", "The rename result could not be confirmed. Reload the thread before trying again.");
         }
         finally
         {
-            isChatBusy = false;
+            if (IsCurrentTarget(generation)) {
+                isChatBusy = false;
+            }
         }
     }
 
     private async Task<bool> LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId)
     {
+        if (disposed) {
+            return false;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
         var loadGeneration = Interlocked.Increment(ref workspaceLoadGeneration);
-        var nextAgent = agents.FirstOrDefault(agent => agent.Id == agentId) ?? selectedAgent;
-        var nextWorkspace = await WorkspaceService.GetChatAgentWorkspaceAsync(agentId, preferredSessionId);
-        if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+        var nextAgent = agents.SingleOrDefault(agent => agent.Id == agentId)
+            ?? throw new InvalidDataException("The requested contextual agent is unavailable.");
+        var nextWorkspace = await WorkspaceService.GetChatAgentWorkspaceAsync(agentId, preferredSessionId, request.Token);
+        if (disposed || loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
         {
             return false;
         }
 
+        if (nextWorkspace.AgentId != agentId || (preferredSessionId.HasValue && nextWorkspace.SelectedSessionId != preferredSessionId)) {
+            throw new InvalidDataException("The contextual workspace belongs to a different requested target.");
+        }
         var runtimeSnapshot = await WorkspaceService.GetChatRuntimeSnapshotAsync(
             agentId,
-            nextWorkspace.SelectedSessionId);
-        if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+            nextWorkspace.SelectedSessionId, request.Token);
+        if (disposed || loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
         {
             return false;
         }
@@ -1265,15 +1381,18 @@
         TooltipService.Close();
     }
 
-    private Task OpenRuntimeDetailsDialogAsync()
+    private async Task OpenRuntimeDetailsDialogAsync()
     {
-        if (!CanOpenRuntimeDetails)
+        if (disposed || !CanOpenRuntimeDetails)
         {
             Notify("Runtime unavailable", "warning", "Send a prompt first so runtime evidence can be opened.");
-            return Task.CompletedTask;
+            return;
         }
 
-        _ = DialogService.OpenAsync<AgentRuntimeDetailsDialog>(
+        var generation = targetGeneration;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
+        try {
+        await DialogService.OpenAsync<AgentRuntimeDetailsDialog>(
             "Runtime details",
             new Dictionary<string, object?>
             {
@@ -1292,42 +1411,57 @@
                 TestId = $"{TestId}-runtime-details-dialog",
                 AriaLabel = "Agent runtime details",
                 Style = "max-height:calc(100vh - 2rem);"
-            });
-
-        return Task.CompletedTask;
+            }, request.Token);
+        } catch (Exception) when (!IsCurrentTarget(generation)) {
+        } catch (Exception) {
+            Notify("Runtime details unavailable", "warning", "The runtime dialog could not be opened. Retry the current thread.");
+        }
     }
 
     private async Task DownloadThreadHistoryAsync()
     {
-        if (!selectedAgentId.HasValue || selectedAgent is null)
+        if (disposed || !selectedAgentId.HasValue || selectedAgent is null)
         {
             Notify("Select an agent", "warning", "Open a contextual agent before exporting thread history.");
             return;
         }
 
+        var generation = targetGeneration;
+        var agent = selectedAgent;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
         isDownloadingThreadHistory = true;
         try
         {
-            var json = await BuildThreadHistoryExportJsonAsync(selectedAgent);
+            var json = await BuildThreadHistoryExportJsonAsync(agent, request.Token);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
             await JsRuntime.InvokeVoidAsync(
-                "CanDoItAll.agentFramework.downloadJson",
-                BuildThreadHistoryExportFileName(selectedAgent),
+                "CanDoItAll.agentFramework.downloadJson", request.Token,
+                BuildThreadHistoryExportFileName(agent),
                 json);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
             Notify("Thread history exported", "success", "Downloaded the agent thread history JSON for debugging.");
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrentTarget(generation)) {
+        }
+        catch (Exception)
         {
-            Notify("Export failed", "danger", exception.Message);
+            Notify("Export failed", "danger", "Thread history could not be exported. Retry the current thread.");
         }
         finally
         {
-            isDownloadingThreadHistory = false;
+            if (IsCurrentTarget(generation)) {
+                isDownloadingThreadHistory = false;
+            }
         }
     }
 
-    private async Task<string> BuildThreadHistoryExportJsonAsync(AgentDefinition agent)
+    private async Task<string> BuildThreadHistoryExportJsonAsync(AgentDefinition agent, CancellationToken cancellationToken)
     {
-        var sessions = (await WorkspaceService.ListChatSessionsAsync(agent.Id))
+        var sessions = (await WorkspaceService.ListChatSessionsAsync(agent.Id, cancellationToken))
             .OrderByDescending(session => session.UpdatedAtUtc)
             .ToList();
         var exportSessions = new List<AgentThreadHistoryExportSession>(sessions.Count);
@@ -1338,7 +1472,7 @@
                 new ExecutionRunQuery(
                     AgentId: agent.Id,
                     ChatSessionId: session.Id,
-                    Take: int.MaxValue));
+                    Take: int.MaxValue), cancellationToken);
             var exportRuns = new List<AgentThreadHistoryExportRun>(runs.Count);
 
             foreach (var run in runs.OrderByDescending(item => item.UpdatedAtUtc))
@@ -1347,15 +1481,18 @@
                 {
                     exportRuns.Add(new AgentThreadHistoryExportRun(
                         run,
-                        await WorkspaceService.GetExecutionRunDetailAsync(run.Id),
+                        await WorkspaceService.GetExecutionRunDetailAsync(run.Id, cancellationToken),
                         string.Empty));
                 }
-                catch (Exception exception)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                    throw;
+                }
+                catch (Exception)
                 {
                     exportRuns.Add(new AgentThreadHistoryExportRun(
                         run,
                         Detail: null,
-                        LoadError: exception.Message));
+                        LoadError: "Run detail could not be loaded."));
                 }
             }
 
@@ -1436,7 +1573,7 @@
 
     private bool ShouldAcceptExecutionEntry(ExecutionLogEntry entry)
     {
-        if (selectedAgentId != entry.AgentId)
+        if (disposed || selectedAgentId != entry.AgentId)
         {
             return false;
         }
@@ -1458,6 +1595,8 @@
 
     private string BuildPromptWithAttachments()
     {
+        draftAttachmentPaths = draftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>()
+            .Distinct(StringComparer.Ordinal).ToArray();
         if (draftAttachmentPaths.Count == 0)
         {
             return draftPrompt.Trim();
@@ -1496,57 +1635,66 @@ Use these workspace artifacts as input:
         return Task.CompletedTask;
     }
 
-    private async Task ToggleVoiceRecordingAsync()
-    {
-        if (!CanUseSelectedAgentVoiceMode)
-        {
+    private async Task ToggleVoiceRecordingAsync() {
+        if (disposed || isVoiceTranscribing || isChatBusy) {
+            return;
+        }
+        if (!CanUseSelectedAgentVoiceMode) {
             SetVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
             return;
         }
-
-        if (!isVoiceRecording)
-        {
-            try
-            {
-                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
-                isVoiceModeEnabled = true;
-                isVoiceRecording = true;
-                SetVoiceStatus("Recording", "danger");
-            }
-            catch (Exception exception)
-            {
-                SetVoiceStatus("Record failed", "danger", exception.Message);
-            }
-
+        if (isVoiceRecording) {
+            await StopRecordingAndSendAsync();
             return;
         }
-
-        await StopRecordingAndSendAsync();
+        var generation = targetGeneration;
+        var voiceOwner = browserVoiceOwnerId;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
+        try {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecordingForOwner", request.Token, voiceOwner);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
+            isVoiceModeEnabled = true;
+            isVoiceRecording = true;
+            SetVoiceStatus("Recording", "danger");
+        } catch (Exception) when (!IsCurrentTarget(generation)) {
+        } catch (Exception) {
+            SetVoiceStatus("Record failed", "danger", "Recording could not be started. Check microphone access and retry.");
+        }
     }
 
-    private async Task StopRecordingAndSendAsync()
-    {
+    private async Task StopRecordingAndSendAsync() {
+        if (disposed) {
+            return;
+        }
+        var generation = targetGeneration;
+        var voiceOwner = browserVoiceOwnerId;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
         isVoiceRecording = false;
         isVoiceTranscribing = true;
         SetVoiceStatus("Transcribing", "info");
-        try
-        {
+        try {
             var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
-                "CanDoItAll.agentFramework.voice.stopRecording");
-            var transcription = await VoiceService.TranscribeAsync(recording.ToTranscriptionRequest());
-
+                "CanDoItAll.agentFramework.voice.stopRecordingForOwner", request.Token, voiceOwner);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
+            var transcription = await VoiceService.TranscribeAsync(recording.ToTranscriptionRequest(), request.Token);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
             draftPrompt = transcription.Text;
             composerKey++;
             SetVoiceStatus("Sending", "info");
             await SendMessageAsync();
-        }
-        catch (Exception exception)
-        {
-            SetVoiceStatus("Voice failed", "danger", exception.Message);
-        }
-        finally
-        {
-            isVoiceTranscribing = false;
+        } catch (Exception) when (!IsCurrentTarget(generation)) {
+        } catch (Exception) {
+            SetVoiceStatus("Voice failed", "danger", "The recording could not be transcribed. Retry or enter your message as text.");
+        } finally {
+            if (IsCurrentTarget(generation)) {
+                isVoiceTranscribing = false;
+            }
         }
     }
 
@@ -1567,44 +1715,63 @@ Use these workspace artifacts as input:
 
     private async Task SpeakTextAsync(string text)
     {
-        if (selectedAgent is null)
+        if (disposed || selectedAgent is null)
         {
             SetVoiceStatus("No agent", "warning", "Select an agent before using text-to-speech.");
             return;
         }
 
+        var generation = targetGeneration;
+        var voiceOwner = browserVoiceOwnerId;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(targetCancellation.Token);
         isVoiceSpeaking = true;
         SetVoiceStatus("Speaking", "primary");
         try
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueueForOwner", request.Token, voiceOwner);
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
             var queuedChunks = 0;
             await foreach (var synthesis in VoiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
                                text,
                                SelectedAgentVoiceAccess,
-                               SuppressIdentifierOmissionNotice: ShouldSuppressIdentifierOmissionNotice())))
+                               SuppressIdentifierOmissionNotice: ShouldSuppressIdentifierOmissionNotice()), request.Token))
             {
+                if (!IsCurrentTarget(generation)) {
+                    return;
+                }
                 TrackIdentifierOmissionNotice(synthesis);
                 queuedChunks++;
                 await JsRuntime.InvokeVoidAsync(
-                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+                    "CanDoItAll.agentFramework.voice.enqueueAudioForOwner", request.Token, voiceOwner,
                     Convert.ToBase64String(synthesis.AudioBytes),
                     synthesis.ContentType);
+                if (!IsCurrentTarget(generation)) {
+                    return;
+                }
                 if (queuedChunks == 1)
                 {
                     SetVoiceStatus("Playing", "primary");
                 }
             }
 
+            if (!IsCurrentTarget(generation)) {
+                return;
+            }
             SetVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrentTarget(generation)) {
+        }
+        catch (Exception)
         {
-            SetVoiceStatus("Speak failed", "danger", exception.Message);
+            SetVoiceStatus("Speak failed", "danger", "Audio playback could not be completed. Retry when voice is available.");
         }
         finally
         {
-            isVoiceSpeaking = false;
+            if (IsCurrentTarget(generation)) {
+                isVoiceSpeaking = false;
+            }
         }
     }
 
@@ -1922,10 +2089,28 @@ Use these workspace artifacts as input:
         return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        targetGeneration++;
+        Interlocked.Increment(ref workspaceLoadGeneration);
+        lifetime.Cancel();
+        targetCancellation.Cancel();
+        lifetime.Dispose();
+        targetCancellation.Dispose();
         WorkspaceService.ExecutionUpdated -= HandleExecutionUpdated;
-        return ValueTask.CompletedTask;
+        await DisposeBrowserVoiceOwnerAsync(browserVoiceOwnerId);
+    }
+
+    private async Task DisposeBrowserVoiceOwnerAsync(string ownerId) {
+        try {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.disposeOwner", ownerId);
+        } catch (Exception exception) {
+            Logger.LogDebug("Contextual voice owner cleanup could not finish ({FailureType}).", exception.GetType().Name);
+        }
     }
 
     private sealed record TagPaletteEntry(

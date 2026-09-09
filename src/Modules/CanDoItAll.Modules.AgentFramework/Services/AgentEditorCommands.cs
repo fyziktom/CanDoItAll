@@ -30,8 +30,8 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
         cancellationToken.ThrowIfCancellationRequested();
         try {
             NormalizeWorkspaceAccess(request);
-        } catch (Exception exception) {
-            return new AgentEditorSaveOutcome.Rejected(exception.Message);
+        } catch (Exception) {
+            return new AgentEditorSaveOutcome.Rejected("External workspace roots could not be prepared. Review the selected paths and bindings.");
         }
         try {
             return new AgentEditorSaveOutcome.Committed(await workspace.SaveAgentAsync(request, cancellationToken));
@@ -43,8 +43,8 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
             return new AgentEditorSaveOutcome.Rejected(exception.Message);
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
-        } catch (Exception exception) {
-            return new AgentEditorSaveOutcome.Unconfirmed(exception.Message);
+        } catch (Exception) {
+            return new AgentEditorSaveOutcome.Unconfirmed("The save result could not be confirmed. Check the catalog before reopening the agent or starting another draft.");
         }
     }
 

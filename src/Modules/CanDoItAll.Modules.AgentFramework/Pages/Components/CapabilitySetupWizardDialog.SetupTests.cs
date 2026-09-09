@@ -7,6 +7,10 @@ public partial class CapabilitySetupWizardDialog
 {
     private async Task TestSetupAsync()
     {
+        if (!IsCurrent) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (!IsCurrent || isBusy || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
         {
             return;
@@ -28,7 +32,7 @@ public partial class CapabilitySetupWizardDialog
                 {
                     Capability = editorModel,
                     JsonInput = string.IsNullOrWhiteSpace(toolState.TestInputJson) ? "{}" : toolState.TestInputJson
-                }, lifetime.Token);
+                }, request.Token);
                 if (!IsCurrent) {
                     return;
                 }
@@ -40,7 +44,7 @@ public partial class CapabilitySetupWizardDialog
                 var result = await CapabilitySetupFlowService.TestMcpSetupAsync(new CapabilityMcpSetupTestRequest
                 {
                     Capability = editorModel
-                }, lifetime.Token);
+                }, request.Token);
                 if (!IsCurrent) {
                     return;
                 }
@@ -50,9 +54,9 @@ public partial class CapabilitySetupWizardDialog
         }
         catch (Exception) when (!IsCurrent) {
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            NotificationService.Error("Setup test failed", exception.Message);
+            NotificationService.Error("Setup test failed", "The setup test could not be completed. Your draft is preserved.");
         }
         finally
         {

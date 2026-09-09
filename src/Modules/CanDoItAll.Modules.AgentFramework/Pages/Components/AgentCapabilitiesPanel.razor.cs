@@ -150,11 +150,15 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     }
 
     private async Task ToggleCapabilityAsync(Guid capabilityId) {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (session.Draft is not { } draft || Snapshot.IsBusy) {
             return;
         }
         var generation = session.Generation;
-        var outcome = await Operations.AssignAsync(draft, capabilityId, lifetime.Token);
+        var outcome = await Operations.AssignAsync(draft, capabilityId, request.Token);
         await ApplyAssignmentOutcomeAsync(outcome, generation);
     }
 
@@ -170,21 +174,29 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     }
 
     private async Task RetryAssignmentAsync() {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (Operations.Find(session.TargetAgentId) is not { CanRetry: true } current) {
             return;
         }
         var generation = session.Generation;
-        var outcome = await Operations.RetryAsync(current.AgentId, current.AttemptId, lifetime.Token);
+        var outcome = await Operations.RetryAsync(current.AgentId, current.AttemptId, request.Token);
         await ApplyAssignmentOutcomeAsync(outcome, generation);
     }
 
     private async Task RecoverOperationAsync(bool adoptCurrent = false) {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (Operations.Find(session.TargetAgentId) is not { IsActive: false } current) {
             return;
         }
         var generation = session.Generation;
         if (current.CanVerify) {
-            current = await Operations.VerifyAsync(current.AgentId, current.AttemptId, lifetime.Token);
+            current = await Operations.VerifyAsync(current.AgentId, current.AttemptId, request.Token);
         }
         if (current is null || !session.IsCurrent(generation) || session.TargetAgentId != current.AgentId) {
             return;
@@ -215,11 +227,15 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     }
 
     private async Task VerifyCapabilityAsync(Guid capabilityId) {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (session.Selection.AgentId is not { } agentId || Snapshot.IsBusy) {
             return;
         }
         var generation = session.Generation;
-        var outcome = await Operations.DiagnoseAsync(agentId, capabilityId, lifetime.Token);
+        var outcome = await Operations.DiagnoseAsync(agentId, capabilityId, request.Token);
         await ApplyAssignmentOutcomeAsync(outcome, generation);
     }
 
@@ -231,6 +247,10 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         .ToArray();
 
     private async Task OpenCapabilityDetailsDialogAsync(Guid capabilityId) {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (disposed || detailsOpen.HasValue) {
             return;
         }
@@ -242,14 +262,14 @@ public partial class AgentCapabilitiesPanel : IDisposable {
                 new Dictionary<string, object?> {
                     [nameof(CapabilityDetailsDialog.CapabilityId)] = capabilityId,
                     [nameof(CapabilityDetailsDialog.TagSuggestions)] = AvailableCapabilityTags,
-                    [nameof(CapabilityDetailsDialog.OwnerCancellationToken)] = lifetime.Token
+                    [nameof(CapabilityDetailsDialog.OwnerCancellationToken)] = request.Token
                 },
                 new DialogOptions {
                     Eyebrow = "Capability metadata",
                     Subtitle = "Inspect and edit capability tags, identity, and type-specific configuration.",
                     Size = ModalSize.Wide, DenseChrome = true, AriaLabel = "Capability details",
                     TestId = "agents-capability-details-dialog"
-                }, lifetime.Token);
+                }, request.Token);
             if (!disposed && result is CapabilityDetailsDialogResult) {
                 await RunReadAsync(session.RefreshAsync);
             }
@@ -264,6 +284,10 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     }
 
     private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind) {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (disposed || Snapshot.IsBusy || wizardOpen) {
             return;
         }
@@ -278,14 +302,14 @@ public partial class AgentCapabilitiesPanel : IDisposable {
                 new Dictionary<string, object?> {
                     [nameof(CapabilitySetupWizardDialog.InitialKind)] = initialKind,
                     [nameof(CapabilitySetupWizardDialog.TagSuggestions)] = AvailableCapabilityTags,
-                    [nameof(CapabilitySetupWizardDialog.OwnerCancellationToken)] = lifetime.Token
+                    [nameof(CapabilitySetupWizardDialog.OwnerCancellationToken)] = request.Token
                 },
                 new DialogOptions {
                     Eyebrow = "Capability setup",
                     Subtitle = "Create a skill, tool, or MCP capability for assignment to technical agents.",
                     Size = ModalSize.Wide, DenseChrome = true, AriaLabel = "Capability setup wizard",
                     TestId = "agents-capability-setup-dialog"
-                }, lifetime.Token);
+                }, request.Token);
             if (!disposed && result is CapabilityDetailsDialogResult && await RunReadAsync(session.RefreshAsync)) {
                 NotificationService.Success("Ready", "Capability created.");
             }
@@ -300,10 +324,14 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     }
 
     private async Task OpenCapabilityCuratorAsync() {
+        if (disposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         if (disposed || !Snapshot.Curator.CanLaunch || Snapshot.IsBusy || Snapshot.CuratorLaunch.IsBusy) {
             return;
         }
-        var started = await CuratorLaunch.OpenAsync(lifetime.Token);
+        var started = await CuratorLaunch.OpenAsync(request.Token);
         if (!disposed && started && CuratorLaunch.Status == CapabilityCuratorLaunchStatus.Opened) {
             NotificationService.Success("Capability Curator ready", "Opened a new managed capability chat.");
         }

@@ -26,11 +26,7 @@ public sealed class ProviderHistoryPremergeUiTests(PlaywrightAppFixture fixture,
         var factory = new ContextFactory(new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(fixture.DatabaseConnectionString).Options);
         var providerId = await SeedVisualRowsAsync(factory);
-        var evidence = Path.Combine(
-            PlaywrightTestHostPaths.RepositoryRoot,
-            "artifacts",
-            "playwright",
-            "provider-history");
+        var evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(evidence);
         await using var context = await fixture.Browser.NewContextAsync(new() {
             ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1
@@ -105,7 +101,9 @@ public sealed class ProviderHistoryPremergeUiTests(PlaywrightAppFixture fixture,
                 Scope = "Disposable visual fixture; does not prove provider production or multi-instance transport."
             }));
         } catch {
-            await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "failure.png"), FullPage = false });
+            if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+                await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "failure.png"), FullPage = false });
+            }
             output.WriteLine(fixture.GetLogSnapshot(50));
             throw;
         }
@@ -119,7 +117,9 @@ public sealed class ProviderHistoryPremergeUiTests(PlaywrightAppFixture fixture,
                 Assert.InRange(bounds.Y, 0, 1080);
                 Assert.True(bounds.X + bounds.Width <= 1921 && bounds.Y + bounds.Height <= 1081);
             }
-            await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, $"{name}.png"), FullPage = false });
+            if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+                await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, $"{name}.png"), FullPage = false });
+            }
         }
     }
 

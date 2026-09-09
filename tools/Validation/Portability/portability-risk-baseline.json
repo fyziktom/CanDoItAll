@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14407,
+  "allowance_count": 14403,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -14999,7 +14999,7 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
       "category": "case-policy",
       "source_fingerprint": "28699095a3a2d8fd6e5c4ad439db95379cd408aebe0a1c1ede3ec061a0f58591",
-      "count": 3
+      "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
@@ -41704,18 +41704,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "category": "case-policy",
-      "source_fingerprint": "5b53363751d94069318acba3f6ea7447553b415847562711f13a6b15e9ce8ad3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "63e9443ee78278b8add48eefe9aee5673506e8b24d1ae30e313ba3fec1f5d4d7",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "category": "case-policy",
       "source_fingerprint": "9726c515c73258fef8c450be2ed63c64fd2349a2266e27472ae7dbaf579dd183",
       "count": 1
     },
@@ -42646,6 +42634,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
       "category": "mcp",
+      "source_fingerprint": "10b62e00ae1ee0b7951dcb440dcf903e62d1497e974887c15c80fba0ea394de6",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+      "category": "mcp",
       "source_fingerprint": "21ab64505439e55f4435942496365d5f3e0f292a417731a559c846f3f5dc52bc",
       "count": 1
     },
@@ -42677,12 +42671,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
       "category": "mcp",
       "source_fingerprint": "78147e9248233d765b2be325e945f796ef7dd120bca9900d119f9071d495cd2e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "821a530e326156639533470b41f547f8403721ac313a6a262fcdbf2703cc023a",
       "count": 1
     },
     {

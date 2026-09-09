@@ -835,7 +835,7 @@ public partial class WorkflowCanvasEditor
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
-            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+            errorMessage = "The save result could not be confirmed. Check the workflow catalog before retrying. Your draft is preserved.";
             NotificationService.Error("Workflow save failed", errorMessage);
         }
         finally
@@ -897,7 +897,7 @@ public partial class WorkflowCanvasEditor
         }
         catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException)
         {
-            previewInputState.ProjectLoadError = $"Project list unavailable: {exception.Message}";
+            previewInputState.ProjectLoadError = "Project list unavailable. Retry when project selection is available.";
         }
     }
 
@@ -995,16 +995,18 @@ public partial class WorkflowCanvasEditor
 
             if (!testResult.Succeeded)
             {
-                errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage);
+                errorMessage = "The preview could not be completed. Review the workflow configuration and event diagnostics.";
                 NotificationService.Error("Workflow preview failed", errorMessage);
                 return;
             }
 
-            NotificationService.Success("Workflow preview completed", testResult.Run?.Summary ?? "Workflow preview completed.");
+            NotificationService.Success("Workflow preview completed", testResult.Run is { } completedRun
+                ? WorkflowEventPresentationPolicy.RunSummary(completedRun.State, completedRun.Summary)
+                : "Workflow preview completed.");
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
-            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+            errorMessage = "The preview could not be completed. Review the workflow configuration and event diagnostics.";
             NotificationService.Error("Workflow preview failed", errorMessage);
         }
         finally
@@ -1104,7 +1106,7 @@ public partial class WorkflowCanvasEditor
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or JsonException)
         {
-            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+            errorMessage = "The node could not be created. Review its configuration and retry. Your draft is preserved.";
             NotificationService.Error("Workflow node create failed", errorMessage);
         }
     }
@@ -2427,9 +2429,9 @@ public partial class WorkflowCanvasEditor
             {
                 using var _ = JsonDocument.Parse(value);
             }
-            catch (JsonException exception)
+            catch (JsonException)
             {
-                errorMessage = exception.Message;
+                errorMessage = "The route predicate must contain valid JSON. Correct its syntax and retry.";
                 return;
             }
         }

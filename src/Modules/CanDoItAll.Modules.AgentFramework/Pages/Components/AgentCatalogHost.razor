@@ -195,6 +195,10 @@
     }
 
     private async Task LoadAsync(object owner) {
+        if (isDisposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         var generation = ++catalogGeneration;
         isLoading = true;
         try {
@@ -202,7 +206,7 @@
             if (isDisposed) {
                 return;
             }
-            var loaded = await CatalogOperations.LoadAsync(new(!SkipCatalogRepair, InitialAgents, InitialProviders, InitialTeams), lifetimeToken);
+            var loaded = await CatalogOperations.LoadAsync(new(!SkipCatalogRepair, InitialAgents, InitialProviders, InitialTeams), request.Token);
             if (isDisposed || generation != catalogGeneration) {
                 return;
             }
@@ -220,7 +224,7 @@
                 HasValidRequestedSelection()
                     ? AgentChatContextAccessState.Ready
                     : AgentChatContextAccessState.Failed);
-        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
         } catch {
             if (isDisposed || generation != catalogGeneration) {
                 return;
@@ -263,6 +267,10 @@
     }
 
     private async Task OpenManagedAgentChatAsync(AgentDefinition agent) {
+        if (isDisposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         if (openingManagedAgentChatId.HasValue) {
             return;
         }
@@ -279,17 +287,17 @@
         }
         openingManagedAgentChatId = agent.Id;
         try {
-            await AgentChatLauncher.StartNewChatAsync(agent.Id, lifetimeToken);
+            await AgentChatLauncher.StartNewChatAsync(agent.Id, request.Token);
             if (isDisposed) {
                 return;
             }
             NotificationService.Success("Chat ready", $"Opened a new chat with {agent.Name}.");
-        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
-        } catch (Exception exception) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
             if (isDisposed) {
                 return;
             }
-            NotificationService.Error("Unable to open managed agent chat", exception.Message);
+            NotificationService.Error("Unable to open managed agent chat", "The chat could not be opened. Check its current state before retrying.");
         } finally {
             if (!isDisposed) {
                 openingManagedAgentChatId = null;
@@ -320,6 +328,10 @@
     }
 
     private async Task OpenAgentDetailsDialogAsync(Guid? agentId) {
+        if (isDisposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         if (isDisposed) {
             return;
         }
@@ -361,17 +373,17 @@
                     DenseChrome = true,
                     AriaLabel = "Agent details editor",
                     TestId = "agents-details-dialog"
-                }, lifetimeToken);
+                }, request.Token);
 
             if (result is AgentDetailsDialogResult dialogResult) {
                 await HandleAgentDialogSavedAsync(presentationId, dialogResult);
             }
-        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
-        } catch (Exception exception) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
             if (isDisposed) {
                 return;
             }
-            NotificationService.Error("Agent dialog failed", exception.Message);
+            NotificationService.Error("Agent dialog failed", "The agent editor could not be completed. Reload the catalog before continuing.");
         } finally {
             editorTargets.Remove(presentationId);
         }
@@ -416,6 +428,10 @@
         if (isDisposed) {
             return;
         }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+        if (isDisposed) {
+            return;
+        }
         var generation = requestGeneration;
         try {
             var result = await DialogService.OpenAsync<AgentTeamDetailsDialog>(
@@ -429,7 +445,7 @@
                     Size = ModalSize.Compact,
                     AriaLabel = "Agent team editor",
                     TestId = "agents-team-details-dialog-shell"
-                }, lifetimeToken);
+                }, request.Token);
 
             if (IsCurrentRequest(generation) && result is AgentTeamDetailsDialogResult teamResult) {
                 await ReloadCatalogAsync();
@@ -440,16 +456,20 @@
                 await SelectedTeamChanged.InvokeAsync(SelectedTeam);
                 await RenderIfAliveAsync();
             }
-        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
-        } catch (Exception exception) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
             if (isDisposed) {
                 return;
             }
-            NotificationService.Error("Team dialog failed", exception.Message);
+            NotificationService.Error("Team dialog failed", "The team editor could not be completed. Reload the catalog before continuing.");
         }
     }
 
     private async Task OpenTeamMembersDialogAsync() {
+        if (isDisposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         var generation = requestGeneration;
         var team = SelectedTeam;
         if (isDisposed || team is null) {
@@ -470,13 +490,13 @@
                     Size = ModalSize.Wide,
                     AriaLabel = "Add agents to team",
                     TestId = "agents-team-members-dialog-shell"
-                }, lifetimeToken);
+                }, request.Token);
 
             if (IsCurrentRequest(generation) && result is AgentTeamMembersDialogResult membersResult) {
                 await CatalogOperations.UpdateMembersAsync(
                     membersResult.TeamId,
                     membersResult.AgentIds,
-                    lifetimeToken);
+                    request.Token);
                 if (!IsCurrentRequest(generation)) {
                     return;
                 }
@@ -492,16 +512,20 @@
                 NotificationService.Success("Team updated", "Agent team membership was saved.");
                 await RenderIfAliveAsync();
             }
-        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
-        } catch (Exception exception) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
             if (isDisposed) {
                 return;
             }
-            NotificationService.Error("Team membership failed", exception.Message);
+            NotificationService.Error("Team membership failed", "The membership change could not be confirmed. Reload the team before retrying.");
         }
     }
 
     private async Task DeleteSelectedTeamAsync() {
+        if (isDisposed) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         var generation = requestGeneration;
         var team = SelectedTeam;
         if (isDisposed || team is null) {
@@ -509,7 +533,7 @@
         }
 
         try {
-            await CatalogOperations.DeleteTeamAsync(team.Id, lifetimeToken);
+            await CatalogOperations.DeleteTeamAsync(team.Id, request.Token);
             if (!IsCurrentRequest(generation)) {
                 return;
             }
@@ -524,12 +548,12 @@
             }
             NotificationService.Success("Team deleted", $"Deleted {team.Name}.");
             await RenderIfAliveAsync();
-        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
-        } catch (Exception exception) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
             if (isDisposed) {
                 return;
             }
-            NotificationService.Error("Team delete failed", exception.Message);
+            NotificationService.Error("Team delete failed", "The deletion could not be confirmed. Reload the catalog before retrying.");
         }
     }
 
@@ -537,9 +561,13 @@
         if (isDisposed) {
             return;
         }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+        if (isDisposed) {
+            return;
+        }
         var generation = ++catalogGeneration;
         try {
-            var loaded = await CatalogOperations.LoadAsync(new(Repair: false), lifetimeToken);
+            var loaded = await CatalogOperations.LoadAsync(new(Repair: false), request.Token);
             if (isDisposed || generation != catalogGeneration) {
                 return;
             }

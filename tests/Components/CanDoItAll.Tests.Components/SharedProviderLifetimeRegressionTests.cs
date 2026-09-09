@@ -29,6 +29,7 @@ public sealed class SharedProviderLifetimeRegressionTests {
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(c => c.ProviderProfileId, first));
         cut.Render(p => p.Add(c => c.ProviderProfileId, second));
         cut.WaitForElement("[data-testid='shared-provider-publish']");
+        Assert.True(firstToken.WaitHandle.WaitOne(0));
         if (failure) {
             await cut.InvokeAsync(() => pending.SetException(new IOException("Synthetic old read failure.")));
         } else {
@@ -52,6 +53,7 @@ public sealed class SharedProviderLifetimeRegressionTests {
         var id = Guid.NewGuid();
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(c => c.ProviderProfileId, id));
         await cut.InvokeAsync(() => cut.Instance.Dispose());
+        Assert.True(received.WaitHandle.WaitOne(0));
         pending.SetResult(SharedProviderPublicationPanelTests.CreateLocalState(id, false, true));
         Assert.True(received.IsCancellationRequested);
     }

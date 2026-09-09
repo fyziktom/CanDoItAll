@@ -9,6 +9,16 @@
         <h3 class="cda-title-md">Preparing capability details</h3>
     </SurfaceCard>
 }
+else if (loadFailed)
+{
+    <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-capability-details-load-failed">
+        The requested capability could not be loaded.
+    </Alert>
+    <Cluster>
+        <Button Text="Retry" Click="LoadAsync" />
+        <Button Text="Close" Click="CancelAsync" />
+    </Cluster>
+}
 else
 {
     <EditForm Model="editorModel" OnValidSubmit="SaveAsync">

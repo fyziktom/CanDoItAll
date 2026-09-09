@@ -56,6 +56,8 @@ public partial class SharedProviderManagementPanel : IDisposable {
         !disposed && operation == generation && !token.IsCancellationRequested;
 
     private async Task LoadAsync(long operation, CancellationToken token, bool verify = false) {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(token);
+        token = request.Token;
         var targetId = ProviderProfileId;
         var unresolved = Recovery.FindTarget(targetId);
         isLoading = true;
@@ -115,7 +117,8 @@ public partial class SharedProviderManagementPanel : IDisposable {
             return;
         }
         var operation = ++generation;
-        var token = owner.Token;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        var token = request.Token;
         if (Recovery.FindTarget(ProviderProfileId) is { } pending && Recovery.PendingDelivery(pending.AttemptId) is not null) {
             isBusy = true;
             try {
@@ -178,7 +181,8 @@ public partial class SharedProviderManagementPanel : IDisposable {
             return;
         }
         var operation = ++generation;
-        var token = owner.Token;
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        var token = lifetime.Token;
         isBusy = true;
         warning = null;
         try {

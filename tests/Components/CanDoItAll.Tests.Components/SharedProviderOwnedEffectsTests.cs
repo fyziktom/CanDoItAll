@@ -86,8 +86,13 @@ public sealed class SharedProviderOwnedEffectsTests {
             await cut.Find("[data-testid='shared-provider-connections-close']").ClickAsync();
         }
         Assert.True(proxy.ReceivedToken.IsCancellationRequested);
+        var callbacks = 0;
+        using var delayed = proxy.ReceivedToken.Register(() => callbacks++);
+        Assert.Equal(1, callbacks);
+        Assert.True(proxy.ReceivedToken.WaitHandle.WaitOne(0));
         proxy.Complete();
         await running;
+        Assert.Throws<ObjectDisposedException>(() => proxy.ReceivedToken.WaitHandle);
         Assert.Empty(changes);
         Assert.NotNull(unrelated.Find("[data-testid='unrelated-dialog']"));
     }
@@ -111,6 +116,7 @@ public sealed class SharedProviderOwnedEffectsTests {
         cut.WaitForAssertion(() => Assert.Equal(first, proxy.WrittenId));
         cut.Render(p => p.Add(x => x.ProviderProfileId, second));
         Assert.True(proxy.Token.IsCancellationRequested);
+        Assert.True(proxy.Token.WaitHandle.WaitOne(0));
         if (failure) {
             proxy.Pending.SetException(new IOException("Synthetic late failure."));
         } else {

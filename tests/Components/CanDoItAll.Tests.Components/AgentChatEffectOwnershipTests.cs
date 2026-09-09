@@ -50,18 +50,44 @@ public sealed class AgentChatEffectOwnershipTests {
     }
 
     [Fact]
+    public async Task Case_distinct_uploads_remain_distinct_in_presentation_and_the_next_prompt() {
+        var (service, _, agent, first, _) = Reads();
+        using var context = Context(service, out var effects);
+        var staging = DispatchProxy.Create<IAgentChatAttachmentStagingService, EffectsProxy>();
+        var proxy = (EffectsProxy)(object)staging;
+        context.Services.AddSingleton(staging);
+        var cut = Render(context, agent, first);
+        foreach (var path in new[] { "uploads/a.png", "uploads/A.png" }) {
+            proxy.Upload = new();
+            proxy.Upload.SetResult(new(path, "image/png", 3));
+            await cut.InvokeAsync(() => Workspace(cut).AttachmentFilesSelected.InvokeAsync(new InputFileChangeEventArgs([new FixtureFile()])));
+        }
+        Assert.Equal(["uploads/a.png", "uploads/A.png"], Workspace(cut).DraftAttachmentPaths);
+        var completion = new TaskCompletionSource<AgentChatRunResult>();
+        effects.Sends.Enqueue(completion);
+        await Send(cut, "Use both images");
+        var request = Assert.Single(effects.Requests);
+        Assert.Equal(["uploads/a.png", "uploads/A.png"], request.AttachmentPaths);
+        Assert.Contains("- uploads/a.png", request.Prompt, StringComparison.Ordinal);
+        Assert.Contains("- uploads/A.png", request.Prompt, StringComparison.Ordinal);
+        completion.SetResult(CreateRunResult(agent.Id, first.Id));
+        cut.WaitForAssertion(() => Assert.False(Workspace(cut).IsBusy));
+    }
+
+    [Fact]
     public async Task Run_artifact_staging_omits_unsafe_paths_and_sends_only_canonical_values() {
         var (service, reads, agent, first, _) = Reads();
         var run = CreateRunningRun(agent.Id, first.Id) with { State = ExecutionState.Completed };
         reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, first, run));
         reads.Detail = (_, _) => Task.FromResult(new ExecutionRunDetail(run, first, [], []) {
             Artifacts = [new(Guid.NewGuid(), run.Id, "text", "Safe", "  artifacts\\safe.txt  ", "text/plain", "fixture", "safe", DateTimeOffset.UtcNow),
+                new(Guid.NewGuid(), run.Id, "text", "Distinct case", "artifacts/Safe.txt", "text/plain", "fixture", "safe", DateTimeOffset.UtcNow),
                 new(Guid.NewGuid(), run.Id, "text", "Unsafe", "notes/../PRIVATE_ARTIFACT_482", "text/plain", "fixture", "unsafe", DateTimeOffset.UtcNow)]
         });
         using var context = Context(service, out var effects);
         var cut = Render(context, agent, first);
         await cut.InvokeAsync(() => Workspace(cut).AttachmentRequested.InvokeAsync());
-        Assert.Equal("artifacts/safe.txt", Assert.Single(Workspace(cut).DraftAttachmentPaths));
+        Assert.Equal(["artifacts/safe.txt", "artifacts/Safe.txt"], Workspace(cut).DraftAttachmentPaths);
         Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages, message => message.Detail.Contains("references were omitted", StringComparison.Ordinal));
         Assert.DoesNotContain("PRIVATE_ARTIFACT_482", cut.Markup, StringComparison.Ordinal);
         var completion = new TaskCompletionSource<AgentChatRunResult>();
@@ -69,7 +95,7 @@ public sealed class AgentChatEffectOwnershipTests {
         await Send(cut, "Read the artifact");
         var request = Assert.Single(effects.Requests);
         Assert.NotNull(request.AttachmentPaths);
-        Assert.Equal("artifacts/safe.txt", Assert.Single(request.AttachmentPaths));
+        Assert.Equal(["artifacts/safe.txt", "artifacts/Safe.txt"], request.AttachmentPaths);
         Assert.DoesNotContain("PRIVATE_ARTIFACT_482", request.Prompt, StringComparison.Ordinal);
         completion.SetResult(CreateRunResult(agent.Id, first.Id));
         cut.WaitForAssertion(() => Assert.False(Workspace(cut).IsBusy));
@@ -469,7 +495,7 @@ public sealed class AgentChatEffectOwnershipTests {
         public Queue<TaskCompletionSource<AgentChatRunResult>> Sends { get; } = [];
         public TaskCompletionSource<AgentVoiceTranscriptionResult> Transcription { get; } = new();
         public Func<CancellationToken, Task<AgentVoiceTranscriptionResult>>? ReadTranscription { get; set; }
-        public TaskCompletionSource<AgentChatAttachmentStagingResult> Upload { get; } = new();
+        public TaskCompletionSource<AgentChatAttachmentStagingResult> Upload { get; set; } = new();
         public int SendCalls { get; private set; }
         public List<AgentChatSendRequest> Requests { get; } = [];
         protected override object? Invoke(MethodInfo? method, object?[]? args) {

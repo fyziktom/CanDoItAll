@@ -1,5 +1,6 @@
 @inject IAvatarGenerationGateway AvatarGenerationGateway
 @inject NotificationService NotificationService
+@implements IDisposable
 
 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
     <Button Text="Choose avatar"
@@ -157,6 +158,8 @@
 }
 
 @code {
+    private readonly CancellationTokenSource lifetime = new();
+    private bool disposed;
     private AvatarGenerationSource? generationSource;
     private string customAvatarFileName = string.Empty;
     private string generationPrompt = string.Empty;
@@ -215,7 +218,7 @@
 
     private async Task OpenAsync()
     {
-        if (Disabled)
+        if (disposed || Disabled)
         {
             return;
         }
@@ -224,8 +227,17 @@
             ? BuildDefaultPrompt()
             : generationPrompt;
         generationErrorMessage = null;
-        generationSource = GenerationSource ?? await AvatarGenerationGateway.GetDefaultSourceAsync();
-        isOpen = true;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        try {
+            var source = GenerationSource ?? await AvatarGenerationGateway.GetDefaultSourceAsync(request.Token);
+            if (!disposed) {
+                generationSource = source;
+                isOpen = true;
+            }
+        } catch (Exception) when (disposed) {
+        } catch (Exception) {
+            NotificationService.Error("Avatar picker unavailable", "Avatar options could not be loaded. Retry when the provider is available.");
+        }
     }
 
     private Task CloseAsync()
@@ -243,22 +255,37 @@
 
     private async Task LoadCustomAvatarAsync(InputFileChangeEventArgs args)
     {
+        if (disposed || isUploadBusy) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         customAvatarFileName = args.File.Name;
         isUploadBusy = true;
         try
         {
-            await ValueChanged.InvokeAsync(await AvatarUploadFormatter.BuildDataUrlAsync(args.File));
+            var value = await AvatarUploadFormatter.BuildDataUrlAsync(args.File, request.Token);
+            if (disposed) {
+                return;
+            }
+            await ValueChanged.InvokeAsync(value);
+            if (disposed) {
+                return;
+            }
             generationErrorMessage = null;
             NotificationService.Success("Custom avatar loaded", $"Save the {EntityKind.ToLowerInvariant()} to persist the loaded avatar.");
         }
-        catch (Exception exception)
+        catch (Exception) when (disposed) {
+        }
+        catch (Exception)
         {
             customAvatarFileName = string.Empty;
-            NotificationService.Error("Avatar upload failed", exception.Message);
+            NotificationService.Error("Avatar upload failed", "The avatar could not be loaded. Choose a supported PNG, JPEG, WebP, or GIF image within the upload limit.");
         }
         finally
         {
-            isUploadBusy = false;
+            if (!disposed) {
+                isUploadBusy = false;
+            }
         }
     }
 
@@ -271,29 +298,40 @@
 
     private async Task GenerateAsync()
     {
-        if (isGenerationBusy || generationSource is null)
+        if (disposed || isGenerationBusy || generationSource is null)
         {
             return;
         }
 
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         isGenerationBusy = true;
         generationErrorMessage = null;
         try
         {
             var result = await AvatarGenerationGateway.GenerateAsync(
-                new AvatarGenerationRequest(generationSource, generationPrompt));
+                new AvatarGenerationRequest(generationSource, generationPrompt), request.Token);
+            if (disposed) {
+                return;
+            }
             customAvatarFileName = string.Empty;
             await ValueChanged.InvokeAsync(result.AvatarDataUrl);
+            if (disposed) {
+                return;
+            }
             NotificationService.Success("AI avatar created", $"Save the {EntityKind.ToLowerInvariant()} to persist the generated avatar.");
         }
-        catch (Exception exception)
+        catch (Exception) when (disposed) {
+        }
+        catch (Exception)
         {
-            generationErrorMessage = exception.Message;
-            NotificationService.Error("AI avatar generation failed", exception.Message);
+            generationErrorMessage = "The avatar could not be generated. Review the image provider configuration before trying again.";
+            NotificationService.Error("AI avatar generation failed", generationErrorMessage);
         }
         finally
         {
-            isGenerationBusy = false;
+            if (!disposed) {
+                isGenerationBusy = false;
+            }
         }
     }
 
@@ -316,4 +354,13 @@
 
     private static string FirstNonEmpty(params string?[] values)
         => values.First(value => !string.IsNullOrWhiteSpace(value))!.Trim();
+
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
 }
