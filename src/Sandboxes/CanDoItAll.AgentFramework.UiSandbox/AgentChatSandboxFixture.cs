@@ -31,9 +31,9 @@ public sealed class AgentChatSandboxFixture {
             Header = new(avatar, [new("Ready", PresentationTone.Info)]),
             Session = new(sessionId, "Research thread"),
             Messages = [new(new("fixture-user"), ConversationMessageRole.User, "User", PresentationTone.Info,
-                "Explain the current work.", "12:00", copyValue: "Explain the current work."),
+                "Explain the current work.", ChatPresentationTime.Format(now.AddMinutes(0)), copyValue: "Explain the current work."),
                 new(new("fixture-assistant"), ConversationMessageRole.Assistant, "Assistant", PresentationTone.Success,
-                    text, "12:01", copyValue: text)],
+                    text, ChatPresentationTime.Format(now.AddMinutes(1)), copyValue: text)],
             DraftPrompt = "A safe sample prompt",
             CanUseVoiceMode = true,
             ComposerGuidance = "All actions update sample presentation only."
@@ -42,7 +42,7 @@ public sealed class AgentChatSandboxFixture {
             Generation = Presentation.Revision,
             HasAgents = true,
             Agent = new(agentId, "Research agent", null, "RA"),
-            Threads = [new(new(sessionId.ToString("N")), "Research thread", now, "12:00", "2 messages", "Accepted transcript", isSelected: true)]
+            Threads = [new(new(sessionId.ToString("N")), "Research thread", now, ChatPresentationTime.Format(now.AddMinutes(0)), "2 messages", "Accepted transcript", isSelected: true)]
         };
         switch (scenario) {
             case AgentChatScenario.Loading:
@@ -63,9 +63,9 @@ public sealed class AgentChatSandboxFixture {
                 Presentation = Presentation with {
                     IsBusy = true,
                     TransientMessages = [new(new("pending"), ConversationMessageRole.User, "User", PresentationTone.Info,
-                        "Pending sample prompt", "12:02", state: ConversationMessageState.Pending)],
+                        "Pending sample prompt", ChatPresentationTime.Format(now.AddMinutes(2)), state: ConversationMessageState.Pending)],
                     ExecutionStepCount = 8,
-                    ExecutionSteps = [new(Guid.Parse("51000000-0000-0000-0000-000000000003"), "Running", "info", "Reading workspace", "12:02", "Sample step with a bounded preview.")]
+                    ExecutionSteps = [new(Guid.Parse("51000000-0000-0000-0000-000000000003"), "Running", "info", "Reading workspace", ChatPresentationTime.Format(now.AddMinutes(2)), "Sample step with a bounded preview.")]
                 };
                 break;
             case AgentChatScenario.Approvals:

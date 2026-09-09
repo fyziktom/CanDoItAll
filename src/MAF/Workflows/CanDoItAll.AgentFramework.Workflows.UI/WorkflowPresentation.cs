@@ -25,7 +25,9 @@ public sealed record WorkflowRunView(Guid Id, string State, string Tone, string 
     string Summary, bool IsSelected = false, bool CanCancel = false, string Duration = "");
 public sealed record WorkflowEventView(Guid Id, string Kind, string Tone, string CreatedAt, string Summary);
 public sealed record WorkflowArtifactView(string Name, string Kind, string ContentType, string Summary);
-public sealed record WorkflowRequestView(Guid Id, string Kind, string EventName, string RequestJson, string ResponseJson, bool IsBusy);
+public sealed record WorkflowRequestView(Guid Id, string Kind, string EventName, string RequestJson, string ResponseJson, bool IsBusy) {
+    public const int MaximumJsonLength = 16_384;
+}
 public sealed record WorkflowPager(int Index, int TotalPages, int TotalCount, string Text) {
     public bool HasPrevious => Index > 0;
     public bool HasNext => Index + 1 < TotalPages;

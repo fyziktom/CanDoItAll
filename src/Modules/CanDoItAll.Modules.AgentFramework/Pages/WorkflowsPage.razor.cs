@@ -403,7 +403,7 @@ public partial class WorkflowsPage : IDisposable {
         Artifacts = artifacts.Select(item => new WorkflowArtifactView(item.Name, item.Kind.ToString(), item.ContentType,
             FormatWorkflowMessage(item.Summary))).ToImmutableArray(),
         Requests = pendingRequests.Select(item => new WorkflowRequestView(item.Id.Value, item.Kind.ToString(), item.EventName,
-            item.RequestJson, ResponseDraft(item), respondingRequests.Contains((item.Id, item.Version)))).ToImmutableArray(),
+            WorkflowEventPresentationPolicy.Bound(item.RequestJson), ResponseDraft(item), respondingRequests.Contains((item.Id, item.Version)))).ToImmutableArray(),
         RunPage = new(historyRunPageIndex, HistoryRunTotalPages, historyRunTotalCount,
             FormatPageLabel(historyRunPageIndex, HistoryRunTotalPages, historyRunTotalCount, "runs")),
         EventPage = new(historyEventPageIndex, HistoryEventTotalPages, historyEventTotalCount,
@@ -494,6 +494,10 @@ public partial class WorkflowsPage : IDisposable {
                 await ChangeEventPageAsync(intent.Delta);
                 break;
             case WorkflowAction.ResponseChanged when pendingRequests.FirstOrDefault(request => request.Id.Value == intent.TargetId) is { } request:
+                if (intent.Text?.Length > WorkflowRequestView.MaximumJsonLength) {
+                    errorMessage = "The response is too long. Limit response JSON to 16,384 characters.";
+                    break;
+                }
                 responseDrafts[(request.Id, request.Version)] = intent.Text ?? "";
                 break;
             case WorkflowAction.Respond when pendingRequests.FirstOrDefault(request => request.Id.Value == intent.TargetId) is { } request:
@@ -648,7 +652,8 @@ public partial class WorkflowsPage : IDisposable {
         long generation,
         AgentChatNavigationIdentity navigation) {
         analyticsRefreshVersion++;
-        var cancellation = pageReadCancellation.Token;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(pageReadCancellation.Token);
+        var cancellation = request.Token;
         var settingsTask = SettingsService.GetSettingsAsync(cancellation);
         var definitionsTask = CatalogService.ListDefinitionsAsync(cancellation);
         await Task.WhenAll(settingsTask, definitionsTask);
@@ -743,11 +748,12 @@ public partial class WorkflowsPage : IDisposable {
         errorMessage = string.Empty;
         SetSelectedDefinitionPlaceholder(definitionId);
         var selectionGeneration = selectedDefinitionGeneration;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(selectionReadCancellation.Token);
         isDefinitionSelectionLoading = true;
         StateHasChanged();
         try {
             if (projectId.HasValue) {
-                var relation = await ValidateProjectWorkflowRelationAsync(projectId.Value, definitionId, selectionReadCancellation.Token);
+                var relation = await ValidateProjectWorkflowRelationAsync(projectId.Value, definitionId, request.Token);
                 if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
                     return;
                 }
@@ -975,9 +981,10 @@ public partial class WorkflowsPage : IDisposable {
     private async Task LoadDefinitionAsync(
         WorkflowId definitionId,
         long selectionGeneration) {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(selectionReadCancellation.Token);
         WorkflowDefinitionDetail? detail;
         try {
-            detail = await CatalogService.GetDefinitionAsync(definitionId, cancellationToken: selectionReadCancellation.Token);
+            detail = await CatalogService.GetDefinitionAsync(definitionId, cancellationToken: request.Token);
         } catch (Exception exception) {
             if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration)) {
                 return;
@@ -1168,8 +1175,9 @@ public partial class WorkflowsPage : IDisposable {
     private async Task LoadPreviewProjectOptionsAsync() {
         var state = previewInputState;
         var owner = CaptureOwner();
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(selectionReadCancellation.Token);
         try {
-            var projects = await ProjectStructureGateway.ListProjectsAsync(selectionReadCancellation.Token);
+            var projects = await ProjectStructureGateway.ListProjectsAsync(request.Token);
             if (!Owns(owner) || !isPreviewInputDialogOpen || !ReferenceEquals(state, previewInputState)) {
                 return;
             }
@@ -1301,7 +1309,8 @@ public partial class WorkflowsPage : IDisposable {
         }
 
         RenewRead(ref runReadCancellation);
-        var cancellation = runReadCancellation.Token;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(runReadCancellation.Token);
+        var cancellation = request.Token;
         if (selectedRun?.RunId != runId) {
             ClearSelectedRunState();
         }
@@ -1380,6 +1389,7 @@ public partial class WorkflowsPage : IDisposable {
         selectedRunRequestId = null;
         isRunSelectionLoading = false;
         isRunsPageLoading = true;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(selectionReadCancellation.Token);
         StateHasChanged();
 
         try {
@@ -1389,7 +1399,7 @@ public partial class WorkflowsPage : IDisposable {
                 null,
                 string.Empty,
                 pageIndex,
-                HistoryRunPageSize), selectionReadCancellation.Token);
+                HistoryRunPageSize), request.Token);
 
             if (!IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration)) {
                 return;
@@ -1454,7 +1464,8 @@ public partial class WorkflowsPage : IDisposable {
         var owner = CaptureOwner();
         var generation = ++overlayGeneration;
         RenewRead(ref overlayReadCancellation);
-        var cancellation = overlayReadCancellation.Token;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(overlayReadCancellation.Token);
+        var cancellation = request.Token;
         runDetail = run;
         runDetailEvents = [];
         runDetailArtifacts = [];
@@ -1680,7 +1691,8 @@ public partial class WorkflowsPage : IDisposable {
 
     private async Task LoadComponentLibraryAsync() {
         var owner = CaptureOwner();
-        var cancellation = selectionReadCancellation.Token;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(selectionReadCancellation.Token);
+        var cancellation = request.Token;
         try {
             var loadedComponents = await ComponentLibrary.ListComponentsAsync(cancellation);
             var loadedProviders = await ComponentLibrary.ListProviderOptionsAsync(cancellation);
@@ -2148,114 +2160,16 @@ public partial class WorkflowsPage : IDisposable {
     }
 
     private static string FormatDate(DateTimeOffset value) {
-        return value.ToLocalTime().ToString("MMM d, HH:mm");
+        return WorkflowPresentationTime.Format(value);
     }
 
     private static string FormatFullDate(DateTimeOffset value) {
-        return value.ToLocalTime().ToString("MMM d, yyyy HH:mm:ss");
+        return WorkflowPresentationTime.Format(value);
     }
 
-    private static string ResolveRunResultPayload(IReadOnlyList<WorkflowEventRecord> events) {
-        foreach (var outputEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.Output)) {
-            var payloadJson = ResolveEventPayloadJson(outputEvent);
-            if (!string.IsNullOrWhiteSpace(payloadJson)) {
-                return payloadJson;
-            }
-        }
-
-        foreach (var completedEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.ExecutorCompleted)) {
-            var payloadJson = ResolveEventPayloadJson(completedEvent);
-            if (!string.IsNullOrWhiteSpace(payloadJson)) {
-                return payloadJson;
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static string ResolveEventPayloadJson(WorkflowEventRecord workflowEvent) {
-        if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson)) {
-            return workflowEvent.PayloadJson;
-        }
-
-        return TryExtractLegacyPayloadJson(workflowEvent.Message, out var payloadJson)
-            ? payloadJson
-            : string.Empty;
-    }
-
-    private static bool TryExtractLegacyPayloadJson(string message, out string payloadJson) {
-        payloadJson = string.Empty;
-        const string marker = "PayloadJson = ";
-        var start = message.LastIndexOf(marker, StringComparison.Ordinal);
-        if (start < 0) {
-            return false;
-        }
-
-        start += marker.Length;
-        while (start < message.Length && char.IsWhiteSpace(message[start])) {
-            start++;
-        }
-
-        if (start >= message.Length || message[start] is not ('{' or '[')) {
-            return false;
-        }
-
-        var stack = new Stack<char>();
-        var inString = false;
-        var escaped = false;
-        for (var index = start; index < message.Length; index++) {
-            var character = message[index];
-            if (inString) {
-                if (escaped) {
-                    escaped = false;
-                } else if (character == '\\') {
-                    escaped = true;
-                } else if (character == '"') {
-                    inString = false;
-                }
-
-                continue;
-            }
-
-            if (character == '"') {
-                inString = true;
-                continue;
-            }
-
-            if (character == '{') {
-                stack.Push('}');
-                continue;
-            }
-
-            if (character == '[') {
-                stack.Push(']');
-                continue;
-            }
-
-            if (character is not ('}' or ']')) {
-                continue;
-            }
-
-            if (stack.Count == 0 || stack.Pop() != character) {
-                return false;
-            }
-
-            if (stack.Count != 0) {
-                continue;
-            }
-
-            var candidate = message[start..(index + 1)];
-            try {
-                using var _ = JsonDocument.Parse(candidate);
-                payloadJson = candidate;
-                return true;
-            } catch (JsonException) {
-                return false;
-            }
-        }
-
-        return false;
-    }
+    private static string ResolveRunResultPayload(IReadOnlyList<WorkflowEventRecord> events)
+        => events.Reverse().Select(WorkflowEventPresentationPolicy.Map)
+            .FirstOrDefault(item => item.Kind == WorkflowEventContentKind.Output && item.Payload.Length > 0)?.Payload ?? string.Empty;
 
     private static string ResolveRunResultPreview(string payloadJson) {
         if (string.IsNullOrWhiteSpace(payloadJson)) {
@@ -2342,32 +2256,10 @@ public partial class WorkflowsPage : IDisposable {
         => WorkflowFailureDisplayFormatter.ToUserMessage(message);
 
     private static string ResolveRunDisplaySummary(WorkflowRunSnapshot run)
-        => run.State == WorkflowRunState.Failed
-            ? WorkflowFailureDisplayFormatter.ToUserMessage(run.Summary)
-            : run.Summary;
+        => WorkflowEventPresentationPolicy.RunSummary(run.State, run.Summary);
 
     private static string ResolveEventDisplayMessage(WorkflowEventRecord workflowEvent)
-        => WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent);
-
-    private static bool HasTechnicalEventMessage(WorkflowEventRecord workflowEvent) {
-        if (WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail)) {
-            return !string.Equals(
-                ResolveEventDisplayMessage(workflowEvent),
-                technicalDetail,
-                StringComparison.Ordinal);
-        }
-
-        return workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed &&
-               !string.Equals(
-                   ResolveEventDisplayMessage(workflowEvent),
-                   workflowEvent.Message,
-                   StringComparison.Ordinal);
-    }
-
-    private static string ResolveEventTechnicalMessage(WorkflowEventRecord workflowEvent)
-        => WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail)
-            ? technicalDetail
-            : workflowEvent.Message;
+        => WorkflowEventPresentationPolicy.Map(workflowEvent).Summary;
 
     private sealed record WorkflowRouteRequest(
         Guid? ProjectId,
@@ -2486,8 +2378,9 @@ public partial class WorkflowsPage : IDisposable {
     }
 
     private async Task<(AgentDefinition? Agent, string? ErrorMessage)> TryResolveWorkflowCuratorAgentAsync() {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeCancellation.Token);
         try {
-            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken: lifetimeCancellation.Token);
+            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken: request.Token);
             var agent = agents.SingleOrDefault(WorkflowCuratorAgentIdentity.Matches);
             return agent is null
                 ? (null, $"The managed agent '{WorkflowCuratorAgentIdentity.AgentId:D}' is not available.")

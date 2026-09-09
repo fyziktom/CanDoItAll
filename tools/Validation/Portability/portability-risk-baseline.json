@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-09T08:29:45.489887+00:00",
+  "generated_utc": "2026-09-09T12:40:34.933965+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14405,
+  "allowance_count": 14407,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -14987,18 +14987,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CapabilityProofPanel.razor",
       "category": "mcp",
       "source_fingerprint": "ce7cb4010b186311800bb44eae8b3c3f4fb6efa7a0c81cc8b6fee509d77b5112",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "c32cc94cf06bd755fb06cb06b1a4cd3d2ad5af54981c576027b1e667649d87d2",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
-      "category": "windows-path",
-      "source_fingerprint": "3d2c23427632fb67c93b3d2db446dfa6c1258f4fd104aa038d1f913a665956c0",
       "count": 1
     },
     {
@@ -41732,12 +41720,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "category": "windows-path",
-      "source_fingerprint": "102b9ed8a303005e0d97ab4b8dc9f37fc13bf33834845ca39f9f260724d065fc",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
       "category": "absolute-path-field",
       "source_fingerprint": "74dec60e3a6e74868f49c63d10a591314669723f094404bef1c921062d893d99",
@@ -43646,6 +43628,24 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowEventPresentationPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "97b85171c8444639903b67e575e3516bea3ffcde5f77ff913a6a720285402387",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowEventPresentationPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "dacabfd1b5616f8493e1492dfb52fe1e07d8d0b4d2b0689818df883db1c197e5",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowEventPresentationPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f35c63947afff1fecc271b6375b5d1f3e94fe84baa5fc3d76a8538323b145ba9",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowPreviewInputSupport.cs",
       "category": "case-policy",
       "source_fingerprint": "c95620804c3c07439c29994f1295a37bb73d8e895e3185a325dcd85a1b89a69e",
@@ -43703,12 +43703,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
       "category": "mcp",
       "source_fingerprint": "10577f365f5670f1c0e9a6f59a64c64d4cd3e89812eb65e891f706fee2b20a49",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
-      "category": "windows-path",
-      "source_fingerprint": "1064d4b1abf2efd4f80302c9c560027702d1930c867b83f76d2e38ffa291eb33",
       "count": 1
     },
     {
@@ -70067,6 +70061,24 @@
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "9f598a733c82e45484578e095ba3f8f13bdb0e908cdd32d17a0cd1c4e43ff116",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/RelativeAttachmentPath.cs",
+      "category": "path-normalization",
+      "source_fingerprint": "5492ca9170a1447076686af039b9fbade140f4f9bab6555774915bee92a781ef",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/RelativeAttachmentPath.cs",
+      "category": "windows-path",
+      "source_fingerprint": "a632c81d8a500f8c3af31a38fed511953301447e3782eb9940bfe46e7de9fd2f",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/RelativeAttachmentPath.cs",
+      "category": "windows-path",
+      "source_fingerprint": "e14bdcf82fa09e23486ee7159b8741ba9f3395fc7f5c336038df1e50622ef77c",
       "count": 1
     },
     {

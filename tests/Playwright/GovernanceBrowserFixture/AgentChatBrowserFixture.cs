@@ -75,8 +75,8 @@ internal sealed class AgentChatBrowserFixture : IAgentChatExecutionOrchestrator,
         }
         if (mode == AgentChatBrowserMode.Approvals) {
             var run = Run(thread) with { State = ExecutionState.WaitingOnTool, PendingApprovals = [
-                new("fixture-read", "read", "Read artifact", "function", "Review the fixture file", "{}"),
-                new("fixture-write", "write", "Save result", "function", "Review the fixture result", "{}")
+                new("fixture-read", "read", "workspace_write_file", "function", "MCP: Research server", "{\"path\":\"artifacts/fixture.txt\",\"content\":\"PRIVATE_BROWSER_CONTENT_482\",\"token\":\"PRIVATE_BROWSER_TOKEN_482\",\"request\":{\"projectId\":\"project-42\",\"password\":\"PRIVATE_BROWSER_NESTED_482\"}}"),
+                new("fixture-write", "write", "Save result", "function", "Review the fixture result", "{malformed PRIVATE_BROWSER_MALFORMED_482")
             ] };
             runs[run.Id] = Detail(run, thread);
             thread = thread with { LatestExecutionRunId = run.Id };
@@ -176,14 +176,15 @@ internal sealed class AgentChatBrowserFixture : IAgentChatExecutionOrchestrator,
     private static ExecutionRunRecord Run(ChatSessionRecord thread)
         => GovernanceBrowserState.Run(Guid.NewGuid(), thread.AgentId, "Synthetic chat execution", 0) with { ChatSessionId = thread.Id };
     private static ExecutionRunDetail Detail(ExecutionRunRecord run, ChatSessionRecord thread)
-        => new(run, thread, [new(Guid.NewGuid(), run.AgentId, thread.Id, DateTimeOffset.UtcNow, run.State, "Fixture execution", "Synthetic execution evidence") { ExecutionRunId = run.Id }],
+        => new(run, thread, [new(Guid.NewGuid(), run.AgentId, thread.Id, DateTimeOffset.UtcNow, run.State, "Fixture execution", "Synthetic execution evidence. token=PRIVATE_BROWSER_LOG_482") { ExecutionRunId = run.Id }],
             [new(Guid.NewGuid(), run.AgentId, thread.Id, DateTimeOffset.UtcNow, RunOutcome.Succeeded, "fixture", "synthetic", 15, 10, 20, 0) { ExecutionRunId = run.Id }]) {
-                Artifacts = [new(Guid.NewGuid(), run.Id, "text", "Fixture artifact", "artifacts/fixture.txt", "text/plain", "fixture", "Synthetic artifact", DateTimeOffset.UtcNow)]
+                Artifacts = [new(Guid.NewGuid(), run.Id, "text", "Fixture artifact", "  artifacts\\fixture.txt  ", "text/plain", "fixture", "Synthetic artifact", DateTimeOffset.UtcNow),
+                    new(Guid.NewGuid(), run.Id, "text", "Internal artifact", "../PRIVATE_BROWSER_PATH_482", "text/plain", "fixture", "Synthetic artifact", DateTimeOffset.UtcNow)]
             };
 
     public Task<AgentChatAttachmentStagingResult> StageImageAsync(string fileName, string? contentType, long sizeBytes, Stream content, CancellationToken cancellationToken = default) {
         uploads++;
-        return Task.FromResult(new AgentChatAttachmentStagingResult("uploads/fixture.png", "image/png", sizeBytes));
+        return Task.FromResult(new AgentChatAttachmentStagingResult("  uploads\\fixture.png  ", "image/png", sizeBytes));
     }
     public Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default) => Task.FromResult(new AgentVoiceSettings());
     public Task<AgentVoiceSettings> SaveSettingsAsync(AgentVoiceSettings settings, CancellationToken cancellationToken = default) => throw new NotSupportedException();

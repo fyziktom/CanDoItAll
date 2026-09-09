@@ -287,7 +287,7 @@ public partial class WorkflowAnalyticsPanel : IDisposable {
             new("Final durations", FormatCount(snapshot.Duration.FinalRunCount), "workflow-analytics-duration-final"),
             new("Active durations", FormatCount(snapshot.Duration.ActiveRunCount), "workflow-analytics-duration-active")
         ],
-        AsOf = snapshot?.AsOfUtc.LocalDateTime.ToString("g") ?? "",
+        AsOf = snapshot is null ? "" : WorkflowPresentationTime.Format(snapshot.AsOfUtc),
         Scope = scopeKind,
         SelectedWorkflow = selectedWorkflowValue,
         ScopeDescription = ScopeDescription,
@@ -296,7 +296,7 @@ public partial class WorkflowAnalyticsPanel : IDisposable {
         Providers = ProviderModelRows.Select(row => new WorkflowProviderUsageView(row.ProviderName, row.Model, row.ProviderKind?.ToString(),
             FormatCount(row.Usage.ObservationCount), FormatCount(row.Usage.TotalTokens), FormatCost(row.Usage.KnownCostUsd), FormatCount(row.Usage.PricingUnknownObservationCount))).ToImmutableArray(),
         RecentRuns = RecentRuns.Select(row => new WorkflowRunView(row.RunId.Value, row.State.ToString(), ResolveStateTone(row.State),
-            row.Backend.ToString(), row.UpdatedAtUtc.LocalDateTime.ToString("g"), WorkflowFailureDisplayFormatter.ToUserMessage(row.Summary), Duration: FormatRunDuration(row.RunId))).ToImmutableArray()
+            row.Backend.ToString(), WorkflowPresentationTime.Format(row.UpdatedAtUtc), WorkflowEventPresentationPolicy.RunSummary(row.State, row.Summary), Duration: FormatRunDuration(row.RunId))).ToImmutableArray()
     };
 
     private async Task HandleIntentAsync(WorkflowQueryIntent intent) {

@@ -1,3 +1,7 @@
+using System.Globalization;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.UI.Chat;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
@@ -10,6 +14,75 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ChatWorkspacePanelTests
 {
+    [Theory]
+    [InlineData("cs-CZ")]
+    [InlineData("ar-SA")]
+    public void Pending_thread_and_execution_times_are_stable_UTC_in_markup_and_dialogs(string culture) {
+        var previous = CultureInfo.CurrentCulture;
+        try {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            using var context = CreateContext();
+            var host = context.Render<DialogHost>();
+            var agentId = Guid.NewGuid();
+            var sessionId = Guid.NewGuid();
+            var runId = Guid.NewGuid();
+            var now = new DateTimeOffset(2026, 9, 9, 12, 34, 56, TimeSpan.FromHours(5));
+            var run = CreateRun(agentId, sessionId, runId, ExecutionState.Running, now);
+            var cut = context.Render<ChatWorkspacePanel>(p => p.Add(x => x.DraftPrompt, "")
+                .Add(x => x.Session, CreateSession(agentId, sessionId, runId, now)).Add(x => x.ActiveRun, run)
+                .Add(x => x.PendingUserPrompt, "Pending message").Add(x => x.PendingUserCreatedAtUtc, now)
+                .Add(x => x.ExecutionLog, [CreateEntry(agentId, sessionId, runId, now, ExecutionState.Running, "Read", "Reading a safe artifact.")]));
+            var timestamp = "2026-09-09 07:34:56 UTC";
+            Assert.Contains(timestamp, cut.Markup, StringComparison.Ordinal);
+            var pending = cut.Find("[data-testid='conversation-message']").TextContent;
+            cut.Render(p => p.Add(x => x.DraftPrompt, "Unrelated rerender"));
+            Assert.Equal(pending, cut.Find("[data-testid='conversation-message']").TextContent);
+            cut.Find("[data-testid='chat-execution-entry']").Click();
+            Assert.Contains(timestamp, host.Markup, StringComparison.Ordinal);
+        } finally {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
+    public void Approval_and_execution_poison_is_sanitized_before_surface_dialog_and_copy() {
+        using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var agentId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var arguments = JsonSerializer.Serialize(new {
+            path = "notes/<b>encoded</b>.txt", content = "test-only-PRIVATE_TOOL_CONTENT_482", apiToken = "test-only-PRIVATE_TOP_482",
+            request = new { projectId = "project-42", password = "test-only-PRIVATE_NESTED_482" },
+            children = new[] { new { nodeId = "node-7", secret = "test-only-PRIVATE_ARRAY_482" } }
+        });
+        var run = CreateRun(agentId, sessionId, runId, ExecutionState.WaitingOnTool, now) with {
+            PendingApprovals = [new("approval", "call", "workspace_write_file", "function", "MCP: Research server", arguments)]
+        };
+        var cut = context.Render<ChatWorkspacePanel>(p => p.Add(x => x.DraftPrompt, "").Add(x => x.ActiveRun, run)
+            .Add(x => x.Session, CreateSession(agentId, sessionId, runId, now))
+            .Add(x => x.ExecutionLog, [CreateEntry(agentId, sessionId, runId, now, ExecutionState.Running,
+                "token=test-only-PRIVATE_PHASE_482", "Read artifact. password=test-only-PRIVATE_LOG_482")])
+            .Add(x => x.DraftAttachmentPaths, ["  notes\\safe.txt  ", "../test-only-PRIVATE_PATH_482", "C:\\test-only-PRIVATE_PATH_482", "notes//test-only-PRIVATE_PATH_482"]));
+        var presentation = cut.FindComponent<AgentChatSurface>().Instance.Presentation;
+        Assert.Equal(AgentToolArgumentDisplayFormatter.DescribeArguments(arguments, "workspace_write_file"),
+            Assert.Single(presentation.Approvals).ArgumentSummary);
+        Assert.Contains("MCP: Research server", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("notes/safe.txt", Assert.Single(presentation.Attachments));
+        Assert.DoesNotContain("PRIVATE_", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("script"));
+        Assert.Contains("&lt;b&gt;", cut.Markup, StringComparison.Ordinal);
+        cut.Find("[data-testid='chat-execution-entry']").Click();
+        Assert.DoesNotContain("PRIVATE_", host.Markup, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", host.Markup, StringComparison.Ordinal);
+        var runtime = context.Render<AgentRuntimeDetailsDialog>(p => p.Add(x => x.Run, run)
+            .Add(x => x.ExecutionLog, [CreateEntry(agentId, sessionId, runId, now, ExecutionState.Running,
+                "token=test-only-PRIVATE_PHASE_482", "password=test-only-PRIVATE_RUNTIME_482")]));
+        Assert.DoesNotContain("PRIVATE_", runtime.Markup, StringComparison.Ordinal);
+        Assert.Contains("UTC", runtime.Markup, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Running_execution_log_renders_compact_chat_stream_and_opens_details_dialog()
     {

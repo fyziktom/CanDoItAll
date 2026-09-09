@@ -183,13 +183,13 @@ public partial class WorkflowOverviewPanel : IDisposable {
             new("Failed", FormatCount(snapshot.FailedRunCount), "workflow-overview-failed-count"),
             new("Success rate", FormatSuccessRate(snapshot.SuccessRatePercent), "workflow-overview-success-rate")
         ],
-        AsOf = snapshot?.AsOfUtc.LocalDateTime.ToString("g") ?? "",
+        AsOf = snapshot is null ? "" : WorkflowPresentationTime.Format(snapshot.AsOfUtc),
         TopWorkflows = snapshot?.TopWorkflows.Select(row => new WorkflowRankedView(row.Name, row.Status?.ToString() ?? "Deleted",
-            ResolveLifecycleTone(row.Status), row.LastRunAtUtc.LocalDateTime.ToString("g"), FormatCount(row.RunCount), FormatFailureCount(row.FailedRunCount))).ToImmutableArray() ?? [],
+            ResolveLifecycleTone(row.Status), WorkflowPresentationTime.Format(row.LastRunAtUtc), FormatCount(row.RunCount), FormatFailureCount(row.FailedRunCount))).ToImmutableArray() ?? [],
         RecentRuns = snapshot?.RecentRuns.Select(row => new WorkflowActivityView(row.WorkflowName,
-            WorkflowFailureDisplayFormatter.ToUserMessage(row.Run.Summary), row.Run.UpdatedAtUtc.LocalDateTime.ToString("g"), FormatRunState(row.Run.State), ResolveRunTone(row.Run.State))).ToImmutableArray() ?? [],
+            WorkflowEventPresentationPolicy.RunSummary(row.Run.State, row.Run.Summary), WorkflowPresentationTime.Format(row.Run.UpdatedAtUtc), FormatRunState(row.Run.State), ResolveRunTone(row.Run.State))).ToImmutableArray() ?? [],
         RecentlyUpdatedDefinitions = snapshot?.RecentlyUpdatedDefinitions.Select(row => new WorkflowActivityView(row.Name,
-            row.Description, row.UpdatedAtUtc.LocalDateTime.ToString("g"), row.Status.ToString(), ResolveLifecycleTone(row.Status), FormatBackend(row.PreferredBackend))).ToImmutableArray() ?? [],
+            row.Description, WorkflowPresentationTime.Format(row.UpdatedAtUtc), row.Status.ToString(), ResolveLifecycleTone(row.Status), FormatBackend(row.PreferredBackend))).ToImmutableArray() ?? [],
         Lifecycle = snapshot is null ? [] : LifecycleStatuses.Select(status => new WorkflowBadge(
             $"{status}: {FormatCount(snapshot.DefinitionsByStatus.GetValueOrDefault(status))}", ResolveLifecycleTone(status))).ToImmutableArray(),
         RunStates = snapshot?.RunsByState.Where(pair => pair.Value > 0).OrderBy(pair => pair.Key)

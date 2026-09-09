@@ -102,7 +102,8 @@ public sealed class WorkflowAnalyticsPanelTests
             File.ReadAllText($"{componentPath}.cs"));
 
         Assert.Contains("IWorkflowAnalyticsQueryService", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("WorkflowEvent", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("WorkflowEventRecord", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ListEventsAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("PayloadJson", source, StringComparison.Ordinal);
         Assert.DoesNotContain("JsonDocument", source, StringComparison.Ordinal);
         Assert.DoesNotContain("HistoryRunPageSize", source, StringComparison.Ordinal);

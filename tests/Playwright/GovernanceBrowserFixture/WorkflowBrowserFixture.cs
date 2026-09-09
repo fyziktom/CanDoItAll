@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -163,9 +164,29 @@ internal sealed class WorkflowBrowserFixture {
         return Task.FromResult(new WorkflowListPage<WorkflowRunSnapshot>(all.Skip(request.PageIndex * request.PageSize).Take(request.PageSize).ToArray(), request.PageIndex, request.PageSize, all.Length));
     }
 
-    private IReadOnlyList<WorkflowEventRecord> Events(WorkflowRunId id) => Enumerable.Range(0, 12).Select(index => new WorkflowEventRecord(
-        Guid.Parse($"54000000-0000-0000-0000-{index + 1:000000000000}"), id, WorkflowEventKind.SuperStep, new("call"),
-        $"Browser event {index + 1} " + new string('x', 150) + " FULL_EVENT_TAIL", "{\"summary\":\"Synthetic workflow result\",\"payload\":\"FULL_PAYLOAD\"}", Now.AddSeconds(index))).ToArray();
+    private IReadOnlyList<WorkflowEventRecord> Events(WorkflowRunId id) => Enumerable.Range(0, 12).Select(index => {
+        var kind = index switch { 0 => WorkflowEventKind.Output, 1 or 2 => WorkflowEventKind.ExecutorFailed, 3 => WorkflowEventKind.Cancelled, _ => WorkflowEventKind.SuperStep };
+        var message = index is 1 or 2 ? "InvalidOperationException: PRIVATE_BROWSER_SECRET_482\n   at PRIVATE_BROWSER_STACK_482() in C:\\PRIVATE_BROWSER_PATH_482\\file.cs:line 7"
+            : $"Browser event {index + 1} " + new string('x', 150) + " FULL_EVENT_TAIL";
+        var payload = index switch {
+            0 => "{\"result\":\"Useful <script>encoded workflow output</script>\",\"payload\":\"FULL_PAYLOAD\"}",
+            1 => "{\"exception\":\"PRIVATE_BROWSER_ENVELOPE_482\"}",
+            2 => JsonSerializer.Serialize(new WorkflowEventPayloadEnvelope(WorkflowEventPayloadSource.Runtime, "WorkflowExecutorFailed", null, null, null, null,
+                JsonSerializer.Serialize(new WorkflowFailureDiagnosticEnvelope(WorkflowFailureKind.Executor, WorkflowFailureRetryability.RetryableAfterRepair,
+                    "Settings are invalid.", "Repair the sample settings.", "Safe diagnostic: token=[REDACTED]", "PRIVATE_BROWSER_CORRELATION_482",
+                    null, null, id, null, null, WorkflowFailureSourceContext.ForTemplate("private", "C:\\PRIVATE_BROWSER_TEMPLATE_482"), Now), JsonOptions),
+                null, false, "C:\\PRIVATE_BROWSER_REFERENCE_482"), JsonOptions),
+            3 => JsonSerializer.Serialize(new WorkflowEventPayloadEnvelope(WorkflowEventPayloadSource.Runtime, "WorkflowCancelled", null, null, null, null,
+                JsonSerializer.Serialize(new WorkflowFailureDiagnosticEnvelope(WorkflowFailureKind.Cancellation, WorkflowFailureRetryability.NotRetryable,
+                    "Workflow run was cancelled.", "Start a new workflow run if execution is still required.", "Workflow runtime cancellation was requested.", "PRIVATE_BROWSER_CORRELATION_482",
+                    null, null, id, null, null, WorkflowFailureSourceContext.ForTemplate("private", "test-only-relative.json"), Now), JsonOptions),
+                null, false, "PRIVATE_BROWSER_REFERENCE_482"), JsonOptions),
+            _ => JsonSerializer.Serialize(new WorkflowEventPayloadEnvelope(WorkflowEventPayloadSource.Runtime, "UnknownInternal", null, null, null, null,
+                "PRIVATE_BROWSER_INTERNAL_482", null, false, "C:\\PRIVATE_BROWSER_REFERENCE_482"), JsonOptions)
+        };
+        return new WorkflowEventRecord(Guid.Parse($"54000000-0000-0000-0000-{index + 1:000000000000}"), id, kind, new("call"), message, payload, Now.AddSeconds(index));
+    }).ToArray();
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private async Task<WorkflowListPage<WorkflowEventRecord>> EventPage(WorkflowEventPageRequest request) {
         eventReads++;
         if (Mode == WorkflowBrowserMode.HoldEvents && request.RunId == FirstRun) {
@@ -175,9 +196,10 @@ internal sealed class WorkflowBrowserFixture {
         return new(all.Skip(request.PageIndex * request.PageSize).Take(request.PageSize).ToArray(), request.PageIndex, request.PageSize, all.Count);
     }
     private IReadOnlyList<WorkflowArtifactRecord> Artifacts(WorkflowRunId id)
-        => [new(new(Guid.NewGuid()), id, WorkflowArtifactKind.Text, new("call"), "browser-review.txt", "text/plain", "fixture/browser-review.txt", "Synthetic artifact", Now)];
+        => [new(new(Guid.NewGuid()), id, WorkflowArtifactKind.Text, new("call"), "browser-review.txt", "text/plain", "  fixture\\browser-review.txt  ", "Synthetic artifact", Now),
+            new(new(Guid.NewGuid()), id, WorkflowArtifactKind.Text, new("call"), "internal-review.txt", "text/plain", " C:\\PRIVATE_BROWSER_STORAGE_482\\review.txt ", "Retained artifact summary", Now)];
     private IReadOnlyList<WorkflowExternalRequestRecord> Pending(WorkflowRunId id) => Mode == WorkflowBrowserMode.HumanInput && runs[id].State != WorkflowRunState.Cancelled
-        ? [new(new(Guid.Parse($"53000000-0000-0000-0000-{901 + responses.Count:000000000000}")), id, WorkflowExternalRequestKind.HumanInput, new("review"), "review", "{\"question\":\"Approve sample?\"}", "", Now, null)] : [];
+        ? [new(new(Guid.Parse($"53000000-0000-0000-0000-{901 + responses.Count:000000000000}")), id, WorkflowExternalRequestKind.HumanInput, new("review"), "review", "{\"question\":\"<b>Approve sample?</b>\"}", "", Now, null)] : [];
     private async Task<WorkflowTestRunResult> Test(WorkflowTestRunRequest request) {
         tests.Add(request);
         var mode = Mode;

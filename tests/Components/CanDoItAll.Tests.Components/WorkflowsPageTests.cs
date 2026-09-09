@@ -1792,7 +1792,7 @@ public sealed class WorkflowsPageTests
             await runStore.SaveEventAsync(new WorkflowEventRecord(
                 Guid.Parse($"00000000-0000-0000-0000-{index + 1:x12}"),
                 newestRunId,
-                index % 2 == 0 ? WorkflowEventKind.ExecutorCompleted : WorkflowEventKind.SuperStep,
+                index == 0 ? WorkflowEventKind.Output : index % 2 == 0 ? WorkflowEventKind.ExecutorCompleted : WorkflowEventKind.SuperStep,
                 new WorkflowNodeId("history-node"),
                 message,
                 $"{{\"index\":{index},\"marker\":\"payload-{index}\"}}",

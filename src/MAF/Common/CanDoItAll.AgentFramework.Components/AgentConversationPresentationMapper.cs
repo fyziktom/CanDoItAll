@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Conversations.Components.Presentation;
 
@@ -32,7 +33,7 @@ internal static class AgentConversationPresentationMapper
             roleLabel: "User",
             roleTone: PresentationTone.Info,
             content: display.VisibleContent,
-            createdAtDisplay: createdAt.LocalDateTime.ToString("g"),
+            createdAtDisplay: ChatPresentationTime.Format(createdAt),
             hiddenContext: display.HiddenContext,
             avatar: MapAvatar(agent),
             state: ConversationMessageState.Pending);
@@ -76,7 +77,7 @@ internal static class AgentConversationPresentationMapper
             roleLabel: message.Role.ToString(),
             roleTone: tone,
             content: display.VisibleContent,
-            createdAtDisplay: message.CreatedAtUtc.LocalDateTime.ToString("g"),
+            createdAtDisplay: ChatPresentationTime.Format(message.CreatedAtUtc),
             hiddenContext: display.HiddenContext,
             copyValue: message.Content,
             copyAriaLabel: isUser ? "Copy user message" : "Copy assistant message",

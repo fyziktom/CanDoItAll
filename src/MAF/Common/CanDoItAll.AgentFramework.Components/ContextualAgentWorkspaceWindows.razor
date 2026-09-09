@@ -218,6 +218,7 @@
                                 RunStateText="@runStateText"
                                 RunStateTone="@runStateTone"
                                 PendingUserPrompt="@pendingUserPrompt"
+                                PendingUserCreatedAtUtc="@pendingUserCreatedAtUtc"
                                 DraftAttachmentPaths="@draftAttachmentPaths"
                                 CanUseVoiceMode="@CanUseSelectedAgentVoiceMode"
                                 IsVoiceModeEnabled="@isVoiceModeEnabled"
@@ -352,6 +353,7 @@
     private string searchText = string.Empty;
     private string draftPrompt = string.Empty;
     private string pendingUserPrompt = string.Empty;
+    private DateTimeOffset? pendingUserCreatedAtUtc;
     private string runStateText = string.Empty;
     private string runStateTone = DefaultRunStateTone;
     private string loadError = string.Empty;
@@ -651,6 +653,7 @@
         var continuationLoadGeneration = executionLoadGeneration;
         var continuationSessionId = executionSessionId;
         isChatBusy = true;
+        pendingUserCreatedAtUtc = DateTimeOffset.UtcNow;
         pendingUserPrompt = draftPrompt;
         var previousDraft = draftPrompt;
         draftPrompt = string.Empty;

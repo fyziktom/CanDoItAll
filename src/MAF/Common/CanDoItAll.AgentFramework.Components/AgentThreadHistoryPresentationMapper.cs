@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Conversations.Components.Presentation;
 
@@ -51,7 +52,7 @@ internal static class AgentThreadHistoryPresentationMapper
         Guid? selectedSessionId)
     {
         var resolvedTitle = string.IsNullOrWhiteSpace(title)
-            ? $"Thread {updatedAtUtc.LocalDateTime:g}"
+            ? $"Thread {ChatPresentationTime.Format(updatedAtUtc)}"
             : title;
         var badges = new List<PresentationBadge>();
         if (selectedSessionId == sessionId)
@@ -75,7 +76,7 @@ internal static class AgentThreadHistoryPresentationMapper
             key: new(sessionId.ToString("N")),
             title: resolvedTitle,
             updatedAtUtc: updatedAtUtc,
-            updatedAtDisplay: updatedAtUtc.LocalDateTime.ToString("g"),
+            updatedAtDisplay: ChatPresentationTime.Format(updatedAtUtc),
             metadata: messageCount == 0 ? "Empty thread" : $"{messageCount} messages",
             preview: string.IsNullOrWhiteSpace(preview) ? "No messages captured yet." : preview,
             searchText: string.Join(' ', resolvedTitle, preview),

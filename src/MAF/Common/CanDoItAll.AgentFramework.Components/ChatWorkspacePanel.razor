@@ -65,6 +65,12 @@
     public string PendingUserPrompt { get; set; } = string.Empty;
 
     [Parameter]
+    public DateTimeOffset? PendingUserCreatedAtUtc { get; set; }
+
+    private string observedPendingPrompt = string.Empty;
+    private DateTimeOffset pendingCreatedAtUtc;
+
+    [Parameter]
     public AgentExecutionActivityStreamId? ActivityStreamId { get; set; }
 
     [Parameter]
@@ -141,7 +147,7 @@
             : [AgentConversationPresentationMapper.MapPendingMessage(
                 Agent,
                 PendingUserPrompt,
-                DateTimeOffset.Now)];
+                PendingUserCreatedAtUtc ?? pendingCreatedAtUtc)];
 
     private ConversationEmptyStatePresentation? TranscriptEmptyState {
         get {
@@ -196,7 +202,7 @@
 
         if (Session is not null) {
             badges.Add(new(
-                Session.UpdatedAtUtc.LocalDateTime.ToString("g"),
+                ChatPresentationTime.Format(Session.UpdatedAtUtc),
                 PresentationTone.Accent));
         }
 
@@ -208,59 +214,9 @@
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
 
-    internal static string FormatApprovalArguments(string? argumentsJson) {
-        if (string.IsNullOrWhiteSpace(argumentsJson) || argumentsJson.Trim() == "{}") {
-            return string.Empty;
-        }
+    internal static string FormatApprovalArguments(string? argumentsJson, string? toolName = null)
+        => AgentToolArgumentDisplayFormatter.DescribeArguments(argumentsJson, toolName);
 
-        try {
-            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object) {
-                return string.Empty;
-            }
-
-            var parts = new List<string>();
-            foreach (var property in document.RootElement.EnumerateObject()) {
-                parts.Add($"{property.Name}: {FormatApprovalArgumentValue(property.Name, property.Value)}");
-            }
-
-            return string.Join(" · ", parts);
-        } catch (System.Text.Json.JsonException) {
-            return string.Empty;
-        }
-    }
-
-    private static readonly string[] SensitiveArgumentKeyMarkers =
-    [
-        "secret",
-        "token",
-        "password",
-        "credential",
-        "apikey",
-        "api_key",
-        "authorization",
-        "connectionstring"
-    ];
-
-    private static string FormatApprovalArgumentValue(string key, System.Text.Json.JsonElement value) {
-        if (SensitiveArgumentKeyMarkers.Any(marker =>
-                key.Contains(marker, StringComparison.OrdinalIgnoreCase))) {
-            return "•••";
-        }
-
-        var text = value.ValueKind switch {
-            System.Text.Json.JsonValueKind.String => value.GetString() ?? string.Empty,
-            System.Text.Json.JsonValueKind.Number or
-            System.Text.Json.JsonValueKind.True or
-            System.Text.Json.JsonValueKind.False => value.GetRawText(),
-            System.Text.Json.JsonValueKind.Null => "null",
-            _ => $"({value.ValueKind.ToString().ToLowerInvariant()})"
-        };
-        const int maximumDisplayLength = 160;
-        return text.Length <= maximumDisplayLength
-            ? text
-            : $"{text[..maximumDisplayLength]}… ({text.Length} chars)";
-    }
     private Task HandleAttachmentFilesSelectedAsync(InputFileChangeEventArgs args)
         => AttachmentFilesSelected.InvokeAsync(args);
 
@@ -342,7 +298,7 @@
     }
 
     private static string BuildEntryPreview(ExecutionLogEntry entry) {
-        var summary = NormalizeInlineText($"{entry.Phase}. {entry.Message}");
+        var summary = NormalizeInlineText(AgentExecutionDisplayText.Format($"{entry.Phase}. {entry.Message}"));
         var preview = TakeFirstSentences(summary, maxSentences: 2);
         const int maxLength = 190;
 
@@ -385,7 +341,7 @@
         }
 
         OpenExecutionDialog(
-            title: entry.Phase,
+            title: AgentExecutionDisplayText.Format(entry.Phase, 240),
             entries,
             highlightEntryId: entry.Id,
             size: ModalSize.Wide);
@@ -432,7 +388,7 @@
             return "No execution steps are available for the selected run.";
         }
 
-        return $"{entries.Count} step(s) captured from {entries[0].CreatedAtUtc.LocalDateTime:g} to {entries[^1].CreatedAtUtc.LocalDateTime:g}.";
+        return $"{entries.Count} step(s) captured from {ChatPresentationTime.Format(entries[0].CreatedAtUtc)} to {ChatPresentationTime.Format(entries[^1].CreatedAtUtc)}.";
     }
 
     private string ResolveComposerGuidance() {
@@ -504,6 +460,10 @@
     private bool disposed;
 
     protected override void OnParametersSet() {
+        if (!string.Equals(observedPendingPrompt, PendingUserPrompt, StringComparison.Ordinal)) {
+            observedPendingPrompt = PendingUserPrompt;
+            pendingCreatedAtUtc = PendingUserCreatedAtUtc ?? DateTimeOffset.UtcNow;
+        }
         var target = (Agent?.Id, Session?.Id, ActiveRun?.Id, SelectionGeneration);
         if (observedTarget == target) {
             return;
@@ -526,10 +486,10 @@
             TransientMessages = TransientMessagePresentations.ToImmutableArray(),
             EmptyState = TranscriptEmptyState,
             Approvals = PendingApprovals.Select(item => new ChatApprovalPresentation(item.ApprovalId, item.ToolKind,
-                item.ToolName, item.Details, FormatApprovalArguments(item.ArgumentsJson))).ToImmutableArray(),
+                item.ToolName, AgentExecutionDisplayText.Format(item.Details, 512), FormatApprovalArguments(item.ArgumentsJson, item.ToolName))).ToImmutableArray(),
             ExecutionSteps = ResolveVisibleExecutionEntries(entries).Select(item => new ChatExecutionStep(item.Id,
                 item.State.ToString(), ResolveExecutionTone(item.State), BoundExecutionText(item.Phase),
-                item.CreatedAtUtc.LocalDateTime.ToString("t"), BuildEntryPreview(item))).ToImmutableArray(),
+                ChatPresentationTime.Format(item.CreatedAtUtc), BuildEntryPreview(item))).ToImmutableArray(),
             ExecutionStepCount = entries.Count,
             CollapseExecution = ShouldCollapseExecutionStream(entries),
             ExecutionSummary = BuildWorkedForLabel(entries),
@@ -540,7 +500,7 @@
             IsBusy = IsBusy,
             AutoApproval = IsAutoApprovalActive(),
             ComposerGuidance = ResolveComposerGuidance(),
-            Attachments = DraftAttachmentPaths.Where(IsRelativeAttachment).ToImmutableArray(),
+            Attachments = DraftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>().ToImmutableArray(),
             CanUseVoiceMode = CanUseVoiceMode,
             IsVoiceModeEnabled = IsVoiceModeEnabled,
             IsVoiceRecording = IsVoiceRecording,
@@ -551,9 +511,7 @@
         };
     }
 
-    private static bool IsRelativeAttachment(string value) => !string.IsNullOrWhiteSpace(value)
-        && !value.StartsWith('/') && !value.StartsWith('\\') && !value.Contains(':');
-    private static string BoundExecutionText(string value) => value.Length <= 240 ? value : value[..240] + "…";
+    private static string BoundExecutionText(string value) => AgentExecutionDisplayText.Format(value, 240);
 
     private Task HandleIntentAsync(ChatWorkspaceIntent intent) {
         if (disposed || intent.Revision != presentationRevision) {

@@ -9,6 +9,63 @@ using ProviderService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IPr
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatSessionTests {
+    [Theory]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Success, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Failure, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Cancellation, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Success, true)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Failure, true)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Cancellation, true)]
+    public async Task Target_read_token_remains_usable_until_its_own_request_completes(WorkflowOwnershipTests.DelayedReadOutcome outcome, bool dispose) {
+        var (service, reads) = CreateReads();
+        var first = CreateAgent();
+        var second = CreateAgent();
+        reads.Agents = [first, second];
+        var entered = new TaskCompletionSource<CancellationToken>();
+        var release = new TaskCompletionSource();
+        Exception? tokenFailure = null;
+        var callbacks = 0;
+        var signaled = false;
+        reads.Workspace = async (id, _, token) => {
+            if (id != first.Id) {
+                return CreateWorkspace(id, CreateSession(id));
+            }
+            entered.SetResult(token);
+            await release.Task;
+            tokenFailure = Record.Exception(() => {
+                using var registration = token.Register(() => callbacks++);
+                signaled = token.WaitHandle.WaitOne(0);
+            });
+            return outcome switch {
+                WorkflowOwnershipTests.DelayedReadOutcome.Success => CreateWorkspace(id, CreateSession(id)),
+                WorkflowOwnershipTests.DelayedReadOutcome.Failure => throw new InvalidOperationException("PRIVATE_DELAYED_CHAT_READ"),
+                _ => throw new OperationCanceledException(token)
+            };
+        };
+        using var session = Session(service);
+        var old = session.LoadAsync(first.Id, null, false);
+        var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        if (dispose) {
+            session.Dispose();
+        } else {
+            Assert.True(await session.LoadAsync(second.Id, null, false));
+        }
+        Assert.True(token.IsCancellationRequested);
+        release.SetResult();
+        Assert.False(await old);
+        Assert.Null(tokenFailure);
+        Assert.Equal(1, callbacks);
+        Assert.True(signaled);
+        Assert.Throws<ObjectDisposedException>(() => {
+            _ = token.WaitHandle;
+        });
+        Assert.Empty(session.ErrorMessage);
+        Assert.False(session.IsLoading);
+        if (!dispose) {
+            Assert.Equal(second.Id, session.Workspace!.AgentId);
+        }
+    }
+
     [Fact]
     public async Task Explicit_missing_agent_is_unavailable_without_loading_another_agent() {
         var (service, reads) = CreateReads();
@@ -203,6 +260,7 @@ public sealed class AgentChatSessionTests {
         public Func<Guid, Guid, string, Task<ChatSessionRecord>>? Rename { get; set; }
         public Func<Guid, Task<ChatSessionRecord>>? CreateThread { get; set; }
         public Func<Guid, Task<AgentEditorModel>>? Editor { get; set; }
+        public Func<Guid, CancellationToken, Task<AgentEditorModel>>? EditorWithToken { get; set; }
         public Func<AgentEditorModel, Task<Guid>>? SaveAgent { get; set; }
         public int CatalogCalls { get; private set; }
         public int WorkspaceCalls { get; private set; }
@@ -223,7 +281,7 @@ public sealed class AgentChatSessionTests {
                 case nameof(IAgentFrameworkWorkspaceService.GetOrCreateChatSessionAsync):
                     return CreateThread!((Guid)args![0]!);
                 case nameof(IAgentFrameworkWorkspaceService.GetAgentEditorAsync):
-                    return Editor!((Guid)args![0]!);
+                    return EditorWithToken?.Invoke((Guid)args![0]!, args.OfType<CancellationToken>().Single()) ?? Editor!((Guid)args![0]!);
                 case nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync):
                     return SaveAgent!((AgentEditorModel)args![0]!);
                 case "add_ExecutionUpdated":

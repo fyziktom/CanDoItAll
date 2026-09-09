@@ -117,6 +117,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
 
     private string draftPrompt = string.Empty;
     private string pendingUserPrompt = string.Empty;
+    private DateTimeOffset? pendingUserCreatedAtUtc;
     private IReadOnlyList<string> draftAttachmentPaths = [];
     private bool isBusy;
     private int composerKey;
@@ -320,12 +321,13 @@ public partial class AgentChatPanel : IAsyncDisposable {
         var executionSessionId = selectedSessionId;
         var executionWorkspaceGeneration = chatSession.Generation;
         var executionHandleId = ActiveChatHandleId;
-        var executionAttachmentPaths = draftAttachmentPaths.ToImmutableArray();
+        var executionAttachmentPaths = draftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>().ToImmutableArray();
         if (!TryBeginChatOperation(executionHandleId)) {
             SetMessage("Chat is still active", "warning", "Wait for the current execution to finish before sending another prompt.");
             return Task.CompletedTask;
         }
 
+        pendingUserCreatedAtUtc = DateTimeOffset.UtcNow;
         pendingUserPrompt = draftPrompt;
         var previousDraft = draftPrompt;
         draftPrompt = string.Empty;
@@ -791,10 +793,13 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 SetMessage("Attachment failed", "danger", "The artifacts do not belong to this thread.");
                 return;
             }
-            draftAttachmentPaths = detail.Artifacts.Select(item => item.RelativePath).Where(IsRelativeAttachment)
+            draftAttachmentPaths = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath)).OfType<string>()
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToImmutableArray();
-            SetMessage("Ready", draftAttachmentPaths.Count == 0 ? "warning" : "success", draftAttachmentPaths.Count == 0
-                ? "The selected run does not have persisted artifacts yet." : $"Staged {draftAttachmentPaths.Count} artifact path(s) for the next prompt.");
+            var omitted = detail.Artifacts.Count - draftAttachmentPaths.Count;
+            SetMessage("Ready", omitted > 0 || draftAttachmentPaths.Count == 0 ? "warning" : "success", omitted > 0
+                ? $"Staged {draftAttachmentPaths.Count} artifact path(s). Unsafe or duplicate references were omitted."
+                : draftAttachmentPaths.Count == 0 ? "The selected run does not have persisted artifacts yet."
+                : $"Staged {draftAttachmentPaths.Count} artifact path(s) for the next prompt.");
         } catch (Exception exception) {
             if (chatSession.IsCurrent(generation) && !request.IsCancellationRequested) {
                 LogOperationFailure(exception, run.AgentId, run.ChatSessionId, ActiveChatHandleId, "read artifacts", false);
@@ -825,10 +830,10 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 if (!chatSession.IsCurrent(generation) || composer != composerGeneration || request.IsCancellationRequested) {
                     return;
                 }
-                if (!IsRelativeAttachment(staged.RelativePath)) {
+                if (!RelativeAttachmentPath.TryNormalize(staged.RelativePath, out var relativePath)) {
                     throw new InvalidOperationException("Attachment staging returned a non-relative path.");
                 }
-                stagedPaths.Add(staged.RelativePath);
+                stagedPaths.Add(relativePath);
             }
             draftAttachmentPaths = stagedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToImmutableArray();
             SetMessage("Ready", "success", $"Staged {draftAttachmentPaths.Count} attachment path(s) for the next prompt.");
@@ -843,9 +848,6 @@ public partial class AgentChatPanel : IAsyncDisposable {
             }
         }
     }
-
-    private static bool IsRelativeAttachment(string value) => !string.IsNullOrWhiteSpace(value)
-        && !value.StartsWith('/') && !value.StartsWith('\\') && !value.Contains(':');
 
     private async Task HandleSessionTitleChangedAsync(string title) {
         if (selectedAgentId is not { } agentId || selectedSessionId is not { } sessionId || isBusy) {
@@ -1017,8 +1019,8 @@ public partial class AgentChatPanel : IAsyncDisposable {
         if (!chatSession.IsCurrent(generation)) {
             return agent;
         }
-        var token = chatSession.TargetCancellation;
-        var editor = await WorkspaceService.GetAgentEditorAsync(agent.Id, token);
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(chatSession.TargetCancellation);
+        var editor = await WorkspaceService.GetAgentEditorAsync(agent.Id, request.Token);
         if (!chatSession.IsCurrent(generation)) {
             return agent;
         }
@@ -1175,7 +1177,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
 
         var attachmentText = string.Join(
             Environment.NewLine,
-            draftAttachmentPaths.Select(item => $"- {item}"));
+            draftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>().Select(item => $"- {item}"));
 
         return $"""
 Use these workspace artifacts as input:
@@ -1207,7 +1209,7 @@ Use these workspace artifacts as input:
                 voiceOwnerId,
                 voiceOwnerGeneration,
                 selectedAgentId,
-                voiceOperationCancellation.Token);
+                CancellationTokenSource.CreateLinkedTokenSource(voiceOperationCancellation.Token));
             return true;
         }
     }
@@ -1320,6 +1322,7 @@ Use these workspace artifacts as input:
                 return;
             }
 
+            using var request = operation;
             try {
                 await JsRuntime.InvokeVoidAsync(
                     "CanDoItAll.agentFramework.voice.startRecordingForOwner",
@@ -1356,6 +1359,7 @@ Use these workspace artifacts as input:
             return;
         }
 
+        using var request = operation;
         try {
             var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
                 "CanDoItAll.agentFramework.voice.stopRecordingForOwner",
@@ -1418,6 +1422,7 @@ Use these workspace artifacts as input:
             return;
         }
 
+        using var request = operation;
         var voiceAccess = SelectedAgentVoiceAccess;
         var suppressIdentifierOmissionNotice = ShouldSuppressIdentifierOmissionNotice();
 
@@ -1640,5 +1645,9 @@ Use these workspace artifacts as input:
         string OwnerId,
         long Generation,
         Guid? AgentId,
-        CancellationToken CancellationToken);
+        CancellationTokenSource Request) : IDisposable {
+        public CancellationToken CancellationToken => Request.Token;
+
+        public void Dispose() => Request.Dispose();
+    }
 }

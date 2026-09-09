@@ -1,3 +1,4 @@
+@using CanDoItAll.AgentFramework.UI.Chat
 <div class="agent-execution-log-dialog-body" data-testid="agent-execution-log-dialog-body">
     @if (OrderedEntries.Count == 0)
     {
@@ -29,22 +30,23 @@
                 @foreach (var entry in OrderedEntries)
                 {
                     var isHighlighted = entry.Id == HighlightEntryId;
+                    var displayMessage = AgentExecutionDisplayText.Format(entry.Message);
 
                     <article class="agent-execution-log-dialog-entry @(isHighlighted ? "agent-execution-log-dialog-entry--highlight" : string.Empty)"
                              data-testid="agent-execution-log-dialog-entry">
                         <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 <StatusBadge Tone="@ResolveTone(entry.State)" Text="@entry.State.ToString()" />
-                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@entry.Phase" />
-                                <TextBlock TextStyle="TextStyle.Caption" Value="@entry.CreatedAtUtc.LocalDateTime.ToString("g")" />
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@AgentExecutionDisplayText.Format(entry.Phase, 240)" />
+                                <TextBlock TextStyle="TextStyle.Caption" Value="@ChatPresentationTime.Format(entry.CreatedAtUtc)" />
                             </Cluster>
 
-                            <pre class="agent-execution-log-dialog-entry__message">@entry.Message</pre>
+                            <pre class="agent-execution-log-dialog-entry__message">@displayMessage</pre>
 
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 <StatusBadge Tone="neutral" Text="@($"Run {entry.ExecutionRunId}")" />
-                                <CopyButton Value="@entry.Message"
-                                            Disabled="@string.IsNullOrWhiteSpace(entry.Message)"
+                                <CopyButton Value="@displayMessage"
+                                            Disabled="@string.IsNullOrWhiteSpace(displayMessage)"
                                             DisplayMode="CopyButtonDisplayMode.IconOnly"
                                             Size="CopyButtonSize.ExtraSmall"
                                             AriaLabel="Copy execution step details" />
@@ -86,7 +88,7 @@
     {
         if (Run is null)
         {
-            return $"Execution log from {OrderedEntries[0].CreatedAtUtc.LocalDateTime:g}.";
+            return $"Execution log from {ChatPresentationTime.Format(OrderedEntries[0].CreatedAtUtc)}.";
         }
 
         return $"{Run.Model} / {Run.SourceKind} / revision {Run.Revision}";

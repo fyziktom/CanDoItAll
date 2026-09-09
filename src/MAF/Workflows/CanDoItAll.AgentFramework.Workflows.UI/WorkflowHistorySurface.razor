@@ -221,6 +221,7 @@
                                                 <label class="workflows-field">
                                                     <span>Response JSON</span>
                                                     <textarea class="cda-input cda-input--textarea workflows-request-response"
+                                                              maxlength="@WorkflowRequestView.MaximumJsonLength"
                                                               value="@request.ResponseJson" @onchange="@(args => ChangeResponseAsync(request.Id, args))"
                                                               data-testid="workflows-pending-response"></textarea>
                                                 </label>

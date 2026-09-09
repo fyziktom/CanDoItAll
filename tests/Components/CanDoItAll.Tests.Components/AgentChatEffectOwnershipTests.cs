@@ -14,6 +14,204 @@ using static CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsive
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatEffectOwnershipTests {
+    [Theory]
+    [InlineData("  uploads\\safe.png  ", "uploads/safe.png")]
+    [InlineData("../PRIVATE_UPLOAD_482.png", null)]
+    [InlineData(" C:\\PRIVATE_UPLOAD_482.png ", null)]
+    public async Task Upload_staging_and_next_prompt_use_the_same_canonical_relative_path(string staged, string? expected) {
+        var (service, _, agent, first, _) = Reads();
+        using var context = Context(service, out var effects);
+        var staging = DispatchProxy.Create<IAgentChatAttachmentStagingService, EffectsProxy>();
+        ((EffectsProxy)(object)staging).Upload.SetResult(new(staged, "image/png", 3));
+        context.Services.AddSingleton(staging);
+        var cut = Render(context, agent, first);
+        await cut.InvokeAsync(() => Workspace(cut).AttachmentFilesSelected.InvokeAsync(new InputFileChangeEventArgs([new FixtureFile()])));
+        if (expected is null) {
+            Assert.Empty(Workspace(cut).DraftAttachmentPaths);
+            Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages, message => message.Detail.Contains("could not be staged", StringComparison.Ordinal));
+        } else {
+            Assert.Equal(expected, Assert.Single(Workspace(cut).DraftAttachmentPaths));
+        }
+        var completion = new TaskCompletionSource<AgentChatRunResult>();
+        effects.Sends.Enqueue(completion);
+        await Send(cut, "Use the attachment");
+        var request = Assert.Single(effects.Requests);
+        Assert.NotNull(request.AttachmentPaths);
+        Assert.DoesNotContain("PRIVATE_", request.Prompt, StringComparison.Ordinal);
+        if (expected is null) {
+            Assert.Empty(request.AttachmentPaths);
+        } else {
+            Assert.Equal(expected, Assert.Single(request.AttachmentPaths));
+            Assert.Contains("- " + expected, request.Prompt, StringComparison.Ordinal);
+            Assert.DoesNotContain('\\', request.Prompt);
+        }
+        completion.SetResult(CreateRunResult(agent.Id, first.Id));
+        cut.WaitForAssertion(() => Assert.False(Workspace(cut).IsBusy));
+    }
+
+    [Fact]
+    public async Task Run_artifact_staging_omits_unsafe_paths_and_sends_only_canonical_values() {
+        var (service, reads, agent, first, _) = Reads();
+        var run = CreateRunningRun(agent.Id, first.Id) with { State = ExecutionState.Completed };
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, first, run));
+        reads.Detail = (_, _) => Task.FromResult(new ExecutionRunDetail(run, first, [], []) {
+            Artifacts = [new(Guid.NewGuid(), run.Id, "text", "Safe", "  artifacts\\safe.txt  ", "text/plain", "fixture", "safe", DateTimeOffset.UtcNow),
+                new(Guid.NewGuid(), run.Id, "text", "Unsafe", "notes/../PRIVATE_ARTIFACT_482", "text/plain", "fixture", "unsafe", DateTimeOffset.UtcNow)]
+        });
+        using var context = Context(service, out var effects);
+        var cut = Render(context, agent, first);
+        await cut.InvokeAsync(() => Workspace(cut).AttachmentRequested.InvokeAsync());
+        Assert.Equal("artifacts/safe.txt", Assert.Single(Workspace(cut).DraftAttachmentPaths));
+        Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages, message => message.Detail.Contains("references were omitted", StringComparison.Ordinal));
+        Assert.DoesNotContain("PRIVATE_ARTIFACT_482", cut.Markup, StringComparison.Ordinal);
+        var completion = new TaskCompletionSource<AgentChatRunResult>();
+        effects.Sends.Enqueue(completion);
+        await Send(cut, "Read the artifact");
+        var request = Assert.Single(effects.Requests);
+        Assert.NotNull(request.AttachmentPaths);
+        Assert.Equal("artifacts/safe.txt", Assert.Single(request.AttachmentPaths));
+        Assert.DoesNotContain("PRIVATE_ARTIFACT_482", request.Prompt, StringComparison.Ordinal);
+        completion.SetResult(CreateRunResult(agent.Id, first.Id));
+        cut.WaitForAssertion(() => Assert.False(Workspace(cut).IsBusy));
+    }
+
+    [Theory]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Success, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Failure, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Cancellation, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Success, true)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Failure, true)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Cancellation, true)]
+    public async Task Favorite_lookup_token_remains_usable_after_its_target_is_replaced(WorkflowOwnershipTests.DelayedReadOutcome outcome, bool dispose) {
+        var (service, reads, agent, first, second) = Reads();
+        var entered = new TaskCompletionSource<CancellationToken>();
+        var release = new TaskCompletionSource();
+        Exception? tokenFailure = null;
+        var callbacks = 0;
+        var signaled = false;
+        var saves = 0;
+        reads.EditorWithToken = async (_, token) => {
+            entered.SetResult(token);
+            await release.Task;
+            tokenFailure = Record.Exception(() => {
+                using var registration = token.Register(() => callbacks++);
+                signaled = token.WaitHandle.WaitOne(0);
+            });
+            return outcome switch {
+                WorkflowOwnershipTests.DelayedReadOutcome.Success => new() { Id = agent.Id },
+                WorkflowOwnershipTests.DelayedReadOutcome.Failure => throw new InvalidOperationException("PRIVATE_FAVORITE_482"),
+                _ => throw new OperationCanceledException(token)
+            };
+        };
+        reads.SaveAgent = _ => {
+            saves++;
+            return Task.FromResult(agent.Id);
+        };
+        using var context = Context(service, out _);
+        var host = context.Render<DialogHost>();
+        var cut = Render(context, agent, first);
+        await cut.InvokeAsync(() => Workspace(cut).NavigationIntent.InvokeAsync(new(Workspace(cut).Navigation!.Generation,
+            CanDoItAll.AgentFramework.UI.Chat.AgentChatNavigationAction.SwitchAgent)));
+        var chooser = host.FindComponent<AgentSwitchDialog>().Instance;
+        var old = cut.InvokeAsync(() => chooser.FavoriteToggled!(agent));
+        var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        if (dispose) {
+            await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        } else {
+            await Select(cut, agent, second);
+        }
+        Assert.True(token.IsCancellationRequested);
+        release.SetResult();
+        var completionError = await Record.ExceptionAsync(async () => await old);
+        Assert.DoesNotContain("PRIVATE_FAVORITE_482", completionError?.Message ?? "", StringComparison.Ordinal);
+        Assert.Null(tokenFailure);
+        Assert.Equal(1, callbacks);
+        Assert.True(signaled);
+        Assert.Equal(0, saves);
+        Assert.Throws<ObjectDisposedException>(() => {
+            _ = token.WaitHandle;
+        });
+    }
+
+    [Theory]
+    [InlineData(AgentChatPanelDisplayMode.FullPage)]
+    [InlineData(AgentChatPanelDisplayMode.FocusedFloating)]
+    public async Task Send_captures_one_pending_UTC_timestamp_for_unrelated_rerenders(AgentChatPanelDisplayMode mode) {
+        var (service, _, agent, first, _) = Reads();
+        using var context = Context(service, out var effects);
+        var completion = new TaskCompletionSource<AgentChatRunResult>();
+        effects.Sends.Enqueue(completion);
+        var cut = Render(context, agent, first);
+        await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.DisplayMode, mode)));
+        var before = DateTimeOffset.UtcNow;
+        await Send(cut, "Stable pending prompt");
+        var captured = Workspace(cut).PendingUserCreatedAtUtc;
+        Assert.NotNull(captured);
+        Assert.InRange(captured.Value, before, DateTimeOffset.UtcNow);
+        Assert.Equal(TimeSpan.Zero, captured.Value.Offset);
+        await cut.InvokeAsync(() => Workspace(cut).DraftPromptChanged.InvokeAsync("Unrelated composer edit"));
+        Assert.Equal(captured, Workspace(cut).PendingUserCreatedAtUtc);
+        Assert.Contains(CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(captured.Value), cut.Markup, StringComparison.Ordinal);
+        completion.SetResult(CreateRunResult(agent.Id, first.Id));
+        cut.WaitForAssertion(() => Assert.False(Workspace(cut).IsBusy));
+    }
+
+    [Theory]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Success, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Failure, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Cancellation, false)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Success, true)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Failure, true)]
+    [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Cancellation, true)]
+    public async Task Browser_voice_token_remains_usable_until_delayed_transcription_completes(WorkflowOwnershipTests.DelayedReadOutcome outcome, bool dispose) {
+        var (service, reads, original, first, second) = Reads();
+        var agent = original with { ConfigurationJson = AgentVoiceAccessMetadata.Write("{}", new() { CanUseVoiceMode = true }) };
+        reads.Agents = [agent];
+        using var context = Context(service, out var effects);
+        context.Services.AddSingleton(DispatchProxy.Create<IAgentVoiceService, EffectsProxy>());
+        var voice = (EffectsProxy)context.Services.GetRequiredService<IAgentVoiceService>();
+        context.JSInterop.Setup<BrowserVoiceRecording>("CanDoItAll.agentFramework.voice.stopRecordingForOwner", _ => true)
+            .SetResult(new() { Base64 = Convert.ToBase64String([1, 2, 3]) });
+        var entered = new TaskCompletionSource<CancellationToken>();
+        var release = new TaskCompletionSource();
+        Exception? tokenFailure = null;
+        var callbacks = 0;
+        var signaled = false;
+        voice.ReadTranscription = async token => {
+            entered.SetResult(token);
+            await release.Task;
+            tokenFailure = Record.Exception(() => {
+                using var registration = token.Register(() => callbacks++);
+                signaled = token.WaitHandle.WaitOne(0);
+            });
+            return outcome switch {
+                WorkflowOwnershipTests.DelayedReadOutcome.Success => new("obsolete spoken prompt", "fixture"),
+                WorkflowOwnershipTests.DelayedReadOutcome.Failure => throw new InvalidOperationException("PRIVATE_DELAYED_VOICE_FAILURE"),
+                _ => throw new OperationCanceledException(token)
+            };
+        };
+        var cut = Render(context, agent, first);
+        await cut.InvokeAsync(() => Workspace(cut).VoiceRecordingToggled.InvokeAsync());
+        var old = cut.InvokeAsync(() => Workspace(cut).VoiceRecordingToggled.InvokeAsync());
+        var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        if (dispose) {
+            await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        } else {
+            await Select(cut, agent, second);
+        }
+        Assert.True(token.IsCancellationRequested);
+        release.SetResult();
+        await old;
+        Assert.Null(tokenFailure);
+        Assert.Equal(1, callbacks);
+        Assert.True(signaled);
+        Assert.Throws<ObjectDisposedException>(() => {
+            _ = token.WaitHandle;
+        });
+        Assert.Equal(0, effects.SendCalls);
+        Assert.DoesNotContain("PRIVATE_DELAYED_VOICE_FAILURE", cut.Markup, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Created_thread_advances_target_and_clears_old_composer_and_voice() {
         var (service, reads, original, first, second) = Reads();
@@ -270,15 +468,18 @@ public sealed class AgentChatEffectOwnershipTests {
     public class EffectsProxy : DispatchProxy {
         public Queue<TaskCompletionSource<AgentChatRunResult>> Sends { get; } = [];
         public TaskCompletionSource<AgentVoiceTranscriptionResult> Transcription { get; } = new();
+        public Func<CancellationToken, Task<AgentVoiceTranscriptionResult>>? ReadTranscription { get; set; }
         public TaskCompletionSource<AgentChatAttachmentStagingResult> Upload { get; } = new();
         public int SendCalls { get; private set; }
+        public List<AgentChatSendRequest> Requests { get; } = [];
         protected override object? Invoke(MethodInfo? method, object?[]? args) {
             switch (method?.Name) {
                 case nameof(IAgentChatExecutionOrchestrator.StartSendMessage):
                     SendCalls++;
+                    Requests.Add((AgentChatSendRequest)args![0]!);
                     return new AgentChatOperationHandle(CreateActivityStreamId(), Sends.Dequeue().Task);
                 case nameof(IAgentVoiceService.TranscribeAsync):
-                    return Transcription.Task;
+                    return ReadTranscription?.Invoke(args!.OfType<CancellationToken>().Single()) ?? Transcription.Task;
                 case nameof(IAgentChatAttachmentStagingService.StageImageAsync):
                     return Upload.Task;
                 default:

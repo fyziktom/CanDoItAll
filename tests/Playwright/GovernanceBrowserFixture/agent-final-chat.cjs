@@ -7,7 +7,7 @@ const root = path.resolve(process.argv[2]);
 const mode = process.argv[3] || 'web';
 const workflowScope = process.argv.includes('--workflows');
 const surfaceName = workflowScope ? 'workflows' : 'chat';
-const raw = path.join(root, '.artifacts/agent-final-closure');
+const raw = path.join(root, '.artifacts/agent-delivery-seal');
 const base = 'http://127.0.0.1:' + (mode === 'web' ? 5285 : mode === 'Parity' ? 5395 : 5396);
 const control = 'http://127.0.0.1:17315/fixture/';
 const result = { mode, viewport: { width: 1600, height: 1000 }, checks: [], errors: [] };
@@ -67,6 +67,21 @@ async function send(text, scope = page) {
     await scope.getByTestId('chat-prompt-input').press('Tab');
     await scope.getByTestId('chat-send-button').click();
 }
+async function stablePending(scope, view) {
+    await post('HoldExecution');
+    await send('Stable browser pending ' + view, scope);
+    const pending = scope.getByTestId('conversation-message').filter({ hasText: 'Stable browser pending ' + view });
+    await pending.waitFor();
+    const time = (await pending.innerText()).match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC/)[0];
+    await pause(1200);
+    await scope.getByTestId('chat-prompt-input').fill('Unrelated rerender');
+    await scope.getByTestId('chat-prompt-input').press('Tab');
+    assert((await pending.innerText()).includes(time));
+    await fetch(control + 'chat-release', { method: 'POST' });
+    await post('Normal');
+    await scope.getByTestId('chat-workspace-panel').getByText('Synthetic answer: Stable browser pending ' + view, { exact: true }).waitFor();
+    result.checks.push('Web ' + view + ' stable pending UTC time across rerender');
+}
 async function inspectChatRail(panel) {
     const rail = panel.locator('.agents-chat-left-rail');
     for (const name of ['Switch Agent', 'Refresh', 'New thread']) {
@@ -82,6 +97,7 @@ async function web() {
     await panel.getByTestId('chat-workspace-panel').getByText('Initial fixture answer', { exact: true }).waitFor();
     await inspect('Web full chat and transcript', panel);
     await inspectChatRail(panel);
+    await stablePending(panel, 'full');
     if (process.argv.includes('--extras')) {
         await extras();
         return;
@@ -105,7 +121,6 @@ async function web() {
     const runtime = page.getByTestId('agent-runtime-details-dialog');
     await runtime.getByText('Fixture execution', { exact: true }).waitFor();
     await inspect('Web runtime details and metrics', runtime);
-    await page.screenshot({ path: path.join(raw, 'chat.png') });
     await runtime.getByRole('button', { name: /close/i }).first().click();
     await panel.getByTestId('chat-execution-summary').click();
     await page.getByTestId('agent-execution-log-dialog').waitFor();
@@ -114,6 +129,8 @@ async function web() {
     await panel.getByText('artifacts/fixture.txt', { exact: true }).waitFor();
     await panel.locator('input[type=file]').setInputFiles({ name: 'fixture.png', mimeType: 'image/png', buffer: Buffer.from([1, 2, 3]) });
     await panel.getByText('uploads/fixture.png', { exact: true }).waitFor();
+    assert(!(await panel.innerText()).includes('PRIVATE_BROWSER_'));
+    result.checks.push('Web canonical attachment references omit unsafe paths');
     result.checks.push('Web thread selection, create, rename, Send, execution history, artifacts and upload');
     await page.evaluate(() => {
         const voice = window.CanDoItAll.agentFramework.voice;
@@ -136,6 +153,9 @@ async function web() {
         await post('Approvals');
         await panel.getByRole('button', { name: 'Refresh', exact: true }).click();
         await panel.getByTestId('chat-approval-approve-fixture-read').waitFor();
+        assert((await panel.innerText()).includes('MCP: Research server'));
+        assert((await panel.innerText()).includes('project-42'));
+        assert(!(await panel.innerText()).includes('PRIVATE_BROWSER_'));
         await post('Normal');
         const before = (await counters()).approvals;
         if (action === 'decisions') {
@@ -183,7 +203,24 @@ async function web() {
     await inspect('Web long encoded message', panel);
     await post('Normal');
     await extras();
+    await predecessorTabs();
     result.counters = await counters();
+}
+async function predecessorTabs() {
+    const tabs = [
+        ['overview', 'agents-overview-dashboard'], ['agents', 'agents-catalog-workspace'],
+        ['simple-chats', 'llm-chats-tabs'], ['providers', 'agents-provider-profiles-panel'],
+        ['request-history', 'provider-request-history'], ['voice', 'agents-voice-settings'],
+        ['floating-chat', 'floating-agent-chat-settings'], ['chat', 'agents-chat-panel'],
+        ['capabilities', 'agents-capabilities-panel'], ['governance', 'agents-governance-panel'],
+        ['diagnostics', 'agents-diagnostics-panel']
+    ];
+    for (const [tab, testId] of tabs) {
+        await navigate('/agents?tab=' + tab);
+        await page.getByTestId(testId).waitFor();
+        assert((await page.getByTestId(testId).innerText()).trim().length > 0);
+        result.checks.push('Web predecessor top-level tab: ' + tab);
+    }
 }
 async function extras() {
     const createsBefore = (await counters()).creates;
@@ -205,6 +242,7 @@ async function extras() {
     await floating.getByTestId('chat-prompt-input').waitFor();
     assert.equal(await floating.locator('.agents-chat-left-rail').count(), 0);
     await inspect('Web focused floating Chat', floating);
+    await stablePending(floating, 'focused');
     await send('Floating synthetic prompt', floating);
     await floating.getByText('Synthetic answer: Floating synthetic prompt', { exact: true }).waitFor();
     await floating.getByTestId('agents-chat-focused-new-thread').click();
@@ -304,6 +342,19 @@ async function workflowWeb() {
     await closeWorkflowDialog('workflows-event-detail-dialog');
     await page.getByTestId('workflows-run-detail').first().click();
     await page.getByTestId('workflows-run-detail-artifact').first().waitFor();
+    const detail = page.getByTestId('workflows-run-detail-dialog');
+    await detail.locator('details summary').first().click();
+    const detailText = await detail.textContent();
+    assert(detailText.includes('Useful <script>encoded workflow output</script>'));
+    assert(detailText.includes('fixture/browser-review.txt'));
+    assert(detailText.includes('Retained artifact summary'));
+    assert(detailText.includes('Safe diagnostic: token=[REDACTED]'));
+    assert(detailText.includes('Start a new workflow run if execution is still required.'));
+    assert(detailText.includes('Workflow runtime cancellation was requested.'));
+    assert(detailText.includes('UTC'));
+    assert(!detailText.includes('PRIVATE_BROWSER_'));
+    assert.equal(await detail.locator('script').count(), 0);
+    result.checks.push('Web safe output, redacted diagnostic, hidden storage reference and UTC details');
     await closeWorkflowDialog('workflows-run-detail-dialog');
     await page.getByTestId('workflows-event-page-next').click();
     await until(async () => (await page.getByTestId('workflows-event-pager').innerText()).includes('Page 2'), 'event page 2');
@@ -328,6 +379,8 @@ async function workflowWeb() {
     await navigate(route(a) + '&runId=' + run, true);
     await page.getByTestId('workflows-refresh').click();
     await page.getByTestId('workflows-pending-response').waitFor();
+    assert((await page.getByTestId('workflows-pending-request').innerText()).includes('<b>Approve sample?</b>'));
+    assert.equal(await page.getByTestId('workflows-pending-request').locator('b').count(), 0);
     await page.getByTestId('workflows-pending-response').fill('{"approved":false,"note":"captured browser response"}');
     await page.getByTestId('workflows-pending-response').press('Tab');
     await page.getByTestId('workflows-respond-request').click();
@@ -372,7 +425,6 @@ async function workflowWeb() {
     for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) {
         if (await dismiss.isVisible()) await dismiss.click();
     }
-    await page.screenshot({ path: path.join(raw, 'workflows.png'), fullPage: false });
     await workflowMode('Failed');
     await navigate(route(a), true);
     await page.getByTestId('workflows-error').waitFor();
@@ -446,7 +498,6 @@ async function sandbox() {
     assert.deepEqual(result.errors, []);
 })().catch(async error => {
     result.failure = error.stack;
-    result.failedText = await page?.locator('body').innerText({ timeout: 1000 }).then(text => text.slice(-6000)).catch(() => 'Unavailable');
     process.exitCode = 1;
 }).finally(async () => {
     await browser?.close();

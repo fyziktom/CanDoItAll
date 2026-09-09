@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using System.Reflection;
 using Bunit;
@@ -15,6 +16,202 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowOwnershipTests {
+    public enum DelayedReadOutcome { Success, Failure, Cancellation }
+
+    public enum DelayedReadLane { Catalog, Definition, RunPage, RunDetail }
+
+    public static IEnumerable<object[]> ReadLifetimes() {
+        foreach (var lane in Enum.GetValues<DelayedReadLane>()) {
+            foreach (var outcome in Enum.GetValues<DelayedReadOutcome>()) {
+                yield return [lane, outcome, false];
+                yield return [lane, outcome, true];
+            }
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ReadLifetimes))]
+    public async Task Each_workflow_read_lane_retains_a_canceled_token_until_its_operation_finishes(
+        DelayedReadLane lane, DelayedReadOutcome outcome, bool dispose) {
+        await using var fixture = await Fixture.CreateAsync();
+        var catalog = fixture.Harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var catalogRows = await catalog.ListDefinitionsAsync();
+        var firstDetail = await catalog.GetDefinitionAsync(fixture.First.Id);
+        var secondDetail = await catalog.GetDefinitionAsync(fixture.Second.Id);
+        var entered = new TaskCompletionSource<CancellationToken>();
+        var release = new TaskCompletionSource();
+        Exception? tokenFailure = null;
+        var callbacks = 0;
+        var signaled = false;
+        var calls = 0;
+        async Task<T> Read<T>(T result, CancellationToken token) {
+            if (++calls != 1) {
+                return result;
+            }
+            entered.SetResult(token);
+            await release.Task;
+            tokenFailure = Record.Exception(() => {
+                using var registration = token.Register(() => callbacks++);
+                signaled = token.WaitHandle.WaitOne(0);
+            });
+            return outcome switch {
+                DelayedReadOutcome.Success => result,
+                DelayedReadOutcome.Failure => throw new InvalidOperationException("PRIVATE_DELAYED_LANE_FAILURE"),
+                _ => throw new OperationCanceledException(token)
+            };
+        }
+        Task old;
+        switch (lane) {
+            case DelayedReadLane.Catalog:
+                fixture.Probe.Catalog = token => Read(catalogRows, token);
+                old = fixture.Emit(WorkflowAction.Refresh);
+                break;
+            case DelayedReadLane.Definition:
+                fixture.Probe.Definition = (id, token) => Read(id == fixture.First.Id ? firstDetail : secondDetail, token);
+                old = fixture.Select(fixture.Second);
+                break;
+            case DelayedReadLane.RunPage:
+                fixture.Probe.RunPage = (request, token) => Read(new WorkflowListPage<WorkflowRunSnapshot>(
+                    [request.WorkflowId == fixture.First.Id ? fixture.FirstRun : fixture.SecondRun], 0, 8, 1), token);
+                old = fixture.Tab(WorkflowTab.History);
+                break;
+            default:
+                await fixture.Tab(WorkflowTab.History);
+                fixture.Probe.Events = (_, token) => Read<IReadOnlyList<WorkflowEventRecord>>([], token);
+                old = fixture.Emit(WorkflowAction.RunDetails, fixture.FirstRun.RunId.Value);
+                break;
+        }
+        var captured = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        if (dispose) {
+            await fixture.Cut.InvokeAsync(fixture.Cut.Instance.Dispose);
+        } else if (lane == DelayedReadLane.Catalog) {
+            await fixture.Emit(WorkflowAction.Refresh);
+        } else {
+            await fixture.Select(lane == DelayedReadLane.Definition ? fixture.First : fixture.Second);
+        }
+        Assert.True(captured.IsCancellationRequested);
+        release.SetResult();
+        await old;
+        Assert.Null(tokenFailure);
+        Assert.Equal(1, callbacks);
+        Assert.True(signaled);
+        Assert.Throws<ObjectDisposedException>(() => {
+            _ = captured.WaitHandle;
+        });
+        Assert.DoesNotContain("PRIVATE_DELAYED_LANE_FAILURE", fixture.Cut.Markup, StringComparison.Ordinal);
+        if (!dispose) {
+            Assert.False(fixture.Surface.Presentation.IsLoading);
+            Assert.Equal((lane is DelayedReadLane.Definition or DelayedReadLane.Catalog ? fixture.First : fixture.Second).Id.Value,
+                fixture.Surface.Catalog.Definition!.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Run_and_event_details_hide_internal_data_and_preserve_output_artifacts_and_editable_human_response() {
+        await using var fixture = await Fixture.CreateAsync();
+        var run = fixture.FirstRun;
+        var failedEvent = Event(run.RunId, "InvalidOperationException: PRIVATE_SECRET_482\n   at PRIVATE_STACK_482() in C:\\PRIVATE_PATH_482\\file.cs:line 7") with {
+            Kind = WorkflowEventKind.ExecutorFailed,
+            PayloadJson = "{\"exception\":\"PRIVATE_ENVELOPE_482\"}"
+        };
+        var output = Event(run.RunId, "Safe output emitted") with {
+            Kind = WorkflowEventKind.Output,
+            PayloadJson = "{\"result\":\"Useful <script>encoded output</script>\"}"
+        };
+        var internalEvent = Event(run.RunId, "Safe runtime summary") with {
+            PayloadJson = JsonSerializer.Serialize(new WorkflowEventPayloadEnvelope(WorkflowEventPayloadSource.Runtime, "UnknownInternal",
+                null, null, null, null, "PRIVATE_INTERNAL_482", 20, false, "C:\\PRIVATE_REFERENCE_482"), new JsonSerializerOptions(JsonSerializerDefaults.Web))
+        };
+        await fixture.Store.SaveEventAsync(failedEvent);
+        await fixture.Store.SaveEventAsync(output);
+        await fixture.Store.SaveEventAsync(internalEvent);
+        await fixture.Store.SaveArtifactAsync(new(WorkflowArtifactId.New(), run.RunId, WorkflowArtifactKind.Text, null,
+            "Useful artifact", "text/plain", "  artifacts\\safe.txt  ", "Useful artifact summary", run.CreatedAtUtc));
+        await fixture.Store.SaveArtifactAsync(new(WorkflowArtifactId.New(), run.RunId, WorkflowArtifactKind.Text, null,
+            "Internal artifact", "text/plain", "  C:\\PRIVATE_STORAGE_482\\file.txt  ", "Retained artifact summary", run.CreatedAtUtc));
+        var request = Request(run.RunId) with { RequestJson = "{\"question\":\"<b>Continue?</b>\"}" };
+        fixture.Probe.Pending = _ => Task.FromResult<IReadOnlyList<WorkflowExternalRequestRecord>>([request]);
+        await fixture.Tab(WorkflowTab.History);
+        await fixture.Emit(WorkflowAction.SelectRun, run.RunId.Value);
+        Assert.Contains("Continue?", fixture.Cut.Markup, StringComparison.Ordinal);
+        await fixture.Emit(WorkflowAction.ResponseChanged, request.Id.Value, "{\"approved\":false}");
+        Assert.Equal("{\"approved\":false}", Assert.Single(fixture.Surface.History.Requests).ResponseJson);
+        await fixture.Emit(WorkflowAction.ResponseChanged, request.Id.Value, new string('a', WorkflowRequestView.MaximumJsonLength + 1));
+        Assert.Equal("{\"approved\":false}", Assert.Single(fixture.Surface.History.Requests).ResponseJson);
+        await fixture.Emit(WorkflowAction.RunDetails, run.RunId.Value);
+        var detail = fixture.Cut.Find("[data-testid='workflows-run-detail-dialog']");
+        Assert.Contains("Useful <script>encoded output</script>", detail.TextContent, StringComparison.Ordinal);
+        Assert.Contains("artifacts/safe.txt", detail.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Internal artifact", detail.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Retained artifact summary", detail.TextContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_", fixture.Cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Technical details", detail.TextContent, StringComparison.Ordinal);
+        Assert.Empty(detail.QuerySelectorAll("script"));
+        Assert.Contains("UTC", detail.TextContent, StringComparison.Ordinal);
+        detail.QuerySelector("[aria-label='Close']")!.Click();
+        await fixture.Emit(WorkflowAction.EventDetails, failedEvent.Id);
+        Assert.DoesNotContain("PRIVATE_", fixture.Cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Technical details", fixture.Cut.Find("[data-testid='workflows-event-detail-dialog']").TextContent, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(DelayedReadOutcome.Success, false)]
+    [InlineData(DelayedReadOutcome.Failure, false)]
+    [InlineData(DelayedReadOutcome.Cancellation, false)]
+    [InlineData(DelayedReadOutcome.Success, true)]
+    [InlineData(DelayedReadOutcome.Failure, true)]
+    [InlineData(DelayedReadOutcome.Cancellation, true)]
+    public async Task Superseded_event_read_owns_its_token_until_delayed_completion(DelayedReadOutcome outcome, bool dispose) {
+        await using var fixture = await Fixture.CreateAsync();
+        var other = fixture.FirstRun with { RunId = new(Guid.NewGuid()), Summary = "current run" };
+        await fixture.Store.SaveRunAsync(other);
+        await fixture.Tab(WorkflowTab.History);
+        var entered = new TaskCompletionSource<CancellationToken>();
+        var release = new TaskCompletionSource();
+        Exception? tokenFailure = null;
+        var callbacks = 0;
+        var signaled = false;
+        fixture.Probe.EventPage = async (request, token) => {
+            if (request.RunId != fixture.FirstRun.RunId) {
+                return new([Event(other.RunId, "current event")], 0, 8, 1);
+            }
+            entered.SetResult(token);
+            await release.Task;
+            tokenFailure = Record.Exception(() => {
+                using var registration = token.Register(() => callbacks++);
+                signaled = token.WaitHandle.WaitOne(0);
+            });
+            return outcome switch {
+                DelayedReadOutcome.Success => new([Event(fixture.FirstRun.RunId, "obsolete event")], 4, 8, 99),
+                DelayedReadOutcome.Failure => throw new InvalidOperationException("PRIVATE_DELAYED_READ_FAILURE"),
+                _ => throw new OperationCanceledException(token)
+            };
+        };
+        var old = fixture.Emit(WorkflowAction.SelectRun, fixture.FirstRun.RunId.Value);
+        var captured = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        if (dispose) {
+            await fixture.Cut.InvokeAsync(fixture.Cut.Instance.Dispose);
+        } else {
+            await fixture.Emit(WorkflowAction.SelectRun, other.RunId.Value);
+        }
+        Assert.True(captured.IsCancellationRequested);
+        release.SetResult();
+        await old;
+        Assert.Null(tokenFailure);
+        Assert.Equal(1, callbacks);
+        Assert.True(signaled);
+        Assert.Throws<ObjectDisposedException>(() => {
+            _ = captured.WaitHandle;
+        });
+        Assert.DoesNotContain("obsolete event", fixture.Cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_DELAYED_READ_FAILURE", fixture.Cut.Markup, StringComparison.Ordinal);
+        if (!dispose) {
+            Assert.Equal(other.RunId.Value, fixture.Surface.History.SelectedRun!.Id);
+            Assert.Equal("current event", Assert.Single(fixture.Surface.History.Events).Summary);
+            Assert.Equal(0, fixture.Surface.History.EventPage.Index);
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -262,6 +459,7 @@ public sealed class WorkflowOwnershipTests {
             var environment = CanDoItAllTestEnvironment.Create("workflow-final-owner");
             var probe = new Probe();
             var harness = await WorkflowsPageTests.CreateInMemoryWorkflowHarnessAsync(environment, services => {
+                Decorate<IWorkflowCatalogService>(services, probe);
                 Decorate<IWorkflowRunStore>(services, probe);
                 Decorate<IWorkflowRuntimeManager>(services, probe);
                 Decorate<IWorkflowTestRunner>(services, probe);
@@ -313,6 +511,8 @@ public sealed class WorkflowOwnershipTests {
     }
 
     public sealed class Probe {
+        public Func<CancellationToken, Task<IReadOnlyList<WorkflowCatalogItem>>>? Catalog { get; set; }
+        public Func<WorkflowId, CancellationToken, Task<WorkflowDefinitionDetail?>>? Definition { get; set; }
         public Func<Guid, Task<ActiveAgentChat>>? Launch { get; set; }
         public Func<WorkflowTestRunRequest, Task<WorkflowTestRunResult>>? Test { get; set; }
         public Func<WorkflowEventPageRequest, CancellationToken, Task<WorkflowListPage<WorkflowEventRecord>>>? EventPage { get; set; }
@@ -329,6 +529,8 @@ public sealed class WorkflowOwnershipTests {
             var method = targetMethod ?? throw new InvalidOperationException("Missing workflow method.");
             var args = arguments ?? [];
             return method.Name switch {
+                nameof(IWorkflowCatalogService.ListDefinitionsAsync) when Probe.Catalog is { } catalog => catalog(args.OfType<CancellationToken>().Single()),
+                nameof(IWorkflowCatalogService.GetDefinitionAsync) when Probe.Definition is { } definition => definition((WorkflowId)args[0]!, args.OfType<CancellationToken>().Single()),
                 nameof(IAgentChatLauncher.StartNewChatAsync) when Probe.Launch is { } launch => launch((Guid)args[0]!),
                 nameof(IWorkflowTestRunner.RunAsync) when Probe.Test is { } run => run((WorkflowTestRunRequest)args[0]!),
                 nameof(IWorkflowRunStore.ListEventPageAsync) when Probe.EventPage is { } events => events((WorkflowEventPageRequest)args[0]!, (CancellationToken)args[1]!),
