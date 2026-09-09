@@ -19,6 +19,15 @@ else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.History) {
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatDefinitions) {
     <DefinitionCatalogSpecimen ScenarioQuery="@ScenarioQuery" />
 }
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatDefinitionEditor) {
+    <DefinitionEditorSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatConversation) {
+    <ConversationWorkspaceSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) is SandboxSpecimen.VoiceSettings or SandboxSpecimen.FloatingChatSettings) {
+    <AgentSettingsSpecimen Voice="@(SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.VoiceSettings)" ScenarioQuery="@ScenarioQuery" />
+}
 else {
     <CatalogSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" TeamQuery="@TeamQuery" />
 }

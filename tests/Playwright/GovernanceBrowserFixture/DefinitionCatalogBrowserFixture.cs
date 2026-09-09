@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.UiSandbox;
 using CatalogResult = CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatUiResult<CanDoItAll.AgentFramework.Llm.SimpleChats.Common.LlmChatPage<CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatDefinitionListItem, CanDoItAll.AgentFramework.Llm.SimpleChats.Common.LlmChatDefinitionCursor>>;
 
-internal enum DefinitionCatalogBrowserMode { Normal, ReadOnly, Denied, FailList }
+internal enum DefinitionCatalogBrowserMode { Normal, ReadOnly, Denied, FailList, ProviderFailure, Conflict }
 
 internal sealed class DefinitionCatalogBrowserFixture : ILlmChatDefinitionUiGateway, ILlmChatUiAuthorizationFacade, ILlmChatProviderUiGateway {
     public const string PrivatePrompt = "definition-browser-private-prompt";
@@ -17,6 +17,9 @@ internal sealed class DefinitionCatalogBrowserFixture : ILlmChatDefinitionUiGate
         index == 2 ? LlmChatDefinitionStatus.Suspended : LlmChatDefinitionStatus.Active, 3, 1,
         new(2026, 9, 8, 12, 0, 0, TimeSpan.Zero), index == 2 ? ["operations"] : ["research"])).ToList();
     public DefinitionCatalogBrowserMode Mode { get; set; }
+    public bool ExecutionEnabled { get; set; }
+    private readonly Dictionary<Guid, LlmChatDefinitionMutation> drafts = [];
+    public int StatusChanges { get; private set; }
     public int ListReads { get; private set; }
     public int EditorReads { get; private set; }
     public int Saves { get; private set; }
@@ -27,9 +30,9 @@ internal sealed class DefinitionCatalogBrowserFixture : ILlmChatDefinitionUiGate
     private bool CanManage => CanRead && Mode != DefinitionCatalogBrowserMode.ReadOnly;
 
     public ValueTask<LlmChatUiAuthorizationSnapshot> GetAsync(CancellationToken cancellationToken = default)
-        => ValueTask.FromResult(new LlmChatUiAuthorizationSnapshot(CanRead, CanManage, false));
+        => ValueTask.FromResult(new LlmChatUiAuthorizationSnapshot(CanRead, CanManage, CanManage && ExecutionEnabled));
     public ValueTask<bool> IsAllowedAsync(LlmChatUiPermission permission, CancellationToken cancellationToken = default)
-        => ValueTask.FromResult(permission switch { LlmChatUiPermission.Read => CanRead, LlmChatUiPermission.Manage => CanManage, _ => false });
+        => ValueTask.FromResult(permission switch { LlmChatUiPermission.Read => CanRead, LlmChatUiPermission.Manage => CanManage, LlmChatUiPermission.Execute => CanManage && ExecutionEnabled, _ => false });
     public Task<CatalogResult> ListPageAsync(LlmChatDefinitionQuery query, CancellationToken cancellationToken = default) {
         if (!CanRead) {
             throw new InvalidOperationException("Denied catalog must not read.");
@@ -63,23 +66,35 @@ internal sealed class DefinitionCatalogBrowserFixture : ILlmChatDefinitionUiGate
         var item = new LlmChatDefinitionListItem(Guid.NewGuid(), mutation.Name, mutation.Summary, mutation.AvatarImageUrl,
             LlmChatDefinitionStatus.Draft, 1, 1, DateTimeOffset.UtcNow, mutation.Tags.ToArray());
         items.Insert(0, item);
+        drafts[item.DefinitionId] = mutation;
         return Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Success(Editor(item)));
     }
     public Task<LlmChatUiResult<LlmChatDefinitionEditor>> UpdateAsync(Guid definitionId, LlmChatDefinitionMutation mutation,
         long expectedConcurrencyToken, CancellationToken cancellationToken = default) {
         Saves++;
+        if (Mode == DefinitionCatalogBrowserMode.Conflict) {
+            return Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Failure(new LlmChatUiFailure(LlmChatErrorCodes.DefinitionConcurrencyConflict, "Synthetic conflict")));
+        }
         var index = items.FindIndex(item => item.DefinitionId == definitionId);
-        items[index] = items[index] with { Name = mutation.Name, Summary = mutation.Summary, Tags = mutation.Tags.ToArray() };
+        items[index] = items[index] with { Name = mutation.Name, Summary = mutation.Summary, AvatarImageUrl = mutation.AvatarImageUrl, Tags = mutation.Tags.ToArray(), ConcurrencyToken = expectedConcurrencyToken + 1, Revision = items[index].Revision + 1 };
+        drafts[definitionId] = mutation;
         return Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Success(Editor(items[index])));
     }
     public Task<LlmChatUiResult<LlmChatDefinitionListItem>> ChangeStatusAsync(Guid definitionId, LlmChatDefinitionStatus status,
-        long expectedConcurrencyToken, CancellationToken cancellationToken = default) => throw new NotSupportedException("This browser slice does not mutate status.");
+        long expectedConcurrencyToken, CancellationToken cancellationToken = default) {
+        StatusChanges++;
+        var index = items.FindIndex(item => item.DefinitionId == definitionId);
+        items[index] = items[index] with { Status = status, ConcurrencyToken = expectedConcurrencyToken + 1 };
+        return Task.FromResult(LlmChatUiResult<LlmChatDefinitionListItem>.Success(items[index]));
+    }
     public Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>> ListAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult(LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>.Success([
-            new(ProviderId, "Synthetic rendering provider", [new("fixture-model", new(LlmChatThinkingEffortSupport.Unsupported,
-                LlmChatThinkingEffortControl.EffortLevels, [], null))])
-        ]));
-    private static LlmChatDefinitionEditor Editor(LlmChatDefinitionListItem item) => new(item, PrivatePrompt, ProviderId,
-        "Synthetic rendering provider", "fixture-model", null, null, "{}", TimeSpan.FromSeconds(30), LlmChatUiResponseFormatKind.Text,
-        "", "", "", "Browser fixture");
+        => Mode == DefinitionCatalogBrowserMode.ProviderFailure ? throw new IOException("Synthetic provider catalog failure")
+            : Task.FromResult(LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>.Success([
+                new(ProviderId, "Synthetic rendering provider", [new("fixture-model", new(LlmChatThinkingEffortSupport.Supported,
+                    LlmChatThinkingEffortControl.EffortLevels, [LlmChatThinkingEffort.Low, LlmChatThinkingEffort.High], null))])
+            ]));
+    private LlmChatDefinitionEditor Editor(LlmChatDefinitionListItem item) => drafts.TryGetValue(item.DefinitionId, out var value)
+        ? new(item, value.SystemPrompt, value.ProviderProfileId, "Synthetic rendering provider", value.Model, value.Temperature, value.ThinkingEffort,
+            value.ModelParameterConfigurationJson, value.Timeout, value.ResponseFormat, value.SchemaJson, value.SchemaName, value.SchemaDescription, value.RevisionReason)
+        : new(item, PrivatePrompt, ProviderId, "Synthetic rendering provider", "fixture-model", null, null, "{}", TimeSpan.FromSeconds(30), LlmChatUiResponseFormatKind.Text, "", "", "", "Browser fixture");
 }

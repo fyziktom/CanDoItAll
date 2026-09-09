@@ -471,6 +471,9 @@ public sealed class LlmChatDefinitionUiTests
         public List<Guid> EditorTargets { get; } = [];
         public Func<LlmChatDefinitionQuery, CancellationToken, Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>>>? ListHandler { get; set; }
         public Func<Guid, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? EditorHandler { get; set; }
+        public Func<Guid, CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? EditorRead { get; set; }
+        public Func<LlmChatDefinitionMutation, CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? SaveHandler { get; set; }
+        public Func<CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionListItem>>>? StatusHandler { get; set; }
 
 
         public IReadOnlyList<LlmChatDefinitionListItem>? ListItems { get; init; }
@@ -519,6 +522,9 @@ public sealed class LlmChatDefinitionUiTests
         {
             GetEditorCalls++;
             EditorTargets.Add(definitionId);
+            if (EditorRead is not null) {
+                return EditorRead(definitionId, cancellationToken);
+            }
             if (EditorHandler is not null) {
                 return EditorHandler(definitionId);
             }
@@ -535,6 +541,9 @@ public sealed class LlmChatDefinitionUiTests
             CancellationToken cancellationToken = default)
         {
             CreatedMutation = mutation;
+            if (SaveHandler is not null) {
+                return SaveHandler(mutation, cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Success(current));
         }
 
@@ -546,6 +555,9 @@ public sealed class LlmChatDefinitionUiTests
         {
             UpdatedMutation = mutation;
             UpdateExpectedConcurrencyToken = expectedConcurrencyToken;
+            if (SaveHandler is not null) {
+                return SaveHandler(mutation, cancellationToken);
+            }
             return Task.FromResult(UpdateFailure is null
                 ? LlmChatUiResult<LlmChatDefinitionEditor>.Success(current)
                 : LlmChatUiResult<LlmChatDefinitionEditor>.Failure(UpdateFailure));
@@ -559,6 +571,9 @@ public sealed class LlmChatDefinitionUiTests
         {
             RequestedStatus = status;
             StatusExpectedConcurrencyToken = expectedConcurrencyToken;
+            if (StatusHandler is not null) {
+                return StatusHandler(cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatDefinitionListItem>.Success(
                 current.Definition with { Status = status }));
         }

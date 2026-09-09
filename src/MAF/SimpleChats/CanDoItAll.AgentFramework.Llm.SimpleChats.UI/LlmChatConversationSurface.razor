@@ -1,0 +1,224 @@
+@if (Presentation.IsAuthorizing) {
+    <LoadingState Eyebrow="Simple Chats"
+                  Title="Loading conversations"
+                  Description="Reading the bounded conversation and definition catalogs." />
+} else if (!Presentation.CanRead) {
+    <EmptyState Eyebrow="Access required"
+                Title="Simple Chats are unavailable"
+                Description="@(string.IsNullOrWhiteSpace(Presentation.ErrorMessage) ? "Read Simple Chats permission is required to view conversations." : Presentation.ErrorMessage)" />
+} else {
+    <section class="@CssClassBuilder.Join(
+                        "llm-chat-conversation-workspace",
+                        Presentation.Focused
+                            ? "llm-chat-conversation-workspace--focused flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden"
+                            : null)"
+             data-testid="llm-chat-conversation-workspace"
+             data-conversation-context="none">
+        <Grid ColumnTemplateXl="@(Presentation.Focused ? "minmax(0,1fr)" : "minmax(16rem,22rem) minmax(0,1fr)")"
+              Gap="LayoutGap.Large"
+              FillHeight="true"
+              Class="h-full min-h-0 w-full flex-1">
+        @if (!Presentation.Focused) {
+        <SurfaceCard Class="llm-chat-conversation-workspace__rail h-full min-h-0 overflow-y-auto">
+            <ConversationThreadRail Threads="@Presentation.Threads"
+                                    Text="@ThreadRailText"
+                                    IsLoading="@Presentation.IsLoading"
+                                    ErrorText="@ThreadErrorText"
+                                    SearchTestId="llm-chat-thread-search"
+                                    Selected="SelectConversationAsync">
+                <HeaderActions>
+                    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                        @if (Presentation.CanManage) {
+                            <Button Text="New chat"
+                                    Icon="add"
+                                    ButtonStyle="ButtonStyle.Primary"
+                                    Click="OpenStartDialog"
+                                    Disabled="@Presentation.IsMutating"
+                                    data-testid="llm-chat-new" />
+                        }
+                        @if (Presentation.HasMoreConversations) {
+                            <Button Text="Load more conversations"
+                                    Icon="expand_more"
+                                    Variant="Variant.Outlined"
+                                    Size="ButtonSize.Small"
+                                    Click="LoadMoreConversationsAsync"
+                                    Disabled="@Presentation.IsLoading"
+                                    IsBusy="@Presentation.IsLoading"
+                                    data-testid="llm-chat-thread-load-more" />
+                        }
+                    </Stack>
+                </HeaderActions>
+                <ThreadActions Context="thread">
+                    @if (Presentation.CanManage &&
+                        ConversationWorkspaceMapping.TryGetConversationId(thread.Key, out var conversationId)) {
+                        <Cluster Gap="LayoutGap.XSmall">
+                            <Button Icon="edit"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => OpenRenameDialogAsync(conversationId))"
+                                    Disabled="@Presentation.IsMutating"
+                                    aria-label="@($"Rename {thread.Title}")"
+                                    data-testid="@($"llm-chat-rename-{conversationId:D}")" />
+                            <Button Icon="archive"
+                                    Variant="Variant.Text"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => OpenArchiveDialogAsync(conversationId))"
+                                    Disabled="@Presentation.IsMutating"
+                                    aria-label="@($"Archive {thread.Title}")"
+                                    data-testid="@($"llm-chat-archive-{conversationId:D}")" />
+                        </Cluster>
+                    }
+                </ThreadActions>
+            </ConversationThreadRail>
+        </SurfaceCard>
+        }
+
+        <ConversationWorkspacePanel TestId="llm-chat-workspace-panel">
+            <Header>
+                @if (Presentation.Selected is { } selected) {
+                    <ConversationHeader Presentation="@selected.Header">
+                        <TitleContent>
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <h2 class="text-lg font-semibold text-slate-900" data-testid="llm-chat-selected-title">@selected.Title</h2>
+                                <p class="text-sm text-slate-600">@selected.DefinitionName</p>
+                            </Stack>
+                        </TitleContent>
+                        <Actions>
+                            @if (Presentation.CanReloadSelected) {
+                                <Button Text="Reload"
+                                        Icon="refresh"
+                                        Variant="Variant.Outlined"
+                                        Size="ButtonSize.Small"
+                                        Click="ReloadSelectedAsync"
+                                        Disabled="@Presentation.IsLoading"
+                                        data-testid="llm-chat-reload-selected" />
+                            }
+                        </Actions>
+                    </ConversationHeader>
+                } else {
+                    <SurfaceCard Soft="true">
+                        <TextBlock TextStyle="TextStyle.Body1" Value="Choose a Simple Chat conversation" />
+                    </SurfaceCard>
+                }
+            </Header>
+            <Transcript>
+                <ConversationTranscript Messages="@Presentation.Messages"
+                                        TransientMessages="@Presentation.TransientMessages"
+                                        EmptyState="@Presentation.EmptyState">
+                    <AfterMessages>
+                        @if (Presentation.HasMoreMessages) {
+                            <Cluster JustifyContent="JustifyContent.Center">
+                                <Button Text="Load more messages"
+                                        Icon="expand_more"
+                                        Variant="Variant.Outlined"
+                                        Size="ButtonSize.Small"
+                                        Click="LoadMoreMessagesAsync"
+                                        Disabled="@Presentation.IsLoading"
+                                        IsBusy="@Presentation.IsLoading"
+                                        data-testid="llm-chat-transcript-load-more" />
+                            </Cluster>
+                        }
+                    </AfterMessages>
+                </ConversationTranscript>
+            </Transcript>
+            <MiddleContent>
+                @if (Presentation.OperationStatus is not null) {
+                    <SurfaceCard Soft="true" data-testid="llm-chat-operation-status">
+                        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+                            <TextBlock TextStyle="TextStyle.Body2"
+                                       Value="@Presentation.OperationStatus" />
+                            <Cluster Gap="LayoutGap.Small">
+                                @if (Presentation.CanCancel) {
+                                    <Button Text="Cancel response"
+                                            Icon="stop_circle"
+                                            ButtonStyle="ButtonStyle.Danger"
+                                            Variant="Variant.Outlined"
+                                            Size="ButtonSize.Small"
+                                            Click="CancelActiveOperationAsync"
+                                            Disabled="@Presentation.IsMutating"
+                                            data-testid="llm-chat-operation-cancel" />
+                                }
+                                @if (Presentation.CanReconcile) {
+                                    <Button Text="Reconcile"
+                                            Icon="sync"
+                                            Variant="Variant.Outlined"
+                                            Size="ButtonSize.Small"
+                                            Click="ReconcileActiveOperationAsync"
+                                            Disabled="@Presentation.IsMutating"
+                                            data-testid="llm-chat-operation-reconcile" />
+                                }
+                                @if (Presentation.CanAbandon) {
+                                    <Button Text="Abandon turn"
+                                            Icon="delete_forever"
+                                            ButtonStyle="ButtonStyle.Danger"
+                                            Variant="Variant.Outlined"
+                                            Size="ButtonSize.Small"
+                                            Click="AbandonActiveOperationAsync"
+                                            Disabled="@Presentation.IsMutating"
+                                            data-testid="llm-chat-operation-abandon" />
+                                }
+                            </Cluster>
+                        </Cluster>
+                    </SurfaceCard>
+                }
+                @if (!string.IsNullOrWhiteSpace(Presentation.ErrorMessage)) {
+                    <Alert AlertStyle="AlertStyle.Danger"
+                           Variant="Variant.Outlined"
+                           data-testid="llm-chat-workspace-error">
+                        @Presentation.ErrorMessage
+                    </Alert>
+                }
+            </MiddleContent>
+            <Composer>
+                <ConversationComposer @key="Presentation.Generation" DraftPrompt="@Presentation.DraftPrompt"
+                                      DraftPromptChanged="HandleDraftChanged"
+                                      SendRequested="SendAsync"
+                                      IsBusy="@Presentation.IsMutating"
+                                      IsSendDisabled="@Presentation.IsSendDisabled"
+                                      ComposerKey="@Presentation.ComposerKey"
+                                      Placeholder="Message this Simple Chat"
+                                      PromptTestId="llm-chat-prompt"
+                                      SendTestId="llm-chat-send"
+                                      SendAriaLabel="Send Simple Chat message">
+                    <LeadingActions>
+                        @ComposerActions
+                    </LeadingActions>
+                </ConversationComposer>
+            </Composer>
+        </ConversationWorkspacePanel>
+        </Grid>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public ConversationWorkspacePresentation Presentation { get; set; } = new();
+    [Parameter] public EventCallback<ConversationWorkspaceIntent> Intent { get; set; }
+    [Parameter] public RenderFragment? ComposerActions { get; set; }
+    private string? ThreadErrorText => Presentation.Selected is null ? Presentation.ErrorMessage : null;
+    private static readonly ConversationThreadRailText ThreadRailText = new(
+        Eyebrow: "Conversations",
+        SearchPlaceholder: "Search conversations",
+        SearchAriaLabel: "Search Simple Chat conversations",
+        EmptyText: "No Simple Chat conversations have been created.",
+        NoMatchesText: "No conversations match the current search.",
+        LoadingText: "Loading conversations...",
+        ErrorEyebrow: "Conversations unavailable");
+
+
+    private Task Emit(ConversationWorkspaceAction action, Guid? id = null, string? text = null)
+        => Intent.InvokeAsync(new(Presentation.Generation, action, id, text));
+    private Task SelectConversationAsync(ConversationPresentationKey key) => ConversationWorkspaceMapping.TryGetConversationId(key, out var id)
+        ? Emit(ConversationWorkspaceAction.Select, id) : Task.CompletedTask;
+    private Task LoadMoreConversationsAsync() => Emit(ConversationWorkspaceAction.LoadMoreConversations);
+    private Task LoadMoreMessagesAsync() => Emit(ConversationWorkspaceAction.LoadMoreMessages);
+    private Task ReloadSelectedAsync() => Emit(ConversationWorkspaceAction.ReloadSelected);
+    private Task OpenStartDialog() => Emit(ConversationWorkspaceAction.NewConversation);
+    private Task OpenRenameDialogAsync(Guid id) => Emit(ConversationWorkspaceAction.Rename, id);
+    private Task OpenArchiveDialogAsync(Guid id) => Emit(ConversationWorkspaceAction.Archive, id);
+    private Task HandleDraftChanged(string? value) => Emit(ConversationWorkspaceAction.DraftChanged, text: value ?? "");
+    private Task SendAsync() => Emit(ConversationWorkspaceAction.Send);
+    private Task CancelActiveOperationAsync() => Emit(ConversationWorkspaceAction.CancelResponse);
+    private Task ReconcileActiveOperationAsync() => Emit(ConversationWorkspaceAction.Reconcile);
+    private Task AbandonActiveOperationAsync() => Emit(ConversationWorkspaceAction.Abandon);
+}

@@ -7,7 +7,11 @@ public enum SandboxSpecimen {
     Governance,
     Diagnostics,
     History,
-    SimpleChatDefinitions
+    SimpleChatDefinitions,
+    SimpleChatDefinitionEditor,
+    SimpleChatConversation,
+    VoiceSettings,
+    FloatingChatSettings
 }
 
 public static class SandboxSpecimens {
@@ -16,6 +20,10 @@ public static class SandboxSpecimens {
         "overview" => SandboxSpecimen.Overview,
         "history" => SandboxSpecimen.History,
         "simple-chat-definitions" => SandboxSpecimen.SimpleChatDefinitions,
+        "simple-chat-definition-editor" => SandboxSpecimen.SimpleChatDefinitionEditor,
+        "simple-chat-conversation" => SandboxSpecimen.SimpleChatConversation,
+        "voice-settings" => SandboxSpecimen.VoiceSettings,
+        "floating-chat-settings" => SandboxSpecimen.FloatingChatSettings,
         "diagnostics" => SandboxSpecimen.Diagnostics,
         "governance" => SandboxSpecimen.Governance,
         _ => SandboxSpecimen.Catalog

@@ -1,12 +1,45 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
+using System.Collections.Immutable;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
 internal static class LlmChatConversationPresentationMapper
 {
-    public const string ConversationKeyPrefix = "llm-chat-conversation:";
+    public const string ConversationKeyPrefix = ConversationWorkspaceMapping.ConversationKeyPrefix;
+
+    public static ConversationWorkspacePresentation ToWorkspace(LlmChatConversationWorkspaceController? controller, bool focused, string draft, int composerKey) {
+        if (controller is null) {
+            return new() { Focused = focused };
+        }
+        var selected = controller.SelectedConversation;
+        var messages = ToMessages(controller.Messages).ToImmutableArray();
+        var transient = ImmutableArray.CreateBuilder<ConversationMessagePresentation>(2);
+        if (controller.PendingTurn is { } pending) {
+            transient.Add(ToPending(pending.OperationId, pending.Message, pending.AdmittedAtUtc));
+        }
+        if (controller.OperationProjection is { TransientAssistantText.Length: > 0 } projection && controller.ActiveOperation is { } operation) {
+            transient.Add(ToStreaming(projection.OperationId, projection.TransientAssistantText, operation.StartedAtUtc));
+        }
+        return new() {
+            Generation = controller.SelectionGeneration, IsAuthorizing = controller.IsAuthorizing,
+            CanRead = controller.Authorization.CanRead, CanManage = controller.Authorization.CanManage,
+            IsLoading = controller.IsLoading, IsMutating = controller.IsMutating, Focused = focused,
+            HasMoreConversations = controller.HasMoreConversations, HasMoreMessages = controller.HasMoreMessages,
+            CanReloadSelected = controller.CanReloadSelected, CanCancel = controller.CanCancel,
+            CanReconcile = controller.CanReconcile, CanAbandon = controller.CanAbandon,
+            IsSendDisabled = !controller.Authorization.CanExecute || selected is not { Status: LlmChatConversationStatus.Active, ActiveOperationId: null }
+                || string.IsNullOrWhiteSpace(draft),
+            DraftPrompt = draft, ComposerKey = composerKey, ErrorMessage = controller.ErrorMessage,
+            OperationStatus = controller.ActiveOperation is null ? null : controller.OperationStatusText,
+            Selected = selected is null ? null : new(selected.ConversationId, selected.Title, selected.DefinitionName, ToHeader(selected)),
+            Threads = controller.Conversations.Select(item => ToThread(item, selected?.ConversationId, controller.IsLoading || controller.IsMutating)).ToImmutableArray(),
+            Messages = messages, TransientMessages = transient.ToImmutable(),
+            EmptyState = messages.IsEmpty && transient.Count == 0 ? ToEmptyState(selected is not null) : null
+        };
+    }
 
     public static ConversationThreadPresentation ToThread(
         LlmChatConversationListItem conversation,
@@ -110,15 +143,11 @@ internal static class LlmChatConversationPresentationMapper
                 "Choose a thread or start a new chat from an active definition.");
 
     public static ConversationPresentationKey ToKey(Guid conversationId)
-        => new($"{ConversationKeyPrefix}{conversationId:D}");
+        => ConversationWorkspaceMapping.ToKey(conversationId);
 
     public static bool TryGetConversationId(ConversationPresentationKey key, out Guid conversationId)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        conversationId = Guid.Empty;
-        return key.Value.StartsWith(ConversationKeyPrefix, StringComparison.Ordinal) &&
-               Guid.TryParse(key.Value[ConversationKeyPrefix.Length..], out conversationId) &&
-               conversationId != Guid.Empty;
+        return ConversationWorkspaceMapping.TryGetConversationId(key, out conversationId);
     }
 
     private static ConversationMessagePresentation? TryToMessage(LlmChatMessageListItem message)

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-08T19:30:23.761157+00:00",
+  "generated_utc": "2026-09-08T23:31:08.798462+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14397,
+  "allowance_count": 14403,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -36248,18 +36248,6 @@
       "count": 1
     },
     {
-      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "d26e7f30f32d307f6ac71c823c87c11ff207da22032257125b67ebc73ebd4366",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "dc0d42a26e35424bd3d8a64f8f06317251ae6d6045d82d38467d0032ea569658",
-      "count": 1
-    },
-    {
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionPresentationMapper.cs",
       "category": "case-policy",
       "source_fingerprint": "9d47504a5b96a21b835b0ee69127d5d250c751716ba89c027fe034ec14e69783",
@@ -36401,6 +36389,24 @@
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionCatalogSurface.razor",
       "category": "case-policy",
       "source_fingerprint": "8ddde6f834914b8c4776e4ac76c064d31c498c9350c7df205ebf50d2c66f208d",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "454782997adceabd1d2c97cc3d9379e9f688e72659c9d63bdf99827e9083b800",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "803fada33522fb387e73993d7eebed82a5ee7409797e9d63558b603320ae108d",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "eec447f7de7b875f8e366476bbc483628206d5443487781da2cb85af5ade1cbd",
       "count": 1
     },
     {
@@ -42016,7 +42022,19 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsPanel.razor",
       "category": "case-policy",
-      "source_fingerprint": "e8dc32f2acc3983a8560a73348540fed257f6e69b43720f19b94612cc4317ce2",
+      "source_fingerprint": "e3b1b1f12f88c6d5d3b468701b62ab917da077335dfee31ad52e981e2b3e8049",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsSession.cs",
+      "category": "permissions",
+      "source_fingerprint": "8b5f7f5aefe6f54336fd1154698df147e454a255746b46a2c840494ac6d852cc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsSession.cs",
+      "category": "permissions",
+      "source_fingerprint": "f22cf75ca4bfe796b2cf5b8b212973228a75bd9ddd4527a44efb26109b1d4bd4",
       "count": 1
     },
     {
@@ -70073,6 +70091,24 @@
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
       "category": "case-policy",
       "source_fingerprint": "808586fe02f600e8bf782d9ad89aa412083e4e842e0062601484ad5c70ab88ad",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Settings/VoiceSettingsPresentation.cs",
+      "category": "permissions",
+      "source_fingerprint": "85fae82aeafc1e46c215e1b1acf7b9166c98affc8d8a4f68c5cd2624f309a20c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Settings/VoiceSettingsPresentation.cs",
+      "category": "permissions",
+      "source_fingerprint": "ef3f39605f6b1ce613c33235e24b7487c910b9306da0184a0703e39ba239a65f",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Settings/VoiceSettingsSurface.razor",
+      "category": "permissions",
+      "source_fingerprint": "70fa029f5b6e11616071cbfa3ac5829048f25990df618627f3403fd6bf66d373",
       "count": 1
     },
     {

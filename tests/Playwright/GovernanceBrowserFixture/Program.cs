@@ -11,8 +11,8 @@ using Npgsql;
 
 internal static class GovernanceBrowserEntry {
     public static async Task Main(string[] args) {
-        if (args.Length != 2 || args[0] is not ("prepare" or "serve" or "serve-history" or "serve-definitions")) {
-            throw new ArgumentException("Use prepare, serve, serve-history or serve-definitions followed by the repository root.");
+        if (args.Length != 2 || args[0] is not ("prepare" or "serve" or "serve-history" or "serve-definitions" or "serve-completion")) {
+            throw new ArgumentException("Use prepare, serve, serve-history, serve-definitions or serve-completion followed by the repository root.");
         }
         var repository = Path.GetFullPath(args[1]);
         var output = Path.Combine(repository, ".artifacts", "governance-final", "browser-data");
@@ -25,7 +25,8 @@ internal static class GovernanceBrowserEntry {
         foreach (var pair in environment) {
             Environment.SetEnvironmentVariable(pair.Key, pair.Value);
         }
-        var fixture = new GovernanceBrowserState { DefinitionsEnabled = args[0] == "serve-definitions" };
+        var fixture = new GovernanceBrowserState { DefinitionsEnabled = args[0] is "serve-definitions" or "serve-completion", CompletionEnabled = args[0] == "serve-completion" };
+        fixture.Definitions.ExecutionEnabled = fixture.CompletionEnabled;
         var stop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [], EnvironmentName = "Development" });
         builder.Logging.ClearProviders();
@@ -53,7 +54,7 @@ internal static class GovernanceBrowserEntry {
         });
         control.MapGet("/fixture/definitions", () => Results.Json(new {
             fixture.Definitions.ListReads, fixture.Definitions.EditorReads, fixture.Definitions.Saves,
-            fixture.Definitions.Search, fixture.Definitions.Tags, fixture.Definitions.Status
+            fixture.Definitions.Search, fixture.Definitions.Tags, fixture.Definitions.Status, fixture.Definitions.StatusChanges
         }));
         control.MapPost("/fixture/definitions/{mode}", (DefinitionCatalogBrowserMode mode) => {
             fixture.Definitions.Mode = mode;
@@ -62,6 +63,15 @@ internal static class GovernanceBrowserEntry {
         control.MapGet("/fixture/state", () => Results.Json(new {
             fixture.Mode, fixture.CatalogReads, fixture.ListReads, fixture.DetailReads, fixture.OwnerCanceled, fixture.DiagnosticsDashboardReads
         }));
+        control.MapGet("/fixture/completion", () => Results.Json(new {
+            fixture.Conversations.Sends, fixture.Conversations.Creates, fixture.Conversations.Renames, fixture.Conversations.Archives,
+            fixture.Settings.VoiceSaves, fixture.Settings.Samples, fixture.Settings.FloatingSaves, fixture.Settings.Applies
+        }));
+        control.MapPost("/fixture/completion/{mode}", (AgentCompletionBrowserMode mode) => {
+            fixture.Settings.Mode = mode;
+            fixture.Conversations.SetMode(mode);
+            return Results.Ok();
+        });
         control.MapPost("/fixture/stop", () => {
             fixture.Release();
             stop.TrySetResult();
@@ -150,6 +160,9 @@ internal sealed class GovernanceBrowserApplication(string repository, Governance
                 services.AddSingleton<ILlmChatProviderUiGateway>(fixture.Definitions);
             });
         }
+        if (fixture.CompletionEnabled) {
+            builder.ConfigureServices(services => AgentCompletionBrowserServices.Register(services, fixture));
+        }
         builder.ConfigureServices(services => services.AddScoped<IProviderRequestHistory>(provider =>
             new HistoryBrowserReads(ActivatorUtilities.CreateInstance<ProviderRequestHistoryService>(provider), fixture)));
         builder.ConfigureServices(services => services.AddScoped<IAgentDiagnosticsReads>(provider =>
@@ -163,6 +176,9 @@ internal enum GovernanceBrowserMode { Normal, HoldDetail, HoldList, FailDetail, 
 
 internal sealed class GovernanceBrowserState {
     public bool DefinitionsEnabled { get; init; }
+    public bool CompletionEnabled { get; init; }
+    public ConversationBrowserFixture Conversations { get; } = new();
+    public AgentSettingsBrowserFixture Settings { get; } = new();
     public DefinitionCatalogBrowserFixture Definitions { get; } = new();
     public const string Denied = "governance-denied-payload";
     public static readonly Guid AgentA = Guid.Parse("83cbd161-4bcb-45f9-9cb7-130000000001");

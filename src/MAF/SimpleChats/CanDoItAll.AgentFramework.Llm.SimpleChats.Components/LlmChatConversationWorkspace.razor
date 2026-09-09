@@ -1,3 +1,4 @@
+@using CanDoItAll.AgentFramework.Llm.SimpleChats.UI
 @using Microsoft.Extensions.Logging
 @inject ILlmChatDefinitionUiGateway Definitions
 @inject ILlmChatConversationUiGateway Conversations
@@ -10,226 +11,21 @@
 @inject ILogger<LlmChatOperationFollower> FollowerLogger
 @implements IAsyncDisposable
 
-@if (controller is null)
-{
-    <LoadingState Eyebrow="Simple Chats"
-                  Title="Loading conversations"
-                  Description="Reading the bounded conversation and definition catalogs." />
-}
-else if (!controller.Authorization.CanRead)
-{
-    <EmptyState Eyebrow="Access required"
-                Title="Simple Chats are unavailable"
-                Description="Read Simple Chats permission is required to view conversations." />
-}
-else
-{
-    <section class="@CssClassBuilder.Join(
-                        "llm-chat-conversation-workspace",
-                        Focused
-                            ? "llm-chat-conversation-workspace--focused flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden"
-                            : null)"
-             data-testid="llm-chat-conversation-workspace"
-             data-conversation-context="none">
-        <Grid ColumnTemplateXl="@(Focused ? "minmax(0,1fr)" : "minmax(16rem,22rem) minmax(0,1fr)")"
-              Gap="LayoutGap.Large"
-              FillHeight="true"
-              Class="h-full min-h-0 w-full flex-1">
-        @if (!Focused)
-        {
-        <SurfaceCard Class="llm-chat-conversation-workspace__rail h-full min-h-0 overflow-y-auto">
-            <ConversationThreadRail Threads="@ThreadPresentations"
-                                    Text="@ThreadRailText"
-                                    IsLoading="@controller.IsLoading"
-                                    ErrorText="@ThreadErrorText"
-                                    SearchTestId="llm-chat-thread-search"
-                                    Selected="SelectConversationAsync">
-                <HeaderActions>
-                    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
-                        @if (controller.Authorization.CanManage)
-                        {
-                            <Button Text="New chat"
-                                    Icon="add"
-                                    ButtonStyle="ButtonStyle.Primary"
-                                    Click="OpenStartDialog"
-                                    Disabled="@controller.IsMutating"
-                                    data-testid="llm-chat-new" />
-                        }
-                        @if (controller.HasMoreConversations)
-                        {
-                            <Button Text="Load more conversations"
-                                    Icon="expand_more"
-                                    Variant="Variant.Outlined"
-                                    Size="ButtonSize.Small"
-                                    Click="LoadMoreConversationsAsync"
-                                    Disabled="@controller.IsLoading"
-                                    IsBusy="@controller.IsLoading"
-                                    data-testid="llm-chat-thread-load-more" />
-                        }
-                    </Stack>
-                </HeaderActions>
-                <ThreadActions Context="thread">
-                    @if (controller.Authorization.CanManage &&
-                        LlmChatConversationPresentationMapper.TryGetConversationId(thread.Key, out var conversationId))
-                    {
-                        <Cluster Gap="LayoutGap.XSmall">
-                            <Button Icon="edit"
-                                    Variant="Variant.Text"
-                                    Size="ButtonSize.Small"
-                                    Click="@(() => OpenRenameDialogAsync(conversationId))"
-                                    Disabled="@controller.IsMutating"
-                                    aria-label="@($"Rename {thread.Title}")"
-                                    data-testid="@($"llm-chat-rename-{conversationId:D}")" />
-                            <Button Icon="archive"
-                                    Variant="Variant.Text"
-                                    ButtonStyle="ButtonStyle.Danger"
-                                    Size="ButtonSize.Small"
-                                    Click="@(() => OpenArchiveDialogAsync(conversationId))"
-                                    Disabled="@controller.IsMutating"
-                                    aria-label="@($"Archive {thread.Title}")"
-                                    data-testid="@($"llm-chat-archive-{conversationId:D}")" />
-                        </Cluster>
-                    }
-                </ThreadActions>
-            </ConversationThreadRail>
-        </SurfaceCard>
+<LlmChatConversationSurface Presentation="@LlmChatConversationPresentationMapper.ToWorkspace(controller, Focused, draftPrompt, composerKey)" Intent="HandleIntentAsync">
+    <ComposerActions>
+        @if (controller?.SelectedConversation is { } selected) {
+            var generation = controller.SelectionGeneration;
+            var context = new LlmChatComposerActionContext(selected.ProviderModel,
+                EventCallback.Factory.Create<string>(this, content => InsertPromptAsync(content, generation)));
+            @foreach (var contributor in ComposerActionContributors) {
+                @contributor.Render(context)
+            }
         }
+    </ComposerActions>
+</LlmChatConversationSurface>
 
-        <ConversationWorkspacePanel TestId="llm-chat-workspace-panel">
-            <Header>
-                @if (controller.SelectedConversation is { } selected)
-                {
-                    <ConversationHeader Presentation="@LlmChatConversationPresentationMapper.ToHeader(selected)">
-                        <TitleContent>
-                            <Stack GapScale="LayoutGap.Tiny">
-                                <h2 class="text-lg font-semibold text-slate-900" data-testid="llm-chat-selected-title">@selected.Title</h2>
-                                <p class="text-sm text-slate-600">@selected.DefinitionName</p>
-                            </Stack>
-                        </TitleContent>
-                        <Actions>
-                            @if (controller.CanReloadSelected)
-                            {
-                                <Button Text="Reload"
-                                        Icon="refresh"
-                                        Variant="Variant.Outlined"
-                                        Size="ButtonSize.Small"
-                                        Click="ReloadSelectedAsync"
-                                        Disabled="@controller.IsLoading"
-                                        data-testid="llm-chat-reload-selected" />
-                            }
-                        </Actions>
-                    </ConversationHeader>
-                }
-                else
-                {
-                    <SurfaceCard Soft="true">
-                        <TextBlock TextStyle="TextStyle.Body1" Value="Choose a Simple Chat conversation" />
-                    </SurfaceCard>
-                }
-            </Header>
-            <Transcript>
-                <ConversationTranscript Messages="@MessagePresentations"
-                                        TransientMessages="@TransientMessages"
-                                        EmptyState="@TranscriptEmptyState">
-                    <AfterMessages>
-                        @if (controller.HasMoreMessages)
-                        {
-                            <Cluster JustifyContent="JustifyContent.Center">
-                                <Button Text="Load more messages"
-                                        Icon="expand_more"
-                                        Variant="Variant.Outlined"
-                                        Size="ButtonSize.Small"
-                                        Click="LoadMoreMessagesAsync"
-                                        Disabled="@controller.IsLoading"
-                                        IsBusy="@controller.IsLoading"
-                                        data-testid="llm-chat-transcript-load-more" />
-                            </Cluster>
-                        }
-                    </AfterMessages>
-                </ConversationTranscript>
-            </Transcript>
-            <MiddleContent>
-                @if (controller.ActiveOperation is { } operation)
-                {
-                    <SurfaceCard Soft="true" data-testid="llm-chat-operation-status">
-                        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-                            <TextBlock TextStyle="TextStyle.Body2"
-                                       Value="@controller.OperationStatusText" />
-                            <Cluster Gap="LayoutGap.Small">
-                                @if (controller.CanCancel)
-                                {
-                                    <Button Text="Cancel response"
-                                            Icon="stop_circle"
-                                            ButtonStyle="ButtonStyle.Danger"
-                                            Variant="Variant.Outlined"
-                                            Size="ButtonSize.Small"
-                                            Click="CancelActiveOperationAsync"
-                                            Disabled="@controller.IsMutating"
-                                            data-testid="llm-chat-operation-cancel" />
-                                }
-                                @if (controller.CanReconcile)
-                                {
-                                    <Button Text="Reconcile"
-                                            Icon="sync"
-                                            Variant="Variant.Outlined"
-                                            Size="ButtonSize.Small"
-                                            Click="ReconcileActiveOperationAsync"
-                                            Disabled="@controller.IsMutating"
-                                            data-testid="llm-chat-operation-reconcile" />
-                                }
-                                @if (controller.CanAbandon)
-                                {
-                                    <Button Text="Abandon turn"
-                                            Icon="delete_forever"
-                                            ButtonStyle="ButtonStyle.Danger"
-                                            Variant="Variant.Outlined"
-                                            Size="ButtonSize.Small"
-                                            Click="AbandonActiveOperationAsync"
-                                            Disabled="@controller.IsMutating"
-                                            data-testid="llm-chat-operation-abandon" />
-                                }
-                            </Cluster>
-                        </Cluster>
-                    </SurfaceCard>
-                }
-                @if (!string.IsNullOrWhiteSpace(controller.ErrorMessage))
-                {
-                    <Alert AlertStyle="AlertStyle.Danger"
-                           Variant="Variant.Outlined"
-                           data-testid="llm-chat-workspace-error">
-                        @controller.ErrorMessage
-                    </Alert>
-                }
-            </MiddleContent>
-            <Composer>
-                <ConversationComposer DraftPrompt="@draftPrompt"
-                                      DraftPromptChanged="HandleDraftChanged"
-                                      SendRequested="SendAsync"
-                                      IsBusy="@controller.IsMutating"
-                                      IsSendDisabled="@IsSendDisabled"
-                                      ComposerKey="@composerKey"
-                                      Placeholder="Message this Simple Chat"
-                                      PromptTestId="llm-chat-prompt"
-                                      SendTestId="llm-chat-send"
-                                      SendAriaLabel="Send Simple Chat message">
-                    <LeadingActions>
-                        @if (ComposerActionContext is { } composerActionContext)
-                        {
-                            @foreach (var contributor in ComposerActionContributors)
-                            {
-                                @contributor.Render(composerActionContext)
-                            }
-                        }
-                    </LeadingActions>
-                </ConversationComposer>
-            </Composer>
-        </ConversationWorkspacePanel>
-        </Grid>
-    </section>
-}
-
-@if (controller is not null && startDialogOpen)
-{
+@if (controller is not null && startDialogOpen) {
+    var startOwner = dialogGeneration;
     <Dialog IsOpen="true"
             Eyebrow="Simple Chat"
             Title="Start a conversation"
@@ -237,8 +33,8 @@ else
             Size="ModalSize.Medium"
             DenseChrome="true"
             CloseOnBackdrop="false"
-            TestId="llm-chat-start-dialog"
-            OnClose="CloseStartDialog">
+            TestId="llm-chat-start-dialog" @key="startOwner"
+            OnClose="@(() => CloseOwnedDialog(startOwner))">
         <ChildContent>
             <Stack GapScale="LayoutGap.Large">
                 <ConversationParticipantPicker Participants="@StartDefinitionPresentations"
@@ -254,8 +50,7 @@ else
                     </ParticipantTemplate>
                 </ConversationParticipantPicker>
 
-                @if (controller.HasMoreDefinitions)
-                {
+                @if (controller.HasMoreDefinitions) {
                     <Button Text="Load more definitions"
                             Icon="expand_more"
                             Variant="Variant.Outlined"
@@ -276,12 +71,12 @@ else
             <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                 <Button Text="Cancel"
                         Variant="Variant.Outlined"
-                        Click="CloseStartDialog"
+                        Click="@(() => CloseOwnedDialog(startOwner))"
                         Disabled="@controller.IsMutating" />
                 <Button Text="Start chat"
                         Icon="add"
                         ButtonStyle="ButtonStyle.Primary"
-                        Click="CreateConversationAsync"
+                        Click="@(() => CreateConversationAsync(startOwner))"
                         Disabled="@(selectedStartDefinitionId is null || string.IsNullOrWhiteSpace(startTitle))"
                         IsBusy="@controller.IsMutating"
                         data-testid="llm-chat-start-confirm" />
@@ -290,8 +85,8 @@ else
     </Dialog>
 }
 
-@if (controller is not null && renameDialogOpen && controller.SelectedConversation is { } renameConversation)
-{
+@if (controller is not null && renameDialogOpen && controller.SelectedConversation is { } renameConversation) {
+    var renameOwner = dialogGeneration;
     <Dialog IsOpen="true"
             Eyebrow="Simple Chat"
             Title="Rename conversation"
@@ -299,8 +94,8 @@ else
             Size="ModalSize.Compact"
             DenseChrome="true"
             CloseOnBackdrop="false"
-            TestId="llm-chat-rename-dialog"
-            OnClose="CloseRenameDialog">
+            TestId="llm-chat-rename-dialog" @key="renameOwner"
+            OnClose="@(() => CloseOwnedDialog(renameOwner))">
         <ChildContent>
             <FormField Text="Conversation title">
                 <TextBox Value="@renameTitle"
@@ -313,11 +108,11 @@ else
             <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                 <Button Text="Cancel"
                         Variant="Variant.Outlined"
-                        Click="CloseRenameDialog"
+                        Click="@(() => CloseOwnedDialog(renameOwner))"
                         Disabled="@controller.IsMutating" />
                 <Button Text="Rename"
                         Icon="edit"
-                        Click="RenameConversationAsync"
+                        Click="@(() => RenameConversationAsync(renameOwner))"
                         Disabled="@string.IsNullOrWhiteSpace(renameTitle)"
                         IsBusy="@controller.IsMutating"
                         data-testid="llm-chat-rename-confirm" />
@@ -326,45 +121,30 @@ else
     </Dialog>
 }
 
-@if (controller is not null && archiveDialogOpen && controller.SelectedConversation is { } archiveConversation)
-{
+@if (controller is not null && archiveDialogOpen && controller.SelectedConversation is { } archiveConversation) {
+    var archiveOwner = dialogGeneration;
     <Dialog IsOpen="true"
             AriaLabel="Archive Simple Chat conversation"
             Size="ModalSize.Compact"
             DenseChrome="true"
             ShowCloseButton="false"
             CloseOnBackdrop="false"
-            TestId="llm-chat-archive-dialog">
+            TestId="llm-chat-archive-dialog" @key="archiveOwner">
         <DangerActionDialog Eyebrow="Archive conversation"
                             Title="@($"Archive {archiveConversation.Title}")"
                             Description="Archiving keeps the canonical transcript but makes this conversation read-only."
                             RequiredConfirmation="@archiveConversation.Title"
                             ConfirmButtonText="Archive"
-                            Confirmed="ArchiveConversationAsync"
-                            Cancelled="CloseArchiveDialog"
+                            Confirmed="@(() => ArchiveConversationAsync(archiveOwner))"
+                            Cancelled="@(() => CloseOwnedDialog(archiveOwner))"
                             TestId="llm-chat-archive-confirmation" />
     </Dialog>
 }
 
 @code {
-    [Parameter]
-    public Guid? InitialConversationId { get; set; }
-
-    [Parameter]
-    public EventCallback<Guid?> SelectedConversationIdChanged { get; set; }
-
-    [Parameter]
-    public bool Focused { get; set; }
-
-    private static readonly ConversationThreadRailText ThreadRailText = new(
-        Eyebrow: "Conversations",
-        SearchPlaceholder: "Search conversations",
-        SearchAriaLabel: "Search Simple Chat conversations",
-        EmptyText: "No Simple Chat conversations have been created.",
-        NoMatchesText: "No conversations match the current search.",
-        LoadingText: "Loading conversations...",
-        ErrorEyebrow: "Conversations unavailable");
-
+    [Parameter] public Guid? InitialConversationId { get; set; }
+    [Parameter] public EventCallback<Guid?> SelectedConversationIdChanged { get; set; }
+    [Parameter] public bool Focused { get; set; }
     private static readonly ConversationParticipantPickerText DefinitionPickerText = new(
         EmptyEyebrow: "Active definitions",
         EmptyTitle: "No active definitions",
@@ -378,397 +158,322 @@ else
         NoMatchesDescription: "Change the search or tag filters.",
         FavoritesFirstLabel: "Favorites first");
 
-    private readonly CancellationTokenSource lifetime = new();
+
     private LlmChatConversationWorkspaceController? controller;
-    private Guid? selectedStartDefinitionId;
-    private string startTitle = string.Empty;
-    private string renameTitle = string.Empty;
-    private string draftPrompt = string.Empty;
-    private int composerKey;
+    private LlmChatOperationFollower? operationFollower;
     private CancellationTokenSource? followerLifetime;
     private Task followerTask = Task.CompletedTask;
-    private LlmChatOperationFollower? operationFollower;
-    private int disposed;
+    private Task initialization = Task.CompletedTask;
+    private Guid? observedRoute;
+    private bool routeObserved;
+    private long routeGeneration;
+    private long dialogGeneration;
+    private bool disposed;
+    private Guid? selectedStartDefinitionId;
+    private string startTitle = "";
+    private string renameTitle = "";
+    private string draftPrompt = "";
+    private int composerKey;
     private bool startDialogOpen;
     private bool renameDialogOpen;
     private bool archiveDialogOpen;
 
-    private IReadOnlyList<ConversationThreadPresentation> ThreadPresentations
-        => controller?.Conversations
-            .Select(item => LlmChatConversationPresentationMapper.ToThread(
-                item,
-                controller.SelectedConversation?.ConversationId,
-                controller.IsLoading || controller.IsMutating))
-            .ToArray() ?? [];
+    private IReadOnlyList<ConversationParticipantPresentation> StartDefinitionPresentations => controller?.ActiveDefinitions
+        .Select(item => LlmChatDefinitionPresentationMapper.ToParticipant(item, selectedStartDefinitionId)).ToArray() ?? [];
 
-    private IReadOnlyList<ConversationMessagePresentation> MessagePresentations
-        => controller is null
-            ? []
-            : LlmChatConversationPresentationMapper.ToMessages(controller.Messages);
-
-    private IReadOnlyList<ConversationMessagePresentation> TransientMessages
-    {
-        get
-        {
-            if (controller is null)
-            {
-                return [];
-            }
-
-            var transient = new List<ConversationMessagePresentation>(2);
-            if (controller.PendingTurn is { } pending)
-            {
-                transient.Add(LlmChatConversationPresentationMapper.ToPending(
-                    pending.OperationId,
-                    pending.Message,
-                    pending.AdmittedAtUtc));
-            }
-
-            if (controller.OperationProjection is
-                {
-                    TransientAssistantText.Length: > 0
-                } projection &&
-                controller.ActiveOperation is { } operation)
-            {
-                transient.Add(LlmChatConversationPresentationMapper.ToStreaming(
-                    projection.OperationId,
-                    projection.TransientAssistantText,
-                    operation.StartedAtUtc));
-            }
-
-            return transient;
-        }
-    }
-
-    private ConversationEmptyStatePresentation? TranscriptEmptyState
-        => MessagePresentations.Count == 0 && TransientMessages.Count == 0
-            ? LlmChatConversationPresentationMapper.ToEmptyState(controller?.SelectedConversation is not null)
-            : null;
-
-    private IReadOnlyList<ConversationParticipantPresentation> StartDefinitionPresentations
-        => controller?.ActiveDefinitions
-            .Select(item => LlmChatDefinitionPresentationMapper.ToParticipant(item, selectedStartDefinitionId))
-            .ToArray() ?? [];
-
-    private bool IsSendDisabled
-        => controller is null ||
-           !controller.Authorization.CanExecute ||
-           controller.SelectedConversation is not
-           {
-               Status: LlmChatConversationStatus.Active,
-               ActiveOperationId: null
-           } ||
-           string.IsNullOrWhiteSpace(draftPrompt);
-
-    private LlmChatComposerActionContext? ComposerActionContext
-        => controller?.SelectedConversation is { } selected
-            ? new(
-                selected.ProviderModel,
-                EventCallback.Factory.Create<string>(this, InsertPromptAsync))
-            : null;
-
-    private string? ThreadErrorText
-        => controller is { SelectedConversation: null } && !string.IsNullOrWhiteSpace(controller.ErrorMessage)
-            ? controller.ErrorMessage
-            : null;
-
-    protected override async Task OnInitializedAsync()
-    {
-        controller = new(
-            Definitions,
-            Conversations,
-            Operations,
-            Authorization,
-            Logger,
-            TimeProvider.System);
+    protected override void OnInitialized() {
+        controller = new(Definitions, Conversations, Operations, Authorization, Logger, TimeProvider.System);
         operationFollower = new(EventSessions, ProjectionReducer, FollowerLogger);
-        await controller.InitializeAsync(lifetime.Token, InitialConversationId);
-        await controller.PrepareActiveOperationAsync(lifetime.Token);
-        await RestartFollowerAsync();
     }
 
-    private async Task SelectConversationAsync(ConversationPresentationKey key)
-    {
-        if (!LlmChatConversationPresentationMapper.TryGetConversationId(key, out var conversationId))
-        {
+    protected override async Task OnParametersSetAsync() {
+        var target = InitialConversationId;
+        if (disposed || routeObserved && observedRoute == target) {
             return;
         }
-
-        await StopFollowerAsync();
-        if (await controller!.SelectConversationAsync(conversationId, lifetime.Token))
-        {
-            await controller.PrepareActiveOperationAsync(lifetime.Token);
-            await RestartFollowerAsync();
-            await SelectedConversationIdChanged.InvokeAsync(conversationId);
+        var first = !routeObserved;
+        routeObserved = true;
+        observedRoute = target;
+        if (!first && controller!.DesiredConversationId == target && controller.SelectedConversation?.ConversationId == target) {
+            await controller.SetRequestedConversationAsync(target, CancellationToken.None);
+            return;
+        }
+        var owner = ++routeGeneration;
+        CloseOwnedDialogs();
+        StopFollower();
+        ClearComposer();
+        if (first) {
+            initialization = controller!.InitializeAsync(CancellationToken.None, target);
+            await initialization;
+        } else {
+            await controller!.SetRequestedConversationAsync(target, CancellationToken.None);
+            if (controller.IsAuthorizing) {
+                await initialization;
+            }
+        }
+        if (!disposed && owner == routeGeneration) {
+            await AcceptSelectionAsync(controller!.SelectionGeneration, notify: !first);
         }
     }
 
-    private Task LoadMoreConversationsAsync()
-        => controller!.LoadMoreConversationsAsync(lifetime.Token);
-
-    private Task LoadMoreDefinitionsAsync()
-        => controller!.LoadMoreDefinitionsAsync(lifetime.Token);
-
-    private Task LoadMoreMessagesAsync()
-        => controller!.LoadMoreMessagesAsync(lifetime.Token);
-
-    private async Task ReloadSelectedAsync()
-    {
-        await StopFollowerAsync();
-        if (await controller!.ReloadSelectedAsync(lifetime.Token))
-        {
-            await controller.PrepareActiveOperationAsync(lifetime.Token);
-            await RestartFollowerAsync();
+    private async Task HandleIntentAsync(ConversationWorkspaceIntent intent) {
+        if (controller is null || !controller.IsCurrentSelection(intent.Generation)) {
+            return;
+        }
+        switch (intent.Action) {
+            case ConversationWorkspaceAction.Select when intent.ConversationId is { } id:
+                await SelectConversationAsync(id);
+                break;
+            case ConversationWorkspaceAction.LoadMoreConversations:
+                await controller.LoadMoreConversationsAsync(CancellationToken.None);
+                break;
+            case ConversationWorkspaceAction.LoadMoreMessages:
+                await controller.LoadMoreMessagesAsync(CancellationToken.None);
+                break;
+            case ConversationWorkspaceAction.ReloadSelected:
+                StopFollower();
+                if (await controller.ReloadSelectedAsync(CancellationToken.None)) {
+                    await AcceptSelectionAsync(intent.Generation);
+                }
+                break;
+            case ConversationWorkspaceAction.NewConversation:
+                CloseOwnedDialogs();
+                startDialogOpen = controller.Authorization.CanManage;
+                break;
+            case ConversationWorkspaceAction.Rename when intent.ConversationId is { } renameId:
+                await OpenTargetDialogAsync(renameId, archive: false);
+                break;
+            case ConversationWorkspaceAction.Archive when intent.ConversationId is { } archiveId:
+                await OpenTargetDialogAsync(archiveId, archive: true);
+                break;
+            case ConversationWorkspaceAction.DraftChanged:
+                draftPrompt = intent.Text ?? "";
+                break;
+            case ConversationWorkspaceAction.Send:
+                if (await controller.SendAsync(draftPrompt, CancellationToken.None) && controller.IsCurrentSelection(intent.Generation)) {
+                    ClearComposer();
+                    RestartFollower();
+                }
+                break;
+            case ConversationWorkspaceAction.CancelResponse:
+                await controller.CancelActiveOperationAsync(CancellationToken.None);
+                break;
+            case ConversationWorkspaceAction.Reconcile:
+                await controller.ReconcileActiveOperationAsync(CancellationToken.None);
+                break;
+            case ConversationWorkspaceAction.Abandon:
+                await controller.AbandonActiveOperationAsync(CancellationToken.None);
+                break;
         }
     }
 
-    private void OpenStartDialog()
-    {
-        selectedStartDefinitionId = null;
-        startTitle = string.Empty;
-        startDialogOpen = true;
+    private async Task<bool> SelectConversationAsync(Guid id) {
+        var owner = ++routeGeneration;
+        CloseOwnedDialogs();
+        StopFollower();
+        ClearComposer();
+        var selected = await controller!.SelectConversationAsync(id, CancellationToken.None);
+        if (!selected || disposed || owner != routeGeneration) {
+            return false;
+        }
+        return await AcceptSelectionAsync(controller.SelectionGeneration);
     }
 
-    private void CloseStartDialog()
-    {
+    private async Task<bool> AcceptSelectionAsync(long generation, bool notify = true) {
+        if (!controller!.IsCurrentSelection(generation)) {
+            return false;
+        }
+        await controller.PrepareActiveOperationAsync(CancellationToken.None);
+        if (!controller.IsCurrentSelection(generation) || controller.SelectedConversation?.ConversationId != controller.DesiredConversationId) {
+            return false;
+        }
+        RestartFollower();
+        if (notify) {
+            await SelectedConversationIdChanged.InvokeAsync(controller.SelectedConversation?.ConversationId);
+        }
+        return controller.IsCurrentSelection(generation);
+    }
+
+    private async Task OpenTargetDialogAsync(Guid id, bool archive) {
+        if (!controller!.Authorization.CanManage) {
+            return;
+        }
+        CloseOwnedDialogs();
+        if (controller.SelectedConversation?.ConversationId != id) {
+            var selection = SelectConversationAsync(id);
+            var owner = dialogGeneration;
+            if (!await selection || owner != dialogGeneration) {
+                return;
+            }
+        }
+        if (disposed || controller.SelectedConversation?.ConversationId != id || controller.DesiredConversationId != id) {
+            return;
+        }
+        dialogGeneration++;
+        renameTitle = controller.SelectedConversation.Title;
+        archiveDialogOpen = archive;
+        renameDialogOpen = !archive;
+    }
+
+    private void CloseOwnedDialogs() {
+        dialogGeneration++;
         startDialogOpen = false;
+        renameDialogOpen = false;
+        archiveDialogOpen = false;
         selectedStartDefinitionId = null;
-        startTitle = string.Empty;
+        startTitle = "";
+        renameTitle = "";
     }
-
-    private Task SelectStartDefinitionAsync(ConversationPresentationKey key)
-    {
-        if (LlmChatDefinitionPresentationMapper.TryGetDefinitionId(key, out var definitionId))
-        {
-            selectedStartDefinitionId = definitionId;
-            var definition = controller!.ActiveDefinitions.Single(item => item.DefinitionId == definitionId);
-            if (string.IsNullOrWhiteSpace(startTitle))
-            {
+    private void CloseOwnedDialog(long owner) {
+        if (owner == dialogGeneration) {
+            CloseOwnedDialogs();
+        }
+    }
+    private Task SelectStartDefinitionAsync(ConversationPresentationKey key) {
+        if (LlmChatDefinitionPresentationMapper.TryGetDefinitionId(key, out var id) && controller!.ActiveDefinitions.FirstOrDefault(item => item.DefinitionId == id) is { } definition) {
+            selectedStartDefinitionId = id;
+            if (string.IsNullOrWhiteSpace(startTitle)) {
                 startTitle = $"{definition.Name} chat";
             }
         }
-
         return Task.CompletedTask;
     }
-
-    private async Task CreateConversationAsync()
-    {
-        if (selectedStartDefinitionId is not { } definitionId)
-        {
+    private async Task CreateConversationAsync(long owner) {
+        if (owner != dialogGeneration || !startDialogOpen || selectedStartDefinitionId is not { } id) {
             return;
         }
-
-        if (await controller!.CreateAsync(definitionId, startTitle, lifetime.Token))
-        {
-            CloseStartDialog();
+        var generation = controller!.SelectionGeneration;
+        if (await controller.CreateAsync(id, startTitle, CancellationToken.None) && controller.IsCurrentSelection(generation) && owner == dialogGeneration) {
+            CloseOwnedDialog(owner);
+            ClearComposer();
+            await AcceptSelectionAsync(generation);
+        }
+    }
+    private async Task RenameConversationAsync(long owner) {
+        if (owner != dialogGeneration || !renameDialogOpen) {
+            return;
+        }
+        if (await controller!.RenameSelectedAsync(renameTitle, CancellationToken.None)) {
+            CloseOwnedDialog(owner);
+        }
+    }
+    private async Task ArchiveConversationAsync(long owner) {
+        if (owner != dialogGeneration || !archiveDialogOpen) {
+            return;
+        }
+        var generation = controller!.SelectionGeneration;
+        if (await controller.ArchiveSelectedAsync(CancellationToken.None) && controller.IsCurrentSelection(generation) && owner == dialogGeneration) {
+            CloseOwnedDialog(owner);
             await SelectedConversationIdChanged.InvokeAsync(controller.SelectedConversation?.ConversationId);
         }
     }
-
-    private async Task OpenRenameDialogAsync(Guid conversationId)
-    {
-        if (controller!.SelectedConversation?.ConversationId != conversationId &&
-            !await controller.SelectConversationAsync(conversationId, lifetime.Token))
-        {
-            return;
-        }
-
-        renameTitle = controller.SelectedConversation!.Title;
-        renameDialogOpen = true;
-    }
-
-    private void CloseRenameDialog()
-    {
-        renameDialogOpen = false;
-        renameTitle = string.Empty;
-    }
-
-    private async Task RenameConversationAsync()
-    {
-        if (await controller!.RenameSelectedAsync(renameTitle, lifetime.Token))
-        {
-            CloseRenameDialog();
-        }
-    }
-
-    private async Task OpenArchiveDialogAsync(Guid conversationId)
-    {
-        if (controller!.SelectedConversation?.ConversationId != conversationId &&
-            !await controller.SelectConversationAsync(conversationId, lifetime.Token))
-        {
-            return;
-        }
-
-        archiveDialogOpen = true;
-    }
-
-    private void CloseArchiveDialog()
-        => archiveDialogOpen = false;
-
-    private async Task ArchiveConversationAsync()
-    {
-        if (await controller!.ArchiveSelectedAsync(lifetime.Token))
-        {
-            CloseArchiveDialog();
-            await SelectedConversationIdChanged.InvokeAsync(controller.SelectedConversation?.ConversationId);
-        }
-    }
-
-    private Task HandleStartTitleChanged(string? value)
-    {
-        startTitle = value ?? string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleRenameTitleChanged(string? value)
-    {
-        renameTitle = value ?? string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleDraftChanged(string? value)
-    {
-        draftPrompt = value ?? string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task InsertPromptAsync(string content)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(content);
-        var normalizedContent = content.Trim();
-        draftPrompt = string.IsNullOrWhiteSpace(draftPrompt)
-            ? normalizedContent
-            : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{normalizedContent}";
-        composerKey++;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private async Task SendAsync()
-    {
-        if (await controller!.SendAsync(draftPrompt, lifetime.Token))
-        {
-            draftPrompt = string.Empty;
+    private Task LoadMoreDefinitionsAsync() => controller!.LoadMoreDefinitionsAsync(CancellationToken.None);
+    private void HandleStartTitleChanged(string? value) => startTitle = value ?? "";
+    private void HandleRenameTitleChanged(string? value) => renameTitle = value ?? "";
+    private Task InsertPromptAsync(string content, long generation) {
+        if (controller!.IsCurrentSelection(generation)) {
+            ArgumentException.ThrowIfNullOrWhiteSpace(content);
+            draftPrompt = string.IsNullOrWhiteSpace(draftPrompt) ? content.Trim() : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{content.Trim()}";
             composerKey++;
-            await RestartFollowerAsync();
+            StateHasChanged();
         }
+        return Task.CompletedTask;
+    }
+    private void ClearComposer() {
+        draftPrompt = "";
+        composerKey++;
     }
 
-    private Task CancelActiveOperationAsync()
-        => controller!.CancelActiveOperationAsync(lifetime.Token);
-
-    private Task ReconcileActiveOperationAsync()
-        => controller!.ReconcileActiveOperationAsync(lifetime.Token);
-
-    private Task AbandonActiveOperationAsync()
-        => controller!.AbandonActiveOperationAsync(lifetime.Token);
-
-    private async Task RestartFollowerAsync()
-    {
-        await StopFollowerAsync();
-        if (controller?.ActiveOperation is not { } operation ||
-            operation.Status == LlmChatOperationStatus.RecoveryRequired)
-        {
+    private void RestartFollower() {
+        StopFollower();
+        if (disposed || controller?.ActiveOperation is not { } operation || operation.Status == LlmChatOperationStatus.RecoveryRequired) {
             return;
         }
-
-        followerLifetime = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        followerTask = RunFollowerAsync(operation.OperationId, followerLifetime.Token);
+        var source = new CancellationTokenSource();
+        followerLifetime = source;
+        followerTask = RunFollowerAsync(operation.OperationId, operation.ConversationId, controller.SelectionGeneration, source);
     }
+    private bool OwnsFollower(Guid conversationId, long generation, CancellationTokenSource source)
+        => !disposed && ReferenceEquals(followerLifetime, source) && !source.IsCancellationRequested
+            && controller!.IsCurrentSelection(generation) && controller.SelectedConversation?.ConversationId == conversationId;
 
-    private async Task RunFollowerAsync(Guid operationId, CancellationToken cancellationToken)
-    {
-        var currentOperationId = operationId;
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var result = await operationFollower!.FollowAsync(
-                currentOperationId,
-                ApplyProjectionAsync,
-                RefreshAuthoritativeStateAsync,
-                cancellationToken);
-            if (result.Completion == LlmChatOperationFollowCompletion.Failed)
-            {
-                await InvokeAsync(() =>
-                {
-                    controller!.SetFollowerFailure(result.Failures);
-                    StateHasChanged();
-                });
-                return;
+    private async Task RunFollowerAsync(Guid operationId, Guid conversationId, long generation, CancellationTokenSource source) {
+        using (source) {
+            try {
+                var result = await operationFollower!.FollowAsync(operationId,
+                    projection => !OwnsFollower(conversationId, generation, source) ? Task.CompletedTask : InvokeAsync(() => {
+                        if (OwnsFollower(conversationId, generation, source)) {
+                            controller!.ApplyOperationProjection(projection);
+                            StateHasChanged();
+                        }
+                    }),
+                    projection => !OwnsFollower(conversationId, generation, source) ? Task.CompletedTask : InvokeAsync(async () => {
+                        if (OwnsFollower(conversationId, generation, source)) {
+                            await controller!.RefreshActiveOperationAsync(projection.OperationId, source.Token);
+                            if (OwnsFollower(conversationId, generation, source)) {
+                                StateHasChanged();
+                            }
+                        }
+                    }), source.Token);
+                if (!OwnsFollower(conversationId, generation, source)) {
+                    return;
+                }
+                if (result.Completion == LlmChatOperationFollowCompletion.ProfileChanged) {
+                    await InvokeAsync(ReloadProfileAsync);
+                } else if (result.Completion == LlmChatOperationFollowCompletion.Failed) {
+                    await InvokeAsync(() => {
+                        if (OwnsFollower(conversationId, generation, source)) {
+                            controller!.SetFollowerFailure(result.Failures);
+                            StateHasChanged();
+                        }
+                    });
+                }
+            } catch (OperationCanceledException) when (source.IsCancellationRequested) {
+            } catch (Exception exception) {
+                if (OwnsFollower(conversationId, generation, source)) {
+                    FollowerLogger.LogWarning("Simple Chat follower failed for selection {Generation} with {ExceptionType}", generation, exception.GetType().Name);
+                    await InvokeAsync(() => {
+                        if (OwnsFollower(conversationId, generation, source)) {
+                            controller!.SetFollowerFailure([new(LlmChatUiFailureCodes.RequestFailed, "The Simple Chat event stream could not be read.")]);
+                            StateHasChanged();
+                        }
+                    });
+                }
+            } finally {
+                if (ReferenceEquals(followerLifetime, source)) {
+                    followerLifetime = null;
+                }
             }
-
-            if (result.Completion != LlmChatOperationFollowCompletion.ProfileChanged)
-            {
-                return;
-            }
-
-            Guid? nextOperationId = null;
-            await InvokeAsync(async () =>
-            {
-                nextOperationId = await controller!.ReloadForProfileChangeAsync(lifetime.Token);
-                StateHasChanged();
-            });
-            if (nextOperationId is null)
-            {
-                return;
-            }
-
-            currentOperationId = nextOperationId.Value;
         }
     }
-
-    private Task ApplyProjectionAsync(LlmChatOperationProjectionState projection)
-        => InvokeAsync(() =>
-        {
-            controller!.ApplyOperationProjection(projection);
+    private async Task ReloadProfileAsync() {
+        if (disposed) {
+            return;
+        }
+        var owner = ++routeGeneration;
+        CloseOwnedDialogs();
+        StopFollower();
+        ClearComposer();
+        initialization = controller!.ReloadForProfileChangeAsync(CancellationToken.None);
+        await initialization;
+        if (!disposed && owner == routeGeneration) {
+            await AcceptSelectionAsync(controller.SelectionGeneration);
             StateHasChanged();
-        });
-
-    private Task RefreshAuthoritativeStateAsync(LlmChatOperationProjectionState projection)
-        => InvokeAsync(async () =>
-        {
-            await controller!.RefreshActiveOperationAsync(projection.OperationId, lifetime.Token);
-            StateHasChanged();
-        });
-
-    private async Task StopFollowerAsync()
-    {
-        var currentLifetime = followerLifetime;
-        var currentTask = followerTask;
+        }
+    }
+    private void StopFollower() {
+        var previous = followerLifetime;
         followerLifetime = null;
-        followerTask = Task.CompletedTask;
-        if (currentLifetime is null)
-        {
-            return;
-        }
-
-        currentLifetime.Cancel();
-        try
-        {
-            await currentTask;
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            currentLifetime.Dispose();
-        }
+        previous?.Cancel();
     }
-
     private static Guid ResolveDefinitionId(ConversationParticipantPresentation definition)
-        => LlmChatDefinitionPresentationMapper.TryGetDefinitionId(definition.Key, out var definitionId)
-            ? definitionId
-            : Guid.Empty;
-
-    public async ValueTask DisposeAsync()
-    {
-        if (Interlocked.Exchange(ref disposed, 1) != 0)
-        {
-            return;
-        }
-
-        lifetime.Cancel();
-        await StopFollowerAsync();
-        lifetime.Dispose();
+        => LlmChatDefinitionPresentationMapper.TryGetDefinitionId(definition.Key, out var id) ? id : Guid.Empty;
+    public async ValueTask DisposeAsync() {
+        disposed = true;
+        routeGeneration++;
+        CloseOwnedDialogs();
+        StopFollower();
+        controller?.Dispose();
+        await followerTask;
     }
 }

@@ -14,8 +14,7 @@ internal sealed class LlmChatConversationWorkspaceController(
     ILlmChatOperationUiGateway operations,
     ILlmChatUiAuthorizationFacade authorization,
     ILogger<LlmChatConversationWorkspaceController> logger,
-    TimeProvider timeProvider)
-{
+    TimeProvider timeProvider) : IDisposable {
     public const int ConversationPageSize = 24;
     public const int MaximumConversationCount = 96;
     public const int DefinitionPageSize = 50;
@@ -53,9 +52,24 @@ internal sealed class LlmChatConversationWorkspaceController(
 
     public bool HasMoreMessages => transcriptPage.HasMore;
 
-    public bool IsLoading { get; private set; }
+    private CancellationTokenSource? authorizationRead;
+    private CancellationTokenSource? conversationRead;
+    private CancellationTokenSource? definitionRead;
+    private CancellationTokenSource? transcriptRead;
+    private CancellationTokenSource? operationRead;
+    private CancellationTokenSource? mutation;
+    private bool initialized;
+    private bool desiredObserved;
+    private bool routeOwned;
+    private bool chooseDefault;
+    private bool disposed;
 
-    public bool IsMutating { get; private set; }
+    public Guid? DesiredConversationId { get; private set; }
+    public long SelectionGeneration { get; private set; }
+    public bool IsAuthorizing => !initialized || authorizationRead is not null;
+    public bool IsLoading => authorizationRead is not null || conversationRead is not null || definitionRead is not null || transcriptRead is not null;
+
+    public bool IsMutating => mutation is not null;
 
     public string ErrorMessage { get; private set; } = string.Empty;
 
@@ -76,8 +90,7 @@ internal sealed class LlmChatConversationWorkspaceController(
     public bool CanAbandon =>
         Authorization.CanExecute &&
         operationState.RecoveryEvidenceConfirmed &&
-        ActiveOperation is
-        {
+        ActiveOperation is {
             Status: Operations.LlmChatOperationStatus.RecoveryRequired
         } operation &&
         SelectedConversation?.ActiveOperationId == operation.OperationId;
@@ -86,30 +99,85 @@ internal sealed class LlmChatConversationWorkspaceController(
 
     private IReadOnlyList<string> lastFailureCodes = [];
 
-    public async Task InitializeAsync(
-        CancellationToken cancellationToken,
-        Guid? preferredConversationId = null)
-    {
-        Authorization = await authorization.GetAsync(cancellationToken);
-        if (!Authorization.CanRead)
-        {
+    public async Task InitializeAsync(CancellationToken cancellationToken, Guid? preferredConversationId = null) {
+        if (disposed) {
             return;
         }
-
-        if (Authorization.CanManage)
-        {
-            await LoadDefinitionsAsync(append: false, cancellationToken);
+        if (!desiredObserved) {
+            ObserveDesired(preferredConversationId, fromRoute: preferredConversationId.HasValue, allowDefault: preferredConversationId is null);
         }
-
-        if (!await LoadConversationsAsync(append: false, cancellationToken) || Conversations.Count == 0)
-        {
-            return;
+        using var request = Begin(ref authorizationRead, cancellationToken);
+        try {
+            var access = await authorization.GetAsync(request.Token);
+            if (!Owns(authorizationRead, request)) {
+                return;
+            }
+            Authorization = access;
+            if (!access.CanRead) {
+                return;
+            }
+            if (access.CanManage) {
+                await LoadDefinitionsAsync(false, request.Token);
+            }
+            if (!Owns(authorizationRead, request)) {
+                return;
+            }
+            await LoadConversationsAsync(false, request.Token);
+            if (!Owns(authorizationRead, request)) {
+                return;
+            }
+            if (chooseDefault && DesiredConversationId is null && Conversations.Count > 0) {
+                ObserveDesired(Conversations[0].ConversationId, fromRoute: false, allowDefault: false);
+            }
+            initialized = true;
+            if (DesiredConversationId is { } target) {
+                await LoadTranscriptAsync(target, false, request.Token);
+            }
+        } catch (OperationCanceledException) when (request.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (Owns(authorizationRead, request)) {
+                LogReadFailure(exception, "authorization");
+                SetUnexpectedFailure();
+            }
+        } finally {
+            if (ReferenceEquals(authorizationRead, request)) {
+                authorizationRead = null;
+                initialized = true;
+            }
         }
-
-        await SelectConversationAsync(
-            preferredConversationId ?? Conversations[0].ConversationId,
-            cancellationToken);
     }
+
+    public Task<bool> SetRequestedConversationAsync(Guid? conversationId, CancellationToken cancellationToken) {
+        if (disposed) {
+            return Task.FromResult(false);
+        }
+        var normalized = conversationId == Guid.Empty ? null : conversationId;
+        var sameAccepted = DesiredConversationId == normalized && SelectedConversation?.ConversationId == normalized;
+        if (!sameAccepted || !desiredObserved) {
+            ObserveDesired(normalized, fromRoute: true, allowDefault: false);
+        } else {
+            routeOwned = true;
+        }
+        return !initialized || !Authorization.CanRead ? Task.FromResult(false)
+            : normalized is { } id && !sameAccepted ? LoadTranscriptAsync(id, false, cancellationToken) : Task.FromResult(true);
+    }
+
+    private void ObserveDesired(Guid? id, bool fromRoute, bool allowDefault) {
+        desiredObserved = true;
+        DesiredConversationId = id == Guid.Empty ? null : id;
+        routeOwned = fromRoute;
+        chooseDefault = allowDefault;
+        SelectionGeneration++;
+        Stop(ref transcriptRead);
+        Stop(ref operationRead);
+        Stop(ref mutation);
+        SelectedConversation = null;
+        transcriptPage.Clear();
+        operationState.Reset();
+        ClearFailure();
+    }
+
+    public bool IsCurrentSelection(long generation) => !disposed && generation == SelectionGeneration;
 
     public Task<bool> LoadMoreConversationsAsync(CancellationToken cancellationToken)
         => HasMoreConversations
@@ -126,93 +194,104 @@ internal sealed class LlmChatConversationWorkspaceController(
             ? LoadTranscriptAsync(SelectedConversation.ConversationId, append: true, cancellationToken)
             : Task.FromResult(false);
 
-    public Task<bool> SelectConversationAsync(Guid conversationId, CancellationToken cancellationToken)
-        => LoadTranscriptAsync(conversationId, append: false, cancellationToken);
+    public Task<bool> SelectConversationAsync(Guid conversationId, CancellationToken cancellationToken) {
+        if (disposed || !Authorization.CanRead || conversationId == Guid.Empty) {
+            return Task.FromResult(false);
+        }
+        if (DesiredConversationId == conversationId && SelectedConversation?.ConversationId == conversationId) {
+            return Task.FromResult(true);
+        }
+        ObserveDesired(conversationId, fromRoute: false, allowDefault: false);
+        return LoadTranscriptAsync(conversationId, false, cancellationToken);
+    }
 
     public Task<bool> ReloadSelectedAsync(CancellationToken cancellationToken)
         => SelectedConversation is null
             ? Task.FromResult(false)
             : LoadTranscriptAsync(SelectedConversation.ConversationId, append: false, cancellationToken);
 
-    public async Task<Guid?> PrepareActiveOperationAsync(CancellationToken cancellationToken)
-    {
+    public async Task<Guid?> PrepareActiveOperationAsync(CancellationToken cancellationToken) {
+        if (disposed) {
+            return null;
+        }
         operationState.Prepare();
-        if (SelectedConversation?.ActiveOperationId is not { } operationId)
-        {
+        if (SelectedConversation?.ActiveOperationId is not { } operationId) {
             operationState.Restore(null);
             return null;
         }
-
-        try
-        {
-            var result = await operations.GetAsync(operationId, cancellationToken);
-            if (!TryGetValue(result, out var operation) || !HasExpectedIdentity(operation, operationId))
-            {
+        var generation = SelectionGeneration;
+        using var request = Begin(ref operationRead, cancellationToken);
+        try {
+            var result = await operations.GetAsync(operationId, request.Token);
+            if (!Owns(operationRead, request) || !IsCurrentSelection(generation)
+                || !TryGetValue(result, out var operation) || !HasExpectedIdentity(operation, operationId)) {
                 return null;
             }
-
             operationState.Restore(operation);
             return operationId;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
+        } catch (OperationCanceledException) when (request.IsCancellationRequested) {
             return null;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Unable to restore Simple Chat operation. ConversationId={ConversationId} OperationId={OperationId}.",
-                SelectedConversation?.ConversationId,
-                operationId);
-            SetUnexpectedFailure();
+        } catch (Exception exception) {
+            if (Owns(operationRead, request) && IsCurrentSelection(generation)) {
+                LogReadFailure(exception, "operation restoration");
+                SetUnexpectedFailure();
+            }
             return null;
+        } finally {
+            End(ref operationRead, request);
         }
     }
 
-    public void ApplyOperationProjection(LlmChatOperationProjectionState projection)
-    {
+    public void ApplyOperationProjection(LlmChatOperationProjectionState projection) {
         operationState.ApplyProjection(projection);
     }
 
-    public async Task<bool> RefreshActiveOperationAsync(
-        Guid operationId,
-        CancellationToken cancellationToken)
-    {
-        if (SelectedConversation is null)
-        {
+    public async Task<bool> RefreshActiveOperationAsync(Guid operationId, CancellationToken cancellationToken) {
+        if (disposed || SelectedConversation is not { } selected) {
             return false;
         }
-
-        var operationResult = await operations.GetAsync(operationId, cancellationToken);
-        if (!TryGetValue(operationResult, out var operation) || !HasExpectedIdentity(operation, operationId))
-        {
+        var generation = SelectionGeneration;
+        using var request = Begin(ref operationRead, cancellationToken);
+        try {
+            var result = await operations.GetAsync(operationId, request.Token);
+            if (!Owns(operationRead, request) || !IsCurrentSelection(generation)
+                || !TryGetValue(result, out var operation) || !HasExpectedIdentity(operation, operationId)) {
+                return false;
+            }
+            if (!await LoadTranscriptAsync(selected.ConversationId, false, request.Token)
+                || !Owns(operationRead, request) || !IsCurrentSelection(generation)) {
+                return false;
+            }
+            operationState.CompleteRefresh(operation);
+            return true;
+        } catch (OperationCanceledException) when (request.IsCancellationRequested) {
             return false;
-        }
-
-        var conversationId = SelectedConversation.ConversationId;
-        if (!await LoadTranscriptAsync(conversationId, append: false, cancellationToken))
-        {
+        } catch (Exception exception) {
+            if (Owns(operationRead, request) && IsCurrentSelection(generation)) {
+                LogReadFailure(exception, "operation refresh");
+                SetUnexpectedFailure();
+            }
             return false;
+        } finally {
+            End(ref operationRead, request);
         }
-
-        operationState.CompleteRefresh(operation);
-        return true;
     }
 
-    public async Task<Guid?> ReloadForProfileChangeAsync(CancellationToken cancellationToken)
-    {
+    public async Task<Guid?> ReloadForProfileChangeAsync(CancellationToken cancellationToken) {
+        Stop(ref authorizationRead);
+        Stop(ref conversationRead);
+        Stop(ref definitionRead);
+        var requested = routeOwned ? DesiredConversationId : null;
+        ObserveDesired(requested, routeOwned, allowDefault: !routeOwned && requested is null);
         conversationPage.Clear();
         definitionPage.Clear();
-        transcriptPage.Clear();
-        SelectedConversation = null;
-        operationState.Reset();
-        await InitializeAsync(cancellationToken);
+        initialized = false;
+        await InitializeAsync(cancellationToken, requested);
         return await PrepareActiveOperationAsync(cancellationToken);
     }
 
     public void SetFollowerFailure(IReadOnlyList<LlmChatUiFailure> failures)
-        => SetFailure(failures);
+        => SetGatewayFailure(failures);
 
     public Task<bool> CancelActiveOperationAsync(CancellationToken cancellationToken)
         => MutateActiveOperationAsync(
@@ -247,12 +326,10 @@ internal sealed class LlmChatConversationWorkspaceController(
     public async Task<bool> CreateAsync(
         Guid definitionId,
         string title,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         if (!Authorization.CanManage ||
             !ActiveDefinitions.Any(item =>
-                item.DefinitionId == definitionId && item.Status == LlmChatDefinitionStatus.Active))
-        {
+                item.DefinitionId == definitionId && item.Status == LlmChatDefinitionStatus.Active)) {
             SetFailure(new LlmChatUiFailure(
                 LlmChatUiFailureCodes.Forbidden,
                 "Choose an active Simple Chat definition."));
@@ -261,24 +338,20 @@ internal sealed class LlmChatConversationWorkspaceController(
 
         return await RunMutationAsync(
             "create conversation",
-            async () =>
-            {
-                var result = await conversations.CreateAsync(definitionId, title.Trim(), cancellationToken);
-                if (!TryGetValue(result, out var view))
-                {
+            async token => {
+                var result = await conversations.CreateAsync(definitionId, title.Trim(), token);
+                if (token.IsCancellationRequested || !TryGetValue(result, out var view)) {
                     return false;
                 }
 
                 ReplaceOrInsertConversation(view.Conversation);
                 SelectView(view);
                 return true;
-            });
+            }, cancellationToken);
     }
 
-    public async Task<bool> RenameSelectedAsync(string title, CancellationToken cancellationToken)
-    {
-        if (!Authorization.CanManage || SelectedConversation is not { } selected)
-        {
+    public async Task<bool> RenameSelectedAsync(string title, CancellationToken cancellationToken) {
+        if (!Authorization.CanManage || SelectedConversation is not { } selected) {
             SetFailure(new LlmChatUiFailure(
                 LlmChatUiFailureCodes.Forbidden,
                 "Select a conversation you can manage."));
@@ -287,29 +360,25 @@ internal sealed class LlmChatConversationWorkspaceController(
 
         return await RunMutationAsync(
             "rename conversation",
-            async () =>
-            {
+            async token => {
                 var result = await conversations.RenameAsync(
                     selected.ConversationId,
                     title.Trim(),
                     selected.ConcurrencyToken,
                     selected.TranscriptRevision,
-                    cancellationToken);
-                if (!TryGetValue(result, out var view))
-                {
+                    token);
+                if (token.IsCancellationRequested || !TryGetValue(result, out var view)) {
                     return false;
                 }
 
                 SelectedConversation = view.Conversation;
                 ReplaceOrInsertConversation(view.Conversation);
                 return true;
-            });
+            }, cancellationToken);
     }
 
-    public async Task<bool> ArchiveSelectedAsync(CancellationToken cancellationToken)
-    {
-        if (!Authorization.CanManage || SelectedConversation is not { } selected)
-        {
+    public async Task<bool> ArchiveSelectedAsync(CancellationToken cancellationToken) {
+        if (!Authorization.CanManage || SelectedConversation is not { } selected) {
             SetFailure(new LlmChatUiFailure(
                 LlmChatUiFailureCodes.Forbidden,
                 "Select a conversation you can manage."));
@@ -318,31 +387,27 @@ internal sealed class LlmChatConversationWorkspaceController(
 
         return await RunMutationAsync(
             "archive conversation",
-            async () =>
-            {
+            async token => {
                 var result = await conversations.ArchiveAsync(
                     selected.ConversationId,
                     selected.ConcurrencyToken,
-                    cancellationToken);
-                if (!TryGetValue(result, out var view))
-                {
+                    token);
+                if (token.IsCancellationRequested || !TryGetValue(result, out var view)) {
                     return false;
                 }
 
                 SelectedConversation = view.Conversation;
                 ReplaceOrInsertConversation(view.Conversation);
                 return true;
-            });
+            }, cancellationToken);
     }
 
-    public async Task<bool> SendAsync(string message, CancellationToken cancellationToken)
-    {
+    public async Task<bool> SendAsync(string message, CancellationToken cancellationToken) {
         var normalizedMessage = message.Trim();
         if (!Authorization.CanExecute ||
             SelectedConversation is not { Status: LlmChatConversationStatus.Active } selected ||
             selected.ActiveOperationId.HasValue ||
-            string.IsNullOrWhiteSpace(normalizedMessage))
-        {
+            string.IsNullOrWhiteSpace(normalizedMessage)) {
             SetFailure(new LlmChatUiFailure(
                 LlmChatUiFailureCodes.InvalidInput,
                 "Select an active conversation and enter a message."));
@@ -352,22 +417,19 @@ internal sealed class LlmChatConversationWorkspaceController(
         var operationId = operationState.GetAdmissionOperationId(selected.ConversationId, normalizedMessage);
         return await RunMutationAsync(
             "admit conversation turn",
-            async () =>
-            {
+            async token => {
                 var result = await operations.SendAsync(
                     operationId,
                     selected.ConversationId,
                     selected.TranscriptRevision,
                     normalizedMessage,
-                    cancellationToken);
-                if (!TryGetValue(result, out var operation))
-                {
+                    token);
+                if (token.IsCancellationRequested || !TryGetValue(result, out var operation)) {
                     return false;
                 }
 
                 if (operation.OperationId != operationId ||
-                    operation.ConversationId != selected.ConversationId)
-                {
+                    operation.ConversationId != selected.ConversationId) {
                     logger.LogError(
                         "Simple Chat admission returned mismatched identity. ConversationId={ConversationId} OperationId={OperationId}.",
                         selected.ConversationId,
@@ -380,190 +442,138 @@ internal sealed class LlmChatConversationWorkspaceController(
                 SelectedConversation = selected with { ActiveOperationId = operationId };
                 ReplaceOrInsertConversation(SelectedConversation);
                 return true;
-            });
+            }, cancellationToken);
     }
 
-    private async Task<bool> LoadConversationsAsync(bool append, CancellationToken cancellationToken)
-    {
-        if (IsLoading)
-        {
+    private async Task<bool> LoadConversationsAsync(bool append, CancellationToken cancellationToken) {
+        if (disposed || !Authorization.CanRead || append && conversationRead is not null) {
             return false;
         }
-
-        IsLoading = true;
+        using var request = Begin(ref conversationRead, cancellationToken);
         ClearFailure();
-        try
-        {
-            var result = await conversations.ListPageAsync(new(
-                take: ConversationPageSize,
-                cursor: append ? conversationPage.NextCursor : null), cancellationToken);
-            if (!TryGetValue(result, out var page))
-            {
+        try {
+            var result = await conversations.ListPageAsync(new(take: ConversationPageSize,
+                cursor: append ? conversationPage.NextCursor : null), request.Token);
+            if (!Owns(conversationRead, request) || !TryGetValue(result, out var page)) {
                 return false;
             }
-
-            if (append)
-            {
+            if (append) {
                 conversationPage.Append(page.Items, page.NextCursor);
-            }
-            else
-            {
+            } else {
                 conversationPage.Replace(page.Items, page.NextCursor);
             }
             return true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
+        } catch (OperationCanceledException) when (request.IsCancellationRequested) {
             return false;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Unable to list Simple Chat conversations.");
-            SetUnexpectedFailure();
+        } catch (Exception exception) {
+            if (Owns(conversationRead, request)) {
+                LogReadFailure(exception, "conversation list");
+                SetUnexpectedFailure();
+            }
             return false;
-        }
-        finally
-        {
-            IsLoading = false;
+        } finally {
+            End(ref conversationRead, request);
         }
     }
 
-    private async Task<bool> LoadDefinitionsAsync(bool append, CancellationToken cancellationToken)
-    {
+    private async Task<bool> LoadDefinitionsAsync(bool append, CancellationToken cancellationToken) {
+        if (disposed || !Authorization.CanManage || append && definitionRead is not null) {
+            return false;
+        }
+        using var request = Begin(ref definitionRead, cancellationToken);
         ClearFailure();
-        try
-        {
-            var result = await definitions.ListPageAsync(new(
-                take: DefinitionPageSize,
-                status: LlmChatDefinitionStatus.Active,
-                cursor: append ? definitionPage.NextCursor : null), cancellationToken);
-            if (!TryGetValue(result, out var page))
-            {
+        try {
+            var result = await definitions.ListPageAsync(new(take: DefinitionPageSize, status: LlmChatDefinitionStatus.Active,
+                cursor: append ? definitionPage.NextCursor : null), request.Token);
+            if (!Owns(definitionRead, request) || !TryGetValue(result, out var page)) {
                 return false;
             }
-
-            var activeItems = page.Items.Where(item => item.Status == LlmChatDefinitionStatus.Active);
-            if (append)
-            {
-                definitionPage.Append(activeItems, page.NextCursor);
-            }
-            else
-            {
-                definitionPage.Replace(activeItems, page.NextCursor);
+            var items = page.Items.Where(item => item.Status == LlmChatDefinitionStatus.Active)
+                .Select(item => item with { Tags = System.Collections.Immutable.ImmutableArray.CreateRange(item.Tags) });
+            if (append) {
+                definitionPage.Append(items, page.NextCursor);
+            } else {
+                definitionPage.Replace(items, page.NextCursor);
             }
             return true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
+        } catch (OperationCanceledException) when (request.IsCancellationRequested) {
             return false;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Unable to list active Simple Chat definitions.");
-            SetUnexpectedFailure();
+        } catch (Exception exception) {
+            if (Owns(definitionRead, request)) {
+                LogReadFailure(exception, "definition list");
+                SetUnexpectedFailure();
+            }
             return false;
+        } finally {
+            End(ref definitionRead, request);
         }
     }
 
-    private async Task<bool> LoadTranscriptAsync(
-        Guid conversationId,
-        bool append,
-        CancellationToken cancellationToken)
-    {
-        if (IsLoading)
-        {
+    private async Task<bool> LoadTranscriptAsync(Guid conversationId, bool append, CancellationToken cancellationToken) {
+        if (disposed || !Authorization.CanRead || DesiredConversationId != conversationId || append && transcriptRead is not null) {
             return false;
         }
-
-        IsLoading = true;
+        var generation = SelectionGeneration;
+        using var request = Begin(ref transcriptRead, cancellationToken);
         ClearFailure();
-        try
-        {
-            var result = await conversations.GetAsync(
-                conversationId,
-                new(TranscriptPageSize, append ? transcriptPage.NextCursor : null),
-                cancellationToken);
-            if (!TryGetValue(result, out var view))
-            {
+        try {
+            var result = await conversations.GetAsync(conversationId,
+                new(TranscriptPageSize, append ? transcriptPage.NextCursor : null), request.Token);
+            if (!Owns(transcriptRead, request) || !IsCurrentSelection(generation) || !TryGetValue(result, out var view)) {
                 return false;
             }
-
-            if (view.Conversation.ConversationId != conversationId)
-            {
-                logger.LogError(
-                    "Simple Chat transcript returned mismatched conversation identity. RequestedConversationId={ConversationId}.",
-                    conversationId);
+            if (view.Conversation.ConversationId != conversationId) {
+                logger.LogError("Simple Chat transcript returned mismatched conversation identity for {ConversationId}", conversationId);
                 SetUnexpectedFailure();
                 return false;
             }
-
-            if (!append)
-            {
+            if (!append) {
                 transcriptPage.Clear();
                 operationState.Reset();
             }
-
-            var visibleMessages = view.Messages.Where(message =>
-                message.Role is LlmMessageRole.User or LlmMessageRole.Assistant);
-            transcriptPage.Append(visibleMessages, view.NextMessageCursor);
+            transcriptPage.Append(view.Messages.Where(message => message.Role is LlmMessageRole.User or LlmMessageRole.Assistant), view.NextMessageCursor);
             SelectedConversation = view.Conversation;
             ReplaceOrInsertConversation(view.Conversation);
             return true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
+        } catch (OperationCanceledException) when (request.IsCancellationRequested) {
             return false;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Unable to load Simple Chat transcript. ConversationId={ConversationId}.",
-                conversationId);
-            SetUnexpectedFailure();
+        } catch (Exception exception) {
+            if (Owns(transcriptRead, request) && IsCurrentSelection(generation)) {
+                LogReadFailure(exception, "transcript");
+                SetUnexpectedFailure();
+            }
             return false;
-        }
-        finally
-        {
-            IsLoading = false;
+        } finally {
+            End(ref transcriptRead, request);
         }
     }
 
-    private async Task<bool> RunMutationAsync(string operationName, Func<Task<bool>> action)
-    {
-        if (IsMutating)
-        {
+    private async Task<bool> RunMutationAsync(string operationName, Func<CancellationToken, Task<bool>> action, CancellationToken cancellationToken) {
+        if (disposed || mutation is not null) {
             return false;
         }
-
-        IsMutating = true;
+        var generation = SelectionGeneration;
+        using var request = Begin(ref mutation, cancellationToken);
         ClearFailure();
-        try
-        {
-            return await action();
-        }
-        catch (OperationCanceledException)
-        {
+        try {
+            return await action(request.Token) && Owns(mutation, request) && IsCurrentSelection(generation);
+        } catch (OperationCanceledException) when (request.IsCancellationRequested) {
             return false;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Unable to {OperationName} in the Simple Chat workspace. ConversationId={ConversationId}.",
-                operationName,
-                SelectedConversation?.ConversationId);
-            SetUnexpectedFailure();
+        } catch (Exception exception) {
+            if (Owns(mutation, request) && IsCurrentSelection(generation)) {
+                LogReadFailure(exception, operationName);
+                SetUnexpectedFailure();
+            }
             return false;
-        }
-        finally
-        {
-            IsMutating = false;
+        } finally {
+            End(ref mutation, request);
         }
     }
 
-    private void SelectView(LlmChatConversationView view)
-    {
+    private void SelectView(LlmChatConversationView view) {
+        DesiredConversationId = view.Conversation.ConversationId;
+        routeOwned = false;
+        chooseDefault = false;
         transcriptPage.Replace(
             view.Messages.Where(message => message.Role is LlmMessageRole.User or LlmMessageRole.Assistant),
             view.NextMessageCursor);
@@ -577,10 +587,8 @@ internal sealed class LlmChatConversationWorkspaceController(
         Func<LlmChatOperationView, CancellationToken, Task<LlmChatUiResult<LlmChatOperationView>>> mutate,
         bool confirmRecoveryEvidence,
         bool refreshTranscript,
-        CancellationToken cancellationToken)
-    {
-        if (!isAllowed || ActiveOperation is not { } current)
-        {
+        CancellationToken cancellationToken) {
+        if (!isAllowed || ActiveOperation is not { } current) {
             SetFailure(new LlmChatUiFailure(
                 LlmChatUiFailureCodes.InvalidInput,
                 "The requested Simple Chat recovery action is not available."));
@@ -589,25 +597,20 @@ internal sealed class LlmChatConversationWorkspaceController(
 
         return await RunMutationAsync(
             operationName,
-            async () =>
-            {
-                var result = await mutate(current, cancellationToken);
-                if (!TryGetValue(result, out var operation) ||
-                    !HasExpectedIdentity(operation, current.OperationId))
-                {
+            async token => {
+                var result = await mutate(current, token);
+                if (token.IsCancellationRequested || !TryGetValue(result, out var operation) ||
+                    !HasExpectedIdentity(operation, current.OperationId)) {
                     return false;
                 }
 
                 operationState.Restore(operation);
-                if (refreshTranscript && SelectedConversation is { } selected)
-                {
+                if (refreshTranscript && SelectedConversation is { } selected) {
                     var refreshed = await LoadTranscriptAsync(
                         selected.ConversationId,
                         append: false,
-                        cancellationToken);
-                    operationState.CompleteRefresh(operation);
-                    if (!refreshed)
-                    {
+                        token);
+                    if (!refreshed || token.IsCancellationRequested) {
                         return false;
                     }
                 }
@@ -615,15 +618,13 @@ internal sealed class LlmChatConversationWorkspaceController(
                 operationState.CompleteMutation(operation, confirmRecoveryEvidence);
 
                 return true;
-            });
+            }, cancellationToken);
     }
 
-    private bool HasExpectedIdentity(LlmChatOperationView operation, Guid operationId)
-    {
+    private bool HasExpectedIdentity(LlmChatOperationView operation, Guid operationId) {
         if (SelectedConversation is { } selected &&
             operation.OperationId == operationId &&
-            operation.ConversationId == selected.ConversationId)
-        {
+            operation.ConversationId == selected.ConversationId) {
             return true;
         }
 
@@ -635,35 +636,38 @@ internal sealed class LlmChatConversationWorkspaceController(
         return false;
     }
 
-    private void ReplaceOrInsertConversation(LlmChatConversationListItem conversation)
-    {
+    private void ReplaceOrInsertConversation(LlmChatConversationListItem conversation) {
         conversationPage.UpsertFirst(conversation);
     }
 
-    private bool TryGetValue<T>(LlmChatUiResult<T> result, out T value)
-    {
-        if (result.IsSuccess)
-        {
+    private bool TryGetValue<T>(LlmChatUiResult<T> result, out T value) {
+        if (result.IsSuccess) {
             value = result.Value!;
             return true;
         }
 
-        SetFailure(result.Failures);
+        SetGatewayFailure(result.Failures);
         value = default!;
         return false;
     }
 
-    private void ClearFailure()
-    {
+    private void ClearFailure() {
         ErrorMessage = string.Empty;
         lastFailureCodes = [];
+    }
+
+    private void SetGatewayFailure(IReadOnlyList<LlmChatUiFailure> failures) {
+        SetFailure(failures.Select(failure => failure.Code switch {
+            LlmChatUiFailureCodes.Forbidden => new LlmChatUiFailure(failure.Code, "You are not authorized to perform this Simple Chat action."),
+            LlmChatUiFailureCodes.InvalidInput => new LlmChatUiFailure(failure.Code, "Review the Simple Chat values and try again."),
+            _ => LlmChatUiResultMapper.FromFailureCode(failure.Code)
+        }).ToArray());
     }
 
     private void SetFailure(params LlmChatUiFailure[] failures)
         => SetFailure((IReadOnlyList<LlmChatUiFailure>)failures);
 
-    private void SetFailure(IReadOnlyList<LlmChatUiFailure> failures)
-    {
+    private void SetFailure(IReadOnlyList<LlmChatUiFailure> failures) {
         ErrorMessage = string.Join(' ', failures.Select(failure => failure.Message));
         lastFailureCodes = failures.Select(failure => failure.Code).Distinct(StringComparer.Ordinal).ToArray();
     }
@@ -672,6 +676,35 @@ internal sealed class LlmChatConversationWorkspaceController(
         => SetFailure(new LlmChatUiFailure(
             LlmChatUiFailureCodes.RequestFailed,
             "The Simple Chat request could not be completed."));
+
+    public void Dispose() {
+        disposed = true;
+        SelectionGeneration++;
+        Stop(ref authorizationRead);
+        Stop(ref conversationRead);
+        Stop(ref definitionRead);
+        Stop(ref transcriptRead);
+        Stop(ref operationRead);
+        Stop(ref mutation);
+    }
+    private bool Owns(CancellationTokenSource? owner, CancellationTokenSource request)
+        => !disposed && ReferenceEquals(owner, request) && !request.IsCancellationRequested;
+    private static CancellationTokenSource Begin(ref CancellationTokenSource? owner, CancellationToken token) {
+        Stop(ref owner);
+        return owner = CancellationTokenSource.CreateLinkedTokenSource(token);
+    }
+    private static void End(ref CancellationTokenSource? owner, CancellationTokenSource request) {
+        if (ReferenceEquals(owner, request)) {
+            owner = null;
+        }
+    }
+    private static void Stop(ref CancellationTokenSource? owner) {
+        var previous = owner;
+        owner = null;
+        previous?.Cancel();
+    }
+    private void LogReadFailure(Exception exception, string operation)
+        => logger.LogWarning("Simple Chat {Operation} failed for selection {Generation} with {ExceptionType}", operation, SelectionGeneration, exception.GetType().Name);
 
 }
 

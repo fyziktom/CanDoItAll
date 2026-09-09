@@ -1,0 +1,45 @@
+@using CanDoItAll.AgentFramework.UI.Settings
+<PageTitle>Agent settings sandbox</PageTitle>
+<header class="catalog-sandbox__controls">
+    <h1 class="cda-title-xl">@(Voice ? "Voice settings" : "Floating chat settings") sandbox</h1>
+    <label for="agent-settings-scenario">Scenario</label>
+    <select id="agent-settings-scenario" class="cda-input" value="@(Voice ? voice.Scenario.ToString() : floating.Scenario.ToString())" @onchange="ChangeScenario">
+        @foreach (var scenario in Scenarios) {
+            <option value="@scenario">@scenario</option>
+        }
+    </select>
+    <output aria-live="polite" data-testid="sandbox-intent">@(Voice ? voice.IntentLog : floating.IntentLog)</output>
+</header>
+<main class="catalog-sandbox__frame" data-testid="sandbox-agent-settings-specimen" data-scenario="@(Voice ? voice.Scenario.ToString() : floating.Scenario.ToString())">
+    @if (Voice) {
+        <VoiceSettingsSurface Presentation="voice.Presentation" Intent="voice.Apply" />
+    } else {
+        <FloatingChatSettingsSurface Presentation="floating.Presentation" Intent="floating.Apply" />
+    }
+</main>
+@code {
+    [Parameter] public bool Voice { get; set; }
+    [Parameter] public string? ScenarioQuery { get; set; }
+    private readonly VoiceSettingsSandboxFixture voice = new();
+    private readonly FloatingChatSettingsSandboxFixture floating = new();
+    private (bool Voice, string? Scenario)? observed;
+    private IEnumerable<string> Scenarios => Voice ? Enum.GetNames<VoiceSettingsScenario>() : Enum.GetNames<FloatingChatSettingsScenario>();
+    protected override void OnParametersSet() {
+        if (observed == (Voice, ScenarioQuery)) {
+            return;
+        }
+        observed = (Voice, ScenarioQuery);
+        if (Voice) {
+            voice.SetScenario(Enum.TryParse<VoiceSettingsScenario>(ScenarioQuery, true, out var scenario) ? scenario : VoiceSettingsScenario.Ready);
+        } else {
+            floating.SetScenario(Enum.TryParse<FloatingChatSettingsScenario>(ScenarioQuery, true, out var scenario) ? scenario : FloatingChatSettingsScenario.Ready);
+        }
+    }
+    private void ChangeScenario(ChangeEventArgs args) {
+        if (Voice) {
+            voice.SetScenario(Enum.Parse<VoiceSettingsScenario>(args.Value!.ToString()!));
+        } else {
+            floating.SetScenario(Enum.Parse<FloatingChatSettingsScenario>(args.Value!.ToString()!));
+        }
+    }
+}

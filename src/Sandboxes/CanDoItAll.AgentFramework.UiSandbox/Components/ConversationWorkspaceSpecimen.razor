@@ -1,0 +1,29 @@
+@using CanDoItAll.AgentFramework.Llm.SimpleChats.UI
+<PageTitle>Simple Chat conversation sandbox</PageTitle>
+<header class="catalog-sandbox__controls">
+    <h1 class="cda-title-xl">Simple Chat conversation sandbox</h1>
+    <label for="conversation-workspace-scenario">Scenario</label>
+    <select id="conversation-workspace-scenario" class="cda-input" value="@fixture.Scenario" @onchange="ChangeScenario">
+        @foreach (var scenario in Enum.GetValues<ConversationWorkspaceScenario>()) {
+            <option value="@scenario">@scenario</option>
+        }
+    </select>
+    <output aria-live="polite" data-testid="sandbox-intent">@fixture.IntentLog</output>
+</header>
+<main class="catalog-sandbox__frame" data-testid="sandbox-conversation-workspace-specimen" data-scenario="@fixture.Scenario">
+    <LlmChatConversationSurface Presentation="fixture.Presentation" Intent="fixture.Apply" />
+</main>
+<Tooltip />
+@code {
+    [Parameter] public string? ScenarioQuery { get; set; }
+    private readonly ConversationWorkspaceSandboxFixture fixture = new();
+    private string? observedQuery;
+    protected override void OnParametersSet() {
+        if (observedQuery == ScenarioQuery) {
+            return;
+        }
+        observedQuery = ScenarioQuery;
+        fixture.SetScenario(Enum.TryParse<ConversationWorkspaceScenario>(ScenarioQuery, true, out var scenario) ? scenario : ConversationWorkspaceScenario.Selected);
+    }
+    private void ChangeScenario(ChangeEventArgs args) => fixture.SetScenario(Enum.Parse<ConversationWorkspaceScenario>(args.Value!.ToString()!));
+}
