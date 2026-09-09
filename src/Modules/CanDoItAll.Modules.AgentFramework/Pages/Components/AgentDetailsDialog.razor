@@ -181,6 +181,18 @@ else
                                 </Alert>
                             }
 
+                            <SurfaceCard Soft="true" data-testid="agents-catalog-tool-policy">
+                                <label class="cda-inline-option">
+                                    <input type="checkbox"
+                                           checked="@editorModel.Permissions.CanUseTools"
+                                           @onchange="args => ToggleToolAccess(args.Value)"
+                                           data-testid="agents-catalog-can-use-tools" />
+                                    Allow tool use
+                                </label>
+                                <TextBlock TextStyle="TextStyle.Body2"
+                                           Value="Turn off tool use for an agent that should only exchange chat messages. Existing capability assignments and access settings are preserved." />
+                            </SurfaceCard>
+
                             <SurfaceCard Soft="true" data-testid="agents-catalog-approval-policy">
                                 <Stack GapScale="LayoutGap.Small">
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Approval policy" />

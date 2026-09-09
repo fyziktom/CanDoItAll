@@ -17,6 +17,28 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentDetailsDialogSettingsTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Tool_access_switch_saves_the_selected_policy_without_changing_other_permissions(bool enabled) {
+        using var context = CreateContext(out var workspaceProxy, out _);
+        var editor = CreateEditor();
+        editor.Permissions = editor.Permissions with { CanUseTools = !enabled };
+        var original = editor.Permissions;
+        var cut = RenderTab(context, editor, section: AgentEditorSection.Runtime);
+
+        Assert.Equal(!enabled, cut.Find("[data-testid='agents-catalog-can-use-tools']").HasAttribute("checked"));
+        cut.Find("[data-testid='agents-catalog-can-use-tools']").Change(enabled);
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+
+        cut.WaitForAssertion(() => {
+            var saved = Assert.Single(workspaceProxy.SavedModels);
+            Assert.Equal(original with { CanUseTools = enabled }, saved.Permissions);
+        });
+        var reopened = RenderTab(context, workspaceProxy.SavedModels.Single(), AgentEditorSection.Runtime);
+        Assert.Equal(enabled, reopened.Find("[data-testid='agents-catalog-can-use-tools']").HasAttribute("checked"));
+    }
+
     [Fact]
     public void Native_external_workspace_root_survives_save()
     {

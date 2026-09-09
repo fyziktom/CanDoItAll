@@ -1287,6 +1287,12 @@ public partial class AgentDetailsDialog : IDisposable
         return Task.CompletedTask;
     }
 
+    private void ToggleToolAccess(object? rawValue) {
+        editorModel.Permissions = editorModel.Permissions with {
+            CanUseTools = rawValue is bool value && value
+        };
+    }
+
     private void ToggleExternalCallApprovalRequirement(object? rawValue)
     {
         editorModel.Permissions = editorModel.Permissions with
