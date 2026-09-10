@@ -79,8 +79,11 @@ public sealed class CrmHrAgentQueryIntegrationTests
     }
 
     private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
+        : IDbContextFactory<AppDbContext>, IDbContextFactory<CrmHrDbContext>
     {
+        CrmHrDbContext IDbContextFactory<CrmHrDbContext>.CreateDbContext()
+            => new(new DbContextOptions<CrmHrDbContext>(options.Extensions.ToDictionary(extension => extension.GetType())));
+
         public AppDbContext CreateDbContext() => new(options);
     }
 

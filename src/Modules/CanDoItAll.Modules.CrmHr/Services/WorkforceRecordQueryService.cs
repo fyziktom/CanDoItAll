@@ -75,7 +75,7 @@ public interface IWorkforceRecordQueryService
 }
 
 public sealed class WorkforceRecordQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     CanDoItAll.SharedKernel.IClock clock) : IWorkforceRecordQueryService
 {
     public async Task<WorkforceRecordPage> SearchAsync(
@@ -292,7 +292,7 @@ public sealed class WorkforceRecordQueryService(
             .Replace("_", "\\_", StringComparison.Ordinal);
 
     private static IQueryable<Party> ApplyClassificationFilter(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IQueryable<Party> candidates,
         WorkforceRecordClassification classification,
         DateTimeOffset todayUtc)
@@ -393,7 +393,7 @@ public sealed class WorkforceRecordQueryService(
     }
 
     private static IQueryable<WorkforceAffiliationRow> QueryCurrentAffiliations(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyCollection<Guid> partyIds,
         DateTimeOffset todayUtc)
     {
@@ -420,7 +420,7 @@ public sealed class WorkforceRecordQueryService(
     }
 
     private static IQueryable<WorkforceProfileRow> QueryProfiles(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyCollection<Guid> partyIds)
     {
         return
@@ -439,7 +439,7 @@ public sealed class WorkforceRecordQueryService(
     }
 
     private static IQueryable<WorkforceRelationshipRow> QueryCurrentOrganizationRelationships(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyCollection<Guid> partyIds,
         DateTimeOffset todayUtc)
     {

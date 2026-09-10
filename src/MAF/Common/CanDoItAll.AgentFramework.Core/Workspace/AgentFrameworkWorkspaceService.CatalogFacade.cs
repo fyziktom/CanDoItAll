@@ -4,6 +4,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed partial class AgentFrameworkWorkspaceService
 {
+    public async Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default) {
+        var snapshot = await store.LoadCatalogSnapshotAsync(cancellationToken);
+        return new(activityWorkspaceIdentity, snapshot);
+    }
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(
         bool includeTemplates = true,
         CancellationToken cancellationToken = default)

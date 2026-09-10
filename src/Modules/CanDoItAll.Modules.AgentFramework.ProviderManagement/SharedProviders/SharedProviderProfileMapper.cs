@@ -1,9 +1,8 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 
-namespace CanDoItAll.Modules.AgentFramework;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 

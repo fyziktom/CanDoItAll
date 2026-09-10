@@ -6,6 +6,10 @@ public sealed record SandboxWorkspaceCatalogSnapshot(
     SandboxWorkspaceCatalog Catalog,
     CatalogDataRevision Revision);
 
+public sealed record AgentWorkspaceCatalogSnapshot(
+    AgentExecutionActivityWorkspaceIdentity Workspace,
+    SandboxWorkspaceCatalogSnapshot Snapshot);
+
 public sealed record SandboxWorkspaceDocumentSnapshot(
     SandboxWorkspaceDocument Document,
     long Revision);

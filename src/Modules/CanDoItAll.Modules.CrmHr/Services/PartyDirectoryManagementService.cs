@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.CrmHr;
 
 public sealed class PartyDirectoryManagementService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
     PartyDirectoryService partyDirectoryService)
 {
@@ -571,7 +571,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeRoleAssignmentsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -607,7 +607,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeContactPointsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -656,7 +656,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeAddressesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -690,7 +690,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeRelationshipsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -761,7 +761,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergePartySkillsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -797,7 +797,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeAiAgentProfilesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -839,7 +839,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeWorkforceProfilesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -909,7 +909,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergePartyOrganizationAffiliationsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         string actor,
@@ -1222,7 +1222,7 @@ public sealed class PartyDirectoryManagementService(
         => partyId == mergedPartyId ? retainedPartyId : partyId;
 
     private static async Task ReassignDirectPartyReferencesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -1237,7 +1237,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task ReassignOptionalPartyReferencesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -1370,7 +1370,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private async Task<IReadOnlyList<PartyDuplicateCandidateModel>> FindPotentialDuplicatesCoreAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string displayName,
         string legalName,
         string preferredName,
@@ -1394,7 +1394,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task<IReadOnlyList<IReadOnlyList<PartyDuplicateCandidateModel>>> FindPotentialDuplicatesForInputsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<PartyDuplicateLookupInput> inputs,
         Guid? excludePartyId,
         CancellationToken cancellationToken)

@@ -72,7 +72,7 @@ public interface IPartyOrganizationAffiliationService
 }
 
 public sealed class PartyOrganizationAffiliationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock) : IPartyOrganizationAffiliationService
 {
     public async Task<IReadOnlyList<PartyOrganizationAffiliationListItemModel>> ListAsync(
@@ -452,7 +452,7 @@ public sealed class PartyOrganizationAffiliationService(
     }
 
     private static IQueryable<AffiliationListRow> QueryListRows(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid personPartyId)
     {
         return
@@ -525,7 +525,7 @@ public sealed class PartyOrganizationAffiliationService(
     }
 
     private static async Task<EndpointValidationResult> ValidateEndpointsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid personPartyId,
         IReadOnlyCollection<PartyOrganizationAffiliationEditorModel> affiliations,
         string actor,

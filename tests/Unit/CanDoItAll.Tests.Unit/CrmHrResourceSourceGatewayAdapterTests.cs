@@ -354,6 +354,9 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
             options.UseInMemoryDatabase(databaseName, databaseRoot);
         });
         services.AddCrmHrModule();
+        services.AddSingleton<IDbContextFactory<CrmHrDbContext>>(new PooledDbContextFactory<CrmHrDbContext>(
+            new DbContextOptionsBuilder<CrmHrDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options));
         services.AddResourcesModule();
         services.AddSingleton<IDbContextFactory<ResourcesDbContext>>(new PooledDbContextFactory<ResourcesDbContext>(
             new DbContextOptionsBuilder<ResourcesDbContext>()

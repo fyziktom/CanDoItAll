@@ -26,6 +26,22 @@ Directory, Workforce, CRM, and Recruiting use the shared typed `PagedRecordBrows
 
 The Agents route projects AgentFramework-owned identities instead of maintaining a second technical catalog. It joins the invalidation-aware `IAgentReferenceDataProvider` snapshot to the durable `AiResourceBinding.TechnicalAgentId` mapping and CRM-owned governance fields, then filters and pages that immutable composite snapshot in memory. The catalogue renders the shared `AgentSelectionCard`; selecting a card opens a CRM-HR read-only dialog, while technical edits remain in AgentFramework. The scoped composite snapshot expires after 20 seconds and is cleared by the shared AgentFramework invalidation signal both before and after successful directory synchronization, so search, validation filters, paging, and direct record lookup do not issue a database query on every interaction or retain a pre-synchronization join.
 
+Technical Agent projection is a CRM-owned writer. The AgentFramework adapter supplies
+one immutable catalog snapshot with canonical profile, organization scope and catalog
+revision. CRM commits the bindings and a per-source cursor atomically under its
+PostgreSQL gate. Equal-revision identical input is replayable; contradictory input is
+rejected, and an older revision cannot overwrite newer state, including an empty
+catalog. Technical availability/provenance is separate from human-maintained Party
+fields and governance. Missing or superseded Agents remain identifiable and unavailable;
+repair does not silently revive them. Legacy unprovenanced bindings stay readable.
+
+Technical catalog saves commit before projection/audit/search completion. Failures in
+those later obligations preserve the committed Agent and Party identities in the
+typed outcome; retry must reconcile those identities instead of creating replacements.
+The complete PostgreSQL migration adds binding provenance and the projection cursor.
+Downgrade is permitted only while this new evidence is empty; retained provenance or
+even an empty-catalog cursor blocks destructive rollback.
+
 The Web host exposes the supported HTTP slice at `/api/crm-hr`. Web owns route binding and status mapping; this module's application services continue to own validation, persistence, audit, search-index, activity, and lifecycle side effects. Do not add direct `DbContext` writes or scenario-specific seed behavior to the Web adapter.
 
 ## Assignment staging boundary
@@ -38,12 +54,18 @@ assignment bridge. Workbench saves through its explicit enlisted owner context; 
 then performs its final save and retains commit ownership. The public bridge exposes
 no DbContext or foreign persistence entity.
 
-CRM still uses the complete runtime context for its own records and its remaining
-foreign reads. Its AccountConnectionProjects ProjectId cascade FK is preserved in
-the complete model; future CRM model isolation must keep that physical relationship
-without importing writable Project records. Project admission, retired-ID fencing,
-the wider project-deletion protocol, and canonical participation semantics remain
-separate required work.
+CRM uses its explicit runtime model for parties, staffing, recruiting and current
+participation records. The complete migration model preserves the physical
+AccountConnectionProjects ProjectId cascade FK; the runtime model retains the
+scalar reference and its indexes without mapping writable Project entities.
+Project existence and ordinary labels use Projects owner queries. The assignment
+history report is an explicit read-only integration query: a parameterized SQL
+projection joins only the Project name needed for database ordering, then pages
+the existing immutable result DTO. It preserves database collation, tie ordering,
+UTC dates and missing-project labels without loading a whole name catalog or
+imposing a new project-count limit. No foreign entity is tracked or writable.
+Project admission, retired-ID fencing, complete lifecycle/transfer integration,
+and canonical participation semantics remain separate required work.
 
 ## Related Docs
 

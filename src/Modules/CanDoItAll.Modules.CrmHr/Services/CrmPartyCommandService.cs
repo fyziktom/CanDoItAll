@@ -101,7 +101,7 @@ public interface ICrmPartyCommandService
 }
 
 public sealed class CrmPartyCommandService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     IPartyOrganizationAffiliationService affiliationService)
     : ICrmPartyCommandService

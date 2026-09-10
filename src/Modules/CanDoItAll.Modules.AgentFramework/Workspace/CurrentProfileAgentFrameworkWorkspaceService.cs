@@ -116,6 +116,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().GetModelUsageDetailsAsync(cancellationToken);
     }
 
+    public Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
+        => ResolveService().LoadCatalogSnapshotAsync(cancellationToken);
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListAgentsAsync(includeTemplates, cancellationToken);
@@ -241,14 +244,16 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
     {
         var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+            exception => new AgentDirectoryProjectionSynchronizationException(cloneId, exception));
         return cloneId;
     }
 
     public async Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
     {
         var templateId = await ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+            exception => new AgentDirectoryProjectionSynchronizationException(templateId, exception));
         return templateId;
     }
 
@@ -260,7 +265,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public async Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
     {
         var agentId = await ResolveService().ImportAgentAsync(packagePath, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+            exception => new AgentDirectoryProjectionSynchronizationException(agentId, exception));
         return agentId;
     }
 
@@ -272,7 +278,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         var receipt = await ResolveService().ImportAgentPackageAsync(package, command, cancellationToken);
         if (!receipt.Replayed)
         {
-            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, importReceipt: receipt));
         }
 
         return receipt;
@@ -298,7 +305,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             cancellationToken);
         if (!receipt.Replayed)
         {
-            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
         }
 
         return receipt;
@@ -313,7 +321,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             cancellationToken);
         if (!receipt.Replayed)
         {
-            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
         }
 
         return receipt;

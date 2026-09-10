@@ -237,7 +237,7 @@ public static class RecruitmentConversionPolicy
 }
 
 public sealed partial class RecruitingService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     HrService hrService,
     IProjectRecordQueryService projectRecordQueryService,
@@ -473,7 +473,7 @@ public sealed partial class RecruitingService(
             .SingleOrDefaultAsync(item => item.PartyId == application.PartyId, cancellationToken);
         var stageHistory = await LoadStageHistoryAsync(dbContext, application.Id, cancellationToken);
         var relatedProjectIds = tasks
-            .Where(task => task.RelatedProjectId.HasValue)
+            .Where(task => task.RelatedProjectId.HasValue && task.RelatedProjectId.Value != Guid.Empty)
             .Select(task => task.RelatedProjectId!.Value)
             .Distinct()
             .ToList();
@@ -793,7 +793,8 @@ public sealed partial class RecruitingService(
 
         if (model.RelatedProjectId.HasValue)
         {
-            var projectExists = await dbContext.Set<Project>().AnyAsync(item => item.Id == model.RelatedProjectId.Value, cancellationToken);
+            var projectExists = model.RelatedProjectId.Value != Guid.Empty &&
+                await projectRecordQueryService.GetAsync(model.RelatedProjectId.Value, cancellationToken) is not null;
             if (!projectExists)
             {
                 return Result<Guid>.Failure(Error.Validation("The related project was not found.", "crmhr.recruiting.task.project-not-found"));
@@ -1192,7 +1193,7 @@ public sealed partial class RecruitingService(
     }
 
     private async Task<Result<Guid>> ResolveCandidatePartyIdAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         RecruitmentApplicationEditorModel model,
         CancellationToken cancellationToken)
     {
@@ -1270,7 +1271,7 @@ public sealed partial class RecruitingService(
     }
 
     private async Task<Error?> ValidateApplicationPartiesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         RecruitmentApplicationEditorModel model,
         Guid candidatePartyId,
         CancellationToken cancellationToken)
@@ -1328,7 +1329,7 @@ public sealed partial class RecruitingService(
     }
 
     private static async Task<Error?> ValidateRecruitmentCandidatePartyAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         CancellationToken cancellationToken)
     {
@@ -1348,7 +1349,7 @@ public sealed partial class RecruitingService(
     }
 
     private static async Task<Error?> ValidatePeopleOnlyPartyAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         string message,
         string code,
@@ -1372,7 +1373,7 @@ public sealed partial class RecruitingService(
         AiResourceBindingStatus BindingStatus);
 
     private async Task<RecruitmentSupportAssignmentsModel> LoadSupportAssignmentsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         CancellationToken cancellationToken)
     {
@@ -1413,7 +1414,7 @@ public sealed partial class RecruitingService(
     }
 
     private async Task<IReadOnlyList<RecruitmentStageHistoryItemModel>> LoadStageHistoryAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid applicationId,
         CancellationToken cancellationToken)
     {
@@ -1487,7 +1488,7 @@ public sealed partial class RecruitingService(
     }
 
     private async Task AppendAuditEntryAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid applicationId,
         string action,
         string summary,
@@ -1577,7 +1578,7 @@ public sealed partial class RecruitingService(
         };
     }
 
-    private async Task<string> LoadPartyDisplayNameAsync(AppDbContext dbContext, Guid partyId, CancellationToken cancellationToken)
+    private async Task<string> LoadPartyDisplayNameAsync(CrmHrDbContext dbContext, Guid partyId, CancellationToken cancellationToken)
     {
         return await dbContext.Set<Party>()
             .Where(item => item.Id == partyId)
@@ -1585,7 +1586,7 @@ public sealed partial class RecruitingService(
             .SingleAsync(cancellationToken);
     }
 
-    private async Task<string> LoadCandidateSummaryAsync(AppDbContext dbContext, Guid partyId, CancellationToken cancellationToken)
+    private async Task<string> LoadCandidateSummaryAsync(CrmHrDbContext dbContext, Guid partyId, CancellationToken cancellationToken)
     {
         return await dbContext.Set<Party>()
             .Where(item => item.Id == partyId)

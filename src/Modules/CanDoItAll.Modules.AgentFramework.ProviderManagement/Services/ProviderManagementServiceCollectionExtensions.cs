@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Providers;
@@ -39,6 +40,11 @@ public static class ProviderManagementServiceCollectionExtensions
             IProviderRuntimeAdministrationService,
             ProviderRuntimeAdministrationService>();
         services.AddScoped<ProviderProfileMapper>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
+            SharedProviderRelayUsageProjectionSource>());
+        services.TryAddSingleton<SharedProviderRuntimeProfileMaterializer>();
+        services.TryAddScoped<SharedProviderProfileMapper>();
+        services.TryAddScoped<IProviderRuntimeProfileSnapshotLoader, DatabaseProviderRuntimeProfileSnapshotLoader>();
         services.AddSingleton<CanonicalProviderRuntimeProfileSnapshotService>();
         services.AddSingleton<IProviderRuntimeProfileSource>(serviceProvider =>
             serviceProvider.GetRequiredService<CanonicalProviderRuntimeProfileSnapshotService>());
@@ -68,6 +74,7 @@ public static class ProviderManagementServiceCollectionExtensions
         services.TryAddScoped<SharedProviderPublicationEligibilityPolicy>();
         services.TryAddScoped<SharedProviderPublicationApplicationService>();
         services.TryAddSingleton<SharedProviderCatalogCache>();
+        services.TryAddScoped<SharedProviderProfileOwnershipQuery>();
         services.TryAddScoped<SharedProviderCatalogQueryService>();
         services.TryAddScoped<ISharedProviderCatalogQueryService>(serviceProvider =>
             serviceProvider.GetRequiredService<SharedProviderCatalogQueryService>());

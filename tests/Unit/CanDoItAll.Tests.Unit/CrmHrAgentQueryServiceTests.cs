@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.SourceGateway;
@@ -227,14 +229,19 @@ public sealed class CrmHrAgentQueryServiceTests
             typeof(CrmHrModuleAssemblyMarker).Assembly
         ]);
 
+        var databaseName = $"crm-hr-agent-query-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
         var services = new ServiceCollection();
         services.AddSingleton<IClock>(new FixedClock(Now));
         services.AddDbContextFactory<AppDbContext>(options =>
         {
             AppDbContextTestOptionsBuilder.ConfigureModelCacheKey(options);
-            options.UseInMemoryDatabase($"crm-hr-agent-query-{Guid.NewGuid():N}");
+            options.UseInMemoryDatabase(databaseName, databaseRoot);
         });
         services.AddCrmHrModule();
+        services.AddSingleton<IDbContextFactory<CrmHrDbContext>>(new PooledDbContextFactory<CrmHrDbContext>(
+            new DbContextOptionsBuilder<CrmHrDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options));
         return services.BuildServiceProvider(validateScopes: true);
     }
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T21:26:17.012950+00:00",
+  "generated_utc": "2026-09-10T23:12:56.480310+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14433,
+  "allowance_count": 14435,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -11657,6 +11657,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910183745_AddProjectLifetimes.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "6ac04a9c865cf51fb612f651a9832dd6d21c7c7f22a974f6e3f71737197e6a84",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910213323_AddCrmTechnicalProjectionProvenance.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "190d020043f471b2249aaeda6a8e76b5808e5a9f379aa8054811081cf4906a2a",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910213323_AddCrmTechnicalProjectionProvenance.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e9d4dbf75e2ff72e38145b7d4a3a72be112cf425f90a168efe4ad0d1373e2add",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910213323_AddCrmTechnicalProjectionProvenance.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "1e457f5d62fe15bdec47694af94ffcbe9ed8f04303d100288841d95ecf45b56b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910213323_AddCrmTechnicalProjectionProvenance.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "d0f642d9f0c83426ce12cfb50ba43a8dee6c1f3dac8de5b41d6d05ee2157cecc",
       "count": 1
     },
     {
@@ -39920,6 +39944,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/DatabaseProviderRuntimeProfileSnapshotLoader.cs",
+      "category": "case-policy",
+      "source_fingerprint": "870a0d4e0b4d754acde70af5c7ee32e9e829f62213291cdae5d3ed7427ecddb7",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs",
       "category": "case-policy",
       "source_fingerprint": "2943d7e11fa916a25321b2acd7fce784e1daebdf2db3253efd35506bf9a5ed7a",
@@ -39929,6 +39959,12 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
       "category": "case-policy",
       "source_fingerprint": "ddb1a83756d5daffd1194288350ba8942d6eaecffca13de21eaf1fa81c1e38a5",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderProfileMapper.cs",
+      "category": "mcp",
+      "source_fingerprint": "99d361d2bbedabb9c58b732835e6c37d6d599612480f3de046237be148056f56",
       "count": 1
     },
     {
@@ -40854,18 +40890,6 @@
       "category": "mcp",
       "source_fingerprint": "f33e34196c83a38d373970ce0180c2ba073b35d959e716d4db18abc0cb2d84fd",
       "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Bridge/AgentFrameworkAiTechnicalAgentBridge.cs",
-      "category": "case-policy",
-      "source_fingerprint": "48bb32a453e970567623e448f994aead00687459741624f6c349637372389209",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Bridge/AgentFrameworkAiTechnicalAgentBridge.cs",
-      "category": "case-policy",
-      "source_fingerprint": "b0eb01b456d4f6b0cc35d23a4174052d7775f48984ea84261d8cf49e35acc01b",
-      "count": 2
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
@@ -43994,12 +44018,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedAwareProviderRuntimeProfileSnapshotLoader.cs",
-      "category": "case-policy",
-      "source_fingerprint": "62633c4033dba4c4e10f9701cb003dd079291f37c15bb796b2dbe642de871f77",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderCatalogProjectionCommitObserver.cs",
       "category": "case-policy",
       "source_fingerprint": "f805d7a5943a1e6adfdde08292bc4dde6829acc38d27286192b028213426bd7f",
@@ -44009,12 +44027,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderImageCapabilityRelay.cs",
       "category": "case-policy",
       "source_fingerprint": "5759789fe32fa647ec2de3ed93a2d9aa48f51b78d2fc9b0ba1e588f13927821b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs",
-      "category": "mcp",
-      "source_fingerprint": "805fd61d67d2dc4ea168f55799845f9dc09c31b97c3ad1f0486427d0b8521cce",
       "count": 1
     },
     {
@@ -45503,6 +45515,18 @@
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Navigation/CrmHrRouteCatalog.cs",
       "category": "case-policy",
       "source_fingerprint": "db818fc785eaed5b78cf759e64ee61892edb34ec2b21bd6d5b257f74e6c51b38",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Persistence/AiTechnicalAgentProjectionStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9cf4bc76f5c11433daad7a3e1b4714e8587430ed7e21ce28cfe846061ca9f90f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Persistence/AiTechnicalAgentProjectionStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b20aaebc081288563431ffc2b549d726bc035fc32f23763a9f9f6176983b29aa",
       "count": 1
     },
     {

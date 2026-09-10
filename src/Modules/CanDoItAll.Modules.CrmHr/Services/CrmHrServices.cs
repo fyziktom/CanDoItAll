@@ -802,7 +802,7 @@ internal sealed class CrmOpportunityExtendedDataModel
 }
 
 public sealed partial class PartyDirectoryService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService)
@@ -1049,7 +1049,7 @@ public sealed partial class PartyDirectoryService(
     }
 
     private async Task<Result<PartySaveOperation>> SavePartyCoreAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         PartyEditorModel model,
         CancellationToken cancellationToken)
     {
@@ -1206,7 +1206,7 @@ public sealed partial class PartyDirectoryService(
         string Actor);
 
     private static async Task ReplaceChildrenAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         PartyEditorModel model,
         string actor,
@@ -1357,7 +1357,7 @@ public sealed partial class PartyDirectoryService(
 }
 
 public sealed partial class CrmService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
@@ -1582,18 +1582,13 @@ public sealed partial class CrmService(
                 .ToListAsync(cancellationToken);
         var projectIds = connectionProjectLinks
             .Select(item => item.ProjectId)
+            .Where(projectId => projectId != Guid.Empty)
             .Distinct()
             .ToList();
         var projects = projectIds.Count == 0
             ? new Dictionary<Guid, CrmAccountConnectionProjectItemModel>()
-            : (await dbContext.Set<Project>()
-                .AsNoTracking()
-                .Where(item => projectIds.Contains(item.Id))
-                .Select(item => new CrmAccountConnectionProjectItemModel(
-                    item.Id,
-                    item.Name,
-                    item.Status))
-                .ToListAsync(cancellationToken))
+            : (await projectRecordQueryService.GetManyAsync(projectIds, cancellationToken))
+                .Select(item => new CrmAccountConnectionProjectItemModel(item.Id, item.Name, item.Status))
                 .ToDictionary(item => item.Id);
         var projectIdsByConnectionId = connectionProjectLinks
             .GroupBy(item => item.AccountConnectionId)
@@ -1883,11 +1878,8 @@ public sealed partial class CrmService(
             .ToList();
         var existingProjectIds = requestedProjectIds.Count == 0
             ? []
-            : await dbContext.Set<Project>()
-                .AsNoTracking()
-                .Where(item => requestedProjectIds.Contains(item.Id))
-                .Select(item => item.Id)
-                .ToListAsync(cancellationToken);
+            : (await projectRecordQueryService.GetManyAsync(requestedProjectIds, cancellationToken))
+                .Select(item => item.Id).ToList();
         if (existingProjectIds.Count != requestedProjectIds.Count)
         {
             return Result.Failure(Error.Validation(
@@ -2649,7 +2641,7 @@ public sealed partial class CrmService(
     }
 
     private async Task<IReadOnlyList<CrmOpportunityDetailModel>> LoadOpportunityDetailsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyCollection<Guid> opportunityIds,
         CancellationToken cancellationToken)
     {
@@ -2703,7 +2695,7 @@ public sealed partial class CrmService(
                 .ToListAsync(cancellationToken))
                 .ToDictionary(item => item.Id);
         var linkedProjectIds = opportunities
-            .Where(item => item.LinkedProjectId.HasValue)
+            .Where(item => item.LinkedProjectId.HasValue && item.LinkedProjectId.Value != Guid.Empty)
             .Select(item => item.LinkedProjectId!.Value)
             .Distinct()
             .ToList();
@@ -2944,7 +2936,7 @@ public sealed partial class CrmService(
     }
 
     private static void AddAuditEntry(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid entityId,
         string action,
         string summary,
@@ -3215,7 +3207,7 @@ internal static class CrmActivityHistoryQueryComposer
     private const int AuditSourceOrder = 1;
 
     public static async Task<CrmActivityHistoryPage> SearchAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IQueryable<InteractionRecord> interactions,
         IQueryable<CrmHrAuditEntry> auditEntries,
         CrmActivityHistoryQuery query,
@@ -3344,7 +3336,7 @@ internal static class CrmActivityHistoryQueryComposer
     }
 
     private static async Task<Dictionary<Guid, string>> LoadParticipantNamesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyCollection<Guid> interactionIds,
         CancellationToken cancellationToken)
     {
@@ -3454,10 +3446,11 @@ internal static class CrmActivityHistoryQueryComposer
 }
 
 public sealed partial class HrService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    ProjectRecordQueryService projectRecordQueryService)
 {
     public async Task<IReadOnlyList<WorkforceProfileSummaryModel>> ListWorkforceProfilesAsync(CancellationToken cancellationToken = default)
     {
@@ -3629,7 +3622,7 @@ public sealed partial class HrService(
     }
 
     private async Task<WorkforceProfileWorkspaceModel?> GetWorkforceProfileWorkspaceCoreAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         CancellationToken cancellationToken)
     {
@@ -3719,7 +3712,7 @@ public sealed partial class HrService(
     }
 
     private async Task<WorkforceCapacityWorkspaceModel> GetWorkforceCapacityWorkspaceCoreAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         decimal capacityHoursPerWeek,
         CancellationToken cancellationToken)
@@ -4073,7 +4066,7 @@ public sealed partial class HrService(
 
         if (model.RelatedProjectId.HasValue)
         {
-            var projectExists = await dbContext.Set<Project>().AnyAsync(item => item.Id == model.RelatedProjectId.Value, cancellationToken);
+            var projectExists = await projectRecordQueryService.GetAsync(model.RelatedProjectId.Value, cancellationToken) is not null;
             if (!projectExists)
             {
                 return Result<Guid>.Failure(Error.Validation("The related project was not found.", "crmhr.capacity.project-not-found"));
@@ -4123,6 +4116,7 @@ public sealed partial class HrService(
     {
         ArgumentNullException.ThrowIfNull(query);
         var normalized = NormalizeStaffingRequestQuery(query);
+        var project = await projectRecordQueryService.GetNameMatchAsync(normalized.ProjectId, normalized.SearchText, cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         IQueryable<StaffingRequest> candidates = dbContext.Set<StaffingRequest>()
@@ -4140,9 +4134,7 @@ public sealed partial class HrService(
                 item.Title.ToUpper().Contains(search) ||
                 item.NeededRole.ToUpper().Contains(search) ||
                 item.Notes.ToUpper().Contains(search) ||
-                dbContext.Set<Project>().Any(project =>
-                    project.Id == item.ProjectId &&
-                    project.Name.ToUpper().Contains(search)) ||
+                (project != null && project.Matches) ||
                 dbContext.Set<Party>().Any(party =>
                     (party.Id == item.RequestedByPartyId ||
                      party.Id == item.DeliveryUnitPartyId) &&
@@ -4186,11 +4178,7 @@ public sealed partial class HrService(
                 totalCount);
         }
 
-        var projectName = await dbContext.Set<Project>()
-            .AsNoTracking()
-            .Where(item => item.Id == normalized.ProjectId)
-            .Select(item => item.Name)
-            .SingleOrDefaultAsync(cancellationToken) ?? string.Empty;
+        var projectName = project?.Name ?? string.Empty;
         var partyIds = requests
             .SelectMany(item => new[] { item.RequestedByPartyId, item.DeliveryUnitPartyId })
             .Where(item => item.HasValue)
@@ -4280,7 +4268,7 @@ public sealed partial class HrService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         if (model.ProjectId.HasValue)
         {
-            var projectExists = await dbContext.Set<Project>().AnyAsync(item => item.Id == model.ProjectId.Value, cancellationToken);
+            var projectExists = await projectRecordQueryService.GetAsync(model.ProjectId.Value, cancellationToken) is not null;
             if (!projectExists)
             {
                 return Result<Guid>.Failure(Error.Validation("The selected project was not found.", "crmhr.staffing-request.project-not-found"));
@@ -4860,7 +4848,7 @@ public sealed partial class HrService(
         }
     }
 
-    private async Task<IReadOnlyList<SkillCatalogItemModel>> GetSkillCatalogItemsAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<SkillCatalogItemModel>> GetSkillCatalogItemsAsync(CrmHrDbContext dbContext, CancellationToken cancellationToken)
     {
         return await dbContext.Set<SkillDefinition>()
             .OrderByDescending(item => item.IsActive)
@@ -4871,7 +4859,7 @@ public sealed partial class HrService(
     }
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<PartySkillItemModel>>> GetPartySkillMapAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken)
     {
@@ -4921,7 +4909,7 @@ public sealed partial class HrService(
     }
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<CapacityBlockItemModel>>> GetCapacityBlockMapAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken)
     {
@@ -4943,12 +4931,12 @@ public sealed partial class HrService(
             .ThenBy(item => item.EndDateUtc)
             .ToList();
 
-        var projectIds = blocks.Where(item => item.RelatedProjectId.HasValue).Select(item => item.RelatedProjectId!.Value).Distinct().ToList();
+        var projectIds = blocks.Where(item => item.RelatedProjectId.HasValue && item.RelatedProjectId.Value != Guid.Empty)
+            .Select(item => item.RelatedProjectId!.Value).Distinct().ToList();
         var projectNames = projectIds.Count == 0
             ? new Dictionary<Guid, string>()
-            : await dbContext.Set<Project>()
-                .Where(item => projectIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+            : (await projectRecordQueryService.GetManyAsync(projectIds, cancellationToken))
+                .ToDictionary(item => item.Id, item => item.Name);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         return blocks
@@ -4977,7 +4965,7 @@ public sealed partial class HrService(
     }
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<ProjectAllocationItemModel>>> GetProjectAllocationMapAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken)
     {
@@ -5010,11 +4998,10 @@ public sealed partial class HrService(
             .ThenBy(item => item.EndsAtUtc ?? DateTimeOffset.MaxValue)
             .ToList();
 
-        var projectIds = assignments.Select(item => item.ProjectId).Distinct().ToList();
+        var projectIds = assignments.Select(item => item.ProjectId).Where(projectId => projectId != Guid.Empty).Distinct().ToList();
         var partyNameIds = assignments.Select(item => item.PartyId).Distinct().ToList();
-        var projectNames = await dbContext.Set<Project>()
-            .Where(item => projectIds.Contains(item.Id))
-            .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+        var projectNames = (await projectRecordQueryService.GetManyAsync(projectIds, cancellationToken))
+            .ToDictionary(item => item.Id, item => item.Name);
         var partyNames = await dbContext.Set<Party>()
             .Where(item => partyNameIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
@@ -5144,7 +5131,7 @@ public sealed partial class HrService(
 }
 
 public sealed partial class AiAgentService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
@@ -5165,7 +5152,7 @@ public sealed partial class AiAgentService(
     }
 
     public Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectorySnapshotAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
@@ -5220,7 +5207,7 @@ public sealed partial class AiAgentService(
     }
 
     public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsProjectionAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<Guid>? partyIds = null,
         CancellationToken cancellationToken = default)
     {
@@ -5292,7 +5279,7 @@ public sealed partial class AiAgentService(
     }
 
     private async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryFromProjectionAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var parties = await dbContext.Set<Party>()
@@ -5553,57 +5540,63 @@ public sealed partial class AiAgentService(
         }
         var technicalAgentSave = technicalSaveResult.Value!;
 
-        var profile = await dbContext.Set<AiAgentProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
-        if (profile is null)
-        {
-            profile = new AiAgentProfile
+        try {
+            var profile = await dbContext.Set<AiAgentProfile>()
+                .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
+            if (profile is null)
             {
-                PartyId = model.PartyId
-            };
-            dbContext.Set<AiAgentProfile>().Add(profile);
-        }
+                profile = new AiAgentProfile
+                {
+                    PartyId = model.PartyId
+                };
+                dbContext.Set<AiAgentProfile>().Add(profile);
+            }
 
-        profile.OwnerPartyId = model.OwnerPartyId;
-        profile.ValidationStatus = model.ValidationStatus;
-        profile.LastReviewedAtUtc = ToUtcDate(model.LastReviewedOn);
-        profile.Notes = model.Notes.Trim();
-        profile.ExtendedDataJson = normalizedExtendedData;
+            profile.OwnerPartyId = model.OwnerPartyId;
+            profile.ValidationStatus = model.ValidationStatus;
+            profile.LastReviewedAtUtc = ToUtcDate(model.LastReviewedOn);
+            profile.Notes = model.Notes.Trim();
+            profile.ExtendedDataJson = normalizedExtendedData;
 
-        party.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy.Trim();
-        party.UpdatedAtUtc = clock.GetUtcNow();
-        CrmHrAuditWriter.AddEntry(
-            dbContext,
-            nameof(AiAgentProfile),
-            party.Id,
-            "AiAgentProfileSaved",
-            $"Saved AI agent profile for '{party.DisplayName}'.",
-            new
-            {
-                model.ExecutionMode,
-                profile.ValidationStatus,
-                model.ProviderProfileId,
-                profile.OwnerPartyId,
-                TechnicalAgentId = technicalAgentSave.TechnicalAgentId,
-                technicalAgentSave.BindingStatus
-            },
-            party.LastChangedBy,
-            party.IsSensitive,
-            party.UpdatedAtUtc);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await UpsertAiAgentSearchDocumentAsync(party.Id, cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
+            party.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy.Trim();
+            party.UpdatedAtUtc = clock.GetUtcNow();
+            CrmHrAuditWriter.AddEntry(
+                dbContext,
+                nameof(AiAgentProfile),
+                party.Id,
                 "AiAgentProfileSaved",
-                $"Saved AI agent profile for {party.DisplayName}",
-                $"{model.ExecutionMode} / {profile.ValidationStatus}",
-                ArtifactKind: nameof(AiAgentProfile),
-                ArtifactId: party.Id,
-                Route: $"/crm-hr/agents?partyId={party.Id}",
-                Actor: party.LastChangedBy),
-            cancellationToken);
-        return Result<Guid>.Success(profile.Id);
+                $"Saved AI agent profile for '{party.DisplayName}'.",
+                new
+                {
+                    model.ExecutionMode,
+                    profile.ValidationStatus,
+                    model.ProviderProfileId,
+                    profile.OwnerPartyId,
+                    TechnicalAgentId = technicalAgentSave.TechnicalAgentId,
+                    technicalAgentSave.BindingStatus
+                },
+                party.LastChangedBy,
+                party.IsSensitive,
+                party.UpdatedAtUtc);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await UpsertAiAgentSearchDocumentAsync(party.Id, cancellationToken);
+            await activityStream.RecordAsync(
+                new ActivityWriteRequest(
+                    "CRM / HR",
+                    "AiAgentProfileSaved",
+                    $"Saved AI agent profile for {party.DisplayName}",
+                    $"{model.ExecutionMode} / {profile.ValidationStatus}",
+                    ArtifactKind: nameof(AiAgentProfile),
+                    ArtifactId: party.Id,
+                    Route: $"/crm-hr/agents?partyId={party.Id}",
+                    Actor: party.LastChangedBy),
+                cancellationToken);
+            return Result<Guid>.Success(profile.Id);
+        } catch (AiTechnicalAgentCommittedSaveException) {
+            throw;
+        } catch (Exception exception) when (technicalAgentSave.TechnicalAgentId is { } technicalAgentId) {
+            throw new AiTechnicalAgentCommittedSaveException(technicalAgentId, model.PartyId, exception);
+        }
     }
 
     private async Task RollBackFailedAgentCreationAsync(Guid partyId, CancellationToken cancellationToken)
@@ -5821,7 +5814,7 @@ public sealed partial class AiAgentService(
 }
 
 public sealed class ProjectPartyIntegrationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy,
     ProjectPartyAffiliationContextService
@@ -5829,7 +5822,8 @@ public sealed class ProjectPartyIntegrationService(
     IProjectWorkItemAssignmentMutationBridge
         workItemAssignmentMutationBridge,
     IClock clock,
-    CoordinatedDatabaseTransaction coordinatedTransaction) :
+    CoordinatedDatabaseTransaction coordinatedTransaction,
+    ProjectRecordQueryService projectRecordQueryService) :
     IProjectPartyIntegrationBridge,
     IProjectPartyCostRateBridge
 {
@@ -6471,8 +6465,7 @@ public sealed class ProjectPartyIntegrationService(
             dbContext,
             $"project:{request.ProjectId:D}",
             cancellationToken);
-        var projectExists = await dbContext.Set<Project>()
-            .AnyAsync(item => item.Id == request.ProjectId, cancellationToken);
+        var projectExists = await ProjectExistsForMutationAsync(dbContext, request.ProjectId, cancellationToken);
         if (!projectExists)
         {
             return Result<Guid>.Failure(Error.Validation("Project was not found.", "crmhr.project-assignment.project-not-found"));
@@ -6750,8 +6743,7 @@ public sealed class ProjectPartyIntegrationService(
                 dbContext,
                 $"project:{projectId:D}",
                 cancellationToken);
-        var projectExists = await dbContext.Set<Project>()
-            .AnyAsync(item => item.Id == projectId, cancellationToken);
+        var projectExists = await ProjectExistsForMutationAsync(dbContext, projectId, cancellationToken);
         if (!projectExists)
         {
             return Result.Failure(Error.Validation("Project was not found.", "crmhr.project-assignment.project-not-found"));
@@ -7152,8 +7144,7 @@ public sealed class ProjectPartyIntegrationService(
             return;
         }
 
-        var targetProjectExists = await dbContext.Set<Project>()
-            .AnyAsync(item => item.Id == targetProjectId, cancellationToken);
+        var targetProjectExists = await ProjectExistsForMutationAsync(dbContext, targetProjectId, cancellationToken);
         if (!targetProjectExists)
         {
             throw new InvalidOperationException($"Target project '{targetProjectId}' was not found for assignment transfer.");
@@ -7222,7 +7213,7 @@ public sealed class ProjectPartyIntegrationService(
 
     private async Task<ProjectWorkItemDirectAssignmentMutationResult>
         StageTaskAssignmentRevisionAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid projectId,
         string taskNodeId,
         CancellationToken cancellationToken,
@@ -7501,4 +7492,11 @@ public sealed class ProjectPartyIntegrationService(
             .Distinct(StringComparer.Ordinal)
             .ToList();
     }
+    private async Task<bool> ProjectExistsForMutationAsync(CrmHrDbContext context, Guid projectId,
+        CancellationToken cancellationToken) {
+        using (coordinatedTransaction.Enter(context)) {
+            return await projectRecordQueryService.GetForMutationAsync(projectId, cancellationToken) is not null;
+        }
+    }
+
 }

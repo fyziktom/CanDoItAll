@@ -1,10 +1,8 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -14,7 +12,7 @@ public interface IAgentFrameworkOrganizationCatalogRepairService
 }
 
 internal sealed class AgentFrameworkOrganizationCatalogRepairService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IAiTechnicalAgentProjectionStore projections,
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProviderProfileService providerProfileService) : IAgentFrameworkOrganizationCatalogRepairService
 {
@@ -34,23 +32,17 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     private async Task EnsureCurrentOrganizationCatalogCoreAsync(CancellationToken cancellationToken)
     {
         var currentWorkspace = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
-        var currentAgents = (await currentWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken)).ToList();
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var aiPartyIds = await dbContext.Set<Party>()
-            .Where(item => item.PartyType == PartyType.AiAgent)
-            .Select(item => item.Id)
-            .ToListAsync(cancellationToken);
-        if (aiPartyIds.Count == 0)
-        {
+        var currentCatalog = (await currentWorkspace.LoadCatalogSnapshotAsync(cancellationToken)).Snapshot.Catalog;
+        var currentAgents = currentCatalog.Agents.Where(agent => !agent.IsTemplate).ToList();
+        var repairFacts = await projections.ReadCatalogRepairFactsAsync(cancellationToken);
+        var aiPartyIds = repairFacts.AiPartyIds;
+        if (aiPartyIds.Length == 0) {
             await RepairOpenAiAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
         var aiPartyIdSet = aiPartyIds.ToHashSet();
-        var boundBindings = await dbContext.Set<AiResourceBinding>()
-            .Where(item => aiPartyIds.Contains(item.PartyId) && item.TechnicalAgentId.HasValue)
-            .ToListAsync(cancellationToken);
+        var boundBindings = repairFacts.Bindings;
         if (CurrentWorkspaceAlreadyOwnsProjectedAgents(currentAgents, aiPartyIds, boundBindings))
         {
             await RepairOpenAiAgentAssignmentsAsync(currentWorkspace, cancellationToken);
@@ -65,15 +57,16 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         }
 
         var boundTechnicalAgentIds = boundBindings
-            .Select(item => item.TechnicalAgentId!.Value)
+            .Select(item => item.TechnicalAgentId)
             .ToHashSet();
-        var currentProviders = (await currentWorkspace.ListProvidersAsync(cancellationToken)).ToList();
-        var currentCapabilities = (await currentWorkspace.ListCapabilitiesAsync(cancellationToken)).ToList();
+        var currentProviders = currentCatalog.Providers.ToList();
+        var currentCapabilities = currentCatalog.Capabilities.ToList();
 
         foreach (var legacyScopeKey in legacyScopeKeys)
         {
             var legacyWorkspace = workspaceFactory.GetWorkspaceService(WorkspaceScopeDescriptor.Organization(legacyScopeKey));
-            var legacyAgents = await legacyWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
+            var legacyCatalog = (await legacyWorkspace.LoadCatalogSnapshotAsync(cancellationToken)).Snapshot.Catalog;
+            var legacyAgents = legacyCatalog.Agents.Where(agent => !agent.IsTemplate);
             var agentsToImport = legacyAgents
                 .Where(agent => ShouldImportAgent(agent, aiPartyIdSet, boundTechnicalAgentIds))
                 .Where(agent => FindMatchingCurrentAgent(currentAgents, agent) is null)
@@ -83,8 +76,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 continue;
             }
 
-            var legacyProviders = await legacyWorkspace.ListProvidersAsync(cancellationToken);
-            var legacyCapabilities = await legacyWorkspace.ListCapabilitiesAsync(cancellationToken);
+            var legacyProviders = legacyCatalog.Providers;
+            var legacyCapabilities = legacyCatalog.Capabilities;
             var providerIdMap = await EnsureProvidersAsync(
                 currentWorkspace,
                 currentProviders,
@@ -451,7 +444,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     private static bool CurrentWorkspaceAlreadyOwnsProjectedAgents(
         IReadOnlyList<AgentDefinition> currentAgents,
         IReadOnlyList<Guid> aiPartyIds,
-        IReadOnlyList<AiResourceBinding> boundBindings)
+        IReadOnlyList<AiTechnicalBindingReference> boundBindings)
     {
         if (aiPartyIds.Count == 0)
         {
@@ -474,9 +467,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
 
         foreach (var binding in boundBindings)
         {
-            if (binding.TechnicalAgentId.HasValue &&
-                currentAgentIds.Contains(binding.TechnicalAgentId.Value))
-            {
+            if (currentAgentIds.Contains(binding.TechnicalAgentId)) {
                 coveredPartyIds.Add(binding.PartyId);
             }
         }

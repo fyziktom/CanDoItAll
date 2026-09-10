@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -126,9 +125,9 @@ public sealed class PartyOrganizationAffiliationPolicyTests
             AffiliationKind = PartyOrganizationAffiliationKind.ExternalContact
         };
 
-    private sealed class ThrowingDbContextFactory : IDbContextFactory<AppDbContext>
+    private sealed class ThrowingDbContextFactory : IDbContextFactory<CrmHrDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public CrmHrDbContext CreateDbContext()
             => throw new InvalidOperationException("Validation opened a database context.");
     }
 

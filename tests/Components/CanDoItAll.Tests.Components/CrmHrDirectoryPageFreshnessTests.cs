@@ -1,7 +1,6 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.AspNetCore.Components;
@@ -11,26 +10,22 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
 
-public sealed class CrmHrDirectoryPageFreshnessTests
-{
+public sealed class CrmHrDirectoryPageFreshnessTests {
     [Fact]
-    public async Task Saving_primary_contact_value_preserves_email_and_phone_metadata_separately()
-    {
+    public async Task Saving_primary_contact_value_preserves_email_and_phone_metadata_separately() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var emailId = Guid.NewGuid();
         var phoneId = Guid.NewGuid();
-        var saveResult = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
-        {
+        var saveResult = await partyDirectoryService.SavePartyAsync(new PartyEditorModel {
             PartyType = PartyType.Person,
             LifecycleStatus = PartyLifecycleStatus.Active,
             DisplayName = "Primary contact metadata",
             LastChangedBy = "component-tests",
             ContactPoints =
             [
-                new PartyContactPointEditorModel
-                {
+                new PartyContactPointEditorModel {
                     Id = emailId,
                     ContactType = PartyContactType.Email,
                     Label = "Billing email",
@@ -41,8 +36,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
                     Tags = ["billing", "restricted"],
                     Notes = "Use for invoices only."
                 },
-                new PartyContactPointEditorModel
-                {
+                new PartyContactPointEditorModel {
                     Id = phoneId,
                     ContactType = PartyContactType.Phone,
                     Label = "Escalation phone",
@@ -59,8 +53,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={saveResult.Value:D}");
         var cut = harness.Context.Render<CrmHrDirectoryPage>();
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "old@example.test",
                 cut.Find("[data-testid='crmhr-party-email']").GetAttribute("value"));
@@ -100,8 +93,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     }
 
     [Fact]
-    public async Task Saving_profile_without_opening_relationships_preserves_existing_relationships()
-    {
+    public async Task Saving_profile_without_opening_relationships_preserves_existing_relationships() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
         var managementService = harness.Context.Services.GetRequiredService<PartyDirectoryManagementService>();
@@ -111,8 +103,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         var relationshipSave = await managementService.SaveRelationshipsAsync(
             sourcePartyId,
             [
-                new PartyRelationshipEditorModel
-                {
+                new PartyRelationshipEditorModel {
                     RelatedPartyId = targetPartyId,
                     RelationshipKind = PartyRelationshipKind.ReportsTo,
                     IsOutgoing = true,
@@ -125,8 +116,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={sourcePartyId:D}");
         var cut = harness.Context.Render<CrmHrDirectoryPage>();
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "Profile save source",
                 cut.Find("[data-testid='crmhr-party-display-name']").GetAttribute("value"));
@@ -154,12 +144,10 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     }
 
     [Fact]
-    public async Task Directory_paging_limits_the_slice_and_search_returns_to_the_first_page()
-    {
+    public async Task Directory_paging_limits_the_slice_and_search_returns_to_the_first_page() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
-        for (var index = 1; index <= 20; index++)
-        {
+        for (var index = 1; index <= 20; index++) {
             await CreatePartyAsync(partyDirectoryService, $"Paging slice party {index:D2}");
         }
 
@@ -167,8 +155,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         cut.WaitForElement("[data-testid='crmhr-directory-search']")
             .Input("Paging slice");
 
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Single(cut.FindAll("[data-testid='crmhr-directory-results']"));
             Assert.Equal(18, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
             Assert.Contains("Paging slice party 01", cut.Markup);
@@ -179,8 +166,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
         cut.Find("[data-testid='crmhr-directory-next']").Click();
 
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(2, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
             Assert.DoesNotContain("Paging slice party 18", cut.Markup);
             Assert.Contains("Paging slice party 19", cut.Markup);
@@ -191,8 +177,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         cut.Find("[data-testid='crmhr-directory-search']")
             .Input("Paging slice party");
 
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(18, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
             Assert.Contains("Paging slice party 01", cut.Markup);
             Assert.Contains("Paging slice party 18", cut.Markup);
@@ -202,8 +187,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     }
 
     [Fact]
-    public async Task Late_previous_party_load_cannot_replace_current_agent_chat_surface()
-    {
+    public async Task Late_previous_party_load_cannot_replace_current_agent_chat_surface() {
         var loadGate = new DelayedDbContextCreationGate();
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => WrapDbContextFactory(services, loadGate));
@@ -219,12 +203,10 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         navigation.NavigateTo($"/crm-hr/directory?partyId={secondPartyId:D}");
 
         var renderCountBeforeRelease = cut.RenderCount;
-        try
-        {
+        try {
             AssertCurrentAgentChatSurface(cut, secondPartyId, "Second current party");
         }
-        finally
-        {
+        finally {
             loadGate.Release();
         }
 
@@ -233,8 +215,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     }
 
     [Fact]
-    public async Task Explicit_missing_party_never_publishes_the_previous_party_as_current()
-    {
+    public async Task Explicit_missing_party_never_publishes_the_previous_party_as_current() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
@@ -246,8 +227,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={missingPartyId:D}");
 
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
             Assert.Equal(
                 AgentChatContextAccessState.Failed,
@@ -259,8 +239,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     }
 
     [Fact]
-    public async Task Closing_the_record_dialog_invalidates_an_in_flight_save_refresh()
-    {
+    public async Task Closing_the_record_dialog_invalidates_an_in_flight_save_refresh() {
         var loadGate = new DelayedDbContextCreationGate();
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => WrapDbContextFactory(services, loadGate));
@@ -281,8 +260,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         loadGate.Release();
         await saveTask;
 
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Empty(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
             Assert.EndsWith("/crm-hr/directory", navigation.Uri, StringComparison.Ordinal);
         });
@@ -291,10 +269,8 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     private static void AssertCurrentAgentChatSurface(
         IRenderedComponent<CrmHrDirectoryPage> cut,
         Guid expectedPartyId,
-        string expectedDisplayName)
-    {
-        cut.WaitForAssertion(() =>
-        {
+        string expectedDisplayName) {
+        cut.WaitForAssertion(() => {
             var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
             Assert.Equal(
                 AgentChatContextAccessState.Ready,
@@ -310,10 +286,8 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
     private static async Task<Guid> CreatePartyAsync(
         PartyDirectoryService partyDirectoryService,
-        string displayName)
-    {
-        var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
-        {
+        string displayName) {
+        var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel {
             PartyType = PartyType.Person,
             LifecycleStatus = PartyLifecycleStatus.Active,
             DisplayName = displayName,
@@ -326,35 +300,30 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
     private static void WrapDbContextFactory(
         IServiceCollection services,
-        DelayedDbContextCreationGate loadGate)
-    {
+        DelayedDbContextCreationGate loadGate) {
         var factoryDescriptor = services.Last(descriptor =>
-            descriptor.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+            descriptor.ServiceType == typeof(IDbContextFactory<CrmHrDbContext>));
         services.Remove(factoryDescriptor);
         services.Add(new ServiceDescriptor(
-            typeof(IDbContextFactory<AppDbContext>),
+            typeof(IDbContextFactory<CrmHrDbContext>),
             serviceProvider => new DelayedDbContextFactory(
-                (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, factoryDescriptor),
+                (IDbContextFactory<CrmHrDbContext>)CreateService(serviceProvider, factoryDescriptor),
                 loadGate),
             factoryDescriptor.Lifetime));
     }
 
     private static object CreateService(
         IServiceProvider serviceProvider,
-        ServiceDescriptor descriptor)
-    {
-        if (descriptor.ImplementationInstance is not null)
-        {
+        ServiceDescriptor descriptor) {
+        if (descriptor.ImplementationInstance is not null) {
             return descriptor.ImplementationInstance;
         }
 
-        if (descriptor.ImplementationFactory is not null)
-        {
+        if (descriptor.ImplementationFactory is not null) {
             return descriptor.ImplementationFactory(serviceProvider);
         }
 
-        if (descriptor.ImplementationType is not null)
-        {
+        if (descriptor.ImplementationType is not null) {
             return ActivatorUtilities.GetServiceOrCreateInstance(
                 serviceProvider,
                 descriptor.ImplementationType);
@@ -365,22 +334,19 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     }
 
     private sealed class DelayedDbContextFactory(
-        IDbContextFactory<AppDbContext> innerFactory,
-        DelayedDbContextCreationGate loadGate) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
+        IDbContextFactory<CrmHrDbContext> innerFactory,
+        DelayedDbContextCreationGate loadGate) : IDbContextFactory<CrmHrDbContext> {
+        public CrmHrDbContext CreateDbContext()
             => innerFactory.CreateDbContext();
 
-        public async Task<AppDbContext> CreateDbContextAsync(
-            CancellationToken cancellationToken = default)
-        {
+        public async Task<CrmHrDbContext> CreateDbContextAsync(
+            CancellationToken cancellationToken = default) {
             await loadGate.WaitIfFirstArmedCreationAsync(cancellationToken);
             return await innerFactory.CreateDbContextAsync(cancellationToken);
         }
     }
 
-    private sealed class DelayedDbContextCreationGate
-    {
+    private sealed class DelayedDbContextCreationGate {
         private readonly TaskCompletionSource delayedCreation = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource release = new(
@@ -397,11 +363,9 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         public void Release()
             => release.TrySetResult();
 
-        public async Task WaitIfFirstArmedCreationAsync(CancellationToken cancellationToken)
-        {
+        public async Task WaitIfFirstArmedCreationAsync(CancellationToken cancellationToken) {
             if (Volatile.Read(ref isArmed) == 0 ||
-                Interlocked.CompareExchange(ref hasDelayedCreation, 1, 0) != 0)
-            {
+                Interlocked.CompareExchange(ref hasDelayedCreation, 1, 0) != 0) {
                 return;
             }
 

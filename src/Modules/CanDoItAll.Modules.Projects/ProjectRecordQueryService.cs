@@ -60,10 +60,28 @@ public interface IProjectRecordQueryService
         CancellationToken cancellationToken = default);
 }
 
+public sealed record ProjectNameMatch(Guid Id, string Name, bool Matches);
+
 public sealed class ProjectRecordQueryService(
     IDbContextFactory<ProjectsDbContext> dbContextFactory,
     DbContextOptions<ProjectsDbContext> contextOptions,
     CoordinatedDatabaseTransaction coordinatedTransaction) : IProjectRecordQueryService {
+    public async Task<ProjectNameMatch?> GetNameMatchAsync(Guid projectId, string searchText,
+        CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
+            throw new ArgumentException("A project is required.", nameof(projectId));
+        }
+        ArgumentNullException.ThrowIfNull(searchText);
+        if (searchText.Length > ProjectRecordQueryLimits.MaximumSearchLength) {
+            throw new ArgumentException("The project name search exceeds the supported length.", nameof(searchText));
+        }
+        var search = searchText.ToUpperInvariant();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.Set<Project>().AsNoTracking().Where(project => project.Id == projectId)
+            .Select(project => new ProjectNameMatch(project.Id, project.Name, project.Name.ToUpper().Contains(search)))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ProjectAccessListItem>> ListReferencesAsync(
         int maximumItems, CancellationToken cancellationToken = default) {
         if (maximumItems is < 1 or > ProjectRecordQueryLimits.MaximumReferenceCount) {

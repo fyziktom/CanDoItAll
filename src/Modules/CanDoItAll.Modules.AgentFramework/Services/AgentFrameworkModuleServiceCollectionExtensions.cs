@@ -214,8 +214,6 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
             AgentProviderUsageProjectionSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
-            SharedProviderRelayUsageProjectionSource>());
         services.TryAddScoped<ProviderUsageQueryService>();
         services.TryAddScoped<
             ISharedProviderImageCapabilityRelay,
@@ -224,11 +222,6 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             (IAgentRecruitingEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentRecruitingEvidenceService, AgentRecruitingEvidenceService>();
         services.TryAddSingleton<IAgentExecutionCancellationRegistry, AgentExecutionCancellationRegistry>();
-        services.TryAddSingleton<SharedProviderRuntimeProfileMaterializer>();
-        services.AddScoped<SharedProviderProfileMapper>();
-        services.AddScoped<
-            IProviderRuntimeProfileSnapshotLoader,
-            DatabaseProviderRuntimeProfileSnapshotLoader>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<
                 IProviderProfileCommitObserver,

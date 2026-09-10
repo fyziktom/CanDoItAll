@@ -15,9 +15,15 @@ including observed secret existence. Normal owner factories stay independent of 
 Commit observers and catalog refresh run after the coordination scope is released; existing saved-state
 warnings, source trust, concurrency conflicts and immutable invocation/history behavior are retained.
 
-Technical-agent catalog projection, CRM enrichment, bootstrap and complete database transfer still
-have separate integration boundaries. This context extraction does not establish their final ownership
-or replay guarantees. Complete schema migrations remain outside ordinary runtime business access.
+Provider Management also owns database-backed runtime profile snapshots, shared-profile
+mapping, bulk profile ownership facts and shared-relay usage projection. Each uses
+`ProvidersDbContext`; AgentFramework consumes their typed results without querying
+Provider tables. Immutable invocation audit and the existing history retention join
+keep their original owner, pricing snapshots, filters and ordering.
+
+Technical-agent CRM enrichment is routed to CRM's provenance-aware writer. Bootstrap
+and selected database-transfer orchestration retain separate maintenance boundaries;
+complete schema migrations remain outside ordinary runtime business access.
 
 Use the repository-pinned .NET SDK and the sibling source dependencies described in the [root README](../../../README.md). Run these commands from the repository root:
 

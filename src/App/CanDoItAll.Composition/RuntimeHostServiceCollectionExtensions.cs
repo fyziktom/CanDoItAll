@@ -297,7 +297,11 @@ public sealed class AppDatabaseBootstrapper(
         logger.LogInformation(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
             profile.Profile.Id);
-        await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var crmOptions = new DbContextOptionsBuilder<CrmHrDbContext>();
+        AppDbContextOptionsConfigurator.Configure(crmOptions, profile);
+        await using (var crm = new CrmHrDbContext(crmOptions.Options)) {
+            await CrmHrSchemaInitializer.EnsureAsync(crm, cancellationToken);
+        }
         logger.LogInformation(
             "Ensuring agent provider bootstrap for profile {ProfileId}.",
             profile.Profile.Id);

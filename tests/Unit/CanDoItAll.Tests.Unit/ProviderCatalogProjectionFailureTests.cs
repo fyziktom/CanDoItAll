@@ -94,7 +94,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                     providerProfileService,
                     providerMapper,
                     new DatabaseProviderRuntimeProfileSnapshotLoader(
-                        dbContextFactory,
+                        dbContextFactory.ProvidersFactory,
                         providerMapper,
                         new SharedProviderProfileMapper(),
                         new SharedProviderRuntimeProfileMaterializer(),
@@ -629,7 +629,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 providerProfileService,
                 providerMapper,
                 new DatabaseProviderRuntimeProfileSnapshotLoader(
-                    dbContextFactory,
+                    dbContextFactory.ProvidersFactory,
                     providerMapper,
                     new SharedProviderProfileMapper(),
                     new SharedProviderRuntimeProfileMaterializer(),
@@ -732,7 +732,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             providerProfileService,
             providerMapper,
             new DatabaseProviderRuntimeProfileSnapshotLoader(
-                dbContextFactory,
+                dbContextFactory.ProvidersFactory,
                 providerMapper,
                 new SharedProviderProfileMapper(),
                 new SharedProviderRuntimeProfileMaterializer(),

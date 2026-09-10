@@ -1,11 +1,9 @@
 using System.Security.Cryptography;
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace CanDoItAll.Modules.AgentFramework;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 using PersistedProviderProfile =
     CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
@@ -13,7 +11,7 @@ using ProviderProfileWellKnownIds =
     CanDoItAll.AgentFramework.Models.ProviderProfileWellKnownIds;
 
 internal sealed class DatabaseProviderRuntimeProfileSnapshotLoader(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
     ProviderProfileMapper providerMapper,
     SharedProviderProfileMapper sharedProviderMapper,
     SharedProviderRuntimeProfileMaterializer sharedProviderMaterializer,

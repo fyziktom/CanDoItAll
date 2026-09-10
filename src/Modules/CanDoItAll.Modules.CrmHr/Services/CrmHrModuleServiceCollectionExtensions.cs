@@ -3,7 +3,9 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -11,8 +13,10 @@ namespace CanDoItAll.Modules.CrmHr;
 
 public static class CrmHrModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddCrmHrModule(this IServiceCollection services)
-    {
+    public static IServiceCollection AddCrmHrModule(this IServiceCollection services) {
+        services.AddPooledDbContextFactory<CrmHrDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             CrmHrProjectTransferTargetStateParticipant>());
@@ -39,6 +43,7 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<IAutomationSignalSource, CrmHrAutomationSignalProvider>();
         services.AddScoped<IProjectPartyIntegrationBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
         services.AddScoped<IProjectPartyCostRateBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
+        services.TryAddScoped<IAiTechnicalAgentProjectionStore, AiTechnicalAgentProjectionStore>();
         services.TryAddScoped<IAiTechnicalAgentBridge, LegacyAiTechnicalAgentBridge>();
         return services;
     }

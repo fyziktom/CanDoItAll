@@ -94,7 +94,7 @@ public interface ICrmHrAgentQueryService
 }
 
 public sealed class CrmHrAgentQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock) : ICrmHrAgentQueryService
 {
     private static readonly IReadOnlyList<CrmHrAgentRecordKind> SupportedRecordKinds =
@@ -221,7 +221,7 @@ public sealed class CrmHrAgentQueryService(
             CrmHrAgentRecordKind.AiAgent;
 
     private static async Task<IReadOnlyList<Candidate>> SearchAllKindsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -241,7 +241,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchKindAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         CrmHrAgentRecordKind recordKind,
         string normalizedSearchText,
         int take,
@@ -278,7 +278,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchPartiesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -312,7 +312,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchWorkforceAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -355,7 +355,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchAccountsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -393,7 +393,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchAiAgentsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -432,7 +432,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> CandidateQuery(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         CrmHrAgentRecordKind recordKind,
         Guid? recordId = null)
     {
@@ -448,7 +448,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> PartyCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return dbContext.Set<Party>()
@@ -470,7 +470,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> WorkforceCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -495,7 +495,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> AccountCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -520,7 +520,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> OpportunityCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -545,7 +545,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> AiAgentCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -571,7 +571,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private async Task<IReadOnlyDictionary<Guid, CrmHrAgentAvailability>> LoadAvailabilityAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<Candidate> candidates,
         CancellationToken cancellationToken)
     {

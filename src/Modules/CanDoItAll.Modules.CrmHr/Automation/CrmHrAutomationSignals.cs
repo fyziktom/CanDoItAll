@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.CrmHr;
 
 internal sealed class CrmHrAutomationSignalProvider(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock) : IAutomationSignalSource
 {
     public async Task<IReadOnlyList<AutomationSignalItem>> ListSignalsAsync(CancellationToken cancellationToken = default)

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
@@ -50,6 +51,15 @@ public sealed class AiResourceBinding
 
     public DateTimeOffset? ProjectionUpdatedAtUtc { get; set; }
 
+    public Guid? SourceDatabaseProfileId { get; set; }
+    public WorkspaceScopeKind? SourceScopeKind { get; set; }
+    public string SourceScopeKey { get; set; } = string.Empty;
+    public long? SourceCatalogRevision { get; set; }
+    public AiTechnicalProjectionAvailability ProjectionAvailability { get; set; }
+    public string ProjectedDisplayName { get; set; } = string.Empty;
+    public string ProjectedSummary { get; set; } = string.Empty;
+    public AgentLifecycleStatus? ProjectedLifecycleStatus { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
@@ -74,6 +84,13 @@ internal sealed class AiResourceBindingConfiguration : IEntityTypeConfiguration<
         builder.Property(binding => binding.ProjectedTemplateKey).HasMaxLength(200);
         builder.Property(binding => binding.ProjectedTagsJson).HasColumnType("TEXT");
         builder.Property(binding => binding.ProjectedCapabilitiesJson).HasColumnType("TEXT");
+        builder.Property(binding => binding.SourceScopeKind).HasConversion<string>().HasMaxLength(32);
+        builder.Property(binding => binding.SourceScopeKey).HasMaxLength(200);
+        builder.Property(binding => binding.ProjectionAvailability).HasConversion<string>().HasMaxLength(32);
+        builder.Property(binding => binding.ProjectedDisplayName).HasMaxLength(200);
+        builder.Property(binding => binding.ProjectedSummary).HasColumnType("TEXT");
+        builder.Property(binding => binding.ProjectedLifecycleStatus).HasConversion<string>().HasMaxLength(32);
+        builder.HasIndex(binding => new { binding.SourceDatabaseProfileId, binding.SourceScopeKind, binding.SourceScopeKey });
         builder.HasIndex(binding => binding.PartyId).IsUnique();
         builder.HasIndex(binding => binding.TechnicalAgentId);
     }
@@ -88,7 +105,9 @@ public sealed record AiTechnicalAgentDirectorySummary(
     string DefaultModel,
     int CapabilityCount,
     bool HasTechnicalProfile,
-    string AgentsRoute);
+    string AgentsRoute) {
+    public AiTechnicalProjectionProvenance? Projection { get; init; }
+}
 
 public sealed record AiTechnicalAgentWorkspaceModel(
     Guid? TechnicalAgentId,
@@ -148,7 +167,8 @@ public interface IAiTechnicalAgentBridge
 }
 
 internal sealed class LegacyAiTechnicalAgentBridge(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
+    IProviderAdministrationService providers,
     IClock clock) : IAiTechnicalAgentBridge
 {
     public Task SynchronizeDirectoryProjectionAsync(
@@ -184,9 +204,9 @@ internal sealed class LegacyAiTechnicalAgentBridge(
             .ToList();
         var providerNames = providerIds.Count == 0
             ? new Dictionary<Guid, string>()
-            : await dbContext.Set<ProviderProfile>()
+            : (await providers.ListProviderProfilesAsync(cancellationToken))
                 .Where(item => providerIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+                .ToDictionary(item => item.Id, item => item.Name);
         var profileByPartyId = profiles.ToDictionary(item => item.PartyId);
         var bindingByPartyId = bindings.ToDictionary(item => item.PartyId);
         var result = new Dictionary<Guid, AiTechnicalAgentDirectorySummary>();
@@ -220,13 +240,11 @@ internal sealed class LegacyAiTechnicalAgentBridge(
             .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
         var binding = await dbContext.Set<AiResourceBinding>()
             .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var providerOptions = (await dbContext.Set<ProviderProfile>()
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken))
+        var providerOptions = (await providers.ListProviderProfilesAsync(cancellationToken))
             .Select(item => new AiProviderOptionModel(
                 item.Id,
                 item.Name,
-                item.ProviderKind?.ToString() ?? item.ConnectorPluginKey,
+                item.LegacyProviderKind?.ToString() ?? item.ConnectorPluginKey,
                 item.DefaultModel,
                 item.IsEnabled))
             .ToList();
@@ -301,11 +319,11 @@ internal sealed class LegacyAiTechnicalAgentBridge(
         ArgumentNullException.ThrowIfNull(model);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        ProviderProfile? provider = null;
+        ProviderProfileSummary? provider = null;
         if (model.ProviderProfileId is Guid providerProfileId)
         {
-            provider = await dbContext.Set<ProviderProfile>()
-                .SingleOrDefaultAsync(item => item.Id == providerProfileId, cancellationToken);
+            provider = (await providers.ListProviderProfilesAsync(cancellationToken))
+                .SingleOrDefault(item => item.Id == providerProfileId);
             if (provider is null)
             {
                 return Result<AiTechnicalAgentSaveResult>.Failure(
