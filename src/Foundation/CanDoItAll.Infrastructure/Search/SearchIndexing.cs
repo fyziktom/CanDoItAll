@@ -68,6 +68,8 @@ public interface ISearchIndexService
 {
     Task UpsertAsync(SearchDocumentInput input, CancellationToken cancellationToken = default);
 
+    Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default);
+
     Task DeleteAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default);
@@ -92,6 +94,16 @@ public sealed class SearchIndexService(
     public async Task UpsertAsync(SearchDocumentInput input, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await UpsertAsync(dbContext, input, cancellationToken);
+    }
+
+    public async Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) {
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new SearchDbContext(options), cancellationToken);
+        await UpsertAsync(dbContext, input, cancellationToken);
+    }
+
+    private async Task UpsertAsync(SearchDbContext dbContext, SearchDocumentInput input, CancellationToken cancellationToken) {
         var entity = await dbContext.Set<SearchDocument>()
             .FirstOrDefaultAsync(
                 document => document.SourceType == input.SourceType && document.SourceKey == input.SourceKey,

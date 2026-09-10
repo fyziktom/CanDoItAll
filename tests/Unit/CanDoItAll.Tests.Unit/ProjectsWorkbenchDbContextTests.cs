@@ -7,10 +7,10 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProjectsWorkbenchDbContextTests {
     [Fact]
-    public void Projects_model_contains_exactly_the_four_owner_records() {
+    public void Projects_model_contains_exactly_the_five_owner_records() {
         using var context = new ProjectsDbContext(new DbContextOptionsBuilder<ProjectsDbContext>()
             .UseInMemoryDatabase($"projects-model-{Guid.NewGuid():N}").Options);
-        Assert.Equal(new[] { typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink) }
+        Assert.Equal(new[] { typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink), typeof(ProjectRetirementRecord) }
             .OrderBy(type => type.Name), context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
         Assert.DoesNotContain(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.IsConcurrencyToken);
         Assert.Throws<InvalidOperationException>(() => context.Set<CrmAccountConnectionProjectLink>().ToList());

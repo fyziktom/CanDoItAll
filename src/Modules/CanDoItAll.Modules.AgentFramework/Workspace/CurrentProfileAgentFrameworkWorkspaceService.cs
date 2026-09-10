@@ -175,6 +175,36 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return changedAgentCount;
     }
 
+    public async Task GrantAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(lifetime);
+        var workspace = ResolveProjectLifetimeWorkspace(lifetime.DatabaseProfileId);
+        await workspace.GrantAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
+        await RefreshProjectStructureAccessProjectionsAsync(agentId, lifetime.ProjectId,
+            ProjectStructureAccessChange.Granted, cancellationToken);
+    }
+
+    public async Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(target);
+        var workspace = ResolveProjectLifetimeWorkspace(target.DatabaseProfileId);
+        var changedAgentCount = await workspace.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(target, cancellationToken);
+        await RefreshBulkProjectStructureAccessProjectionsAsync(target.ProjectId, changedAgentCount, cancellationToken);
+        return changedAgentCount;
+    }
+
+    private IAgentFrameworkWorkspaceService ResolveProjectLifetimeWorkspace(Guid databaseProfileId) {
+        lock (executionSubscriptionGate) {
+            var identity = ResolvePinnedActivityExecutionIdentity();
+            if (identity.ProfileId != databaseProfileId) {
+                throw new InvalidOperationException("The project access lifetime belongs to another database profile.");
+            }
+            var workspace = workspaceFactory.GetWorkspaceService(identity.WorkspaceScope);
+            EnsurePinnedActivityExecutionIdentity(identity, ResolvePinnedActivityExecutionIdentity());
+            return workspace;
+        }
+    }
+
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteAgentAsync(agentId, cancellationToken);

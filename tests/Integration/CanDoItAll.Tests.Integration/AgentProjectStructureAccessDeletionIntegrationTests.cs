@@ -393,7 +393,7 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             if (targetMethod?.Name !=
-                nameof(IAgentFrameworkWorkspaceService.RevokeProjectStructureAccessFromAllAgentsAsync))
+                nameof(IAgentFrameworkWorkspaceService.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync))
             {
                 throw new NotSupportedException(
                     $"Unexpected workspace call '{targetMethod?.Name}'.");
@@ -425,7 +425,7 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             if (targetMethod?.Name !=
-                nameof(IAgentFrameworkWorkspaceService.RevokeProjectStructureAccessFromAllAgentsAsync))
+                nameof(IAgentFrameworkWorkspaceService.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync))
             {
                 throw new NotSupportedException(
                     $"Unexpected workspace call '{targetMethod?.Name}'.");

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T17:51:40.435305+00:00",
+  "generated_utc": "2026-09-10T18:47:14.154329+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14424,
+  "allowance_count": 14429,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -11636,6 +11636,30 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910183745_AddProjectLifetimes.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "47adc5f46caa83ee57cb1787f27ae58d313341a000ae3ca368810cca438f0d65",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910183745_AddProjectLifetimes.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e31e14da35fbe283edb025d2cb4283171a4a8f894595bcec404930d983cc128a",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910183745_AddProjectLifetimes.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "2b64e71d0ca6d5e4d5cae120ad16faed7aa1fadffecd49f540142429c9fca477",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910183745_AddProjectLifetimes.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "6ac04a9c865cf51fb612f651a9832dd6d21c7c7f22a974f6e3f71737197e6a84",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "a33075cb8612f67d57d247ef09617e46910b005bc5020353f51528c26c3aca30",
@@ -15833,12 +15857,24 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
       "category": "case-policy",
       "source_fingerprint": "c9df2e4b286e0786cce0cffcb77244e8aadfc990585f47568de50f80b9ec8cea",
-      "count": 9
+      "count": 8
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
       "category": "case-policy",
       "source_fingerprint": "f6230be1db866ca051aa83f0dc496695cf212d8c1a2d05cdc7497a620df5a068",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProjectLifetimes.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6986bea9ae5ce40e5c1f9293beebf614bb71c504c9fde83ec4d56ab1d156f85b",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProjectLifetimes.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e154c3b24456c6921a629e5fa978066a421f953d6ae8da5e66b21d48c9815248",
       "count": 1
     },
     {

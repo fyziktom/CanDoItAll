@@ -263,6 +263,9 @@ public sealed class ProjectsServiceIntegrationTests
 
     private sealed class ThrowingSearchIndexService : ISearchIndexService
     {
+        public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) =>
+            UpsertAsync(input, cancellationToken);
+
         public Task UpsertAsync(SearchDocumentInput input, CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("Expected search projection failure.");

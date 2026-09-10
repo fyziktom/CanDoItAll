@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
@@ -11,6 +12,7 @@ namespace CanDoItAll.Modules.Projects;
 public static class ProjectErrorCodes
 {
     public const string NotFound = "projects.not-found";
+    public const string LifetimeChanged = "projects.lifetime-changed";
 }
 
 public enum ProjectStatus
@@ -45,6 +47,12 @@ public enum ProjectOptionCategory
 public sealed class Project
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    [JsonIgnore]
+    public Guid LifetimeId { get; private set; } = Guid.NewGuid();
+
+    [JsonIgnore]
+    public bool LegacyAgentAccessBindingEligible { get; private set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -114,6 +122,8 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
     {
         builder.ToTable("Projects_Projects");
         builder.HasKey(project => project.Id);
+        builder.Property(project => project.LifetimeId).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(project => project.LegacyAgentAccessBindingEligible).HasDefaultValue(false);
         builder.Property(project => project.Name).HasMaxLength(200).IsRequired();
         builder.Property(project => project.Slug).HasMaxLength(200).IsRequired();
         builder.Property(project => project.Description).HasColumnType("TEXT");
@@ -220,6 +230,8 @@ public sealed class ProjectEditorModel
 {
     public Guid? Id { get; set; }
 
+    public Guid? ExpectedLifetimeId { get; set; }
+
     public string Name { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
@@ -247,7 +259,8 @@ public sealed class ProjectsService(
     ILogger<ProjectsService> logger,
     SearchIndexService searchMutationService,
     StorageCatalogService storageCatalogService,
-    CoordinatedDatabaseTransaction coordinatedTransaction) {
+    CoordinatedDatabaseTransaction coordinatedTransaction,
+    ProjectWriteAdmissionService writeAdmissionService) {
     private const string DeleteRetryGuidance =
         "Retry each exact participant and recovery id returned by the deletion recovery; do not create or select a newer project-deletion operation.";
 
@@ -592,6 +605,7 @@ public sealed class ProjectsService(
         return new ProjectEditorModel
         {
             Id = project.Id,
+            ExpectedLifetimeId = project.LifetimeId,
             Name = project.Name,
             Description = project.Description,
             Objective = project.Objective,
@@ -731,6 +745,11 @@ public sealed class ProjectsService(
                 ProjectErrorCodes.NotFound));
         }
 
+        if (entity is not null && model.ExpectedLifetimeId.HasValue && model.ExpectedLifetimeId.Value != entity.LifetimeId) {
+            return Result<Guid>.Failure(Error.Failure(
+                "This project belongs to a different lifetime. Reload it before saving changes.", ProjectErrorCodes.LifetimeChanged));
+        }
+
         if (entity is null)
         {
             entity = new Project
@@ -826,10 +845,12 @@ public sealed class ProjectsService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.DisposeAsync();
+        var admission = writeAdmissionService.Capture(entity);
         await RunPostCommitActionAsync(
             "search-index-upsert",
             entity.Id,
-            () => searchIndexService.UpsertAsync(new SearchDocumentInput(
+            () => UpsertAdmittedSearchProjectionAsync(admission, new SearchDocumentInput(
                 "project",
                 entity.Id.ToString(),
                 "Projects",
@@ -867,6 +888,18 @@ public sealed class ProjectsService(
         }
 
         return Result<Guid>.Success(entity.Id);
+    }
+
+    private async Task UpsertAdmittedSearchProjectionAsync(ProjectWriteAdmission admission, SearchDocumentInput input,
+        CancellationToken cancellationToken) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext, ProjectMutationScopeKeys.ForProject(admission.ProjectId), cancellationToken);
+        await writeAdmissionService.RequireAsync(dbContext, admission, cancellationToken);
+        using (coordinatedTransaction.Enter(dbContext)) {
+            await searchIndexService.UpsertForMutationAsync(input, cancellationToken);
+        }
+        await mutationScope.CommitAsync(cancellationToken);
     }
 
     private static string[] BuildProjectMutationScopeKeys(
@@ -974,6 +1007,9 @@ public sealed class ProjectsService(
                 dbContext.RemoveRange(phases);
                 dbContext.RemoveRange(options);
                 dbContext.RemoveRange(hierarchyLinks);
+                dbContext.Add(new ProjectRetirementRecord {
+                    ProjectId = project.Id, LifetimeId = project.LifetimeId, RetiredAtUtc = clock.GetUtcNow()
+                });
                 dbContext.Remove(project);
             }
 

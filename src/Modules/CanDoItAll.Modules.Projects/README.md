@@ -29,8 +29,9 @@ contracts instead of duplicating them.
 
 ## Runtime persistence boundary
 
-`ProjectsDbContext` maps only Project, ProjectPhase, ProjectOptionSelection, and
-ProjectHierarchyLink with their existing table, key, index, and property mappings.
+`ProjectsDbContext` maps Project, ProjectPhase, ProjectOptionSelection,
+ProjectHierarchyLink, and the retained ProjectRetirementRecord. Existing business
+records retain their mappings; the lifetime addition requires the canonical migration.
 Normal project operations, recent activity, record queries, and file-scope project
 lookups use this owner context. Factories bind to the host's immutable canonical
 database profile. The complete AppDbContext remains the sole schema and migration
@@ -46,17 +47,53 @@ Project deletion uses ProjectsDbContext and the data-only deletion participant
 contract. Projects owns one Serializable transaction and the sorted union of project,
 hierarchy, and participant keys. Workbench, Agent access, Search, and Storage staging
 each save through a fresh explicitly enlisted owner context on that same connection
-and transaction. Projects saves its four owned record types, exits coordination,
+and transaction. Projects saves its five owned record types, exits coordination,
 commits, and releases the preparation scope before completion. Missing-project cleanup
 and terminal recovery histories remain supported. Existing precommit filesystem
 containment and reparse inspection remains validation; destructive byte effects stay
 after the authoritative commit under the separate managed-binding gate.
 
 The twelve-owner transfer context contract and other modules' direct project queries
-remain dependent work. Runtime owner contexts do not establish durable project
-admission or prevent retired ProjectId reuse. Canonical task identity and existing
-Agent recovery IDs are retained; Agent revocation now fences lease transitions by
-the durable attempt generation.
+remain dependent work. Canonical task identity and existing Agent recovery IDs are
+retained. Agent revocation fences lease transitions by the durable attempt generation;
+this admission layer does not change that behavior.
+
+Project write admission is the tuple of canonical database profile, project ID and
+persisted lifetime ID. Deletion retains that lifetime in Projects_ProjectRetirements
+without a cascading foreign key. Same-ID creation gets a new lifetime; saved v2 project
+JSON omits the local lifetime field and preserves every existing payload property.
+Fresh inactive-profile import remains supported. Row transfer can preserve source
+fields because the admission also binds the target profile explicitly.
+
+LegacyAgentAccessBindingEligible records migration provenance for later Agent grant
+binding. Only projects present during the first lifetime upgrade are marked eligible;
+new creations and saved-package restores default to false. The marker is omitted
+from compatible project JSON and cannot be changed by an ordinary editor. It does
+not itself authorize a grant or infer the history of a missing project.
+
+Migration 20260910183745_AddProjectLifetimes preserves existing business/recovery rows,
+assigns a distinct lifetime to every live project and retains legacy recovery metadata
+as null. Downgrade refuses retained retirements or lifetime-bound access recoveries.
+Before an otherwise empty-evidence downgrade, stop writers and discard old admission
+handles; re-upgrade assigns new lifetimes. Older binaries cannot enforce the new
+metadata and must be drained before activating lifetime-aware writers.
+
+Loaded editors retain ExpectedLifetimeId through the page's save clone and reject an
+explicit stale lifetime. Legacy callers omitting that field remain compatible and
+still need admission cutover. Project postcommit Search upsert captures the lifetime
+at authoritative save, releases the original mutation scope, acquires the project
+scope again, validates that lifetime, and stages Search on the exact same transaction.
+A delayed old save cannot restore deleted search or overwrite a recreated project's
+projection. Search failure remains a logged best-effort postcommit failure.
+
+ProjectWriteAdmissionService has independent CaptureAsync and explicit enlisted
+RequireForMutationAsync. The latter preserves the current transaction's read set;
+callers must already hold the complete ordered project mutation scope before their
+first read. It does not silently create a scope or capture a replacement admission.
+Delayed operations must retain the originally captured admission through dispatch.
+Pre-creation agent grants, multi-lifetime Agent revocation, remaining live foreign
+writers and retained workflow/placement receipts require their dependent protocols.
+This core does not claim that all deletion races are closed.
 
 The complete model retains the CRM AccountConnectionProjects ProjectId cascade FK to
 Projects_Projects. Projects' runtime model contains no CRM records. Canonical tasks

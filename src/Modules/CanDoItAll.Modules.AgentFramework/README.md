@@ -78,21 +78,27 @@ enlisted owner context, saves the durable revocation in Projects' transaction, a
 returns only the project/recovery identity. Postcommit recovery, status updates, and
 history use ordinary independent owner contexts.
 
-The unique ProjectId, status values, existing fields and exact recovery identity are
-retained. AttemptCount is also the durable claim generation: eligible claims compare
+Recovery is keyed by project lifetime. Existing recovery IDs, status values and claim
+fields are retained. Legacy records keep null profile/lifetime metadata and their
+filtered unique ProjectId index; new records have a unique (ProjectId, ProjectLifetimeId)
+index and paired profile/lifetime metadata. The canonical migration owns these additions. AttemptCount is also the durable claim generation: eligible claims compare
 and increment the observed value, and renewal/completion/failure require that exact
 generation, Processing status, and a live lease. Each transition locks its exact row
 in a short owner transaction, then its conditional UPDATE samples PostgreSQL
 clock_timestamp() once after the lock wait. UpdatedAtUtc renews ownership while LastAttemptAtUtc preserves attempt start. Fresh
 Processing recoveries expose retry availability instead of apparent completion.
 Failure persistence is bounded; ownership loss cancels workspace processing and cannot
-rewrite a successor's recovery state. No new schema or migration is required.
+rewrite a successor's recovery state.
 
-Revocation is an idempotent workspace catalog removal, guarded by its existing
-cross-process catalog lock. Lease ownership does not promise external exactly-once
-effects, durable project admission, or safe retired-ID reuse. Grants, editor/import
-writes, lifetime tombstones and explicit profile transfer/purge remain separate
-required cutovers. All participating workers must use generation-aware finalization;
+Revocation matches the captured profile/project/lifetime inside the existing
+cross-process catalog mutation. AllowedProjectIds remains the compatible projection;
+allowedProjectLifetimes records exact bindings and normal metadata writes retain them
+for selected IDs. Old cleanup cannot remove another bound lifetime. Legacy unbound
+grants retain their explicit cleanup behavior. These guarantees require the grant
+writer cutover before all bare-ID authority is fenced: durable creation reservations,
+bootstrap binding, editor/import admission, runtime access enforcement and explicit
+profile transfer/purge remain required dependent work. No external exactly-once claim
+is made. All participating workers must use generation-aware finalization;
 older binaries still use the legacy unguarded updates.
 
 ## Related Docs

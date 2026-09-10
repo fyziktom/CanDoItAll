@@ -14,7 +14,8 @@ internal sealed class ProjectsProjectTransferTargetStateParticipant
         typeof(Project),
         typeof(ProjectHierarchyLink),
         typeof(ProjectOptionSelection),
-        typeof(ProjectPhase)
+        typeof(ProjectPhase),
+        typeof(ProjectRetirementRecord)
     ];
 
     public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
@@ -26,7 +27,8 @@ internal sealed class ProjectsProjectTransferTargetStateParticipant
             await dbContext.Set<Project>().AsNoTracking().AnyAsync(cancellationToken) ||
             await dbContext.Set<ProjectHierarchyLink>().AsNoTracking().AnyAsync(cancellationToken) ||
             await dbContext.Set<ProjectOptionSelection>().AsNoTracking().AnyAsync(cancellationToken) ||
-            await dbContext.Set<ProjectPhase>().AsNoTracking().AnyAsync(cancellationToken);
+            await dbContext.Set<ProjectPhase>().AsNoTracking().AnyAsync(cancellationToken) ||
+            await dbContext.Set<ProjectRetirementRecord>().AsNoTracking().AnyAsync(cancellationToken);
         return hasResidue
             ? [new("project core records")]
             : [];

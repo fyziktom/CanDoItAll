@@ -211,7 +211,8 @@ public sealed class AgentProjectAccessClaimIntegrationTests {
         IDbContextFactory<AgentProjectAccessDbContext>? factory = null) => new(
         workspace!, factory ?? services.GetRequiredService<IDbContextFactory<AgentProjectAccessDbContext>>(), timeProvider ?? TimeProvider.System,
         NullLogger<AgentProjectStructureAccessDeletionParticipant>.Instance, services.GetRequiredService<DbContextOptions<AgentProjectAccessDbContext>>(),
-        services.GetRequiredService<CoordinatedDatabaseTransaction>(), options ?? AgentProjectAccessClaimOptions.Default);
+        services.GetRequiredService<CoordinatedDatabaseTransaction>(), options ?? AgentProjectAccessClaimOptions.Default,
+        services.GetRequiredService<ProjectWriteAdmissionService>());
 
     private static TestHarnessOptions Harness(AgentProjectAccessClaimOptions? options = null,
         CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null) => new() {
@@ -295,7 +296,7 @@ public sealed class AgentProjectAccessClaimIntegrationTests {
         public int InvocationCount { get; private set; }
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
-            if (targetMethod?.Name != nameof(IAgentFrameworkWorkspaceService.RevokeProjectStructureAccessFromAllAgentsAsync)) {
+            if (targetMethod?.Name != nameof(IAgentFrameworkWorkspaceService.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync)) {
                 throw new NotSupportedException(targetMethod?.Name);
             }
             return RunAsync((CancellationToken)args![1]!);

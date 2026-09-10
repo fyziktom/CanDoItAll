@@ -126,6 +126,7 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
         }
         await using var readback = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         Assert.Equal(failFinalSave, await readback.Set<Project>().AnyAsync(item => item.Id == projectId));
+        Assert.Equal(!failFinalSave, await readback.Set<ProjectRetirementRecord>().AnyAsync(item => item.ProjectId == projectId));
         Assert.Equal(failFinalSave, await readback.Set<ProjectObjectRecord>().AnyAsync(item => item.Id == objectId));
         Assert.Equal(failFinalSave, await readback.Set<ProjectNodeBindingRecord>().AnyAsync(item => item.ProjectObjectId == objectId));
         Assert.Equal(failFinalSave ? 2 : 0, await readback.Set<SearchDocument>().CountAsync(item => item.ProjectId == projectId ||

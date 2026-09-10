@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,8 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
     ILogger<AgentProjectStructureAccessDeletionParticipant> logger,
     DbContextOptions<AgentProjectAccessDbContext> contextOptions,
     CoordinatedDatabaseTransaction coordinatedTransaction,
-    AgentProjectAccessClaimOptions claimOptions)
+    AgentProjectAccessClaimOptions claimOptions,
+    ProjectWriteAdmissionService writeAdmissionService)
     : IProjectDeletionParticipant
 {
     private readonly AgentProjectAccessClaimOptions options = claimOptions.Validate();
@@ -41,10 +43,15 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
             throw new ArgumentException("A project id is required.", nameof(projectId));
         }
 
+        var admission = await writeAdmissionService.CaptureForMutationAsync(projectId, cancellationToken);
+        var lifetimeId = admission?.LifetimeId;
         await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
             contextOptions, static options => new AgentProjectAccessDbContext(options), cancellationToken);
         var record = await dbContext.Set<AgentProjectStructureAccessRevocationRecord>()
-            .SingleOrDefaultAsync(record => record.ProjectId == projectId, cancellationToken);
+            .SingleOrDefaultAsync(record => record.ProjectId == projectId && record.ProjectLifetimeId == lifetimeId, cancellationToken);
+        if (record is not null && record.DatabaseProfileId != admission?.DatabaseProfileId) {
+            throw new InvalidOperationException("The stored project-access revocation belongs to another database profile.");
+        }
         if (record?.Status == AgentProjectStructureAccessRevocationStatus.Completed) {
             await dbContext.SaveChangesAsync(cancellationToken);
             return null;
@@ -57,6 +64,8 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
             {
                 Id = Guid.NewGuid(),
                 ProjectId = projectId,
+                DatabaseProfileId = admission?.DatabaseProfileId,
+                ProjectLifetimeId = lifetimeId,
                 Status = AgentProjectStructureAccessRevocationStatus.Pending,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
@@ -106,7 +115,8 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
             if (!await TryRenewClaimAsync(claim, processingCancellation.Token)) {
                 throw new InvalidOperationException("Agent project-access revocation lost its claim before workspace dispatch.");
             }
-            await workspaceService.RevokeProjectStructureAccessFromAllAgentsAsync(preparation.ProjectId, processingCancellation.Token);
+            await workspaceService.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(
+                ResolveRevocationTarget(record), processingCancellation.Token);
             await StopHeartbeatAsync(heartbeatStop, heartbeatTask, suppressFailure: false);
             if (!await TryCompleteClaimAsync(claim, cancellationToken) && !await IsCompletedAsync(preparation, cancellationToken)) {
                 throw new InvalidOperationException("Agent project-access revocation lost its claim before completion.");
@@ -241,7 +251,7 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
     private async Task<int> ExecuteClaimTransitionAsync(Guid projectId, Guid recoveryId, FormattableString update,
         CancellationToken cancellationToken) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        if (dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL") {
+        if (!dbContext.Database.IsNpgsql()) {
             throw new InvalidOperationException("Agent project-access claim transitions require the canonical PostgreSQL provider.");
         }
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -296,7 +306,7 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
         if (!dbContext.Database.IsRelational()) {
             return Task.FromResult(timeProvider.GetUtcNow());
         }
-        if (dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL") {
+        if (!dbContext.Database.IsNpgsql()) {
             throw new InvalidOperationException("Agent project-access claim time requires the canonical PostgreSQL provider.");
         }
         return dbContext.Database.SqlQueryRaw<DateTimeOffset>("SELECT clock_timestamp() AS \"Value\"").SingleAsync(cancellationToken);
@@ -330,6 +340,16 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
         };
     }
 
+    private AgentProjectStructureRevocationTarget ResolveRevocationTarget(AgentProjectStructureAccessRevocationRecord record) {
+        if (record.DatabaseProfileId is null && record.ProjectLifetimeId is null) {
+            return AgentProjectStructureRevocationTarget.UnboundLegacy(writeAdmissionService.DatabaseProfileId, record.ProjectId);
+        }
+        if (record.DatabaseProfileId != writeAdmissionService.DatabaseProfileId || record.ProjectLifetimeId is not { } lifetimeId) {
+            throw new InvalidOperationException("The stored project-access revocation does not belong to the canonical project lifetime profile.");
+        }
+        return AgentProjectStructureRevocationTarget.ForLifetime(new(record.DatabaseProfileId.Value, record.ProjectId, lifetimeId));
+    }
+
     private static SemaphoreSlim ResolveCompletionLock(Guid recoveryId)
     {
         var stripeIndex = (recoveryId.GetHashCode() & int.MaxValue) % CompletionLockStripeCount;
@@ -351,6 +371,10 @@ public sealed class AgentProjectStructureAccessRevocationRecord
 
     public Guid ProjectId { get; set; }
 
+    public Guid? DatabaseProfileId { get; set; }
+
+    public Guid? ProjectLifetimeId { get; set; }
+
     public AgentProjectStructureAccessRevocationStatus Status { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -371,13 +395,19 @@ internal sealed class AgentProjectStructureAccessRevocationRecordConfiguration
 {
     public void Configure(EntityTypeBuilder<AgentProjectStructureAccessRevocationRecord> builder)
     {
-        builder.ToTable("AgentFramework_ProjectAccessRevocations");
+        builder.ToTable("AgentFramework_ProjectAccessRevocations", table => table.HasCheckConstraint(
+            "CK_AF_ProjectAccessRevocations_Lifetime",
+            "(\"DatabaseProfileId\" IS NULL AND \"ProjectLifetimeId\" IS NULL) OR (\"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)"));
         builder.HasKey(record => record.Id);
         builder.Property(record => record.Status).HasConversion<int>();
         builder.Property(record => record.LastFailureCode).HasMaxLength(256);
         builder.HasIndex(record => record.ProjectId)
             .IsUnique()
+            .HasFilter("\"ProjectLifetimeId\" IS NULL")
             .HasDatabaseName("UX_AF_ProjectAccessRevocations_Project");
+        builder.HasIndex(record => new { record.ProjectId, record.ProjectLifetimeId })
+            .IsUnique()
+            .HasDatabaseName("UX_AF_ProjectAccessRevocations_ProjectLifetime");
         builder.HasIndex(record => new { record.Status, record.CreatedAtUtc })
             .HasDatabaseName("IX_AF_ProjectAccessRevocations_Status");
     }

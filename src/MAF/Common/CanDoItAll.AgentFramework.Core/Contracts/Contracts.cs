@@ -489,6 +489,14 @@ public interface IAgentFrameworkWorkspaceService :
     {
         throw new NotSupportedException("This workspace does not support bulk durable project-structure access revocation.");
     }
+    Task GrantAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        throw new NotSupportedException("This workspace does not support project lifetime access grants.");
+    }
+    Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
+        CancellationToken cancellationToken = default) {
+        throw new NotSupportedException("This workspace does not support project lifetime access revocation.");
+    }
     Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);
     Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default);

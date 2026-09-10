@@ -451,6 +451,27 @@ public sealed class ProjectsPageTests
     }
 
     [Fact]
+    public async Task Loaded_project_editor_preserves_its_lifetime_when_saving_after_same_id_recreation() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects, "Original editor lifetime");
+        var cut = harness.Context.Render<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Original editor lifetime", cut.Markup));
+        var card = cut.FindAll("[data-testid='project-card']")
+            .Single(item => item.TextContent.Contains("Original editor lifetime", StringComparison.Ordinal));
+        card.QuerySelector("[data-testid='project-card-details-button']")!.Click();
+        cut.WaitForElement("[data-testid='projects-detail-modal']");
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Edit name and details").Click();
+        cut.WaitForElement("[data-testid='project-name-input']");
+        cut.Find("[data-testid='project-name-input']").Change("Stale editor attempt");
+        await projects.DeleteAsync(projectId);
+        Assert.True((await projects.CreateAsync(projectId, new() { Name = "Restored current lifetime" })).IsSuccess);
+        cut.Find("[data-testid='project-save-button']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Reload it before saving changes.", cut.Markup));
+        Assert.Equal("Restored current lifetime", (await projects.GetAsync(projectId)).Name);
+    }
+
+    [Fact]
     public async Task Project_overview_modal_explains_that_header_uses_saved_project_name()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

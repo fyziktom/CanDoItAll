@@ -122,51 +122,13 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             static (access, id) => access.AllowedProjectIds.Remove(id),
             cancellationToken);
 
-    public async Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
-        Guid projectId,
-        CancellationToken cancellationToken = default)
-    {
-        if (projectId == Guid.Empty)
-        {
+    public Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
+        Guid projectId, CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
             throw new ArgumentException("A project id is required.", nameof(projectId));
         }
-
-        var changedAgentCount = 0;
-        var now = DateTimeOffset.UtcNow;
-        await UpdateCatalogAsync(catalog =>
-        {
-            changedAgentCount = 0;
-            var updatedAgents = new List<AgentDefinition>(catalog.Agents.Count);
-            foreach (var agent in catalog.Agents)
-            {
-                var revocation = AgentProjectStructureAccessMetadata.RevokeProject(
-                    agent.ConfigurationJson,
-                    projectId);
-                if (!revocation.Changed)
-                {
-                    updatedAgents.Add(agent);
-                    continue;
-                }
-
-                changedAgentCount++;
-                updatedAgents.Add(agent with
-                {
-                    ConfigurationJson = revocation.ConfigurationJson,
-                    UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
-                });
-            }
-
-            return changedAgentCount == 0
-                ? catalog
-                : catalog with
-                {
-                    Agents = updatedAgents
-                        .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                        .ToList()
-                };
-        }, cancellationToken);
-
-        return changedAgentCount;
+        return RevokeProjectStructureAccessCoreAsync(
+            configuration => AgentProjectStructureAccessMetadata.RevokeProject(configuration, projectId), cancellationToken);
     }
 
     private async Task UpdateAgentProjectStructureAccessAsync(

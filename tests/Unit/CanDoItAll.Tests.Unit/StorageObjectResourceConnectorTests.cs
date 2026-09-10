@@ -353,6 +353,9 @@ public sealed class StorageObjectResourceConnectorTests
 
     private sealed class NullSearchIndex : ISearchIndexService
     {
+        public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) =>
+            UpsertAsync(input, cancellationToken);
+
         public Task UpsertAsync(SearchDocumentInput input, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 

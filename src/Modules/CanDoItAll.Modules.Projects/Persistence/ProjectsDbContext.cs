@@ -9,6 +9,7 @@ public sealed class ProjectsDbContext(DbContextOptions<ProjectsDbContext> option
         modelBuilder.ApplyConfiguration(new ProjectPhaseConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectOptionSelectionConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectHierarchyLinkConfiguration());
+        modelBuilder.ApplyConfiguration(new ProjectRetirementRecordConfiguration());
         base.OnModelCreating(modelBuilder);
     }
 

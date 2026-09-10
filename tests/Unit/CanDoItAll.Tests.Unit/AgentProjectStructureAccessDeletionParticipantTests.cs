@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -47,13 +48,19 @@ public sealed class AgentProjectStructureAccessDeletionParticipantTests
             DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
         var options = new DbContextOptionsBuilder<AgentProjectAccessDbContext>();
         AppDbContextOptionsConfigurator.Configure(options, profile);
+        var storeRoot = new InMemoryDatabaseRoot();
+        options.UseInMemoryDatabase(databaseName, storeRoot);
+        var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>();
+        AppDbContextOptionsConfigurator.Configure(projectOptions, profile);
+        projectOptions.UseInMemoryDatabase(databaseName, storeRoot);
         await using var dbContext = new AgentProjectAccessDbContext(options.Options);
         var coordinator = CoordinatedDatabaseTransaction.ForProfile(profile);
         var projectId = Guid.NewGuid();
         var participant = new AgentProjectStructureAccessDeletionParticipant(
             workspaceService: null!, dbContextFactory: null!, timeProvider: TimeProvider.System,
             logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentProjectStructureAccessDeletionParticipant>.Instance,
-            contextOptions: options.Options, coordinatedTransaction: coordinator, claimOptions: AgentProjectAccessClaimOptions.Default);
+            contextOptions: options.Options, coordinatedTransaction: coordinator, claimOptions: AgentProjectAccessClaimOptions.Default,
+            writeAdmissionService: new ProjectWriteAdmissionService(null!, projectOptions.Options, coordinator, new CanonicalDatabase(profile)));
         using (coordinator.Enter(dbContext)) {
             var preparation = await participant.PrepareAsync(projectId);
             Assert.NotNull(preparation);
@@ -68,4 +75,9 @@ public sealed class AgentProjectStructureAccessDeletionParticipantTests
         }
         await Assert.ThrowsAsync<InvalidOperationException>(() => participant.PrepareAsync(projectId));
     }
+    private sealed class CanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 1;
+    }
+
 }
