@@ -151,7 +151,10 @@ public sealed class PromptGalleryApiIntegrationTests
             await arrangeContext.SaveChangesAsync();
         }
 
-        var driver = new SearchIndexPromptGalleryProjectionDriver(factory);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var driver = new SearchIndexPromptGalleryProjectionDriver(
+            scope.ServiceProvider.GetRequiredService<SearchProjectionStore>(),
+            scope.ServiceProvider.GetRequiredService<IPromptArtifactProjectionQueryService>());
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             driver.RebuildAsync(FailingProjectionDocuments()));
 

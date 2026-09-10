@@ -7,6 +7,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -20,11 +21,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     [Fact]
     public async Task PersistentComponentSaveRejectsIncompatibleGalleryBindingBeforePersisting()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(AgentFrameworkModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"workflow-prompt-boundary-{Guid.NewGuid():N}")
-            .Options;
-        var factory = new PromptGalleryTestSupport.TestDbContextFactory(options);
+        var factory = CreateWorkflowFactory(nameof(PersistentComponentSaveRejectsIncompatibleGalleryBindingBeforePersisting));
         var promptArtifactId = Guid.NewGuid();
         var promptVersionId = Guid.NewGuid();
         var promptGallery = new IncompatiblePromptGallery(promptArtifactId, promptVersionId);
@@ -69,7 +66,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     public async Task Workflow_publication_rejects_an_intervening_gallery_writer()
     {
         var factory = CreateWorkflowFactory("publication-concurrency");
-        var gallery = PromptGalleryTestSupport.CreateService(factory);
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
         var provider = CreateProvider();
         var initialSave = await gallery.SaveDraftAsync(new PromptGalleryDraft(
             Id: null,
@@ -130,7 +127,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     public async Task StartupMigrationBatchesLegacyRecordsAndPersistsDurableMarkers()
     {
         var factory = CreateWorkflowFactory("legacy-migration");
-        var gallery = PromptGalleryTestSupport.CreateService(factory);
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
         var catalog = new PersistentWorkflowCatalogService(
             factory,
             new WorkflowDefinitionValidator(),
@@ -273,7 +270,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     public async Task ComponentHydrationFailsExplicitlyWhenBoundPromptVersionIsMissing()
     {
         var factory = CreateWorkflowFactory("missing-version");
-        var gallery = PromptGalleryTestSupport.CreateService(factory);
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
         var catalog = new PersistentWorkflowCatalogService(
             factory,
             new WorkflowDefinitionValidator(),
@@ -302,7 +299,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     public async Task DefinitionValidationFailsWhenBoundGalleryItemIsArchivedAfterComponentSave()
     {
         var factory = CreateWorkflowFactory("archived-after-save");
-        var gallery = PromptGalleryTestSupport.CreateService(factory);
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
         var catalog = new PersistentWorkflowCatalogService(
             factory,
             new WorkflowDefinitionValidator(),
@@ -340,7 +337,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     public async Task DefinitionValidationRejectsIncompatibleNodeProviderModelOverride()
     {
         var factory = CreateWorkflowFactory("node-provider-model-override");
-        var gallery = PromptGalleryTestSupport.CreateService(factory);
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
         var provider = CreateProvider();
         var catalog = new PersistentWorkflowCatalogService(
             factory,
@@ -427,14 +424,22 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         await migration.EnsureMigratedAsync();
     }
 
-    private static PromptGalleryTestSupport.TestDbContextFactory CreateWorkflowFactory(string testName)
-    {
+    private static WorkflowTestDbContextFactory CreateWorkflowFactory(string testName) {
         AppDbContextModelRegistry.ConfigureAssemblies(
             [typeof(AgentFrameworkModuleAssemblyMarker).Assembly, typeof(PromptsModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"workflow-prompt-migration-{testName}-{Guid.NewGuid():N}")
-            .Options;
-        return new PromptGalleryTestSupport.TestDbContextFactory(options);
+        var databaseName = $"workflow-prompt-migration-{testName}-{Guid.NewGuid():N}";
+        var store = new InMemoryDatabaseRoot();
+        var options = AppDbContextTestOptionsBuilder.Create().UseInMemoryDatabase(databaseName, store).Options;
+        var promptOptions = new DbContextOptionsBuilder<PromptsDbContext>().UseInMemoryDatabase(databaseName, store).Options;
+        return new(options, new PromptGalleryTestSupport.TestDbContextFactory(promptOptions));
+    }
+
+    private sealed class WorkflowTestDbContextFactory(DbContextOptions<AppDbContext> options,
+        IDbContextFactory<PromptsDbContext> prompts) : IDbContextFactory<AppDbContext> {
+        public IDbContextFactory<PromptsDbContext> Prompts { get; } = prompts;
+        public AppDbContext CreateDbContext() => new(options);
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateDbContext());
     }
 
     private static LlmCallComponent CreateLegacyComponent()

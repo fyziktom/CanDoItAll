@@ -182,6 +182,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IPathFoundationReadinessProbe, PathFoundationReadinessProbe>();
         services.AddScoped<IBackgroundJobTracker, BackgroundJobTracker>();
         services.AddScoped<SearchIndexService>();
+        services.AddScoped<SearchProjectionStore>();
         services.AddScoped<ISearchIndexService>(provider => provider.GetRequiredService<SearchIndexService>());
 
         services.AddHealthChecks()

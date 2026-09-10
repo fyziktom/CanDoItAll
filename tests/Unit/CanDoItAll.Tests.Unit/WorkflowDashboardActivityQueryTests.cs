@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Prompts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -207,9 +208,11 @@ public sealed class WorkflowDashboardActivityQueryTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
             [typeof(AgentFrameworkModuleAssemblyMarker).Assembly, typeof(PromptsModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"workflow-dashboard-catalog-{Guid.NewGuid():N}")
-            .Options;
+        var databaseName = $"workflow-dashboard-catalog-{Guid.NewGuid():N}";
+        var store = new InMemoryDatabaseRoot();
+        var options = AppDbContextTestOptionsBuilder.Create().UseInMemoryDatabase(databaseName, store).Options;
+        var promptFactory = new PromptGalleryTestSupport.TestDbContextFactory(
+            new DbContextOptionsBuilder<PromptsDbContext>().UseInMemoryDatabase(databaseName, store).Options);
         var factory = new TrackingAppDbContextFactory(options);
         var requestedWorkflowId = new WorkflowId(Guid.Parse("40000000-0000-0000-0000-000000000001"));
         var unrelatedWorkflowId = new WorkflowId(Guid.Parse("40000000-0000-0000-0000-000000000002"));
@@ -238,7 +241,7 @@ public sealed class WorkflowDashboardActivityQueryTests
         }
 
         factory.ResetTrackedEntityCount();
-        var promptGallery = PromptGalleryTestSupport.CreateService(factory);
+        var promptGallery = PromptGalleryTestSupport.CreateService(promptFactory);
         var catalog = new PersistentWorkflowCatalogService(
             factory,
             new WorkflowDefinitionValidator(),

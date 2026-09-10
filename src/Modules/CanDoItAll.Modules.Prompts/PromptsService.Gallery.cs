@@ -7,7 +7,7 @@ namespace CanDoItAll.Modules.Prompts;
 
 public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImportService
 {
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly IDbContextFactory<PromptsDbContext> _dbContextFactory;
     private readonly IClock _clock;
     private readonly IActivityStream _activityStream;
     private readonly IPromptGallerySearchDriver _searchDriver;
@@ -16,7 +16,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
     private readonly ILogger<PromptsService> _logger;
 
     public PromptsService(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<PromptsDbContext> dbContextFactory,
         IClock clock,
         IActivityStream activityStream,
         IPromptGallerySearchDriver searchDriver,
@@ -50,40 +50,42 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
     }
 
     public async Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
-        PromptGalleryDraft draft,
-        CancellationToken cancellationToken = default)
-    {
+        PromptGalleryDraft draft, CancellationToken cancellationToken = default) {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var saved = await SaveDraftInContextAsync(dbContext, draft, cancellationToken);
+        if (saved.IsFailure) {
+            return Result<PromptDraftSaveReceipt>.Failure(saved.Errors);
+        }
+        var state = saved.Value!;
+        await NotifyDraftSaveAsync(state.Artifact.Id, state.Artifact.ProjectId, state.Artifact.Title, state.IsNew, cancellationToken);
+        return Result<PromptDraftSaveReceipt>.Success(new(state.Artifact.Id, state.Artifact.UpdatedAtUtc));
+    }
+
+    internal async Task<Result<PromptDraftSaveState>> SaveDraftInContextAsync(
+        PromptsDbContext dbContext, PromptGalleryDraft draft, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(draft);
         var errors = PromptGalleryPersistence.ValidateDraft(draft);
-        if (errors.Count > 0)
-        {
-            return Result<PromptDraftSaveReceipt>.Failure(errors);
+        if (errors.Count > 0) {
+            return Result<PromptDraftSaveState>.Failure(errors);
         }
 
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         PromptArtifact entity;
         var isNew = draft.Id is null;
-        if (draft.Id is not Guid existingId)
-        {
-            entity = new PromptArtifact
-            {
+        if (draft.Id is not Guid existingId) {
+            entity = new PromptArtifact {
                 CreatedAtUtc = _clock.GetUtcNow(),
                 Provenance = PromptArtifactProvenance.User
             };
             await dbContext.Set<PromptArtifact>().AddAsync(entity, cancellationToken);
-        }
-        else
-        {
+        } else {
             var existing = await dbContext.Set<PromptArtifact>()
                 .FirstOrDefaultAsync(item => item.Id == existingId, cancellationToken);
-            if (existing is null)
-            {
-                return Result<PromptDraftSaveReceipt>.Failure(NotFound(existingId));
+            if (existing is null) {
+                return Result<PromptDraftSaveState>.Failure(NotFound(existingId));
             }
 
-            if (existing.UpdatedAtUtc != draft.ExpectedUpdatedAtUtc)
-            {
-                return Result<PromptDraftSaveReceipt>.Failure(Error.Failure(
+            if (existing.UpdatedAtUtc != draft.ExpectedUpdatedAtUtc) {
+                return Result<PromptDraftSaveState>.Failure(Error.Failure(
                     "The Prompt Gallery item changed after it was loaded. Reload it before saving.",
                     "prompts.gallery.concurrency-conflict"));
             }
@@ -120,25 +122,26 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             draft.SupportedConsumers ?? [],
             isNew,
             cancellationToken);
-        try
-        {
+        try {
             await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Result<PromptDraftSaveReceipt>.Failure(Error.Failure(
+        } catch (DbUpdateConcurrencyException) {
+            return Result<PromptDraftSaveState>.Failure(Error.Failure(
                 "The Prompt Gallery item changed while it was being saved. Reload it before retrying.",
                 "prompts.gallery.concurrency-conflict"));
         }
 
-        await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
-        await RecordActivityAsync(
-            isNew ? "create-draft" : "update-draft",
-            isNew ? "Created prompt draft" : "Updated prompt draft",
-            entity,
-            cancellationToken);
-        return Result<PromptDraftSaveReceipt>.Success(new(entity.Id, entity.UpdatedAtUtc));
+        return Result<PromptDraftSaveState>.Success(new(entity, isNew));
     }
+
+    internal async Task NotifyDraftSaveAsync(Guid promptId, Guid? projectId, string title, bool isNew,
+        CancellationToken cancellationToken) {
+        await ProjectCanonicalChangeAsync(promptId, cancellationToken);
+        await RecordActivityAsync(isNew ? "create-draft" : "update-draft",
+            isNew ? "Created prompt draft" : "Updated prompt draft",
+            new PromptArtifact { Id = promptId, ProjectId = projectId, Title = title }, cancellationToken);
+    }
+
+    internal sealed record PromptDraftSaveState(PromptArtifact Artifact, bool IsNew);
 
     public async Task<Result<PromptVersionSnapshot>> CreateVersionAsync(
         Guid promptArtifactId,

@@ -21,7 +21,7 @@ public sealed class ConnectorOutboxIntegrationTests
         await using var scope = harness.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkspaceConnectorCommandDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Connector outbox idempotency");
         var request = new ConnectorCommandEnqueueRequest(
@@ -73,7 +73,7 @@ public sealed class ConnectorOutboxIntegrationTests
         await using var scope = harness.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkspaceConnectorCommandDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Connector outbox replay");
         var enqueue = await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
@@ -165,7 +165,7 @@ public sealed class ConnectorOutboxIntegrationTests
         await using var scope = harness.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkspaceConnectorCommandDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Connector outbox stolen lease");
         var enqueue = await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
@@ -224,11 +224,10 @@ public sealed class ConnectorOutboxIntegrationTests
     }
 
     private static async Task ForceNextAttemptDueAsync(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkspaceConnectorCommandDbContext> dbContextFactory,
         Guid commandId)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext);
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .SingleAsync(item => item.Id == commandId);
         command.NextAttemptAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
@@ -236,12 +235,11 @@ public sealed class ConnectorOutboxIntegrationTests
     }
 
     private static async Task StealConnectorLeaseAsync(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkspaceConnectorCommandDbContext> dbContextFactory,
         Guid commandId,
         DateTimeOffset leaseExpiresAtUtc)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext);
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .SingleAsync(item => item.Id == commandId);
         command.LeaseToken = Guid.NewGuid().ToString("N");
@@ -251,11 +249,10 @@ public sealed class ConnectorOutboxIntegrationTests
     }
 
     private static async Task ExpireConnectorLeaseAsync(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkspaceConnectorCommandDbContext> dbContextFactory,
         Guid commandId)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext);
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .SingleAsync(item => item.Id == commandId);
         command.LeaseExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);

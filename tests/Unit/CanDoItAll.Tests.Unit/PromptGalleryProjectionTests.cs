@@ -146,12 +146,12 @@ public sealed class PromptGalleryProjectionTests
         }
     }
 
-    private sealed class ThrowingDbContextFactory : Microsoft.EntityFrameworkCore.IDbContextFactory<CanDoItAll.Infrastructure.Persistence.AppDbContext>
+    private sealed class ThrowingDbContextFactory : Microsoft.EntityFrameworkCore.IDbContextFactory<CanDoItAll.Modules.Prompts.PromptsDbContext>
     {
-        public CanDoItAll.Infrastructure.Persistence.AppDbContext CreateDbContext()
+        public CanDoItAll.Modules.Prompts.PromptsDbContext CreateDbContext()
             => throw new InvalidOperationException("Disabled projection must not access the database.");
 
-        public Task<CanDoItAll.Infrastructure.Persistence.AppDbContext> CreateDbContextAsync(
+        public Task<CanDoItAll.Modules.Prompts.PromptsDbContext> CreateDbContextAsync(
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Disabled projection must not access the database.");
     }

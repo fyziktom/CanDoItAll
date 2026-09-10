@@ -132,7 +132,7 @@ internal static class SchedulerPlanRunRetryClassifier
 }
 
 public sealed class SchedulerPlannerService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SchedulerPlannerDbContext> dbContextFactory,
     ISchedulerPlannerTriggerScheduler triggerScheduler,
     ICronDescriptionService cronDescriptionService,
     IWorkflowCatalogService workflowCatalogService,
@@ -376,7 +376,7 @@ public sealed class SchedulerPlannerService(
     }
 
     private async Task<IReadOnlyList<SchedulerPlanRunSummary>> SearchHistoryAsync(
-        AppDbContext dbContext,
+        SchedulerPlannerDbContext dbContext,
         SchedulerHistoryQuery query,
         CancellationToken cancellationToken)
     {
@@ -1113,7 +1113,7 @@ public sealed record SchedulerPlanFireRequest(
     DateTimeOffset? NextPlannedFireAtUtc);
 
 public sealed class SchedulerPlannerRunDispatcher(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SchedulerPlannerDbContext> dbContextFactory,
     ISchedulerTargetLauncher targetLauncher,
     IClock clock,
     ILogger<SchedulerPlannerRunDispatcher> logger) : ISchedulerPlannerRunDispatcher

@@ -20,9 +20,9 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
-Scheduler Planner should coordinate existing process and workflow runtimes; it should not duplicate process launch logic or workflow execution semantics. Persistence is split between `SchedulerPlanner_Plans` and `SchedulerPlanner_Runs`, with PostgreSQL EF migrations owning runtime schema.
+Scheduler Planner should coordinate existing process and workflow runtimes; it should not duplicate process launch logic or workflow execution semantics. `SchedulerPlannerDbContext` contains only plans and run history. Its pooled factory is bound to the immutable canonical database profile. It reuses the complete model mappings for `SchedulerPlanner_Plans` and `SchedulerPlanner_Runs`, including legacy Automation column names, run deduplication, and the plan/run cascade. The complete `AppDbContext` remains the PostgreSQL migration authority and the explicit profile-transfer maintenance model.
 
-Scheduler trigger handling is explicit through `SchedulerPlannerRunDispatcher`. Keep dedupe keys and run-state transitions predictable so repeated scheduler fires do not launch duplicate work.
+Scheduler trigger handling is explicit through `SchedulerPlannerRunDispatcher`. The owner context preserves current firing keys, terminal replay behavior, and target launch orchestration. Durable launch authority and recovery across an interrupted dispatch remain a separate required boundary; the context cutover does not change that protocol.
 
 ## Related Docs
 

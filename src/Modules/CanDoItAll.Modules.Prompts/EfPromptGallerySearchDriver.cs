@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Prompts;
 
-public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> dbContextFactory)
+public sealed class EfPromptGallerySearchDriver(IDbContextFactory<PromptsDbContext> dbContextFactory)
     : IPromptGallerySearchDriver
 {
     public async Task<PromptGalleryPage<PromptGallerySearchItem>> SearchAsync(
@@ -152,7 +152,7 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
 
     private static async Task<Dictionary<Guid, IReadOnlyList<string>>> LoadTagsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         IReadOnlyCollection<Guid> artifactIds,
         CancellationToken cancellationToken)
     {
@@ -172,7 +172,7 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
     }
 
     private static async Task<Dictionary<Guid, IReadOnlyList<PromptProviderModel>>> LoadModelsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         IReadOnlyCollection<Guid> artifactIds,
         CancellationToken cancellationToken)
     {

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -11,6 +12,9 @@ public static class WorkspaceModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkspaceModule(this IServiceCollection services)
     {
+        services.AddPooledDbContextFactory<WorkspaceConnectorCommandDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             WorkspaceProjectTransferTargetStateParticipant>());

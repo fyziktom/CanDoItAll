@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Workspace;
 
 public sealed class ConnectorCommandProcessor(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkspaceConnectorCommandDbContext> dbContextFactory,
     IClock clock,
     IEnumerable<IConnectorCommandHandler> handlers,
     ILogger<ConnectorCommandProcessor> logger)
@@ -23,7 +23,6 @@ public sealed class ConnectorCommandProcessor(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var now = clock.GetUtcNow();
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .AsNoTracking()
@@ -132,7 +131,7 @@ public sealed class ConnectorCommandProcessor(
     }
 
     private async Task<bool> TryStartClaimedAttemptAsync(
-        AppDbContext dbContext,
+        WorkspaceConnectorCommandDbContext dbContext,
         ConnectorCommandRecord command,
         string leaseToken,
         DateTimeOffset now,
@@ -164,7 +163,7 @@ public sealed class ConnectorCommandProcessor(
     }
 
     private static async Task ReleaseClaimedLeaseAsync(
-        AppDbContext dbContext,
+        WorkspaceConnectorCommandDbContext dbContext,
         Guid commandId,
         string leaseToken,
         DateTimeOffset now,
@@ -237,7 +236,7 @@ public sealed class ConnectorCommandProcessor(
     }
 
     private static async Task<bool> TryFinalizeCommandAsync(
-        AppDbContext dbContext,
+        WorkspaceConnectorCommandDbContext dbContext,
         ConnectorCommandRecord command,
         string leaseToken,
         ConnectorCommandFinalization finalization,
@@ -290,7 +289,6 @@ public sealed class ConnectorCommandProcessor(
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
         {
             ConnectorCommandId = command.Id,
@@ -368,7 +366,7 @@ public sealed class ConnectorCommandProcessor(
 }
 
 public sealed class ConnectorOutboxService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkspaceConnectorCommandDbContext> dbContextFactory,
     IClock clock,
     ConnectorPluginRegistry connectorPluginRegistry,
     ConnectorCommandProcessor commandProcessor)
@@ -384,7 +382,6 @@ public sealed class ConnectorOutboxService(
         ArgumentException.ThrowIfNullOrWhiteSpace(request.IdempotencyKey);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         _ = connectorPluginRegistry.Resolve(request.ConnectorPluginKey);
 
         var normalizedPluginKey = request.ConnectorPluginKey.Trim();
@@ -512,7 +509,6 @@ public sealed class ConnectorOutboxService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var batchStopwatch = Stopwatch.StartNew();
         var now = clock.GetUtcNow();
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
@@ -579,7 +575,7 @@ public sealed class ConnectorOutboxService(
     }
 
     private static async Task<IReadOnlyList<ClaimedConnectorCommand>> ClaimPendingCommandsPostgreSqlAsync(
-        AppDbContext dbContext,
+        WorkspaceConnectorCommandDbContext dbContext,
         int take,
         DateTimeOffset now,
         TimeSpan leaseDuration,
@@ -690,7 +686,6 @@ public sealed class ConnectorOutboxService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .FirstOrDefaultAsync(item => item.Id == commandId, cancellationToken);
         if (command is null || command.Status != ConnectorCommandStatus.DeadLettered)
@@ -727,7 +722,6 @@ public sealed class ConnectorOutboxService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .FirstOrDefaultAsync(item => item.Id == commandId, cancellationToken);
         return command is null
@@ -740,7 +734,6 @@ public sealed class ConnectorOutboxService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var audit = await dbContext.Set<ConnectorCommandAuditRecord>()
             .Where(item => item.ConnectorCommandId == commandId)
             .Select(item => new ConnectorCommandAuditEntry(
@@ -768,7 +761,6 @@ public sealed class ConnectorOutboxService(
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .FirstOrDefaultAsync(item => item.Id == commandId, cancellationToken);
         if (command is null)
@@ -840,7 +832,6 @@ public sealed class ConnectorOutboxService(
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
 
         var now = clock.GetUtcNow();
         var leaseToken = Guid.NewGuid().ToString("N");
@@ -952,7 +943,6 @@ public sealed class ConnectorOutboxService(
         CancellationToken cancellationToken)
     {
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ConnectorCommandSchemaInitializer.EnsureAsync(verificationContext, cancellationToken);
         var existing = await verificationContext.Set<ConnectorCommandRecord>()
             .FirstOrDefaultAsync(item =>
                     item.ProjectId == projectId &&

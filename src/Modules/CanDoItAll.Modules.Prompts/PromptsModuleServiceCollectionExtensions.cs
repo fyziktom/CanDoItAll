@@ -1,3 +1,5 @@
+using CanDoItAll.Infrastructure.ControlPlane;
+using Microsoft.EntityFrameworkCore;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -7,8 +9,12 @@ namespace CanDoItAll.Modules.Prompts;
 
 public static class PromptsModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddPromptsModule(this IServiceCollection services)
-    {
+    public static IServiceCollection AddPromptsModule(this IServiceCollection services) {
+        services.AddPooledDbContextFactory<PromptsDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
+        services.TryAddScoped<IPromptArtifactProjectionQueryService, PromptArtifactProjectionQueryService>();
+        services.TryAddScoped<IPromptGalleryMutationService, PromptGalleryMutationService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             PromptsProjectTransferTargetStateParticipant>());

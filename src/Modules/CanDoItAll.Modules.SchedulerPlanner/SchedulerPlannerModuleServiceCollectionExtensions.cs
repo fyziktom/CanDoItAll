@@ -1,3 +1,5 @@
+using CanDoItAll.Infrastructure.ControlPlane;
+using Microsoft.EntityFrameworkCore;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
@@ -16,6 +18,9 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
         IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        services.AddPooledDbContextFactory<SchedulerPlannerDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             SchedulerPlannerProjectTransferTargetStateParticipant>());
