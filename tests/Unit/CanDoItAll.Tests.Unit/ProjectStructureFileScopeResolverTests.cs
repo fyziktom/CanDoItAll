@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -434,6 +435,7 @@ public sealed class ProjectStructureFileScopeResolverTests
 
         private ResolverFixture(
             DbContextOptions<AppDbContext> options,
+            string databaseName,
             Guid projectId,
             string nodeKey,
             MutableProjectionContributor? projectionContributor = null)
@@ -447,7 +449,11 @@ public sealed class ProjectStructureFileScopeResolverTests
                 : [projectionContributor];
             Sut = new ProjectStructureFileScopeResolver(
                 new TestDbContextFactory(options),
-                new ProjectStructureAssemblyService(projectionContributors, new SystemClock()),
+                new ProjectStructureAssemblyService(projectionContributors, new SystemClock(),
+                    CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+                        new() { ProviderKind = DatabaseProviderKind.InMemory },
+                        DatabaseProfileResolutionSource.ExplicitOverride,
+                        databaseName))),
                 new StaticStorageCatalog(CreateStorage(isReadOnly: false)));
         }
 
@@ -485,8 +491,9 @@ public sealed class ProjectStructureFileScopeResolverTests
             bool preserveUnvalidatedReference)
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
+            var databaseName = $"project-structure-file-scope-{Guid.NewGuid():N}";
             var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"project-structure-file-scope-{Guid.NewGuid():N}")
+                .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = $"node:{Guid.NewGuid():N}";
@@ -515,14 +522,15 @@ public sealed class ProjectStructureFileScopeResolverTests
             }
 
             await dbContext.SaveChangesAsync();
-            return new ResolverFixture(options, projectId, nodeKey);
+            return new ResolverFixture(options, databaseName, projectId, nodeKey);
         }
 
         public static async Task<ResolverFixture> CreateCollectionAsync(string prefix)
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
+            var databaseName = $"project-structure-file-collection-{Guid.NewGuid():N}";
             var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"project-structure-file-collection-{Guid.NewGuid():N}")
+                .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = $"node:{Guid.NewGuid():N}";
@@ -550,7 +558,7 @@ public sealed class ProjectStructureFileScopeResolverTests
                 ReferenceId = StorageId.ToString("D")
             });
             await dbContext.SaveChangesAsync();
-            return new ResolverFixture(options, projectId, nodeKey);
+            return new ResolverFixture(options, databaseName, projectId, nodeKey);
         }
 
         public static Task<ResolverFixture> CreateProjectedCollectionAsync(
@@ -559,8 +567,9 @@ public sealed class ProjectStructureFileScopeResolverTests
             Guid? artifactId = null)
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
+            var databaseName = $"project-structure-projected-file-collection-{Guid.NewGuid():N}";
             var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"project-structure-projected-file-collection-{Guid.NewGuid():N}")
+                .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId, root);
@@ -585,7 +594,7 @@ public sealed class ProjectStructureFileScopeResolverTests
                     artifactId ?? runId),
                 ParentNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId)
             });
-            return Task.FromResult(new ResolverFixture(options, projectId, nodeKey, contributor));
+            return Task.FromResult(new ResolverFixture(options, databaseName, projectId, nodeKey, contributor));
         }
 
         public async ValueTask DisposeAsync()

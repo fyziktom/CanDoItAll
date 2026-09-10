@@ -1,5 +1,6 @@
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
@@ -92,7 +93,13 @@ public sealed class StorageObjectResourceConnectorTests
             new FixedClock(),
             new NullActivityStream(),
             new NullSearchIndex(),
-            new ResourceConnectorPluginRegistry([plugin]));
+            new ResourceConnectorPluginRegistry([plugin]),
+            new DbContextOptionsBuilder<ResourcesDbContext>()
+                .UseInMemoryDatabase(nameof(General_resource_save_rejects_governed_storage_object_connector)).Options,
+            CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+                new() { ProviderKind = DatabaseProviderKind.InMemory },
+                DatabaseProfileResolutionSource.ExplicitOverride,
+                nameof(General_resource_save_rejects_governed_storage_object_connector))));
         var model = new ResourceEditorModel
         {
             ProjectId = Guid.NewGuid(),

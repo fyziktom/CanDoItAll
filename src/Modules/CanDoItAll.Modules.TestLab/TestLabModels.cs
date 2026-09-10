@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -206,18 +207,52 @@ kind: service
 name: TestLabService
 summary: Persists test plans, linked cases, evidence, and execution results for delivery traceability.
 owns: test-plan aggregate, evidence records, latest run summary
-deps: TestLabDbContext, IClock, IActivityStream, ISearchIndexService
+deps: TestLabDbContext, CoordinatedDatabaseTransaction, IClock, IActivityStream, ISearchIndexService
 risks: evidence-path-drift, noisy-test-plan-updates
-tests: integration:TestLabOwnerPersistenceTests, integration:CrmHrCrossModuleIntegrationTests, integration:ProjectStructureAgentIntegrationTests, integration:ProjectStructureAutomaticPlacementIntegrationTests
+tests: integration:TestLabOwnerPersistenceTests, integration:WorkbenchOwnerProjectionIntegrationTests, integration:CrmHrCrossModuleIntegrationTests, integration:ProjectStructureAgentIntegrationTests, integration:ProjectStructureAutomaticPlacementIntegrationTests
 inputs: TestPlanEditorModel
-outputs: TestPlanSummary, test plan detail
+outputs: TestPlanSummary, test plan detail, projection and scope facts
 */
 public sealed class TestLabService(
     IDbContextFactory<TestLabDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    DbContextOptions<TestLabDbContext> contextOptions,
+    CoordinatedDatabaseTransaction coordinatedTransaction)
 {
+    public async Task<IReadOnlyList<TestPlanProjectionFact>> ListProjectProjectionFactsAsync(
+        Guid projectId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await LoadProjectProjectionFactsAsync(dbContext, projectId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TestPlanProjectionFact>> ListProjectProjectionFactsForMutationAsync(
+        Guid projectId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(contextOptions,
+            static options => new TestLabDbContext(options), cancellationToken);
+        return await LoadProjectProjectionFactsAsync(dbContext, projectId, cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<TestPlanProjectionFact>> LoadProjectProjectionFactsAsync(
+        TestLabDbContext dbContext, Guid projectId, CancellationToken cancellationToken) {
+        var plans = await dbContext.Set<TestPlan>().AsNoTracking()
+            .Where(plan => plan.ProjectId == projectId)
+            .Select(plan => new TestPlanProjectionFact(plan.Id, plan.Title, plan.Phase,
+                plan.CoverageGoal, plan.CreatedAtUtc, plan.UpdatedAtUtc))
+            .ToListAsync(cancellationToken);
+        return plans.OrderByDescending(plan => plan.UpdatedAtUtc).ToArray();
+    }
+
+    public async Task<TestPlanProjectionScopeFact?> ReadProjectionScopeAsync(
+        Guid testPlanId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Set<TestPlan>().AsNoTracking()
+            .Where(plan => plan.Id == testPlanId)
+            .Select(plan => new TestPlanProjectionScopeFact(plan.ProjectId))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -418,5 +453,3 @@ public sealed class TestLabService(
         }
     }
 }
-
-

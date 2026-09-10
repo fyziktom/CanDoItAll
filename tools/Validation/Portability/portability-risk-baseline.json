@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T16:33:41.889104+00:00",
+  "generated_utc": "2026-09-10T17:16:14.877248+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14402,
+  "allowance_count": 14406,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -10232,6 +10232,18 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Models/StorageCatalogPlanningFact.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "74d750a128a3fee0e08bf631b34c27cdba8df8d1c93545b4dec9b61151d73c4d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Models/StorageCatalogPlanningFact.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "9c4fe69634bd1da80abe1793eb93ef841f21ee1db0832ee0350f264632d20b16",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "1ee137386718cce5416c0c66f724418eb09a27306ad536b63a6e9d3e38e78925",
@@ -10492,6 +10504,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "aea7c634baaceb3e1c08aea49a32c606d634aff58b9945c56b39a6416915d968",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "af181a19965edbb8dec462db81776979c5884ea420e4abd7378b2f0490839119",
       "count": 2
     },
@@ -10559,6 +10577,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "f05d6c927d9576c460254f36e65e2dabb625296dea8cd78c0df641f569339235",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f87a48525388db5b0b8707aedb74295eae2e9a7c5817e3d88ec0d2ab4499fa7d",
       "count": 1
     },
     {

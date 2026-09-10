@@ -81,6 +81,19 @@ non-Project Structure contexts use canonical data. Snapshot reads are read-only
 context; all mutations still pass through current canonical authorization and
 concurrency checks.
 
+Resource and TestLab projections and node-scope checks consume owner-provided facts.
+Resources resolves connector kind/subtype before returning those facts. Workbench owns
+node keys, bindings, layout, and scope comparison; it does not read those owners' EF
+records or configuration JSON. The shared projection context and other contributor,
+lifecycle, and transaction seams remain separate boundary work.
+
+During relational Workbench mutations, each assembly operation enters the supplied
+context's active transaction and selects explicit coordinated owner-query methods.
+Those queries share the caller's connection, transaction, and snapshot. Participation
+ends before the assembly operation returns; the caller retains commit ownership.
+Ordinary owner queries and InMemory assembly reads remain independent. InMemory does
+not provide transactional atomicity.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

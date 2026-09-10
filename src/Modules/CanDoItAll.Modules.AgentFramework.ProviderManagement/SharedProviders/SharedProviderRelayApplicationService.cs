@@ -11,7 +11,8 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 public sealed class SharedProviderRelayApplicationService(
     ISharedProviderRelayRequestPolicy requestPolicy,
     ISharedProviderRoutingResolver routingResolver,
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    SecretReferenceQuery secretReferences,
     IProviderManifestCatalog providerManifestCatalog,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     ISharedProviderRelaySupportCatalog relaySupportCatalog,
@@ -205,26 +206,25 @@ public sealed class SharedProviderRelayApplicationService(
             from publication in dbContext.Set<ProviderSharePublication>().AsNoTracking()
             join profile in dbContext.Set<ProviderProfile>().AsNoTracking()
                 on publication.ProviderProfileId equals profile.Id
-            join secret in dbContext.Set<SecretRecord>().AsNoTracking()
-                on profile.ApiKeySecretId equals (Guid?)secret.Id into matchedSecrets
-            from secret in matchedSecrets.DefaultIfEmpty()
             where publication.IsPublished &&
                 publication.PublicId == route.PublicationId &&
                 publication.ProviderProfileId == route.ProviderProfileId
-            select new PersistedRelayRow(publication, profile, secret != null))
+            select new PersistedRelayRow(publication, profile))
             .SingleOrDefaultAsync(cancellationToken);
         if (row is null)
         {
             return null;
         }
 
+        var requiredSecretExists = row.Profile.ApiKeySecretId is { } secretId &&
+            (await secretReferences.GetExistingIdsAsync([secretId], cancellationToken)).Contains(secretId);
         var manifest = providerManifestCatalog.ResolveManifest(
             row.Profile.ConnectorPluginKey,
             row.Profile.ProviderKind);
         var eligibility = eligibilityPolicy.Evaluate(
             row.Profile,
             manifest,
-            row.RequiredSecretExists);
+            requiredSecretExists);
         if (!eligibility.IsEligible ||
             eligibility.Purpose != route.Purpose ||
             eligibility.Purpose is not { } purpose ||
@@ -415,8 +415,7 @@ public sealed class SharedProviderRelayApplicationService(
 
     private sealed record PersistedRelayRow(
         ProviderSharePublication Publication,
-        ProviderProfile Profile,
-        bool RequiredSecretExists);
+        ProviderProfile Profile);
 
     private sealed record PersistedRelayTarget(
         ProviderSharePublication Publication,

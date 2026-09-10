@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderInvocationAuditService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
     IClock clock,
     SharedProviderHistoryProjection history,
     CoordinatedDatabaseTransaction transactions) {

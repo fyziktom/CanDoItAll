@@ -88,7 +88,15 @@ public sealed class SharedProviderPremergePerformanceTests(ITestOutputHelper out
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
         var counter = new PremergeCommandCounter();
-        var factory = fixture.Factory.WithInterceptor(counter);
+        var providerOptions = new DbContextOptionsBuilder<ProvidersDbContext>();
+        AppDbContextOptionsConfigurator.Configure(providerOptions, fixture.Profile);
+        var observedProviderOptions = providerOptions.AddInterceptors(counter).Options;
+        var factory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(observedProviderOptions));
+        var securityOptions = new DbContextOptionsBuilder<SecurityDbContext>();
+        AppDbContextOptionsConfigurator.Configure(securityOptions, fixture.Profile);
+        var observedSecurityOptions = securityOptions.AddInterceptors(counter).Options;
+        var securityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(observedSecurityOptions));
+        var secretReferences = new SecretReferenceQuery(securityFactory, observedSecurityOptions, fixture.Transactions);
         var secret = new SecretRecord {
             Id = Guid.NewGuid(), Name = "Measurement fixture", Kind = SecretKind.ApiKey,
             EncryptedPayload = "not-a-credential", CreatedAtUtc = fixture.Clock.Now, UpdatedAtUtc = fixture.Clock.Now
@@ -115,7 +123,7 @@ public sealed class SharedProviderPremergePerformanceTests(ITestOutputHelper out
         }
         using var scope = host.App.Services.CreateScope();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-        var service = new SharedProviderCatalogQueryService(factory, new(factory, clock),
+        var service = new SharedProviderCatalogQueryService(factory, secretReferences, new(factory, clock),
             scope.ServiceProvider.GetRequiredService<IProviderManifestCatalog>(),
             scope.ServiceProvider.GetRequiredService<SharedProviderPublicationEligibilityPolicy>(), new());
         var first = await service.GetSnapshotAsync();
@@ -206,6 +214,16 @@ public sealed class SharedProviderPremergePerformanceTests(ITestOutputHelper out
             Workload = "orphan-drain", Rows = rows, BatchSize = 500,
             ElapsedMilliseconds = Stopwatch.GetElapsedTime(started).TotalMilliseconds
         }));
+    }
+
+    private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>
+        where TContext : DbContext {
+        public TContext CreateDbContext() => create();
+
+        public Task<TContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateDbContext());
+        }
     }
 }
 

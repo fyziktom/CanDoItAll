@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 internal sealed class SharedProviderInvocationRecoveryService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
     IClock clock,
     SharedProviderHistoryProjection history,
     CoordinatedDatabaseTransaction transactions) {

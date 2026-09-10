@@ -153,7 +153,7 @@ public sealed class SecretMigrationTests
             Assert.Equal(Sentinel, await sourceVault.GetAsync(source.SourceVaultKey));
             Assert.Empty(durableDestination.Keys);
 
-            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+            await using SecurityDbContext dbContext = await factory.CreateDbContextAsync();
             SecretRecord restored = await dbContext.Set<SecretRecord>().SingleAsync(item => item.Id == source.Record.Id);
             Assert.Equal(source.OriginalPayload, restored.EncryptedPayload);
         }
@@ -193,7 +193,7 @@ public sealed class SecretMigrationTests
                     .RollbackAsync(options));
 
             Assert.Equal("rollback-operation-failed", interruption.ErrorCode);
-            await using (AppDbContext interruptedContext = await factory.CreateDbContextAsync())
+            await using (SecurityDbContext interruptedContext = await factory.CreateDbContextAsync())
             {
                 SecretRecord restored = await interruptedContext.Set<SecretRecord>()
                     .SingleAsync(item => item.Id == source.Record.Id);
@@ -257,7 +257,7 @@ public sealed class SecretMigrationTests
                     .RollbackAsync(options));
 
             Assert.Equal("legacy-data-protection-unreadable", interruption.ErrorCode);
-            await using (AppDbContext interruptedContext = await factory.CreateDbContextAsync())
+            await using (SecurityDbContext interruptedContext = await factory.CreateDbContextAsync())
             {
                 string persistedPayload = await interruptedContext.Set<SecretRecord>()
                     .Where(item => item.Id == source.Id)
@@ -276,7 +276,7 @@ public sealed class SecretMigrationTests
 
             Assert.Equal(0, rolledBack.CommittedCount);
             Assert.Empty(destinationVault.Keys);
-            await using AppDbContext completedContext = await factory.CreateDbContextAsync();
+            await using SecurityDbContext completedContext = await factory.CreateDbContextAsync();
             SecretRecord restored = await completedContext.Set<SecretRecord>()
                 .SingleAsync(item => item.Id == source.Id);
             Assert.Equal(source.EncryptedPayload, restored.EncryptedPayload);
@@ -306,7 +306,7 @@ public sealed class SecretMigrationTests
             await Assert.ThrowsAsync<SecretMigrationException>(() =>
                 CreateCoordinator(factory, protector, new InMemorySecretVault(), failFirstRead)
                     .RunAsync(options));
-            await using (AppDbContext dbContext = await factory.CreateDbContextAsync())
+            await using (SecurityDbContext dbContext = await factory.CreateDbContextAsync())
             {
                 SecretRecord changed = await dbContext.Set<SecretRecord>().SingleAsync(item => item.Id == source.Id);
                 changed.EncryptedPayload = protector.Protect("concurrent-update");
@@ -400,7 +400,7 @@ public sealed class SecretMigrationTests
     }
 
     private static SecretMigrationCoordinator CreateCoordinator(
-        IDbContextFactory<AppDbContext> factory,
+        IDbContextFactory<SecurityDbContext> factory,
         ISecretProtector protector,
         ISecretVault source,
         ISecretVault destination,
@@ -418,7 +418,7 @@ public sealed class SecretMigrationTests
             interruptionObserver);
 
     private static async Task<SecretRecord> AddLegacyRecordAsync(
-        IDbContextFactory<AppDbContext> factory,
+        IDbContextFactory<SecurityDbContext> factory,
         ISecretProtector protector,
         string value)
     {
@@ -429,14 +429,14 @@ public sealed class SecretMigrationTests
             CreatedAtUtc = DateTimeOffset.UtcNow,
             UpdatedAtUtc = DateTimeOffset.UtcNow
         };
-        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+        await using SecurityDbContext dbContext = await factory.CreateDbContextAsync();
         dbContext.Set<SecretRecord>().Add(record);
         await dbContext.SaveChangesAsync();
         return record;
     }
 
     private static async Task<VaultRecordFixture> AddVaultRecordAsync(
-        IDbContextFactory<AppDbContext> factory,
+        IDbContextFactory<SecurityDbContext> factory,
         ISecretVault sourceVault,
         string value)
     {
@@ -452,17 +452,17 @@ public sealed class SecretMigrationTests
             CreatedAtUtc = DateTimeOffset.UtcNow,
             UpdatedAtUtc = DateTimeOffset.UtcNow
         };
-        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+        await using SecurityDbContext dbContext = await factory.CreateDbContextAsync();
         dbContext.Set<SecretRecord>().Add(record);
         await dbContext.SaveChangesAsync();
         return new VaultRecordFixture(record, key, payload);
     }
 
     private static async Task<string> ResolvePersistedVaultKeyAsync(
-        IDbContextFactory<AppDbContext> factory,
+        IDbContextFactory<SecurityDbContext> factory,
         Guid secretId)
     {
-        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+        await using SecurityDbContext dbContext = await factory.CreateDbContextAsync();
         string payload = await dbContext.Set<SecretRecord>()
             .Where(item => item.Id == secretId)
             .Select(item => item.EncryptedPayload)
@@ -473,8 +473,7 @@ public sealed class SecretMigrationTests
 
     private static TestDbContextFactory CreateDbContextFactory()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(SecretRecord).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<SecurityDbContext>()
             .UseInMemoryDatabase($"secret-migration-{Guid.NewGuid():N}")
             .Options;
         return new TestDbContextFactory(options);
@@ -491,13 +490,12 @@ public sealed class SecretMigrationTests
         }
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext() => new(options);
+    private sealed class TestDbContextFactory(DbContextOptions<SecurityDbContext> options)
+        : IDbContextFactory<SecurityDbContext> {
+        public SecurityDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new AppDbContext(options));
+        public Task<SecurityDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new SecurityDbContext(options));
     }
 
     private sealed class OpaqueTestProtector : ISecretProtector

@@ -6,7 +6,7 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 public interface IProviderProfileDeletionGuard
 {
     Task EnsureCanDeleteAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid providerProfileId,
         CancellationToken cancellationToken);
 }

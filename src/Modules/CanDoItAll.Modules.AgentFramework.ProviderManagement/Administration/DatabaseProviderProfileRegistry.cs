@@ -31,7 +31,9 @@ public sealed class ProviderCatalogProjectionException(
 }
 
 internal sealed class DatabaseProviderProfileRegistry(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    SecretReferenceQuery secretReferences,
+    CoordinatedDatabaseTransaction transactions,
     ISandboxWorkspaceStore store,
     ProviderAdministrationConnectorCatalog providerConnectorCatalog,
     IProviderProfileService providerProfileService,
@@ -97,6 +99,7 @@ internal sealed class DatabaseProviderProfileRegistry(
                 model.Id,
                 secretRecordId,
                 cancellationToken);
+        using var coordination = secretMutationScope.HasMutationScope ? transactions.Enter(dbContext) : null;
         var current = secretMutationScope.Profile;
         if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
                 current?.ConnectorPluginKey))
@@ -158,11 +161,7 @@ internal sealed class DatabaseProviderProfileRegistry(
         if (secretRecordId is { } targetSecretRecordId)
         {
             var secretExists = targetSecretRecordId != Guid.Empty &&
-                await dbContext.Set<SecretRecord>()
-                    .AsNoTracking()
-                    .AnyAsync(
-                        secret => secret.Id == targetSecretRecordId,
-                        cancellationToken);
+                await secretReferences.ExistsForMutationAsync(targetSecretRecordId, cancellationToken);
             if (!secretExists)
             {
                 throw new ProviderProfileValidationException(
@@ -248,6 +247,7 @@ internal sealed class DatabaseProviderProfileRegistry(
             committed = dbContext.Database.CurrentTransaction is null;
             await secretMutationScope.CommitAsync(cancellationToken);
             committed = true;
+            coordination?.Dispose();
             await secretMutationScope.DisposeAsync();
             await NotifyProviderSavedAsync(entity.Id);
             await ProjectCatalogAsync(

@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Security.Abstractions;
@@ -312,16 +313,16 @@ public sealed class SecretVaultTests
 
     private static TestDbContextFactory CreateDbContextFactory()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(SecretRecord).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"secret-vault-{Guid.NewGuid():N}")
+        var databaseName = $"secret-vault-{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<SecurityDbContext>()
+            .UseInMemoryDatabase(databaseName)
             .Options;
 
-        return new TestDbContextFactory(options);
+        return new TestDbContextFactory(options, databaseName);
     }
 
     private static SecretService CreateSecretService(
-        IDbContextFactory<AppDbContext> factory,
+        TestDbContextFactory factory,
         ISecretVault vault)
         => new(
             factory,
@@ -329,15 +330,21 @@ public sealed class SecretVaultTests
             new TestSecretProtector(),
             new TestClock(new DateTimeOffset(2026, 5, 13, 12, 0, 0, TimeSpan.Zero)),
             new NullActivityStream(),
-            []);
+            [],
+            factory.Transactions);
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
+    private sealed class TestDbContextFactory(DbContextOptions<SecurityDbContext> options, string databaseName) : IDbContextFactory<SecurityDbContext> {
+        public CoordinatedDatabaseTransaction Transactions { get; } = CoordinatedDatabaseTransaction.ForProfile(
+            new(new DatabaseProfileRecord {
+                ProviderKind = DatabaseProviderKind.InMemory,
+                SourceKind = DatabaseProfileSourceKind.InMemory
+            }, DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+
+        public SecurityDbContext CreateDbContext()
             => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new AppDbContext(options));
+        public Task<SecurityDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new SecurityDbContext(options));
     }
 
     private sealed class TestSecretProtector : ISecretProtector

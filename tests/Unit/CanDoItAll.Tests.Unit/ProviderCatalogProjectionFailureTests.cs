@@ -1,12 +1,14 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
@@ -66,11 +68,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             typeof(WorkspaceModuleAssemblyMarker).Assembly,
             typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase(
-                $"provider-catalog-projection-{Guid.NewGuid():N}")
-            .Options;
-        var dbContextFactory = new TestDbContextFactory(options);
+        var dbContextFactory = new TestDbContextFactory($"provider-catalog-projection-{Guid.NewGuid():N}");
         var providerRegistry = new ProviderAdministrationConnectorCatalog(
             [new ScenarioHarnessProviderAdministrationConnector()]);
         IProviderProfileService providerProfileService =
@@ -88,7 +86,9 @@ public sealed class ProviderCatalogProjectionFailureTests
         {
             var registry =
                 new DatabaseProviderProfileRegistry(
-                    dbContextFactory,
+                    dbContextFactory.ProvidersFactory,
+                    dbContextFactory.SecretReferences,
+                    dbContextFactory.Transactions,
                     new FileSandboxWorkspaceStore(blockedWorkspaceRoot),
                     providerRegistry,
                     providerProfileService,
@@ -610,11 +610,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             typeof(WorkspaceModuleAssemblyMarker).Assembly,
             typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase(
-                $"provider-catalog-stale-projection-{Guid.NewGuid():N}")
-            .Options;
-        var dbContextFactory = new TestDbContextFactory(options);
+        var dbContextFactory = new TestDbContextFactory($"provider-catalog-stale-projection-{Guid.NewGuid():N}");
         var providerRegistry = new ProviderAdministrationConnectorCatalog(
             [new ScenarioHarnessProviderAdministrationConnector()]);
         IProviderProfileService providerProfileService =
@@ -625,7 +621,9 @@ public sealed class ProviderCatalogProjectionFailureTests
         var store = new FailingCatalogProjectionStore();
         var registry =
             new DatabaseProviderProfileRegistry(
-                dbContextFactory,
+                dbContextFactory.ProvidersFactory,
+                dbContextFactory.SecretReferences,
+                dbContextFactory.Transactions,
                 store,
                 providerRegistry,
                 providerProfileService,
@@ -718,19 +716,17 @@ public sealed class ProviderCatalogProjectionFailureTests
             typeof(WorkspaceModuleAssemblyMarker).Assembly,
             typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase(
-                $"provider-thinking-capability-{Guid.NewGuid():N}")
-            .Options;
         var providerRegistry = new ProviderAdministrationConnectorCatalog(providerAdapters);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
-        var dbContextFactory = new TestDbContextFactory(options);
+        var dbContextFactory = new TestDbContextFactory($"provider-thinking-capability-{Guid.NewGuid():N}");
         var providerMapper = new ProviderProfileMapper(
             providerRegistry,
             providerProfileService);
         var registry = new DatabaseProviderProfileRegistry(
-            dbContextFactory,
+            dbContextFactory.ProvidersFactory,
+            dbContextFactory.SecretReferences,
+            dbContextFactory.Transactions,
             new FailingCatalogProjectionStore(),
             providerRegistry,
             providerProfileService,
@@ -777,18 +773,43 @@ public sealed class ProviderCatalogProjectionFailureTests
         Assert.NotNull(exception.InnerException);
     }
 
-    private sealed class TestDbContextFactory(
-        DbContextOptions<AppDbContext> options) :
-        IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
-        {
-            return new AppDbContext(options);
+    private sealed class TestDbContextFactory : IDbContextFactory<AppDbContext> {
+        private readonly DbContextOptions<AppDbContext> options;
+
+        public TestDbContextFactory(string databaseName) {
+            var databaseRoot = new InMemoryDatabaseRoot();
+            options = AppDbContextTestOptionsBuilder.Create().UseInMemoryDatabase(databaseName, databaseRoot).Options;
+            ProviderOptions = new DbContextOptionsBuilder<ProvidersDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options;
+            var securityOptions = new DbContextOptionsBuilder<SecurityDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options;
+            ProvidersFactory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(ProviderOptions));
+            SecurityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(securityOptions));
+            Transactions = CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+                new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.InMemory, SourceKind = DatabaseProfileSourceKind.InMemory },
+                DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+            SecretReferences = new(SecurityFactory, securityOptions, Transactions);
         }
 
-        public Task<AppDbContext> CreateDbContextAsync(
-            CancellationToken cancellationToken = default)
-        {
+        public DbContextOptions<ProvidersDbContext> ProviderOptions { get; }
+        public IDbContextFactory<ProvidersDbContext> ProvidersFactory { get; }
+        public IDbContextFactory<SecurityDbContext> SecurityFactory { get; }
+        public CoordinatedDatabaseTransaction Transactions { get; }
+        public SecretReferenceQuery SecretReferences { get; }
+
+        public AppDbContext CreateDbContext() => new(options);
+
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateDbContext());
+        }
+    }
+
+    private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>
+        where TContext : DbContext {
+        public TContext CreateDbContext() => create();
+
+        public Task<TContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());
         }

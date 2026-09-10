@@ -24,7 +24,9 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 Saving a plan commits its cases, evidence metadata, and runs together, then updates search and records activity. These post-commit calls retain their existing behavior: a search or activity failure can surface after the plan is already saved. Project and responsible-party IDs remain references; TestLab does not own those records, and a recorded test result does not automatically accept a task.
 
-The project-transfer target-state participant temporarily retains its existing complete-schema maintenance read under the transfer coordinator. Workbench's test-plan projection and node-scope bridge also retain their current read integration. These remaining reads do not change TestLab's runtime writer and must be replaced by owner queries in their respective boundary slices.
+The project-transfer target-state participant temporarily retains its existing complete-schema maintenance read under the transfer coordinator. Workbench's test-plan projection and node-scope bridge obtain typed facts from TestLabService. These queries preserve project membership, plan ordering, and timestamps without exposing TestLab entities or changing evidence/runner behavior.
+
+Ordinary projection reads use the independent owner factory. Explicit mutation projection reads enlist through the shared transaction coordinator and retain the caller's relational snapshot and transaction read set; the caller owns commit.
 
 ## Focused Validation
 

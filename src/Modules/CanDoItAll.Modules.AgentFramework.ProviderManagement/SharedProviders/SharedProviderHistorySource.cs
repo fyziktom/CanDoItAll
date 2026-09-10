@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderHistorySource(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<ProvidersDbContext> factory,
     HistoryPartitionStore partitions,
     CoordinatedDatabaseTransaction transactions,
     HistoryOutboxWriter outbox,

@@ -10,8 +10,8 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectNodeScopeBridge(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry) : IProjectNodeScopeBridge
-{
+    ResourcesService resourcesService,
+    TestLabService testLabService) : IProjectNodeScopeBridge {
     public async Task<ProjectNodeScopeResolution> ResolveAsync(
         Guid projectId,
         ProjectNodeReference nodeReference,
@@ -97,37 +97,10 @@ internal sealed class ProjectNodeScopeBridge(
             return BuildProjectedResolution(phaseProjectId, projectId, ProjectObjectType.Phase);
         }
 
-        if (TryParsePrefixedGuidNodeKey(nodeKey, "resource:", out var resourceId))
-        {
-            var resource = await dbContext.Set<ProjectResource>()
-                .Where(item => item.Id == resourceId)
-                .Select(item => new
-                {
-                    item.ProjectId,
-                    item.ResourceKind,
-                    item.ConnectorPluginKey,
-                    item.ConfigSchemaVersion
-                })
-                .FirstOrDefaultAsync(cancellationToken);
-            if (resource is null)
-            {
-                return null;
-            }
-
-            var resourceRecord = new ProjectResource
-            {
-                Id = resourceId,
-                ProjectId = resource.ProjectId,
-                ResourceKind = resource.ResourceKind,
-                ConnectorPluginKey = resource.ConnectorPluginKey,
-                ConfigSchemaVersion = resource.ConfigSchemaVersion
-            };
-            var connectorPlugin = resourceConnectorPluginRegistry.Resolve(resourceRecord);
-            return BuildProjectedResolution(
-                resource.ProjectId,
-                projectId,
-                connectorPlugin.ResolveWorkbenchObjectType(resourceRecord),
-                connectorPlugin.ResolveWorkbenchObjectSubtype(resourceRecord));
+        if (TryParsePrefixedGuidNodeKey(nodeKey, "resource:", out var resourceId)) {
+            var resource = await resourcesService.ReadProjectionScopeAsync(resourceId, cancellationToken);
+            return resource is null ? null : BuildProjectedResolution(
+                resource.ProjectId, projectId, resource.ObjectType, resource.ObjectSubtype);
         }
 
         if (TryParsePrefixedGuidNodeKey(nodeKey, "prompt:", out var promptId))
@@ -151,13 +124,9 @@ internal sealed class ProjectNodeScopeBridge(
             return BuildProjectedResolution(prompt.ProjectId, projectId, objectType);
         }
 
-        if (TryParsePrefixedGuidNodeKey(nodeKey, "test-plan:", out var testPlanId))
-        {
-            var testPlanProjectId = await dbContext.Set<TestPlan>()
-                .Where(item => item.Id == testPlanId)
-                .Select(item => (Guid?)item.ProjectId)
-                .FirstOrDefaultAsync(cancellationToken);
-            return BuildProjectedResolution(testPlanProjectId, projectId, ProjectObjectType.TestPlan);
+        if (TryParsePrefixedGuidNodeKey(nodeKey, "test-plan:", out var testPlanId)) {
+            var testPlan = await testLabService.ReadProjectionScopeAsync(testPlanId, cancellationToken);
+            return BuildProjectedResolution(testPlan?.ProjectId, projectId, ProjectObjectType.TestPlan);
         }
 
         return null;

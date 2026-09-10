@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -14,6 +15,10 @@ public static class ProviderManagementServiceCollectionExtensions
     public static IServiceCollection AddAgentFrameworkProviderManagement(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.AddPooledDbContextFactory<ProvidersDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
 
         services.AddHttpClient();
         services.AddScoped<IProviderAdministrationConnector, OpenAiProviderAdministrationConnector>();

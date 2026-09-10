@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -174,8 +175,57 @@ public sealed class ResourcesService(
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
-    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry)
+    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry,
+    DbContextOptions<ResourcesDbContext> contextOptions,
+    CoordinatedDatabaseTransaction coordinatedTransaction)
 {
+    public async Task<IReadOnlyList<ResourceProjectionFact>> ListProjectProjectionFactsAsync(
+        Guid projectId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await LoadProjectProjectionFactsAsync(dbContext, projectId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ResourceProjectionFact>> ListProjectProjectionFactsForMutationAsync(
+        Guid projectId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(contextOptions,
+            static options => new ResourcesDbContext(options), cancellationToken);
+        return await LoadProjectProjectionFactsAsync(dbContext, projectId, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<ResourceProjectionFact>> LoadProjectProjectionFactsAsync(
+        ResourcesDbContext dbContext, Guid projectId, CancellationToken cancellationToken) {
+        var resources = await dbContext.Set<ProjectResource>().AsNoTracking()
+            .Where(resource => resource.ProjectId == projectId)
+            .OrderBy(resource => resource.Name)
+            .ToListAsync(cancellationToken);
+        return resources.Select(resource => {
+            var connector = resourceConnectorPluginRegistry.Resolve(resource);
+            return new ResourceProjectionFact(resource.Id, connector.ResolveWorkbenchObjectType(resource),
+                connector.ResolveWorkbenchObjectSubtype(resource), resource.Name, resource.LocationOrIdentifier,
+                resource.ValidationStatus, resource.Description, resource.CreatedAtUtc);
+        }).ToArray();
+    }
+
+    public async Task<ResourceProjectionScopeFact?> ReadProjectionScopeAsync(
+        Guid resourceId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var resource = await dbContext.Set<ProjectResource>().AsNoTracking()
+            .Where(item => item.Id == resourceId)
+            .Select(item => new ProjectResource {
+                Id = item.Id,
+                ProjectId = item.ProjectId,
+                ResourceKind = item.ResourceKind,
+                ConnectorPluginKey = item.ConnectorPluginKey,
+                ConfigSchemaVersion = item.ConfigSchemaVersion
+            }).FirstOrDefaultAsync(cancellationToken);
+        if (resource is null) {
+            return null;
+        }
+        var connector = resourceConnectorPluginRegistry.Resolve(resource);
+        return new(resource.ProjectId, connector.ResolveWorkbenchObjectType(resource),
+            connector.ResolveWorkbenchObjectSubtype(resource));
+    }
+
     public IReadOnlyList<ConnectorPluginManifest> ListConnectorManifests()
     {
         return resourceConnectorPluginRegistry.ListManifests();
@@ -421,5 +471,3 @@ public sealed class ResourcesService(
         connectorPlugin.ApplyConfig(model, model.ConfigJson);
     }
 }
-
-

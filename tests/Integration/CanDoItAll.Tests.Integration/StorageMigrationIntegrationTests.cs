@@ -211,10 +211,17 @@ public sealed class StorageMigrationIntegrationTests
         DbContextOptions<AppDbContext> options,
         string workspaceRoot)
     {
+        using var schema = new AppDbContext(options);
+        var profile = new ResolvedDatabaseProfile(new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.PostgreSql },
+            DatabaseProfileResolutionSource.ExplicitOverride, schema.Database.GetConnectionString()!);
+        var ownerOptions = new DbContextOptionsBuilder<StorageDbContext>();
+        AppDbContextOptionsConfigurator.Configure(ownerOptions, profile);
         return new StorageCatalogService(
-            new TestDbContextFactory(options),
+            new TestDbContextFactory(ownerOptions.Options),
             new StaticWorkspacePathResolver(workspaceRoot),
-            new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
+            new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)),
+            ownerOptions.Options,
+            CoordinatedDatabaseTransaction.ForProfile(profile));
     }
 
     private sealed class StaticControlPlanePathResolver(string rootPath) : IControlPlanePathResolver
@@ -253,12 +260,11 @@ public sealed class StorageMigrationIntegrationTests
         public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, "manager-artifacts");
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext() => new(options);
+    private sealed class TestDbContextFactory(DbContextOptions<StorageDbContext> options) : IDbContextFactory<StorageDbContext> {
+        public StorageDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new AppDbContext(options));
+        public Task<StorageDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new StorageDbContext(options));
     }
 
     private sealed class TestClock(DateTimeOffset currentUtc) : IClock

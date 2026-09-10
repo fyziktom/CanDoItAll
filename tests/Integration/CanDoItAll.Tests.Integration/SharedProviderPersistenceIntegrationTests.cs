@@ -129,8 +129,8 @@ public sealed class SharedProviderPersistenceIntegrationTests
     public async Task Service_and_publication_identity_are_stable_across_concurrent_contexts()
     {
         await using var database = await SharedProviderTestDatabase.CreateAsync("sharedprovider-identity");
-        var firstStore = new SharedProviderServiceIdentityStore(database.Factory, new FixedClock(Now));
-        var secondStore = new SharedProviderServiceIdentityStore(database.Factory, new FixedClock(Now.AddDays(1)));
+        var firstStore = new SharedProviderServiceIdentityStore(database.ProvidersFactory, new FixedClock(Now));
+        var secondStore = new SharedProviderServiceIdentityStore(database.ProvidersFactory, new FixedClock(Now.AddDays(1)));
 
         var identities = await Task.WhenAll(
             firstStore.GetOrCreateAsync(),
@@ -155,11 +155,13 @@ public sealed class SharedProviderPersistenceIntegrationTests
         }
 
         var firstPublicationStore = new SharedProviderPublicationStore(
-            database.Factory,
-            new FixedClock(Now));
+            database.ProvidersFactory,
+            new FixedClock(Now),
+            database.Transactions);
         var secondPublicationStore = new SharedProviderPublicationStore(
-            database.Factory,
-            new FixedClock(Now.AddSeconds(1)));
+            database.ProvidersFactory,
+            new FixedClock(Now.AddSeconds(1)),
+            database.Transactions);
         var publications = await Task.WhenAll(
             firstPublicationStore.GetOrCreateAsync(providerProfileId),
             secondPublicationStore.GetOrCreateAsync(providerProfileId));
@@ -484,7 +486,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
     public async Task Invocation_audit_is_metadata_only_and_finalization_is_idempotent()
     {
         await using var database = await SharedProviderTestDatabase.CreateAsync("sharedprovider-audit");
-        var service = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now),
+        var service = new SharedProviderInvocationAuditService(database.ProvidersFactory, new FixedClock(Now),
             new(database.History.Partitions, database.History.Retention, database.History.Outbox), database.History.Transactions);
         const string requestId = "invocation-001";
         var publicationId = new SharedProviderPublicationId(Guid.Parse("11111111-1111-4111-8111-111111111111"));
@@ -635,7 +637,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var clock = new HistoryPersistenceTestDatabase.TestClock { Now = Now };
         var history = database.CreateHistory(clock);
         var outbox = history.Outbox;
-        var audit = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now),
+        var audit = new SharedProviderInvocationAuditService(database.ProvidersFactory, new FixedClock(Now),
             new(history.Partitions, history.Retention, outbox), history.Transactions);
         var start = new SharedProviderInvocationStartRequest("expired", publication, provider, "caller", null,
             "trace", "correlation", SharedProviderRelayOperation.ChatCompletions,
@@ -680,7 +682,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
             Assert.Equal(2, await verification.Set<SharedProviderInvocationRecord>().CountAsync());
             Assert.Empty(await verification.Set<HistoryOutboxRow>().ToListAsync());
         }
-        var source = new SharedProviderHistorySource(database.Factory, history.Partitions, history.Transactions, outbox, clock);
+        var source = new SharedProviderHistorySource(database.ProvidersFactory, history.Partitions, history.Transactions, outbox, clock);
         await source.ProcessAsync(context, null, 10, default);
         await processor.ProcessAsync(partition, 50, default);
         await history.Projection.ApplyAsync(stale, default);
@@ -699,7 +701,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var provider = await SeedInvocationOwnerAsync(database, publication);
         var clock = new HistoryPersistenceTestDatabase.TestClock { Now = Now };
         var history = database.CreateHistory(clock);
-        var audit = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now),
+        var audit = new SharedProviderInvocationAuditService(database.ProvidersFactory, new FixedClock(Now),
             new(history.Partitions, history.Retention, history.Outbox), history.Transactions);
         var request = new SharedProviderInvocationStartRequest("owner-expired", publication, provider, "caller", null,
             "trace", "correlation", SharedProviderRelayOperation.ChatCompletions,
@@ -725,7 +727,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         clock.Now = Now.AddDays(2);
         var runtime = new HistoryPersistenceTestDatabase.TestRuntime();
         var context = new HistoryMaintenanceContext(partition, runtime.GetSnapshot(), runtime);
-        var source = new SharedProviderHistorySource(database.Factory, history.Partitions, history.Transactions, history.Outbox, clock);
+        var source = new SharedProviderHistorySource(database.ProvidersFactory, history.Partitions, history.Transactions, history.Outbox, clock);
         var progress = await source.ProcessAsync(context, null, 1, default);
         await using (var first = database.Factory.CreateDbContext()) {
             var remaining = await first.Set<SharedProviderInvocationRecord>().Select(row => row.RequestId).ToArrayAsync();
@@ -750,7 +752,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
             if (context is ProviderHistoryDbContext && context.ChangeTracker.Entries<HistoryOutboxRow>().Any(entry =>
                     entry.Entity.Mutation.Kind == HistorySourceMutationKind.Delete)) {
                 outboxTransaction = context.Database.CurrentTransaction!.GetDbTransaction();
-            } else if (context is AppDbContext && outboxTransaction is not null &&
+            } else if (context is ProvidersDbContext && outboxTransaction is not null &&
                     ReferenceEquals(outboxTransaction, context.Database.CurrentTransaction?.GetDbTransaction())) {
                 ObservedBothFlushes = true;
                 throw new InvalidOperationException("Injected relay cleanup failure after both owner flushes.");
@@ -766,9 +768,10 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var source = await CreateSourceAsync(database);
         var observer = new PersistedProfileObserver(database.Factory);
         var reconciliation = new SharedProviderReconciliationCoordinator(
-            database.Factory,
+            database.ProvidersFactory,
             new FixedClock(Now),
-            [observer]);
+            [observer],
+            database.Transactions);
 
         var result = await reconciliation.ReconcileAsync(
             CreateReconciliationRequest(source.Id, CreateCatalog(), selectPublication: true));
@@ -800,10 +803,10 @@ public sealed class SharedProviderPersistenceIntegrationTests
     }
 
     private static SharedProviderSourceService CreateSourceService(SharedProviderTestDatabase database)
-        => new(database.Factory, new FixedClock(Now), [], new SharedProviderSourceUriPolicy());
+        => new(database.ProvidersFactory, new FixedClock(Now), [], new SharedProviderSourceUriPolicy(), database.SecretReferences, database.Transactions);
 
     private static SharedProviderReconciliationCoordinator CreateReconciliation(SharedProviderTestDatabase database)
-        => new(database.Factory, new FixedClock(Now), []);
+        => new(database.ProvidersFactory, new FixedClock(Now), [], database.Transactions);
 
     private static async Task<SharedProviderSourceWriteResult> CreateSourceAsync(
         SharedProviderTestDatabase database,
@@ -1039,16 +1042,32 @@ public sealed class SharedProviderPersistenceIntegrationTests
             HistoryOptions = historyOptions.Options;
             HistoryFactory = new(HistoryOptions);
             History = CreateHistory(TimeProvider.System);
+            var providerOptions = new DbContextOptionsBuilder<ProvidersDbContext>();
+            AppDbContextOptionsConfigurator.Configure(providerOptions, profile);
+            ProviderOptions = providerOptions.Options;
+            ProvidersFactory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(ProviderOptions));
+            var securityOptions = new DbContextOptionsBuilder<SecurityDbContext>();
+            AppDbContextOptionsConfigurator.Configure(securityOptions, profile);
+            var ownedSecurityOptions = securityOptions.Options;
+            SecurityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(ownedSecurityOptions));
+            SecretReferences = new(SecurityFactory, ownedSecurityOptions, Transactions);
         }
 
         public SharedProviderDbContextFactory Factory { get; }
+        public DbContextOptions<ProvidersDbContext> ProviderOptions { get; }
+        public IDbContextFactory<ProvidersDbContext> ProvidersFactory { get; }
+        public IDbContextFactory<SecurityDbContext> SecurityFactory { get; }
+        public CoordinatedDatabaseTransaction Transactions => History.Transactions;
+        public SecretReferenceQuery SecretReferences { get; }
         public DbContextOptions<ProviderHistoryDbContext> HistoryOptions { get; }
         public HistoryPersistenceTestDatabase.HistoryTestFactory HistoryFactory { get; }
         public HistoryTargetWriteSession History { get; }
         public HistoryTargetWriteSession CreateHistory(TimeProvider clock) => new(profile, clock);
 
-        public SharedProviderDbContextFactory WithInterceptor(IInterceptor interceptor) =>
-            new(new DbContextOptionsBuilder<AppDbContext>(lease.CreateAppDbContextOptions()).AddInterceptors(interceptor).Options);
+        public IDbContextFactory<ProvidersDbContext> WithInterceptor(IInterceptor interceptor) {
+            var options = new DbContextOptionsBuilder<ProvidersDbContext>(ProviderOptions).AddInterceptors(interceptor).Options;
+            return new OwnedDbContextFactory<ProvidersDbContext>(() => new(options));
+        }
 
         public static async Task<SharedProviderTestDatabase> CreateAsync(string key, bool migrate = false, string? targetMigration = null)
         {
@@ -1079,12 +1098,22 @@ public sealed class SharedProviderPersistenceIntegrationTests
             var context = eventData.Context!;
             if (context is ProviderHistoryDbContext && context.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
                 outboxTransaction = context.Database.CurrentTransaction!.GetDbTransaction();
-            } else if (context.ChangeTracker.Entries<SharedProviderInvocationRecord>().Any()) {
+            } else if (context is ProvidersDbContext && context.ChangeTracker.Entries<SharedProviderInvocationRecord>().Any()) {
                 ObservedAuditAndOutbox = outboxTransaction is not null &&
                     ReferenceEquals(outboxTransaction, context.Database.CurrentTransaction?.GetDbTransaction());
                 throw new InvalidOperationException("Fail after the actual audit and outbox database flush.");
             }
             return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>
+        where TContext : DbContext {
+        public TContext CreateDbContext() => create();
+
+        public Task<TContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateDbContext());
         }
     }
 

@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -70,8 +69,7 @@ public sealed class SecretPortabilityIntegrationTests
         string encodedDestinationKey = Convert.ToBase64String(destinationKey);
         try
         {
-            AppDbContextModelRegistry.ConfigureAssemblies([typeof(SecretRecord).Assembly]);
-            var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
+            var dbOptions = new DbContextOptionsBuilder<SecurityDbContext>()
                 .UseInMemoryDatabase($"a04-dpapi-migration-{Guid.NewGuid():N}")
                 .Options;
             var factory = new TestDbContextFactory(dbOptions);
@@ -92,7 +90,7 @@ public sealed class SecretPortabilityIntegrationTests
                 CreatedAtUtc = DateTimeOffset.UtcNow,
                 UpdatedAtUtc = DateTimeOffset.UtcNow
             };
-            await using (AppDbContext dbContext = await factory.CreateDbContextAsync())
+            await using (SecurityDbContext dbContext = await factory.CreateDbContextAsync())
             {
                 dbContext.Set<SecretRecord>().Add(record);
                 await dbContext.SaveChangesAsync();
@@ -153,7 +151,7 @@ public sealed class SecretPortabilityIntegrationTests
             Assert.Equal(1, cleaned.CleanedCount);
             Assert.Null(await source.GetAsync(sourceKey));
 
-            await using AppDbContext assertContext = await factory.CreateDbContextAsync();
+            await using SecurityDbContext assertContext = await factory.CreateDbContextAsync();
             string payload = await assertContext.Set<SecretRecord>()
                 .Where(item => item.Id == record.Id)
                 .Select(item => item.EncryptedPayload)
@@ -255,13 +253,13 @@ public sealed class SecretPortabilityIntegrationTests
         }
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
+    private sealed class TestDbContextFactory(DbContextOptions<SecurityDbContext> options)
+        : IDbContextFactory<SecurityDbContext>
     {
-        public AppDbContext CreateDbContext() => new(options);
+        public SecurityDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new AppDbContext(options));
+        public Task<SecurityDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new SecurityDbContext(options));
     }
 
     private sealed class UnusedProtector : ISecretProtector

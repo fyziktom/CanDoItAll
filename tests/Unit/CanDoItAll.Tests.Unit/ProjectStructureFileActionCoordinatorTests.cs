@@ -1,6 +1,7 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -77,7 +78,11 @@ public sealed class ProjectStructureFileActionCoordinatorTests
             projectScopes,
             new ProjectStructureFileScopeResolver(
                 new ThrowingDbContextFactory(),
-                new ProjectStructureAssemblyService([], new SystemClock()),
+                new ProjectStructureAssemblyService([], new SystemClock(),
+                    CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+                        new() { ProviderKind = DatabaseProviderKind.InMemory },
+                        DatabaseProfileResolutionSource.ExplicitOverride,
+                        nameof(ProjectStructureFileActionCoordinatorTests)))),
                 new ThrowingStorageCatalog()),
             browseSessions,
             new ThrowingBrowseItemActivator(),

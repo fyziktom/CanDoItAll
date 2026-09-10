@@ -10,10 +10,11 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace CanDoItAll.Infrastructure.Storage;
 
 public sealed class StorageCatalogService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<StorageDbContext> dbContextFactory,
     IWorkspacePathResolver workspacePathResolver,
-    IClock clock) : IStorageCatalogService, IStorageCatalogPathMigrationService
-{
+    IClock clock,
+    DbContextOptions<StorageDbContext> contextOptions,
+    CoordinatedDatabaseTransaction coordinatedTransaction) : IStorageCatalogService, IStorageCatalogPathMigrationService {
     private const string BootstrapStorageName = "Workspace file system";
     private const string BootstrapRoutingRuleName = "Workspace editable fallback";
     private static readonly Guid BootstrapRoutingRuleId = Guid.Parse("fbb91e1a-f1fc-4261-8baf-76c2de2730b9");
@@ -23,6 +24,54 @@ public sealed class StorageCatalogService(
     {
         WriteIndented = true
     };
+
+    public async Task<int> DeleteProjectRoutingForMutationAsync(Guid projectId, CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
+            throw new ArgumentException("A project identifier is required.", nameof(projectId));
+        }
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new StorageDbContext(options), cancellationToken);
+        var rules = await dbContext.Set<StorageRoutingRule>()
+            .Where(rule => rule.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+        dbContext.RemoveRange(rules);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return rules.Count;
+    }
+
+    public async Task<IReadOnlyList<StorageCatalogPlanningFact>> ListCatalogPlanningFactsAsync(
+        IReadOnlyCollection<Guid> referencedStorageIds, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(referencedStorageIds);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await ReadCatalogPlanningFactsAsync(dbContext, referencedStorageIds, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<StorageCatalogPlanningFact>> ListCatalogPlanningFactsForMutationAsync(
+        IReadOnlyCollection<Guid> referencedStorageIds, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(referencedStorageIds);
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new StorageDbContext(options), cancellationToken);
+        return await ReadCatalogPlanningFactsAsync(dbContext, referencedStorageIds, cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<StorageCatalogPlanningFact>> ReadCatalogPlanningFactsAsync(
+        StorageDbContext dbContext, IReadOnlyCollection<Guid> referencedStorageIds, CancellationToken cancellationToken) {
+        var referencedIds = referencedStorageIds.ToHashSet();
+        var storages = await dbContext.Set<StorageCatalogRecord>().AsNoTracking().ToArrayAsync(cancellationToken);
+        return storages.Select(storage => {
+            StorageFtpAddressingFact? ftpAddressing = null;
+            if (storage.ProviderKind == StorageProviderKind.Ftp && referencedIds.Contains(storage.Id)) {
+                var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+                ftpAddressing = new(configuration.Port, configuration.BasePath);
+            }
+            return new StorageCatalogPlanningFact(
+                storage.Id, storage.Name, storage.ProviderKind, storage.IsEnabled, storage.IsSystemDefault,
+                storage.IsReadOnly, storage.DisplayOrder, storage.ConnectionMode, storage.EndpointOrRoot,
+                storage.RootBindingFormatVersion, storage.RootPlatformFamily, storage.RootPathSyntax,
+                storage.RootHostBindingId, storage.RootPathState, storage.RootLastValidatedAtUtc,
+                storage.CapabilityMask, storage.CreatedAtUtc, storage.UpdatedAtUtc, ftpAddressing);
+        }).ToArray();
+    }
 
     public async Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -120,7 +169,7 @@ public sealed class StorageCatalogService(
         CancellationToken cancellationToken = default)
     {
         string workspaceRoot = workspacePathResolver.ResolveWorkspaceRoot();
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using StorageDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         List<StorageCatalogRecord> legacy = await dbContext.Set<StorageCatalogRecord>()
             .AsNoTracking()
             .Where(storage =>
@@ -140,7 +189,7 @@ public sealed class StorageCatalogService(
         CancellationToken cancellationToken = default)
     {
         string workspaceRoot = workspacePathResolver.ResolveWorkspaceRoot();
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using StorageDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await MigrateLegacyRootBindingsAsync(dbContext, workspaceRoot, cancellationToken);
     }
 
@@ -178,7 +227,7 @@ public sealed class StorageCatalogService(
             }
         }
 
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using StorageDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using IDbContextTransaction? transaction = dbContext.Database.IsRelational()
             ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
             : null;
@@ -227,7 +276,7 @@ public sealed class StorageCatalogService(
         string resolvedRoot = ControlPlane.ControlPlanePathDefaults.ResolveConfiguredPath(
             Directory.GetCurrentDirectory(),
             rootPath);
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using StorageDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         StorageCatalogRecord storage = await dbContext.Set<StorageCatalogRecord>()
             .SingleOrDefaultAsync(item => item.Id == storageId, cancellationToken)
             ?? throw new InvalidOperationException("The storage catalog entry to rebind was not found.");
@@ -391,7 +440,7 @@ public sealed class StorageCatalogService(
     }
 
     private async Task EnsureBootstrapRuleAsync(
-        AppDbContext dbContext,
+        StorageDbContext dbContext,
         StorageCatalogRecord storage,
         CancellationToken cancellationToken)
     {
@@ -540,7 +589,7 @@ public sealed class StorageCatalogService(
     }
 
     private async Task<StorageCatalogPathMigrationReport> MigrateLegacyRootBindingsAsync(
-        AppDbContext dbContext,
+        StorageDbContext dbContext,
         string workspaceRoot,
         CancellationToken cancellationToken)
     {
@@ -643,7 +692,7 @@ public sealed class StorageCatalogService(
     }
 
     private async Task<StorageCatalogPathMigrationReport?> TryRepairCommitMarkerAsync(
-        AppDbContext dbContext,
+        StorageDbContext dbContext,
         string workspaceRoot,
         string backupPath,
         string stagedPath,

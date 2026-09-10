@@ -60,6 +60,8 @@ public sealed class ProjectStructureProjectionContext(
 
     public DateTimeOffset AssembledAtUtc => assembledAtUtc;
 
+    internal bool RequiresCoordinatedOwnerReads { get; init; }
+
     public IReadOnlyList<ProjectObjectRecord> Nodes => _nodesByKey.Values.ToList();
 
     public IReadOnlyList<ProjectObjectRecord> AllNodes =>
@@ -136,7 +138,8 @@ public sealed class ProjectStructureProjectionContext(
 
 public sealed class ProjectStructureAssemblyService(
     IEnumerable<IProjectStructureProjectionContributor> projectionContributors,
-    IClock clock)
+    IClock clock,
+    CoordinatedDatabaseTransaction coordinatedTransaction)
 {
     private readonly IReadOnlyList<IProjectStructureProjectionContributor> _projectionContributors = projectionContributors.ToList();
 
@@ -145,6 +148,9 @@ public sealed class ProjectStructureAssemblyService(
         Guid projectId,
         CancellationToken cancellationToken = default)
     {
+        using var coordinatedRead = dbContext.Database.IsRelational() && dbContext.Database.CurrentTransaction is not null
+            ? coordinatedTransaction.Enter(dbContext)
+            : null;
         var canonicalNodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);
@@ -169,7 +175,9 @@ public sealed class ProjectStructureAssemblyService(
             projectId,
             clock.GetUtcNow(),
             layoutOverrides,
-            canonicalNodes);
+            canonicalNodes) {
+            RequiresCoordinatedOwnerReads = coordinatedRead is not null
+        };
 
         foreach (var contributor in _projectionContributors)
         {
@@ -325,11 +333,16 @@ public sealed class ProjectStructureAssemblyService(
         Guid projectId,
         CancellationToken cancellationToken)
     {
+        using var coordinatedRead = dbContext.Database.IsRelational() && dbContext.Database.CurrentTransaction is not null
+            ? coordinatedTransaction.Enter(dbContext)
+            : null;
         var context = new ProjectStructureProjectionContext(
             dbContext,
             projectId,
             clock.GetUtcNow(),
-            new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal));
+            new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal)) {
+            RequiresCoordinatedOwnerReads = coordinatedRead is not null
+        };
 
         foreach (var contributor in _projectionContributors)
         {
@@ -818,24 +831,18 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
 }
 
 internal sealed class ProjectResourceProjectionContributor(
-    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry) : IProjectStructureProjectionContributor
-{
-    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
-    {
-        var resources = await context.DbContext.Set<ProjectResource>()
-            .Where(item => item.ProjectId == context.ProjectId)
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken);
+    ResourcesService resourcesService) : IProjectStructureProjectionContributor {
+    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken) {
+        var resources = context.RequiresCoordinatedOwnerReads
+            ? await resourcesService.ListProjectProjectionFactsForMutationAsync(context.ProjectId, cancellationToken)
+            : await resourcesService.ListProjectProjectionFactsAsync(context.ProjectId, cancellationToken);
 
-        foreach (var resource in resources.Select((resource, index) => new { Resource = resource, Index = index }))
-        {
-            var connectorPlugin = resourceConnectorPluginRegistry.Resolve(resource.Resource);
-            context.AddNode(new ProjectObjectRecord
-            {
+        foreach (var resource in resources.Select((resource, index) => new { Resource = resource, Index = index })) {
+            context.AddNode(new ProjectObjectRecord {
                 ProjectId = context.ProjectId,
                 NodeKey = $"resource:{resource.Resource.Id}",
-                ObjectType = connectorPlugin.ResolveWorkbenchObjectType(resource.Resource),
-                ObjectSubtype = connectorPlugin.ResolveWorkbenchObjectSubtype(resource.Resource),
+                ObjectType = resource.Resource.ObjectType,
+                ObjectSubtype = resource.Resource.ObjectSubtype,
                 Title = resource.Resource.Name,
                 Subtitle = resource.Resource.LocationOrIdentifier,
                 Status = resource.Resource.ValidationStatus.ToString(),
@@ -895,20 +902,14 @@ internal sealed class PromptGalleryProjectionContributor : IProjectStructureProj
     }
 }
 
-internal sealed class TestPlanProjectionContributor : IProjectStructureProjectionContributor
-{
-    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
-    {
-        var testPlans = (await context.DbContext.Set<TestPlan>()
-                .Where(item => item.ProjectId == context.ProjectId)
-                .ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToList();
+internal sealed class TestPlanProjectionContributor(TestLabService testLabService) : IProjectStructureProjectionContributor {
+    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken) {
+        var testPlans = context.RequiresCoordinatedOwnerReads
+            ? await testLabService.ListProjectProjectionFactsForMutationAsync(context.ProjectId, cancellationToken)
+            : await testLabService.ListProjectProjectionFactsAsync(context.ProjectId, cancellationToken);
 
-        foreach (var testPlan in testPlans.Select((testPlan, index) => new { TestPlan = testPlan, Index = index }))
-        {
-            context.AddNode(new ProjectObjectRecord
-            {
+        foreach (var testPlan in testPlans.Select((testPlan, index) => new { TestPlan = testPlan, Index = index })) {
+            context.AddNode(new ProjectObjectRecord {
                 ProjectId = context.ProjectId,
                 NodeKey = $"test-plan:{testPlan.TestPlan.Id}",
                 ObjectType = ProjectObjectType.TestPlan,

@@ -29,8 +29,14 @@ come from Projects application queries. Storage continues to own bytes and acces
 
 Complete migrations reuse the existing mapping without table, identifier or configuration
 changes. The transfer residue check retains the explicit shared maintenance context
-until the coordinated transfer boundary changes. Workbench projection/lifecycle readers
-remain part of the subsequent cross-owner contract work.
+until the coordinated transfer boundary changes. Workbench receives typed projection
+and scope facts from ResourcesService; connector kind/subtype resolution stays inside
+Resources and configuration JSON does not cross that query boundary. Project-name
+lookups use the bulk Projects query without the file-source catalog's reference cap.
+
+Ordinary projection reads use the independent owner factory. Explicit mutation
+projection reads enlist through the shared transaction coordinator so Workbench
+validation retains its caller's relational snapshot and transaction read set.
 
 ## Related Docs
 

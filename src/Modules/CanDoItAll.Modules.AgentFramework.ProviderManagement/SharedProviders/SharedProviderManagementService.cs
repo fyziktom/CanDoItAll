@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -6,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderManagementService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    SecretReferenceQuery secretReferences,
     SharedProviderPublicationStore publicationStore,
     SharedProviderPublicationApplicationService publicationApplicationService,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
@@ -53,12 +55,8 @@ public sealed class SharedProviderManagementService(
                 Import: null);
         }
 
-        var requiredSecretExists = profile.ApiKeySecretId.HasValue &&
-            await dbContext.Set<CanDoItAll.Modules.Security.SecretRecord>()
-                .AsNoTracking()
-                .AnyAsync(
-                    secret => secret.Id == profile.ApiKeySecretId.Value,
-                    cancellationToken);
+        var requiredSecretExists = profile.ApiKeySecretId is { } secretId &&
+            (await secretReferences.GetExistingIdsAsync([secretId], cancellationToken)).Contains(secretId);
         var eligibility = eligibilityPolicy.Evaluate(
             profile,
             providerManifestCatalog.ResolveManifest(
@@ -253,7 +251,7 @@ public sealed class SharedProviderManagementService(
     }
 
     private static async Task<SharedProviderImportedProfileSnapshot?> LoadImportedProfileAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid providerProfileId,
         CancellationToken cancellationToken)
     {
@@ -270,7 +268,7 @@ public sealed class SharedProviderManagementService(
     }
 
     private static async Task<IReadOnlyList<SharedProviderImportedProfileSnapshot>> LoadImportedProfilesAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var rows = await (
@@ -308,7 +306,7 @@ public sealed class SharedProviderManagementService(
     }
 
     private static async Task<(SharedProviderImport Import, ProviderProfile Profile)> LoadImportedMutationAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid importId,
         Guid providerProfileId,
         CancellationToken cancellationToken)
@@ -362,7 +360,7 @@ public sealed class SharedProviderManagementService(
     }
 
     private static async Task SaveImportedMutationAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         SharedProviderImport import,
         ProviderProfile profile,
         CancellationToken cancellationToken)

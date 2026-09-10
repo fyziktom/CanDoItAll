@@ -1,4 +1,6 @@
 using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Security.Abstractions;
@@ -15,6 +17,11 @@ public static class SecurityModuleServiceCollectionExtensions
 
     public static IServiceCollection AddSecurityModule(this IServiceCollection services, IConfiguration? configuration)
     {
+        services.AddPooledDbContextFactory<SecurityDbContext>((serviceProvider, options) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(options, database.Profile);
+        });
+        services.AddSingleton<SecretReferenceQuery>();
         var optionsBuilder = services.AddOptions<SecretVaultOptions>();
         if (configuration is not null)
         {

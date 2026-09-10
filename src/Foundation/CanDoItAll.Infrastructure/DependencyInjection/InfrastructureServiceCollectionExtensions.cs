@@ -136,6 +136,14 @@ public static class InfrastructureServiceCollectionExtensions
             var canonicalRuntimeDatabase = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
             AppDbContextOptionsConfigurator.Configure(optionsBuilder, canonicalRuntimeDatabase.Profile);
         });
+        services.AddPooledDbContextFactory<SearchDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
+        services.AddPooledDbContextFactory<StorageDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
         services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
@@ -172,7 +180,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IRuntimeReadinessService, RuntimeReadinessService>();
         services.AddSingleton<IPathFoundationReadinessProbe, PathFoundationReadinessProbe>();
         services.AddScoped<IBackgroundJobTracker, BackgroundJobTracker>();
-        services.AddScoped<ISearchIndexService, SearchIndexService>();
+        services.AddScoped<SearchIndexService>();
+        services.AddScoped<ISearchIndexService>(provider => provider.GetRequiredService<SearchIndexService>());
 
         services.AddHealthChecks()
             .AddCheck<RuntimeReadinessHealthCheck>("runtime-readiness");

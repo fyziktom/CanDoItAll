@@ -22,6 +22,14 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
+`SecurityDbContext` contains exactly the existing `SecretRecord` and `SecretReference` mappings. The complete application model remains the migration authority; table names, columns, indexes, GUID identities, and legacy payload formats are unchanged. These entities have no concurrency-token fields or application-managed stamping, and the owner context does not add them.
+
+Runtime secret services, resolution, and material-migration coordinators use a pooled factory bound to the immutable `ICanonicalRuntimeDatabase.Profile`. Ordinary factory calls remain independent. `SecretReferenceQuery.GetExistingIdsAsync` returns existing secret IDs without names or payloads. `ExistsForMutationAsync` performs the existence read inside the caller's explicitly entered coordinated transaction.
+
+Deletion retains its serializable mutation scope and advisory keys. Reference policies accept a secret ID and enlist their own context through `CoordinatedDatabaseTransaction`; their reads remain part of the deletion transaction. After database commit, the coordination frame is released before vault cleanup and activity callbacks. Vault replacement, cleanup failure behavior, legacy protection, migration checkpoints, and current runtime authorization rules are preserved. Purpose-policy refinements remain a separate task.
+
+`SecurityOwnerPersistenceTests` covers exact model parity, the absence of token stamping, legacy record/binding readback after restart and owner edit, profile isolation, independent/enlisted reference reads, and serializable deletion with post-commit vault callbacks. Existing secret vault, runtime authorization, migration, portability, and cross-module deletion tests remain required. InMemory fixture cases do not prove PostgreSQL transaction atomicity.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

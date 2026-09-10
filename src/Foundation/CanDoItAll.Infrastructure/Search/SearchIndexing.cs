@@ -78,14 +78,17 @@ kind: service
 name: SearchIndexService
 summary: Maintains a relational search index for projects, prompts, resources, validations, and tests.
 owns: search-documents, simple-query-ranking
-deps: AppDbContext, IClock
+deps: SearchDbContext, IClock, CoordinatedDatabaseTransaction
 risks: stale-summary, duplicate-source-key
-tests: integration:SearchIndexServiceTests
+tests: integration:SearchStorageOwnerPersistenceTests
 inputs: SearchDocumentInput, query text
 outputs: SearchResult list
 */
-public sealed class SearchIndexService(IDbContextFactory<AppDbContext> dbContextFactory, SharedKernel.IClock clock) : ISearchIndexService
-{
+public sealed class SearchIndexService(
+    IDbContextFactory<SearchDbContext> dbContextFactory,
+    SharedKernel.IClock clock,
+    DbContextOptions<SearchDbContext> contextOptions,
+    CoordinatedDatabaseTransaction coordinatedTransaction) : ISearchIndexService {
     public async Task UpsertAsync(SearchDocumentInput input, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -128,6 +131,22 @@ public sealed class SearchIndexService(IDbContextFactory<AppDbContext> dbContext
 
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<int> DeleteProjectSearchForMutationAsync(Guid projectId, CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
+            throw new ArgumentException("A project identifier is required.", nameof(projectId));
+        }
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new SearchDbContext(options), cancellationToken);
+        var sourceKey = projectId.ToString();
+        var documents = await dbContext.Set<SearchDocument>()
+            .Where(document => document.ProjectId == projectId ||
+                document.SourceType == SearchDocument.ProjectSourceType && document.SourceKey == sourceKey)
+            .ToListAsync(cancellationToken);
+        dbContext.RemoveRange(documents);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return documents.Count;
     }
 
     public async Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default)

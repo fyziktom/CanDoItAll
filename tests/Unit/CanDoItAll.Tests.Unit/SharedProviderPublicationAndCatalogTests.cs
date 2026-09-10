@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
@@ -755,12 +756,13 @@ public sealed class SharedProviderPublicationAndCatalogTests
             isPublished: false);
         var deletionActivity = new RecordingActivityStream();
         var secretService = new SecretService(
-            referencedFixture.DbContextFactory,
+            referencedFixture.DbContextFactory.SecurityFactory,
             new NoOpSecretVault(),
             new NoOpSecretProtector(),
             referencedFixture.Clock,
             deletionActivity,
-            [new ProviderSecretDeletionReferencePolicy()]);
+            [new ProviderSecretDeletionReferencePolicy(referencedFixture.DbContextFactory.ProviderOptions, referencedFixture.DbContextFactory.Transactions)],
+            referencedFixture.DbContextFactory.Transactions);
         var deletionException = await Assert.ThrowsAsync<
             SecretDeletionBlockedException>(() => secretService.DeleteAsync(
             referencedFixture.SecretRecordId));
@@ -800,14 +802,15 @@ public sealed class SharedProviderPublicationAndCatalogTests
             raceActivity,
             raceObserver);
         var gatedDeletionPolicy = new GatedSecretDeletionReferencePolicy(
-            new ProviderSecretDeletionReferencePolicy());
+            new ProviderSecretDeletionReferencePolicy(referencedFixture.DbContextFactory.ProviderOptions, referencedFixture.DbContextFactory.Transactions));
         var raceSecretService = new SecretService(
-            referencedFixture.DbContextFactory,
+            referencedFixture.DbContextFactory.SecurityFactory,
             new NoOpSecretVault(),
             new NoOpSecretProtector(),
             referencedFixture.Clock,
             raceActivity,
-            [gatedDeletionPolicy]);
+            [gatedDeletionPolicy],
+            referencedFixture.DbContextFactory.Transactions);
         var deleteObservation = Record.ExceptionAsync(() => raceSecretService.DeleteAsync(
             referencedFixture.SecretRecordId));
         await gatedDeletionPolicy.Entered.WaitAsync(TimeSpan.FromSeconds(5));
@@ -1157,11 +1160,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             typeof(ProviderManagementModuleAssemblyMarker).Assembly,
             typeof(SecretService).Assembly
         ]);
-        var databaseRoot = new InMemoryDatabaseRoot();
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"shared-provider-catalog-{Guid.NewGuid():N}", databaseRoot)
-            .Options;
-        var dbContextFactory = new TestDbContextFactory(options);
+        var dbContextFactory = new TestDbContextFactory($"shared-provider-catalog-{Guid.NewGuid():N}");
         var profile = CreateProfile();
         var publication = CreatePublication(profile.Id, isPublished);
         var identity = SharedProviderServiceIdentity.Create(SourceInstanceId, Timestamp);
@@ -1194,7 +1193,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
     }
 
     private sealed record PersistenceFixture(
-        IDbContextFactory<AppDbContext> DbContextFactory,
+        TestDbContextFactory DbContextFactory,
         PersistedProviderProfile Profile,
         ProviderSharePublication Publication,
         Guid SecretRecordId,
@@ -1206,7 +1205,9 @@ public sealed class SharedProviderPublicationAndCatalogTests
             IActivityStream activityStream,
             ISharedProviderPublicationCommitObserver observer)
             => new(
-                DbContextFactory,
+                DbContextFactory.ProvidersFactory,
+                DbContextFactory.SecretReferences,
+                DbContextFactory.Transactions,
                 ProviderAdministrationConnectorCatalog,
                 EligibilityPolicy,
                 activityStream,
@@ -1216,8 +1217,9 @@ public sealed class SharedProviderPublicationAndCatalogTests
         public SharedProviderCatalogQueryService CreateCatalogService(
             SharedProviderCatalogCache cache)
             => new(
-                DbContextFactory,
-                new SharedProviderServiceIdentityStore(DbContextFactory, Clock),
+                DbContextFactory.ProvidersFactory,
+                DbContextFactory.SecretReferences,
+                new SharedProviderServiceIdentityStore(DbContextFactory.ProvidersFactory, Clock),
                 ProviderAdministrationConnectorCatalog,
                 EligibilityPolicy,
                 cache);
@@ -1227,14 +1229,17 @@ public sealed class SharedProviderPublicationAndCatalogTests
             IProviderProfileCommitObserver observer)
         {
             var secretService = new SecretService(
-                DbContextFactory,
+                DbContextFactory.SecurityFactory,
                 new NoOpSecretVault(),
                 new NoOpSecretProtector(),
                 Clock,
                 activityStream,
-                [new ProviderSecretDeletionReferencePolicy()]);
+                [new ProviderSecretDeletionReferencePolicy(DbContextFactory.ProviderOptions, DbContextFactory.Transactions)],
+                DbContextFactory.Transactions);
             return new ProviderAdministrationService(
-                DbContextFactory,
+                DbContextFactory.ProvidersFactory,
+                DbContextFactory.SecretReferences,
+                DbContextFactory.Transactions,
                 secretService,
                 secretRuntimeResolver: null!,
                 ProviderAdministrationConnectorCatalog,
@@ -1307,14 +1312,12 @@ public sealed class SharedProviderPublicationAndCatalogTests
         public Task Entered => entered.Task;
 
         public async Task<SecretDeletionReference?> FindReferenceAsync(
-            AppDbContext dbContext,
             Guid secretRecordId,
             CancellationToken cancellationToken = default)
         {
             entered.TrySetResult();
             await release.Task.WaitAsync(cancellationToken);
             return await inner.FindReferenceAsync(
-                dbContext,
                 secretRecordId,
                 cancellationToken);
         }
@@ -1336,10 +1339,46 @@ public sealed class SharedProviderPublicationAndCatalogTests
 
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
-    {
+    private sealed class TestDbContextFactory : IDbContextFactory<AppDbContext> {
+        private readonly DbContextOptions<AppDbContext> options;
+
+        public TestDbContextFactory(string databaseName) {
+            var databaseRoot = new InMemoryDatabaseRoot();
+            options = AppDbContextTestOptionsBuilder.Create().UseInMemoryDatabase(databaseName, databaseRoot).Options;
+            ProviderOptions = new DbContextOptionsBuilder<ProvidersDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options;
+            var securityOptions = new DbContextOptionsBuilder<SecurityDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options;
+            ProvidersFactory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(ProviderOptions));
+            SecurityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(securityOptions));
+            Transactions = CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+                new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.InMemory, SourceKind = DatabaseProfileSourceKind.InMemory },
+                DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+            SecretReferences = new(SecurityFactory, securityOptions, Transactions);
+        }
+
+        public DbContextOptions<ProvidersDbContext> ProviderOptions { get; }
+        public IDbContextFactory<ProvidersDbContext> ProvidersFactory { get; }
+        public IDbContextFactory<SecurityDbContext> SecurityFactory { get; }
+        public CoordinatedDatabaseTransaction Transactions { get; }
+        public SecretReferenceQuery SecretReferences { get; }
+
         public AppDbContext CreateDbContext() => new(options);
+
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateDbContext());
+        }
+    }
+
+    private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>
+        where TContext : DbContext {
+        public TContext CreateDbContext() => create();
+
+        public Task<TContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateDbContext());
+        }
     }
 
     private sealed class FixedClock(DateTimeOffset current) : IClock
