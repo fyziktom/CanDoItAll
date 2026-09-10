@@ -2,14 +2,13 @@ using CanDoItAll.Memory.SourceGateway;
 using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
 namespace CanDoItAll.Modules.Resources;
 
 public sealed partial class ResourceSourceSnapshotProvider(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ResourcesDbContext> dbContextFactory,
     ResourceConnectorPluginRegistry resourceConnectorPluginRegistry) : IResourceSourceSnapshotProvider
 {
     public async Task<MemorySourceSnapshot> ReadSnapshotAsync(

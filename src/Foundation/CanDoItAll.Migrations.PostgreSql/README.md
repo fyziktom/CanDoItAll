@@ -22,6 +22,15 @@ The authoritative project and package dependency list is in [CanDoItAll.Migratio
 
 This project owns provider-specific EF Core migration assets only. Runtime behavior belongs in Infrastructure or the owning product module.
 
+`PostgreSqlAppDbContextFactory` uses the complete `CanDoItAll.Composition.ModuleAssemblies.All`
+catalog. The Infrastructure compatibility factory requires that same catalog and fails
+if it cannot be loaded. Model registration rejects partially loadable assemblies instead
+of generating a subset schema.
+
+Plugin and Scheduler tables are owned by this migration chain. Runtime startup does not
+recreate them with separate SQL definitions. The CRM/HR lookup seed still runs after
+migrations; it inserts missing lookup values without changing schema.
+
 `20260728161028_InitialPostgreSqlBaseline` defines the complete baseline database required
 by the application model. Provider-specific indexes that EF cannot represent in the
 model are owned by

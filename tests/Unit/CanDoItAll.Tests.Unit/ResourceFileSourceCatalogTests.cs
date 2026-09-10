@@ -23,7 +23,7 @@ public sealed class ResourceFileSourceCatalogTests
         writeOnly.CapabilityMask = StorageCapability.Write;
         var storageCatalog = new MutableStorageCatalog(fileSystem, ipfs, ftp, disabled, writeOnly);
         var catalog = new ResourceFileSourceCatalog(
-            fixture.Factory,
+            new ProjectRecordQueryService(fixture.Factory),
             storageCatalog,
             new FakeBrowseDriverRegistry(
                 StorageProviderKind.FileSystem,

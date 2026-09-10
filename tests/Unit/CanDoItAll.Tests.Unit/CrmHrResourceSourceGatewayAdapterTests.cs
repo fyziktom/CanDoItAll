@@ -6,6 +6,8 @@ using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Resources;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using GenericMemorySourceScope = CanDoItAll.Memory.Abstractions.MemorySourceScope;
 
@@ -343,14 +345,19 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
             typeof(ResourcesModuleAssemblyMarker).Assembly
         ]);
 
+        var databaseName = $"crm-resource-source-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
         var services = new ServiceCollection();
         services.AddDbContextFactory<AppDbContext>(options =>
         {
             AppDbContextTestOptionsBuilder.ConfigureModelCacheKey(options);
-            options.UseInMemoryDatabase($"crm-resource-source-{Guid.NewGuid():N}");
+            options.UseInMemoryDatabase(databaseName, databaseRoot);
         });
         services.AddCrmHrModule();
         services.AddResourcesModule();
+        services.AddSingleton<IDbContextFactory<ResourcesDbContext>>(new PooledDbContextFactory<ResourcesDbContext>(
+            new DbContextOptionsBuilder<ResourcesDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options));
         services.AddScoped<IMemorySourceGateway>(serviceProvider =>
         {
             var adapters = serviceProvider.GetServices<IMemorySourceGatewayAdapter>().ToArray();

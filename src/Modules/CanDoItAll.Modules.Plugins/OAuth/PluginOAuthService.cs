@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Plugins.Abstractions;
@@ -17,7 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Plugins;
 
 public sealed class PluginOAuthService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PluginsDbContext> dbContextFactory,
     PluginCatalogService catalogService,
     PluginConnectionStore connectionStore,
     PluginGrantEvaluator grantEvaluator,
@@ -686,7 +685,7 @@ public sealed class PluginOAuthService(
     }
 
     private async Task StoreTokenEnvelopeAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
         PluginOAuthTokenEnvelope envelope,
         DateTimeOffset timestamp,
@@ -741,7 +740,7 @@ public sealed class PluginOAuthService(
     }
 
     private async Task MarkSessionFailedAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
         string errorCode,
         string errorDescription,
@@ -756,7 +755,7 @@ public sealed class PluginOAuthService(
     }
 
     private async Task UpsertOAuthConnectionErrorAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
         PluginOAuthConnectionStatusKind status,
         string errorCode,
@@ -787,7 +786,7 @@ public sealed class PluginOAuthService(
     }
 
     private static async Task MarkReconnectRequiredAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthConnectionRecord record,
         string errorCode,
         string errorDescription,

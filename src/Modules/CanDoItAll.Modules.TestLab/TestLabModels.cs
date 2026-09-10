@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -207,14 +206,14 @@ kind: service
 name: TestLabService
 summary: Persists test plans, linked cases, evidence, and execution results for delivery traceability.
 owns: test-plan aggregate, evidence records, latest run summary
-deps: AppDbContext, IClock, IActivityStream, ISearchIndexService
+deps: TestLabDbContext, IClock, IActivityStream, ISearchIndexService
 risks: evidence-path-drift, noisy-test-plan-updates
-tests: unit:TestLabServiceTests, integration:TestLabPersistenceTests
+tests: integration:TestLabOwnerPersistenceTests, integration:CrmHrCrossModuleIntegrationTests, integration:ProjectStructureAgentIntegrationTests, integration:ProjectStructureAutomaticPlacementIntegrationTests
 inputs: TestPlanEditorModel
 outputs: TestPlanSummary, test plan detail
 */
 public sealed class TestLabService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<TestLabDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService)

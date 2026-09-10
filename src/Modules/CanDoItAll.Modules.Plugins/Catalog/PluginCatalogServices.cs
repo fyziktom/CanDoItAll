@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +25,7 @@ public sealed class BundledPluginCatalogSource(IEnumerable<ICanDoItAllPlugin> pl
 }
 
 public sealed class PluginInstallationStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PluginsDbContext> dbContextFactory,
     IClock clock,
     ILogger<PluginInstallationStore> logger)
 {

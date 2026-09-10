@@ -1,6 +1,5 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -61,7 +60,8 @@ internal interface IStorageObjectResourceWriter
 }
 
 internal sealed class StorageObjectResourceWriter(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ResourcesDbContext> dbContextFactory,
+    IProjectRecordQueryService projectQueries,
     IClock clock) : IStorageObjectResourceWriter
 {
     public async Task<StorageObjectResourceWriteResult> SaveAsync(
@@ -85,10 +85,8 @@ internal sealed class StorageObjectResourceWriter(
         }
 
         string configJson = StorageObjectResourceConnectorPlugin.Serialize(request.Config);
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        bool projectExists = await dbContext.Set<Project>()
-            .AsNoTracking()
-            .AnyAsync(project => project.Id == request.ProjectId, cancellationToken);
+        await using ResourcesDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        bool projectExists = await projectQueries.GetAsync(request.ProjectId, cancellationToken) is not null;
         if (!projectExists)
         {
             throw new ResourcePromotionException(

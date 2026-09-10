@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -170,7 +169,8 @@ public sealed class ResourceEditorModel
 }
 
 public sealed class ResourcesService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ResourcesDbContext> dbContextFactory,
+    Projects.IProjectRecordQueryService projectQueries,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
@@ -199,13 +199,14 @@ public sealed class ResourcesService(
     public async Task<IReadOnlyList<ResourceSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var projects = await dbContext.Set<Projects.Project>()
-            .Select(project => new { project.Id, project.Name })
-            .ToDictionaryAsync(project => project.Id, project => project.Name, cancellationToken);
-
         var resources = await dbContext.Set<ProjectResource>()
             .OrderBy(resource => resource.Name)
             .ToListAsync(cancellationToken);
+
+        var projectIds = resources.Select(resource => resource.ProjectId)
+            .Where(id => id != Guid.Empty).Distinct().ToArray();
+        var projects = (await projectQueries.GetManyAsync(projectIds, cancellationToken))
+            .ToDictionary(project => project.Id, project => project.Name);
 
         return resources.Select(resource => new ResourceSummary(
                 resource.Id,

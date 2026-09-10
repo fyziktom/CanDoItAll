@@ -1,10 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using CanDoItAll.FileTools.Integration;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Resources;
 
@@ -94,7 +92,7 @@ internal interface IResourceFileSourceCatalog
 }
 
 internal sealed class ResourceFileSourceCatalog(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    ProjectRecordQueryService projectQueries,
     IStorageCatalogService storageCatalog,
     IStorageBrowseDriverRegistry browseDrivers) : IResourceFileSourceCatalog
 {
@@ -102,14 +100,10 @@ internal sealed class ResourceFileSourceCatalog(
 
     public async Task<ResourceFileSourceCatalogSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        ResourcePromotionProject[] projects = await dbContext.Set<Project>()
-            .AsNoTracking()
-            .OrderBy(project => project.Name)
-            .ThenBy(project => project.Id)
-            .Take(MaximumSourceCount + 1)
+        ResourcePromotionProject[] projects = (await projectQueries.ListReferencesAsync(
+                MaximumSourceCount + 1, cancellationToken))
             .Select(project => new ResourcePromotionProject(project.Id, project.Name))
-            .ToArrayAsync(cancellationToken);
+            .ToArray();
         if (projects.Length > MaximumSourceCount)
         {
             throw new InvalidOperationException(

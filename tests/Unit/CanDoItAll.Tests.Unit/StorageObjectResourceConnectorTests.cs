@@ -7,6 +7,8 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Unit.Storage;
 
@@ -85,7 +87,8 @@ public sealed class StorageObjectResourceConnectorTests
         Guid storageId = Guid.NewGuid();
         var plugin = new StorageObjectResourceConnectorPlugin();
         var service = new ResourcesService(
-            new ThrowingDbContextFactory(),
+            new ThrowingResourceDbContextFactory(),
+            new ProjectRecordQueryService(new ThrowingDbContextFactory()),
             new FixedClock(),
             new NullActivityStream(),
             new NullSearchIndex(),
@@ -126,7 +129,7 @@ public sealed class StorageObjectResourceConnectorTests
             "file.txt",
             "text/plain",
             42);
-        var writer = new StorageObjectResourceWriter(fixture.Factory, new FixedClock());
+        var writer = new StorageObjectResourceWriter(fixture.OwnerFactory, new ProjectRecordQueryService(fixture.Factory), new FixedClock());
         var request = new StorageObjectResourceWriteRequest(
             fixture.ProjectId,
             "Stored file",
@@ -173,7 +176,7 @@ public sealed class StorageObjectResourceConnectorTests
         var sessions = new RecordingKnownFileSessionFactory();
         var releaser = new RecordingKnownFileReleaser();
         var service = new ResourceStorageObjectInteractionService(
-            fixture.Factory,
+            fixture.OwnerFactory,
             new StaticSourceCatalog(source),
             activator,
             sessions,
@@ -211,7 +214,7 @@ public sealed class StorageObjectResourceConnectorTests
         ResourceFileSourceDescriptor source = CreateSource(sourceKey, storageId);
         var activator = new RecordingKnownFileActivator(source.Scope);
         var service = new ResourceStorageObjectInteractionService(
-            fixture.Factory,
+            fixture.OwnerFactory,
             new MissingSourceCatalog(),
             activator,
             new RecordingKnownFileSessionFactory(),
@@ -252,13 +255,16 @@ public sealed class StorageObjectResourceConnectorTests
 
     private sealed class ResourcePersistenceFixture : IAsyncDisposable
     {
-        private ResourcePersistenceFixture(TestDbContextFactory factory, Guid projectId)
+        private ResourcePersistenceFixture(TestDbContextFactory factory, IDbContextFactory<ResourcesDbContext> ownerFactory, Guid projectId)
         {
             Factory = factory;
+            OwnerFactory = ownerFactory;
             ProjectId = projectId;
         }
 
         public TestDbContextFactory Factory { get; }
+
+        public IDbContextFactory<ResourcesDbContext> OwnerFactory { get; }
 
         public Guid ProjectId { get; }
 
@@ -266,15 +272,20 @@ public sealed class StorageObjectResourceConnectorTests
         {
             AppDbContextModelRegistry.ConfigureAssemblies(
                 [typeof(Project).Assembly, typeof(ProjectResource).Assembly]);
+            var databaseName = $"storage-object-resource-{Guid.NewGuid():N}";
+            var databaseRoot = new InMemoryDatabaseRoot();
+            var ownerFactory = new PooledDbContextFactory<ResourcesDbContext>(
+                new DbContextOptionsBuilder<ResourcesDbContext>()
+                    .UseInMemoryDatabase(databaseName, databaseRoot).Options);
             var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"storage-object-resource-{Guid.NewGuid():N}")
+                .UseInMemoryDatabase(databaseName, databaseRoot)
                 .Options;
             var factory = new TestDbContextFactory(options);
             Guid projectId = Guid.NewGuid();
             await using AppDbContext dbContext = factory.CreateDbContext();
             dbContext.Set<Project>().Add(new Project { Id = projectId, Name = "Target project" });
             await dbContext.SaveChangesAsync();
-            return new ResourcePersistenceFixture(factory, projectId);
+            return new ResourcePersistenceFixture(factory, ownerFactory, projectId);
         }
 
         public async Task<Guid> AddResourceAsync(StorageObjectResourceConfig config)
@@ -312,6 +323,10 @@ public sealed class StorageObjectResourceConnectorTests
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("DB must not be reached.");
+    }
+
+    private sealed class ThrowingResourceDbContextFactory : IDbContextFactory<ResourcesDbContext> {
+        public ResourcesDbContext CreateDbContext() => throw new InvalidOperationException("DB must not be reached.");
     }
 
     private sealed class FixedClock : IClock

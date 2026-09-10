@@ -296,14 +296,6 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
         await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         logger.LogInformation(
-            "Ensuring plugin runtime schema for profile {ProfileId}.",
-            profile.Profile.Id);
-        await PluginSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        logger.LogInformation(
-            "Ensuring scheduler planner schema for profile {ProfileId}.",
-            profile.Profile.Id);
-        await SchedulerPlannerSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        logger.LogInformation(
             "Ensuring agent provider bootstrap for profile {ProfileId}.",
             profile.Profile.Id);
         await EnsureAgentProviderBootstrapAsync(profile, dbContext, cancellationToken);

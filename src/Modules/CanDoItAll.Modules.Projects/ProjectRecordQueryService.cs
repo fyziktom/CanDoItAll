@@ -17,6 +17,7 @@ public static class ProjectRecordQueryLimits
     public const int DefaultPageSize = 24;
     public const int MaximumPageSize = 100;
     public const int MaximumSearchLength = 200;
+    public const int MaximumReferenceCount = 1024;
 }
 
 public sealed record ProjectRecordQuery(
@@ -62,6 +63,20 @@ public interface IProjectRecordQueryService
 public sealed class ProjectRecordQueryService(
     IDbContextFactory<AppDbContext> dbContextFactory) : IProjectRecordQueryService
 {
+    public async Task<IReadOnlyList<ProjectAccessListItem>> ListReferencesAsync(
+        int maximumItems, CancellationToken cancellationToken = default) {
+        if (maximumItems is < 1 or > ProjectRecordQueryLimits.MaximumReferenceCount) {
+            throw new ArgumentOutOfRangeException(nameof(maximumItems));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Set<Project>().AsNoTracking()
+            .OrderBy(project => project.Name).ThenBy(project => project.Id)
+            .Take(maximumItems)
+            .Select(project => new ProjectAccessListItem(project.Id, project.Name))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<ProjectRecordQueryItem?> GetAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)

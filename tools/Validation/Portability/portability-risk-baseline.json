@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-09T12:40:34.933965+00:00",
+  "generated_utc": "2026-09-10T16:08:16.287859+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14403,
+  "allowance_count": 14401,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -47402,12 +47402,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Plugins/Persistence/PluginSchemaInitializer.cs",
-      "category": "case-policy",
-      "source_fingerprint": "ee16717df7ce4e23f02f20dbd4250ac0acf6a121bc602e9e1a7a434b36d8e1bf",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Plugins/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "2b1e5ff63d2c64cf728d4eb51ce8b9350c96170f7f43ec0e9b94dbae3f9a44bb",
@@ -55097,12 +55091,6 @@
       "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/README.md",
       "category": "windows-executable",
       "source_fingerprint": "72e07c20c8bf2778c1a5627b54f6bb55ecc0d759342bc8bb7911800d3f926f8d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerSchemaInitializer.cs",
-      "category": "case-policy",
-      "source_fingerprint": "be56dcfdb5dcf6950dcb57c7636093f7640386fac0387b7a2844b9d0ed848031",
       "count": 1
     },
     {

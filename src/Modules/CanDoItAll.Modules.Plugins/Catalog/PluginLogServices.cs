@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Plugins;
 
 public sealed class PluginLogStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PluginsDbContext> dbContextFactory,
     IClock clock,
     IWorkflowPayloadPolicyService? payloadPolicyService = null)
 {
