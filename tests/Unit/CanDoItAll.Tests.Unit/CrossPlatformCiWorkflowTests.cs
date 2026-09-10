@@ -28,7 +28,7 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("path: CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_COMPONENTS_COMMIT", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_FILETOOLS_COMMIT", workflow, StringComparison.Ordinal);
-        Assert.Contains("CANDOITALL_COMPONENTS_COMMIT: c3e6aa03a878994c0ba8aed6af017d0be75f3796", workflow, StringComparison.Ordinal);
+        Assert.Contains("CANDOITALL_COMPONENTS_COMMIT: 1c939033cb427b507086d1f7f2381c43992175ee", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_FILETOOLS_COMMIT: 498b36825bd5a5222429972af120b04becf4b3f6", workflow, StringComparison.Ordinal);
         Assert.Equal(2, workflow.Split("- name: Verify committed BaseLib source assets", StringSplitOptions.None).Length - 1);
         Assert.Contains("src/CanDoItAll.Components.BaseLib/wwwroot/css/material-symbols.css", workflow, StringComparison.Ordinal);
