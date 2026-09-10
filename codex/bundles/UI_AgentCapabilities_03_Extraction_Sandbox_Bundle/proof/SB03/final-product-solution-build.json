@@ -1,7 +1,0 @@
-{
-  "command": "dotnet build CanDoItAll.slnx --configuration Release /m:1 -v:q",
-  "reason": "Shared avatar assembly identity and AppComponents reference changed; close the product graph after the final CSS correction.",
-  "startedUtc": "2026-09-07T05:24:56.8254468+00:00",
-  "finishedUtc": "2026-09-07T05:25:35.5709259+00:00",
-  "exit": 0
-}

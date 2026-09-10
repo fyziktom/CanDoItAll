@@ -1,0 +1,723 @@
+[
+  {
+    "id": "GAP-001",
+    "title": "Deferred image generation uses an in-memory queue",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "MOD-PROVIDERS"
+    ],
+    "status": "CODE_OBSERVED_LIMITATION",
+    "source_ids": [
+      "SRC-024"
+    ],
+    "risk": "Accepted work in Channel and TaskCompletionSource does not inherently survive restart. OperationId metadata is not a durable queue.",
+    "default_decision": "Preserve the feature without describing it as durable. Reliability changes require an explicit admission/recovery specification.",
+    "required_before_affected_cutover": "Restart between enqueue, provider response, and media commit; establish what was accepted and how an unknown external result is recognized.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-002",
+    "title": "Gateway idempotency across restarts and instances",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORK"
+    ],
+    "status": "CODE_PARTIAL_VERIFICATION",
+    "source_ids": [
+      "SRC-025"
+    ],
+    "risk": "An in-memory semaphore and metadata-key lookup do not prove an atomic durable unique receipt or coverage of every path.",
+    "default_decision": "Require CON-021; do not condemn the entire implementation without inspecting other guards.",
+    "required_before_affected_cutover": "Find every writer and constraint; prove concurrent duplicate handling, changed-payload rejection, and replay after deletion/restart.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-003",
+    "title": "Workflow GetStatus applies status changes",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS"
+    ],
+    "status": "CODE_OBSERVED",
+    "source_ids": [
+      "SRC-026"
+    ],
+    "risk": "A query can mutate a projection; merely removing the side effect may remove existing writeback.",
+    "default_decision": "Extract explicit reconciliation/refresh or a durable projector; preserve updates without an open page.",
+    "required_before_affected_cutover": "Capture the current call graph and prove result delivery before and after moving it out of the read path.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-004",
+    "title": "Workflow admission versus a later projection failure",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS"
+    ],
+    "status": "CODE_RISK_NOT_END_TO_END_PROVEN",
+    "source_ids": [
+      "SRC-026"
+    ],
+    "risk": "An exception after launch may be mapped to start failure; complete impact depends on helpers and runtime behavior.",
+    "default_decision": "Separate the launch receipt from projection failure. Do not relaunch because refresh failed.",
+    "required_before_affected_cutover": "Inject failure after owner admission and around ApplyStatus; inspect the run store and verify a single execution identity.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-005",
+    "title": "Attributing outputs by node-set difference alone",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "status": "CODE_RISK_NOT_END_TO_END_PROVEN",
+    "source_ids": [
+      "SRC-026"
+    ],
+    "risk": "Existing-node snapshots and result projection may attribute another writer's concurrent change; additional lineage validation was not fully inspected.",
+    "default_decision": "Prove outputs through an owner manifest and origin/run key, not time or set difference alone.",
+    "required_before_affected_cutover": "Two concurrent runs, a human-created node, and late completion of an older run.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-006",
+    "title": "File upload before SQL commit and orphan cleanup",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE",
+      "MOD-RESOURCES"
+    ],
+    "status": "DOC_KNOWN_FOLLOWUP",
+    "source_ids": [
+      "SRC-004"
+    ],
+    "risk": "SQL rollback cannot undo an external byte write; cleanup may delete content that has become shared.",
+    "default_decision": "Explicit staging, finalization, reconciliation, reference eligibility, and evidence-based orphan cleanup.",
+    "required_before_affected_cutover": "Storage success with DB failure, DB success with finalization failure, and repeated recovery.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-007",
+    "title": "Content versions and typed asset-edit actions",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE"
+    ],
+    "status": "DOC_KNOWN_FOLLOWUP",
+    "source_ids": [
+      "SRC-004"
+    ],
+    "risk": "Generic metadata editing is not file-content editing; a note must not act as fake file content.",
+    "default_decision": "Preserve creation, upload, and preview. Content-version editing is an explicit follow-up feature, not a silent side effect.",
+    "required_before_affected_cutover": "Characterize UI labels and actual byte revisions for supported edit paths.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-008",
+    "title": "Meeting/recording/transcript scaffolds are not capture or STT",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "MOD-PROVIDERS"
+    ],
+    "status": "DOC_PARTIAL_CAPABILITY",
+    "source_ids": [
+      "SRC-004",
+      "MAP-02"
+    ],
+    "risk": "Typed scaffolding does not demonstrate a recording player, transcription, or provider I/O.",
+    "default_decision": "Preserve native metadata; do not describe adding a transcript scaffold as a completed Transcribe operation.",
+    "required_before_affected_cutover": "Inventory actual active actions/kinds, provider contracts, and existing evidence.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-009",
+    "title": "CRM technical-agent bridge and foreign writers",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM"
+    ],
+    "status": "INHERITED_RECHECK_REQUIRED",
+    "source_ids": [
+      "MAP-08",
+      "MAP-05",
+      "SRC-010"
+    ],
+    "risk": "The UI can correctly project agents while a synchronization implementation still writes foreign master data.",
+    "default_decision": "Move mutation to the CRM owner rather than create a second technical-agent catalog.",
+    "required_before_affected_cutover": "Inspect bridge callers, DB writes, commit-with-warning semantics, and preservation of local CRM governance.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-010",
+    "title": "Mixed ProjectPartyAssignment meanings",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-PROJECTS",
+      "BND-WORK",
+      "MOD-PROCESSES"
+    ],
+    "status": "INHERITED_MIGRATION_RISK",
+    "source_ids": [
+      "MAP-01",
+      "MAP-08"
+    ],
+    "risk": "Project role, task performer, and execution assignment may share current entities or payloads.",
+    "default_decision": "Classify records semantically; preserve rates, intervals, and audit. No last-writer-wins or blind nullable-NodeId filtering.",
+    "required_before_affected_cutover": "Reconciliation report, original rows, uniqueness invariants, and representative legacy fixtures.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-011",
+    "title": "Capacity reservations beyond capacity blocks",
+    "module_ids": [
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "status": "TARGET_NEED_NOT_PROVEN_EXISTING",
+    "source_ids": [
+      "MAP-08"
+    ],
+    "risk": "A capacity block is not a confirmed reservation linked to a WorkAssignment.",
+    "default_decision": "CRM/Staffing is the target owner; do not claim a new reservation implementation is already delivered.",
+    "required_before_affected_cutover": "Establish current atomicity and supported capacity semantics before assignment changes.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-012",
+    "title": "Workload-aware AgentCostQuote",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "status": "TARGET_NEED",
+    "source_ids": [
+      "SRC-007",
+      "USER-001"
+    ],
+    "risk": "Tariffs and existing cost strategies may not provide a unified quote with assumptions and revision.",
+    "default_decision": "Agents/Providers computes quotes; the plan stores a historical baseline, not a competing price list.",
+    "required_before_affected_cutover": "Map existing rates and cost evidence, units, unknown values, and expiry policy.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-013",
+    "title": "Human-in-the-loop and workflow/process backend parity",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "MOD-AGENTS"
+    ],
+    "status": "NOT_RUNTIME_VERIFIED",
+    "source_ids": [
+      "SRC-003",
+      "SRC-009",
+      "MAP-06",
+      "MAP-09"
+    ],
+    "risk": "Runtime approval support does not prove every workflow UI/backend recovery combination.",
+    "default_decision": "Preserve existing approvals; complete HIL expansion is not automatically part of refactoring.",
+    "required_before_affected_cutover": "Baseline matrix of supported backends, purposes, and approval continuations, including negative authorization proof.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-014",
+    "title": "Scheduler process-target support differs by surface",
+    "module_ids": [
+      "MOD-SCHEDULER",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "status": "DOC_MAP_CONFLICT",
+    "source_ids": [
+      "SRC-013",
+      "MAP-11"
+    ],
+    "risk": "General documentation and older maps do not establish a working process launcher or direct process-scheduling tool.",
+    "default_decision": "Reverify each surface. The audited managed Scheduler tool is workflow-only; do not fake success or silently implement unsupported targets.",
+    "required_before_affected_cutover": "Inspect current dispatcher, launcher, and registration; exercise each claimed target in the actual host.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-015",
+    "title": "Do connector commands have executable handlers?",
+    "module_ids": [
+      "BND-CONNECTORS",
+      "MOD-WORKSPACE",
+      "MOD-RESOURCES"
+    ],
+    "status": "INHERITED_RECHECK_REQUIRED",
+    "source_ids": [
+      "MAP-10",
+      "MAP-11"
+    ],
+    "risk": "A manifest, renderer, or outbox slot does not prove an executable connector command.",
+    "default_decision": "Registry/capabilities must expose unsupported status; do not modify every connector indiscriminately.",
+    "required_before_affected_cutover": "Verify registry-to-handler-to-result paths and explicit failure without a handler.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-016",
+    "title": "Migrations versus runtime SQL initialization",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-SCHEDULER",
+      "MOD-PLUGINS"
+    ],
+    "status": "INHERITED_RECHECK_REQUIRED",
+    "source_ids": [
+      "MAP-10",
+      "MAP-11",
+      "SRC-013"
+    ],
+    "risk": "Earlier analysis identified several schema-creation paths; current composition may differ.",
+    "default_decision": "Verify the full upgrade path before removal; one migration authority per table.",
+    "required_before_affected_cutover": "Actual DB schema/history, current mapping, and empty/older-supported-database upgrade fixtures.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-017",
+    "title": "Product terminology inside MAF Core",
+    "module_ids": [
+      "BND-MAF",
+      "MOD-AGENTS",
+      "MOD-SCHEDULER",
+      "MOD-PROMPTS"
+    ],
+    "status": "INHERITED_RECHECK_REQUIRED",
+    "source_ids": [
+      "MAP-05",
+      "MAP-06"
+    ],
+    "risk": "A clean ProjectReference graph can conceal product-specific tool names and policy inside a general layer.",
+    "default_decision": "Move semantic policy into owner adapters while retaining neutral tooling mechanisms.",
+    "required_before_affected_cutover": "Inspect descriptors, composer, policy, and actual attachment; preserve serialized tool names.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-018",
+    "title": "The stabilized Agents commit will change",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-PROVIDERS",
+      "BND-CONVERSATIONS",
+      "BND-SIMPLECHATS"
+    ],
+    "status": "MOVING_BASELINE",
+    "source_ids": [
+      "SRC-009",
+      "USER-001"
+    ],
+    "risk": "Reapplying this analysis over newer decoupling work can regress already-fixed behavior.",
+    "default_decision": "Rebaseline the actual stabilized HEAD before the first slice; reuse completed seams.",
+    "required_before_affected_cutover": "Record SHA, affected contract/serialization/model diff, and current test discovery.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-019",
+    "title": "New contexts must preserve hidden persistence behavior",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "MOD-STRUCTURE"
+    ],
+    "status": "CODE_OBSERVED_AND_AUDIT_REQUIRED",
+    "source_ids": [
+      "SRC-023"
+    ],
+    "risk": "Concurrency stamping and model-cache keys can disappear; other interceptors were not exhaustively audited.",
+    "default_decision": "Explicit model and token/filter/audit inventory; initial migration must preserve behavior.",
+    "required_before_affected_cutover": "Concurrent edits, EF-model inventory, scope generation, old data, and migration snapshot.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-020",
+    "title": "Memory API dependency on UI",
+    "module_ids": [
+      "MOD-MEMORY",
+      "BND-API"
+    ],
+    "status": "INHERITED_RECHECK_REQUIRED",
+    "source_ids": [
+      "MAP-11",
+      "SRC-018"
+    ],
+    "risk": "Older wrapper/registry paths may reverse API-to-UI dependency direction.",
+    "default_decision": "Use a Memory application contract, not a new facade over a Razor controller.",
+    "required_before_affected_cutover": "Verify actual constructor/reference graph and production provider operations.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-021",
+    "title": "Plugin secret broker versus raw vault",
+    "module_ids": [
+      "MOD-PLUGINS",
+      "MOD-SECURITY"
+    ],
+    "status": "INHERITED_RECHECK_REQUIRED",
+    "source_ids": [
+      "MAP-11",
+      "SRC-019"
+    ],
+    "risk": "A broad vault resolver may bypass plugin purpose/grants; the type name alone does not prove this.",
+    "default_decision": "Purpose-limited resolution without removing legitimate OAuth refresh.",
+    "required_before_affected_cutover": "Cross-plugin denial, revoked grants, missing capabilities, and no secrets in logs/DTOs.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-022",
+    "title": "Collaboration membership and lifecycle",
+    "module_ids": [
+      "MOD-COLLAB",
+      "MOD-PROJECTS"
+    ],
+    "status": "LIMITED_PRIMARY_REVIEW",
+    "source_ids": [
+      "SRC-020",
+      "MAP-11"
+    ],
+    "risk": "The README is generic; detailed membership/message paths are inherited discovery anchors.",
+    "default_decision": "Preserve a distinct Collaboration domain; do not merge it with Simple Chats or agent transcripts.",
+    "required_before_affected_cutover": "Current thread, member, inbox, read, and write behavior before affected changes.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-023",
+    "title": "TestLab is not a universal node executor",
+    "module_ids": [
+      "MOD-TESTLAB",
+      "MOD-STRUCTURE"
+    ],
+    "status": "DOC_PARTIAL_CAPABILITY",
+    "source_ids": [
+      "SRC-016",
+      "SRC-004",
+      "MAP-11"
+    ],
+    "risk": "TestPlan/TestRun and a UI Test action do not prove a runner for every node kind.",
+    "default_decision": "Typed supported runners and evidence target revisions; preserve project TestLab links.",
+    "required_before_affected_cutover": "Characterize plans, cases, evidence, attachments, and available runner kinds.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-024",
+    "title": "Workspace contains control-plane and foreign settings",
+    "module_ids": [
+      "MOD-WORKSPACE",
+      "BND-COMPOSITION",
+      "MOD-PROVIDERS",
+      "MOD-SECURITY"
+    ],
+    "status": "INHERITED_OWNERSHIP_RISK",
+    "source_ids": [
+      "SRC-021",
+      "MAP-10",
+      "MAP-11"
+    ],
+    "risk": "Placement on the Settings page does not establish authority over provider prices, secrets, or database lifecycle.",
+    "default_decision": "Workspace owns preferences and delegates each edit to its actual owner.",
+    "required_before_affected_cutover": "Preserve profile activation, storage selection, provider references, and settings without full-host leakage.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-025",
+    "title": "Shared-provider live contract has not been executed",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-AGENTS"
+    ],
+    "status": "NOT_RUNTIME_VERIFIED",
+    "source_ids": [
+      "SRC-007",
+      "SRC-022"
+    ],
+    "risk": "Publishing/routing support does not prove network modes, revocation during a run, or every transport.",
+    "default_decision": "Preserve exact published subset/provenance and explicit unsupported behavior.",
+    "required_before_affected_cutover": "Local/shared parity for genuinely supported profiles/models/transports and revoked targets.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-026",
+    "title": "Snapshot fencing is an evidenced contract, not a new PASS",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS"
+    ],
+    "status": "DOC_NOT_EXECUTED",
+    "source_ids": [
+      "SRC-008",
+      "SRC-003"
+    ],
+    "risk": "Context extraction may drop coverage, fingerprint, generation, or authorization checks.",
+    "default_decision": "Preserve explicit read sources and canonical mutations; do not claim complete snapshots without proof.",
+    "required_before_affected_cutover": "Scope, profile, expiry, missing coverage, and stale callbacks across two circuits.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-027",
+    "title": "Database restore and data incarnation",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "BND-STORAGE",
+      "MOD-AGENTS"
+    ],
+    "status": "TARGET_RELIABILITY_NEED",
+    "source_ids": [
+      "SRC-009",
+      "MAP-10"
+    ],
+    "risk": "Reusing old event/key namespaces after restore can repeat an external side effect.",
+    "default_decision": "Controlled restore, drain, and reconciliation with incarnation tied to the actual control plane.",
+    "required_before_affected_cutover": "Restore with pending outbox/runs and verify identity, cursors, and lease guards.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-028",
+    "title": "Cost allocation and currencies",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "BND-WORK",
+      "MOD-PROCESSES"
+    ],
+    "status": "TARGET_NEED",
+    "source_ids": [
+      "SRC-007",
+      "MAP-08"
+    ],
+    "risk": "Agent-to-workflow-to-process aggregation can count the same attempt repeatedly and mix units/currencies.",
+    "default_decision": "Reference invocation evidence, explicit allocation/FX policy, and complete/partial/unpriced status.",
+    "required_before_affected_cutover": "Same attempt in multiple projections, partial usage, explicit zero, and mixed-currency fixtures.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-029",
+    "title": "Simple Chats reporting hooks versus implicit context",
+    "module_ids": [
+      "BND-SIMPLECHATS",
+      "MOD-STRUCTURE",
+      "BND-CONVERSATIONS"
+    ],
+    "status": "DOC_MAP_SCOPE_AMBIGUITY",
+    "source_ids": [
+      "SRC-006",
+      "MAP-07"
+    ],
+    "risk": "Historical report-to-Structure hook names do not invalidate the product's no-implicit-context/no-tools boundary.",
+    "default_decision": "Do not remove a hook based on its name. Keep the product ordinary; preserve explicit export/report adapters respecting owners and scope.",
+    "required_before_affected_cutover": "Find current callers/registrations and prove ordinary no-tools behavior plus the specific report operation.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-030",
+    "title": "Import/transfer and serialized-shape compatibility",
+    "module_ids": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "BND-COMPOSITION"
+    ],
+    "status": "NOT_RUNTIME_VERIFIED",
+    "source_ids": [
+      "MAP-01",
+      "MAP-10",
+      "SRC-005"
+    ],
+    "risk": "Moving types, enums, or assemblies can break persisted payloads, routes, alias IDs, and historical deletion defaults.",
+    "default_decision": "Versioned adapters/manifests and identity remapping with provenance; never activate imported runs or secrets automatically.",
+    "required_before_affected_cutover": "Representative legacy exports, stored operation payloads, and restart recovery.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-031",
+    "title": "Registry type/kind coverage is not a complete product audit",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-CONNECTORS",
+      "BND-MAF"
+    ],
+    "status": "DISCOVERY_COVERAGE_LIMIT",
+    "source_ids": [
+      "SRC-001",
+      "MAP-02",
+      "MAP-11"
+    ],
+    "risk": "The catalog records capabilities and 392 inherited anchors, not every method in every assembly.",
+    "default_decision": "Discover affected surfaces before each slice; absence from this catalog does not authorize removing behavior.",
+    "required_before_affected_cutover": "Reconcile actual UI, API, tool, worker, transfer, and persistence paths for each changed operation.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-032",
+    "title": "Application validation was not run during preparation",
+    "module_ids": [
+      "BND-API",
+      "BND-COMPOSITION",
+      "MOD-AGENTS",
+      "MOD-STRUCTURE"
+    ],
+    "status": "NOT_EXECUTED_BY_DESIGN",
+    "source_ids": [
+      "USER-001"
+    ],
+    "risk": "Document structure and references cannot prove product behavior, migration safety, or runtime completeness.",
+    "default_decision": "Keep application scenarios NOT_RUN until real evidence exists; package validation is a separate result.",
+    "required_before_affected_cutover": "Execute the affected baseline and post-change proof plan in the product environment before cutover.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-033",
+    "title": "Cross-module automation beyond Structure was underspecified",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "status": "DESIGN_GAP_ADDRESSED_IMPLEMENTATION_SCOPED",
+    "source_ids": [
+      "USER-002"
+    ],
+    "risk": "A Structure-only model can disable legitimate CRM/Resource/Simple Chats interactions or introduce a universal gateway.",
+    "default_decision": "Use destination-owned query/command contracts and distinct runtime adapters; matrix is not blanket permission.",
+    "required_before_affected_cutover": "Verify every affected existing caller plus the explicitly included new surface.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-034",
+    "title": "HR-to-Simple Chats definition adapter is missing",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "status": "REQUIRED_EXTENSION_NOT_DELIVERED",
+    "source_ids": [
+      "SRC-029",
+      "SRC-034",
+      "USER-002"
+    ],
+    "risk": "Reimplementing Simple Chats under Agents would break ordinary product ownership.",
+    "default_decision": "Reuse existing definition API through an external governed adapter; no transcript/tools dependency.",
+    "required_before_affected_cutover": "Actual adapter registration, safe definition DTOs, concurrency, approval, receipt, and no-agent runtime proof.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-035",
+    "title": "Definition creation retry guarantee is not established",
+    "module_ids": [
+      "BND-SIMPLECHATS"
+    ],
+    "status": "OBSERVED_CONTRACT_LIMIT",
+    "source_ids": [
+      "SRC-034"
+    ],
+    "risk": "Definition request shapes have no intent key; a post-hoc receipt can leave duplicate creation after a crash.",
+    "default_decision": "Add/reuse an owner-atomic boundary in scoped work or expose truthful uncertainty and reconcile.",
+    "required_before_affected_cutover": "Concurrent duplicate and crash-at-every-boundary tests; do not infer safety from a wrapper cache.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-036",
+    "title": "Interactive managed purpose is not background authority",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-SCHEDULER",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "status": "CODE_OBSERVED_PURPOSE_LIMIT",
+    "source_ids": [
+      "SRC-029",
+      "SRC-031"
+    ],
+    "risk": "Broadening purposes or spoofing HR can escalate background jobs.",
+    "default_decision": "Retain interactive identity gates; use separately approved executor/step delegation.",
+    "required_before_affected_cutover": "Exercise allowed and denied purposes and revoked authority after restart/approval.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-037",
+    "title": "General direct Process tools are not established",
+    "module_ids": [
+      "MOD-PROCESSES"
+    ],
+    "status": "DOCUMENTED_SURFACE_LIMIT",
+    "source_ids": [
+      "SRC-028",
+      "SRC-035"
+    ],
+    "risk": "A process assistant/template or HTTP endpoint can be mistaken for an executable direct tool.",
+    "default_decision": "Preserve actual bridges/API; implement new provider only in an explicit runtime/security scope.",
+    "required_before_affected_cutover": "Inspect real provider registry, purpose, metadata, handler, and invocation evidence.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-038",
+    "title": "Source-to-provider and destination disclosure coverage unknown",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-RESOURCES",
+      "MOD-AGENTS"
+    ],
+    "status": "TARGET_POLICY_REQUIRES_CURRENT_DISCOVERY",
+    "source_ids": [
+      "SRC-032",
+      "USER-002"
+    ],
+    "risk": "Safe owner query alone does not prevent confidential data being sent to disallowed LLMs or broader tasks.",
+    "default_decision": "Require explicit data-use policy at affected integration boundaries without claiming full current coverage.",
+    "required_before_affected_cutover": "Synthetic canary tests for raw/derived data, caches, artifacts, logs, and disclosure destinations.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-039",
+    "title": "Broader staffing and Resource automation is not universally attached",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-RESOURCES"
+    ],
+    "status": "REQUIRED_OR_OPTIONAL_BY_SLICE",
+    "source_ids": [
+      "SRC-029",
+      "SRC-032",
+      "SRC-036",
+      "USER-002"
+    ],
+    "risk": "Existing safe queries/affiliations do not prove every workforce/Resource mutation is a tool.",
+    "default_decision": "Separate field/action grants; keep current working paths and add only requested bounded capabilities.",
+    "required_before_affected_cutover": "Inventory actual owner methods and adapters, supported kinds, privacy, and persistence effects.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-040",
+    "title": "Foreign owner commit versus checkpoint gap",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "status": "TARGET_RECOVERY_OBLIGATION",
+    "source_ids": [
+      "USER-002"
+    ],
+    "risk": "Restart after foreign commit can duplicate contacts, definitions, or schedules.",
+    "default_decision": "Persist effect identity before dispatch and reconcile owner receipt before replay.",
+    "required_before_affected_cutover": "Crash after owner commit before workflow/process checkpoint with multi-instance delivery.",
+    "authorizes_implementation": false
+  },
+  {
+    "id": "GAP-041",
+    "title": "Complete source and runtime audit not performed in revision",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "status": "EXPLICIT_EVIDENCE_LIMIT",
+    "source_ids": [
+      "SRC-037"
+    ],
+    "risk": "New pinned excerpts do not prove all historical sources or current runtime behaviors.",
+    "default_decision": "Preserve original source pins and targeted-read limits; all application QA stays NOT_RUN.",
+    "required_before_affected_cutover": "Rebaseline affected stabilized HEAD, complete helper/handler reads, and execute chosen proof gates.",
+    "authorizes_implementation": false
+  }
+]

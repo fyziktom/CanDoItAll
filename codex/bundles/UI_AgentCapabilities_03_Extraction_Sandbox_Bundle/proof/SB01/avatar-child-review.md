@@ -1,9 +1,0 @@
-# Additional pure child revealed by the standalone build
-
-The prepared rendered-tag inventory included AgentAvatarActionButton but omitted its owning project from the move map. The standalone UI build independently exposed the missing component, along with a missing Forms import. AppComponents references Canvas and FileTools rendering/core dependencies, so adding it to the lightweight UI would violate the intended rendering closure.
-
-The real avatar action has no services, state lifetime or feature models: it composes BaseLib TooltipTarget, Button and Avatar with public immutable display parameters and an EventCallback. Move that exact file to existing Conversations.Components, retain its public CanDoItAll.AppComponents namespace/API, and let AppComponents reference that existing reusable assembly for its existing consumers. UI already references Conversations.Components, so its transitive graph remains light. No duplicate, wrapper back to the old assembly, sibling edit or new project is needed.
-
-Freeze existing public regression before correction: CanDoItAll.Tests.Components.AgentFramework.AgentCapabilitiesSurfaceTests.Emits_curator_intent_only_when_ready (expected discovery 1). It passed in the pre-move baseline and must continue rendering an accessible real disabled/enabled action and typed intent. After adding only Forms imports, execute it against the incomplete extracted renderer to expose the missing child, then move the actual child and rerun.
-
-Retain AgentAvatarActionButtonTests plus AgentsHomePageTests and WorkflowsPageTests to protect other real consumers. Because this correction moves a shared component's assembly identity and adds a shared project reference, a final stable checkpoint is named after all extraction/sandbox changes settle. This is a real invalidation trigger, not a test-count requirement. Do not rerun the full suite at every intermediate phase.

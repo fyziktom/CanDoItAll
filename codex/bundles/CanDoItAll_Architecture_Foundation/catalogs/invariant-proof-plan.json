@@ -1,0 +1,562 @@
+[
+  {
+    "invariant_id": "INV-001",
+    "qa_ids": [
+      "QA-047",
+      "QA-056",
+      "QA-057",
+      "QA-059",
+      "QA-060",
+      "QA-091",
+      "QA-092"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-002",
+    "qa_ids": [
+      "QA-040",
+      "QA-089",
+      "QA-091"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-003",
+    "qa_ids": [
+      "QA-001",
+      "QA-002",
+      "QA-006",
+      "QA-007",
+      "QA-009",
+      "QA-010",
+      "QA-072"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-004",
+    "qa_ids": [
+      "QA-003",
+      "QA-022",
+      "QA-025",
+      "QA-088"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-005",
+    "qa_ids": [
+      "QA-003",
+      "QA-015",
+      "QA-094"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-006",
+    "qa_ids": [
+      "QA-006",
+      "QA-017",
+      "QA-020",
+      "QA-031",
+      "QA-037",
+      "QA-108"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-007",
+    "qa_ids": [
+      "QA-009",
+      "QA-010",
+      "QA-033",
+      "QA-058",
+      "QA-068",
+      "QA-069"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-008",
+    "qa_ids": [
+      "QA-007",
+      "QA-045",
+      "QA-054",
+      "QA-095",
+      "QA-097"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-009",
+    "qa_ids": [
+      "QA-023",
+      "QA-026",
+      "QA-047",
+      "QA-048",
+      "QA-089",
+      "QA-094"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-010",
+    "qa_ids": [
+      "QA-017",
+      "QA-018",
+      "QA-019",
+      "QA-020",
+      "QA-029",
+      "QA-062",
+      "QA-085",
+      "QA-121"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-011",
+    "qa_ids": [
+      "QA-013",
+      "QA-029",
+      "QA-030",
+      "QA-071",
+      "QA-104"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-012",
+    "qa_ids": [
+      "QA-027",
+      "QA-028",
+      "QA-030",
+      "QA-036",
+      "QA-038",
+      "QA-044"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-013",
+    "qa_ids": [
+      "QA-031",
+      "QA-037",
+      "QA-038",
+      "QA-044"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-014",
+    "qa_ids": [
+      "QA-011",
+      "QA-012",
+      "QA-033"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-015",
+    "qa_ids": [
+      "QA-014",
+      "QA-015",
+      "QA-016",
+      "QA-075",
+      "QA-093",
+      "QA-094"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-016",
+    "qa_ids": [
+      "QA-079",
+      "QA-080",
+      "QA-082",
+      "QA-083"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-017",
+    "qa_ids": [
+      "QA-079",
+      "QA-081"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-018",
+    "qa_ids": [
+      "QA-002",
+      "QA-004",
+      "QA-047",
+      "QA-059",
+      "QA-060",
+      "QA-061",
+      "QA-120"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-019",
+    "qa_ids": [
+      "QA-048",
+      "QA-060",
+      "QA-106"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-020",
+    "qa_ids": [
+      "QA-049",
+      "QA-050",
+      "QA-051",
+      "QA-052",
+      "QA-057"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-021",
+    "qa_ids": [
+      "QA-051",
+      "QA-052",
+      "QA-054"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-022",
+    "qa_ids": [
+      "QA-049",
+      "QA-050",
+      "QA-052"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-023",
+    "qa_ids": [
+      "QA-027",
+      "QA-030",
+      "QA-033",
+      "QA-036",
+      "QA-037",
+      "QA-038",
+      "QA-039"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-024",
+    "qa_ids": [
+      "QA-071",
+      "QA-072",
+      "QA-073"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-025",
+    "qa_ids": [
+      "QA-022",
+      "QA-086",
+      "QA-087",
+      "QA-088",
+      "QA-097"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-026",
+    "qa_ids": [
+      "QA-084",
+      "QA-085",
+      "QA-086",
+      "QA-103"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-027",
+    "qa_ids": [
+      "QA-089",
+      "QA-090",
+      "QA-091"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-028",
+    "qa_ids": [
+      "QA-048",
+      "QA-081",
+      "QA-093",
+      "QA-104",
+      "QA-106",
+      "QA-120"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-029",
+    "qa_ids": [
+      "QA-089",
+      "QA-092",
+      "QA-097"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-030",
+    "qa_ids": [
+      "QA-011",
+      "QA-034",
+      "QA-055",
+      "QA-064",
+      "QA-096",
+      "QA-101",
+      "QA-112"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-031",
+    "qa_ids": [
+      "QA-058",
+      "QA-065",
+      "QA-069",
+      "QA-102"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-032",
+    "qa_ids": [
+      "QA-028",
+      "QA-040",
+      "QA-041",
+      "QA-042"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-033",
+    "qa_ids": [
+      "QA-001",
+      "QA-008",
+      "QA-009",
+      "QA-022"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-034",
+    "qa_ids": [
+      "QA-010",
+      "QA-011",
+      "QA-068",
+      "QA-069",
+      "QA-114"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-035",
+    "qa_ids": [
+      "QA-005",
+      "QA-006",
+      "QA-007",
+      "QA-071",
+      "QA-098",
+      "QA-104"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-036",
+    "qa_ids": [
+      "QA-076",
+      "QA-077",
+      "QA-078",
+      "QA-079",
+      "QA-089",
+      "QA-098",
+      "QA-108"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-037",
+    "qa_ids": [
+      "QA-039",
+      "QA-042",
+      "QA-043",
+      "QA-083",
+      "QA-093",
+      "QA-097",
+      "QA-103",
+      "QA-105",
+      "QA-121"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-038",
+    "qa_ids": [
+      "QA-043",
+      "QA-064",
+      "QA-072",
+      "QA-097",
+      "QA-112",
+      "QA-117"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-039",
+    "qa_ids": [
+      "QA-001",
+      "QA-002",
+      "QA-004",
+      "QA-015",
+      "QA-027",
+      "QA-035",
+      "QA-036",
+      "QA-047",
+      "QA-109",
+      "QA-110",
+      "QA-111",
+      "QA-113",
+      "QA-115",
+      "QA-116",
+      "QA-118",
+      "QA-119"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-040",
+    "qa_ids": [
+      "QA-098",
+      "QA-099",
+      "QA-100"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-041",
+    "qa_ids": [
+      "QA-122",
+      "QA-139",
+      "QA-140",
+      "QA-161"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-042",
+    "qa_ids": [
+      "QA-143",
+      "QA-147",
+      "QA-159",
+      "QA-160"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-043",
+    "qa_ids": [
+      "QA-124",
+      "QA-143",
+      "QA-150"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-044",
+    "qa_ids": [
+      "QA-129",
+      "QA-130",
+      "QA-133",
+      "QA-134",
+      "QA-135"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-045",
+    "qa_ids": [
+      "QA-136",
+      "QA-137",
+      "QA-138",
+      "QA-141"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-046",
+    "qa_ids": [
+      "QA-126",
+      "QA-127",
+      "QA-152",
+      "QA-156",
+      "QA-164"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-047",
+    "qa_ids": [
+      "QA-125",
+      "QA-132",
+      "QA-144",
+      "QA-155"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-048",
+    "qa_ids": [
+      "QA-141",
+      "QA-142",
+      "QA-163"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-049",
+    "qa_ids": [
+      "QA-128",
+      "QA-152",
+      "QA-155"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-050",
+    "qa_ids": [
+      "QA-149",
+      "QA-150"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-051",
+    "qa_ids": [
+      "QA-145",
+      "QA-146"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "invariant_id": "INV-052",
+    "qa_ids": [
+      "QA-165"
+    ],
+    "status": "PLANNED_NOT_RUN"
+  }
+]

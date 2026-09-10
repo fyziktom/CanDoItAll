@@ -1,5 +1,0 @@
-{
-  "kind": "Harness invocation error before test discovery",
-  "detail": "Wrong argument order to existing run-selection.py; no tests executed. Eight direct builds passed. Corrected invocation uses name, project, selector, expected.",
-  "utc": "2026-09-07T06:28:06.101895+00:00"
-}

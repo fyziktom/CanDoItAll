@@ -1,0 +1,2297 @@
+[
+  {
+    "id": "CON-001",
+    "name": "Agent catalog / batch lookup",
+    "mode": "query",
+    "input_contract": "Scope, a filtered page cursor or explicit AgentIds, and requested public attributes.",
+    "result_contract": "AgentSummary: identity, label, technical status, capability hints and source revision; per-item availability where applicable.",
+    "invariants_and_failure": "Bounded pagination/batches without N+1; no secrets, system prompts or EF AgentDefinition. A listing is not execution admission. A missing CRM binding does not create a technical agent.",
+    "source_ids": [
+      "SRC-009",
+      "SRC-010",
+      "MAP-05"
+    ],
+    "current_anchor": "IAgentReferenceDataProvider; IAgentFrameworkWorkspaceService.ListAgentsAsync discovery anchors.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-CRM",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "MOD-SCHEDULER",
+      "MOD-WORKSPACE"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-AGENTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-002",
+    "name": "Agent definition commands",
+    "mode": "command",
+    "input_contract": "Typed create/edit/archive intent; expected revision for changes and explicit OperationId for a newly retry-safe route.",
+    "result_contract": "Committed with agent identity/revision; Conflict, Validation, Denied or NotFound; downstream synchronization separately.",
+    "invariants_and_failure": "CRM onboarding requests creation from Agents instead of storing a definition. A successful commit is not relabeled failed save when CRM projection synchronization fails.",
+    "source_ids": [
+      "SRC-009",
+      "MAP-06"
+    ],
+    "current_anchor": "Agent editor commands and technical-agent bridge: rebaseline after Agents stabilization.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-CRM",
+      "BND-API",
+      "MOD-AGENTS"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-AGENTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller -> owner contract; owner application implements it; composition wires adapters. Neutral conversation UI is not a direct caller; the product-specific adapter invokes the domain contract."
+  },
+  {
+    "id": "CON-003",
+    "name": "Governed agent execution",
+    "mode": "long_running_command",
+    "input_contract": "Agent identity and pinned configuration/selection policy; verified source authority; bounded input; OperationId, purpose and execution target.",
+    "result_contract": "Accepted/Existing with RunId and operation receipt; stream/status handle; explicit pre-admission rejection.",
+    "invariants_and_failure": "Admission cannot depend on a live component; callers cannot forge a more privileged purpose. External inference occurs outside database transactions. Reconcile an unknown launch rather than blindly replaying it.",
+    "source_ids": [
+      "SRC-009",
+      "SRC-003",
+      "MAP-09"
+    ],
+    "current_anchor": "AgentChatExecutionOrchestrator; AgentFrameworkProcessExecutionAdapter; executor resolver.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS",
+      "MOD-TESTLAB",
+      "MOD-AGENTS"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-AGENTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller -> owner contract; owner application implements it; composition wires adapters. Neutral conversation UI is not a direct caller; the product-specific adapter invokes the domain contract."
+  },
+  {
+    "id": "CON-004",
+    "name": "Agent approval / cancellation / status",
+    "mode": "command_and_query",
+    "input_contract": "RunId/OperationId; exact approval identity, payload fingerprint, expected revision and decision; cancellation reason.",
+    "result_contract": "Current durable state, decision receipt, conflict/expired/denied; cancellation-requested distinct from terminal cancelled.",
+    "invariants_and_failure": "Recheck authority, scope, state and revision. A changed request needs new approval. Closing UI is not cancellation.",
+    "source_ids": [
+      "SRC-003",
+      "SRC-009"
+    ],
+    "current_anchor": "Existing source authority continuation, tool receipts and runtime approval boundaries.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-PROCESSES",
+      "BND-API",
+      "MOD-AGENTS"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-AGENTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller -> owner contract; owner application implements it; composition wires adapters. Neutral conversation UI is not a direct caller; the product-specific adapter invokes the domain contract."
+  },
+  {
+    "id": "CON-005",
+    "name": "AI workload cost quote",
+    "mode": "query",
+    "input_contract": "Agent/definition reference, workload/expected usage with units, scope, optional pinned provider choice and requested currency without implicit FX.",
+    "result_contract": "QuoteId, source revisions, tariff components/currencies/units, assumptions, confidence/range/unpriced state, validity and chosen/fallback target.",
+    "invariants_and_failure": "Do not store a master AI price in CRM. Distinguish missing usage/prices from explicit zero. Currency conversion requires an FX rate. A quote is not budget reservation.",
+    "source_ids": [
+      "SRC-007",
+      "USER-001"
+    ],
+    "current_anchor": "ProviderPricingModels and task cost-strategy discovery; a unified public quote contract is proposed.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROVIDERS",
+    "caller_modules": [
+      "MOD-CRM",
+      "BND-WORK",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "implementation_modules": [
+      "MOD-PROVIDERS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROVIDERS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-006",
+    "name": "Provider administration",
+    "mode": "command_and_query",
+    "input_contract": "Profile identity, typed configuration without resolved secrets, SecretReference, expected revision and supported-model publication policy.",
+    "result_contract": "Sanitized profile summary, validation/probe result or committed revision.",
+    "invariants_and_failure": "The owner validates transport/model/purpose compatibility. A probe is not an unconditional save; snapshot-refresh failure after commit is a separate outcome.",
+    "source_ids": [
+      "SRC-022",
+      "SRC-007"
+    ],
+    "current_anchor": "IProviderAdministrationService a IProviderRuntimeAdministrationService discovery anchors.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROVIDERS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "MOD-WORKSPACE",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-PROVIDERS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROVIDERS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-007",
+    "name": "Provider execution profile lease",
+    "mode": "query_admission",
+    "input_contract": "Trusted operation scope, profile identity, required capability and pinned fingerprint.",
+    "result_contract": "Immutable runtime profile/configuration revision lease; unavailable/changed/denied; short-lived purpose-specific secret resolution is separate.",
+    "invariants_and_failure": "Verify revision and profile generation at use time; no secrets in singleton caches. Scope changes must not retarget prepared dispatch.",
+    "source_ids": [
+      "SRC-009",
+      "SRC-007"
+    ],
+    "current_anchor": "CanonicalProviderRuntimeProfileSnapshotService; IProviderRuntimeProfileSource.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROVIDERS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "BND-SIMPLECHATS"
+    ],
+    "implementation_modules": [
+      "MOD-PROVIDERS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROVIDERS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-008",
+    "name": "Shared-provider publish/import/sync",
+    "mode": "command_and_query",
+    "input_contract": "Publication/source/import identities, scope, allowed models/capabilities, expected revision, remote identity and network policy.",
+    "result_contract": "Versioned advertised catalog, import state, routing identity, explicit remote-unavailable/revoked states and operation receipt.",
+    "invariants_and_failure": "Do not copy upstream secrets or enlarge the published set. Adapters verify remote claims. Do not charge for one relay attempt twice.",
+    "source_ids": [
+      "SRC-022",
+      "SRC-007"
+    ],
+    "current_anchor": "SharedProviders.Http a ProviderManagement publication/source/import lifecycle.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROVIDERS",
+    "caller_modules": [
+      "BND-API",
+      "MOD-AGENTS"
+    ],
+    "implementation_modules": [
+      "MOD-PROVIDERS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROVIDERS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-009",
+    "name": "Usage evidence and allocation query",
+    "mode": "query_and_owned_append",
+    "input_contract": "Invocation identities/run references, currency/time filters and explicit allocation basis; only trusted execution adapters append evidence.",
+    "result_contract": "Observed usage, frozen tariff, cost completeness/provenance and aggregation coverage; source identities for deduplication.",
+    "invariants_and_failure": "Appending evidence does not reprice history using today's tariff. Parent-run and child-invocation totals must not double-count. Resolved secrets or bodies are not standard query results.",
+    "source_ids": [
+      "SRC-007",
+      "SRC-009"
+    ],
+    "current_anchor": "Provider request history, audit/usage projections.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROVIDERS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORK",
+      "MOD-PROCESSES",
+      "BND-SIMPLECHATS"
+    ],
+    "implementation_modules": [
+      "MOD-PROVIDERS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROVIDERS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-010",
+    "name": "CRM party/resource catalog",
+    "mode": "query",
+    "input_contract": "Scoped identities, bounded search/page, role/availability filter and query purpose.",
+    "result_contract": "Sanitized Party/ResourceSummary, owned revision and separate technical AgentReference.",
+    "invariants_and_failure": "Confidential fields require special-purpose detail access. Technical AI data comes from Agents, not a stale copy treated as master. Availability is a hint, not a reservation.",
+    "source_ids": [
+      "SRC-010",
+      "MAP-08"
+    ],
+    "current_anchor": "Directory/Workforce query services a privacy-safe runtime query.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-PROJECTS",
+      "BND-WORK",
+      "MOD-PROCESSES",
+      "MOD-SCHEDULER",
+      "MOD-STRUCTURE"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-CRM. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-011",
+    "name": "CRM domain commands",
+    "mode": "command",
+    "input_contract": "Typed party/contact/recruitment/governance intent, verified actor and expected revision.",
+    "result_contract": "Owner result with identity/revision/audit and validation/conflict outcomes.",
+    "invariants_and_failure": "Route technical agent changes to CON-002. CRM executes its own changes with required indexing, activity and lifecycle effects. Individual AI-facing operations require the narrower contracts and policies in the revision extension.",
+    "source_ids": [
+      "SRC-010",
+      "MAP-08"
+    ],
+    "current_anchor": "CRM application services; HR tool adapter.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-PROJECTS",
+      "BND-API",
+      "MOD-AGENTS"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-CRM. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-012",
+    "name": "AI resource projection/binding reconcile",
+    "mode": "owned_projection_command",
+    "input_contract": "Trusted AgentReference snapshot/tombstone and source revision, plus explicit CRM resource-enrolment/binding policy.",
+    "result_contract": "Applied/AlreadyApplied/StaleIgnored/Conflict/ScopeMismatch, CRM binding identity and synchronization state.",
+    "invariants_and_failure": "Only CRM writes bindings. Separate technical and CRM-owned fields. Never clone a missing agent or revive an archived binding without explicit intent.",
+    "source_ids": [
+      "SRC-010",
+      "MAP-08",
+      "MAP-06"
+    ],
+    "current_anchor": "AiResourceBinding and technical bridge; replace the current cross-writer with an adapter.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-COMPOSITION"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-CRM. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-013",
+    "name": "Capacity reservation",
+    "mode": "command_and_query",
+    "input_contract": "Resource reference, interval/time zone, capacity units, assignment/correlation identity, expected revision and reserve/change/release intent.",
+    "result_contract": "Reserved/Conflict/Unavailable/Released or explicitly unsupported; stable ReservationId.",
+    "invariants_and_failure": "Staffing capacity is not a provider technical limit. Coordinate mandatory reservation plus assignment atomically or report pending. Do not claim a complete reservation engine already exists.",
+    "source_ids": [
+      "MAP-08"
+    ],
+    "current_anchor": "CapacityBlock/StaffingRequest are discovery anchors; a complete reservation API is a target design.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "BND-WORK",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-CRM. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-014",
+    "name": "Project participation",
+    "mode": "command_and_query",
+    "input_contract": "ProjectReference, PartyReference, commercial/staffing role, interval/rate metadata and expected revision.",
+    "result_contract": "Role assignments, committed revision, conflict/denied and project-lifecycle validation.",
+    "invariants_and_failure": "Do not hide work-item performers inside an ambiguous generic role. CRM owns the relationship; Projects owns the project. Deletion/transfer uses owner participants.",
+    "source_ids": [
+      "MAP-01",
+      "MAP-08"
+    ],
+    "current_anchor": "ProjectPartyIntegrationContracts/ProjectPartyAssignment.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-CRM. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-015",
+    "name": "Project lookup",
+    "mode": "query",
+    "input_contract": "Scope and project identities, bounded page/phase/portfolio filters, and required public attributes.",
+    "result_contract": "ProjectSummary, revision and access-safe existence/lifecycle result.",
+    "invariants_and_failure": "Do not use ListAll plus FirstOrDefault in every consumer. Map NotFound versus Denied without existence leakage according to API policy.",
+    "source_ids": [
+      "SRC-011",
+      "MAP-01"
+    ],
+    "current_anchor": "ProjectsService; proposed narrow catalog.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROJECTS",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "MOD-TESTLAB",
+      "MOD-CRM",
+      "MOD-SCHEDULER",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-PROJECTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROJECTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-016",
+    "name": "Project lifecycle orchestration",
+    "mode": "long_running_command",
+    "input_contract": "Project identity, expected lifecycle revision, typed delete/archive/export/transfer intent and explicit dispositions.",
+    "result_contract": "Durable operation identity, effect plan, participant receipts and committed/pending/partial/blocked states; recoverable status query.",
+    "invariants_and_failure": "Participants change only their own data. Lifecycle blocks new target mutations as appropriate. No global cascade beyond the explicit plan.",
+    "source_ids": [
+      "MAP-01",
+      "MAP-10"
+    ],
+    "current_anchor": "Project deletion/transfer participant mechanism.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROJECTS",
+    "caller_modules": [
+      "BND-API",
+      "MOD-STRUCTURE",
+      "MOD-WORKSPACE"
+    ],
+    "implementation_modules": [
+      "MOD-PROJECTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROJECTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-017",
+    "name": "Project hierarchy",
+    "mode": "command_and_query",
+    "input_contract": "Parent/child project references, typed hierarchy mutation and expected revisions.",
+    "result_contract": "Validated hierarchy/reference edges; cycle/conflict/denied.",
+    "invariants_and_failure": "Structure displays the edges but is not another master. Preserve current DAG/cardinality policy and related-project navigation.",
+    "source_ids": [
+      "SRC-011",
+      "MAP-01"
+    ],
+    "current_anchor": "ProjectHierarchyLink; hierarchy bridge/contributor.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROJECTS",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-PROJECTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROJECTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-018",
+    "name": "Structure read / invocation read",
+    "mode": "query",
+    "input_contract": "Project identity, explicit read source, node filters/pages/bounds, requested coverage, and an internally held invocation-snapshot handle only.",
+    "result_contract": "Immutable nodes/links, per-source revisions, coverage/omissions, stale/unavailable states and allowed-action hints.",
+    "invariants_and_failure": "InvocationSnapshot fails closed without fallback; HTTP has no in-process snapshot handle. Mutations use current canonical state. Read-side projection rebuild performs no owner writes.",
+    "source_ids": [
+      "SRC-008",
+      "SRC-003",
+      "SRC-025"
+    ],
+    "current_anchor": "ProjectStructureInvocationSnapshotReadDispatcher; IProjectStructureRuntimeGateway.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-STRUCTURE",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-STRUCTURE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller -> owner contract; owner application implements it; composition wires adapters. Neutral conversation UI is not a direct caller; the product-specific adapter invokes the domain contract."
+  },
+  {
+    "id": "CON-019",
+    "name": "Native structure authoring",
+    "mode": "command",
+    "input_contract": "Project/parent NodeKey, typed kind-specific payload, expected revisions/lease where policy requires, and explicit create/update/reclassify/remove intent.",
+    "result_contract": "Node identity/revision, typed validation/conflict/scope failures; separate metadata and content outcomes.",
+    "invariants_and_failure": "Canonical task kinds cannot bypass Work Management. Generic notes payloads cannot create file assets. Callers cannot set system-ownership flags.",
+    "source_ids": [
+      "SRC-025",
+      "SRC-004",
+      "USER-001"
+    ],
+    "current_anchor": "ProjectWorkbenchService/ProjectStructureAgentService; adapt rather than discard.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-STRUCTURE",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-STRUCTURE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-020",
+    "name": "Structural links",
+    "mode": "command_and_query",
+    "input_contract": "Endpoint NodeKeys/EntityReferences appropriate to relation kind, expected endpoint/graph revisions and idempotent operation identity.",
+    "result_contract": "Created/Existing/Removed link identity and revised graph; unsupported-owner or endpoint failure.",
+    "invariants_and_failure": "Endpoint authority is not transferred. Route source-owned project/process/dependency relationships to their owner. Validate scope, lifecycle, cardinality and cycles according to kind.",
+    "source_ids": [
+      "USER-001",
+      "MAP-02",
+      "MAP-04"
+    ],
+    "current_anchor": "ProjectWorkbenchRelationService; existing link commands.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-STRUCTURE",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-STRUCTURE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-021",
+    "name": "Ensure structure contribution",
+    "mode": "command",
+    "input_contract": "Producer namespace, trusted run/step origin, stable OutputKey, target binding, typed CreateNative/AttachReference/CreateAsset/CreateTask/Link intent, normalized payload hash and expected target revision.",
+    "result_contract": "Durable ContributionReceipt: accepted/applied/existing/pending/blocked/suppressed/conflict; created references, revisions, effect state and source origin.",
+    "invariants_and_failure": "Follow architecture/05. Required is not an authority bypass. Same key with different payload conflicts; do not revive tombstones; recheck current scope. Native writes and receipts commit atomically.",
+    "source_ids": [
+      "SRC-025",
+      "SRC-027",
+      "USER-001"
+    ],
+    "current_anchor": "Existing gateways and workflow executors are entry points; a uniform protocol must not replace typed commands.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-STRUCTURE",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS",
+      "MOD-RESOURCES",
+      "MOD-PROMPTS",
+      "MOD-TESTLAB"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-STRUCTURE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-022",
+    "name": "Asset binding and content lifecycle",
+    "mode": "command",
+    "input_contract": "Target node/parent, trusted staged-content handle or authorized StorageObjectReference, MIME/name/revision, replace/attach intent and operation identity.",
+    "result_contract": "AssetBinding/node identity, content revision and finalized/pending/failed-cleanup state.",
+    "invariants_and_failure": "Bytes are outside the database transaction: use staging, finalization and compensation. Do not write file contents into Notes. Native SimpleNote is a different kind. Revalidate source paths.",
+    "source_ids": [
+      "SRC-004",
+      "SRC-005",
+      "SRC-025"
+    ],
+    "current_anchor": "ProjectAssetCreationService/StorageService/ReplaceObjectMedia a FileTools storage pipeline.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-STRUCTURE",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "BND-API",
+      "MOD-RESOURCES"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-STRUCTURE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-023",
+    "name": "Canonical work-item commands",
+    "mode": "command_and_query",
+    "input_contract": "Typed task goal/description/schedule/acceptance/resource intent, project parent, expected revisions and operation identity.",
+    "result_contract": "WorkItem detail/revision, validation/partial-compensation status and invariant-protected creation.",
+    "invariants_and_failure": "One owner serves canvas, Gantt and tools. Generic CreateNode must not bypass task-resource and assignment invariants.",
+    "source_ids": [
+      "MAP-02",
+      "SRC-027"
+    ],
+    "current_anchor": "ProjectStructureTaskApplicationService, task creation/edit/resource cluster.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-WORK",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "BND-WORK"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-WORK. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-024",
+    "name": "Work assignment",
+    "mode": "command_and_query",
+    "input_contract": "WorkItemRef; supported Human/Agent/Workflow/Process assignee reference; role/interval; expected assignment revision and optional reservation requirement.",
+    "result_contract": "Assignment identity/revision plus reservation/quote references; committed/pending/conflict.",
+    "invariants_and_failure": "Not CRM ProjectParticipation. Preserve multiplicity and primary-role rules after reconciliation. Runtime launch is a subsequent operation, not an undocumented assignment-save side effect.",
+    "source_ids": [
+      "MAP-02",
+      "MAP-08"
+    ],
+    "current_anchor": "WorkItemAssigneeService a ProjectWorkItemAssignmentMutationBridge.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-WORK",
+    "caller_modules": [
+      "MOD-CRM",
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "BND-WORK"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-WORK. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-025",
+    "name": "Gantt and dependency mutations",
+    "mode": "command",
+    "input_contract": "WorkItem identities, typed scheduling/dependency/reorder intent, UTC instants plus time-zone/calendar meaning, expected revisions and explicit propagation scope.",
+    "result_contract": "Updated plan slice/revisions, affected items, constraints/conflicts and invalidation hints.",
+    "invariants_and_failure": "Business scheduling is neither canvas coordinates nor cron. Do not silently shift unrelated tasks. Partial changes must be explicit; row ordering does not alter dependencies.",
+    "source_ids": [
+      "MAP-02",
+      "MAP-03",
+      "USER-001"
+    ],
+    "current_anchor": "ProjectStructureGanttMutationService; GanttRowOrderService; dependency analysis.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-WORK",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "BND-WORK"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-WORK. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-026",
+    "name": "Plan estimate/baseline commit",
+    "mode": "command_and_query",
+    "input_contract": "WorkItem/plan reference, versioned AI quotes and human-rate sources, assumptions/coverage and expected plan/resource revisions.",
+    "result_contract": "An estimate with components/uncertainty or a committed immutable baseline; stale/conflict/unpriced outcomes.",
+    "invariants_and_failure": "A new tariff does not change an approved past baseline. Check quote-input revisions at commit. Do not add current actuals and baselines without an explicit aggregation basis.",
+    "source_ids": [
+      "SRC-007",
+      "MAP-02"
+    ],
+    "current_anchor": "TaskEstimateRefresh, TaskPricingCommit/Persistence, CostStrategies.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-WORK",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "BND-WORK"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-WORK. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-027",
+    "name": "Process launch",
+    "mode": "long_running_command",
+    "input_contract": "Definition reference/revision, normalized variables, verified actor/source authority, parent linkage, output-target binding and stable OperationId.",
+    "result_contract": "Accepted/Existing RunId with frozen launch context, or explicit validation/readiness rejection.",
+    "invariants_and_failure": "Owner-controlled durable admission and start deduplication precede external effects. Bind the original project, not current UI selection. Subprocesses preserve parent authority and cancellation policy.",
+    "source_ids": [
+      "MAP-09",
+      "USER-001"
+    ],
+    "current_anchor": "ProcessNodeService, subprocess launch coordinator, ProcessExecutionAdapter.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROCESSES",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-SCHEDULER",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROCESSES. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-028",
+    "name": "Process run query/control",
+    "mode": "command_and_query",
+    "input_contract": "Run identity/revision, bounded status/history/manifest filters, or explicit cancel/continue/recover intent.",
+    "result_contract": "Durable runtime status, lineage, history and artifacts; accepted control or state conflict.",
+    "invariants_and_failure": "Not automatically a general direct runtime tool. UI labels do not change source state. Recovery cannot inherit scope from a newly opened project.",
+    "source_ids": [
+      "SRC-003",
+      "MAP-09"
+    ],
+    "current_anchor": "Process runtime/contracts, run-record API and Blazor process workspace.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROCESSES",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-SCHEDULER",
+      "BND-API",
+      "MOD-TESTLAB"
+    ],
+    "implementation_modules": [
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROCESSES. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-029",
+    "name": "Workflow catalog/version lookup",
+    "mode": "query",
+    "input_contract": "Definition/version references, lifecycle filters and scoped input schemas/capabilities.",
+    "result_contract": "Typed summaries/details with actual versions, supported backend options and input schema.",
+    "invariants_and_failure": "Workbench must not read workflow EF entities. Active/default selection is owner policy; accepted runs remain pinned.",
+    "source_ids": [
+      "SRC-026",
+      "MAP-09"
+    ],
+    "current_anchor": "IWorkflowCatalogService; backend selection support.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-WORKFLOWS",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "MOD-SCHEDULER",
+      "MOD-TESTLAB"
+    ],
+    "implementation_modules": [
+      "BND-WORKFLOWS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-WORKFLOWS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-030",
+    "name": "Workflow launch/control",
+    "mode": "long_running_command",
+    "input_contract": "Versioned workflow reference, validated input, requested backend/simulation policy, source authority/origin binding and stable operation identity; RunId for control.",
+    "result_contract": "Launch receipt/RunId, execution state, approval/cancel results and output manifest.",
+    "invariants_and_failure": "Structure status-projection failure is not launch failure. Target GetStatus semantics are pure query; preserve current ApplyStatus behavior via an explicit refresh or projector.",
+    "source_ids": [
+      "SRC-026",
+      "SRC-027",
+      "USER-001"
+    ],
+    "current_anchor": "IWorkflowLaunchService/IWorkflowRuntimeManager/IWorkflowRunStore; PS workflow node adapter.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-WORKFLOWS",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "MOD-SCHEDULER",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "BND-WORKFLOWS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-WORKFLOWS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-031",
+    "name": "Process run result publication",
+    "mode": "durable_event_and_query",
+    "input_contract": "Owner-specific RunId and source revision/sequence, ArtifactManifest, validated output roles and original destination binding.",
+    "result_contract": "Identified runtime outputs and destination-delivery evidence; acknowledgment through a destination receipt rather than a change to the source result.",
+    "invariants_and_failure": "Processes owns only its own run result/manifest; CON-054 and CON-055 belong to Agents and Workflows. Late output must not overwrite a newer run or human edits.",
+    "source_ids": [
+      "SRC-026",
+      "SRC-008",
+      "MAP-09"
+    ],
+    "current_anchor": "Process reports and result projection; target explicit lineage.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROCESSES",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "BND-WORK",
+      "MOD-TESTLAB",
+      "MOD-RESOURCES"
+    ],
+    "implementation_modules": [
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROCESSES. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-032",
+    "name": "Read-only structure contribution adapter",
+    "mode": "extension_query",
+    "input_contract": "Scope, bounded requested coverage and stable source-cursor/revision requirements; no DbContext in the context.",
+    "result_contract": "Read-only node/edge descriptors with source references, owner, schema, actions and provenance; missing/unavailable/partial coverage.",
+    "invariants_and_failure": "Producers provide owned query data; adapters translate it. Rebuilds do not change native nodes or start workflows. Action hints are not grants.",
+    "source_ids": [
+      "MAP-02",
+      "MAP-04"
+    ],
+    "current_anchor": "IProjectStructureProjectionContributor; narrow the current ProjectionContext.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-STRUCTURE",
+    "caller_modules": [
+      "MOD-STRUCTURE"
+    ],
+    "implementation_modules": [
+      "MOD-PROJECTS",
+      "MOD-CRM",
+      "MOD-PROCESSES",
+      "MOD-PROMPTS",
+      "MOD-RESOURCES",
+      "MOD-TESTLAB",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS"
+    ],
+    "extension_implementers": [
+      "MOD-PROJECTS",
+      "MOD-CRM",
+      "MOD-PROCESSES",
+      "MOD-PROMPTS",
+      "MOD-RESOURCES",
+      "MOD-TESTLAB",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS"
+    ],
+    "data_authority": "Every source module owns its entities and relationships. Structure owns composition and its native/local overlays; the adapter owns no master data.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller owns the required port; a source/product-specific adapter implements it using published owner APIs. The adapter can reference both contract packages; source application does not depend on consumer implementation."
+  },
+  {
+    "id": "CON-033",
+    "name": "Prompt search/version retrieval",
+    "mode": "query",
+    "input_contract": "Prompt/version reference, consumer/model compatibility filters, scope and pagination.",
+    "result_contract": "Versioned content/metadata, explicit compatibility warnings and available actions.",
+    "invariants_and_failure": "Using a final prompt must not silently change a pinned prompt in a run. Context text is not system authority.",
+    "source_ids": [
+      "SRC-003",
+      "MAP-11"
+    ],
+    "current_anchor": "IPromptGalleryService; search/import drivers.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROMPTS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-STRUCTURE",
+      "BND-SIMPLECHATS"
+    ],
+    "implementation_modules": [
+      "MOD-PROMPTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROMPTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-034",
+    "name": "Prompt authoring/curation",
+    "mode": "command",
+    "input_contract": "Typed draft/version/publication/collection/import intent, expected revision and verified curator/human authority.",
+    "result_contract": "Owner commit/revision and validation/conflict/approval outcomes.",
+    "invariants_and_failure": "Mutations remain Prompts-owned; an Agents curator tool must not introduce Agents-to-Prompts EF writes.",
+    "source_ids": [
+      "SRC-003",
+      "MAP-11"
+    ],
+    "current_anchor": "IPromptGalleryService and curator adapter.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROMPTS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-PROMPTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PROMPTS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-035",
+    "name": "Resource catalog and promotion",
+    "mode": "command_and_query",
+    "input_contract": "Resource references/pagination, typed metadata/connector references and an explicit promotion source StorageObjectReference with scope.",
+    "result_contract": "Resource summary/revision, storage/file-scope descriptor and promotion receipt.",
+    "invariants_and_failure": "Promotion is not copying to an arbitrary path and grants no broader access. Resources owns binding metadata; Storage owns bytes.",
+    "source_ids": [
+      "SRC-014",
+      "MAP-11"
+    ],
+    "current_anchor": "ResourcesService, ResourceStorageObjectPromotionService, source gateway.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-RESOURCES",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-RESOURCES"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-RESOURCES. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-036",
+    "name": "TestLab plan/run/evidence",
+    "mode": "command_and_query",
+    "input_contract": "Plan/case/target-revision references, supported runner intent and authorized evidence handles.",
+    "result_contract": "Run/verdict/evidence references with coverage/limitations; explicitly unsupported runners.",
+    "invariants_and_failure": "Do not claim every node can be tested when its kind has no runner. Historical target-revision verdicts do not transfer to new content.",
+    "source_ids": [
+      "SRC-016",
+      "SRC-004",
+      "MAP-11"
+    ],
+    "current_anchor": "TestLabService; TestPlan/Case/Evidence/Run.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-TESTLAB",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-TESTLAB"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-TESTLAB. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-037",
+    "name": "Schedule plan and fire dispatch",
+    "mode": "command_and_query",
+    "input_contract": "Typed target reference/version, normalized inputs, cron/time zone/misfire policy and expected revision; internal firing identity.",
+    "result_contract": "Schedule revision, dispatch receipt/linked runtime RunId and deferred/failed/unavailable states.",
+    "invariants_and_failure": "Quartz is not a second plan master. Repeated firings retain the same identity; unsupported process targets must not return fake success.",
+    "source_ids": [
+      "SRC-013",
+      "SRC-003",
+      "MAP-11"
+    ],
+    "current_anchor": "SchedulerPlannerRunDispatcher and target launchers.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-SCHEDULER",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-API",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-SCHEDULER"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-SCHEDULER. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-038",
+    "name": "Memory operation API",
+    "mode": "command_and_query",
+    "input_contract": "Operation kind/configuration, bounded query or source reference/snapshot, purpose/scope and source revisions.",
+    "result_contract": "Operation identity/status and retrieval results with provenance/coverage and explicit limitations.",
+    "invariants_and_failure": "Retrieval is not authority for source mutations; owner policy filters data. Ingestion idempotency/cancellation follows the specific operation semantics.",
+    "source_ids": [
+      "SRC-018",
+      "SRC-003",
+      "MAP-11"
+    ],
+    "current_anchor": "src/Memory application contracts and runtime provider.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-MEMORY",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "MOD-CRM",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-MEMORY"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-MEMORY. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-039",
+    "name": "Memory source snapshot publication",
+    "mode": "extension_query",
+    "input_contract": "Owner-specific source reference/version and permitted export shape/purpose; incremental cursor where supported.",
+    "result_contract": "Sanitized immutable source snapshot with access/provenance/removal information.",
+    "invariants_and_failure": "Memory owns this consumer port; an integration adapter depends on the source owner's query API. Do not pass DbContext. Revocation must block stale retrieval access.",
+    "source_ids": [
+      "MAP-02",
+      "MAP-08",
+      "MAP-11"
+    ],
+    "current_anchor": "IMemorySourceGatewayAdapter/source snapshot providers.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-MEMORY",
+    "caller_modules": [
+      "MOD-MEMORY"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "MOD-CRM",
+      "MOD-PROJECTS"
+    ],
+    "extension_implementers": [
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "MOD-CRM",
+      "MOD-PROJECTS"
+    ],
+    "data_authority": "The source owner owns exported content and access policy. Memory owns its derived index, not the source.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller owns the required port; a source/product-specific adapter implements it using published owner APIs. The adapter can reference both contract packages; source application does not depend on consumer implementation."
+  },
+  {
+    "id": "CON-040",
+    "name": "Plugin lifecycle/capability API",
+    "mode": "command_and_query",
+    "input_contract": "Install/activate/grant/connect intent with verified actor and manifest/version; use-time capability query.",
+    "result_contract": "Installation/connection references, active/disabled/unavailable states and grant results, without secrets.",
+    "invariants_and_failure": "Registry publication does not confer owner-resource access. Disabling or grant changes invalidates leases and requires revalidation.",
+    "source_ids": [
+      "SRC-019",
+      "MAP-11"
+    ],
+    "current_anchor": "PluginGrantEvaluator, plugin services and runtime registrars.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PLUGINS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-WORKSPACE",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-PLUGINS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-PLUGINS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-041",
+    "name": "Connector execution",
+    "mode": "command_and_query",
+    "input_contract": "Declared connector/operation schema, owner configuration reference, scope, stable delivery identity and bounded payload.",
+    "result_contract": "Capability availability, durable delivery status/receipt where supported, and typed external uncertainty.",
+    "invariants_and_failure": "A manifest without a handler is unavailable. Retrying non-idempotent external effects requires reconciliation; an outbox does not imply exactly once.",
+    "source_ids": [
+      "MAP-11",
+      "SRC-002"
+    ],
+    "current_anchor": "ConnectorCommandHandler registry/outbox; verify actual handlers.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-CONNECTORS",
+    "caller_modules": [
+      "MOD-RESOURCES",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-WORKSPACE"
+    ],
+    "implementation_modules": [
+      "BND-CONNECTORS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-CONNECTORS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-042",
+    "name": "Secret reference and purpose-scoped use",
+    "mode": "command_and_query",
+    "input_contract": "SecretReference with verified consumer identity/purpose; lifecycle operations include scope/revision.",
+    "result_contract": "Safe metadata or a short-lived use handle; values only inside the authorized adapter.",
+    "invariants_and_failure": "No values in DTOs, exports or snapshots. Preserve reference-aware deletion guards; revoked or missing secrets fail closed.",
+    "source_ids": [
+      "SRC-009",
+      "MAP-11"
+    ],
+    "current_anchor": "ISecretRuntimeResolver, SecretService, PluginSecretBroker.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-SECURITY",
+    "caller_modules": [
+      "MOD-PROVIDERS",
+      "MOD-PLUGINS",
+      "BND-STORAGE",
+      "MOD-WORKSPACE",
+      "MOD-AGENTS"
+    ],
+    "implementation_modules": [
+      "MOD-SECURITY"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-SECURITY. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-043",
+    "name": "Managed storage lifecycle",
+    "mode": "command_and_query",
+    "input_contract": "Authorized scope, logical object/staging references, expected content revision, bounded stream/name/MIME and explicit disposition.",
+    "result_contract": "Object/revision/hash/locator evidence and finalize/delete/retain receipts; integrity/ownership/conflict errors.",
+    "invariants_and_failure": "No arbitrary absolute paths. Define finalization, database receipt and cleanup protocols. Check shared references, active runs and protected roots before deletion.",
+    "source_ids": [
+      "SRC-004",
+      "SRC-005",
+      "SRC-008"
+    ],
+    "current_anchor": "IStoragePlacementService, managed storage, FileTools binding boundaries.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-STORAGE",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS",
+      "MOD-TESTLAB"
+    ],
+    "implementation_modules": [
+      "BND-STORAGE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-STORAGE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-044",
+    "name": "Context surface capture",
+    "mode": "extension_query",
+    "input_contract": "Surface/session identity, selected project/nodes/view and requested capture purpose.",
+    "result_contract": "Immutable bounded context/snapshot handle with generation, fingerprint, expiry and omissions.",
+    "invariants_and_failure": "Carry no component, service or EF objects. Explicitly select stale snapshot reads; revalidate mutations. Simple Chats does not receive this context implicitly.",
+    "source_ids": [
+      "SRC-008",
+      "SRC-006",
+      "SRC-009"
+    ],
+    "current_anchor": "AgentChatContextSurfaceProvider/builders; proposed Agents-specific application adapter port, not neutral conversation presentation.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-AGENTS"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS",
+      "MOD-RESOURCES",
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS",
+      "MOD-RESOURCES",
+      "MOD-PROCESSES"
+    ],
+    "data_authority": "The source owner supplies content; the Agents application capture adapter owns the immutable invocation attachment. Neutral conversation UI owns neither business context nor grants.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller owns the required port; a source/product-specific adapter implements it using published owner APIs. The adapter can reference both contract packages; source application does not depend on consumer implementation."
+  },
+  {
+    "id": "CON-045",
+    "name": "Post-commit invalidation/live progress",
+    "mode": "event_notification",
+    "input_contract": "Owner source reference/revision, scope generation, operation correlation and bounded event data.",
+    "result_contract": "Disposable subscription/token and invalidation hint; query the owner for durable state.",
+    "invariants_and_failure": "Live events neither grant access nor prove commit. Ignore stale generations; dispose subscriptions on surface/profile changes.",
+    "source_ids": [
+      "SRC-002",
+      "SRC-009",
+      "SRC-006"
+    ],
+    "current_anchor": "Activity/live channels and module invalidation signals.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-COMPOSITION",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "MOD-PROCESSES",
+      "BND-SIMPLECHATS"
+    ],
+    "implementation_modules": [
+      "BND-COMPOSITION"
+    ],
+    "extension_implementers": [],
+    "data_authority": "The source module owns event content and meaning. Composition/notification infrastructure owns only transport, subscriptions and lifetime.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller -> owner contract; owner application implements it; composition wires adapters. Neutral conversation UI is not a direct caller; the product-specific adapter invokes the domain contract."
+  },
+  {
+    "id": "CON-046",
+    "name": "Project lifecycle participant protocol",
+    "mode": "extension_command",
+    "input_contract": "Project lifecycle operation identity, project/source scope, pinned plan/revision, explicit deletion/archival/transfer disposition and verified actor.",
+    "result_contract": "Prepared effects, owner-specific commit/cleanup receipts, compensation availability and blockers.",
+    "invariants_and_failure": "The coordinator does not own participant data. Version export schemas. Imports must not implicitly activate secrets or live runs; resumption must not duplicate effects.",
+    "source_ids": [
+      "MAP-01",
+      "MAP-10",
+      "MAP-11"
+    ],
+    "current_anchor": "Project deletion/transfer participants. Database-profile transfer is the separate CON-056.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROJECTS",
+    "caller_modules": [
+      "MOD-PROJECTS"
+    ],
+    "implementation_modules": [
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "MOD-RESOURCES",
+      "MOD-PROMPTS",
+      "MOD-TESTLAB",
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "MOD-RESOURCES",
+      "MOD-PROMPTS",
+      "MOD-TESTLAB",
+      "MOD-PROCESSES"
+    ],
+    "data_authority": "Projects owns the project lifecycle and operation plan. Every participant owns changes to its data and its cleanup receipt.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Projects application -> Projects lifecycle port -> participant adapter -> owner service. Composition only registers adapters."
+  },
+  {
+    "id": "CON-047",
+    "name": "Workspace preference API",
+    "mode": "command_and_query",
+    "input_contract": "Workspace identity/scope, typed preference keys/values and expected revision.",
+    "result_contract": "Preference summary/revision with validation of referenced owners.",
+    "invariants_and_failure": "Default providers are opaque references; catalog and pricing changes delegate to Providers. A configuration store is not a bag of foreign entities.",
+    "source_ids": [
+      "MAP-11",
+      "SRC-021"
+    ],
+    "current_anchor": "WorkspaceService and IWorkspaceProviderCatalog consumer port.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-WORKSPACE",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "BND-COMPOSITION",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-WORKSPACE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-WORKSPACE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-048",
+    "name": "Database profile and host capability control",
+    "mode": "control_plane_command_and_query",
+    "input_contract": "Operator-authorized profile activation/schema/transfer action, expected profile generation and supported host capability.",
+    "result_contract": "New profile-generation/incarnation handle or explicit capability-unavailable result; lifecycle/drain outcome.",
+    "invariants_and_failure": "A background worker must not inherit the current UI session's connection. Do not release child-process leases while a run is running or waiting.",
+    "source_ids": [
+      "SRC-008",
+      "SRC-009",
+      "MAP-10"
+    ],
+    "current_anchor": "DatabaseProfileWorkspaceService/control plane and HostCapabilities.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-COMPOSITION",
+    "caller_modules": [
+      "MOD-WORKSPACE",
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "BND-COMPOSITION"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-COMPOSITION. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-049",
+    "name": "Ordinary Simple Chats operations",
+    "mode": "command_and_query",
+    "input_contract": "Conversation/definition references, explicit ordinary input, turn OperationId and ETag according to the existing contract.",
+    "result_contract": "Durable admission, replayable stream/status, transcript and retained operations, without agent tools.",
+    "invariants_and_failure": "Preserve the non-idempotent HTTP conversation-create baseline until separately changed; turns are retry-safe. Closing/disconnecting a surface does not cancel a run.",
+    "source_ids": [
+      "SRC-006",
+      "SRC-009"
+    ],
+    "current_anchor": "LLM Chats product/persistence and Web adapter.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-SIMPLECHATS",
+    "caller_modules": [
+      "BND-API",
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "implementation_modules": [
+      "BND-SIMPLECHATS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-SIMPLECHATS. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller -> owner contract; owner application implements it; composition wires adapters. Neutral conversation UI is not a direct caller; the product-specific adapter invokes the domain contract."
+  },
+  {
+    "id": "CON-050",
+    "name": "Collaboration thread/message",
+    "mode": "command_and_query",
+    "input_contract": "Thread/member/target references, bounded text/attachment handles, owned revision and verified actor.",
+    "result_contract": "Message/thread/inbox states and membership failures.",
+    "invariants_and_failure": "Enforce owned membership policy, with no implicit merging into Simple Chats or agent transcripts. Cross-object reads use current authorization.",
+    "source_ids": [
+      "MAP-11",
+      "SRC-020"
+    ],
+    "current_anchor": "CollaborationService and owned thread/message records.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-COLLAB",
+    "caller_modules": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "MOD-COLLAB"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to MOD-COLLAB. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-051",
+    "name": "Execution source authority resolver",
+    "mode": "extension_query_and_admission",
+    "input_contract": "Trusted source descriptor from its owner, principal/purpose/profile scope, source revision and required operations.",
+    "result_contract": "Verified effective authority with denied/malformed/stale results and a persisted restoration descriptor.",
+    "invariants_and_failure": "Source modules own product source providers. No product hardcoding in neutral runtime. Continuation cannot implicitly upgrade legacy ungoverned execution into governed execution.",
+    "source_ids": [
+      "SRC-009",
+      "SRC-003"
+    ],
+    "current_anchor": "IAgentExecutionSourceAuthorityProvider registry.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "implementation_modules": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES"
+    ],
+    "data_authority": "Source owners validate actual origin and scope; execution runtime enforces verified authority and its restoration, rechecking current policy at use time.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller owns the required port; a source/product-specific adapter implements it using published owner APIs. The adapter can reference both contract packages; source application does not depend on consumer implementation."
+  },
+  {
+    "id": "CON-052",
+    "name": "Authorized file browsing/opening",
+    "mode": "query_and_command",
+    "input_contract": "Owner-issued file collection/object-scope descriptor, source revision, explicit browse/read/write/open action and current actor.",
+    "result_contract": "Bounded file listings/content or write revisions and platform-capability/open receipts.",
+    "invariants_and_failure": "Revalidate traversal, symlink and retarget policies; neither browser nor agent may invent a root. Desktop folder opening requires host support.",
+    "source_ids": [
+      "SRC-004",
+      "SRC-008",
+      "SRC-025"
+    ],
+    "current_anchor": "FileTools scopes, ProjectStructureFileScopeResolver/local opener.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-STORAGE",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "implementation_modules": [
+      "BND-STORAGE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "Published domain facts and mutations belong to BND-STORAGE. Foreign source references do not transfer authority.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-053",
+    "name": "Managed curator launch port",
+    "mode": "consumer_port",
+    "input_contract": "An owner-domain curation goal, source references and scope; resolve managed agent identity through Agents.",
+    "result_contract": "Accepted curator run/session or explicit unavailable result; proposals remain separate from owner mutations.",
+    "invariants_and_failure": "Prompts, Workflows and Capability curation may own distinct concrete launch ports; no universal arbitrary administrative-agent command.",
+    "source_ids": [
+      "SRC-003",
+      "MAP-11"
+    ],
+    "current_anchor": "IPromptGalleryCuratorLauncher; analogous concrete curator adapters.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-PROMPTS",
+    "caller_modules": [
+      "MOD-PROMPTS"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [
+      "MOD-AGENTS"
+    ],
+    "data_authority": "Prompts owns the curation request and prompt mutations. Agents owns accepted curator execution; the adapter only translates.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller owns the required port; a source/product-specific adapter implements it using published owner APIs. The adapter can reference both contract packages; source application does not depend on consumer implementation."
+  },
+  {
+    "id": "CON-054",
+    "name": "Agent run result publication",
+    "mode": "durable_event_and_query",
+    "input_contract": "Owner-specific RunId and source revision/sequence, ArtifactManifest, validated output roles and original destination binding.",
+    "result_contract": "Identified runtime outputs and destination-delivery evidence; acknowledgment through a receipt, not a change to the source result.",
+    "invariants_and_failure": "Publication retries do not duplicate nodes/assets. Execution completion and writeback are separate; a new LastRunId cannot appropriate old output. Destination receipts are not a second run store.",
+    "source_ids": [
+      "SRC-009",
+      "SRC-003",
+      "USER-001"
+    ],
+    "current_anchor": "Owner execution/report adapter; verify the current durable store, events and callers before implementation.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "BND-WORK",
+      "MOD-TESTLAB",
+      "MOD-RESOURCES"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-AGENTS owns its run, manifest and source revision. Destination owners own their operation receipts and bindings; Work Management owns work acceptance.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-055",
+    "name": "Workflow run result publication",
+    "mode": "durable_event_and_query",
+    "input_contract": "Owner-specific RunId and source revision/sequence, ArtifactManifest, validated output roles and original destination binding.",
+    "result_contract": "Identified runtime outputs and destination-delivery evidence; acknowledgment through a receipt, not a change to the source result.",
+    "invariants_and_failure": "Publication retries do not duplicate nodes/assets. Execution completion and writeback are separate; a new LastRunId cannot appropriate old output. Destination receipts are not a second run store.",
+    "source_ids": [
+      "SRC-026",
+      "SRC-027",
+      "USER-001"
+    ],
+    "current_anchor": "Owner execution/report adapter; verify the current durable store, events and callers before implementation.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-WORKFLOWS",
+    "caller_modules": [
+      "MOD-STRUCTURE",
+      "BND-WORK",
+      "MOD-TESTLAB",
+      "MOD-RESOURCES"
+    ],
+    "implementation_modules": [
+      "BND-WORKFLOWS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "BND-WORKFLOWS owns its run, manifest and source revision. Destination owners own their operation receipts and bindings; Work Management owns work acceptance.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller → owner contract; owner application implements it. Composition wires concrete adapters."
+  },
+  {
+    "id": "CON-056",
+    "name": "Database profile transfer participant protocol",
+    "mode": "extension_command",
+    "input_contract": "Operator-authorized source/destination profiles, schema/manifest versions, incarnation, identity-remapping policy, stable transfer identity and owner partition.",
+    "result_contract": "Prepared effects, owner-specific commit/cleanup receipts, compensation availability and blockers.",
+    "invariants_and_failure": "The coordinator does not own participant data. Version export schemas. Imports do not implicitly activate secrets or live runs; resumption must not duplicate effects.",
+    "source_ids": [
+      "MAP-01",
+      "MAP-10",
+      "MAP-11"
+    ],
+    "current_anchor": "Database transfer contributors/control-plane services. Derive participants from affected data, not a mandatory number of modules.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process; an external adapter only where the product publishes an HTTP, tool or plugin boundary.",
+    "contract_owner": "BND-COMPOSITION",
+    "caller_modules": [
+      "BND-COMPOSITION"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS",
+      "MOD-PROVIDERS",
+      "MOD-CRM",
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "MOD-PROMPTS",
+      "MOD-RESOURCES",
+      "MOD-SCHEDULER",
+      "MOD-MEMORY",
+      "MOD-PLUGINS",
+      "MOD-SECURITY",
+      "MOD-COLLAB",
+      "MOD-WORKSPACE",
+      "MOD-TESTLAB",
+      "BND-WORK",
+      "BND-WORKFLOWS",
+      "BND-SIMPLECHATS",
+      "BND-STORAGE"
+    ],
+    "extension_implementers": [
+      "MOD-AGENTS",
+      "MOD-PROVIDERS",
+      "MOD-CRM",
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "MOD-PROMPTS",
+      "MOD-RESOURCES",
+      "MOD-SCHEDULER",
+      "MOD-MEMORY",
+      "MOD-PLUGINS",
+      "MOD-SECURITY",
+      "MOD-COLLAB",
+      "MOD-WORKSPACE",
+      "MOD-TESTLAB",
+      "BND-WORK",
+      "BND-WORKFLOWS",
+      "BND-SIMPLECHATS",
+      "BND-STORAGE"
+    ],
+    "data_authority": "Control plane owns transfer plans, profile activation and incarnation. Each participant owns its data; controllers and schema composition must not write foreign tables outside the owner protocol.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Control-plane coordinator -> control-plane transfer port -> each owner adapter/service. Distinct from project lifecycle CON-046."
+  },
+  {
+    "id": "CON-057",
+    "name": "Automation-safe CRM search and identity resolution",
+    "mode": "Query",
+    "input_contract": "Bounded text/record-kind/IDs and requested field purpose; verified caller, scope, and egress policy outside model DTO.",
+    "result_contract": "Safe typed summaries, stable party/resource refs, source revision where supported, redaction, trust, coverage and ambiguity.",
+    "invariants_and_failure": "No confidential default details; no global empty-success on outage. Revalidate source eligibility when assigning work. Separate read permission, provider disclosure, and destination disclosure.",
+    "source_ids": [
+      "SRC-029",
+      "SRC-032"
+    ],
+    "current_anchor": "Reuse ICrmHrAgentQueryService through an owner-safe boundary; do not duplicate it under Agents.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-CRM",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-058",
+    "name": "Bounded CRM party/contact creation",
+    "mode": "Command",
+    "input_contract": "Allowlisted nonsensitive person/organization/unit fields, creation intent identity and actor scope. Contact-point fields only where current owner supports them.",
+    "result_contract": "Canonical Party reference, owner revision, committed receipt and explicit validation/duplicate/reconciliation result.",
+    "invariants_and_failure": "Reuse canonical CRM command. Creating Party is not proof all contact-point variants are supported. Duplicate suggestion is not an automatic merge. Preserve approvals, audit and sensitivity policy.",
+    "source_ids": [
+      "SRC-029"
+    ],
+    "current_anchor": "ICrmPartyCommandService.CreatePartyAsync is already wired by HR; preserve this path.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-CRM",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-059",
+    "name": "CRM affiliation read and mutation",
+    "mode": "Query / Command",
+    "input_contract": "Person and organization references, bounded affiliation patch, expected relevant revision and command identity.",
+    "result_contract": "Safe affiliations or committed affiliation result with preserved restricted fields.",
+    "invariants_and_failure": "CRM validates endpoints and role/cardinality/interval; no arbitrary workforce/confidential-field update through affiliation.",
+    "source_ids": [
+      "SRC-029"
+    ],
+    "current_anchor": "ListAffiliationsAsync and UpsertAffiliationAsync are wired by HR.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-CRM",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-060",
+    "name": "Staffing/resource-profile administration",
+    "mode": "Query / Command",
+    "input_contract": "CRM resource/workforce identity, allowlisted local role/availability/skills/capacity patch and expected revision.",
+    "result_contract": "Owner-validated local staffing result and safe source references; reservations remain CON-013.",
+    "invariants_and_failure": "Read and edit grants are separate. No technical agent configuration, AI-price rewrite, or task assignment through CRM-owned fields. New workforce automation surfaces require explicit implementation/approval.",
+    "source_ids": [
+      "USER-002",
+      "SRC-032",
+      "MAP-08"
+    ],
+    "current_anchor": "Actual Workforce/resource service and supported mutations must be rebaselined; no general existing HR staffing-write tool is claimed.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-CRM",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-CRM"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-CRM",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-061",
+    "name": "Simple Chats definition discovery for administrators",
+    "mode": "Query",
+    "input_contract": "Scoped search, status, tags, paging, or exact definition ID; safe field profile.",
+    "result_contract": "Definition summary or permitted editable settings, revision and expected concurrency token.",
+    "invariants_and_failure": "Definition visibility does not grant access to conversations/transcripts, secrets, deployments, or retention. No inferred project context.",
+    "source_ids": [
+      "SRC-033",
+      "SRC-034",
+      "USER-002"
+    ],
+    "current_anchor": "Reuse ILlmChatDefinitionApplicationService.Get/List/ListPage; external administration adapter is new.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "BND-SIMPLECHATS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "BND-SIMPLECHATS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "BND-SIMPLECHATS",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-062",
+    "name": "Simple Chats definition administration",
+    "mode": "Command",
+    "input_contract": "Typed create/update/status intent with allowlisted definition fields, expected token for changes, revision reason and stable command identity for new retry-safe automation.",
+    "result_contract": "Canonical definition/revision/token plus truthful owner receipt or conflict/rejection/unconfirmed status.",
+    "invariants_and_failure": "Call existing owner service, not EF/editor state. Preserve ordinary execution and pinned/admitted revisions. New durable create dedupe must commit atomically with definition; a post-hoc wrapper is insufficient. No transcript or turn manipulation.",
+    "source_ids": [
+      "SRC-033",
+      "SRC-034",
+      "USER-002"
+    ],
+    "current_anchor": "Existing CreateAsync/UpdateAsync/ChangeStatusAsync; no HR tool wiring observed, and current request shapes do not promise retry-safe creation.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "BND-SIMPLECHATS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "BND-SIMPLECHATS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "BND-SIMPLECHATS",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-063",
+    "name": "Managed agent administration adapter",
+    "mode": "Query / Command",
+    "input_contract": "Safe catalog/settings/options or allowed create/update/avatar/review intent with verified managed actor and exact target.",
+    "result_contract": "Technical owner result, revisions, safe readiness warnings and separate downstream effect status.",
+    "invariants_and_failure": "Reuse existing HR service/CON-002; deny self/privileged grants and protected target changes according to current policy. Editing another definition never widens the running actor authority. No raw provider credentials.",
+    "source_ids": [
+      "SRC-029",
+      "SRC-030"
+    ],
+    "current_anchor": "HrAgentAdministrationService and HrAgentRuntimeToolProvider; currently interactive managed-HR surface.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-AGENTS",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-064",
+    "name": "Workflow definition and component curation",
+    "mode": "Query / Command",
+    "input_contract": "Definition/version/component refs, bounded validated patch, expected revision, publication intent and approval.",
+    "result_contract": "New draft/revision or explicitly approved lifecycle result with validation diagnostics.",
+    "invariants_and_failure": "Definition edits do not alter admitted runs/checkpoints. Capability/schema validation and exact publication permission; no general process persistence.",
+    "source_ids": [
+      "SRC-028",
+      "USER-002"
+    ],
+    "current_anchor": "WorkflowCurator runtime provider is documented; inspect actual methods/registration before changing it.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "BND-WORKFLOWS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "BND-WORKFLOWS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "BND-WORKFLOWS",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-065",
+    "name": "Capability catalog curation",
+    "mode": "Query / Command",
+    "input_contract": "Bounded capability metadata/definition patch and target revision, separate policy authority.",
+    "result_contract": "Validated capability draft/revision and safe diagnostics, not a grant to execute.",
+    "invariants_and_failure": "Catalog curation is distinct from permission assignment/secret access. No arbitrary code or privileged self-grant via schema. Reuse registered curator, verify exact surface.",
+    "source_ids": [
+      "SRC-028"
+    ],
+    "current_anchor": "CapabilityCurator runtime provider is documented; current complete method inventory not reread.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-AGENTS",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-AGENTS"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-AGENTS",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-066",
+    "name": "Scheduler target and schedule discovery",
+    "mode": "Query",
+    "input_contract": "Bounded search, target kind, scope and allowed field projection.",
+    "result_contract": "Available exact workflow/version targets and safe schedule summaries with coverage.",
+    "invariants_and_failure": "Do not return saved input JSON by default. Offered targets require actual adapter availability; current managed provider exposes workflow targets only.",
+    "source_ids": [
+      "SRC-031"
+    ],
+    "current_anchor": "SchedulerWorkflowTargetsSearch and SchedulerWorkflowSchedulesSearch.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-SCHEDULER",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-SCHEDULER"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-SCHEDULER",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-067",
+    "name": "Governed workflow schedule administration",
+    "mode": "Command",
+    "input_contract": "Discovered workflow/version, typed schedule/timezone/misfire/bounded input and enable/start/end fields; intent and change revision.",
+    "result_contract": "Canonical plan and next-fire metadata with receipt; later dispatch has a distinct run receipt.",
+    "invariants_and_failure": "Existing create path retained; update/disable/delete as automation are target extensions only if approved. Check execution authority at each firing; process scheduling is not implicitly enabled.",
+    "source_ids": [
+      "SRC-031",
+      "USER-002"
+    ],
+    "current_anchor": "Current managed tool creates workflow schedules through ISchedulerPlannerService.SavePlanAsync.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-SCHEDULER",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-SCHEDULER"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-SCHEDULER",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-068",
+    "name": "Process definition and planning administration",
+    "mode": "Query / Command",
+    "input_contract": "Typed draft/definition/assignment edit with source revision, permitted purpose and scope.",
+    "result_contract": "Process-owned definition/revision or explicit invalid/unsupported result.",
+    "invariants_and_failure": "UI/HTTP existence does not attach runtime tools. Definition editing, run control, task planning, and execution assignments remain distinct. A process agent needs a reviewed adapter, not direct runtime-store writes.",
+    "source_ids": [
+      "SRC-028",
+      "SRC-035",
+      "USER-002"
+    ],
+    "current_anchor": "Rebaseline existing process application methods; no general first-party Process tool provider is currently documented.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-PROCESSES",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-PROCESSES",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-069",
+    "name": "Authorized Resources discovery and retrieval metadata",
+    "mode": "Query",
+    "input_contract": "Resource IDs/kinds/search, bounded fields, source scope and intended data use.",
+    "result_contract": "Catalog summaries, owner-issued references/version/content handles and explicit availability/coverage.",
+    "invariants_and_failure": "Distinguish catalog Resource from CRM staffing resource. No raw Storage locator/credential or implied grant from a display label. Resolve current access at content use.",
+    "source_ids": [
+      "SRC-036",
+      "MAP-11",
+      "USER-002"
+    ],
+    "current_anchor": "Resources owner services; exact current runtime attachment requires discovery.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-RESOURCES",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-RESOURCES"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-RESOURCES",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-070",
+    "name": "Resource catalog creation and metadata administration",
+    "mode": "Command",
+    "input_contract": "Bounded resource metadata, source/storage reference, supported kind/schema, expected revision and command identity.",
+    "result_contract": "Canonical Resource with provenance, revision, binding/content state and effect receipt.",
+    "invariants_and_failure": "Resources owns catalog metadata, Storage bytes, CRM staffing facts. Promotion/creation is explicit; content replacement uses Storage policy. No arbitrary connector provisioning through a Resource patch.",
+    "source_ids": [
+      "SRC-036",
+      "MAP-11",
+      "USER-002"
+    ],
+    "current_anchor": "Reuse ResourcesService/promotion paths after current-code discovery; do not claim every CRUD action is an attached agent tool.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-RESOURCES",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-RESOURCES"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-RESOURCES",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-071",
+    "name": "Authorized content streaming for automation",
+    "mode": "Query / Content access",
+    "input_contract": "Owner-issued content/version reference, bounded range/size/format and resolved use-time scope/egress permit.",
+    "result_contract": "Safe bytes/stream or bounded excerpt with version/hash/coverage and redaction where applicable.",
+    "invariants_and_failure": "Read-only may still disclose sensitive data. Recheck root/ACL/alias/symlink before I/O; no arbitrary URL fetch or secret disclosure. Do not materialize complete documents into broad search responses.",
+    "source_ids": [
+      "SRC-008",
+      "SRC-033",
+      "USER-002"
+    ],
+    "current_anchor": "Reuse authorized FileTools/storage access through domain adapters, not an unrestricted file/HTTP gateway.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "BND-STORAGE",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "BND-STORAGE"
+    ],
+    "extension_implementers": [],
+    "data_authority": "BND-STORAGE",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-072",
+    "name": "Workflow executor owner-operation extension port",
+    "mode": "Extension port",
+    "input_contract": "Registered executor operation schema and version, persisted step/iteration intent ID, verified run delegation and pinned source refs.",
+    "result_contract": "Typed query or owner receipt recorded as step result; required-effect delivery state and recovery reference.",
+    "invariants_and_failure": "Executor invokes typed owner API, not self HTTP, fabricated tool call, or foreign EF. No automatic reuse of interactive HR/Scheduler authority. Replay reconciles before a new effect.",
+    "source_ids": [
+      "SRC-027",
+      "SRC-028",
+      "USER-002"
+    ],
+    "current_anchor": "Existing Structure workflow executor is a concrete precedent; other domain executors are target-specific additions.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "BND-WORKFLOWS",
+    "caller_modules": [
+      "BND-WORKFLOWS"
+    ],
+    "implementation_modules": [
+      "BND-WORKFLOWS"
+    ],
+    "extension_implementers": [
+      "BND-WORKFLOWS"
+    ],
+    "data_authority": "Each target module owns its own domain effects; the execution owner owns step identity, checkpoints, and recovery state.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Consumer owns executor/step port and its integration adapter. Adapter references target published API. Composition registers it. Destination owns all target data and has no reverse runtime implementation dependency.",
+    "delegated_data_owners": [
+      "MOD-CRM",
+      "BND-SIMPLECHATS",
+      "MOD-RESOURCES",
+      "MOD-SCHEDULER",
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "MOD-PROMPTS",
+      "MOD-TESTLAB"
+    ],
+    "adapter_location_rule": "Implementation means a separately placed runtime-to-domain integration adapter associated with the consumer boundary, not the target product or its persistence. In particular Simple Chats must never implement a Workflow/Process/Tooling interface inside its product/persistence projects."
+  },
+  {
+    "id": "CON-073",
+    "name": "Process step owner-operation extension port",
+    "mode": "Extension port",
+    "input_contract": "Registered step operation/version, durable step/iteration intent, trusted process actor/delegation and source/target scope.",
+    "result_contract": "Owner query/result receipt and process-owned checkpoint/effect status.",
+    "invariants_and_failure": "No process writer for foreign data. Resolve authority at dispatch/resume; no borrowing a privileged interactive identity. Owner commit before checkpoint loss reconciles using the same intent.",
+    "source_ids": [
+      "SRC-028",
+      "SRC-035",
+      "USER-002"
+    ],
+    "current_anchor": "Existing process execution adapters retained; domain-operation step adapters require explicit registration/testing.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-PROCESSES",
+    "caller_modules": [
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-PROCESSES"
+    ],
+    "extension_implementers": [
+      "MOD-PROCESSES"
+    ],
+    "data_authority": "Each target module owns its own domain effects; the execution owner owns step identity, checkpoints, and recovery state.",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Consumer owns executor/step port and its integration adapter. Adapter references target published API. Composition registers it. Destination owns all target data and has no reverse runtime implementation dependency.",
+    "delegated_data_owners": [
+      "MOD-CRM",
+      "BND-SIMPLECHATS",
+      "MOD-RESOURCES",
+      "MOD-SCHEDULER",
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "MOD-PROMPTS",
+      "MOD-TESTLAB"
+    ],
+    "adapter_location_rule": "Implementation means a separately placed runtime-to-domain integration adapter associated with the consumer boundary, not the target product or its persistence. In particular Simple Chats must never implement a Workflow/Process/Tooling interface inside its product/persistence projects."
+  },
+  {
+    "id": "CON-074",
+    "name": "Collaboration message contributions",
+    "mode": "Command",
+    "input_contract": "Authorized thread/object ref, bounded message/attachment references, explicit publication intent and durable command ID.",
+    "result_contract": "Canonical Collaboration message ID and delivery/commit status.",
+    "invariants_and_failure": "Membership and destination audience apply; retrieved confidential data cannot be laundered into a broad thread. Not an agent/Simple Chats transcript write.",
+    "source_ids": [
+      "MAP-11",
+      "USER-002"
+    ],
+    "current_anchor": "Current Collaboration services must be discovered before exposing automation writes.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-COLLAB",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-COLLAB"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-COLLAB",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-075",
+    "name": "Memory ingestion of owner-published evidence",
+    "mode": "Command / Operation query",
+    "input_contract": "Authorized source snapshot/reference, provenance, purpose, bounded payload and idempotent ingestion identity.",
+    "result_contract": "Ingestion operation/status, source revision and completeness, not a source-master update.",
+    "invariants_and_failure": "Derived memory remains revocable and nonauthoritative. Agent claims do not become verified business facts; query/command separation and retention apply.",
+    "source_ids": [
+      "SRC-028",
+      "USER-002"
+    ],
+    "current_anchor": "Reuse Memory operations/source gateway; exact write-tool surface must be verified.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-MEMORY",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-MEMORY"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-MEMORY",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  },
+  {
+    "id": "CON-076",
+    "name": "TestLab evidence and verdict authoring",
+    "mode": "Command",
+    "input_contract": "Plan/case/target-version refs, authorized evidence content, supported runner output or explicit human verdict and revision.",
+    "result_contract": "Owner evidence/verdict identity and traceable target/content version.",
+    "invariants_and_failure": "A model statement is not successful test execution. Distinguish adding evidence from granting acceptance; no fabricated runner PASS.",
+    "source_ids": [
+      "MAP-11",
+      "USER-002"
+    ],
+    "current_anchor": "Existing TestLabService and supported runners require rebaseline; new automation grants are explicit.",
+    "status": "TARGET_SEMANTICS_NOT_IMPLEMENTATION",
+    "transport": "In-process typed owner API; separately governed tool, executor, UI, or HTTP adapters where explicitly supported.",
+    "contract_owner": "MOD-TESTLAB",
+    "caller_modules": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "implementation_modules": [
+      "MOD-TESTLAB"
+    ],
+    "extension_implementers": [],
+    "data_authority": "MOD-TESTLAB",
+    "registration_owner": "BND-COMPOSITION",
+    "direction_note": "Caller modules identify architectural consumers, not automatic grants or currently attached runtime tools. Owner commands and use-time policy remain authoritative."
+  }
+]

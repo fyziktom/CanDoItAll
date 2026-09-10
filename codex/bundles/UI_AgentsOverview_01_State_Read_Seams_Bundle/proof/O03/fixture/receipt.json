@@ -1,8 +1,0 @@
-{
-  "state": "Prepared",
-  "databaseName": "cditall_overview_measurement_2c206fe19632470395fc3676d154b379",
-  "profile": "overview-measurement",
-  "fixture": "overview.json",
-  "root": "C:\\repositories\\CanDoItAll\\.mcp-state\\overview03-data\\isolated\\f2c938e2a44e45048af6e76f65cce406",
-  "scope": "Isolated canonical production stores and queries; synthetic completed observations; no provider invocation."
-}

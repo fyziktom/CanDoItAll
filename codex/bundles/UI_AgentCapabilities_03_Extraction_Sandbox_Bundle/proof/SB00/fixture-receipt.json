@@ -1,9 +1,0 @@
-{
-  "state": "Prepared",
-  "agentId": "9ba4d415-cc9c-4e0e-b03a-cc0000000001",
-  "mcpId": "9ba4d415-cc9c-4e0e-b03a-cc0000000011",
-  "profile": "capabilities-measurement",
-  "fixture": "capabilities.json",
-  "root": "C:\\repositories\\CanDoItAll\\.mcp-state\\capa03-data\\isolated\\e119c1c236434698954b5f023fb526b8",
-  "scope": "Task-owned isolated data retained across pre/post full-app measurements; rendering only."
-}

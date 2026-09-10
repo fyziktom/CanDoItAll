@@ -1,0 +1,540 @@
+[
+  {
+    "id": "INV-001",
+    "title": "One writer per fact",
+    "rule": "Only its owner changes master data; projections, local enrichment and historical snapshots have distinct meanings.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-002",
+    "title": "No foreign EF backdoor",
+    "rule": "Owner contracts expose no DbContext, EF entities or IQueryable; runtime models do not pull foreign master data through navigations.",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-STRUCTURE"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-003",
+    "title": "UI has no execution authority",
+    "rule": "Reusable presentation controls neither business transactions nor runtime state and has no runtime or persistence dependency.",
+    "module_ids": [
+      "BND-CONVERSATIONS",
+      "MOD-AGENTS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-004",
+    "title": "Native data versus projections",
+    "rule": "Projection reads and rebuilds neither overwrite nor delete native notes, tasks, links or layout.",
+    "module_ids": [
+      "MOD-STRUCTURE"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-005",
+    "title": "SimpleNote is not a file fallback",
+    "rule": "An inline native body and file-node Notes have different authority; opening a node never changes its master representation.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-006",
+    "title": "Stable identity and origin",
+    "rule": "Renaming or switching views does not change source identity; runs and contributions retain their frozen targets and lineage.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-007",
+    "title": "Current authority",
+    "rule": "Mutations, secret access, reads and approvals enforce current actor, scope and purpose; model input is not a trusted grant.",
+    "module_ids": [
+      "MOD-SECURITY",
+      "MOD-AGENTS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-008",
+    "title": "Profile and incarnation fence",
+    "rule": "Data, workers and caches from another profile, generation or history must not be used in the current scope.",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-WORKSPACE"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-009",
+    "title": "Optimistic concurrency",
+    "rule": "Relevant revisions or tokens prevent lost updates with the same semantics across every surface.",
+    "module_ids": [
+      "BND-WORK",
+      "MOD-STRUCTURE",
+      "MOD-CRM"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-010",
+    "title": "Durable idempotency",
+    "rule": "The same key and payload have one confirmed local effect or receipt; a different payload conflicts.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-011",
+    "title": "Truthful acceptance",
+    "rule": "Accepted, Committed, Unconfirmed and Rejected are not interchangeable; UI failure does not erase an admission receipt.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-012",
+    "title": "Separate writeback",
+    "rule": "Execution success, required output publication and task acceptance have separate authorities and states.",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS",
+      "MOD-STRUCTURE"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-013",
+    "title": "No appropriation of foreign output",
+    "rule": "Run manifests and contribution receipts prove origin; a UI set-difference is not the sole authority.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-014",
+    "title": "Serial tools and approvals",
+    "rule": "Preserve tool order and approval barriers; continuation revalidates the material payload.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-015",
+    "title": "Assets have real content",
+    "rule": "An available file node corresponds to the correct bytes and revision; storage/database intermediate states are truthful.",
+    "module_ids": [
+      "BND-STORAGE",
+      "MOD-STRUCTURE"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-016",
+    "title": "Deletion provenance",
+    "rule": "Confirmation does not bypass ownership, liveness or references; shared bytes are not deleted prematurely.",
+    "module_ids": [
+      "BND-STORAGE",
+      "MOD-PROCESSES"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-017",
+    "title": "Destructive-operation compatibility",
+    "rule": "Preserve explicit dispositions, legacy defaults and partial outcomes for multiple roots.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-API"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-018",
+    "title": "One work plan",
+    "rule": "Gantt, canvas, CRM and tools change the same WorkItem and assignment; a task is not a ProcessStep.",
+    "module_ids": [
+      "BND-WORK",
+      "MOD-CRM"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-019",
+    "title": "Reservation is not assignment",
+    "rule": "Mandatory reservation and assignment retain atomicity or explicit pending state; runtime admission is another layer.",
+    "module_ids": [
+      "BND-WORK",
+      "MOD-CRM"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-020",
+    "title": "AI prices have an owner",
+    "rule": "Providers/Agents determines tariffs and quotes; CRM is not a second AI price list.",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-CRM"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-021",
+    "title": "Historical pricing and evidence",
+    "rule": "New tariffs or versions do not change past budgets, usage or accepted runs.",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-PROMPTS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-022",
+    "title": "Cost completeness",
+    "rule": "Distinguish unknown, partial and free; make currencies, units, valuation basis and aggregation deduplication explicit.",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "BND-WORK"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-023",
+    "title": "Source runtime authority",
+    "rule": "Only its owner changes process or workflow state; technical success is not business acceptance.",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS",
+      "MOD-TESTLAB"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-024",
+    "title": "Simple Chats remain ordinary",
+    "rule": "UI sharing introduces no implicit agent tools, context or store; preserve existing turn durability.",
+    "module_ids": [
+      "BND-SIMPLECHATS",
+      "BND-CONVERSATIONS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-025",
+    "title": "Source revisions and rebuild",
+    "rule": "Projection sequences, gaps, tombstones and coverage are explicit; old events do not resurrect a deleted source.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-MEMORY",
+      "MOD-CRM"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-026",
+    "title": "Outbox and inbox atomicity",
+    "rule": "Publication intent commits with source state; the dedupe marker commits with the consumer effect; a transient signal is not master data.",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-027",
+    "title": "One schema authority",
+    "rule": "Canonical migration mappings are not duplicated by runtime DDL; subset hosts do not generate production migrations.",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-028",
+    "title": "Transaction guarantees",
+    "rule": "A cross-context atomic operation has an actual shared connection and transaction, a short scope and coordinated retries.",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "BND-WORK",
+      "MOD-CRM"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-029",
+    "title": "Single-writer cutover",
+    "rule": "A legacy adapter delegates instead of dual-writing; rollback and restore respect data compatibility and external effects.",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-030",
+    "title": "Unavailable is not success",
+    "rule": "Missing, denied or unsupported capabilities are explicit, not replaced by production fakes.",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-SECURITY"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-031",
+    "title": "Data minimization",
+    "rule": "Secrets and PII do not leak through projections, quotes, logs or exports; membership and source access are current.",
+    "module_ids": [
+      "MOD-SECURITY",
+      "MOD-COLLAB",
+      "MOD-CRM"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-032",
+    "title": "Headless and desktop parity",
+    "rule": "Owner operations do not depend on a Razor page; desktop-only host actions remain capability-gated.",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "BND-STORAGE"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-033",
+    "title": "A snapshot is bounded evidence",
+    "rule": "Snapshot capture has coverage, expiry and fingerprint, not silent fallback or mutation authority.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-034",
+    "title": "Registration is not a grant",
+    "rule": "HTTP scope, a plugin grant or a tool descriptor does not replace owner policy.",
+    "module_ids": [
+      "BND-API",
+      "MOD-PLUGINS",
+      "MOD-AGENTS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-035",
+    "title": "Notifications and UI lifecycle",
+    "rule": "Post-commit invalidation does not replace durable state; fence late callbacks and dispose subscriptions.",
+    "module_ids": [
+      "BND-CONVERSATIONS",
+      "BND-COMPOSITION"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-036",
+    "title": "Stored-shape compatibility",
+    "rule": "NodeKeys, URLs, payload versions, import mappings and history have explicit migration policies.",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-037",
+    "title": "Traceable recovery",
+    "rule": "Required pending or failed effects and uncertain external effects have receipts, correlation and safe retry or reconciliation.",
+    "module_ids": [
+      "BND-CONNECTORS",
+      "MOD-PROCESSES"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-038",
+    "title": "Future functions do not expand scope",
+    "rule": "A gap or estimate does not authorize implementation; new hardening guarantees require scoped proof.",
+    "module_ids": [
+      "MOD-TESTLAB",
+      "MOD-MEMORY",
+      "MOD-SCHEDULER"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-039",
+    "title": "No silent loss of supported capabilities",
+    "rule": "Rewire a working integration instead of removing it merely to clean up the dependency graph.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-040",
+    "title": "Measure actual outcomes",
+    "rule": "Use actual tests, build graphs and performance evidence rather than quotas, assumed passes or counts of new abstractions.",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-041",
+    "title": "Automation calls owners, not foreign stores",
+    "rule": "Agents, workflows, and processes use typed destination-owner operations; Structure is not a universal intermediary.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-042",
+    "title": "Surface availability is explicit",
+    "rule": "API, descriptor, preset name, or UI existence does not prove an attached authorized tool or executor.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-SCHEDULER",
+      "MOD-PROCESSES"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-043",
+    "title": "Managed identity is not a display label",
+    "rule": "Caller authority is resolved and bounded; ordinary automation cannot spoof HR or inherit interactive-only privileges.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-044",
+    "title": "Simple Chats administration remains external",
+    "rule": "Definition administration does not add agent dependencies, tools, implicit context, conversation access, or transcript mutation to Simple Chats.",
+    "module_ids": [
+      "BND-SIMPLECHATS",
+      "MOD-AGENTS",
+      "BND-CONVERSATIONS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-045",
+    "title": "New retry-safe commands commit receipts with effects",
+    "rule": "An owner effect and its durable dedupe/receipt must share an atomic boundary before automatic retry safety is advertised.",
+    "module_ids": [
+      "MOD-CRM",
+      "BND-SIMPLECHATS",
+      "MOD-SCHEDULER"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-046",
+    "title": "Read and disclosure permissions differ",
+    "rule": "Source access, model/provider disclosure, and destination publication each require an applicable permission decision.",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-RESOURCES",
+      "MOD-AGENTS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-047",
+    "title": "Use-time authority survives no cache shortcut",
+    "rule": "Current authorization, actor scope, field policy, and required approval are checked at dispatch/resume and receipt disclosure.",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORKFLOWS"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-048",
+    "title": "Step retry differs from loop iteration",
+    "rule": "Persist logical step/iteration/effect identity; replay reconciles existing owner effects rather than deriving new IDs from attempts.",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-049",
+    "title": "Safe lookup is not a stale assignment guarantee",
+    "rule": "Typed identity resolution and current eligibility validation are required before source references drive mutations.",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-RESOURCES",
+      "BND-WORK"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-050",
+    "title": "Administration preserves separate fact owners",
+    "rule": "Staffing fields cannot overwrite agent configuration, Provider AI prices, or Work Management assignments.",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-AGENTS",
+      "MOD-PROVIDERS",
+      "BND-WORK"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-051",
+    "title": "Required foreign effects remain visible",
+    "rule": "Successful execution does not hide blocked required domain effects; compensation never silently deletes pre-existing or later-edited data.",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "status": "NORMATIVE_TARGET"
+  },
+  {
+    "id": "INV-052",
+    "title": "Engineering artifacts are English",
+    "rule": "Instructions, catalogs, implementation bundles, comments, and reports use English; retain required technical identifiers and product-localized strings.",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "status": "NORMATIVE_TARGET"
+  }
+]

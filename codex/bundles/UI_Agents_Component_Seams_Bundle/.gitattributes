@@ -1,2 +1,0 @@
-# Hashed execution evidence must retain exact bytes across checkouts.
-proof/** -text

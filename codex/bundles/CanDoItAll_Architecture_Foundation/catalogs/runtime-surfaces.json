@@ -1,0 +1,215 @@
+[
+  {
+    "id": "SURF-001",
+    "name": "Managed HR agent",
+    "owner_module_id": "MOD-AGENTS",
+    "baseline_state": "CODE_OBSERVED",
+    "observed_purpose": "InteractiveChat",
+    "reads": "Agents safe catalog/settings/options, usage, process history; safe CRM search/detail and affiliations.",
+    "commands": "Draft agent create, allowed settings update, avatar, selected manager review; CRM party create/affiliation upsert.",
+    "source_ids": [
+      "SRC-029",
+      "SRC-030"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-058",
+      "CON-059",
+      "CON-063"
+    ],
+    "limitations": "Identity-bound; separate CRM scope; no Simple Chats methods in the fully read provider; no complete helper/security execution audit.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-002",
+    "name": "Managed Scheduler agent",
+    "owner_module_id": "MOD-SCHEDULER",
+    "baseline_state": "CODE_OBSERVED",
+    "observed_purpose": "InteractiveChat",
+    "reads": "Workflow targets and schedule summaries.",
+    "commands": "Workflow schedule creation.",
+    "source_ids": [
+      "SRC-031"
+    ],
+    "contract_ids": [
+      "CON-066",
+      "CON-067"
+    ],
+    "limitations": "Workflow-only. No implied process schedule, plan update/delete, saved input-JSON disclosure, or headless grant.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-003",
+    "name": "Simple Chats definition application API",
+    "owner_module_id": "BND-SIMPLECHATS",
+    "baseline_state": "CODE_OBSERVED",
+    "observed_purpose": "Application API, not itself a runtime tool",
+    "reads": "Definition get/list/paged list.",
+    "commands": "Create/update/status.",
+    "source_ids": [
+      "SRC-034"
+    ],
+    "contract_ids": [
+      "CON-061",
+      "CON-062"
+    ],
+    "limitations": "Existing changes use expected concurrency token; create idempotency is not promised by the request shape.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-004",
+    "name": "HR -> Simple Chats administration",
+    "owner_module_id": "BND-SIMPLECHATS",
+    "baseline_state": "REQUIRED_EXTENSION",
+    "observed_purpose": "To be explicitly approved; initially managed interactive integration",
+    "reads": "Safe definition summaries/settings.",
+    "commands": "Allowlisted definition create/update/status.",
+    "source_ids": [
+      "USER-002",
+      "SRC-029",
+      "SRC-034"
+    ],
+    "contract_ids": [
+      "CON-061",
+      "CON-062"
+    ],
+    "limitations": "External adapter only; no transcripts/turns/tools inside Simple Chats; prove atomic create receipt before retries.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-005",
+    "name": "General direct Process runtime tool",
+    "owner_module_id": "MOD-PROCESSES",
+    "baseline_state": "NOT_DOCUMENTED_AS_EXISTING",
+    "observed_purpose": "None established",
+    "reads": "No general direct tool inventory established.",
+    "commands": "No general direct tool inventory established.",
+    "source_ids": [
+      "SRC-028"
+    ],
+    "contract_ids": [
+      "CON-028",
+      "CON-068"
+    ],
+    "limitations": "Retain real HTTP/UI/governed/Structure bridge operations; do not infer tools from process-agent/template names.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-006",
+    "name": "Project Structure tools and workflow executor",
+    "owner_module_id": "MOD-STRUCTURE",
+    "baseline_state": "BASELINE_CODE_AND_DOCUMENTATION",
+    "observed_purpose": "Existing supported purposes must be reverified",
+    "reads": "Scoped Structure/project/node reads.",
+    "commands": "Native/task/asset operations and declared execution bridges.",
+    "source_ids": [
+      "SRC-025",
+      "SRC-027",
+      "SRC-028"
+    ],
+    "contract_ids": [
+      "CON-018",
+      "CON-021",
+      "CON-023"
+    ],
+    "limitations": "Preserve current positive paths; restart/multi-instance receipt guarantees remain explicit proof obligations.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-007",
+    "name": "Prompt, workflow, and capability curators",
+    "owner_module_id": "MOD-AGENTS",
+    "baseline_state": "DOCUMENTED_NOT_REAUDITED_METHOD_BY_METHOD",
+    "observed_purpose": "Current provider-specific gates require discovery",
+    "reads": "Safe owner catalog/settings according to each pack.",
+    "commands": "Owner-specific versioned curation.",
+    "source_ids": [
+      "SRC-028"
+    ],
+    "contract_ids": [
+      "CON-034",
+      "CON-064",
+      "CON-065"
+    ],
+    "limitations": "No automatic protected-capability grants or rewriting admitted definitions; each provider independently registered and tested.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-008",
+    "name": "General operational agent CRM/Resources lookup",
+    "owner_module_id": "MOD-AGENTS",
+    "baseline_state": "REQUIRED_WHERE_MISSING",
+    "observed_purpose": "Explicitly granted task-planning/data-use purpose",
+    "reads": "CRM identity/availability and Resources/content.",
+    "commands": "Task write separately uses Work Management.",
+    "source_ids": [
+      "USER-002",
+      "SRC-032",
+      "SRC-036"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-069",
+      "CON-071",
+      "CON-023"
+    ],
+    "limitations": "Do not impersonate HR. Source read, provider disclosure, and task audience policy are independent.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-009",
+    "name": "Cross-domain workflow owner-operation executors",
+    "owner_module_id": "BND-WORKFLOWS",
+    "baseline_state": "TARGET_EXTENSION_PROTOCOL",
+    "observed_purpose": "Verified admitted workflow delegation",
+    "reads": "Owner queries through registered typed executors.",
+    "commands": "Only explicitly registered/granted owner commands.",
+    "source_ids": [
+      "USER-002",
+      "SRC-027"
+    ],
+    "contract_ids": [
+      "CON-072"
+    ],
+    "limitations": "Structure executor is the current precedent, not proof every domain executor already exists.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-010",
+    "name": "Cross-domain process owner-operation steps",
+    "owner_module_id": "MOD-PROCESSES",
+    "baseline_state": "TARGET_EXTENSION_PROTOCOL",
+    "observed_purpose": "Verified admitted process delegation",
+    "reads": "Owner queries through registered step adapters.",
+    "commands": "Only explicitly registered/granted owner commands.",
+    "source_ids": [
+      "USER-002",
+      "SRC-035"
+    ],
+    "contract_ids": [
+      "CON-073"
+    ],
+    "limitations": "Preserve checkpoint gap recovery and scope; no browser dependency or generic privileged HTTP calls.",
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "SURF-011",
+    "name": "Optional CRM-specialist preset",
+    "owner_module_id": "MOD-CRM",
+    "baseline_state": "OPTIONAL_FUTURE",
+    "observed_purpose": "Distinct approved managed identity/purpose",
+    "reads": "Safe CRM catalogs.",
+    "commands": "Approved CRM business fields only.",
+    "source_ids": [
+      "USER-002"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-058",
+      "CON-059",
+      "CON-060"
+    ],
+    "limitations": "Same CRM writer, no new master and no inherited HR technical privileges.",
+    "execution_status": "NOT_RUN"
+  }
+]

@@ -1,1 +1,0 @@
-ERROR: Generated or local-only tracked files match '\.(?:log|pyc|pid)$': 118 file(s); first is codex/bundles/UI_Agents_Component_Seams_Bundle/proof/SB01/transcripts/characterization-discovery.log

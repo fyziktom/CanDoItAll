@@ -1,0 +1,3530 @@
+[
+  {
+    "id": "ANCH-0001",
+    "source_id": "MAP-01",
+    "label": "Project",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:45",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0002",
+    "source_id": "MAP-01",
+    "label": "ProjectPhase",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:68",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0003",
+    "source_id": "MAP-01",
+    "label": "ProjectOptionSelection",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:87",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0004",
+    "source_id": "MAP-01",
+    "label": "ProjectHierarchyLink",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:100",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0005",
+    "source_id": "MAP-01",
+    "label": "ProjectStatus / ProjectPhaseStatus / ProjectOptionCategory enums",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:16",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0006",
+    "source_id": "MAP-01",
+    "label": "ProjectSummary",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:164",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0007",
+    "source_id": "MAP-01",
+    "label": "ProjectAccessListItem / ProjectHierarchyLinkSummary / ProjectHierarchySnapshot",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:179",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0008",
+    "source_id": "MAP-01",
+    "label": "ProjectEditorModel / ProjectPhaseEditorModel / ProjectOptionEditorModel",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:193",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0009",
+    "source_id": "MAP-01",
+    "label": "ProjectsService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:240",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0010",
+    "source_id": "MAP-01",
+    "label": "ProjectMutationScopeKeys",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletion.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0011",
+    "source_id": "MAP-01",
+    "label": "IProjectDeletionParticipant (+ Preparation/Completion/Recovery/Warning records, exceptions)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletion.cs:46",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0012",
+    "source_id": "MAP-01",
+    "label": "IProjectRecordQueryService / ProjectRecordQueryService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectRecordQueryService.cs:47",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0013",
+    "source_id": "MAP-01",
+    "label": "IRecentProjectActivityQueryService / RecentProjectActivityQueryService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/RecentProjectActivityQueryService.cs:18",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0014",
+    "source_id": "MAP-01",
+    "label": "Party integration enums (ProjectPartyPortfolioCategory, ProjectPartyAssignmentRole, ProjectPartyQuickCreateKind, ProjectPartyType, ProjectResourceRateUnit)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0015",
+    "source_id": "MAP-01",
+    "label": "IProjectPartyIntegrationBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:328",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0016",
+    "source_id": "MAP-01",
+    "label": "IProjectPartyCostRateBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:442",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0017",
+    "source_id": "MAP-01",
+    "label": "IProjectNodeScopeBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:303",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0018",
+    "source_id": "MAP-01",
+    "label": "IProjectNodeAssignmentPolicyBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:311",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0019",
+    "source_id": "MAP-01",
+    "label": "IProjectNodeDetailsBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:434",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0020",
+    "source_id": "MAP-01",
+    "label": "IProjectWorkItemAssignmentMutationBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:189",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0021",
+    "source_id": "MAP-01",
+    "label": "ProjectNodeReference / ProjectNodeScopeResolution / ProjectNodeDetails / ProjectNodeAssignmentSemantics",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:255",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0022",
+    "source_id": "MAP-01",
+    "label": "ProjectPartyIntegrationErrorCodes",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:320",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0023",
+    "source_id": "MAP-01",
+    "label": "Noop bridge defaults (NoopProjectNodeScopeBridge, NoopProjectNodeAssignmentPolicyBridge, NoopProjectPartyIntegrationBridge, NoopProjectWorkItemAssignmentMutationBridge, NoopProjectNodeDetailsBridge, NoopProjectPartyCostRateBridge)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:449",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0024",
+    "source_id": "MAP-01",
+    "label": "IProjectPackageService + ProjectPackageManifest/Export/Import contracts",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPackageContracts.cs:111",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0025",
+    "source_id": "MAP-01",
+    "label": "ProjectsAgentChatContextBuilder",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectsAgentChatContextBuilder.cs:16",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0026",
+    "source_id": "MAP-01",
+    "label": "ProjectsExecutionAuthorityProvider",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectsExecutionAuthorityProvider.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0027",
+    "source_id": "MAP-01",
+    "label": "ProjectFileFilter / ProjectHierarchyFilterMode / ProjectFileFilterProjection",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs:16",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0028",
+    "source_id": "MAP-01",
+    "label": "IProjectFilesPilotCoordinator / ProjectFilesPilotCoordinator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFilesPilot.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0029",
+    "source_id": "MAP-01",
+    "label": "IProjectFilePortfolioCoordinator / ProjectFilePortfolioCoordinator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFilePortfolio.cs:10",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0030",
+    "source_id": "MAP-01",
+    "label": "ProjectFilesPilotWorkspace / ProjectFilesPilotInteraction / ProjectFilePortfolioWorkspace",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFilesPilotSessions.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0031",
+    "source_id": "MAP-01",
+    "label": "ProjectFileReadOnlyInteractionFactory",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileReadOnlyInteractionFactory.cs:9",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0032",
+    "source_id": "MAP-01",
+    "label": "ProjectFileScopeProvider",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileScopeProvider.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0033",
+    "source_id": "MAP-01",
+    "label": "ProjectFileToolsStorageBindingSource",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileToolsStorageBindingSource.cs:10",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0034",
+    "source_id": "MAP-01",
+    "label": "ProjectFileBrowserPolicy",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileBrowserPolicy.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0035",
+    "source_id": "MAP-01",
+    "label": "ProjectsProjectTransferTargetStateParticipant",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectTransferTargetStateParticipant.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0036",
+    "source_id": "MAP-01",
+    "label": "ProjectsSchemaInitializer",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectsSchemaInitializer.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0037",
+    "source_id": "MAP-01",
+    "label": "AddProjectsModule / ProjectsModuleAssemblyMarker",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectsModuleServiceCollectionExtensions.cs:11",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0038",
+    "source_id": "MAP-01",
+    "label": "ProjectsPage (/projects)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0039",
+    "source_id": "MAP-01",
+    "label": "ProjectsAgentChatContextProvider",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsAgentChatContextProvider.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0040",
+    "source_id": "MAP-01",
+    "label": "ProjectsBoard",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsBoard.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0041",
+    "source_id": "MAP-01",
+    "label": "ProjectModalHost",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectModalHost.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0042",
+    "source_id": "MAP-01",
+    "label": "ProjectHierarchyModal",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectHierarchyModal.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0043",
+    "source_id": "MAP-01",
+    "label": "ProjectFilesDialog / ProjectFilesPortfolioPane",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectFilesDialog.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0044",
+    "source_id": "MAP-01",
+    "label": "ProjectPortfolioCards",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectPortfolioCards.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0045",
+    "source_id": "MAP-01",
+    "label": "ProjectPortfolioTreeNodeBuilder / ProjectsPresentation / StarterObjectDraft / ProjectHierarchyDialogState",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectPortfolioTreeNodeBuilder.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0046",
+    "source_id": "MAP-01",
+    "label": "ProjectsPageLoadGeneration",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPageLoadGeneration.cs:27",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0047",
+    "source_id": "MAP-02",
+    "label": "ProjectObjectRecord (+ProjectObjectRecordConfiguration, table Workbench_ProjectObjects)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:60-115",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0048",
+    "source_id": "MAP-02",
+    "label": "ProjectObjectLinkRecord (table Workbench_ProjectObjectLinks)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:117-139",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0049",
+    "source_id": "MAP-02",
+    "label": "ProjectWorkbenchViewStateRecord (table Workbench_ViewStates)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:141-160",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0050",
+    "source_id": "MAP-02",
+    "label": "ProjectNodeBindingRecord / ProjectNodeReferenceRecord (Workbench_ProjectNodeBindings, Workbench_ProjectNodeReferences) + ProjectNodeBindingStorage",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeBindings.cs:24-86,265",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0051",
+    "source_id": "MAP-02",
+    "label": "ProjectNodeLifecycleEventRecord (Workbench_ProjectNodeLifecycleEvents)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeLifecycleHistory.cs:14-45",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0052",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureProjectionLayoutRecord (Workbench_ProjectProjectionLayouts)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssemblyService.cs:16-36",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0053",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureLeaseRecord / ProjectStructureOperationAnalyticsRecord (Workbench_ProjectStructureLeases, Workbench_ProjectStructureOperationAnalytics)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentModels.cs:7-110",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0054",
+    "source_id": "MAP-02",
+    "label": "ProjectCrossModuleMutationRecord (Workbench_ProjectCrossModuleMutations) + ProjectCrossModuleMutationCoordinator",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCrossModuleMutations.cs:32-132",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0055",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureNode / ProjectStructureLink / ProjectStructureSurface (read model) + create/edit/reclassify/seed requests",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:162-401",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0056",
+    "source_id": "MAP-02",
+    "label": "ProjectWorkbenchService (partial: Models + Clipboard)",
+    "kind": "aggregate",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:423-2056; src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchService.Clipboard.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0057",
+    "source_id": "MAP-02",
+    "label": "ProjectWorkbenchRelationService / ProjectWorkbenchLifecycleService / ProjectWorkbenchCrossModuleMutationService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchRelationService.cs; src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchLifecycleService.cs; src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCrossModuleMutationService.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0058",
+    "source_id": "MAP-02",
+    "label": "ProjectNodeKindRegistry / ProjectNodeKindDescriptor / ProjectNodeKindFamily",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeKindRegistry.cs:6-938",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0059",
+    "source_id": "MAP-02",
+    "label": "ProjectObjectMetadataEnvelope + typed metadata (ProjectBlock/Meeting/Recording/Transcript/Participant/WorkItem/Repository/File/Script/Environment/Infrastructure/SecretReference/Link/WorkflowNode) + ProjectObjectMetadataSerializer",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchMetadata.cs:10-1180",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0060",
+    "source_id": "MAP-02",
+    "label": "ProjectWorkbenchGraphConventions / ProjectWorkbenchObjectModeling / ProjectWorkbenchNodeMapper",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchGraphConventions.cs; src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs; src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchNodeMapper.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0061",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureInvariantService / ProjectStructureAutomaticPlacementPolicy / ProjectStructureNodeGeometry",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureInvariantService.cs; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAutomaticPlacementPolicy.cs; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureNodeGeometry.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0062",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureAssemblyService + ProjectStructureProjectionContext + IProjectStructureProjectionContributor",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssemblyService.cs:42-215",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0063",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureProcessProjectionContributor + ProjectStructureProcessRunRecordProjector + ProjectStructureProcessRunOutputFolderPolicy",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessProjectionContributor.cs:14-1419; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessRunRecordProjector.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0064",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureAgentService + ProjectStructureAgentContracts (ProjectStructureAgentContext, ProjectStructureAgentException, read/create/update/link/transfer/asset/checklist/dependency DTOs)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentService.cs:11-2384; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentContracts.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0065",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureLeaseService / ProjectStructureAnalyticsService (IProjectStructureAnalyticsService)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLeaseService.cs:8; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAnalyticsService.cs:22-34",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0066",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureSerializableMutationScope",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSerializableMutationScope.cs:7-148",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0067",
+    "source_id": "MAP-02",
+    "label": "Task application cluster: ProjectStructureTaskApplicationService, TaskCreationService, TaskDetailsService, TaskEstimateRefreshService, TaskPricingCommit/PersistenceService, TaskEditCompensationService, TaskResourceAttachmentService, TaskResourceService, TaskResourceCostService (+IProjectStructureTaskResourceCostStrategy: Person/Workflow/Process), WorkItemAssigneeService, WorkItemAssignmentRevisionService, ProjectTaskEstimate, ProjectTaskExecutionStatePolicy, ProjectTaskExpectedCostBasis, ProjectStructureTaskEditState, Canonical task policies",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskApplicationService.cs:60; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceCostService.cs:84; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkItemAssigneeService.cs:10",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0068",
+    "source_id": "MAP-02",
+    "label": "Gantt mutation cluster: ProjectStructureGanttMutationService, GanttMutationContracts, GanttRowOrderService, GanttScheduleMutationFactory",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureGanttMutationService.cs:11; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureGanttMutationContracts.cs:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0069",
+    "source_id": "MAP-02",
+    "label": "Plan analytics / manager summary: ProjectPlanAnalyticsQueryService, ProjectPlanSummaryCalculator, ProjectPlanAnalyticsContracts, ProjectManagerSummaryQueryService, ScopeResolver, SnapshotCalculator, StateStore, Contracts",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectPlanAnalyticsQueryService.cs:8; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryQueryService.cs:16-24",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0070",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureImportService / ProjectStructureChecklistService / ProjectStructureDependencyAnalysis / ProjectStructureSummaryModels",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureImportService.cs:9; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureChecklistService.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0071",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureSubprojectTransferCoordinator / ProjectStructureBatchDeletionCoordinator / ProjectStructureProjectionMaintenanceService / Deletion and Transfer failure models",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSubprojectTransferCoordinator.cs:13; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureBatchDeletionCoordinator.cs:3; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProjectionMaintenanceService.cs:15",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0072",
+    "source_id": "MAP-02",
+    "label": "Process node integration: ProjectStructureProcessNodeService, ProcessSubprocessLaunchCoordinator (IProcessSubprocessLaunchCoordinator), ProcessLaunchContextBuilder, ProcessLaunchSourceSnapshotMapper, ProcessSubprocessParentArtifactContextBuilder, ProcessNodeKeys, ProcessParentNodePolicy, ProcessContextNodeFilter",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessNodeService.cs:15; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessSubprocessLaunchCoordinator.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0073",
+    "source_id": "MAP-02",
+    "label": "Workflow node integration: ProjectStructureWorkflowNodeService, WorkflowLaunchIntentFactory, WorkflowNodeKeys, WorkflowPreviewSimulationSupport, WorkflowInputSettingsNormalizer",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs:12-23; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowLaunchIntentFactory.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0074",
+    "source_id": "MAP-02",
+    "label": "WorkbenchProjectStructureRuntimeGateway (IProjectStructureRuntimeGateway impl)",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureRuntimeGateway.cs:11-601",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0075",
+    "source_id": "MAP-02",
+    "label": "WorkbenchProjectStructureSourceSnapshotProvider / WorkbenchProjectStructureMemorySourceGatewayAdapter / ProjectMemoryIngestionService",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureSourceSnapshotProvider.cs:10; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureMemorySourceGatewayAdapter.cs:10; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectMemoryIngestionService.cs:8",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0076",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureInvocationSnapshot (+Coverage, Mapper, ReadDispatcher)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureInvocationSnapshot.cs:12-758; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureInvocationSnapshotReadDispatcher.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0077",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureAgentChatContextBuilder / ProjectStructureExecutionAuthorityProvider / ProjectStructureAgentRootAuthorityWriteGuard / ProjectStructureOutputRootAuthorityResolver",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentChatContextBuilder.cs:17; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureExecutionAuthorityProvider.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0078",
+    "source_id": "MAP-02",
+    "label": "ProjectStructureDeferredNodeCompletion (queue, processor, hosted worker, IProjectStructureDeferredNodeCompletionQueue)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletion.cs:93-383",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0079",
+    "source_id": "MAP-02",
+    "label": "Runtime execution cluster: IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher, RuntimeAdapters (executable resolver, execution adapter, terminal presenter, elevation), RuntimePlan/Compiler, RuntimePathResolver, RuntimeSessionRegistry (+hosted service), RuntimeNodeMetadataBoundary, DirectDotNetCommandPolicy, DotNetProjectTargetResolver, DotNetRuntimeMetadataHydrator, LegacyRuntimeCommandMigrator, SourceWorkspacePathResolver",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs:6; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs:9-470; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeSessionRegistry.cs:16",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0080",
+    "source_id": "MAP-02",
+    "label": "Asset cluster: ProjectAssetStorageService, ProjectAssetCreationService/Contracts (IProjectAssetContentGenerator), ProjectAssetContentGeneratorResolver, ProjectTextAsset*, ProjectAssetFileNamePolicy, ProjectStructureAssetContentReader, AssetSourcePolicy, ExternalAssetSourcePolicy(+HttpClient), SvgAssetValidator, ManagedAssetCreationPolicy, AssetAgentFailureBoundary, WebLinkResolver, ExternalLinkClassifier",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectAssetStorageService.cs:6; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectAssetCreationContracts.cs:46; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssetContentReader.cs:10",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0081",
+    "source_id": "MAP-02",
+    "label": "File-tools integration cluster: ProjectStructureFileScopeResolver (IProjectStructureNodeFileScopeProvider + IFileToolsStorageBindingSource), FileRequests, FileActionCoordinator, LocalFileActionCoordinator (+IProjectStructureCurrentNodeResolver), LocalFileOpener (IProjectStructureLocalFileOpener), KnownFileInteractionCoordinator/Slot, FileInteractionPolicy, FileBrowserHostActions, FileBrowserWindowKey, WorkbenchFileInteractionComposition, WorkbenchMermaidFileView.razor, WorkbenchMarkdownMermaidBlock.razor, WorkbenchMarkdownMermaidComponentRegistration, WorkbenchMermaidRenderingPolicy",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileScopeResolver.cs:12-16; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileActionCoordinator.cs:11; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchFileInteractionComposition.cs:11",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0082",
+    "source_id": "MAP-02",
+    "label": "Canvas-facing catalog/editor cluster: ProjectStructureCanvasCatalog(+RichDefinitions), ProjectStructureCreateRequestComposer, MenuComposition, ActionShortcuts, FileActions, NodeEditor, NodeDescriptor, NodeActionCapabilityResolver, TaskDialogContracts, TaskDetailsContracts, CanvasTaskCommitPolicy, PreviewFieldAttribute",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.cs:46; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureNodeEditor.cs:7; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureMenuComposition.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0083",
+    "source_id": "MAP-02",
+    "label": "Calendar: ProjectCalendarAdapter, ProjectCalendarStateParser, ProjectCalendarViewState",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Calendar/ProjectCalendarAdapter.cs:5; src/Modules/CanDoItAll.Modules.Workbench/Calendar/ProjectCalendarStateParser.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0084",
+    "source_id": "MAP-02",
+    "label": "WorkbenchStateService / InMemoryWorkbenchStateStore / ArtifactReference",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/WorkbenchTabState.cs:20-856; src/Modules/CanDoItAll.Modules.Workbench/Workbench/ArtifactReference.cs:3",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0085",
+    "source_id": "MAP-02",
+    "label": "DatabaseTransfer: ProjectsDatabaseTransferHandler (IDatabaseTransferHandler), ProjectTransferDataSet, ProjectTransferTargetStateGuard, WorkbenchProjectTransferTargetStateParticipant, ProjectPackageService (IProjectPackageService), ProjectPackageArchive, ProjectPackageStorageExporter/Importer/BindingPolicy/CatalogSnapshot",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectsDatabaseTransferHandler.cs:6-14; src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectTransferDataSet.cs:38-60; src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectPackageService.cs:16-28",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0086",
+    "source_id": "MAP-02",
+    "label": "WorkbenchModuleServiceCollectionExtensions.AddWorkbenchModule",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs:29-207",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0087",
+    "source_id": "MAP-02",
+    "label": "ProjectNodeScopeBridge / ProjectNodeDetailsBridge / ProjectNodeAssignmentPolicyBridge (Projects bridge impls)",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeScopeBridge.cs:11; src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeDetailsBridge.cs:7; src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeAssignmentPolicyBridge.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0088",
+    "source_id": "MAP-02",
+    "label": "ProjectWorkbenchCommandService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCommandService.cs:9-198",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0089",
+    "source_id": "MAP-02",
+    "label": "ProjectWorkbenchSchemaInitializer / ProjectStructureAgentSchemaInitializer",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchSchemaInitializer.cs:5-12; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentSchemaInitializer.cs:5-12",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0090",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage (page shell + canvas host)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0091",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.Processes (process link/start/estimate orchestration)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Processes.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0092",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.Workflows (delete/reconnect/summary/export/transcript/mermaid)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0093",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.WorkflowNodes (workflow add/start dialogs)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.WorkflowNodes.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0094",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.PartyIntegration (participant/meeting party editor)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0095",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.ImageGeneration (generated image asset flow)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0096",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.AgentWindows (floating agent catalog toggle + refresh on agent completion)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.AgentWindows.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0097",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.ToolWindows (toolbox, object index, file browser windows)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ToolWindows.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0098",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.RuntimeLaunch",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.RuntimeLaunch.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0099",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.NodeEditing (inspector action catalog + dispatch + edit routing)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0100",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.NodeQuickActions (quick action + web preview dialogs)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeQuickActions.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0101",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.NodeMutations (block type change, note conversion, move-to-subproject)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0102",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.Clipboard (copy/cut/paste subtrees)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Clipboard.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0103",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.SelectionPanel (selection panel state + render keys)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SelectionPanel.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0104",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.ProjectCreation (embedded Projects create wizard)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectCreation.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0105",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.ProjectHierarchy (add/reconnect subproject)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0106",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.Tree (subtree/outline helpers + clipboard text)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Tree.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0107",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.SignalToolbox (marker/progress/priority tiles)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SignalToolbox.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0108",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.Storage (storage summary cards)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Storage.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0109",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.CreateCatalog (hydrate create actions with dynamic options)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.CreateCatalog.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0110",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.ComponentAdapters (adapters to coordinators + typed callbacks)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0111",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.Recomposition / SelectionSync",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Recomposition.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0112",
+    "source_id": "MAP-03",
+    "label": "ProjectStructurePage.OverlayStates (dialog state records)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.OverlayStates.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0113",
+    "source_id": "MAP-03",
+    "label": "ProjectCalendarPage",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0114",
+    "source_id": "MAP-03",
+    "label": "ProjectStructureSelectionPanel (presentational)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructureSelectionPanel.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0115",
+    "source_id": "MAP-03",
+    "label": "ProjectStructureAgentChatContextProvider (agent chat context publisher)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureAgentChatContextProvider.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0116",
+    "source_id": "MAP-03",
+    "label": "ProjectStructureGanttPanel (Gantt tab, second mini-page)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0117",
+    "source_id": "MAP-03",
+    "label": "ProjectManagerSummaryPanel + ProjectManagerActivityDialog + ChartOptions",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectManagerSummaryPanel.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0118",
+    "source_id": "MAP-03",
+    "label": "ProjectStructureCanvasDialogs (overlay dialog aggregator)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasDialogs.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0119",
+    "source_id": "MAP-03",
+    "label": "ProjectStructureProcessAssignmentDialog (+AgentPicker, AgentDetails, SwitchConfirmation)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0120",
+    "source_id": "MAP-03",
+    "label": "ProjectStructureSupportDialogs",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureSupportDialogs.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0121",
+    "source_id": "MAP-03",
+    "label": "Task dialogs and editors (Canvas task create, Gantt task, text asset, estimate/execution editors, resource picker/cost estimator)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0122",
+    "source_id": "MAP-03",
+    "label": "Dialog coordinators (service-layer glue living under Pages/Components)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasTaskDialogCoordinator.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0123",
+    "source_id": "MAP-03",
+    "label": "Floating canvas windows (Toolbox, ObjectIndex, FileBrowser, Health, Signals, ToolbarActions)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0124",
+    "source_id": "MAP-03",
+    "label": "Page helper statics/models",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructureNodeHelpers.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0125",
+    "source_id": "MAP-03",
+    "label": "CanvasAdapters (surface projection/policy layer)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0126",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentRuntimeToolProvider",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs:17",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0127",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentRuntimeToolContracts (OperationAck/OperationCount/ScopeInput/CompactNode/ReadToolData)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolContracts.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0128",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentProjectCreationCoordinator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentProjectCreationCoordinator.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0129",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentNodeCopyCoordinator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentNodeCopyCoordinator.cs:3",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0130",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentAuthorizationService + ProjectPlanAgentAuthorizationPolicy",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectPlanAgentAuthorization.cs:80",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0131",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureNonTaskWritePolicy",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureNonTaskWritePolicy.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0132",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentToolAnalyticsRecorder / AnalyticsBoundary / ToolResponseProjection / AssetContentSanitizer",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentToolAnalyticsRecorder.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0133",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentService.cs:11",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0134",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentContracts (ProjectStructureAgentContext, lease/read/node/link/workflow/process/asset/import/analytics DTOs, ProjectStructureAgentException)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentContracts.cs:22",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0135",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureInvocationSnapshot (+ Coverage, Node, Link, Mapper)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureInvocationSnapshot.cs:134",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0136",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureInvocationSnapshotReadDispatcher + ReadContext",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureInvocationSnapshotReadDispatcher.cs:50",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0137",
+    "source_id": "MAP-04",
+    "label": "WorkbenchProjectStructureRuntimeGateway",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureRuntimeGateway.cs:11",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0138",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentChatContextProvider.razor",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureAgentChatContextProvider.razor:22",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0139",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureAgentChatContextBuilder + ProjectStructureAgentChatView",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentChatContextBuilder.cs:17",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0140",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureRuntimeGuidanceContributor",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentContext/ProjectStructureRuntimeGuidanceContributor.cs:13",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0141",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureGanttObservation (+ Factory, Contributor, Attachment)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentContext/ProjectStructureGanttObservationModels.cs:27",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0142",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureExecutionAuthorityProvider",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureExecutionAuthorityProvider.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0143",
+    "source_id": "MAP-04",
+    "label": "ProjectCrossModuleMutationProcessor (+ payload records, ProcessingOptions)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectCrossModuleMutationProcessor.cs:64",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0144",
+    "source_id": "MAP-04",
+    "label": "ProjectCrossModuleMutationRecord + ProjectCrossModuleMutationCoordinator",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCrossModuleMutations.cs:32",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0145",
+    "source_id": "MAP-04",
+    "label": "ProjectCrossModuleMutationTimeSource",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectCrossModuleMutationTimeSource.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0146",
+    "source_id": "MAP-04",
+    "label": "ProjectManagedStorageDeletionPlanner / ProjectManagedStorageDeletionService / ProjectManagedStoragePhysicalIdentityPolicy / ProvenancePolicy / ObjectKey",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs:671",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0147",
+    "source_id": "MAP-04",
+    "label": "WindowsFileSystemObjectIdentity",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/WindowsFileSystemObjectIdentity.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0148",
+    "source_id": "MAP-04",
+    "label": "ProjectWorkbenchDeletionParticipant",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectWorkbenchDeletionParticipant.cs:9",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0149",
+    "source_id": "MAP-04",
+    "label": "ProjectWorkbenchCrossModuleMutationService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCrossModuleMutationService.cs:13",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0150",
+    "source_id": "MAP-04",
+    "label": "ProjectStructureLeaseRecord / ProjectStructureOperationAnalyticsRecord",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentModels.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0151",
+    "source_id": "MAP-04",
+    "label": "WorkbenchProjectStructureSourceSnapshotProvider / WorkbenchProjectStructureMemorySourceGatewayAdapter",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureSourceSnapshotProvider.cs:10",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0152",
+    "source_id": "MAP-05",
+    "label": "IConversationShellContributor / IConversationShellLauncher / IConversationShellCoordinator / ConversationShellWindowDescriptor",
+    "kind": "contract",
+    "source_locations": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellContracts.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0153",
+    "source_id": "MAP-05",
+    "label": "ConversationShellHost (floating catalog + windows host)",
+    "kind": "ui-component",
+    "source_locations": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellHost.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0154",
+    "source_id": "MAP-05",
+    "label": "Conversation presentation records and components (ConversationParticipantCard, ConversationParticipantCompactList, ConversationTranscript, ...)",
+    "kind": "ui-component",
+    "source_locations": "src/UI/CanDoItAll.Conversations.Components/Presentation/ConversationParticipantPresentation.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0155",
+    "source_id": "MAP-05",
+    "label": "IAgentReferenceDataProvider / AgentReferenceDataRequest / AgentReferenceDataSnapshot / IAgentReferenceDataCacheInvalidator",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ReferenceData/AgentReferenceDataContracts.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0156",
+    "source_id": "MAP-05",
+    "label": "IAgentFrameworkWorkspaceService (53 Task members) + CatalogFacade partial",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0157",
+    "source_id": "MAP-05",
+    "label": "IAgentChatLauncher / IFloatingAgentChatCoordinator / IFloatingAgentChatSettingsService / IAgentChatExecutionOrchestrator / AgentChatSendRequest",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/FloatingAgentChatContracts.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0158",
+    "source_id": "MAP-05",
+    "label": "IActiveAgentChatRegistry / ActiveAgentChatRegistry",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/ActiveAgentChatRegistry.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0159",
+    "source_id": "MAP-05",
+    "label": "IAgentChatPreparationPool",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/AgentChatPreparationPoolContracts.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0160",
+    "source_id": "MAP-05",
+    "label": "IAgentChatContextRegistry + scope/fragment/publication/position leases",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentChatContextRegistry.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0161",
+    "source_id": "MAP-05",
+    "label": "Agent chat context models (AgentChatContextScope, Fragment, Publication, Snapshot, Surface, SurfacePosition, WorkspacePosition, AgentChatExecutionCompleted, IAgentChatContextAttachment, ActiveAgentChat, FloatingAgentChatSettings)",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/FloatingAgentChatModels.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0162",
+    "source_id": "MAP-05",
+    "label": "IAgentChatExecutionNotificationHub / IAgentChatExecutionNotificationSubscription",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentChatExecutionNotificationHub.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0163",
+    "source_id": "MAP-05",
+    "label": "IAgentExecutionSourceAuthorityProvider / ProjectScopedExecutionAuthority",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentExecutionSourceAuthority.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0164",
+    "source_id": "MAP-05",
+    "label": "IAgentContextContributor",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentContextContributionContracts.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0165",
+    "source_id": "MAP-05",
+    "label": "AgentChatContextSurfaceProvider (shared declarative context publisher)",
+    "kind": "ui-component",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentChatContextSurfaceProvider.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0166",
+    "source_id": "MAP-05",
+    "label": "IAgentWorkspaceScopeAccessor / AgentChatWorkspaceScopeAccessor",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentWorkspaceScopeAccessor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0167",
+    "source_id": "MAP-05",
+    "label": "Shared agent UI components: AgentSelectionCard, AgentCompactList, ChatWorkspacePanel, AgentThreadHistoryDialog, AgentExecutionActivityStatus, ProviderModelSelector, ContextualAgentWorkspaceWindows",
+    "kind": "ui-component",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSelectionCard.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0168",
+    "source_id": "MAP-05",
+    "label": "FloatingAgentChatCoordinator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/FloatingAgentChatCoordinator.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0169",
+    "source_id": "MAP-05",
+    "label": "AgentConversationShellContributor (agents adapter to the shell)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentConversationShellContributor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0170",
+    "source_id": "MAP-05",
+    "label": "AgentChatLauncherCompatibilityFacade",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentChatLauncherCompatibilityFacade.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0171",
+    "source_id": "MAP-05",
+    "label": "AgentChatExecutionOrchestrator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentChatExecutionOrchestrator.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0172",
+    "source_id": "MAP-05",
+    "label": "AgentChatPreparationPool",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentChatPreparationPool.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0173",
+    "source_id": "MAP-05",
+    "label": "FloatingAgentChatSettingsService",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/FloatingAgentChatSettingsService.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0174",
+    "source_id": "MAP-05",
+    "label": "AgentFloatingConversationContent + AgentChatPanel (floating window content)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0175",
+    "source_id": "MAP-05",
+    "label": "AgentFrameworkAgentsExecutionAuthorityProvider (source kind 'agents')",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkAgentsExecutionAuthorityProvider.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0176",
+    "source_id": "MAP-05",
+    "label": "Module DI composition for the agent projection",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0177",
+    "source_id": "MAP-06",
+    "label": "AddAgentFrameworkModule composition root (MAF runtime + persistence + product wiring)",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0178",
+    "source_id": "MAP-06",
+    "label": "ICanDoItAllAgentWorkspaceFactory / CanDoItAllAgentWorkspaceFactory (profile+scope-fenced workspace service factory)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/AgentFrameworkWorkspaceFactory.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0179",
+    "source_id": "MAP-06",
+    "label": "CurrentProfileAgentFrameworkWorkspaceService (IAgentFrameworkWorkspaceService adapter for current DB profile)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0180",
+    "source_id": "MAP-06",
+    "label": "Persistent workflow stores (catalog/run/checkpoint/idempotency/external-request/usage) + EF entity configurations",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0181",
+    "source_id": "MAP-06",
+    "label": "Agent history file source / publication store / locator (AgentFramework_HistoryLocators)",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/AgentFileHistorySource.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0182",
+    "source_id": "MAP-06",
+    "label": "AgentProjectStructureAccessRevocationRecord + AgentProjectStructureAccessDeletionParticipant (AgentFramework_ProjectAccessRevocations)",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/AgentProjectStructureAccessDeletionParticipant.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0183",
+    "source_id": "MAP-06",
+    "label": "Provider runtime gateway + shared-provider snapshot loader / commit observer / relay usage projection / credential resolver",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/AgentFrameworkProviderRuntimeGateway.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0184",
+    "source_id": "MAP-06",
+    "label": "ProcessMock agent runtime + catalog (fake LLM provider for governed process testing)",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0185",
+    "source_id": "MAP-06",
+    "label": "ScenarioHarness agent runtime (scripted scenario execution)",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ScenarioHarnessAgentRuntime.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0186",
+    "source_id": "MAP-06",
+    "label": "Agent runtime tool providers (7 IAgentRuntimeToolProvider implementations)",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0187",
+    "source_id": "MAP-06",
+    "label": "HR agent feature services (administration, avatar, usage analytics, process review, execution lineage)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentAdministrationService.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0188",
+    "source_id": "MAP-06",
+    "label": "AgentFrameworkAiTechnicalAgentBridge (implementation of CrmHr's IAiTechnicalAgentBridge)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Bridge/AgentFrameworkAiTechnicalAgentBridge.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0189",
+    "source_id": "MAP-06",
+    "label": "AgentFrameworkCrmHrMetadata (CRM-HR block inside agent ConfigurationJson)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkCrmHrMetadata.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0190",
+    "source_id": "MAP-06",
+    "label": "Catalog warmup / organization catalog repair / workflow example seed / prompt-gallery migration",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkCatalogWarmupService.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0191",
+    "source_id": "MAP-06",
+    "label": "Execution recovery workers",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Execution/AgentFrameworkExecutionRecoveryService.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0192",
+    "source_id": "MAP-06",
+    "label": "Database transfer participants (AiAgents handler, project transfer target state, history transfer)",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/DatabaseTransfer/AgentHistoryTransferParticipant.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0193",
+    "source_id": "MAP-06",
+    "label": "Agent chat orchestration + floating agent chats (IConversationShellContributor)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentConversationShellContributor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0194",
+    "source_id": "MAP-06",
+    "label": "Chat context builders (agents/workflows/prompt gallery surfaces)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentFrameworkAgentsChatContextBuilder.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0195",
+    "source_id": "MAP-06",
+    "label": "Agents workspace UI (/agents): AgentsHomePage + panels/dialogs",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0196",
+    "source_id": "MAP-06",
+    "label": "Workflows UI (/agents/workflows): WorkflowsPage + WorkflowCanvasEditor",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0197",
+    "source_id": "MAP-06",
+    "label": "AgentFrameworkShellNavigationContributor (Workflows nav item)",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Navigation/AgentFrameworkShellNavigationContributor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0198",
+    "source_id": "MAP-07",
+    "label": "IProjectStructureRuntimeGateway + ProjectStructureRuntime* DTOs + UnavailableProjectStructureRuntimeGateway",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ProjectStructure/ProjectStructureRuntimeGatewayContracts.cs:5-223",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0199",
+    "source_id": "MAP-07",
+    "label": "IAgentReferenceDataProvider / AgentReferenceDataRequest / AgentReferenceDataSnapshot / IAgentReferenceDataCacheInvalidator",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ReferenceData/AgentReferenceDataContracts.cs:7-154",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0200",
+    "source_id": "MAP-07",
+    "label": "WorkspaceBackedAgentReferenceDataProvider",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ReferenceData/WorkspaceBackedAgentReferenceDataProvider.cs:6-49",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0201",
+    "source_id": "MAP-07",
+    "label": "IAgentExecutionSourceAuthorityProvider / AgentExecutionSourceAuthorityRequest / Decision",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentExecutionSourceAuthority.cs:10-49",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0202",
+    "source_id": "MAP-07",
+    "label": "ProjectScopedExecutionAuthority",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentExecutionSourceAuthority.cs:51-84",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0203",
+    "source_id": "MAP-07",
+    "label": "IAgentContextContributor / AgentContextContributionRequest / AgentContextExecutionMode",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentContextContributionContracts.cs:5-62",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0204",
+    "source_id": "MAP-07",
+    "label": "IAgentChatContextRegistry + leases",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentChatContextRegistry.cs:7-68",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0205",
+    "source_id": "MAP-07",
+    "label": "ContextualAgentWorkspaceKind / ContextualAgentWorkspaceContextBuilder / ContextualAgentAccessResolver",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/ContextualAgentWorkspaceModels.cs:5-302",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0206",
+    "source_id": "MAP-07",
+    "label": "AgentChatTrustedSourceKinds.ProjectStructure = \"project-structure\" / IAgentExecutionAuthorityResolver",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentTurnContextCaptureService.cs:9-39",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0207",
+    "source_id": "MAP-07",
+    "label": "IAgentRuntimeToolProvider / AgentRuntimeToolProviderContext / Descriptor / Metadata / Purpose",
+    "kind": "contract",
+    "source_locations": "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs:5-18",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0208",
+    "source_id": "MAP-07",
+    "label": "IAgentExecutionProviderSelectionPolicy / IAgentExecutionRunCriticalityPolicy",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionProcessPolicyContracts.cs:11-49",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0209",
+    "source_id": "MAP-07",
+    "label": "IAgentRecruitingEvidenceStore / IAgentRecruitingTargetResolver / IAgentRecruitingEvidenceService",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/Recruiting/AgentRecruitingEvidenceContracts.cs:22-83",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0210",
+    "source_id": "MAP-07",
+    "label": "AgentRecruitingEvidenceService / AgentRecruitingEvidenceValidation / AgentRecruitingReadinessProjector",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/Recruiting/AgentRecruitingEvidenceService.cs:6-309",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0211",
+    "source_id": "MAP-07",
+    "label": "AgentRecruiting* models (Interview, Attempt, HumanReview, CandidateReadiness, commands)",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Recruiting/AgentRecruitingEvidenceModels.cs:11-194",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0212",
+    "source_id": "MAP-07",
+    "label": "FileSandboxWorkspaceStore.RecruitingEvidence (+ storage layout agent-recruiting/interviews)",
+    "kind": "persistence",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.RecruitingEvidence.cs:5-153",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0213",
+    "source_id": "MAP-07",
+    "label": "IFloatingAgentChatCoordinator / IAgentChatLauncher / IFloatingAgentChatSettingsService / IAgentChatExecutionOrchestrator / AgentChatSendRequest",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/FloatingAgentChatContracts.cs:14-138",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0214",
+    "source_id": "MAP-07",
+    "label": "AgentToolInvocationPolicyMetadata (tool-name catalog, redaction schemes, ProjectStructureReadTools/MutationTools)",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:2765-3135",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0215",
+    "source_id": "MAP-07",
+    "label": "ToolContractCatalog",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/ToolContractCatalog.cs:94-358",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0216",
+    "source_id": "MAP-07",
+    "label": "ToolCapabilityRegistry / ToolCapabilitySideEffectKind",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/ToolCapabilityRegistry.cs:5-377",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0217",
+    "source_id": "MAP-07",
+    "label": "DefaultAgentToolInvocationPolicy / AgentToolPolicyBlockGuard (governed process step rules)",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:58-2760",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0218",
+    "source_id": "MAP-07",
+    "label": "ProjectWorkspaceScopePolicy",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/ProjectWorkspaceScopePolicy.cs:6-169",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0219",
+    "source_id": "MAP-07",
+    "label": "ProcessToolOperationAuthorizer / RuntimeToolProcessIntentPolicy / ProcessScriptSideEffectAnalyzer / GovernedScriptSideEffectManifest",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/RuntimeToolProcessIntentPolicy.cs:5-115",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0220",
+    "source_id": "MAP-07",
+    "label": "ProcessOperationContractNames / ProviderUsagePhaseContractNames / WorkflowJsonPathContractNames",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Contracts/ProcessOperationContractNames.cs:3-132",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0221",
+    "source_id": "MAP-07",
+    "label": "ProcessAllowedOperationsCapabilityPolicyCompiler",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/ProcessAllowedOperationsCapabilityPolicyCompiler.cs:6-113",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0222",
+    "source_id": "MAP-07",
+    "label": "Capabilities.Abstractions enums (CapabilityAccessScope.ProcessDefinition/ProcessStep, CapabilityOperationClassification.ProjectStructure, CapabilitySideEffectKind.ProcessMutation/ProjectStructureMutation)",
+    "kind": "contract",
+    "source_locations": "src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CapabilityEnums.cs:43-88",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0223",
+    "source_id": "MAP-07",
+    "label": "AgentProjectStructureAccessSettings / AgentProjectStructureAccessMetadata",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Access/AgentProjectStructureAccessModels.cs:6-360",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0224",
+    "source_id": "MAP-07",
+    "label": "AgentProcessAccessSettings / AgentProcessAccessMetadata",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Access/AgentProcessAccessModels.cs:6-60",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0225",
+    "source_id": "MAP-07",
+    "label": "AgentEditorModel.ProjectStructureAccess",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Editors/EditorModels.cs:27,66",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0226",
+    "source_id": "MAP-07",
+    "label": "ISandboxWorkspaceStore Grant/Revoke/RevokeAll ProjectStructureAccess + catalog implementation",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs:472-490",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0227",
+    "source_id": "MAP-07",
+    "label": "AgentProcessReadinessEvaluator / AgentProcessRoleReadinessRequest",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/AgentProcessReadinessEvaluator.cs:8-1100",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0228",
+    "source_id": "MAP-07",
+    "label": "ProjectStructureAgentIdentityDescriptor",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Execution/ProjectStructureAgentIdentityDescriptor.cs:3-14",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0229",
+    "source_id": "MAP-07",
+    "label": "ProjectStructureProcessNodeContextDescriptor",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/ProjectStructureProcessNodeContextDescriptor.cs:3-30",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0230",
+    "source_id": "MAP-07",
+    "label": "ExecutionInvocationMetadata (agentProjectStructureLaunchAgent / agentProjectStructureProcessNodeContext / agentProcessStep* keys)",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs:22-52,175-212,694-708,1029-1083,1310-1322",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0231",
+    "source_id": "MAP-07",
+    "label": "HrAgentIdentity / HrAgentExecutionSourceKinds / HrAgentExecutionRetention",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/HrAgentIdentity.cs:5-39",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0232",
+    "source_id": "MAP-07",
+    "label": "SchedulerAgentIdentity",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/SchedulerAgentIdentity.cs:3-33",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0233",
+    "source_id": "MAP-07",
+    "label": "ManagedAdministrativeAgentIdentityCatalog (+ PromptsCurator/WorkflowCurator/CapabilityCurator/DeliveryManager identities)",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/ManagedAdministrativeAgentIdentityCatalog.cs:5-15",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0234",
+    "source_id": "MAP-07",
+    "label": "AgentWorkloadKind (Hr, Sales, Support, Spreadsheet, Mail...) and AgentPermissionsPolicy.CanScheduleWork",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Common/Enums.cs:91-103",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0235",
+    "source_id": "MAP-07",
+    "label": "SandboxWorkspaceSeedNormalizer HR/Scheduler/ProjectStructure migrations",
+    "kind": "persistence",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs:21-25,552-600,717,765-770,1305,1386-1389",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0236",
+    "source_id": "MAP-07",
+    "label": "AgentTemplatePackLoader.AgentTemplateProjectStructureAccess / SandboxWorkspaceSeedBuilder access write",
+    "kind": "persistence",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/AgentTemplatePackLoader.cs:286-311",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0237",
+    "source_id": "MAP-07",
+    "label": "ManagedProjectMediaPath",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/ManagedProjectMediaPath.cs:3-8",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0238",
+    "source_id": "MAP-07",
+    "label": "WorkspaceProcessRunArtifactPath",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspaceProcessRunArtifactPath.cs:5-156",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0239",
+    "source_id": "MAP-07",
+    "label": "WorkspaceChatProjectionBuilder source-kind attribution",
+    "kind": "projection",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Chat/WorkspaceChatProjectionBuilder.cs:16-22,300-315,431-518",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0240",
+    "source_id": "MAP-07",
+    "label": "WorkspaceScopeKind {Sandbox, Process, Project, Tenant, Organization} / WorkspaceScopeDescriptor",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workspace/WorkspaceScopeModels.cs:3-70",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0241",
+    "source_id": "MAP-07",
+    "label": "AgentRuntimeContextIntent (SourceKind, ProcessRunId, ProcessStepId, TargetScope, IsGovernedProcessStep, AllowedOperations)",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Runtime/AgentRuntimeContextAssemblyModels.cs:33-66",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0242",
+    "source_id": "MAP-07",
+    "label": "ProcessStepOutcomeResult / ProcessStatePatch output contracts + finalizers submit_process_step_outcome/submit_process_state_patch",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Finalizers/AgentFinalizerPolicy.cs:73-120,151-156,232-237",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0243",
+    "source_id": "MAP-07",
+    "label": "AgentFrameworkTelemetry process_run_id/process_step_id/scheduler_run_id tags",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Telemetry/AgentFrameworkTelemetry.cs:80-82,109-111,246-248,271-273",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0244",
+    "source_id": "MAP-07",
+    "label": "ProjectStructureWorkflowExecutor (partial: InputResolution, Support, TaskNodes) + DI extension",
+    "kind": "service",
+    "source_locations": "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/ProjectStructureWorkflowExecutor.cs:11-96",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0245",
+    "source_id": "MAP-07",
+    "label": "WorkflowProjectStructureOperation / WorkflowProjectStructureExecutorSettings / WorkflowExecutorIds.ProjectStructure / BuiltInWorkflowExecutorDescriptors.ProjectStructure",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowExecutorModels.cs:32,60,429-436,865-885",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0246",
+    "source_id": "MAP-07",
+    "label": "WorkflowLaunchOrigin.SchedulerPlanRun / ProjectStructureNode / ProcessAssignment + WorkflowProcessRunId / WorkflowSchedulerFireId / WorkflowProjectStructureNodeId",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowLaunchModels.cs:77-80,151-154,169-172,183-197,249-335,385-403",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0247",
+    "source_id": "MAP-07",
+    "label": "WorkflowInputParameterKind (CrmContactEmail, ProjectId, ProjectNodeId, ExternalConnectionId) / WorkflowInputParameterOptionSourceKind (CrmContacts, ProjectStructureProjects, ProjectStructureNodes, Office365Connections)",
+    "kind": "entity",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowInputParameterModels.cs:3-25",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0248",
+    "source_id": "MAP-07",
+    "label": "WorkflowFailureSourceKind.Workbench",
+    "kind": "entity",
+    "source_locations": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/WorkflowFailureDiagnostics.cs:30-43",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0249",
+    "source_id": "MAP-07",
+    "label": "IWorkflowProjectStructureReportStore / WorkflowProjectStructureReportQuery",
+    "kind": "projection",
+    "source_locations": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/WorkflowProjectStructureReportContracts.cs:5-145",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0250",
+    "source_id": "MAP-07",
+    "label": "ILlmChatProjectStructureReportStore / EfLlmChatProjectStructureReportStore",
+    "kind": "projection",
+    "source_locations": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/Application/LlmChatProjectStructureReportContracts.cs:6-30",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0251",
+    "source_id": "MAP-07",
+    "label": "ContextualAgentWorkspaceWindows.razor",
+    "kind": "ui-component",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor:7-15,271-273,321-335,1645-1769",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0252",
+    "source_id": "MAP-07",
+    "label": "MafToolInvocationCorrelationKey project_structure_ prefix rule",
+    "kind": "service",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs:44-48",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0253",
+    "source_id": "MAP-07",
+    "label": "ToolCapabilityBuilder.Workspace tool descriptions mentioning project_structure_* tools",
+    "kind": "tool-provider",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ToolCapabilityBuilder.Workspace.cs:169,207,374",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0254",
+    "source_id": "MAP-07",
+    "label": "Hosting AgentFrameworkServiceCollectionExtensions (default port registrations)",
+    "kind": "composition",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs:119-123,194-199",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0255",
+    "source_id": "MAP-08",
+    "label": "Party aggregate (Party, PartyRoleAssignment, PartyContactPoint, PartyAddress, PartyRelationship, PartyConfidentialNote, CrmHrAuditEntry, CrmHrLookupOption)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrFoundationModels.cs:73-176",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0256",
+    "source_id": "MAP-08",
+    "label": "PartyOrganizationAffiliation",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/PartyOrganizationAffiliation.cs:14",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0257",
+    "source_id": "MAP-08",
+    "label": "CRM entities (InteractionRecord, InteractionPartyLink, CrmAccountProfile, CrmAccountConnection, CrmAccountConnectionProjectLink, Opportunity, OpportunityPartyLink, OpportunityStageHistory)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:195-296",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0258",
+    "source_id": "MAP-08",
+    "label": "HR entities (WorkforceProfile, SkillDefinition, PartySkill, CapacityBlock, StaffingRequest)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:296-370",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0259",
+    "source_id": "MAP-08",
+    "label": "Recruiting entities (RecruitmentApplication, RecruitmentInterview, OnboardingTask)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:370-412",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0260",
+    "source_id": "MAP-08",
+    "label": "AiAgentProfile (business governance profile of an AI-agent party)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:412-425",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0261",
+    "source_id": "MAP-08",
+    "label": "AiResourceBinding + AiResourceBindingStatus (party -> technical agent projection row)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Agents/AiTechnicalAgentBridge.cs:11-80",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0262",
+    "source_id": "MAP-08",
+    "label": "ProjectPartyAssignment + ProjectPartyAssignmentMoveReceipt (canonical party<->project/node assignment)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:427-455",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0263",
+    "source_id": "MAP-08",
+    "label": "IAiTechnicalAgentBridge + LegacyAiTechnicalAgentBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Agents/AiTechnicalAgentBridge.cs:128-148 (contract), :150-468 (legacy impl)",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0264",
+    "source_id": "MAP-08",
+    "label": "AiAgentService (partial)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:5146-5822 + Integration/CrmHrCrossModuleIntegration.cs:362-407",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0265",
+    "source_id": "MAP-08",
+    "label": "AiAgentDirectoryQueryService / IAiAgentDirectoryQueryService",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/AiAgentDirectoryQueryService.cs:60-434",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0266",
+    "source_id": "MAP-08",
+    "label": "CrmHrAgentQueryService / ICrmHrAgentQueryService (privacy-safe query API for agents/tools)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrAgentQueryService.cs:85-792",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0267",
+    "source_id": "MAP-08",
+    "label": "CrmPartyCommandService / ICrmPartyCommandService",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmPartyCommandService.cs:86-103",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0268",
+    "source_id": "MAP-08",
+    "label": "PartyDirectoryService (partial)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:804-1358 + Integration/CrmHrCrossModuleIntegration.cs:84-301",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0269",
+    "source_id": "MAP-08",
+    "label": "CrmService (partial)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:1359-3211 + Integration/CrmHrCrossModuleIntegration.cs:475-527",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0270",
+    "source_id": "MAP-08",
+    "label": "HrService (partial)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:3456-5145 + Integration/CrmHrCrossModuleIntegration.cs:303-360",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0271",
+    "source_id": "MAP-08",
+    "label": "RecruitingService (partial)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Recruiting/CrmHrRecruitingServices.cs:239-1702 + Integration/CrmHrCrossModuleIntegration.cs:409-473",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0272",
+    "source_id": "MAP-08",
+    "label": "ProjectPartyIntegrationService (implements IProjectPartyIntegrationBridge, IProjectPartyCostRateBridge)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:5823-7503",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0273",
+    "source_id": "MAP-08",
+    "label": "ProjectPartyAssignmentNodePolicy",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Integration/ProjectPartyAssignmentNodePolicy.cs:6-77",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0274",
+    "source_id": "MAP-08",
+    "label": "ProjectPartyAffiliationContextService, ProjectPartyAssignmentInvariantPolicy, ProjectPartyAssignmentQueryModels",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/ProjectPartyAffiliationContextService.cs:32; Services/ProjectPartyAssignmentInvariantPolicy.cs:6; Services/ProjectPartyAssignmentQueryModels.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0275",
+    "source_id": "MAP-08",
+    "label": "ProjectAssignmentGanttProjectionAdapter + ProjectPartyAssignmentPresentation",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Assignments/ProjectAssignmentGanttProjectionAdapter.cs:7-203; Assignments/ProjectPartyAssignmentPresentation.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0276",
+    "source_id": "MAP-08",
+    "label": "CrmAgentChatContextBuilder / CrmHrAgentChatSurfaceBuilder / CrmAgentChatContextProvider.razor",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Agents/CrmAgentChatContextBuilder.cs:148; Agents/CrmHrAgentChatSurfaceBuilder.cs:6; Components/CrmAgentChatContextProvider.razor:1-390",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0277",
+    "source_id": "MAP-08",
+    "label": "Query services (IPartyRecordQueryService, IWorkforceRecordQueryService, ICrmHrHomeQueryService, IOpportunityPipelineQueryService, ICrmFinancialSnapshotQueryService, IPartyOrganizationAffiliationService)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/PartyRecordQueryService.cs:63; Services/WorkforceRecordQueryService.cs:70; Services/CrmHrHomeQueryService.cs:38; Services/OpportunityPipelineQueryService.cs:52; Services/CrmFinancialSnapshotQueryService.cs:48; Services/PartyOrganizationAffiliationService.cs:55",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0278",
+    "source_id": "MAP-08",
+    "label": "CrmHrSourceSnapshotProvider + CrmHrMemorySourceGatewayAdapter",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrSourceSnapshotProvider.cs:12; Services/CrmHrMemorySourceGatewayAdapter.cs:10-44",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0279",
+    "source_id": "MAP-08",
+    "label": "CrmHrAutomationSignalProvider",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Automation/CrmHrAutomationSignals.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0280",
+    "source_id": "MAP-08",
+    "label": "CrmHrProjectTransferTargetStateParticipant",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/DatabaseTransfer/CrmHrProjectTransferTargetStateParticipant.cs:6-88",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0281",
+    "source_id": "MAP-08",
+    "label": "CrmHrSchemaInitializer",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Persistence/CrmHrSchemaInitializer.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0282",
+    "source_id": "MAP-08",
+    "label": "AddCrmHrModule + CrmHrModuleAssemblyMarker",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrModuleServiceCollectionExtensions.cs:14-47",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0283",
+    "source_id": "MAP-08",
+    "label": "CrmHrRouteCatalog / CrmHrWorkspaceArea",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Navigation/CrmHrRouteCatalog.cs:5-79",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0284",
+    "source_id": "MAP-08",
+    "label": "Pages (Home, Directory, Crm, Workforce, Recruiting, Agents, Assignments) and ~50 components",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/*.razor; Components/*.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0285",
+    "source_id": "MAP-09",
+    "label": "AgentFrameworkProcessExecutionAdapter",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.cs:13",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0286",
+    "source_id": "MAP-09",
+    "label": "AgentFrameworkProcessStepExecutor",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessStepExecutor.cs:43",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0287",
+    "source_id": "MAP-09",
+    "label": "WorkflowProcessStepExecutor / IProcessWorkflowStepExecutor",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/WorkflowProcessStepExecutor.cs:16",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0288",
+    "source_id": "MAP-09",
+    "label": "AgentFrameworkProcessLaunchExecutorResolver",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessLaunchExecutorResolver.cs:34",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0289",
+    "source_id": "MAP-09",
+    "label": "ProcessesExecutionAuthorityProvider / LiveProcessesExecutionAuthorityProvider",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Processes/AgentChat/ProcessesExecutionAuthorityProviders.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0290",
+    "source_id": "MAP-09",
+    "label": "ProcessWorkspaceShell",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0291",
+    "source_id": "MAP-09",
+    "label": "ProcessesModuleServiceCollectionExtensions.AddProcessesModule",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:32",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0292",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureProcessNodeService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessNodeService.cs:15",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0293",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureWorkflowNodeService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs:12",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0294",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureProcessProjectionContributor",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessProjectionContributor.cs:14",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0295",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureProcessSubprocessLaunchCoordinator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessSubprocessLaunchCoordinator.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0296",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureWorkflowLaunchIntentFactory",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowLaunchIntentFactory.cs:7",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0297",
+    "source_id": "MAP-09",
+    "label": "WorkbenchProjectStructureRuntimeGateway",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureRuntimeGateway.cs:11",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0298",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureExecutionAuthorityProvider",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureExecutionAuthorityProvider.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0299",
+    "source_id": "MAP-09",
+    "label": "IProjectStructureProjectionContributor / ProjectStructureProjectionContext",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssemblyService.cs:42",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0300",
+    "source_id": "MAP-09",
+    "label": "ProjectStructurePage.Processes / ProjectStructurePage.Workflows / .WorkflowNodes",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Processes.cs:13",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0301",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureProcessAssignmentDialog",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor:1",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0302",
+    "source_id": "MAP-09",
+    "label": "ProjectManagerSummaryQueryService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryQueryService.cs:16",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0303",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureAgentRuntimeToolProvider",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs:17",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0304",
+    "source_id": "MAP-09",
+    "label": "IProjectStructureRuntimeGateway + UnavailableProjectStructureRuntimeGateway",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ProjectStructure/ProjectStructureRuntimeGatewayContracts.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0305",
+    "source_id": "MAP-09",
+    "label": "IAgentExecutionSourceAuthorityProvider",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentExecutionSourceAuthority.cs:41",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0306",
+    "source_id": "MAP-09",
+    "label": "WorkflowLaunchOrigin.ProjectStructureNode / ProcessAssignment",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowLaunchModels.cs:197",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0307",
+    "source_id": "MAP-09",
+    "label": "IWorkflowProjectStructureReportStore",
+    "kind": "contract",
+    "source_locations": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/WorkflowProjectStructureReportContracts.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0308",
+    "source_id": "MAP-09",
+    "label": "ProjectStructureWorkflowExecutor",
+    "kind": "service",
+    "source_locations": "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/ProjectStructureWorkflowExecutor.cs:11",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0309",
+    "source_id": "MAP-09",
+    "label": "IProcessSubprocessLaunchCoordinator",
+    "kind": "contract",
+    "source_locations": "src/Processes/CanDoItAll.Processes.Application/ProcessSubprocessLaunchContracts.cs:6",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0310",
+    "source_id": "MAP-09",
+    "label": "ProcessRuntimeLaunchVariables (ProjectId/ProjectNodeId/ProjectName)",
+    "kind": "contract",
+    "source_locations": "src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeLaunchVariables.cs:45",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0311",
+    "source_id": "MAP-09",
+    "label": "ISchedulerWorkflowInputOptionProvider",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerWorkflowInputOptionService.cs:9",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0312",
+    "source_id": "MAP-09",
+    "label": "ProjectStructure(Node)SchedulerWorkflowInputOptionProvider",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/SchedulerPlannerWorkflowInputOptionProviders.cs:43",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0313",
+    "source_id": "MAP-10",
+    "label": "AddCanDoItAllRuntimeModules (module registration order)",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:52-116",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0314",
+    "source_id": "MAP-10",
+    "label": "ModuleAssemblies.All",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/ModuleAssemblies.cs:26-49",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0315",
+    "source_id": "MAP-10",
+    "label": "RuntimeHostProfile resolution (Auto/Windows/Linux/MacOs Interactive|Headless/Test)",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeHostProfiles.cs:1-152",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0316",
+    "source_id": "MAP-10",
+    "label": "AddRuntimeHostPlatformComposition / HostCapabilities model, snapshot service, startup validator, health check",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:136-176; HostCapabilities.cs; HostCapabilityRuntime.cs; HostCapabilitySnapshotProjector.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0317",
+    "source_id": "MAP-10",
+    "label": "AppDatabaseBootstrapper",
+    "kind": "persistence",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:186-1537",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0318",
+    "source_id": "MAP-10",
+    "label": "Memory runtime composition (AddCanDoItAllMemory)",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/Memory/MemoryRuntimeServiceCollectionExtensions.cs:27-46",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0319",
+    "source_id": "MAP-10",
+    "label": "Composition-owned cross-module adapters",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/ProviderManagementWorkspaceProviderCatalog.cs:6-19; SchedulerPlannerWorkflowInputOptionProviders.cs:11-119; SharedProviderRuntimeHttpClientSelector.cs; SharedProviderRuntimeAccessContextHandler.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0320",
+    "source_id": "MAP-10",
+    "label": "LlmChatOperationDispatcherHostedService",
+    "kind": "service",
+    "source_locations": "src/App/CanDoItAll.Composition/LlmChatOperationDispatcherHostedService.cs:10-73",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0321",
+    "source_id": "MAP-10",
+    "label": "RuntimeDeploymentSupport manifest + RuntimeOperationsSnapshotProjector",
+    "kind": "projection",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeDeploymentSupport.cs:1-217",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0322",
+    "source_id": "MAP-10",
+    "label": "Program.cs host pipeline and dev endpoints",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Web/Program.cs:1-928",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0323",
+    "source_id": "MAP-10",
+    "label": "ShellNavigation (top-level nav literal + contributor merge)",
+    "kind": "ui-component",
+    "source_locations": "src/App/CanDoItAll.Web/Composition/ShellNavigation.cs:8-149",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0324",
+    "source_id": "MAP-10",
+    "label": "MainLayout shell (razor + State/Workbench/DatabaseProfiles partials, TopBar, DatabaseDialog)",
+    "kind": "ui-component",
+    "source_locations": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor; MainLayout.State.cs; MainLayout.Workbench.cs; MainLayout.DatabaseProfiles.cs; MainLayoutTopBar.razor; MainLayoutDatabaseDialog.razor",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0325",
+    "source_id": "MAP-10",
+    "label": "Routes.razor / App.razor (router + static asset links)",
+    "kind": "ui-component",
+    "source_locations": "src/App/CanDoItAll.Web/Components/Routes.razor:3; Components/App.razor:9-34",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0326",
+    "source_id": "MAP-10",
+    "label": "Home dashboard page + Dashboard snapshot services",
+    "kind": "ui-page",
+    "source_locations": "src/App/CanDoItAll.Web/Components/Pages/Home.razor; Dashboard/DashboardSnapshotLoader.cs:4 (uses Modules.Projects)",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0327",
+    "source_id": "MAP-10",
+    "label": "HTTP API adapters (AddCanDoItAllApi, MapCanDoItAllApi, per-module *Api.cs)",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs:27-176; Api/ApiEndpointRouteBuilderExtensions.cs:39-99",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0328",
+    "source_id": "MAP-10",
+    "label": "ProjectStructureAgentApi + ProjectStructureHttpJsonContract (Web root)",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs:15-1692; ProjectStructureHttpJsonContract.cs:13-756",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0329",
+    "source_id": "MAP-10",
+    "label": "Web infrastructure (InteractiveServer, LocalOperator auth, BrowserWorkspaceStateStore, DevelopmentManagerClient, RuntimeHotReloadTracker, ManagedFilesEndpointRoutes, HttpFileAccessContextProvider)",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Web/Infrastructure/*.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0330",
+    "source_id": "MAP-10",
+    "label": "CanDoItAll.Manager (local dev manager: dotnet watch supervisor, Tailwind watch, readiness, tuning)",
+    "kind": "tool-provider",
+    "source_locations": "tools/App/CanDoItAll.Manager/WatchSupervisorService.cs:273-291; WorkspaceRuntimeProcessTools.cs:23-82; ManagerOptions.cs:7,13",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0331",
+    "source_id": "MAP-10",
+    "label": "Test topology (Unit/Integration/Components/Playwright/Memory projects, Support bootstrap, six .slnx wrappers)",
+    "kind": "composition",
+    "source_locations": "tests/Solutions/*.slnx; tests/Support/CanDoItAll.Tests.Support/TestApplicationBootstrap.cs:40,68-73,106; TestSchemaBootstrapModules.cs:4-13; tests/Integration/CanDoItAll.Tests.Integration/ApiTestHost.cs:210-218; tests/Playwright/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs:62-89",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0332",
+    "source_id": "MAP-11",
+    "label": "WorkspaceSettings (table Workspace_Settings) + WorkspaceService (settings, storage catalog CRUD/test, routing defaults, ListSecretsAsync facade)",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs:12-133; src/Modules/CanDoItAll.Modules.Workspace/Storage/WorkspaceService.Storage.cs:7-275",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0333",
+    "source_id": "MAP-11",
+    "label": "StorageCatalogSummary/StorageCatalogEditorModel/IStorageCatalogSelectionSource + StorageCatalogSelectionField/Dialog components",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Storage/WorkspaceStorageModels.cs:5-112; src/Modules/CanDoItAll.Modules.Workspace/Storage/WorkspaceStorageCatalogSelectionSource.cs:3-17; src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageCatalogSelectionField.razor.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0334",
+    "source_id": "MAP-11",
+    "label": "DatabaseProfileWorkspaceService (database profiles, schema health/apply, transfer preview/apply)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs:10-536",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0335",
+    "source_id": "MAP-11",
+    "label": "ApiAccess: ApiAccessOptions, IApiTokenService/ApiTokenService, ApiAccessScopeNames, ApiScopeCatalog, ApiManagedTokenClaims, IApiTokenAdministrationAccess (+Unavailable default), ApiTokenAdministrationService",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs:12-161; src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccessScopeNames.cs:3-34; src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiTokenAdministrationService.cs:6-47",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0336",
+    "source_id": "MAP-11",
+    "label": "ConnectorCommandRecord/ConnectorCommandAuditRecord (tables via ConnectorCommands.cs), ConnectorCommandProcessor, ConnectorOutboxService, IConnectorCommandHandler, ConnectorCommandSchemaInitializer",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Connectors/ConnectorCommands.cs:45-226; src/Modules/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:12-987; src/Modules/CanDoItAll.Modules.Workspace/Connectors/ConnectorCommandSchemaInitializer.cs:5-12",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0337",
+    "source_id": "MAP-11",
+    "label": "ConnectorPluginRegistry (aggregates SharedKernel IConnectorManifestSource) + ISettingsRendererRegistry/ISettingsRendererSource/SettingsRendererDescriptor + SettingsRendererHost/ConnectorConfigFieldEditor/ConfigurationSchemaFallbackRenderer components",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Connectors/ConnectorPluginPlatform.cs:5-43; src/Modules/CanDoItAll.Modules.Workspace/Connectors/SettingsRendererRegistry.cs:132-220; src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/SettingsRendererHost.razor:1-111",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0338",
+    "source_id": "MAP-11",
+    "label": "IWorkspaceProviderCatalog / WorkspaceProviderOption",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Providers/WorkspaceProviderCatalog.cs:3-12",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0339",
+    "source_id": "MAP-11",
+    "label": "ProjectManagementKnowledgeService / IProjectManagementKnowledgeProvider / StaticProjectManagementKnowledgeProvider",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/ProjectStructure/ProjectManagementKnowledgeService.cs:28-133",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0340",
+    "source_id": "MAP-11",
+    "label": "SettingsPage (/settings) with DatabaseSourcesSettingsPanel, StorageSettingsPanel, ProviderHistoryPolicyPanel, FileApplicationSettingsPanel, secret vault editor, ApiTokenAdministrationPanel",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor:1-277; src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs:1-217",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0341",
+    "source_id": "MAP-11",
+    "label": "WorkspaceDefaultProviderDatabaseTransferHandler, WorkspaceProjectTransferTargetStateParticipant",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/WorkspaceDefaultProviderDatabaseTransferHandler.cs:7-84; src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/WorkspaceProjectTransferTargetStateParticipant.cs:6-40",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0342",
+    "source_id": "MAP-11",
+    "label": "ProjectResource (table Resources_ProjectResources) + ResourcesService + ResourceSummary/ResourceEditorModel + legacy ResourceKind enum",
+    "kind": "entity",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs:70-424; src/Modules/CanDoItAll.Modules.Resources/ResourceKind.Legacy.cs:3-15",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0343",
+    "source_id": "MAP-11",
+    "label": "IResourceConnectorPlugin / ResourceConnectorPluginRegistry (IConnectorManifestSource) / Webhook + StorageObject + Legacy connector plugins",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Resources/ResourceConnectorPlugins.cs:50-567; src/Modules/CanDoItAll.Modules.Resources/StorageObjectResourceConnectorPlugin.cs:22-215",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0344",
+    "source_id": "MAP-11",
+    "label": "ResourceFileSourceCatalog, ResourceFileToolsStorageBindingSource (IFileToolsStorageBindingSource), ResourceFileBrowseCoordinator, ResourceStorageObjectPromotionService/StorageObjectResourceWriter, ResourceStorageObjectInteractionService",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Resources/ResourceFileSourceCatalog.cs:97-276; src/Modules/CanDoItAll.Modules.Resources/ResourceFileToolsStorageBindingSource.cs:8-70; src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs:62-318",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0345",
+    "source_id": "MAP-11",
+    "label": "ResourceSourceSnapshotProvider (IResourceSourceSnapshotProvider) + ResourceMemorySourceGatewayAdapter (IMemorySourceGatewayAdapter)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Resources/ResourceSourceSnapshotProvider.cs:11-219; src/Modules/CanDoItAll.Modules.Resources/ResourceMemorySourceGatewayAdapter.cs:10-45",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0346",
+    "source_id": "MAP-11",
+    "label": "ResourcesPage (/resources) + ResourceFileBrowsePane + ResourceStorageObjectPromotionDialog + ResourcesAgentChatContextBuilder",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor:1-339; src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs:1-573; src/Modules/CanDoItAll.Modules.Resources/ResourcesAgentChatContextBuilder.cs:1-148",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0347",
+    "source_id": "MAP-11",
+    "label": "Prompt gallery aggregate: PromptArtifact, PromptVersion, PromptCollection, PromptTag, PromptArtifactTag, PromptSupportedProviderModel, PromptSupportedConsumer, PromptTemplateToken, PromptCompatibilityWarningPreference, PromptUsageRecord (tables Prompts_*)",
+    "kind": "aggregate",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Prompts/PromptDomainModels.cs:33-215; src/Modules/CanDoItAll.Modules.Prompts/PromptEntityConfigurations.cs:6-171",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0348",
+    "source_id": "MAP-11",
+    "label": "IPromptGalleryService / IPromptGalleryImportService / IPromptGallerySearchDriver / PromptGalleryQuery/Draft/... contracts + PromptsService impl",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Prompts/PromptGalleryContracts.cs:221-292; src/Modules/CanDoItAll.Modules.Prompts/PromptsService.Gallery.cs:8-818",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0349",
+    "source_id": "MAP-11",
+    "label": "IPromptGalleryCuratorLauncher (+ UnavailablePromptGalleryCuratorLauncher default)",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Prompts/PromptGalleryCuratorLauncher.cs:7-43",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0350",
+    "source_id": "MAP-11",
+    "label": "Prompt gallery components (PromptGalleryPickerButton/Dialog, PromptGalleryChatComposerButton, PromptGalleryItemEditor, PromptGallerySearchList, PromptCompatibilityWarningDialog) + PromptGalleryPage (/prompt-gallery) + seed importer hosted service",
+    "kind": "ui-component",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryChatComposerButton.razor:1-113; src/Modules/CanDoItAll.Modules.Prompts/Pages/PromptGalleryPage.razor:1-197; src/Modules/CanDoItAll.Modules.Prompts/PromptGallerySeedImporter.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0351",
+    "source_id": "MAP-11",
+    "label": "TestPlan, TestCaseRecord, TestEvidenceRecord, TestRunRecord (tables TestLab_*) + TestLabService + TestLabPage (/test-lab)",
+    "kind": "aggregate",
+    "source_locations": "src/Modules/CanDoItAll.Modules.TestLab/TestLabModels.cs:18-421; src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor:1-438",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0352",
+    "source_id": "MAP-11",
+    "label": "SchedulerPlan, SchedulerPlanRun (tables SchedulerPlanner_Plans/Runs) + ISchedulerPlannerService/SchedulerPlannerService + SchedulerPlannerTriggerScheduler (Quartz) + SchedulerPlannerRunDispatcher + SchedulerTargetLauncher + SchedulerPlannerSchemaInitializer",
+    "kind": "aggregate",
+    "source_locations": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerModels.cs:51-187; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs:15-1280; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerScheduling.cs:12-223; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerSchemaInitializer.cs:6-81",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0353",
+    "source_id": "MAP-11",
+    "label": "ISchedulerWorkflowInputOptionProvider / ISchedulerWorkflowInputOptionService / ISchedulerWorkflowInputSchemaService",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerWorkflowInputOptionService.cs:5-76; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerWorkflowInputSchemaService.cs:11-364",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0354",
+    "source_id": "MAP-11",
+    "label": "SchedulerAgentRuntimeToolProvider (IAgentRuntimeToolProvider) + SchedulerAgentRuntimeAuthorizationPolicy/Service + SchedulerAgentCapabilityKeys + SchedulerAgentChatContextBuilder",
+    "kind": "tool-provider",
+    "source_locations": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs:9-283; src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeAuthorization.cs:7-95; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerAgentChatContextBuilder.cs:12-114",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0355",
+    "source_id": "MAP-11",
+    "label": "SchedulerPlannerPage (/scheduler, 2492-line single razor file)",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor:1-2492",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0356",
+    "source_id": "MAP-11",
+    "label": "Plugins persistence: PluginInstallationRecord, PluginLogRecord, PluginCapabilityGrantRecord, PluginConnectionRecord, PluginOAuthConnectionRecord, PluginOAuthSessionRecord (tables Plugins_*) + PluginSchemaInitializer (raw SQL)",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Plugins/Persistence/PluginRuntimeRecords.cs:7-239; src/Modules/CanDoItAll.Modules.Plugins/Persistence/PluginInstallationRecord.cs:7-54; src/Modules/CanDoItAll.Modules.Plugins/Persistence/PluginSchemaInitializer.cs:5-182",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0357",
+    "source_id": "MAP-11",
+    "label": "Plugin services: PluginCatalogService, PluginInstallationStore, PluginGrantStore, PluginConnectionStore, PluginGrantEvaluator, PluginSettingsService, PluginOAuthService, PluginLogStore, PluginPackageService/ManifestStore/AssetService, PluginRuntimeRestartService, PluginHostToolRecipeCatalogService, IPluginCatalogSource, IPluginHostToolRecipeCatalogSource",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginCatalogServices.cs:11-358; src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPermissionServices.cs:10-557; src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPackageServices.cs:17-1083; src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0358",
+    "source_id": "MAP-11",
+    "label": "PluginsPage (/plugins) + tab components + PluginCatalogTreeNodeBuilder + PluginsPageHelpers",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor:1-651; src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginsPageHelpers.cs:1-356",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0359",
+    "source_id": "MAP-11",
+    "label": "Memory UI module: IMemoryProviderManagementUiService, IMemoryProviderProfileConfigurationService (+ configuration records), MemoryProvidersPageController, MemoryProvidersPage (/memory), 28 components, IMemoryProviderUiSurfaceComponentRegistry, MemoryShellNavigationContributor",
+    "kind": "ui-page",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Memory/Services/IMemoryProviderManagementUiService.cs:5-45; src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileConfigurationContracts.cs:5-72; src/Modules/CanDoItAll.Modules.Memory/Pages/MemoryProvidersPage.razor:1-126; src/Modules/CanDoItAll.Modules.Memory/Navigation/MemoryShellNavigationContributor.cs:5-22",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0360",
+    "source_id": "MAP-11",
+    "label": "CollaborationThreadRecord, CollaborationParticipantRecord, CollaborationMessageRecord, CollaborationInboxItemRecord (tables Collaboration_*) + CollaborationService (partial: Commands/Queries/Support) + contracts + CollaborationHomePage (/collaboration)",
+    "kind": "aggregate",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModels.cs:50-201; src/Modules/CanDoItAll.Modules.Collaboration/CollaborationContracts.cs:5-132; src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.cs:8-18; src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor:1-356",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0361",
+    "source_id": "MAP-11",
+    "label": "Security: SecretRecord/SecretReference (tables Security_SecretRecords/SecretReferences), SecretService (concrete), SecretListItem, SecretKind, ISecretProtector",
+    "kind": "aggregate",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs:9-472",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0362",
+    "source_id": "MAP-11",
+    "label": "Security: ISecretVault + vault implementations (DPAPI, DataProtection file, LocalUserFile, MacOS keychain, Linux secret service, ExternalWrappingKey, InMemory), SecretVaultFactory/Options, ISecretVaultCapabilityState, SecretVaultStartupValidator, SecretMigrationCoordinator",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs:10-695; src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs:8-677; src/Modules/CanDoItAll.Modules.Security/SecretMigration.cs:13-807; src/Modules/CanDoItAll.Modules.Security/SecretVaultStartupValidation.cs:6-55",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0363",
+    "source_id": "MAP-11",
+    "label": "Security: SecretRuntimeResolver (impl of Foundation ISecretRuntimeResolver), StorageSecretResolver (impl of Infrastructure IStorageSecretResolver), IPluginSecretBroker/PluginSecretBroker, ISecretDeletionReferencePolicy + SecretMutationScopeKeys",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Security/SecretRuntimeResolver.cs:7-215; src/Modules/CanDoItAll.Modules.Security/StorageSecretResolver.cs:6-24; src/Modules/CanDoItAll.Modules.Security/PluginSecretBroker.cs:29-95; src/Modules/CanDoItAll.Modules.Security/SecretDeletionReferencePolicy.cs:48-54",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0364",
+    "source_id": "MAP-11",
+    "label": "ProviderManagement: ProviderProfile EF entity (table Workspace_ProviderProfiles) + legacy ProviderKind enum",
+    "kind": "ef-entity-or-dbset",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderProfile.cs:8-62; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Domain/ProviderKind.Legacy.cs:3-8",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0365",
+    "source_id": "MAP-11",
+    "label": "ProviderManagement contracts: IProviderAdministrationService, IProviderRuntimeAdministrationService, IProviderManifestCatalog, ProviderConnectorKeys, IProviderProfileCommitObserver, IProviderProfileDeletionGuard, IProviderDatabaseTransferGuard, ISharedProviderManagementService, ProviderInitializationOptions",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/ProviderAdministration.cs:7-36; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/ProviderRuntimeAdministration.cs:8-38; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/ProviderManifestCatalog.cs:5-34; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/ProviderPersistenceGuards.cs:6-20; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Contracts/SharedProviderManagement.cs:64-110",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0366",
+    "source_id": "MAP-11",
+    "label": "ProviderManagement administration: ProviderAdministrationService (internal), ProviderAdministrationConnectorCatalog + 6 IProviderAdministrationConnector impls (OpenAI, ScenarioHarness, ProcessMock, ComfyUI, Ollama local/remote), ProviderRuntimeAdministrationService (internal), DatabaseProviderProfileRegistry (internal, implements MAF IProviderProfileRegistry)",
+    "kind": "service",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderAdministrationService.cs:69-686; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderAdministrationConnectors.cs:28-614; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/DatabaseProviderProfileRegistry.cs:39-542",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0367",
+    "source_id": "MAP-11",
+    "label": "ProviderManagement runtime projection: CanonicalProviderRuntimeProfileSnapshotService (internal singleton implementing MAF IProviderRuntimeProfileSource/SnapshotSource/SnapshotInitializer), IProviderRuntimeProfileSnapshotLoader, ProviderProfileMapper (public concrete), ProviderMetadata (public static helpers)",
+    "kind": "projection",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/ProviderRuntimeProfileSnapshotService.cs:15-895; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/PersistedProviderProfileMapper.cs:10-292; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/ProviderMetadata.cs:12-777",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0368",
+    "source_id": "MAP-11",
+    "label": "ProviderManagement shared providers: SharedProviderSource, ProviderSharePublication, SharedProviderImport, SharedProviderInvocationRecord, SharedProviderServiceIdentity entities (tables Workspace_SharedProviderSources/Imports/...), publication/eligibility/reconciliation/sync/catalog-cache/query/relay/audit/recovery/history-source services, SharedProviderConnectorManifestSource",
+    "kind": "aggregate",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSource.cs:6; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceConfiguration.cs:21; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderImportConfiguration.cs:12; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogQueryService.cs:11-118; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRelayApplicationService.cs:11-478; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderHistorySource.cs:9-79",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0369",
+    "source_id": "MAP-11",
+    "label": "ProviderManagement persistence guards: ProviderSecretDeletionReferencePolicy, SharedProviderSourceSecretDeletionReferencePolicy (Security ISecretDeletionReferencePolicy impls), ProviderProfileSecretMutationScope, AiProvidersDatabaseTransferHandler",
+    "kind": "persistence",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderSecretDeletionReferencePolicy.cs:7-33; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderProfileSecretMutationScope.cs:7-81; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/DatabaseTransfer/AiProvidersDatabaseTransferHandler.cs:8-129",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0370",
+    "source_id": "MAP-11",
+    "label": "Module DI extensions: AddWorkspaceModule, AddResourcesModule, AddPromptsModule(+AddPromptGallerySearchIndexProjection), AddTestLabModule, AddSchedulerPlannerModule(configuration), AddPluginsModule(configuration, contentRoot), AddCollaborationModule, AddSecurityModule(configuration), AddMemoryUiModule, AddAgentFrameworkProviderManagement; every module exposes a *ModuleAssemblyMarker used by Composition ModuleAssemblies.All",
+    "kind": "composition",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs:10-34; src/Modules/CanDoItAll.Modules.Resources/ResourcesModuleServiceCollectionExtensions.cs:12-38; src/Modules/CanDoItAll.Modules.Prompts/PromptsModuleServiceCollectionExtensions.cs:8-44; src/Modules/CanDoItAll.Modules.TestLab/TestLabModuleServiceCollectionExtensions.cs:7-19; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerModuleServiceCollectionExtensions.cs:12-55; src/Modules/CanDoItAll.Modules.Plugins/Services/PluginsModuleServiceCollectionExtensions.cs:10-47; src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModuleServiceCollectionExtensions.cs:7-19; src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs:11-45; src/Modules/CanDoItAll.Modules.Memory/MemoryModuleServiceCollectionExtensions.cs:10-37; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs:12-107; src/App/CanDoItAll.Composition/ModuleAssemblies.cs:25-50",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0371",
+    "source_id": "MAP-12",
+    "label": "IShellNavigationContributor",
+    "kind": "contract",
+    "source_locations": "src/Foundation/CanDoItAll.SharedKernel/Navigation/ShellNavigationItem.cs:19",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0372",
+    "source_id": "MAP-12",
+    "label": "IConversationShellContributor",
+    "kind": "contract",
+    "source_locations": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellContracts.cs:145",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0373",
+    "source_id": "MAP-12",
+    "label": "IAgentRuntimeToolProvider",
+    "kind": "contract",
+    "source_locations": "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0374",
+    "source_id": "MAP-12",
+    "label": "IAgentExecutionSourceAuthorityProvider",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentExecutionSourceAuthority.cs:41",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0375",
+    "source_id": "MAP-12",
+    "label": "IProjectDeletionParticipant",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletion.cs:46",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0376",
+    "source_id": "MAP-12",
+    "label": "IProjectTransferTargetStateParticipant",
+    "kind": "contract",
+    "source_locations": "src/Foundation/CanDoItAll.Infrastructure/Persistence/ProjectTransferTargetStateContracts.cs:21",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0377",
+    "source_id": "MAP-12",
+    "label": "IProjectStructureProjectionContributor",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssemblyService.cs:42",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0378",
+    "source_id": "MAP-12",
+    "label": "IProjectStructureRuntimeGateway",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ProjectStructure/ProjectStructureRuntimeGatewayContracts.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0379",
+    "source_id": "MAP-12",
+    "label": "IAgentReferenceDataProvider (+IAgentReferenceDataCacheInvalidator)",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ReferenceData/AgentReferenceDataContracts.cs:142",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0380",
+    "source_id": "MAP-12",
+    "label": "IAiTechnicalAgentBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Agents/AiTechnicalAgentBridge.cs:128",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0381",
+    "source_id": "MAP-12",
+    "label": "IProjectNodeScopeBridge / IProjectNodeAssignmentPolicyBridge / IProjectNodeDetailsBridge / IProjectWorkItemAssignmentMutationBridge / IProjectPartyIntegrationBridge / IProjectPartyCostRateBridge",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:303,311,434,189,328,442",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0382",
+    "source_id": "MAP-12",
+    "label": "IFileToolsStorageBindingSource / IFileToolsStorageBindingProvider (+IProjectFileScopeProvider, IProjectStructureNodeFileScopeProvider, IProcessRunFileScopeProvider, IFileAccessContextProvider)",
+    "kind": "contract",
+    "source_locations": "src/Integration/CanDoItAll.FileTools.Integration.Abstractions/FileToolsBrowseContracts.cs:130,123",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0383",
+    "source_id": "MAP-12",
+    "label": "IProjectStructureSourceSnapshotProvider / IProcessRuntimeEvidenceSourceProvider / IWorkflowRuntimeEvidenceSourceProvider / ICrmHrSourceSnapshotProvider / IResourceSourceSnapshotProvider / IManualSourceSnapshotProvider + IMemorySourceGatewayAdapter",
+    "kind": "contract",
+    "source_locations": "src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions/MemorySourceSnapshotProviders.cs:13,20,27,34,41,48",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0384",
+    "source_id": "MAP-12",
+    "label": "ISettingsRendererSource / ISettingsRendererRegistry",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Connectors/SettingsRendererRegistry.cs:132,145,152",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0385",
+    "source_id": "MAP-12",
+    "label": "ISchedulerWorkflowInputOptionProvider",
+    "kind": "contract",
+    "source_locations": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerWorkflowInputOptionService.cs:9",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0386",
+    "source_id": "MAP-12",
+    "label": "IDatabaseTransferHandler / IDatabaseTransferService (+IHistoryTransferParticipant)",
+    "kind": "contract",
+    "source_locations": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferModels.cs:64,77",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0387",
+    "source_id": "MAP-12",
+    "label": "Schema initializers (static, no interface)",
+    "kind": "persistence",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:297,301,305",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0388",
+    "source_id": "MAP-12",
+    "label": "IHostCapabilitySnapshotProvider / IProcessHostCapabilitySource / IProcessHostProfileSource",
+    "kind": "composition",
+    "source_locations": "src/App/CanDoItAll.Composition/HostCapabilities.cs:99",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0389",
+    "source_id": "MAP-12",
+    "label": "IAgentContextContributor / IToolInvocationPolicyContextContributor / IProcessLaunchVariableContributor / ILlmChatComposerActionContributor",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentContextContributionContracts.cs:5",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0390",
+    "source_id": "MAP-12",
+    "label": "IAutomationSignalSource / IConnectorManifestSource / IPluginCatalogSource / IPluginHostToolRecipeCatalogSource / IAvatarGenerationGateway / IWorkspaceProviderCatalog",
+    "kind": "contract",
+    "source_locations": "src/Foundation/CanDoItAll.SharedKernel/Automation/AutomationSignals.cs:12",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0391",
+    "source_id": "MAP-12",
+    "label": "SharedKernel workbench contracts: IProjectWorkbenchSeedService, IWorkbenchStateStore, ProjectObjectType, IProjectObject",
+    "kind": "shared-kernel",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs:199",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  },
+  {
+    "id": "ANCH-0392",
+    "source_id": "MAP-12",
+    "label": "MAF execution bridges with Null defaults: IAgentExecutionGovernanceBridge, IAgentExecutionCheckpointBridge",
+    "kind": "contract",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs:415,433",
+    "evidence_level": "INHERITED_UNVERIFIED",
+    "instruction": "Discovery anchor only. Do not infer ownership or a working integration from a class name."
+  }
+]
