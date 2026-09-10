@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,15 +11,6 @@ public sealed partial class CollaborationService
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await CreateThreadAsync(dbContext, request, cancellationToken);
-    }
-
-    public async Task<Result<Guid>> CreateThreadAsync(
-        AppDbContext dbContext,
-        CollaborationThreadCreateRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
 
         var errors = ValidateCreateRequest(request);
         if (errors.Count > 0)
@@ -124,15 +114,6 @@ public sealed partial class CollaborationService
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await AppendMessageAsync(dbContext, request, cancellationToken);
-    }
-
-    public async Task<Result> AppendMessageAsync(
-        AppDbContext dbContext,
-        CollaborationMessageWriteRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
 
         var errors = ValidateMessageRequest(request);
         if (errors.Count > 0)

@@ -28,7 +28,7 @@ public sealed class AppDbContext : DbContext
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        StampApplicationManagedConcurrencyTokens();
+        ApplicationManagedConcurrencyTokens.Stamp(ChangeTracker);
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -39,29 +39,8 @@ public sealed class AppDbContext : DbContext
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
-        StampApplicationManagedConcurrencyTokens();
+        ApplicationManagedConcurrencyTokens.Stamp(ChangeTracker);
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-    }
-
-    private void StampApplicationManagedConcurrencyTokens()
-    {
-        foreach (var entry in ChangeTracker.Entries<IHasConcurrencyToken>())
-        {
-            if (entry.State == EntityState.Added)
-            {
-                if (entry.Entity.ConcurrencyToken == Guid.Empty)
-                {
-                    entry.Entity.ConcurrencyToken = Guid.NewGuid();
-                }
-
-                continue;
-            }
-
-            if (entry.State == EntityState.Modified)
-            {
-                entry.Entity.ConcurrencyToken = Guid.NewGuid();
-            }
-        }
     }
 
 }

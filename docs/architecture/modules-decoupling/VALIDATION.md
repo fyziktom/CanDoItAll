@@ -24,12 +24,14 @@ All sibling sources remain read-only. Shared standards inspected: documentation 
 | Check | Reproduction / observation | Result |
 | --- | --- | --- |
 | Repository | `git status --short`, `git branch --show-current`, `git rev-parse HEAD` | PASS: clean expected branch and actual HEAD recorded |
-| Signing reuse | Matching Git GnuPG `gpgconf --launch gpg-agent`; two detached signatures of disposable non-secret input in separate shell invocations, each verified | PASS: expected fingerprint `96E836FAA8854EE98ABC10903C206549E1D7EAD6`; second reused cache without pinentry. No settings changed. Repository commit verification still pending. |
+| Signing reuse | Matching Git GnuPG `gpgconf --launch gpg-agent`; two detached signatures of disposable non-secret input in separate shell invocations, each verified | PASS: expected fingerprint `96E836FAA8854EE98ABC10903C206549E1D7EAD6`; second reused cache without pinentry. No settings changed during the probes. Initial default idle cache later expired; finite task policy and restoration details are in EXECUTION. |
+| First checkpoint | `git commit -S`, `git verify-commit HEAD`, `git log -1 --format='%H %G? %GF'` | PASS: `49ef77a3dcc4bc5b4d39126e7770e4706553098d`, status G, expected fingerprint. Local only. |
 | Product build | `dotnet build ./CanDoItAll.slnx --configuration Release /m:1` | FAIL: output copy locks held by existing PID 1836; 1000 warnings / 200 errors, elapsed 6:23. Log: `product-build.log`. Isolated output rerun passed below; not classified as a source defect. |
 | Isolated product build | `dotnet build ./CanDoItAll.slnx --configuration Release --artifacts-path ./artifacts/modules-decoupling/build /m:1` | PASS: 0 warnings / 0 errors, elapsed 3:20.81. Log: `product-build-isolated.log`. Same source/dependency graph; existing sandbox retains its explicit Parity output. |
 | Established host | Read-only `GET http://localhost:5032/_dev/runtime` and `/_dev/database/selection`, PID/path inspection | Ready, PID 1836, main checkout Release executable, predates task. Runtime override profile `e5df9ad6-33db-c697-4a06-78a74976013c`; no pending activation. Build freshness for task not proven. |
 | Ollama availability | `GET http://127.0.0.1:11434/api/tags` | PASS for discovery only: `gpt-oss:20b` installed. Real tool invocation NOT_RUN. |
-| OpenAI | Locate configured provider and secure path without printing credentials | NOT_RUN: real connectivity/tool proof pending |
+| OpenAI | Configured provider discovery, `GET /_dev/agentframework/credential`, bounded synthetic `POST /api/agents/providers/{id}/test-chat` | Connectivity PASS on baseline host: provider `c1c103db-707e-3f52-8809-8d804fc171d1`, model `gpt-5.4-mini`, response OK, input 29/output 32 tokens, 40-second deadline/no retry. No credential printed. Sanitized `openai-connectivity.json`; real tool proof NOT_RUN. |
+| Ollama connectivity | Same synthetic test-chat route, configured local provider `bd2bffbb-23d5-d152-82f6-e1d37908b169`, installed `gpt-oss:20b` | FAIL: client deadline at 60 seconds, TaskCanceledException, no automatic retry; real tool proof NOT_RUN. Availability alone does not prove usable completion. |
 | Documentation | `./tools/Validation/Test-Documentation.ps1` | PASS: 208 maintained Markdown files after correcting two task-note path findings and five missing historical evidence references reproduced in unchanged Governance fixture / UI sandbox READMEs. |
 | Portability-static | Two documented Python tooling test commands; `scan_portability.py --repo-root . --output ./artifacts/modules-decoupling/20260910-baseline/portability-scan.json --tracked-only`; enforcement with the canonical baseline and no write flag | PASS: tooling 6 + 4 tests; 5627 files / 29249 findings scanned; 14403 reviewed executable-source findings unchanged. No baseline rewrite. |
 | Runtime analysis | CodeAnalytics `snap-20260910124606-06a9d455`, five scoped projects, 443 documents, 1067 types, 9528 members | Source evidence; no blocking load error. Generated attribute warnings and partial factory-DI interpretation; not runtime PASS. |
@@ -41,7 +43,7 @@ Commands run from the repository root. Build the owning test assembly first and 
 
 | Suite / class | Expected cases | Actual / result |
 | --- | --- | --- |
-| Integration / CollaborationIntegrationTests | 2 | NOT_RUN |
+| Integration / CollaborationIntegrationTests | 2 | PASS: expected/actual 2, 2 passed / 0 failed / 0 skipped, 17 seconds; `collaboration-baseline.trx` / `.log` |
 | Integration / ProjectStructureAgentRuntimeToolRoundTripIntegrationTests | 12 | NOT_RUN |
 | Integration / ProjectStructureAssetEffectIntegrationTests | 6 | NOT_RUN |
 | Integration / ProjectStructureWorkflowScenarioHarnessTests | 2 (each covers 21 scenarios internally) | NOT_RUN |
@@ -63,4 +65,21 @@ Use disposable database/storage/profile fixtures. Browser default fixtures isola
 
 Build/test isolation uses the same Release configuration with `--artifacts-path ./artifacts/modules-decoupling/build`. During child-host test execution, set process-scoped `ArtifactsPath` to that absolute root and `CANDOITALL_TEST_CONFIGURATION=Release`; the existing Playwright child `dotnet run` then resolves the isolated Web executable. Keep those settings scoped to the tool process. SDK property evaluation confirmed this path without modifying projects; runtime verification is still required.
 
-No schema/source change yet; starting binary/schema pairing remains unchanged. Migration rehearsal, rollback proof, cumulative architect/QA review, and final gates are NOT_RUN. Complete implementation and end-to-end validation are **not complete**.
+## Collaboration slice in progress
+
+Source base: signed documentation checkpoint `49ef77a3d` plus the staged Collaboration context/stamping change, source tree `a8e5ed489c4c86e1fdbd26d8d0b56781c5a36669` (index before evidence-text updates). Both changed production projects built directly in Release with isolated artifacts: Infrastructure and Collaboration each report 0 warnings / 0 errors. Evidence: `artifacts/modules-decoupling/collaboration/`. xUnit 2.9.3 runs through VSTest on the existing SDK; no test-platform change.
+
+| Check | Discovery and result |
+| --- | --- |
+| Integration, `FullyQualifiedName~CollaborationIntegrationTests` | Expected/actual 4; PASS 4, failed 0, skipped 0, 28 seconds. Preserves two baseline cases and proves complete-schema mapping parity, historical records/restart and profile isolation on disposable PostgreSQL. `collaboration-integration.trx`. |
+| Unit, `FullyQualifiedName~CollaborationDbContextTests` | Expected/actual 5; PASS 5, failed 0, skipped 0, 1 second. Exact bounded model/foreign-query rejection and save-overload GUID stamping matrix. `collaboration-unit.trx`. |
+| Components, `FullyQualifiedName~MainLayoutCollaborationTests` | Expected/actual 1; PASS 1, failed 0, skipped 0, 15 seconds. Existing shell unread badge preserved. `collaboration-components.trx`. |
+| Portability-static | PASS: tooling 6 + 4; complete staged-source scan 5630 files / 29250 findings; final no-write enforcement reports 14403 reviewed executable findings unchanged. No baseline rewrite. |
+| Evidence secret scan | PASS: 13 text artifacts scanned, no oversized/unreadable files or findings, before broad execution. |
+| Documentation | PASS: 208 maintained Markdown files after slice and evidence updates. |
+| Broad stable gate | Trigger: shared persistence stamping and owner composition. Refreshed stable aggregate build PASS, 0 errors / 3 warnings in unchanged component tests (CS8602 twice, xUnit2031 once). Discovery established execution expectations: Components 1896, Integration 1407, Memory 180, AgentFramework Memory 22, Unit 7267 (total 10772). Execution in progress with the documented exact exclusions; compare executed totals and report skips independently. |
+| Independent architecture/QA source review | No actionable findings. Explicit model membership, inherited save dispatch, complete mappings, profile binding and removed overload callers checked; runtime closure is evaluated separately. |
+
+No schema migration or data copy is introduced by this slice. Complete migration mapping remains unchanged. Migration rehearsal, cumulative review, remaining owner changes and final gates are NOT_RUN. Complete implementation and end-to-end validation are **not complete**.
+
+The Collaboration slice preserves current local-operator behavior. It does not establish a new membership/private-thread authorization contract: the current service stores participant identities but has no member-removal operation or per-thread authorization policy. Foundation QA-070's broader scenario therefore cannot be claimed PASS from these persistence and shell tests.
