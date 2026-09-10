@@ -18,11 +18,29 @@ public static class LlmChatFingerprints
         LlmResponseFormat? responseFormat = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(providerProfileId, Guid.Empty);
-        if (!Enum.IsDefined(providerKind))
-        {
+        if (!Enum.IsDefined(providerKind)) {
             throw new ArgumentOutOfRangeException(nameof(providerKind), providerKind, "Unknown provider kind.");
         }
 
+        return CreateSettingsCore(providerProfileId, providerKind, model, settings, timeout, responseFormat);
+    }
+
+    public static LlmChatSettingsFingerprint CreateRequestedSettings(
+        Guid providerProfileId,
+        string model,
+        LlmModelSettings settings,
+        TimeSpan? timeout,
+        LlmResponseFormat? responseFormat)
+        => CreateSettingsCore(providerProfileId, null, model, settings, timeout, responseFormat);
+
+    private static LlmChatSettingsFingerprint CreateSettingsCore(
+        Guid providerProfileId,
+        ProviderKind? providerKind,
+        string model,
+        LlmModelSettings? settings,
+        TimeSpan? timeout,
+        LlmResponseFormat? responseFormat) {
+        ArgumentOutOfRangeException.ThrowIfEqual(providerProfileId, Guid.Empty);
         var normalizedModel = LlmChatDefinitionValidation.NormalizeRequired(
             model,
             LlmChatDefinitionValidation.MaximumModelLength,
@@ -35,7 +53,9 @@ public static class LlmChatFingerprints
             {
                 writer.WriteStartObject();
                 writer.WriteString("providerProfileId", providerProfileId);
-                writer.WriteString("providerKind", providerKind.ToString());
+                if (providerKind is { } resolvedKind) {
+                    writer.WriteString("providerKind", resolvedKind.ToString());
+                }
                 writer.WriteString("model", normalizedModel);
                 if (settings?.Temperature is { } temperature)
                 {

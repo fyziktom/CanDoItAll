@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T17:16:14.877248+00:00",
+  "generated_utc": "2026-09-10T17:32:08.274041+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14406,
+  "allowance_count": 14410,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -11531,6 +11531,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260830104752_AddProviderHistoryExternalReference.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "577d5ecc1459929c77d810a64a04ff3ddf8d4045a22842f2f69da5574acea1e8",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910163827_AddLlmChatDefinitionCreateReceipts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "944edc93beb0fa561742accd38fe80201a172709ab94b9b23345d9e270bc2d13",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910163827_AddLlmChatDefinitionCreateReceipts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f6d2e91b36c1a863191b6cfb2cd78cc53e8d3671cbf406b6d8dd1410aac47a88",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910163827_AddLlmChatDefinitionCreateReceipts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "33f4d3cc3f2be183bbd2edefa4c26ffaa543a9768dc336b42a69ff180cdb581e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910163827_AddLlmChatDefinitionCreateReceipts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "43ea655081cf5f6de9ab0fece50cdc5e9fd83d31b9a0bed96a33c3326e64f503",
       "count": 1
     },
     {

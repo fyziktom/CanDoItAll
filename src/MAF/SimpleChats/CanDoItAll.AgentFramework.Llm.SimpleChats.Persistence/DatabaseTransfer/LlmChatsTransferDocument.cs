@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.EntityFrameworkCore;
@@ -21,13 +22,16 @@ internal sealed record LlmChatsTransferDocument(
     IReadOnlyList<LlmChatMessageRow> Messages,
     IReadOnlyList<LlmChatOperationRow> Operations,
     IReadOnlyList<LlmChatInvocationRecordRow> InvocationRecords,
-    IReadOnlyList<LlmChatOperationEventRow> OperationEvents)
+    IReadOnlyList<LlmChatOperationEventRow> OperationEvents,
+    IReadOnlyList<LlmChatDefinitionCreateReceiptRow> DefinitionCreateReceipts)
 {
-    public const int CurrentSchemaVersion = 8;
+    public const int CurrentSchemaVersion = 9;
+    internal const string RetainedCreationReceiptReplacementError =
+        "Chat replacement would invalidate retained creation receipts. Use an empty target database.";
 
     public int RecordCount =>
         Definitions.Count + Revisions.Count + Tags.Count + Conversations.Count + Transcripts.Count +
-        Messages.Count + Operations.Count + InvocationRecords.Count + OperationEvents.Count;
+        Messages.Count + Operations.Count + InvocationRecords.Count + OperationEvents.Count + DefinitionCreateReceipts.Count;
 
     public static async Task<LlmChatsTransferDocument> LoadAsync(
         DbContext dbContext,
@@ -59,7 +63,8 @@ internal sealed record LlmChatsTransferDocument(
             ("messages", await dbContext.Set<LlmChatMessageRow>().LongCountAsync(cancellationToken).ConfigureAwait(false)),
             ("operations", await dbContext.Set<LlmChatOperationRow>().LongCountAsync(cancellationToken).ConfigureAwait(false)),
             ("invocation records", await dbContext.Set<LlmChatInvocationRecordRow>().LongCountAsync(cancellationToken).ConfigureAwait(false)),
-            ("operation events", await dbContext.Set<LlmChatOperationEventRow>().LongCountAsync(cancellationToken).ConfigureAwait(false))
+            ("operation events", await dbContext.Set<LlmChatOperationEventRow>().LongCountAsync(cancellationToken).ConfigureAwait(false)),
+            ("definition create receipts", await dbContext.Set<LlmChatDefinitionCreateReceiptRow>().LongCountAsync(cancellationToken).ConfigureAwait(false))
         };
         var overBound = counts.FirstOrDefault(item => item.Count > options.MaximumRecordsPerCollection);
         if (overBound.Count > options.MaximumRecordsPerCollection)
@@ -86,7 +91,8 @@ internal sealed record LlmChatsTransferDocument(
             await LoadBoundedAsync(dbContext.Set<LlmChatMessageRow>(), "messages").ConfigureAwait(false),
             await LoadBoundedAsync(dbContext.Set<LlmChatOperationRow>(), "operations").ConfigureAwait(false),
             await LoadBoundedAsync(dbContext.Set<LlmChatInvocationRecordRow>(), "invocation records").ConfigureAwait(false),
-            await LoadBoundedAsync(dbContext.Set<LlmChatOperationEventRow>(), "operation events").ConfigureAwait(false));
+            await LoadBoundedAsync(dbContext.Set<LlmChatOperationEventRow>(), "operation events").ConfigureAwait(false),
+            await LoadBoundedAsync(dbContext.Set<LlmChatDefinitionCreateReceiptRow>(), "definition create receipts").ConfigureAwait(false));
         if (snapshot is not null)
         {
             await snapshot.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -140,6 +146,8 @@ internal sealed record LlmChatsTransferDocument(
         EnsureUnique(Operations.Select(row => row.Id), "operation id");
         EnsureUnique(InvocationRecords.Select(row => (row.OperationId, row.Ordinal)), "invocation ordinal");
         EnsureUnique(OperationEvents.Select(row => (row.OperationId, row.Sequence)), "operation event sequence");
+        EnsureUnique(DefinitionCreateReceipts.Select(row => (row.Producer, row.Actor, row.HistoryNamespace, row.IntentId)),
+            "definition create intent");
 
         var definitionIds = Definitions.Select(row => row.Id).ToHashSet();
         var revisionIds = Revisions.Select(row => (row.DefinitionId, row.Revision)).ToHashSet();
@@ -150,6 +158,10 @@ internal sealed record LlmChatsTransferDocument(
             Tags.Any(row => !definitionIds.Contains(row.DefinitionId)))
         {
             throw new InvalidDataException("An LLM Chat revision or tag references a missing definition.");
+        }
+
+        if (DefinitionCreateReceipts.Any(row => !revisionIds.Contains((row.DefinitionId, row.DefinitionRevision)))) {
+            throw new InvalidDataException("An LLM Chat creation receipt references a missing original definition revision.");
         }
 
         if (Definitions.Any(row => !revisionIds.Contains((row.Id, row.CurrentRevision))))
@@ -300,11 +312,16 @@ internal sealed record LlmChatsTransferDocument(
         await dbContext.AddRangeAsync(Operations, cancellationToken).ConfigureAwait(false);
         await dbContext.AddRangeAsync(InvocationRecords, cancellationToken).ConfigureAwait(false);
         await dbContext.AddRangeAsync(OperationEvents, cancellationToken).ConfigureAwait(false);
+        await dbContext.AddRangeAsync(DefinitionCreateReceipts, cancellationToken).ConfigureAwait(false);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task ClearAsync(DbContext dbContext, CancellationToken cancellationToken)
     {
+        if (await dbContext.Set<LlmChatDefinitionCreateReceiptRow>().AnyAsync(cancellationToken).ConfigureAwait(false)) {
+            throw new InvalidOperationException(RetainedCreationReceiptReplacementError);
+        }
+
         await dbContext.Set<LlmChatOperationEventRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await dbContext.Set<LlmChatInvocationRecordRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await dbContext.Set<LlmChatOperationRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
@@ -325,8 +342,15 @@ internal sealed record LlmChatsTransferDocument(
         }
     }
 
-    private void ValidateRowValues()
-    {
+    private void ValidateRowValues() {
+        if (DefinitionCreateReceipts.Any(row =>
+                !IsCanonicalIdentity(row.Producer) || !IsCanonicalIdentity(row.Actor) || !IsCanonicalIdentity(row.HistoryNamespace) ||
+                row.IntentId == Guid.Empty || row.DefinitionId == Guid.Empty || row.DefinitionRevision != 1 ||
+                row.OriginalConcurrencyToken != 0 || row.SemanticVersion != LlmChatDefinitionCreateClaim.SemanticVersion ||
+                row.SemanticFingerprint.Length != 64 || row.SemanticFingerprint.Any(character => !char.IsAsciiHexDigit(character)))) {
+            throw new InvalidDataException("The LLM Chats transfer contains an invalid definition creation receipt.");
+        }
+
         if (Definitions.Any(row =>
                 row.Id == Guid.Empty ||
                 !Enum.IsDefined(row.Status) ||
@@ -369,6 +393,10 @@ internal sealed record LlmChatsTransferDocument(
             throw new InvalidDataException("The LLM Chats transfer contains an invalid definition or conversation graph value.");
         }
     }
+
+    private static bool IsCanonicalIdentity(string identity)
+        => !string.IsNullOrWhiteSpace(identity) && identity.Length <= LlmChatDefinitionCreateScope.MaximumIdentityLength &&
+           string.Equals(identity, identity.Trim(), StringComparison.Ordinal);
 
     private static bool IsValidOperationState(LlmChatOperationRow row)
     {

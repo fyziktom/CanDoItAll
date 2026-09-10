@@ -12,11 +12,25 @@ namespace CanDoItAll.Tests.Unit;
 
 internal sealed class InMemoryLlmChatDefinitionRepository :
     ILlmChatDefinitionRepository,
-    ILlmChatDefinitionReadStore
+    ILlmChatDefinitionReadStore,
+    ILlmChatDefinitionCreateReceiptRepository
 {
     private readonly Dictionary<LlmChatDefinitionId, LlmChatDefinition> definitions = [];
     private readonly Dictionary<(LlmChatDefinitionId Id, int Revision), LlmChatDefinitionRevision> revisions = [];
     private readonly Dictionary<LlmChatDefinitionId, IReadOnlyList<string>> tags = [];
+
+    public Task<LlmChatDefinitionCreateClaim?> TryGetReceiptAsync(
+        LlmChatDefinitionCreateKey key,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Definition create receipt tests require PostgreSQL.");
+
+    public Task<bool> TryClaimAsync(
+        LlmChatDefinitionCreateClaim claim,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Definition create receipt tests require PostgreSQL.");
+
+    public void ForgetAttempt(LlmChatDefinitionId definitionId)
+        => throw new NotSupportedException("Definition create receipt tests require PostgreSQL.");
 
     public Task<LlmChatDefinition?> TryGetAsync(
         LlmChatDefinitionId id,

@@ -40,7 +40,11 @@ public static class SimpleChatsApplicationServiceCollectionExtensions
         services.AddScoped<LlmChatDefinitionApplicationService>();
         services.AddScoped<LlmChatConversationApplicationService>();
         services.AddScoped<LlmChatOperationApplicationService>();
-        services.AddScoped<ILlmChatDefinitionApplicationService, ProfileScopedLlmChatDefinitionApplicationService>();
+        services.AddScoped<ProfileScopedLlmChatDefinitionApplicationService>();
+        services.AddScoped<ILlmChatDefinitionApplicationService>(provider =>
+            provider.GetRequiredService<ProfileScopedLlmChatDefinitionApplicationService>());
+        services.AddScoped<ILlmChatDefinitionCreateReceiptService>(provider =>
+            provider.GetRequiredService<ProfileScopedLlmChatDefinitionApplicationService>());
         services.AddScoped<ILlmChatConversationApplicationService, ProfileScopedLlmChatConversationApplicationService>();
         services.AddScoped<ILlmChatOperationApplicationService, ProfileScopedLlmChatOperationApplicationService>();
         return services;

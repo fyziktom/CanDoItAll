@@ -11,13 +11,14 @@ namespace CanDoItAll.Tests.Unit.LlmChats;
 
 public sealed class SimpleChatsDbContextTests {
     [Fact]
-    public void Runtime_model_maps_only_nine_chat_entities_and_rejects_foreign_queries() {
+    public void Runtime_model_maps_only_ten_chat_entities_and_rejects_foreign_queries() {
         using var context = new SimpleChatsDbContext(new DbContextOptionsBuilder<SimpleChatsDbContext>()
             .UseNpgsql("Host=localhost;Database=simple_chats_model")
             .Options);
         Type[] owned = [typeof(LlmChatDefinitionRow), typeof(LlmChatDefinitionRevisionRow), typeof(LlmChatDefinitionTagRow),
             typeof(LlmChatConversationRow), typeof(LlmChatTranscriptRow), typeof(LlmChatMessageRow),
-            typeof(LlmChatOperationRow), typeof(LlmChatInvocationRecordRow), typeof(LlmChatOperationEventRow)];
+            typeof(LlmChatOperationRow), typeof(LlmChatInvocationRecordRow), typeof(LlmChatOperationEventRow),
+            typeof(LlmChatDefinitionCreateReceiptRow)];
 
         Assert.Equal(owned.OrderBy(type => type.Name), context.Model.GetEntityTypes()
             .Select(entity => entity.ClrType).OrderBy(type => type.Name));
@@ -74,10 +75,16 @@ public sealed class SimpleChatsDbContextTests {
     [InlineData(EvidenceWrite.InvocationModified)]
     [InlineData(EvidenceWrite.InvocationDeleted)]
     [InlineData(EvidenceWrite.EventModified)]
+    [InlineData(EvidenceWrite.ReceiptModified)]
+    [InlineData(EvidenceWrite.ReceiptDeleted)]
     public async Task Unit_of_work_preserves_append_only_evidence_checks(EvidenceWrite write) {
         var databaseName = $"simple-chats-append-only-{Guid.NewGuid():N}";
         await using var context = CreateInMemoryContext(databaseName);
         object row = write switch {
+            EvidenceWrite.ReceiptModified or EvidenceWrite.ReceiptDeleted => new LlmChatDefinitionCreateReceiptRow {
+                Producer = "fixture", Actor = "operator", HistoryNamespace = "history", IntentId = Guid.NewGuid(),
+                SemanticVersion = 1, SemanticFingerprint = new string('a', 64), DefinitionId = Guid.NewGuid(), DefinitionRevision = 1
+            },
             EvidenceWrite.RevisionModified or EvidenceWrite.RevisionDeleted => new LlmChatDefinitionRevisionRow {
                 DefinitionId = Guid.NewGuid(), Revision = 1
             },
@@ -88,7 +95,7 @@ public sealed class SimpleChatsDbContextTests {
         };
         context.Add(row);
         await context.SaveChangesAsync();
-        context.Entry(row).State = write is EvidenceWrite.RevisionDeleted or EvidenceWrite.InvocationDeleted
+        context.Entry(row).State = write is EvidenceWrite.RevisionDeleted or EvidenceWrite.InvocationDeleted or EvidenceWrite.ReceiptDeleted
             ? EntityState.Deleted
             : EntityState.Modified;
         var transactions = CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
@@ -99,6 +106,7 @@ public sealed class SimpleChatsDbContextTests {
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync(_ => Task.FromResult(true)));
         var expected = write switch {
+            EvidenceWrite.ReceiptModified or EvidenceWrite.ReceiptDeleted => "LLM Chat definition create receipts are immutable.",
             EvidenceWrite.RevisionModified or EvidenceWrite.RevisionDeleted => "LLM Chat definition revisions are append-only.",
             EvidenceWrite.InvocationModified or EvidenceWrite.InvocationDeleted => "LLM Chat invocation records are append-only.",
             _ => "LLM Chat operation events cannot be modified after append."
@@ -116,7 +124,9 @@ public sealed class SimpleChatsDbContextTests {
         RevisionDeleted,
         InvocationModified,
         InvocationDeleted,
-        EventModified
+        EventModified,
+        ReceiptModified,
+        ReceiptDeleted
     }
 
     private sealed class DirectFence : ILlmChatCommitFence {

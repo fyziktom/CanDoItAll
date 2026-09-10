@@ -27,7 +27,11 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.TryAddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter>();
         services.TryAddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionStore>();
         services.TryAddSingleton<ILlmChatRuntimeLeaseFactory, DatabaseProfileLlmChatRuntimeLeaseFactory>();
-        services.AddScoped<ILlmChatDefinitionRepository, EfLlmChatDefinitionRepository>();
+        services.AddScoped<EfLlmChatDefinitionRepository>();
+        services.AddScoped<ILlmChatDefinitionRepository>(provider =>
+            provider.GetRequiredService<EfLlmChatDefinitionRepository>());
+        services.AddScoped<ILlmChatDefinitionCreateReceiptRepository>(provider =>
+            provider.GetRequiredService<EfLlmChatDefinitionRepository>());
         services.AddScoped<ILlmChatDefinitionReadStore, EfLlmChatDefinitionReadStore>();
         services.AddScoped<ILlmChatConversationRepository, EfLlmChatConversationRepository>();
         services.AddScoped<ILlmChatConversationReadStore, EfLlmChatConversationReadStore>();

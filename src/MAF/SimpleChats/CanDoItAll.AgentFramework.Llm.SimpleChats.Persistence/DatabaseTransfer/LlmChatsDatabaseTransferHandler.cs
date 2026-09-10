@@ -22,9 +22,10 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
             .ConfigureAwait(false);
         return new DatabaseTransferItemPreview(
             Descriptor,
-            source.RecordCount > 0,
+            source.RecordCount > 0 && target.DefinitionCreateReceipts.Count == 0,
             $"{source.Definitions.Count} definition(s), {source.Conversations.Count} conversation(s), and {source.Operations.Count} operation(s) are available.",
-            source.RecordCount == 0 ? "The source database does not contain LLM Chats data." : null,
+            source.RecordCount == 0 ? "The source database does not contain LLM Chats data."
+                : target.DefinitionCreateReceipts.Count > 0 ? LlmChatsTransferDocument.RetainedCreationReceiptReplacementError : null,
             source.RecordCount,
             target.RecordCount);
     }

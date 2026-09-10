@@ -6,6 +6,7 @@ namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 public sealed class SimpleChatsDbContext(DbContextOptions<SimpleChatsDbContext> options) : DbContext(options) {
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.ApplyConfiguration(new LlmChatDefinitionConfiguration());
+        modelBuilder.ApplyConfiguration(new LlmChatDefinitionCreateReceiptConfiguration());
         modelBuilder.ApplyConfiguration(new LlmChatDefinitionRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new LlmChatDefinitionTagConfiguration());
         modelBuilder.ApplyConfiguration(new LlmChatConversationConfiguration());

@@ -230,6 +230,7 @@ public sealed class MigrationBootstrapIntegrationTests
         string[] expectedTableNames =
         [
             "LlmChats_Conversations",
+            "LlmChats_DefinitionCreateReceipts",
             "LlmChats_DefinitionRevisions",
             "LlmChats_DefinitionTags",
             "LlmChats_Definitions",

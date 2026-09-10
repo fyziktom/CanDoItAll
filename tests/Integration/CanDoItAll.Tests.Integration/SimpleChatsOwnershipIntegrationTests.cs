@@ -16,14 +16,14 @@ namespace CanDoItAll.Tests.Integration.LlmChats;
 
 public sealed class SimpleChatsOwnershipIntegrationTests {
     [Fact]
-    public async Task Runtime_model_retains_all_nine_complete_schema_mappings() {
+    public async Task Runtime_model_retains_all_ten_complete_schema_mappings() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var owner = scope.ServiceProvider.GetRequiredService<SimpleChatsDbContext>();
         var complete = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var ownerModel = owner.GetService<IDesignTimeModel>().Model;
         var completeModel = complete.GetService<IDesignTimeModel>().Model;
-        Assert.Equal(9, ownerModel.GetEntityTypes().Count());
+        Assert.Equal(10, ownerModel.GetEntityTypes().Count());
         foreach (var entity in ownerModel.GetEntityTypes()) {
             var existing = Assert.IsAssignableFrom<IEntityType>(completeModel.FindEntityType(entity.ClrType));
             Assert.Equal(existing.ToDebugString(MetadataDebugStringOptions.LongDefault),

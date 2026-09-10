@@ -281,7 +281,8 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
             new EfLlmChatDefinitionReadStore(dbContext),
             new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(dbContext)),
             FixedProviderResolver.Instance,
-            TimeProvider.System);
+            TimeProvider.System,
+            new EfLlmChatDefinitionRepository(dbContext));
 
     private static ReconciliationHarness CreateReconciliationHarness(SimpleChatsDbContext dbContext)
     {

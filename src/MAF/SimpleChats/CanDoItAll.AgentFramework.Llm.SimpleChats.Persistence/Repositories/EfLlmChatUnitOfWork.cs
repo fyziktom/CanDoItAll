@@ -11,6 +11,7 @@ public sealed class EfLlmChatUnitOfWork(
     CoordinatedDatabaseTransaction transactions) : ILlmChatUnitOfWork {
     private readonly List<Action> _postCommitCallbacks = [];
     private int _executionDepth;
+    private Exception? _nestedFailure;
 
     public async Task<T> ExecuteAsync<T>(
         Func<CancellationToken, Task<T>> operation,
@@ -26,12 +27,16 @@ public sealed class EfLlmChatUnitOfWork(
                 var nestedResult = await operation(cancellationToken).ConfigureAwait(false);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 return nestedResult;
+            } catch (Exception exception) {
+                _nestedFailure ??= exception;
+                throw;
             } finally {
                 _executionDepth--;
             }
         }
 
         _postCommitCallbacks.Clear();
+        _nestedFailure = null;
         try {
             var result = await commitFence.ExecuteAsync(async fenceCancellationToken => {
                 await using var transaction = dbContext.Database.IsRelational()
@@ -41,6 +46,10 @@ public sealed class EfLlmChatUnitOfWork(
                 _executionDepth++;
                 try {
                     var transactionResult = await operation(fenceCancellationToken).ConfigureAwait(false);
+                    if (_nestedFailure is { } nestedFailure) {
+                        throw new InvalidOperationException("An LLM Chat transaction cannot commit after nested work failed.", nestedFailure);
+                    }
+
                     await SaveChangesAsync(fenceCancellationToken).ConfigureAwait(false);
                     if (transaction is not null) {
                         await transaction.CommitAsync(fenceCancellationToken).ConfigureAwait(false);
@@ -61,6 +70,8 @@ public sealed class EfLlmChatUnitOfWork(
         } catch {
             _postCommitCallbacks.Clear();
             throw;
+        } finally {
+            _nestedFailure = null;
         }
     }
 
@@ -74,6 +85,12 @@ public sealed class EfLlmChatUnitOfWork(
     }
 
     private Task<int> SaveChangesAsync(CancellationToken cancellationToken) {
+        var invalidReceiptWrite = dbContext.ChangeTracker.Entries<LlmChatDefinitionCreateReceiptRow>()
+            .FirstOrDefault(entry => entry.State is EntityState.Modified or EntityState.Deleted);
+        if (invalidReceiptWrite is not null) {
+            throw new InvalidOperationException("LLM Chat definition create receipts are immutable.");
+        }
+
         var invalidRevisionWrite = dbContext.ChangeTracker.Entries<LlmChatDefinitionRevisionRow>()
             .FirstOrDefault(entry => entry.State is EntityState.Modified or EntityState.Deleted);
         if (invalidRevisionWrite is not null) {

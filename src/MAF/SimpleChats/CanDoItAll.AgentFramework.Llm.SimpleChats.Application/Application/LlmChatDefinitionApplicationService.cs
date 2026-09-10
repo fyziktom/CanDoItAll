@@ -10,7 +10,9 @@ public sealed class LlmChatDefinitionApplicationService(
     ILlmChatDefinitionReadStore readStore,
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatProviderResolver providerResolver,
-    TimeProvider timeProvider) : ILlmChatDefinitionApplicationService
+    TimeProvider timeProvider,
+    ILlmChatDefinitionCreateReceiptRepository createReceipts)
+    : ILlmChatDefinitionApplicationService, ILlmChatDefinitionCreateReceiptService
 {
     public async Task<Result<LlmChatDefinitionDetails>> CreateAsync(
         CreateLlmChatDefinitionCommand command,
@@ -34,27 +36,111 @@ public sealed class LlmChatDefinitionApplicationService(
                 var now = timeProvider.GetUtcNow();
                 var tags = LlmChatDefinitionValidation.NormalizeTags(command.Tags);
                 var id = LlmChatDefinitionId.New();
-                var revisionNumber = new LlmChatDefinitionRevisionNumber(1);
-                var revision = CreateRevision(id, revisionNumber, command, resolved.Value!, now);
-                var definition = new LlmChatDefinition(
-                    id,
-                    revision.Name,
-                    revision.Summary,
-                    revision.AvatarImageUrl,
-                    LlmChatDefinitionStatus.Draft,
-                    revisionNumber,
-                    now,
-                    now,
-                    0);
-                await repository.CreateAsync(definition, revision, transactionCancellationToken).ConfigureAwait(false);
-                await repository.ReplaceTagsAsync(id, tags, transactionCancellationToken).ConfigureAwait(false);
-                return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(definition, revision, tags));
+                var details = await CreateCoreAsync(command, resolved.Value!, id, now, tags,
+                    transactionCancellationToken).ConfigureAwait(false);
+                return Result<LlmChatDefinitionDetails>.Success(details);
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (ArgumentException exception)
         {
             return Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.InvalidRequest(exception.Message));
         }
+    }
+
+    public async Task<Result<LlmChatDefinitionCreateResponse>> CreateOnceAsync(
+        CreateLlmChatDefinitionOnceCommand command,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(command.Key);
+        CreateLlmChatDefinitionCommand snapshot;
+        LlmChatDefinitionCreateFingerprint fingerprint;
+        try {
+            snapshot = LlmChatDefinitionCreateSemantics.Snapshot(command.Definition);
+            fingerprint = LlmChatDefinitionCreateSemantics.Fingerprint(snapshot);
+        } catch (ArgumentException exception) {
+            return Result<LlmChatDefinitionCreateResponse>.Failure(LlmChatErrors.InvalidRequest(exception.Message));
+        }
+
+        LlmChatDefinitionId? attemptedDefinitionId = null;
+        try {
+            return await unitOfWork.ExecuteAsync(async token => {
+                var existing = await createReceipts.TryGetReceiptAsync(command.Key, token).ConfigureAwait(false);
+                if (existing is not null) {
+                    return Replay(existing, fingerprint);
+                }
+
+                var id = LlmChatDefinitionId.New();
+                var now = timeProvider.GetUtcNow();
+                var createdAt = new DateTimeOffset(now.Ticks - now.Ticks % TimeSpan.TicksPerMicrosecond, TimeSpan.Zero);
+                var receipt = new LlmChatDefinitionCreateReceipt(command.Key, id, new(1), 0, createdAt);
+                var claim = new LlmChatDefinitionCreateClaim(receipt, fingerprint);
+                if (!await createReceipts.TryClaimAsync(claim, token).ConfigureAwait(false)) {
+                    var winner = await createReceipts.TryGetReceiptAsync(command.Key, token).ConfigureAwait(false)
+                        ?? throw new InvalidOperationException("A competing definition create committed without its receipt.");
+                    return Replay(winner, fingerprint);
+                }
+
+                attemptedDefinitionId = id;
+                try {
+                    var resolved = await providerResolver.ResolveAsync(snapshot.ProviderProfileId, snapshot.Model,
+                        snapshot.Settings.ThinkingEffort, token).ConfigureAwait(false);
+                    if (resolved.IsFailure) {
+                        throw new DefinitionCreateRejectedException(resolved.Errors);
+                    }
+
+                    await CreateCoreAsync(snapshot, resolved.Value!, id, receipt.CreatedAtUtc, snapshot.Tags!, token)
+                        .ConfigureAwait(false);
+                } catch (ArgumentException exception) {
+                    throw new DefinitionCreateRejectedException([LlmChatErrors.InvalidRequest(exception.Message)]);
+                }
+
+                return Result<LlmChatDefinitionCreateResponse>.Success(new(receipt, WasReplay: false));
+            }, cancellationToken).ConfigureAwait(false);
+        } catch (DefinitionCreateRejectedException exception) {
+            return Result<LlmChatDefinitionCreateResponse>.Failure(exception.Errors);
+        } finally {
+            if (attemptedDefinitionId is { } id) {
+                createReceipts.ForgetAttempt(id);
+            }
+        }
+    }
+
+    public async Task<Result<LlmChatDefinitionCreateReceipt?>> FindReceiptAsync(
+        LlmChatDefinitionCreateKey key,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(key);
+        var claim = await createReceipts.TryGetReceiptAsync(key, cancellationToken).ConfigureAwait(false);
+        return Result<LlmChatDefinitionCreateReceipt?>.Success(claim?.Receipt);
+    }
+
+    private static Result<LlmChatDefinitionCreateResponse> Replay(
+        LlmChatDefinitionCreateClaim claim,
+        LlmChatDefinitionCreateFingerprint fingerprint)
+        => claim.Fingerprint == fingerprint
+            ? Result<LlmChatDefinitionCreateResponse>.Success(new(claim.Receipt, WasReplay: true))
+            : Result<LlmChatDefinitionCreateResponse>.Failure(new Error(
+                LlmChatErrorCodes.DefinitionCreateIntentConflict,
+                "This definition create intent was already committed with a different request."));
+
+    private sealed class DefinitionCreateRejectedException(IReadOnlyList<Error> errors)
+        : Exception("The definition create was rejected after reserving its intent.") {
+        public IReadOnlyList<Error> Errors { get; } = errors;
+    }
+
+    private async Task<LlmChatDefinitionDetails> CreateCoreAsync(
+        CreateLlmChatDefinitionCommand command,
+        LlmChatResolvedProvider resolved,
+        LlmChatDefinitionId id,
+        DateTimeOffset now,
+        IReadOnlyList<string> tags,
+        CancellationToken cancellationToken) {
+        var revisionNumber = new LlmChatDefinitionRevisionNumber(1);
+        var revision = CreateRevision(id, revisionNumber, command, resolved, now);
+        var definition = new LlmChatDefinition(id, revision.Name, revision.Summary, revision.AvatarImageUrl,
+            LlmChatDefinitionStatus.Draft, revisionNumber, now, now, 0);
+        await repository.CreateAsync(definition, revision, cancellationToken).ConfigureAwait(false);
+        await repository.ReplaceTagsAsync(id, tags, cancellationToken).ConfigureAwait(false);
+        return new LlmChatDefinitionDetails(definition, revision, tags);
     }
 
     public async Task<Result<LlmChatDefinitionDetails>> UpdateAsync(
