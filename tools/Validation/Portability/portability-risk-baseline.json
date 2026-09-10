@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T17:32:08.274041+00:00",
+  "generated_utc": "2026-09-10T17:51:40.435305+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14410,
+  "allowance_count": 14424,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -9784,6 +9784,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "10b8ae9c6335c8bd9abd318c846dd97b9ea52393f5e569238e8dc6722e4c84f4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "19c9d1dfb4a4c310c4b3b66cad4099c9fa6f620bf19878ff64a5954c31c33ef9",
       "count": 1
     },
@@ -9820,6 +9826,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "630067d735b91d0c0dc2e386c4c102cdab1569e80603698d821def612aa6054e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "6f6892fa5af6a48abbff6df53e0e3c7a01558c09681fc3a134b70be43e939cc8",
       "count": 1
     },
@@ -9833,6 +9845,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "8454df8cdc9ea1e633123d42db7c6f894f8e786cbb20c3bde2a2b838d3c5bfc4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "8ce7ac98d8de52ef5799d34e44dfdb9c937900b2a3c5958ef74948abc01a5706",
       "count": 1
     },
     {
@@ -9940,13 +9958,13 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FtpStorageAddressPolicy.cs",
       "category": "case-policy",
-      "source_fingerprint": "55eb473672a4da74070f4c2ee7932e167d8b9b6231eff5646d1ee1157165c569",
+      "source_fingerprint": "26bd93795021f44b8706dc5f2e74f68f1e054303338dd28c011f244d86b3b4f2",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FtpStorageAddressPolicy.cs",
       "category": "case-policy",
-      "source_fingerprint": "ad174f26aa61ce230de1018ed855dbf04dc2d004d31885e6c7b41947b6949899",
+      "source_fingerprint": "8e16b6b845396f5cf5fdcfd4bef9c61c07a220a0b9221e5e767b0c6a1fc4bab9",
       "count": 1
     },
     {
@@ -10031,6 +10049,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/StorageBrowseCursorProtector.cs",
       "category": "path-normalization",
       "source_fingerprint": "c1dc59d29e384def15e21718f6238053d31f041a58a66600896a128c772f0120",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/StorageObjectDeletionService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "7e22a40b8df1712f05dc3171565ae6288bc1484b8adf0579b91bd3802b6eda0b",
       "count": 1
     },
     {
@@ -10234,6 +10258,18 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Models/StorageCatalogPlanningFact.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "4b59721bf281bd51983e0b633b9621991dc7d85df6dc50935f6c87b7070f1637",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Models/StorageCatalogPlanningFact.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "72c61a3b6077d779b658898c42b39a93832cc860fae0ac7b88ee4c14838f8962",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Models/StorageCatalogPlanningFact.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "74d750a128a3fee0e08bf631b34c27cdba8df8d1c93545b4dec9b61151d73c4d",
       "count": 1
     },
@@ -10246,13 +10282,25 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "1ee137386718cce5416c0c66f724418eb09a27306ad536b63a6e9d3e38e78925",
+      "source_fingerprint": "0dda1223a802580367fdd04c7cdbcca62d896e9fd9f39a7e5327859fe0b7339d",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "488aa285828f13a484430d6b0ba082d278993c7fd5bb64ed9ec69745747fc316",
+      "source_fingerprint": "4d638df8636a1ce946652a01770a79fbcc30eab1e6faf4a8f716125277ff9ab3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "57a11f81365b4b7eccde9165f48cf3c1b2d42aa643743f58b63782ff0bf86f1d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "7ddc30a44f01064d9a9c9e65899b7673030a7b034853e8a499665595e1238ce5",
       "count": 1
     },
     {
@@ -10270,25 +10318,55 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "ccf7f520c2c641b2ec4bc418c2b3651ae05be50aa55f4366743b6a02c23b72ad",
+      "source_fingerprint": "9867d5e040106b5e05360f924065cf2445592259ffa7a986975ec24271f25e25",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "fd6f8fb74018dfaf5e56b7d7280e4ed4872ae25b2242d93c77388deb8fe008ed",
+      "source_fingerprint": "b81396f590a931a37eef852164f46d6292d42e39adbb56a83f3197eebb54e25f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "bb27cb6a616d7856a425a7551266e988bdeb3132880d29e5e7effa1f7b506834",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f37569fd520666782c48d760c25a0572ec30026f7e6eb8297006ee15bef1cf20",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "3ee59a5e4ec1b419037765563f8553ad32474f23a1ec301edd6e5ed39e317c96",
-      "count": 2
+      "source_fingerprint": "1ed3582b0546f5b9d137ad299ad8756ca6e5c05fdfab08ccd1a432f4b8ea57e6",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "3cb409f7342211ad2deda0458dd47d51d6c84adde413b92ea31657f95fb0b84f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "43fab9ac7037576cb694abddb3f0e656ac334a090800af8512199e2581b7ee0e",
+      "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "4e9a249f8daaf85e2f9d06b3d57da1ccf7d561b6f77cd43567e45d6ec82f2234",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5192e12a45debc7f94aa00d7691b7376b602d4546cb815b06aa13136f43473f0",
       "count": 1
     },
     {
@@ -10300,13 +10378,25 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "81c2968498feeb14e8d6d5061fa38c79bbefaf4099f31111e1d78917c7386d92",
+      "source_fingerprint": "74454ba499ee29e83d882720fc899c3b5608e673e6c28a81faf00ee9a6263eba",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "861b539dd190ee16b4bb65330af0b27541356a16d9828f7a78a1b3b78a203a80",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "976ee1654c3d5de190d52fe1b0df9ed028db328e66bdbc63bd4675f8e324ce23",
+      "count": 2
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a8f8fddd917e9af2744ac732228605c37cf790237b37753527cea7a148c230dd",
       "count": 1
     },
     {
@@ -10319,7 +10409,7 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "b1a9e8758d9476622677f8ffdb9fb3803df916319b8e5d4241c5df078659325d",
-      "count": 1
+      "count": 2
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
@@ -10343,7 +10433,7 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogHostBindingPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "ed8e22b9d008bc361ed38e6d19a5b5e0315615304efaf881307d017e172864bf",
-      "count": 1
+      "count": 2
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
@@ -10504,12 +10594,6 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "aea7c634baaceb3e1c08aea49a32c606d634aff58b9945c56b39a6416915d968",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
-      "category": "absolute-path-field",
       "source_fingerprint": "af181a19965edbb8dec462db81776979c5884ea420e4abd7378b2f0490839119",
       "count": 2
     },
@@ -10577,12 +10661,6 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "f05d6c927d9576c460254f36e65e2dabb625296dea8cd78c0df641f569339235",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "f87a48525388db5b0b8707aedb74295eae2e9a7c5817e3d88ec0d2ab4499fa7d",
       "count": 1
     },
     {
@@ -57496,38 +57574,38 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "317efe952df5edbd8818a4a5f9090965634d9902ad9cbb85f23b692a48070f24",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
-      "category": "absolute-path-field",
       "source_fingerprint": "69257cb2e6092c82a23fb46a6bf81e09a43b7880fd7fec088e2e4b96edc31d76",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "700636633d68655b0fdfe140fc91e094d4733a426b1dd74354a8c060eb8d3978",
+      "source_fingerprint": "70d05d01ab3c44d291b605bc0e58c1dae1d7e1d4694974b6cace3a80fff744f2",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "9ad87693b2cacc8d68b6ce63d692c2a492a989e40ee059fd0958c35d9889e2a4",
+      "source_fingerprint": "82671941da65c44a6660e705cba5c89818dea7f5adbaa0389af14f03c43386cb",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "ec74ad7f6e034027060d03c06b739e2a4ed48deab46e68956b5d1a32117e131a",
+      "source_fingerprint": "8e0c102a56473fd602b5a3387741e486977bfc2809e37a846ab2026bb6ef6116",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "d199e41d01b12082fbb8020ad5c1d88ad4f12cf39e7dceff547e686f735b0ff3",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "f7282f68c93d595de5dd0fe5767144a829123463100e8dfa9fcadfbc098910ca",
-      "count": 2
+      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",

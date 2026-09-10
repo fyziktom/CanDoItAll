@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Text.Json;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
@@ -238,7 +239,13 @@ public sealed class RecordQueryIntegrationTests
             await dbContext.SaveChangesAsync();
         }
 
-        var service = new ProjectRecordQueryService(factory);
+        var profile = new ResolvedDatabaseProfile(new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.PostgreSql },
+            DatabaseProfileResolutionSource.ExplicitOverride, database.ConnectionString);
+        var ownerOptions = new DbContextOptionsBuilder<ProjectsDbContext>();
+        AppDbContextOptionsConfigurator.Configure(ownerOptions, profile);
+        ownerOptions.AddInterceptors(interceptor);
+        var service = new ProjectRecordQueryService(new ProjectOwnerFactory(ownerOptions.Options),
+            ownerOptions.Options, CoordinatedDatabaseTransaction.ForProfile(profile));
         interceptor.Clear();
 
         var result = await service.SearchAsync(new ProjectRecordQuery(
@@ -449,6 +456,10 @@ public sealed class RecordQueryIntegrationTests
             commands.Enqueue(new CapturedCommand(command.CommandText));
             return ValueTask.FromResult(result);
         }
+    }
+
+    private sealed class ProjectOwnerFactory(DbContextOptions<ProjectsDbContext> options) : IDbContextFactory<ProjectsDbContext> {
+        public ProjectsDbContext CreateDbContext() => new(options);
     }
 
     private sealed class TestDbContextFactory(

@@ -1,11 +1,15 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Unit.Projects;
 
@@ -15,7 +19,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_preserves_shared_bytes_until_every_binding_is_deleted_then_returns_one_reference()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var source = CreateObject(projectId, "asset:source");
         var copy = CreateObject(projectId, "asset:copy");
@@ -33,7 +37,6 @@ public sealed class ProjectManagedStorageDeletionTests
                 StorageObjectReferenceJson = "not-storage-json"
             });
         await dbContext.SaveChangesAsync();
-        var planner = CreatePlanner();
 
         var sharedPlan = await planner.PlanAsync(dbContext, [source.Id, duplicate.Id]);
         var finalPlan = await planner.PlanAsync(dbContext, [source.Id, copy.Id, duplicate.Id]);
@@ -46,7 +49,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_rejects_malformed_managed_candidate_and_managed_survivor()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var candidate = CreateObject(projectId, "asset:candidate");
         var survivor = CreateObject(projectId, "asset:survivor");
@@ -60,7 +63,6 @@ public sealed class ProjectManagedStorageDeletionTests
             },
             CreateBinding(survivor.Id, CreateReference()));
         await dbContext.SaveChangesAsync();
-        var planner = CreatePlanner();
 
         await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() =>
             planner.PlanAsync(dbContext, [candidate.Id]));
@@ -83,9 +85,8 @@ public sealed class ProjectManagedStorageDeletionTests
         var storageId = Guid.NewGuid();
         var storage = CreateStorage(storageId, StorageProviderKind.Ipfs);
         var driver = new RecordingStorageDriver(StorageProviderKind.Ipfs, StorageCapability.Read);
-        var service = new ProjectManagedStorageDeletionService(
+        var service = CreateDeletionService(
             new StubStorageDriverRegistry(driver),
-            CreatePhysicalIdentityPolicy(),
             CreateDbContextFactory(storage));
         var reference = new StorageObjectReference(
             storageId,
@@ -113,9 +114,8 @@ public sealed class ProjectManagedStorageDeletionTests
             StorageProviderKind.FileSystem,
             StorageCapability.Delete,
             new IOException("delete failed"));
-        var service = new ProjectManagedStorageDeletionService(
+        var service = CreateDeletionService(
             new StubStorageDriverRegistry(driver),
-            CreatePhysicalIdentityPolicy(),
             CreateDbContextFactory(storage));
         var reference = StampManagedReference(
             CreateReference(storageId: storageId),
@@ -133,7 +133,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_uses_stamped_provenance_for_remote_assets_without_media_relative_path()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var ftpObject = CreateObject(projectId, "asset:ftp");
         var ipfsObject = CreateObject(projectId, "asset:ipfs");
@@ -176,7 +176,7 @@ public sealed class ProjectManagedStorageDeletionTests
             });
         await dbContext.SaveChangesAsync();
 
-        var plan = await CreatePlanner().PlanAsync(
+        var plan = await planner.PlanAsync(
             dbContext,
             [ftpObject.Id, ipfsObject.Id]);
 
@@ -188,7 +188,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_rejects_managed_path_bound_to_an_unrelated_or_noncanonical_locator()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var mismatched = CreateObject(projectId, "asset:mismatch");
         var dotSegment = CreateObject(projectId, "asset:dot-segment");
@@ -214,7 +214,6 @@ public sealed class ProjectManagedStorageDeletionTests
                 MediaRelativePath = "managed-files/project-media/files/a/../shared.txt"
             });
         await dbContext.SaveChangesAsync();
-        var planner = CreatePlanner();
 
         await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() =>
             planner.PlanAsync(dbContext, [mismatched.Id]));
@@ -225,7 +224,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_normalizes_legacy_windows_media_paths_but_preserves_mixed_bootstrap_references()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var legacy = CreateObject(projectId, "asset:legacy");
         var upgradedCopy = CreateObject(projectId, "asset:copy");
@@ -244,7 +243,7 @@ public sealed class ProjectManagedStorageDeletionTests
             CreateBinding(upgradedCopy.Id, CreateReference(storageId: storageId)));
         await dbContext.SaveChangesAsync();
 
-        var plan = await CreatePlanner().PlanAsync(
+        var plan = await planner.PlanAsync(
             dbContext,
             [legacy.Id]);
 
@@ -266,7 +265,7 @@ public sealed class ProjectManagedStorageDeletionTests
             "files"));
         try
         {
-            await using var dbContext = CreateDbContext();
+            await using var dbContext = CreateDbContext(out var planner);
             var projectId = Guid.NewGuid();
             var candidate = CreateObject(projectId, "asset:candidate");
             var survivor = CreateObject(projectId, "asset:survivor");
@@ -281,7 +280,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 CreateBinding(survivor.Id, CreateReference("shared.txt")));
             await dbContext.SaveChangesAsync();
 
-            var plan = await CreatePlanner().PlanAsync(
+            var plan = await planner.PlanAsync(
                 dbContext,
                 [candidate.Id]);
 
@@ -311,7 +310,7 @@ public sealed class ProjectManagedStorageDeletionTests
 
         try
         {
-            await using var dbContext = CreateDbContext();
+            await using var dbContext = CreateDbContext(out var planner);
             var projectId = Guid.NewGuid();
             var candidate = CreateObject(projectId, "asset:candidate-sensitive");
             var survivor = CreateObject(projectId, "asset:survivor-sensitive");
@@ -326,7 +325,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 CreateBinding(survivor.Id, CreateReference("shared.txt")));
             await dbContext.SaveChangesAsync();
 
-            ProjectManagedStorageDeletionPlan plan = await CreatePlanner().PlanAsync(
+            ProjectManagedStorageDeletionPlan plan = await planner.PlanAsync(
                 dbContext,
                 [candidate.Id]);
 
@@ -345,9 +344,8 @@ public sealed class ProjectManagedStorageDeletionTests
     {
         var storage = CreateStorage(Guid.NewGuid(), StorageProviderKind.Ipfs);
         var driver = new RecordingStorageDriver(StorageProviderKind.Ipfs, StorageCapability.Read);
-        var service = new ProjectManagedStorageDeletionService(
+        var service = CreateDeletionService(
             new StubStorageDriverRegistry(driver),
-            CreatePhysicalIdentityPolicy(),
             CreateDbContextFactory());
         var reference = new StorageObjectReference(
             storage.Id,
@@ -372,9 +370,8 @@ public sealed class ProjectManagedStorageDeletionTests
         var storage = CreateStorage(Guid.NewGuid(), StorageProviderKind.Ftp);
         storage.EndpointOrRoot = "ftp://storage.example.test";
         var driver = new RecordingStorageDriver(StorageProviderKind.Ftp, StorageCapability.Read);
-        var service = new ProjectManagedStorageDeletionService(
+        var service = CreateDeletionService(
             new StubStorageDriverRegistry(driver),
-            CreatePhysicalIdentityPolicy(),
             CreateDbContextFactory(storage));
         var reference = StampManagedReference(
             new StorageObjectReference(
@@ -400,9 +397,8 @@ public sealed class ProjectManagedStorageDeletionTests
         var driver = new RecordingStorageDriver(
             StorageProviderKind.FileSystem,
             StorageCapability.Delete);
-        var service = new ProjectManagedStorageDeletionService(
+        var service = CreateDeletionService(
             new StubStorageDriverRegistry(driver),
-            CreatePhysicalIdentityPolicy(),
             CreateDbContextFactory(storage));
         var reference = CreateReference(storageId: storage.Id);
 
@@ -422,7 +418,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_refuses_retargeted_storage_before_unrelated_destination_bytes_can_be_deleted()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var asset = CreateObject(projectId, "asset:retargeted");
         var storage = CreateStorage(Guid.NewGuid(), StorageProviderKind.FileSystem);
@@ -451,13 +447,13 @@ public sealed class ProjectManagedStorageDeletionTests
         await dbContext.SaveChangesAsync();
 
         await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() =>
-            CreatePlanner().PlanAsync(dbContext, [asset.Id]));
+            planner.PlanAsync(dbContext, [asset.Id]));
     }
 
     [Fact]
     public async Task Planner_uses_physical_root_not_catalog_id_for_survivor_liveness()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var candidate = CreateObject(projectId, "asset:catalog-a");
         var survivor = CreateObject(projectId, "asset:catalog-b");
@@ -485,7 +481,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 policy)));
         await dbContext.SaveChangesAsync();
 
-        var plan = await CreatePlanner().PlanAsync(dbContext, [candidate.Id]);
+        var plan = await planner.PlanAsync(dbContext, [candidate.Id]);
 
         Assert.Empty(plan.References);
     }
@@ -511,7 +507,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 CreateHardLink(aliasPath, originalPath, IntPtr.Zero),
                 $"CreateHardLinkW failed with Win32 error {Marshal.GetLastWin32Error()}.");
 
-            await using var dbContext = CreateDbContext();
+            await using var dbContext = CreateDbContext(out var planner);
             var projectId = Guid.NewGuid();
             var candidate = CreateObject(projectId, "asset:hard-link-original");
             var survivor = CreateObject(projectId, "asset:hard-link-alias");
@@ -548,7 +544,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 });
             await dbContext.SaveChangesAsync();
 
-            var plan = await CreatePlanner().PlanAsync(dbContext, [candidate.Id]);
+            var plan = await planner.PlanAsync(dbContext, [candidate.Id]);
 
             Assert.Empty(plan.References);
         }
@@ -695,9 +691,8 @@ public sealed class ProjectManagedStorageDeletionTests
             var driver = new RecordingStorageDriver(
                 StorageProviderKind.FileSystem,
                 StorageCapability.Delete);
-            var service = new ProjectManagedStorageDeletionService(
+            var service = CreateDeletionService(
                 new StubStorageDriverRegistry(driver),
-                CreatePhysicalIdentityPolicy(),
                 dbContextFactory);
 
             var failure = await Assert.ThrowsAsync<StorageBrowseException>(() =>
@@ -727,7 +722,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_does_not_conflate_same_locator_under_different_physical_roots()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var candidate = CreateObject(projectId, "asset:root-a");
         var survivor = CreateObject(projectId, "asset:root-b");
@@ -754,7 +749,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 policy)));
         await dbContext.SaveChangesAsync();
 
-        var plan = await CreatePlanner().PlanAsync(dbContext, [candidate.Id]);
+        var plan = await planner.PlanAsync(dbContext, [candidate.Id]);
 
         Assert.Single(plan.References);
     }
@@ -762,7 +757,7 @@ public sealed class ProjectManagedStorageDeletionTests
     [Fact]
     public async Task Planner_conservatively_preserves_ftp_case_alias_but_detects_base_path_retargeting()
     {
-        await using var dbContext = CreateDbContext();
+        await using var dbContext = CreateDbContext(out var planner);
         var projectId = Guid.NewGuid();
         var candidate = CreateObject(projectId, "asset:ftp-a");
         var survivor = CreateObject(projectId, "asset:ftp-b");
@@ -811,47 +806,140 @@ public sealed class ProjectManagedStorageDeletionTests
             });
         await dbContext.SaveChangesAsync();
 
-        Assert.Empty((await CreatePlanner().PlanAsync(dbContext, [candidate.Id])).References);
+        Assert.Empty((await planner.PlanAsync(dbContext, [candidate.Id])).References);
 
         storageA.ConfigJson = "{\"basePath\":\"Origin\"}";
         await dbContext.SaveChangesAsync();
         await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() =>
-            CreatePlanner().PlanAsync(dbContext, [candidate.Id]));
+            planner.PlanAsync(dbContext, [candidate.Id]));
     }
 
-    private static AppDbContext CreateDbContext()
-    {
-        AppDbContextModelRegistry.ConfigureAssemblies(
-        [
-            typeof(WorkbenchModuleAssemblyMarker).Assembly
-        ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"project-storage-deletion-{Guid.NewGuid():N}")
-            .Options;
-        return new AppDbContext(options);
+    [Fact]
+    public void Storage_facts_preserve_bootstrap_host_binding_and_filesystem_and_ftp_identity() {
+        var bootstrap = CreateBootstrapStorage();
+        var facts = StorageCatalogPlanningFact.FromCatalogRecord(bootstrap, includeFtpAddressing: false);
+        var paths = new FileSystemStoragePathPolicy(new StubWorkspacePathResolver());
+        var reference = CreateReference(storageId: bootstrap.Id);
+        Assert.Equal(paths.ResolveRootPath(bootstrap), paths.ResolveRootPathFromFacts(facts));
+        Assert.Equal(paths.ResolveFullPath(bootstrap, reference.Locator), paths.ResolveFullPathFromFacts(facts, reference.Locator));
+        Assert.Equal(paths.ResolveFullPath(bootstrap, reference.Locator), paths.ResolveWorkspaceFullPath(reference.Locator));
+        Assert.Equal(bootstrap.Id, StorageBootstrapCatalogPolicy.ResolveAuthoritativeFileSystemStorageFact(
+            [facts], paths.ResolveWorkspaceRootPath())?.Id);
+        var physical = CreatePhysicalIdentityPolicy();
+        Assert.Equal(physical.ResolveObjectFingerprint(reference, bootstrap, bootstrap.Id),
+            physical.ResolveObjectFingerprintFromFacts(reference, facts, bootstrap.Id));
+        var ftp = CreateStorage(Guid.NewGuid(), StorageProviderKind.Ftp);
+        ftp.EndpointOrRoot = "ftps://example.invalid/Root";
+        ftp.ConfigJson = "{\"port\":2121,\"basePath\":\"MixedCase\"}";
+        var ftpFacts = StorageCatalogPlanningFact.FromCatalogRecord(ftp, includeFtpAddressing: true);
+        const string remotePath = "managed-files/project-media/files/Asset.txt";
+        Assert.Equal(FtpStorageAddressPolicy.ResolveObjectUri(ftp, remotePath),
+            FtpStorageAddressPolicy.ResolveObjectUriFromFacts(ftpFacts, remotePath));
+        Assert.Equal("/Root/MixedCase/managed-files/project-media/files/Asset.txt",
+            FtpStorageAddressPolicy.ResolveObjectUriFromFacts(ftpFacts, remotePath).AbsolutePath);
+        Assert.Equal(2121, FtpStorageAddressPolicy.ResolveObjectUriFromFacts(ftpFacts, remotePath).Port);
     }
 
-    private static IDbContextFactory<AppDbContext> CreateDbContextFactory(
-        params StorageCatalogRecord[] storages)
-    {
-        AppDbContextModelRegistry.ConfigureAssemblies(
-        [
-            typeof(WorkbenchModuleAssemblyMarker).Assembly
-        ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"project-storage-service-{Guid.NewGuid():N}")
-            .Options;
-        using (var dbContext = new AppDbContext(options))
-        {
-            dbContext.AddRange(storages);
-            dbContext.SaveChanges();
-        }
-
-        return new TestDbContextFactory(options);
+    [Fact]
+    public async Task Planner_parses_malformed_ftp_configuration_only_when_a_reached_binding_references_it() {
+        await using var context = CreateDbContext(out var planner);
+        var bootstrap = CreateBootstrapStorage();
+        var malformed = CreateStorage(Guid.NewGuid(), StorageProviderKind.Ftp);
+        malformed.Name = "Unrelated malformed FTP";
+        malformed.ConfigJson = "{";
+        var item = CreateObject(Guid.NewGuid(), "asset:selective-configuration");
+        var reference = StampManagedReference(CreateReference(storageId: bootstrap.Id), bootstrap);
+        var binding = CreateBinding(item.Id, reference);
+        context.AddRange(bootstrap, malformed, item, binding);
+        await context.SaveChangesAsync();
+        Assert.Single((await planner.PlanAsync(context, [item.Id])).References);
+        binding.StorageObjectReferenceJson = StorageJson.SerializeReference(new StorageObjectReference(
+            malformed.Id, StorageProviderKind.Ftp, StorageLocatorKind.RemotePath,
+            reference.Locator, "shared.txt", "text/plain"));
+        await context.SaveChangesAsync();
+        await Assert.ThrowsAsync<JsonException>(() => planner.PlanAsync(context, [item.Id]));
+        binding.StorageObjectReferenceJson = StorageJson.SerializeReference(CreateReference(storageId: malformed.Id));
+        await context.SaveChangesAsync();
+        var mismatch = await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() => planner.PlanAsync(context, [item.Id]));
+        Assert.Contains("provider does not match", mismatch.Message, StringComparison.Ordinal);
     }
 
-    private static ProjectManagedStorageDeletionPlanner CreatePlanner()
-        => new(CreatePhysicalIdentityPolicy());
+    [Fact]
+    public async Task Planner_does_not_parse_surviving_ftp_configuration_when_deleted_objects_have_no_media() {
+        await using var context = CreateDbContext(out var planner);
+        var malformed = CreateStorage(Guid.NewGuid(), StorageProviderKind.Ftp);
+        malformed.ConfigJson = "{";
+        var item = CreateObject(Guid.NewGuid(), "note:no-media");
+        var survivor = CreateObject(Guid.NewGuid(), "asset:surviving-malformed-config");
+        var reference = new StorageObjectReference(malformed.Id, StorageProviderKind.Ftp,
+            StorageLocatorKind.RemotePath, "managed-files/project-media/files/shared.txt");
+        context.AddRange(malformed, item, survivor, CreateBinding(survivor.Id, reference));
+        await context.SaveChangesAsync();
+        Assert.Empty((await planner.PlanAsync(context, [item.Id])).References);
+    }
+
+    [Fact]
+    public async Task Storage_owner_requires_callback_success_and_retains_the_catalog_record_used_for_validation() {
+        var storage = CreateStorage(Guid.NewGuid(), StorageProviderKind.Ftp);
+        storage.EndpointOrRoot = "ftp://example.invalid/original";
+        storage.ConfigJson = "{\"basePath\":\"Original\"}";
+        var factory = CreateDbContextFactory(storage);
+        var driver = new RecordingStorageDriver(StorageProviderKind.Ftp, StorageCapability.Delete);
+        var owner = new StorageObjectDeletionService(factory.StorageFactory, new StubStorageDriverRegistry(driver),
+            new FileSystemStoragePathPolicy(new StubWorkspacePathResolver()));
+        var reference = new StorageObjectReference(storage.Id, storage.ProviderKind, StorageLocatorKind.RemotePath, "asset.txt");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => owner.DeleteUnderCallerBindingGateAsync(reference,
+            (_, _) => throw new InvalidOperationException("The caller refused the current binding state.")));
+        Assert.Equal(0, driver.DeleteCalls);
+        await owner.DeleteUnderCallerBindingGateAsync(reference, async (facts, cancellationToken) => {
+            Assert.Equal(storage.Id, facts.Storage.Id);
+            Assert.Equal("Original", facts.Storage.FtpAddressing?.BasePath);
+            await using var edit = await factory.StorageFactory.CreateDbContextAsync(cancellationToken);
+            var row = await edit.Set<StorageCatalogRecord>().SingleAsync(cancellationToken);
+            row.EndpointOrRoot = "ftp://example.invalid/retargeted";
+            row.ConfigJson = "{\"basePath\":\"Retargeted\"}";
+            await edit.SaveChangesAsync(cancellationToken);
+        });
+        Assert.Equal(1, driver.DeleteCalls);
+        var used = Assert.IsType<StorageCatalogRecord>(driver.LastDeletedStorage);
+        Assert.Equal(storage.EndpointOrRoot, used.EndpointOrRoot);
+        Assert.Equal(storage.ConfigJson, used.ConfigJson);
+        await using var readback = await factory.StorageFactory.CreateDbContextAsync();
+        Assert.Equal("ftp://example.invalid/retargeted", (await readback.Set<StorageCatalogRecord>().SingleAsync()).EndpointOrRoot);
+    }
+
+    private static AppDbContext CreateDbContext(out ProjectManagedStorageDeletionPlanner planner) {
+        var factory = CreateDbContextFactory();
+        planner = new(CreatePhysicalIdentityPolicy(), factory.Catalog, factory.Coordinator);
+        return factory.CreateDbContext();
+    }
+
+    private static TestDbContextFactory CreateDbContextFactory(params StorageCatalogRecord[] storages) {
+        AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
+        var databaseName = $"project-storage-deletion-{Guid.NewGuid():N}";
+        var root = new InMemoryDatabaseRoot();
+        var profile = new ResolvedDatabaseProfile(new() { ProviderKind = DatabaseProviderKind.InMemory },
+            DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+        var options = new DbContextOptionsBuilder<AppDbContext>();
+        AppDbContextOptionsConfigurator.Configure(options, profile);
+        options.UseInMemoryDatabase(databaseName, root);
+        var storageOptions = new DbContextOptionsBuilder<StorageDbContext>();
+        AppDbContextOptionsConfigurator.Configure(storageOptions, profile);
+        storageOptions.UseInMemoryDatabase(databaseName, root);
+        var workbenchOptions = new DbContextOptionsBuilder<WorkbenchDbContext>();
+        AppDbContextOptionsConfigurator.Configure(workbenchOptions, profile);
+        workbenchOptions.UseInMemoryDatabase(databaseName, root);
+        var factory = new TestDbContextFactory(options.Options, storageOptions.Options, workbenchOptions.Options, profile);
+        using var dbContext = factory.CreateDbContext();
+        dbContext.AddRange(storages);
+        dbContext.SaveChanges();
+        return factory;
+    }
+
+    private static ProjectManagedStorageDeletionService CreateDeletionService(IStorageDriverRegistry drivers, TestDbContextFactory factory) {
+        return new(new StorageObjectDeletionService(factory.StorageFactory, drivers,
+            new FileSystemStoragePathPolicy(new StubWorkspacePathResolver())), CreatePhysicalIdentityPolicy(), factory.WorkbenchFactory, factory.Catalog);
+    }
 
     private static ProjectManagedStoragePhysicalIdentityPolicy CreatePhysicalIdentityPolicy()
         => new(
@@ -961,33 +1049,6 @@ public sealed class ProjectManagedStorageDeletionTests
         return storage;
     }
 
-    private sealed class StubStorageCatalogService(
-        StorageCatalogRecord storage,
-        bool returnMissing = false) : IStorageCatalogService
-    {
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([storage]);
-
-        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.FromResult<StorageCatalogRecord?>(
-                !returnMissing && id == storage.Id ? storage : null);
-
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(storage);
-
-        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
-            => Task.FromResult(record);
-
-        public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
-
-        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
-            => Task.FromResult(rule);
-    }
-
     private sealed class StubWorkspacePathResolver : IWorkspacePathResolver
     {
         private static readonly string Root = Path.Combine(
@@ -1018,11 +1079,24 @@ public sealed class ProjectManagedStorageDeletionTests
         string existingFileName,
         IntPtr securityAttributes);
 
-    private sealed class TestDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
-            => new(options);
+    private sealed class TestDbContextFactory : IDbContextFactory<AppDbContext> {
+        private readonly DbContextOptions<AppDbContext> options;
+
+        public TestDbContextFactory(DbContextOptions<AppDbContext> options, DbContextOptions<StorageDbContext> storageOptions,
+            DbContextOptions<WorkbenchDbContext> workbenchOptions, ResolvedDatabaseProfile profile) {
+            this.options = options;
+            Coordinator = CoordinatedDatabaseTransaction.ForProfile(profile);
+            StorageFactory = new PooledDbContextFactory<StorageDbContext>(storageOptions);
+            WorkbenchFactory = new PooledDbContextFactory<WorkbenchDbContext>(workbenchOptions);
+            Catalog = new(StorageFactory, new StubWorkspacePathResolver(), new SystemClock(), storageOptions, Coordinator);
+        }
+
+        public CoordinatedDatabaseTransaction Coordinator { get; }
+        public IDbContextFactory<StorageDbContext> StorageFactory { get; }
+        public IDbContextFactory<WorkbenchDbContext> WorkbenchFactory { get; }
+        public StorageCatalogService Catalog { get; }
+        public AppDbContext CreateDbContext() => new(options);
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
     }
 
     private sealed class StubStorageDriverRegistry(IStorageDriver driver) : IStorageDriverRegistry
@@ -1052,6 +1126,8 @@ public sealed class ProjectManagedStorageDeletionTests
 
         public int DeleteCalls { get; private set; }
 
+        public StorageCatalogRecord? LastDeletedStorage { get; private set; }
+
         public Task<StorageConnectionTestResult> TestConnectionAsync(
             StorageCatalogRecord storage,
             string? secretValue,
@@ -1075,6 +1151,7 @@ public sealed class ProjectManagedStorageDeletionTests
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
         {
+            LastDeletedStorage = storage;
             DeleteCalls++;
             return deletionFailure is null
                 ? Task.CompletedTask

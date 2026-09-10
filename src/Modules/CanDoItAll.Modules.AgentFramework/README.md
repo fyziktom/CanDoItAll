@@ -69,6 +69,32 @@ module hosts the Simple Chats workspace, floating-shell contribution, Prompt Gal
 and usage projection; it does not route those conversations through agent execution. Web owns the
 separate authorized HTTP/OpenAPI adapter.
 
+## Project-access deletion persistence
+
+AgentProjectAccessDbContext maps only the existing project-access revocation record.
+The complete model remains the sole schema and migration authority. Runtime factories
+bind to the immutable canonical database profile. Preparation opens an explicit
+enlisted owner context, saves the durable revocation in Projects' transaction, and
+returns only the project/recovery identity. Postcommit recovery, status updates, and
+history use ordinary independent owner contexts.
+
+The unique ProjectId, status values, existing fields and exact recovery identity are
+retained. AttemptCount is also the durable claim generation: eligible claims compare
+and increment the observed value, and renewal/completion/failure require that exact
+generation, Processing status, and a live lease. Each transition locks its exact row
+in a short owner transaction, then its conditional UPDATE samples PostgreSQL
+clock_timestamp() once after the lock wait. UpdatedAtUtc renews ownership while LastAttemptAtUtc preserves attempt start. Fresh
+Processing recoveries expose retry availability instead of apparent completion.
+Failure persistence is bounded; ownership loss cancels workspace processing and cannot
+rewrite a successor's recovery state. No new schema or migration is required.
+
+Revocation is an idempotent workspace catalog removal, guarded by its existing
+cross-process catalog lock. Lease ownership does not promise external exactly-once
+effects, durable project admission, or safe retired-ID reuse. Grants, editor/import
+writes, lifetime tombstones and explicit profile transfer/purge remain separate
+required cutovers. All participating workers must use generation-aware finalization;
+older binaries still use the legacy unguarded updates.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

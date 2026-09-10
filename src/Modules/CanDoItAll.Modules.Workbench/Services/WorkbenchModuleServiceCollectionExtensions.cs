@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using CanDoItAll.Memory.SourceGateway;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -30,8 +31,10 @@ public static class WorkbenchModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkbenchModule(
         this IServiceCollection services,
-        IConfiguration? configuration = null)
-    {
+        IConfiguration? configuration = null) {
+        services.AddPooledDbContextFactory<WorkbenchDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
             ProjectStructureExecutionAuthorityProvider>());

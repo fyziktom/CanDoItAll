@@ -5828,7 +5828,8 @@ public sealed class ProjectPartyIntegrationService(
         projectPartyAffiliationContextService,
     IProjectWorkItemAssignmentMutationBridge
         workItemAssignmentMutationBridge,
-    IClock clock) :
+    IClock clock,
+    CoordinatedDatabaseTransaction coordinatedTransaction) :
     IProjectPartyIntegrationBridge,
     IProjectPartyCostRateBridge
 {
@@ -7283,8 +7284,8 @@ public sealed class ProjectPartyIntegrationService(
                     party.DisplayName);
             })
             .ToArray();
+        using var ownerScope = coordinatedTransaction.Enter(dbContext);
         return await workItemAssignmentMutationBridge.StageMutationAsync(
-            dbContext,
             projectId,
             new ProjectNodeReference(taskNodeId),
             states,

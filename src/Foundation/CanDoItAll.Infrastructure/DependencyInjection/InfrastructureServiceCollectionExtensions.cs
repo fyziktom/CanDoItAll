@@ -152,6 +152,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.AddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.AddSingleton<StorageCatalogService>();
+        services.AddScoped<StorageObjectDeletionService>();
         services.AddSingleton<IStorageCatalogService>(provider =>
             provider.GetRequiredService<StorageCatalogService>());
         services.AddSingleton<IStorageCatalogPathMigrationService>(provider =>

@@ -39,6 +39,7 @@ using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.Tools.Documents;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Memory.Application;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,6 +51,10 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddPooledDbContextFactory<AgentProjectAccessDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
+        services.AddSingleton(AgentProjectAccessClaimOptions.Default);
         services.AddConversationShell();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,

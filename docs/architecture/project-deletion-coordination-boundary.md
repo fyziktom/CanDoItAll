@@ -5,9 +5,11 @@
 `ProjectsService.DeleteAsync` is the only project-lifecycle deletion coordinator.
 Projects owns the unit of work and the small `IProjectDeletionParticipant` boundary.
 Workbench implements that boundary without introducing a Projects-to-Workbench
-reference: Projects stages participant-owned database changes through the shared
-`AppDbContext`, then asks each participant to finish recoverable external work after
-the authoritative transaction commits.
+reference. Projects enters its own `ProjectsDbContext` transaction through
+`CoordinatedDatabaseTransaction`; each participant saves through a fresh explicitly
+enlisted owner context on that same connection and transaction. The public participant
+contract carries project/recovery facts and no EF context. Projects then asks each
+participant to finish recoverable external work after the authoritative commit.
 
 The selected pattern is a unit-of-work participant plus the existing durable
 cross-module mutation processor. Project, hierarchy, Workbench, search, and routing
@@ -19,8 +21,9 @@ never converted into apparent success or silently retried under a new identity.
 
 | Owner | Responsibility |
 |---|---|
-| Projects | Union and acquire the project, hierarchy, and participant-declared preparation scopes, validate the project, stage every participant, delete project/hierarchy/search/routing state, commit, aggregate participant results, and expose typed recovery. |
+| Projects | Acquire the sorted project, hierarchy, and participant scope union, load the project, stage every participant and Search/Storage owner command, save project/hierarchy state, commit, aggregate results, and expose typed recovery. |
 | `IProjectDeletionParticipant` | Declare every serialization key required while staging, stage downstream database cleanup in the Projects-owned unit of work, and complete post-commit work by an exact durable recovery ID. |
+| Agent access participant | Stage its existing revocation row in the Projects transaction; revoke workspace permissions after commit and retain pending/terminal history. Its existing AttemptCount is the claim generation; a live lease and matching generation fence status updates. |
 | Workbench participant | Remove project-scoped Workbench rows, persist or amend the `DeleteProject` mutation, order dependency cleanup, detect residual state, and expose pending and terminal history. |
 | Cross-module mutation processor | Claim one mutation across instances, heartbeat ownership, reconcile CRM, delete storage conservatively, checkpoint outcomes, and complete or fail the owned claim. |
 | Managed-storage planner and deletion service | Validate provenance, deduplicate physical identities, recheck the final current identity and all surviving bindings under the binding gate, and return explicit deletion or retention outcomes. |
@@ -35,15 +38,20 @@ wrapper interface is introduced.
 
 1. Projects collects `PreparationScopeKeys` from every ordered participant, adds
    `project:{projectId}` and `projects:hierarchy`, deduplicates and sorts the union,
-   starts one serializable scope, and then verifies the project still exists.
-   Workbench declares `workbench:managed-storage-bindings`, so its deletion planning
+   starts one serializable scope, and loads the project. Preparation and residual
+   cleanup still run when the project row is already absent. Workbench declares `workbench:managed-storage-bindings`, so its deletion planning
    and binding-row removal cannot race another binding writer.
-2. Each participant stages its rows in the same `AppDbContext`. Workbench removes its
-   project objects, links, bindings, view state, projections, analytics, references,
-   leases, and related project-scoped state, and records one durable `DeleteProject`
-   mutation containing dependency and managed-storage evidence.
-3. Projects removes project hierarchy, project search documents, project storage
-   routing rules, and the project itself, saves once, and commits.
+2. Projects enters its active transaction. Each participant creates an explicit
+   enlisted context for its own mapped records, saves, and disposes without committing.
+   Workbench removes its project objects, links, bindings, view state, projections,
+   analytics, references, leases, and related project-scoped state, and records one
+   durable `DeleteProject` mutation containing dependency and managed-storage evidence.
+   Agent access stages its revocation. Completed/no-new-work paths still save any
+   residual cleanup before returning null.
+3. Search and Storage owner commands save matching search documents and routing-rule
+   removal on that same transaction. Projects saves its owned phases/options/hierarchy
+   and project deletion, exits the coordinated scope, and alone commits. Ordinary
+   factories remain independent; only explicit coordinated methods enlist.
 4. Immediately after commit, Projects disposes the preparation mutation scope before
    recording activity or invoking participant completion. Commit releases the
    transaction-scoped database advisory locks; disposal releases the matching
@@ -58,7 +66,12 @@ wrapper interface is introduced.
 
 Before commit, any validation, provenance, catalog, or database failure rolls the
 whole unit of work back. After commit, the project remains deleted and only the exact
-durable cleanup is retryable.
+durable cleanup is retryable. Precommit filesystem containment and reparse inspection
+remain side-effect-free safety validation. Physical deletion is postcommit, under a
+separate Serializable managed-binding scope deliberately held across the driver call.
+The complete AppDbContext remains the migration and unfinished transfer authority;
+runtime owner contexts do not initialize schemas. InMemory tests do not establish
+transactional atomicity.
 
 ## Public recovery contract
 
@@ -107,7 +120,10 @@ recovery can no longer be amended safely, the participant stages a durable follo
 mutation. Completion returns that effective recovery ID, and both the original and
 follow-up histories remain queryable. This is the only case where the effective
 identity can differ from the requested identity; it is explicit in the completion
-result rather than hidden behind a retry.
+result rather than hidden behind a retry. Residual staging holds the sorted union
+of project and managed-binding keys before planning or removing new bindings. Durable
+workflow receipts/admissions are retained across ordinary project/node deletion;
+explicit profile transfer and purge must include their replay evidence separately.
 
 Project-deletion terminal notices include both clean and warning completion. Node
 completion notices are retained when warnings require user action; clean node
@@ -116,6 +132,24 @@ include the participant, effective recovery, provider, storage and locator ident
 reason, message, and remediation.
 
 ## Cross-instance claim and lease protocol
+
+The Workbench processor uses its opaque claim token. Agent access uses its existing
+AttemptCount as a monotonic durable generation: claiming compares and increments the
+observed value; heartbeat, completion and failure require the same generation,
+Processing status and a live lease. Each Agent transition first locks its exact row
+in a short owner transaction. Its conditional UPDATE samples PostgreSQL
+clock_timestamp() after that lock wait, so delayed commands cannot renew or finalize
+an already expired lease. No workspace work runs in this transaction. Heartbeat updates
+UpdatedAtUtc while preserving LastAttemptAtUtc as the attempt start. Fresh Processing
+is unavailable for retry; stale work can be reclaimed under the same recovery ID with
+a new generation. A failed claim never reports active work as successful completion
+or marks another owner's attempt Failed. Database failure persistence is bounded.
+
+Agent workspace revocation remains an idempotent cross-process locked catalog removal.
+Ownership loss cancels processing and fences database finalization, but does not promise
+external exactly-once effects. Project admission and retired-ID lifetime rules remain
+required. Mixed execution with old generation-unaware binaries cannot provide the new
+claim guarantee; participating workers must be upgraded together.
 
 The processor conditionally claims one relational mutation. A successful claim sets
 `Processing`, increments the attempt count, records an opaque owner token, and records
@@ -171,7 +205,14 @@ recomputes the physical identity, and scans surviving bindings. File-system iden
 uses the canonical final path plus file volume and index when available; FTP identity
 uses canonical authority and path; immutable content uses its content address. Any
 surviving reference preserves the object. Duplicate deleted bindings produce one
-driver delete.
+driver delete. Storage owns catalog reads and the retained driver record; Workbench
+receives typed storage/bootstrap facts through a required bounded validation callback.
+The callback sees no raw configuration or EF record. Planning facts preserve complete
+catalog/bootstrap selection and parse FTP addressing only for references in the
+reached phase. Unrelated malformed configuration remains unparsed. Under the final
+postcommit binding gate, binding IDs are collected before the ordinary owner fact
+query. Those independent reads do not form a new atomic catalog snapshot and the
+binding gate does not serialize independent catalog edits.
 
 The only terminal non-delete outcomes are explicit:
 
@@ -210,9 +251,19 @@ check. Transaction completion or connection loss releases the PostgreSQL lock.
 Workbench mutation scopes parse every `project:{id}` key and verify the project exists
 after acquiring the serialized scope. A post-deletion write fails with 404
 `ProjectNotFound`. This prevents a stale agent, UI, or retry from resurrecting
-project-structure rows after Projects has committed deletion.
+project-structure rows after Projects has committed deletion, for callers using
+that established guard. This is not a complete admission protocol for every owner:
+all nonempty project-attributed writes need final enlisted liveness/admission checks,
+and historical/global/orphan reads and residual cleanup must remain supported.
+Reserved-ID creation currently checks live Projects rows only. Completed revocations
+remain unique by ProjectId, so safe retired-ID reuse requires an explicit durable
+identity/tombstone or incarnation and restore policy; this cutover does not invent one.
 
 ## Project-package import boundary
+
+The twelve-owner target-transfer contract still exposes the complete maintenance
+context. Its owner-mediated cutover is separate unfinished work; the runtime deletion
+cutover must not weaken its locked residue scan, payload compatibility, or cleanup.
 
 Project packages use format `candoitall.projects.v2`. Import is intentionally
 empty-target-only: the target profile must be inactive and must contain no project or
@@ -274,6 +325,13 @@ transaction, and compensation.
 
 Focused tests must prove:
 
+- actual Projects deletion saves Agent access, Workbench, Search, and Storage through
+  the same raw connection/Serializable transaction; a final Projects save failure
+  rolls back all already-successful owner saves;
+- completed/no-new-work cleanup persists residual views after the project is missing,
+  and follow-up residual binding removal waits behind the managed-binding gate;
+- Agent legacy mapping, pending/terminal fields and recovery IDs survive restart and
+  remain isolated by canonical profile;
 - clean deletion removes project, hierarchy, Workbench, search, routing, CRM, and
   physical storage state while retaining a clean terminal mutation and notice;
 - a driver failure commits database deletion, then exact participant and recovery

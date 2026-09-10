@@ -1,14 +1,13 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Projects;
 
 internal sealed class ProjectFileToolsStorageBindingSource(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProjectsDbContext> dbContextFactory,
     IStorageCatalogService storageCatalog,
     IWorkspacePathResolver workspacePathResolver,
     DurableFileWriter durableFileWriter) : IFileToolsStorageBindingSource
@@ -36,7 +35,7 @@ internal sealed class ProjectFileToolsStorageBindingSource(
                 "The project file scope identifier is invalid.");
         }
 
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using ProjectsDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         bool projectExists = await dbContext.Set<Project>()
             .AsNoTracking()
             .AnyAsync(project => project.Id == projectId, cancellationToken);

@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects;
@@ -189,7 +188,6 @@ public sealed record ProjectWorkItemDirectAssignmentMutationResult(
 public interface IProjectWorkItemAssignmentMutationBridge
 {
     Task<ProjectWorkItemDirectAssignmentMutationResult> StageMutationAsync(
-        AppDbContext dbContext,
         Guid projectId,
         ProjectNodeReference taskNode,
         IReadOnlyCollection<ProjectWorkItemDirectAssignmentState>
@@ -599,7 +597,6 @@ internal sealed class NoopProjectWorkItemAssignmentMutationBridge :
 {
     public Task<ProjectWorkItemDirectAssignmentMutationResult>
         StageMutationAsync(
-            AppDbContext dbContext,
             Guid projectId,
             ProjectNodeReference taskNode,
             IReadOnlyCollection<ProjectWorkItemDirectAssignmentState>

@@ -62,7 +62,7 @@ public sealed record ProjectCrossModuleMutationProcessingOptions(
 }
 
 public sealed class ProjectCrossModuleMutationProcessor(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     ProjectManagedStorageDeletionService managedStorageDeletionService,
     ProjectCrossModuleMutationCoordinator mutationCoordinator,
@@ -94,7 +94,6 @@ public sealed class ProjectCrossModuleMutationProcessor(
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
             var current = await dbContext.Set<ProjectCrossModuleMutationRecord>()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.Id == mutationId, cancellationToken);
@@ -216,7 +215,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     internal async Task<bool> TryClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)
@@ -271,7 +270,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private Task ExecuteCommittedMutationAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         CancellationToken cancellationToken)
@@ -304,7 +303,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task DeleteSubtreeAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         DeleteSubtreeMutationPayload payload,
@@ -326,7 +325,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task DeleteProjectAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         DeleteProjectMutationPayload payload,
@@ -350,7 +349,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task DeleteStorageObjectsAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         IReadOnlyCollection<ProjectManagedStorageDeletionCandidate> candidates,
@@ -447,7 +446,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task RenewClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)
@@ -534,7 +533,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task PersistPayloadCheckpointAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         string payloadJson,
@@ -572,7 +571,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task<ProjectCrossModuleMutationStatus> CompleteClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)
@@ -609,7 +608,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task<bool> FailClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         string safeErrorMessage,
@@ -671,7 +670,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private static async Task<ProjectCrossModuleMutationRecord> GetOwnedClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)

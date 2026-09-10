@@ -94,6 +94,48 @@ ends before the assembly operation returns; the caller retains commit ownership.
 Ordinary owner queries and InMemory assembly reads remain independent. InMemory does
 not provide transactional atomicity.
 
+## Assignment persistence boundary
+
+`WorkbenchDbContext` explicitly maps the ten existing Workbench record types, including
+canonical ProjectObjects, bindings, references, lifecycle and cross-module mutation
+records. Runtime consumers include the direct-assignment revision writer, project
+deletion participant, and complete mutation-processor claim/checkpoint/heartbeat path.
+Other Workbench mutation and projection paths remain dependent cutovers. The complete
+AppDbContext continues to own schema initialization and migrations.
+
+The Projects-owned assignment mutation bridge carries final typed assignment facts,
+the canonical node reference, and the expected revision. Workbench opens an explicit
+enlisted owner context, preserves the existing managed-binding lock and pricing rules,
+saves its object/binding/reference changes, then disposes without committing. CRM owns
+the enclosing transaction and final save. Historical unknown top-level metadata is
+retained by the existing preserving serializer. Task identity remains the existing
+ProjectObject ID and project/node key; display metadata is not a second assignment
+source of truth.
+
+## Project deletion ownership
+
+The project deletion participant saves Workbench records through an explicitly
+enlisted WorkbenchDbContext during Projects' authoritative transaction. It saves even
+when a completed recovery needs only residual view/layout cleanup and returns no
+preparation. Residual object recovery acquires both the project and managed-binding
+keys before planning and removing bindings, preserving the original and any required
+follow-up recovery IDs.
+
+Storage planning consumes owner catalog facts and explicitly enlists those database
+reads in the supplied mutation transaction. FTP configuration is inspected only for
+referenced rows in the reached planning phase. Physical deletion retains a separate
+postcommit Serializable binding gate across provenance/liveness validation and the
+driver call. Storage owns the current catalog record and driver; its bounded callback
+provides typed facts to Workbench. Normal postcommit reads use independent factories.
+The fact query follows binding-ID collection, so these independent reads are not a
+new atomic catalog snapshot. Existing record-based provenance helpers remain explicit
+compatibility adapters for creation/transfer callers that have not yet migrated.
+
+Workflow contribution receipts and admissions remain a dependent cutover. Their
+required retention policy excludes ordinary project/node cascades; profile transfer
+and explicit purge must account for them separately. This cutover does not establish
+admission for all project-attributed writers or prohibit reuse of retired project IDs.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

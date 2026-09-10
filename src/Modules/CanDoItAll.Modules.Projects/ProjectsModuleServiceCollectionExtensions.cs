@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
@@ -8,8 +10,10 @@ namespace CanDoItAll.Modules.Projects;
 
 public static class ProjectsModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddProjectsModule(this IServiceCollection services)
-    {
+    public static IServiceCollection AddProjectsModule(this IServiceCollection services) {
+        services.AddPooledDbContextFactory<ProjectsDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
             ProjectsExecutionAuthorityProvider>());

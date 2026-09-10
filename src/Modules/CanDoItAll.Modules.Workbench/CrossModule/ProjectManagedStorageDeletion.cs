@@ -219,9 +219,21 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
     internal string ResolveWorkspaceRootPath()
         => fileSystemStoragePathPolicy.ResolveWorkspaceRootPath();
 
-    internal string ResolveObjectFingerprint(
+    internal string ResolveObjectFingerprint(StorageObjectReference reference, StorageCatalogRecord? storage,
+        Guid? authoritativeBootstrapStorageId = null) {
+        return ResolveObjectFingerprintFromFacts(reference, storage is null ? null :
+            StorageCatalogPlanningFact.FromCatalogRecord(storage, reference.ProviderKind == StorageProviderKind.Ftp), authoritativeBootstrapStorageId);
+    }
+
+    internal string ResolveConservativeLivenessKey(StorageObjectReference reference, StorageCatalogRecord? storage,
+        Guid? authoritativeBootstrapStorageId = null) {
+        return ResolveConservativeLivenessKeyFromFacts(reference, storage is null ? null :
+            StorageCatalogPlanningFact.FromCatalogRecord(storage, reference.ProviderKind == StorageProviderKind.Ftp), authoritativeBootstrapStorageId);
+    }
+
+    internal string ResolveObjectFingerprintFromFacts(
         StorageObjectReference reference,
-        StorageCatalogRecord? storage,
+        StorageCatalogPlanningFact? storage,
         Guid? authoritativeBootstrapStorageId = null)
     {
         ArgumentNullException.ThrowIfNull(reference);
@@ -240,9 +252,9 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalIdentity)));
     }
 
-    internal string ResolveConservativeLivenessKey(
+    internal string ResolveConservativeLivenessKeyFromFacts(
         StorageObjectReference reference,
-        StorageCatalogRecord? storage,
+        StorageCatalogPlanningFact? storage,
         Guid? authoritativeBootstrapStorageId = null)
     {
         var key = ProjectManagedStorageObjectKey.FromReference(reference);
@@ -265,7 +277,7 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
 
         if (reference.ProviderKind != StorageProviderKind.Ftp)
         {
-            return ResolveObjectFingerprint(
+            return ResolveObjectFingerprintFromFacts(
                 reference,
                 storage,
                 authoritativeBootstrapStorageId);
@@ -277,7 +289,7 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
     }
 
     private string ResolveFileSystemIdentity(
-        StorageCatalogRecord? storage,
+        StorageCatalogPlanningFact? storage,
         string locator,
         Guid? authoritativeBootstrapStorageId)
     {
@@ -297,47 +309,28 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
     }
 
     private (string FullPath, IPhysicalFileSystemPathPolicy RootPolicy) ResolveFileSystemPath(
-        StorageCatalogRecord? storage,
+        StorageCatalogPlanningFact? storage,
         string locator,
         Guid? authoritativeBootstrapStorageId)
     {
-        StorageCatalogRecord effectiveStorage = storage ?? CreateCurrentWorkspaceStorage();
-        var isAuthoritativeBootstrap = authoritativeBootstrapStorageId.HasValue &&
-            effectiveStorage.Id == authoritativeBootstrapStorageId.Value;
-        if (isAuthoritativeBootstrap)
-        {
-            effectiveStorage = CreateCurrentWorkspaceStorage();
-        }
-
-        string fullPath = fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(
-            fileSystemStoragePathPolicy.ResolveFullPath(effectiveStorage, locator));
-        IPhysicalFileSystemPathPolicy rootPolicy = physicalPathPolicyFactory.Create(
-            fileSystemStoragePathPolicy.ResolveRootPath(effectiveStorage));
+        var useWorkspace = storage is null || authoritativeBootstrapStorageId.HasValue && storage.Id == authoritativeBootstrapStorageId.Value;
+        var rootPath = useWorkspace
+            ? fileSystemStoragePathPolicy.ResolveWorkspaceRootPath()
+            : fileSystemStoragePathPolicy.ResolveRootPathFromFacts(storage!);
+        var containedPath = useWorkspace
+            ? fileSystemStoragePathPolicy.ResolveWorkspaceFullPath(locator)
+            : fileSystemStoragePathPolicy.ResolveFullPathFromFacts(storage!, locator);
+        var fullPath = fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(containedPath);
+        var rootPolicy = physicalPathPolicyFactory.Create(rootPath);
         rootPolicy.EnsureSafePath(fullPath, allowMissingLeaf: true);
         return (fullPath, rootPolicy);
-
-        StorageCatalogRecord CreateCurrentWorkspaceStorage()
-        {
-            string workspaceRoot = fileSystemStoragePathPolicy.ResolveWorkspaceRootPath();
-            var currentStorage = new StorageCatalogRecord
-            {
-                ProviderKind = StorageProviderKind.FileSystem,
-                IsSystemDefault = true,
-                EndpointOrRoot = workspaceRoot
-            };
-            StorageCatalogHostBindingPolicy.BindCurrent(
-                currentStorage,
-                workspaceRoot,
-                DateTimeOffset.UtcNow);
-            return currentStorage;
-        }
     }
 
     internal string ResolveReparseSafeFullPath(string path)
         => fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(path);
 
     private static string ResolveFtpIdentity(
-        StorageCatalogRecord? storage,
+        StorageCatalogPlanningFact? storage,
         string locator)
     {
         if (storage is null)
@@ -346,7 +339,7 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
                 "Managed FTP media requires a current storage catalog entry.");
         }
 
-        var address = FtpStorageAddressPolicy.ResolveObjectUri(storage, locator);
+        var address = FtpStorageAddressPolicy.ResolveObjectUriFromFacts(storage, locator);
         var authority = address
             .GetComponents(UriComponents.SchemeAndServer, UriFormat.UriEscaped)
             .ToLowerInvariant();
@@ -509,38 +502,29 @@ internal static class ProjectManagedStorageProvenancePolicy
         return true;
     }
 
-    internal static bool TryValidateCurrentStorage(
-        StorageObjectReference reference,
-        StorageCatalogRecord? storage,
-        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
-        out string error)
-        => TryValidateCurrentStorageCore(
-            reference,
-            storage,
-            physicalIdentityPolicy,
-            authoritativeBootstrapStorageId: null,
-            out error);
+    internal static bool TryValidateCurrentStorage(StorageObjectReference reference, StorageCatalogRecord? storage,
+        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy, out string error) {
+        return TryValidateCurrentStorageCore(reference, () => physicalIdentityPolicy.ResolveObjectFingerprint(reference, storage), out error);
+    }
 
-    internal static bool TryValidateCurrentStorageForDeletion(
-        StorageObjectReference reference,
-        StorageCatalogRecord? storage,
-        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
-        Guid authoritativeBootstrapStorageId,
-        out string error)
-        => TryValidateCurrentStorageCore(
-            reference,
-            storage,
-            physicalIdentityPolicy,
-            authoritativeBootstrapStorageId,
-            out error);
+    internal static bool TryValidateCurrentStorageForDeletion(StorageObjectReference reference, StorageCatalogRecord? storage,
+        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy, Guid authoritativeBootstrapStorageId, out string error) {
+        return TryValidateCurrentStorageCore(reference,
+            () => physicalIdentityPolicy.ResolveObjectFingerprint(reference, storage, authoritativeBootstrapStorageId), out error);
+    }
 
-    private static bool TryValidateCurrentStorageCore(
-        StorageObjectReference reference,
-        StorageCatalogRecord? storage,
-        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
-        Guid? authoritativeBootstrapStorageId,
-        out string error)
-    {
+    internal static bool TryValidateCurrentStorageFromFacts(StorageObjectReference reference, StorageCatalogPlanningFact? storage,
+        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy, out string error) {
+        return TryValidateCurrentStorageCore(reference, () => physicalIdentityPolicy.ResolveObjectFingerprintFromFacts(reference, storage), out error);
+    }
+
+    internal static bool TryValidateCurrentStorageForDeletionFromFacts(StorageObjectReference reference, StorageCatalogPlanningFact? storage,
+        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy, Guid authoritativeBootstrapStorageId, out string error) {
+        return TryValidateCurrentStorageCore(reference,
+            () => physicalIdentityPolicy.ResolveObjectFingerprintFromFacts(reference, storage, authoritativeBootstrapStorageId), out error);
+    }
+
+    private static bool TryValidateCurrentStorageCore(StorageObjectReference reference, Func<string> resolveCurrentFingerprint, out string error) {
         error = string.Empty;
         if (!HasManagedMarker(reference))
         {
@@ -569,10 +553,7 @@ internal static class ProjectManagedStorageProvenancePolicy
         string currentFingerprint;
         try
         {
-            currentFingerprint = physicalIdentityPolicy.ResolveObjectFingerprint(
-                reference,
-                storage,
-                authoritativeBootstrapStorageId);
+            currentFingerprint = resolveCurrentFingerprint();
         }
         catch (Exception exception) when (
             exception is InvalidOperationException or
@@ -669,10 +650,12 @@ internal static class ProjectManagedStorageProvenancePolicy
 }
 
 public sealed class ProjectManagedStorageDeletionPlanner(
-    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy)
+    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
+    StorageCatalogService storageCatalogService,
+    CoordinatedDatabaseTransaction coordinatedTransaction)
 {
     internal async Task<ProjectManagedStorageDeletionPlan> PlanAsync(
-        AppDbContext dbContext,
+        DbContext dbContext,
         IReadOnlyCollection<Guid> deletedProjectObjectIds,
         CancellationToken cancellationToken = default)
     {
@@ -683,18 +666,22 @@ public sealed class ProjectManagedStorageDeletionPlanner(
             return new([], []);
         }
 
+        using var ownerScope = coordinatedTransaction.Enter(dbContext);
         var deletedIds = deletedProjectObjectIds.Distinct().ToArray();
-        var storages = await dbContext.Set<StorageCatalogRecord>()
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        var storages = await storageCatalogService.ListCatalogPlanningFactsForMutationAsync([], cancellationToken);
         var storageById = storages.ToDictionary(storage => storage.Id);
         var bootstrapFileSystemStorage =
-            StorageBootstrapCatalogPolicy.ResolveAuthoritativeFileSystemStorage(
+            StorageBootstrapCatalogPolicy.ResolveAuthoritativeFileSystemStorageFact(
                 storages,
                 physicalIdentityPolicy.ResolveWorkspaceRootPath());
         var deletedBindings = await dbContext.Set<ProjectNodeBindingRecord>()
             .Where(binding => deletedIds.Contains(binding.ProjectObjectId))
             .ToListAsync(cancellationToken);
+        var referencedStorageIds = ResolveReferencedStorageIds(deletedBindings, storageById, bootstrapFileSystemStorage);
+        if (referencedStorageIds.Count > 0) {
+            storages = await storageCatalogService.ListCatalogPlanningFactsForMutationAsync(referencedStorageIds, cancellationToken);
+            storageById = storages.ToDictionary(storage => storage.Id);
+        }
         var candidates = deletedBindings
             .Select(binding => ResolveManagedReference(
                 binding,
@@ -721,6 +708,11 @@ public sealed class ProjectManagedStorageDeletionPlanner(
                 (binding.StorageObjectReferenceJson != string.Empty ||
                  binding.MediaRelativePath != string.Empty))
             .ToListAsync(cancellationToken);
+        referencedStorageIds.UnionWith(ResolveReferencedStorageIds(survivingBindings, storageById, bootstrapFileSystemStorage));
+        if (referencedStorageIds.Count > 0) {
+            storages = await storageCatalogService.ListCatalogPlanningFactsForMutationAsync(referencedStorageIds, cancellationToken);
+            storageById = storages.ToDictionary(storage => storage.Id);
+        }
         var survivingKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var binding in survivingBindings)
         {
@@ -759,9 +751,26 @@ public sealed class ProjectManagedStorageDeletionPlanner(
             retainedOutcomes);
     }
 
+    private static HashSet<Guid> ResolveReferencedStorageIds(IEnumerable<ProjectNodeBindingRecord> bindings,
+        IReadOnlyDictionary<Guid, StorageCatalogPlanningFact> storageById, StorageCatalogPlanningFact? bootstrap) {
+        var ids = new HashSet<Guid>();
+        foreach (var binding in bindings) {
+            var reference = ResolveManagedReferenceSyntax(binding);
+            if (reference is null) {
+                continue;
+            }
+            reference = NormalizeBootstrapReference(reference, bootstrap);
+            var storage = ResolveStorageForPlanning(binding.Id, reference, storageById, bootstrap);
+            if (storage is not null) {
+                ids.Add(storage.Id);
+            }
+        }
+        return ids;
+    }
+
     private static StorageObjectReference NormalizeBootstrapReference(
         StorageObjectReference reference,
-        StorageCatalogRecord? bootstrapFileSystemStorage)
+        StorageCatalogPlanningFact? bootstrapFileSystemStorage)
     {
         return reference.ProviderKind == StorageProviderKind.FileSystem &&
                reference.StorageId is null &&
@@ -772,8 +781,8 @@ public sealed class ProjectManagedStorageDeletionPlanner(
 
     private ResolvedManagedStorageReference? ResolveManagedReference(
         ProjectNodeBindingRecord binding,
-        IReadOnlyDictionary<Guid, StorageCatalogRecord> storageById,
-        StorageCatalogRecord? bootstrapFileSystemStorage,
+        IReadOnlyDictionary<Guid, StorageCatalogPlanningFact> storageById,
+        StorageCatalogPlanningFact? bootstrapFileSystemStorage,
         bool isDeletionCandidate)
     {
         var reference = ResolveManagedReferenceSyntax(binding);
@@ -795,12 +804,12 @@ public sealed class ProjectManagedStorageDeletionPlanner(
         if (hasProvenance)
         {
             var validCurrentStorage = bootstrapFileSystemStorage is null
-                ? ProjectManagedStorageProvenancePolicy.TryValidateCurrentStorage(
+                ? ProjectManagedStorageProvenancePolicy.TryValidateCurrentStorageFromFacts(
                     normalizedReference,
                     storage,
                     physicalIdentityPolicy,
                     out var error)
-                : ProjectManagedStorageProvenancePolicy.TryValidateCurrentStorageForDeletion(
+                : ProjectManagedStorageProvenancePolicy.TryValidateCurrentStorageForDeletionFromFacts(
                     normalizedReference,
                     storage,
                     physicalIdentityPolicy,
@@ -814,7 +823,7 @@ public sealed class ProjectManagedStorageDeletionPlanner(
         string fingerprint;
         try
         {
-            fingerprint = physicalIdentityPolicy.ResolveConservativeLivenessKey(
+            fingerprint = physicalIdentityPolicy.ResolveConservativeLivenessKeyFromFacts(
                 normalizedReference,
                 storage,
                 bootstrapFileSystemStorage?.Id ?? Guid.Empty);
@@ -850,7 +859,7 @@ public sealed class ProjectManagedStorageDeletionPlanner(
         var candidate = new ProjectManagedStorageDeletionCandidate(
             normalizedReference,
             ownershipBasis,
-            physicalIdentityPolicy.ResolveObjectFingerprint(
+            physicalIdentityPolicy.ResolveObjectFingerprintFromFacts(
                 normalizedReference,
                 storage,
                 bootstrapFileSystemStorage?.Id ?? Guid.Empty),
@@ -862,13 +871,13 @@ public sealed class ProjectManagedStorageDeletionPlanner(
             ownershipBasis != ProjectManagedStorageOwnershipBasis.UnverifiedLegacyPayload);
     }
 
-    private static StorageCatalogRecord? ResolveStorageForPlanning(
+    private static StorageCatalogPlanningFact? ResolveStorageForPlanning(
         Guid bindingId,
         StorageObjectReference reference,
-        IReadOnlyDictionary<Guid, StorageCatalogRecord> storageById,
-        StorageCatalogRecord? bootstrapFileSystemStorage)
+        IReadOnlyDictionary<Guid, StorageCatalogPlanningFact> storageById,
+        StorageCatalogPlanningFact? bootstrapFileSystemStorage)
     {
-        StorageCatalogRecord? storage = null;
+        StorageCatalogPlanningFact? storage = null;
         if (reference.StorageId.HasValue)
         {
             storageById.TryGetValue(reference.StorageId.Value, out storage);
@@ -1016,9 +1025,10 @@ public sealed class ProjectManagedStorageDeletionPlanner(
 }
 
 public sealed class ProjectManagedStorageDeletionService(
-    IStorageDriverRegistry storageDriverRegistry,
+    StorageObjectDeletionService storageDeletionService,
     ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
-    IDbContextFactory<AppDbContext> dbContextFactory)
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    StorageCatalogService storageCatalogService)
 {
     internal async Task<IReadOnlyList<ProjectManagedStorageDeletionOutcome>> DeleteAsync(
         IReadOnlyCollection<ProjectManagedStorageDeletionCandidate> candidates,
@@ -1056,43 +1066,10 @@ public sealed class ProjectManagedStorageDeletionService(
                 ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey,
                 cancellationToken);
 
-            var storageResolution = await ResolveStorageAsync(
-                reference,
-                cancellationToken);
-            var storage = storageResolution.Storage;
-            var authoritativeBootstrapStorage =
-                storageResolution.AuthoritativeBootstrapStorage;
-            ValidateDeletionCandidate(
-                candidate,
-                storage,
-                authoritativeBootstrapStorage);
-            await EnsureNoSurvivingPhysicalReferenceAsync(
-                candidate,
-                storage,
-                authoritativeBootstrapStorage,
-                cancellationToken);
-
-            var driver = storageDriverRegistry.Resolve(reference.ProviderKind);
-
-            if (!driver.SupportedCapabilities.HasFlag(StorageCapability.Delete))
-            {
-                throw new InvalidOperationException(
-                    $"Storage provider '{reference.ProviderKind}' unexpectedly does not support managed project media deletion.");
-            }
-
-            if (!storage.IsEnabled)
-            {
-                throw new InvalidOperationException(
-                    $"Storage '{storage.Id:D}' is disabled and cannot delete managed project media.");
-            }
-
-            if (storage.IsReadOnly || !storage.CapabilityMask.HasFlag(StorageCapability.Delete))
-            {
-                throw new InvalidOperationException(
-                    $"Storage '{storage.Id:D}' does not allow managed project media deletion.");
-            }
-
-            await driver.DeleteAsync(storage, reference, cancellationToken);
+            await storageDeletionService.DeleteUnderCallerBindingGateAsync(reference, async (facts, token) => {
+                ValidateDeletionCandidate(candidate, facts.Storage, facts.AuthoritativeBootstrapStorage);
+                await EnsureNoSurvivingPhysicalReferenceAsync(candidate, facts.Storage, facts.AuthoritativeBootstrapStorage, token);
+            }, cancellationToken);
             await bindingMutationScope.CommitAsync(cancellationToken);
             outcomes.Add(new ProjectManagedStorageDeletionOutcome(
                 reference,
@@ -1105,8 +1082,8 @@ public sealed class ProjectManagedStorageDeletionService(
 
     private void ValidateDeletionCandidate(
         ProjectManagedStorageDeletionCandidate candidate,
-        StorageCatalogRecord storage,
-        StorageCatalogRecord? authoritativeBootstrapStorage)
+        StorageCatalogPlanningFact storage,
+        StorageCatalogPlanningFact? authoritativeBootstrapStorage)
     {
         var reference = candidate.Reference;
         switch (candidate.OwnershipBasis)
@@ -1128,7 +1105,7 @@ public sealed class ProjectManagedStorageDeletionService(
                 }
 
                 var validCurrentStorage =
-                    ProjectManagedStorageProvenancePolicy.TryValidateCurrentStorageForDeletion(
+                    ProjectManagedStorageProvenancePolicy.TryValidateCurrentStorageForDeletionFromFacts(
                         reference,
                         storage,
                         physicalIdentityPolicy,
@@ -1163,8 +1140,8 @@ public sealed class ProjectManagedStorageDeletionService(
 
     private void ValidateAuthoritativeBootstrapCandidate(
         ProjectManagedStorageDeletionCandidate candidate,
-        StorageCatalogRecord storage,
-        StorageCatalogRecord? authoritativeBootstrapStorage)
+        StorageCatalogPlanningFact storage,
+        StorageCatalogPlanningFact? authoritativeBootstrapStorage)
     {
         var reference = candidate.Reference;
         if (reference.ProviderKind != StorageProviderKind.FileSystem ||
@@ -1185,7 +1162,7 @@ public sealed class ProjectManagedStorageDeletionService(
                 "Authoritative bootstrap deletion evidence does not match the current managed project-media namespace.");
         }
 
-        var currentFingerprint = physicalIdentityPolicy.ResolveObjectFingerprint(
+        var currentFingerprint = physicalIdentityPolicy.ResolveObjectFingerprintFromFacts(
             reference,
             storage,
             authoritativeBootstrapStorage.Id);
@@ -1202,40 +1179,34 @@ public sealed class ProjectManagedStorageDeletionService(
 
     private async Task EnsureNoSurvivingPhysicalReferenceAsync(
         ProjectManagedStorageDeletionCandidate candidate,
-        StorageCatalogRecord candidateStorage,
-        StorageCatalogRecord? authoritativeBootstrapStorage,
+        StorageCatalogPlanningFact candidateStorage,
+        StorageCatalogPlanningFact? authoritativeBootstrapStorage,
         CancellationToken cancellationToken)
     {
         var authoritativeBootstrapStorageId =
             authoritativeBootstrapStorage?.Id ?? Guid.Empty;
-        var candidateKey = physicalIdentityPolicy.ResolveConservativeLivenessKey(
+        var candidateKey = physicalIdentityPolicy.ResolveConservativeLivenessKeyFromFacts(
             candidate.Reference,
             candidateStorage,
             authoritativeBootstrapStorageId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var storages = await dbContext.Set<StorageCatalogRecord>()
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-        var storageById = storages.ToDictionary(storage => storage.Id);
         var survivingBindings = await dbContext.Set<ProjectNodeBindingRecord>()
             .AsNoTracking()
             .Where(binding =>
                 binding.StorageObjectReferenceJson != string.Empty ||
                 binding.MediaRelativePath != string.Empty)
             .ToListAsync(cancellationToken);
-        foreach (var binding in survivingBindings)
+        var survivingReferences = survivingBindings.Select(ResolveSurvivingReference)
+            .Where(reference => reference is not null && reference.ProviderKind == candidate.Reference.ProviderKind)
+            .Cast<StorageObjectReference>().ToArray();
+        var referencedIds = survivingReferences.Select(reference => reference.StorageId ??
+                (reference.ProviderKind == StorageProviderKind.FileSystem ? authoritativeBootstrapStorageId : Guid.Empty))
+            .Where(id => id != Guid.Empty).Distinct().ToArray();
+        var storages = await storageCatalogService.ListCatalogPlanningFactsAsync(referencedIds, cancellationToken);
+        var storageById = storages.ToDictionary(storage => storage.Id);
+        foreach (var resolvedReference in survivingReferences)
         {
-            var survivingReference = ResolveSurvivingReference(binding);
-            if (survivingReference is null)
-            {
-                continue;
-            }
-
-            if (survivingReference.ProviderKind != candidate.Reference.ProviderKind)
-            {
-                continue;
-            }
-
+            var survivingReference = resolvedReference;
             if (survivingReference.ProviderKind == StorageProviderKind.FileSystem &&
                 survivingReference.StorageId is null &&
                 authoritativeBootstrapStorage is not null)
@@ -1262,7 +1233,7 @@ public sealed class ProjectManagedStorageDeletionService(
                     "Managed storage deletion was refused because a surviving binding has unresolved storage identity.");
             }
 
-            var survivingKey = physicalIdentityPolicy.ResolveConservativeLivenessKey(
+            var survivingKey = physicalIdentityPolicy.ResolveConservativeLivenessKeyFromFacts(
                 survivingReference,
                 survivingStorage,
                 authoritativeBootstrapStorageId);
@@ -1310,56 +1281,4 @@ public sealed class ProjectManagedStorageDeletionService(
             binding.MediaOriginalFileName);
     }
 
-    private async Task<ManagedStorageResolution> ResolveStorageAsync(
-        StorageObjectReference reference,
-        CancellationToken cancellationToken)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var storages = await dbContext.Set<StorageCatalogRecord>()
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-        var authoritativeBootstrapStorage =
-            StorageBootstrapCatalogPolicy.ResolveAuthoritativeFileSystemStorage(
-                storages,
-                physicalIdentityPolicy.ResolveWorkspaceRootPath());
-        StorageCatalogRecord? storage;
-        if (reference.StorageId.HasValue)
-        {
-            storage = storages.SingleOrDefault(candidate =>
-                candidate.Id == reference.StorageId.Value);
-            if (storage is null)
-            {
-                throw new InvalidOperationException(
-                    $"Storage '{reference.StorageId.Value:D}' for managed project media was not found.");
-            }
-        }
-        else if (reference.ProviderKind == StorageProviderKind.FileSystem)
-        {
-            storage = authoritativeBootstrapStorage;
-            if (storage is null)
-            {
-                throw new InvalidOperationException(
-                    "Authoritative bootstrap filesystem storage was not found.");
-            }
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                $"Managed project media for provider '{reference.ProviderKind}' requires a storage id.");
-        }
-
-        if (storage.ProviderKind != reference.ProviderKind)
-        {
-            throw new InvalidOperationException(
-                $"Storage '{storage.Id:D}' uses provider '{storage.ProviderKind}', but the managed media reference requires '{reference.ProviderKind}'.");
-        }
-
-        return new ManagedStorageResolution(
-            storage,
-            authoritativeBootstrapStorage);
-    }
-
-    private sealed record ManagedStorageResolution(
-        StorageCatalogRecord Storage,
-        StorageCatalogRecord? AuthoritativeBootstrapStorage);
 }

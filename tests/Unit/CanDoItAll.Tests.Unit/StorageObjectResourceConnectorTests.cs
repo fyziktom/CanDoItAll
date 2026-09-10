@@ -87,9 +87,14 @@ public sealed class StorageObjectResourceConnectorTests
     {
         Guid storageId = Guid.NewGuid();
         var plugin = new StorageObjectResourceConnectorPlugin();
+        var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>()
+            .UseInMemoryDatabase(nameof(General_resource_save_rejects_governed_storage_object_connector)).Options;
+        var projectProfile = new ResolvedDatabaseProfile(new() { ProviderKind = DatabaseProviderKind.InMemory },
+            DatabaseProfileResolutionSource.ExplicitOverride,
+            nameof(General_resource_save_rejects_governed_storage_object_connector));
         var service = new ResourcesService(
             new ThrowingResourceDbContextFactory(),
-            new ProjectRecordQueryService(new ThrowingDbContextFactory()),
+            new ProjectRecordQueryService(new ThrowingProjectDbContextFactory(), projectOptions, CoordinatedDatabaseTransaction.ForProfile(projectProfile)),
             new FixedClock(),
             new NullActivityStream(),
             new NullSearchIndex(),
@@ -136,7 +141,7 @@ public sealed class StorageObjectResourceConnectorTests
             "file.txt",
             "text/plain",
             42);
-        var writer = new StorageObjectResourceWriter(fixture.OwnerFactory, new ProjectRecordQueryService(fixture.Factory), new FixedClock());
+        var writer = new StorageObjectResourceWriter(fixture.OwnerFactory, fixture.Projects, new FixedClock());
         var request = new StorageObjectResourceWriteRequest(
             fixture.ProjectId,
             "Stored file",
@@ -262,16 +267,19 @@ public sealed class StorageObjectResourceConnectorTests
 
     private sealed class ResourcePersistenceFixture : IAsyncDisposable
     {
-        private ResourcePersistenceFixture(TestDbContextFactory factory, IDbContextFactory<ResourcesDbContext> ownerFactory, Guid projectId)
+        private ResourcePersistenceFixture(TestDbContextFactory factory, IDbContextFactory<ResourcesDbContext> ownerFactory, ProjectRecordQueryService projects, Guid projectId)
         {
             Factory = factory;
             OwnerFactory = ownerFactory;
+            Projects = projects;
             ProjectId = projectId;
         }
 
         public TestDbContextFactory Factory { get; }
 
         public IDbContextFactory<ResourcesDbContext> OwnerFactory { get; }
+
+        public ProjectRecordQueryService Projects { get; }
 
         public Guid ProjectId { get; }
 
@@ -292,7 +300,13 @@ public sealed class StorageObjectResourceConnectorTests
             await using AppDbContext dbContext = factory.CreateDbContext();
             dbContext.Set<Project>().Add(new Project { Id = projectId, Name = "Target project" });
             await dbContext.SaveChangesAsync();
-            return new ResourcePersistenceFixture(factory, ownerFactory, projectId);
+            var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options;
+            var projectProfile = new ResolvedDatabaseProfile(new() { ProviderKind = DatabaseProviderKind.InMemory },
+                DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+            var projects = new ProjectRecordQueryService(new PooledDbContextFactory<ProjectsDbContext>(projectOptions),
+                projectOptions, CoordinatedDatabaseTransaction.ForProfile(projectProfile));
+            return new ResourcePersistenceFixture(factory, ownerFactory, projects, projectId);
         }
 
         public async Task<Guid> AddResourceAsync(StorageObjectResourceConfig config)
@@ -324,12 +338,8 @@ public sealed class StorageObjectResourceConnectorTests
             => Task.FromResult(CreateDbContext());
     }
 
-    private sealed class ThrowingDbContextFactory : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext() => throw new InvalidOperationException("DB must not be reached.");
-
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => throw new InvalidOperationException("DB must not be reached.");
+    private sealed class ThrowingProjectDbContextFactory : IDbContextFactory<ProjectsDbContext> {
+        public ProjectsDbContext CreateDbContext() => throw new InvalidOperationException("DB must not be reached.");
     }
 
     private sealed class ThrowingResourceDbContextFactory : IDbContextFactory<ResourcesDbContext> {

@@ -23,7 +23,7 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var dbContextFactory = scope.ServiceProvider
-            .GetRequiredService<IDbContextFactory<AppDbContext>>();
+            .GetRequiredService<IDbContextFactory<WorkbenchDbContext>>();
         var mutationId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
         const string rootNodeKey = "winner-payload-proof";
@@ -92,7 +92,7 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var dbContextFactory = scope.ServiceProvider
-            .GetRequiredService<IDbContextFactory<AppDbContext>>();
+            .GetRequiredService<IDbContextFactory<WorkbenchDbContext>>();
         var farFutureClock = new FixedClock(
             new DateTimeOffset(2200, 1, 1, 0, 0, 0, TimeSpan.Zero));
         var farPastClock = new FixedClock(
@@ -252,7 +252,7 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
         ILogger<ProjectCrossModuleMutationProcessor> logger)
     {
         return new ProjectCrossModuleMutationProcessor(
-            services.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+            services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(),
             services.GetRequiredService<IProjectPartyIntegrationBridge>(),
             services.GetRequiredService<ProjectManagedStorageDeletionService>(),
             new ProjectCrossModuleMutationCoordinator(clock),
@@ -286,12 +286,14 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
             CreateProcessor(services, clock),
             ProcessingOptions,
             clock,
-            services.GetRequiredService<IDbContextFactory<AppDbContext>>());
+            services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(),
+            services.GetRequiredService<DbContextOptions<WorkbenchDbContext>>(),
+            services.GetRequiredService<CoordinatedDatabaseTransaction>());
     }
 
     private static async Task<bool> ClaimWhenReleasedAsync(
         ProjectCrossModuleMutationProcessor processor,
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         Task release)
@@ -304,7 +306,7 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
             CancellationToken.None);
     }
 
-    private static Task<DateTimeOffset> GetDatabaseUtcNowAsync(AppDbContext dbContext)
+    private static Task<DateTimeOffset> GetDatabaseUtcNowAsync(WorkbenchDbContext dbContext)
     {
         return dbContext.Database
             .SqlQueryRaw<DateTimeOffset>(

@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +6,7 @@ namespace CanDoItAll.Modules.Workbench;
 internal static class ProjectCrossModuleMutationTimeSource
 {
     public static Task<DateTimeOffset> GetUtcNowAsync(
-        AppDbContext dbContext,
+        DbContext dbContext,
         IClock fallbackClock,
         CancellationToken cancellationToken)
     {

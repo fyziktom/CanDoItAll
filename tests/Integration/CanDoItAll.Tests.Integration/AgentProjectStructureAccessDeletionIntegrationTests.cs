@@ -243,9 +243,11 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
             var dbContextFactory = setupScope.ServiceProvider
                 .GetRequiredService<IDbContextFactory<AppDbContext>>();
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            preparation = Assert.IsType<ProjectDeletionParticipantPreparation>(
-                await participant.PrepareAsync(dbContext, projectId));
-            await dbContext.SaveChangesAsync();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            using (setupScope.ServiceProvider.GetRequiredService<CoordinatedDatabaseTransaction>().Enter(dbContext)) {
+                preparation = Assert.IsType<ProjectDeletionParticipantPreparation>(await participant.PrepareAsync(projectId));
+            }
+            await transaction.CommitAsync();
         }
 
         await using var firstScope = application.Services.CreateAsyncScope();

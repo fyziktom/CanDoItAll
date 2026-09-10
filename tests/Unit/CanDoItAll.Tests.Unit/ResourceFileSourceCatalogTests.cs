@@ -1,10 +1,12 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace CanDoItAll.Tests.Unit.Infrastructure;
 
@@ -23,7 +25,7 @@ public sealed class ResourceFileSourceCatalogTests
         writeOnly.CapabilityMask = StorageCapability.Write;
         var storageCatalog = new MutableStorageCatalog(fileSystem, ipfs, ftp, disabled, writeOnly);
         var catalog = new ResourceFileSourceCatalog(
-            new ProjectRecordQueryService(fixture.Factory),
+            fixture.Projects,
             storageCatalog,
             new FakeBrowseDriverRegistry(
                 StorageProviderKind.FileSystem,
@@ -103,42 +105,26 @@ public sealed class ResourceFileSourceCatalogTests
             UpdatedAtUtc = DateTimeOffset.Parse("2026-07-13T00:00:00Z")
         };
 
-    private sealed class ResourceSourceFixture : IAsyncDisposable
-    {
-        private ResourceSourceFixture(TestDbContextFactory factory)
-        {
-            Factory = factory;
-        }
+    private sealed class ResourceSourceFixture(ProjectRecordQueryService projects) : IAsyncDisposable {
+        public ProjectRecordQueryService Projects { get; } = projects;
 
-        public TestDbContextFactory Factory { get; }
-
-        public static async Task<ResourceSourceFixture> CreateAsync()
-        {
-            AppDbContextModelRegistry.ConfigureAssemblies(
-                [typeof(Project).Assembly, typeof(ProjectResource).Assembly]);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"resource-sources-{Guid.NewGuid():N}")
-                .Options;
-            var factory = new TestDbContextFactory(options);
-            await using AppDbContext dbContext = factory.CreateDbContext();
-            dbContext.Set<Project>().Add(new Project
-            {
+        public static async Task<ResourceSourceFixture> CreateAsync() {
+            var databaseName = $"resource-sources-{Guid.NewGuid():N}";
+            var options = new DbContextOptionsBuilder<ProjectsDbContext>()
+                .UseInMemoryDatabase(databaseName).Options;
+            var factory = new PooledDbContextFactory<ProjectsDbContext>(options);
+            await using var dbContext = factory.CreateDbContext();
+            dbContext.Set<Project>().Add(new Project {
                 Id = Guid.NewGuid(),
                 Name = "Project files"
             });
             await dbContext.SaveChangesAsync();
-            return new ResourceSourceFixture(factory);
+            var profile = new ResolvedDatabaseProfile(new() { ProviderKind = DatabaseProviderKind.InMemory },
+                DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+            return new(new ProjectRecordQueryService(factory, options, CoordinatedDatabaseTransaction.ForProfile(profile)));
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-    }
-
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext() => new(options);
-
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(CreateDbContext());
     }
 
     private sealed class MutableStorageCatalog(params StorageCatalogRecord[] storages) : IStorageCatalogService

@@ -942,7 +942,6 @@ public sealed class ProjectsPageTests
         public int CompleteCalls { get; private set; }
 
         public Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
-            AppDbContext dbContext,
             Guid projectId,
             CancellationToken cancellationToken = default)
         {

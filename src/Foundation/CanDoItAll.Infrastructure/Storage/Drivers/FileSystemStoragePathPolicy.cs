@@ -44,6 +44,29 @@ public sealed class FileSystemStoragePathPolicy
         return TranslateValidation(() => rootPolicy.ResolveContainedPath(normalizedPath));
     }
 
+    public string ResolveRootPathFromFacts(StorageCatalogPlanningFact storage) {
+        return ResolveRootPolicyFromFacts(storage).RootPath;
+    }
+
+    public string ResolveFullPathFromFacts(StorageCatalogPlanningFact storage, string relativePath) {
+        ArgumentNullException.ThrowIfNull(relativePath);
+        var rootPolicy = ResolveRootPolicyFromFacts(storage);
+        var normalizedPath = NormalizeRelativeKey(relativePath);
+        return TranslateValidation(() => rootPolicy.ResolveContainedPath(normalizedPath));
+    }
+
+    public string ResolveWorkspaceFullPath(string relativePath) {
+        ArgumentNullException.ThrowIfNull(relativePath);
+        var rootPolicy = ResolveWorkspacePolicy();
+        var normalizedPath = NormalizeRelativeKey(relativePath);
+        return TranslateValidation(() => rootPolicy.ResolveContainedPath(normalizedPath));
+    }
+
+    private IPhysicalFileSystemPathPolicy ResolveRootPolicyFromFacts(StorageCatalogPlanningFact storage) {
+        return TranslateValidation(() => physicalPathPolicyFactory.Create(
+            StorageCatalogHostBindingPolicy.ResolveRequiredFromFacts(storage, workspacePathResolver.ResolveWorkspaceRoot())));
+    }
+
     public string ResolveTrustedWorkspacePath(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

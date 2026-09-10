@@ -27,6 +27,42 @@ contracts. The Workbench module owns canonical Project Structure nodes, workbenc
 and node mutations; this module consumes those capabilities through typed bridge
 contracts instead of duplicating them.
 
+## Runtime persistence boundary
+
+`ProjectsDbContext` maps only Project, ProjectPhase, ProjectOptionSelection, and
+ProjectHierarchyLink with their existing table, key, index, and property mappings.
+Normal project operations, recent activity, record queries, and file-scope project
+lookups use this owner context. Factories bind to the host's immutable canonical
+database profile. The complete AppDbContext remains the sole schema and migration
+authority; this context performs no independent schema initialization.
+
+`ProjectRecordQueryService.GetForMutationAsync` and `GetManyForMutationAsync` are
+explicit coordinated reads: they require the caller's active coordinated scope,
+share its database connection and transaction, and finish before returning. Ordinary
+query methods use independent factory contexts. Bulk GetMany retains its complete
+requested-ID result set; only ListReferences has the separate bounded catalog limit.
+
+Project deletion uses ProjectsDbContext and the data-only deletion participant
+contract. Projects owns one Serializable transaction and the sorted union of project,
+hierarchy, and participant keys. Workbench, Agent access, Search, and Storage staging
+each save through a fresh explicitly enlisted owner context on that same connection
+and transaction. Projects saves its four owned record types, exits coordination,
+commits, and releases the preparation scope before completion. Missing-project cleanup
+and terminal recovery histories remain supported. Existing precommit filesystem
+containment and reparse inspection remains validation; destructive byte effects stay
+after the authoritative commit under the separate managed-binding gate.
+
+The twelve-owner transfer context contract and other modules' direct project queries
+remain dependent work. Runtime owner contexts do not establish durable project
+admission or prevent retired ProjectId reuse. Canonical task identity and existing
+Agent recovery IDs are retained; Agent revocation now fences lease transitions by
+the durable attempt generation.
+
+The complete model retains the CRM AccountConnectionProjects ProjectId cascade FK to
+Projects_Projects. Projects' runtime model contains no CRM records. Canonical tasks
+remain Workbench ProjectObjects and their binding/reference records; this module does
+not create a separate task table or identity.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

@@ -58,19 +58,8 @@ public sealed class StorageCatalogService(
         StorageDbContext dbContext, IReadOnlyCollection<Guid> referencedStorageIds, CancellationToken cancellationToken) {
         var referencedIds = referencedStorageIds.ToHashSet();
         var storages = await dbContext.Set<StorageCatalogRecord>().AsNoTracking().ToArrayAsync(cancellationToken);
-        return storages.Select(storage => {
-            StorageFtpAddressingFact? ftpAddressing = null;
-            if (storage.ProviderKind == StorageProviderKind.Ftp && referencedIds.Contains(storage.Id)) {
-                var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
-                ftpAddressing = new(configuration.Port, configuration.BasePath);
-            }
-            return new StorageCatalogPlanningFact(
-                storage.Id, storage.Name, storage.ProviderKind, storage.IsEnabled, storage.IsSystemDefault,
-                storage.IsReadOnly, storage.DisplayOrder, storage.ConnectionMode, storage.EndpointOrRoot,
-                storage.RootBindingFormatVersion, storage.RootPlatformFamily, storage.RootPathSyntax,
-                storage.RootHostBindingId, storage.RootPathState, storage.RootLastValidatedAtUtc,
-                storage.CapabilityMask, storage.CreatedAtUtc, storage.UpdatedAtUtc, ftpAddressing);
-        }).ToArray();
+        return storages.Select(storage => StorageCatalogPlanningFact.FromCatalogRecord(
+            storage, referencedIds.Contains(storage.Id))).ToArray();
     }
 
     public async Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)

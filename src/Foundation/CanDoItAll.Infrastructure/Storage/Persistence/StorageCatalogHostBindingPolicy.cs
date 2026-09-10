@@ -33,39 +33,44 @@ public static class StorageCatalogHostBindingPolicy
     }
 
     public static bool TryResolve(
-        StorageCatalogRecord storage,
-        string fallbackRoot,
-        out string rootPath,
-        out string diagnostic)
-    {
+        StorageCatalogRecord storage, string fallbackRoot, out string rootPath, out string diagnostic) {
         ArgumentNullException.ThrowIfNull(storage);
-        if (storage.ProviderKind != StorageProviderKind.FileSystem)
-        {
+        return TryResolveCore(storage.ProviderKind, ToRecord(storage), fallbackRoot, out rootPath, out diagnostic);
+    }
+
+    public static bool TryResolveFromFacts(
+        StorageCatalogPlanningFact storage, string fallbackRoot, out string rootPath, out string diagnostic) {
+        ArgumentNullException.ThrowIfNull(storage);
+        return TryResolveCore(storage.ProviderKind, new HostBoundPathRecord {
+            FormatVersion = storage.RootBindingFormatVersion,
+            PlatformFamily = storage.RootPlatformFamily,
+            PathSyntax = storage.RootPathSyntax,
+            HostBindingId = storage.RootHostBindingId,
+            Path = storage.EndpointOrRoot,
+            State = storage.RootPathState,
+            LastValidatedAtUtc = storage.RootLastValidatedAtUtc
+        }, fallbackRoot, out rootPath, out diagnostic);
+    }
+
+    public static string ResolveRequiredFromFacts(StorageCatalogPlanningFact storage, string fallbackRoot) {
+        if (TryResolveFromFacts(storage, fallbackRoot, out var rootPath, out var diagnostic)) {
+            return rootPath;
+        }
+        throw new InvalidOperationException($"The filesystem storage root is unavailable. {diagnostic}");
+    }
+
+    private static bool TryResolveCore(StorageProviderKind providerKind, HostBoundPathRecord binding,
+        string fallbackRoot, out string rootPath, out string diagnostic) {
+        if (providerKind != StorageProviderKind.FileSystem) {
             rootPath = string.Empty;
             diagnostic = "The storage provider does not own a physical filesystem root.";
             return false;
         }
-
-        if (storage.RootBindingFormatVersion == 0)
-        {
-            string candidate = string.IsNullOrWhiteSpace(storage.EndpointOrRoot)
-                ? fallbackRoot
-                : storage.EndpointOrRoot;
-            HostBoundPathRecord imported = HostBoundPathPolicy.ImportLegacy(
-                candidate,
-                HostPathContext.CaptureCurrent());
-            return HostBoundPathPolicy.TryResolve(
-                imported,
-                HostPathContext.CaptureCurrent(),
-                out rootPath,
-                out diagnostic);
+        if (binding.FormatVersion == 0) {
+            var candidate = string.IsNullOrWhiteSpace(binding.Path) ? fallbackRoot : binding.Path;
+            binding = HostBoundPathPolicy.ImportLegacy(candidate, HostPathContext.CaptureCurrent());
         }
-
-        return HostBoundPathPolicy.TryResolve(
-            ToRecord(storage),
-            HostPathContext.CaptureCurrent(),
-            out rootPath,
-            out diagnostic);
+        return HostBoundPathPolicy.TryResolve(binding, HostPathContext.CaptureCurrent(), out rootPath, out diagnostic);
     }
 
     public static string ResolveRequired(StorageCatalogRecord storage, string fallbackRoot)

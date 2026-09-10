@@ -12,7 +12,9 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
     ProjectCrossModuleMutationProcessor mutationProcessor,
     ProjectCrossModuleMutationProcessingOptions processingOptions,
     IClock clock,
-    IDbContextFactory<AppDbContext> dbContextFactory) : IProjectDeletionParticipant
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    DbContextOptions<WorkbenchDbContext> contextOptions,
+    CoordinatedDatabaseTransaction coordinatedTransaction) : IProjectDeletionParticipant
 {
     private const string ProjectDeletionScopeNodeKey = "project";
     private const int CompletionLockStripeCount = 64;
@@ -30,12 +32,19 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
     ];
 
     public async Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
-        AppDbContext dbContext,
+        Guid projectId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new WorkbenchDbContext(options), cancellationToken);
+        var preparation = await PrepareCoreAsync(dbContext, projectId, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return preparation;
+    }
+
+    private async Task<ProjectDeletionParticipantPreparation?> PrepareCoreAsync(
+        WorkbenchDbContext dbContext,
         Guid projectId,
         CancellationToken cancellationToken = default)
     {
-        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-
         var sourceProjectMutations = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .Where(record => record.ProjectId == projectId)
             .ToListAsync(cancellationToken);
@@ -329,7 +338,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var mutationScope = await SerializableMutationScope.BeginAsync(
             dbContext,
-            ProjectMutationScopeKeys.ForProject(projectId),
+            [ProjectMutationScopeKeys.ForProject(projectId), ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey],
             cancellationToken);
         var currentMutation = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .SingleOrDefaultAsync(
@@ -433,7 +442,6 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var mutations = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .AsNoTracking()
             .Where(record =>
@@ -460,7 +468,6 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var mutations = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .AsNoTracking()
             .Where(record =>
@@ -607,7 +614,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
     }
 
     private static async Task<List<ProjectCrossModuleMutationRecord>> LoadIncompleteInboundMoveMutationsAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid targetProjectId,
         CancellationToken cancellationToken)
     {
@@ -625,7 +632,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
     }
 
     private static Task<List<ProjectObjectRecord>> LoadProjectObjectsAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         CancellationToken cancellationToken)
     {
@@ -635,7 +642,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
     }
 
     private static async Task RemoveProjectRowsAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         IReadOnlyCollection<ProjectObjectRecord> projectObjects,
         CancellationToken cancellationToken)

@@ -238,14 +238,16 @@ public sealed class ProjectEditorModel
 }
 
 public sealed class ProjectsService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProjectsDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     IEnumerable<IProjectDeletionParticipant> deletionParticipants,
-    ILogger<ProjectsService> logger)
-{
+    ILogger<ProjectsService> logger,
+    SearchIndexService searchMutationService,
+    StorageCatalogService storageCatalogService,
+    CoordinatedDatabaseTransaction coordinatedTransaction) {
     private const string DeleteRetryGuidance =
         "Retry each exact participant and recovery id returned by the deletion recovery; do not create or select a newer project-deletion operation.";
 
@@ -938,54 +940,48 @@ public sealed class ProjectsService(
         var preparedParticipants = new List<(
             IProjectDeletionParticipant Participant,
             ProjectDeletionParticipantPreparation Preparation)>();
-        foreach (var participant in orderedParticipants)
-        {
-            var preparation = await participant.PrepareAsync(dbContext, id, cancellationToken);
-            if (preparation is null)
+        using (coordinatedTransaction.Enter(dbContext)) {
+            foreach (var participant in orderedParticipants)
             {
-                continue;
+                var preparation = await participant.PrepareAsync(id, cancellationToken);
+                if (preparation is null)
+                {
+                    continue;
+                }
+
+                if (preparation.RecoveryId == Guid.Empty)
+                {
+                    throw new InvalidOperationException(
+                        $"Project deletion participant '{participant.Id}' returned an empty recovery id.");
+                }
+
+                if (preparation.ProjectId != id)
+                {
+                    throw new InvalidOperationException(
+                        $"Project deletion participant '{participant.Id}' returned recovery state for another project.");
+                }
+
+                preparedParticipants.Add((participant, preparation));
             }
 
-            if (preparation.RecoveryId == Guid.Empty)
+            if (project is not null)
             {
-                throw new InvalidOperationException(
-                    $"Project deletion participant '{participant.Id}' returned an empty recovery id.");
+                var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
+                var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
+                var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
+                    .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
+                    .ToListAsync(cancellationToken);
+                dbContext.RemoveRange(phases);
+                dbContext.RemoveRange(options);
+                dbContext.RemoveRange(hierarchyLinks);
+                dbContext.Remove(project);
             }
 
-            if (preparation.ProjectId != id)
-            {
-                throw new InvalidOperationException(
-                    $"Project deletion participant '{participant.Id}' returned recovery state for another project.");
-            }
+            await searchMutationService.DeleteProjectSearchForMutationAsync(id, cancellationToken);
+            await storageCatalogService.DeleteProjectRoutingForMutationAsync(id, cancellationToken);
 
-            preparedParticipants.Add((participant, preparation));
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
-
-        if (project is not null)
-        {
-            var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-            var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-            var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
-                .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
-                .ToListAsync(cancellationToken);
-            dbContext.RemoveRange(phases);
-            dbContext.RemoveRange(options);
-            dbContext.RemoveRange(hierarchyLinks);
-            dbContext.Remove(project);
-        }
-
-        var searchDocuments = await dbContext.Set<SearchDocument>()
-            .Where(document =>
-                document.ProjectId == id ||
-                (document.SourceType == "project" && document.SourceKey == id.ToString()))
-            .ToListAsync(cancellationToken);
-        var storageRoutingRules = await dbContext.Set<StorageRoutingRule>()
-            .Where(rule => rule.ProjectId == id)
-            .ToListAsync(cancellationToken);
-        dbContext.RemoveRange(searchDocuments);
-        dbContext.RemoveRange(storageRoutingRules);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
         await mutationScope.CommitAsync(cancellationToken);
         await mutationScope.DisposeAsync();
 
@@ -1347,7 +1343,7 @@ public sealed class ProjectsService(
         portfolioContext?.SearchText ?? string.Empty);
 
     private static async Task<IReadOnlyDictionary<Guid, int>> LoadPhaseCountsAsync(
-        AppDbContext dbContext,
+        ProjectsDbContext dbContext,
         CancellationToken cancellationToken)
         => await dbContext.Set<ProjectPhase>()
             .GroupBy(phase => phase.ProjectId)
@@ -1355,7 +1351,7 @@ public sealed class ProjectsService(
             .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);
 
     private static async Task<ProjectHierarchyMetrics> LoadHierarchyMetricsAsync(
-        AppDbContext dbContext,
+        ProjectsDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var links = await dbContext.Set<ProjectHierarchyLink>()
@@ -1377,7 +1373,7 @@ public sealed class ProjectsService(
     }
 
     private static async Task<Error?> ValidateHierarchyConnectionAsync(
-        AppDbContext dbContext,
+        ProjectsDbContext dbContext,
         Guid parentProjectId,
         Guid childProjectId,
         CancellationToken cancellationToken)

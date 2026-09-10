@@ -28,6 +28,23 @@ The Agents route projects AgentFramework-owned identities instead of maintaining
 
 The Web host exposes the supported HTTP slice at `/api/crm-hr`. Web owns route binding and status mapping; this module's application services continue to own validation, persistence, audit, search-index, activity, and lifecycle side effects. Do not add direct `DbContext` writes or scenario-specific seed behavior to the Web adapter.
 
+## Assignment staging boundary
+
+Direct task-assignment mutations derive the final assignment DTOs from CRM's current
+ChangeTracker, including unsaved additions and excluding deleted/detached rows. The
+single staging helper used by save, replace, delete, node cleanup, and project move
+enters the existing mutation transaction only while calling Workbench's data-only
+assignment bridge. Workbench saves through its explicit enlisted owner context; CRM
+then performs its final save and retains commit ownership. The public bridge exposes
+no DbContext or foreign persistence entity.
+
+CRM still uses the complete runtime context for its own records and its remaining
+foreign reads. Its AccountConnectionProjects ProjectId cascade FK is preserved in
+the complete model; future CRM model isolation must keep that physical relationship
+without importing writable Project records. Project admission, retired-ID fencing,
+the wider project-deletion protocol, and canonical participation semantics remain
+separate required work.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

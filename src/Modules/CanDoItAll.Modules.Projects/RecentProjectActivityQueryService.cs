@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Projects;
@@ -23,7 +22,7 @@ public interface IRecentProjectActivityQueryService
 }
 
 public sealed class RecentProjectActivityQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IRecentProjectActivityQueryService
+    IDbContextFactory<ProjectsDbContext> dbContextFactory) : IRecentProjectActivityQueryService
 {
     public async Task<IReadOnlyList<RecentProjectActivityItem>> ListAsync(
         int itemCount,

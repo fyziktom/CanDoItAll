@@ -37,8 +37,9 @@ services also expose explicit `ForMutationAsync` methods for a caller that enter
 an existing transaction with `CoordinatedDatabaseTransaction`. Those methods create
 and dispose a fresh enlisted owner context, save their own changes, and leave
 commit or rollback with the transaction owner. No ambient scope redirects the
-normal factories. This prerequisite does not yet convert project deletion or
-Prompt search projection callers, or establish project admission/replay fencing.
+normal factories. Project deletion stages Search and routing cleanup through these
+owner methods in the Projects transaction. Prompt search projection callers and
+project admission/replay fencing remain separate work.
 
 Storage catalog planning facts include every catalog row and retain selection and
 host-binding fields. Callers supply the exact storage IDs whose configuration the
@@ -48,8 +49,17 @@ referenced configuration fails, while unrelated malformed configuration stays
 unparsed. The facts contain no raw configuration or credential reference. Fact
 queries and staged routing cleanup do no bootstrap, path resolution, or provider
 work. Existing normal catalog reads and writes retain their bootstrap and
-host-path migration behavior. Physical byte operations remain outside database
-transactions and under the existing containment/provenance policies.
+host-path migration behavior.
+
+StorageObjectDeletionService retains the selected current catalog record privately,
+passes typed storage/bootstrap facts to one required caller validation callback, then
+invokes the existing driver with that same record. The operation performs no database
+write or bootstrap and contains no project-specific dependency. Its caller must hold
+the managed-binding gate across the entire call. Project deletion invokes it only
+after its authoritative database commit, under a separate postcommit Serializable
+binding gate retained across final validation and the byte deletion. Existing path
+containment, provenance, provider capabilities, and enabled/read-only checks remain
+authoritative. This gate does not claim to serialize independent catalog edits.
 
 ## Related Docs
 
