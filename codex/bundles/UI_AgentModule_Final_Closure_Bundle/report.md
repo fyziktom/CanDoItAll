@@ -1,3 +1,5 @@
+> Historical record: all sections before "Committed dependency and live-provider closure seal" describe earlier executions and delivery states. Their uncommitted/future-owner wording is superseded by that final section; historical identities and outcomes are preserved.
+
 # Final Agent module closure report
 
 Current results are in the [bounded correction and delivery seal](#bounded-correction-and-delivery-seal). Earlier execution sections preserve the historical closure and its original source identities.
@@ -1335,3 +1337,121 @@ Verdicts: test integrity, adversarial security, functional parity, practical UI 
 ### Four-file delivery seal
 
 The final source and compiled test identities reconcile without missing cases or duplicate execution IDs. Documentation (205 maintained files and nine validator self-tests), final bundle UTF-8, retained-evidence secret/sentinel scan, proposed Git links and the three-member SHA-256 manifest pass. Historical Markdown prefixes and historical JSON sections are preserved. The exact four-file and added-evidence byte counts are in `independentAdversarialClosure.evidencePolicy`; no screenshot or new retained evidence file was created.
+
+## Committed dependency and live-provider closure seal
+
+This section supersedes earlier delivery status without changing when historical validation ran. Verdict: **READY_FOR_ARCHITECTURE_FOUNDATION_BRANCH**. Agent Chat, Workflows and the complete Agent module are ready at the accepted component boundary. The existing effectful children remain accepted; no new component/module decoupling or Architecture Foundation implementation was undertaken.
+
+### Committed predecessor and delivery identities
+
+| Identity | Commit | Tree |
+| --- | --- | --- |
+| Primary entry, clean local = remote | `e010a8b29ec9b55ba017af2081fb6db521c621da` | `83584cc9c5f685b926e3878f5acca7f9c72b0656` |
+| Published primary immutable-pin change | `54e4aeb150441e3c7b7c2c73f6b1448a4368bd83` | `722ef79042e79d48ca2f0ac6f528d3169c47c13f` |
+| Final production tested by real providers and frozen gates | `a5119faff0d3c84678de760011fd8891328494cc` | `a840f73dab45daced027c3657c68e2351439df6d` |
+| Separate test-only immutable-pin guard correction | `fa6c2c6c9581ac29fb5388d2f5f377ab85edc2b2` | `816b6064093e23e673e656f59211e8647a39b178` |
+| Components entry, clean, existing publication branch not yet remote | `b03671cfcc060b536965da535ad1e04f2a7de93c` | `869740c6bd1a2ec9827e39a5f32ed876eaba0b12` |
+| Components published final and immutable CI pin | `1c939033cb427b507086d1f7f2381c43992175ee` | `92ec83df85d0b77108e13d360213c29ca35d084f` |
+| FileTools original clean checkout | `7c7453c6583365ae5bd63f8fc6efc4a776e15818` | `6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d` |
+| FileTools CI pin and clean proof checkout | `498b36825bd5a5222429972af120b04becf4b3f6` | `6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d` |
+
+Primary branch remains `components-decoupling`; Components branch is `codex/original-ui-refactoring-release`. Primary entry parent is `1a0a88f5e381fc971fa42f114499f940736c38be`, development merge base `d446dc2bad461c7e753cceb53a7969d6ff6b9cb2`. Components entry parent is `c3e6aa03a878994c0ba8aed6af017d0be75f3796`, development merge base `8372c1d55f21b349f8e859470b02eeb4421e96ca`. Both entered with clean index/worktree and no untracked files. The pin commit directly follows primary entry; the production correction directly follows the pin; the separate test-only pin guard correction follows production, then the final evidence-only commit follows that correction. Components final directly follows its entry. No history was rewritten.
+
+The prior independent audit entered at `1a0a88f` and tested proposed source `e6136e653c08fb6bc07e1ad99ea0e1f96e4f92858633921651a3ac2986278db5`. Computing that identity from committed `e010a8b` produces an exact match. The original three-member bundle manifest also passes. This is a committed-predecessor seal, not a claim that earlier execution occurred after its eventual commit.
+
+The final proposed/committed all-source identity is **`cad050e2444669e138acdf3525f0f6d16f70b2bb4526eca72c0611b47e0d0df6`**, covering 9619 Git files outside this bundle. The frozen broad/live production commit had all-source identity **`3195a0151297f0b196b07f8773c81113a476c71bc8a78d9f5306ee514efc4933`**. Their only source difference is the expected immutable Components SHA in one CI test; production bytes are unchanged. Algorithm: SHA-256 of sorted UTF-8 `path<TAB>mode<TAB>Git-filtered-blob-id<LF>`. Only the four bundle files change after test-only correction `fa6c2c6c9581ac29fb5388d2f5f377ab85edc2b2`. The final closure commit and tree are obtained by:
+
+```text
+git log -1 --format="%H %T" -- codex/bundles/UI_AgentModule_Final_Closure_Bundle
+```
+
+That exact resolved commit is the proposed Architecture Foundation branch point. A Git commit cannot contain its own hash; the actual resolved final commit/tree and local/remote equality are reported in the delivery response. No post-push receipt file is added. Final verification checks that the closure-only diff has precisely these four members and that the final all-source identity above is unchanged and no production byte changed after a5119fa.
+
+### Published dependency and clean source proof
+
+The five-file DialogService patch was already committed in Components `b03671c` at entry. Its actual files are the five listed in the preceding historical hash table, not the speculative filenames in the task input. Three previous working hashes exactly match committed bytes; two approval fixtures match after Git CRLF checkout conversion. Canonical binary Git diff SHA-256 (`c3e6aa0..b03671c`) is `59c7caafef65a35e7f0ec3a5b19cda454dcda3b843839a3455fffb38586dc3ab`. The earlier working-file hash-map SHA-256 `f81413a9e7a248d70b0aa86328a7cbdf74070f459ac15d49e4091a44ba42b43d` uses a different algorithm and is retained separately.
+
+Two new public bUnit tests in `tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs` prove fragment reference/content identity until explicit close-all and nested owner cancellation without closing the outer fragment. The complete dialog/modal/public-API approval selection passes **30/30** both before publication and in the clean published checkout. Explicit preservation leases, default/cross-page closure, nested/idempotent disposal, cancellation and subscriptions remain correct. No Components production source was changed in this task. Commit `1c939033` is published and the primary's immutable `CANDOITALL_COMPONENTS_COMMIT` is exactly that SHA.
+
+Clean primary and both sibling worktrees under `C:/cda-live-0909-2131` restore/build without the original local sibling checkout. BaseLib, Agent UI/Components, Workflows UI, Simple Chats UI/Components, Module, Web, sandbox Parity/Fast and affected test projects pass. Initial clean pin proof includes 30 dialog and 15 Agent route cases; the final committed correction also passes its 21 owning cases. FileTools' different local/CI commits have identical trees; its existing pin remains unchanged.
+
+Two setup failures are retained honestly. An initial deep Windows checkout exceeded path lengths; fresh short-path checkouts resolved Git/MSBuild failures without source edits. The first Fast build lacked generated CSS; documented `npm ci --prefix Tailwind` and `npm run catalog:css:build` produced the ignored asset from committed inputs, then the exact Fast build passed. Generated CSS SHA-256: `60c9fd2ac72afee5fd94250d19e8a242feda22c3dfe0c616d6d8ce9091526350` (20474 bytes). No hidden working-tree asset was borrowed. Final clean reproduction uses these documented prerequisites.
+
+Environment: .NET SDK 10.0.303, Node 24.19.0, Tailwind 4.2.1, Playwright Chromium 153.0.8010.12, Ollama 0.33.2. Existing PostgreSQL and Ollama services were usable and were not reset. No browser/model download or optional Components MCP was needed.
+
+### Localized correction and actual production acceptance
+
+The required no-tool agent configuration exposed one small defect: the editor did not offer the existing `CanUseTools` switch. Empty capabilities alone do not disable runtime-attached tools. Two failing-first toggle tests reproduced the absent UI control. The Runtime tab now exposes **Allow tool use**, changing only that permission. Existing runtime guards enforce false; no provider/execution/persistence design changed. Settings/capability tests pass **21/21** in both original and clean committed checkouts; the new false/true cases save and reopen the exact permission record.
+
+The normal production Web project was built and run from committed `a5119fa`, using the Development `http` launch profile at **http://localhost:5032**. Root and `/agents` responded, the existing database startup modal was explicitly continued, and startup remained healthy. The real browser created and reopened two active non-template agents with no capabilities, tool access, auto-approval, external workspace roots, project mutation, voice, images or persistent-memory contributions. UI save/readback retained exact provider/model selection. No credential or provider configuration was changed.
+
+OpenAI used existing **OpenAI default**, provider `c1c103db-707e-3f52-8809-8d804fc171d1`, OpenAI/Responses, configured **gpt-5.4-mini** and its supported stored secret binding. The key value was never read or retained. Local execution used **Local Ollama**, provider `bd2bffbb-23d5-d152-82f6-e1d37908b169`, Ollama/ChatCompletions, **llama3.1**, installed tag **llama3.1:latest**, inventory ID `a340353013fd`. Preferred `gpt-oss:20b` was installed but rejected at UI save by the existing missing-model-price rule; it was not invoked. The already configured/priced installed alternative was used with no download, provider mutation or remote fallback.
+
+| Phase | Provider / model | Run | Session | Exact trimmed marker |
+| --- | --- | --- | --- | --- |
+| acceptance | OpenAI default / gpt-5.4-mini | `6ab81daa-c733-42ef-8228-ad5b28379d5a` | `916aebbf-45c2-4ebb-93cf-0b23f667da56` | `CDA_OPENAI_OK` |
+| acceptance | Local Ollama / llama3.1 | `e61e1df1-514b-4dd7-80c8-6b41326f1b80` | `41d62dc0-992e-489b-83bb-d8f4c66f937d` | `CDA_LOCAL_OK` |
+| committed-repeat | OpenAI default / gpt-5.4-mini | `815467d1-7712-467e-809a-b33d27117946` | `c999de18-199d-4efe-a999-41a7fcfbe78a` | `CDA_OPENAI_OK` |
+| committed-repeat | Local Ollama / llama3.1 | `81d12978-6ae9-4827-a6a3-38e6fc2be583` | `e84f9d7e-526c-4997-b3c4-5ce3b2c22dba` | `CDA_LOCAL_OK` |
+
+All four requests were submitted once through the real UI. Each showed active then idle UI and terminal **Completed / Succeeded**, exactly one persisted user message plus one assistant completion, correct provider/model evidence, and zero tool receipts, approvals or artifacts. Both initial flows and required committed-source repeats matched their first completion: **four requests, zero model retries**. Refresh and same-thread reopen preserved exact message IDs, two-message count and revision 2. No duplicate persistence/terminal refresh or raw technical/credential detail appeared in the accepted browser flow. The compact JSON retains exact agent/message identities without transcript dumps.
+
+Switch Agent correctly changed workspace state in both directions. Explicit target URLs, back/forward and refresh restored the correct transcript and busy state without crossover. The existing Switch Agent action does not itself rewrite the URL; this contract was preserved. For same-page dialog ownership, existing Overview and Chat shell buttons received DOM click events while the real default-synchronization confirmation remained open. The same dialog identity/title/content survived both query changes; Cancel closed it and synchronization was never invoked. Runtime details opened with UTC and no raw technical sentinel. All final accepted browser actions had zero page/console errors and no Blazor error UI.
+
+Original driver failures remain under ignored artifacts: CUA field-change delivery, prerender versus interactive timing, reading transient busy state, assuming Switch Agent rewrites the URL, expecting `tab=overview` instead of the canonical omitted query, and issuing both click and Enter to a runtime-details button. Correcting the browser driver resolved them; no product behavior, assertion or timeout was weakened to hide a defect.
+
+Both disposable agents were deleted through the real editor and explicit confirmation. Supported catalog/session/run list readbacks show no disposable agent and no remaining four sessions/four runs. A direct single-editor lookup after deletion returns HTTP 500; its raw body was not retained. Catalog absence and empty owned lists prove cleanup without direct database writes or repeated deletion. Existing 32 agent records and nine providers match entry hashes; 100 CRM parties, 39 workflow definitions and 29 chat-workspace summaries match pre/post-cleanup hashes. This bounded readback does not claim a full database snapshot. Only the task-owned Web process tree was stopped; PostgreSQL/Ollama and unrelated processes were untouched.
+
+### Frozen validation and exact accounting
+
+| Agent-focused project | Discovered cases | Executed cases | Failed |
+| --- | ---: | ---: | ---: |
+| CanDoItAll.Tests.Unit | 6309 | 6343 | 0 |
+| CanDoItAll.Tests.Components | 1544 | 1544 | 0 |
+| CanDoItAll.Tests.Integration | 1281 | 1286 | 0 |
+| CanDoItAll.Memory.Tests | 165 | 181 | 0 |
+| CanDoItAll.AgentFramework.Memory.Tests | 22 | 22 | 0 |
+| **Total non-browser** | **9321** | **9376** | **0** |
+| Production-browser Agent route selection | 12 | 12 | 0 |
+
+The source census contains **8776 test methods**, **7218 Agent-related**, with no missing source method. Runtime theory expansion explains the difference between discovery and execution; display-name duplicates are preserved as list entries, and execution IDs are unique. The complete Agent selection is reconciled from its Stable intersection plus **454 disjoint supplemental cases** (409 Unit, 45 Integration), replacing the affected Unit partition with its actual post-repair 7296-pass run. The original focused execution was **9375 passed / one CI-pin guard failed**; the final reconciled selection is **9376 passed**. No case is dropped or relabeled without a passing execution. Browser duration: 84.234 seconds. There is no new Agent quarantine or weakened RED assertion.
+
+The single final Stable aggregate executed **10820 cases: 10819 passed, one failed, zero skipped**. The failure was `CrossPlatformCiWorkflowTests.Active_workflow_defines_three_actual_host_gates_with_pinned_sibling_sources`, whose exact expected Components SHA had not been updated with the CI pin. An isolated RED run reproduced the same assertion, proving a deterministic pin-assumption mismatch. Updating only that expected SHA preserves the strict immutable-pin guard; the full owning Unit partition then passed **7296/7296**, including the exact case, with unchanged test names/counts. The exact guard also passes a fresh build from the clean committed checkout. This related test-only correction is committed separately as `fa6c2c6c9581ac29fb5388d2f5f377ab85edc2b2`; it changes no production byte. The original failed aggregate is retained and is not relabeled green; no second aggregate was run. The three-retry rule for unrelated timing failures does not apply to this deterministic, directly related pin assertion.
+
+Discovery had **10765 entries** (eight duplicate display entries), and all runtime theory expansions reconcile with no missing or extra method. The final Agent-focused selection is **9376/9376 passed** after the explicit owning-partition replacement described above; the original failed result remains separate. Aggregate start UTC: `2026-09-09T22:43:08.922506+00:00`; duration: 4680.938 seconds. Command from the clean committed primary checkout:
+
+```text
+dotnet test tests/Solutions/CanDoItAll.Tests.Stable.slnx -c Release --no-build --no-restore --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true" /m:1
+```
+
+The historical exact inventory of **37 environment/opt-in gated methods (46 cases)** remains in `independentAdversarialClosure`. **22 non-browser runner-passed cases** return at environment guards and are explicitly not behavioral proof. Windows does not validate native Unix semantics; Docker/live/performance/other external browser gates remain classified. Today's four real production UI inferences close OpenAI/local acceptance independently, not every opt-in integration test. Historical enabled-Docker and unrelated Workbench exploratory failures remain historical. No new watcher/performance campaign was required; the earlier 27 restored edits are not claimed as executions of this task.
+
+Static gates pass: evaluated 142-project/123-root graph with zero cycles and no new forbidden edge; equal sandbox Parity/Fast closures; portability enforcement without baseline expansion; source-secret comparison with zero new matches; final retained-evidence secret review; UTF-8/mojibake; documentation/self-tests; exact four-file manifest and Git diff/status checks. The source scan covered 7364 text and 2259 binary files and classified 245 existing synthetic/historical matches with no additions before documentation. Two occurrences of an ephemeral integration-fixture query token were redacted from captured stdout before final scanning; execution IDs and outcomes are unchanged. Remaining test-data matches are classified against committed source; operator credentials and sensitive response bodies are absent. The final four bundle members contain no new evidence file or screenshot. Raw logs stay in `.artifacts/agent-live-provider-closure`.
+
+### Exact task delta
+
+Primary files changed from entry, including the existing evidence bundle:
+
+- `.github/workflows/ci.yml`
+- `src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor`
+- `src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs`
+- `tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogSettingsTests.cs`
+- `tests/Unit/CanDoItAll.Tests.Unit/CrossPlatformCiWorkflowTests.cs`
+- `codex/bundles/UI_AgentModule_Final_Closure_Bundle/README.md`
+- `codex/bundles/UI_AgentModule_Final_Closure_Bundle/report.md`
+- `codex/bundles/UI_AgentModule_Final_Closure_Bundle/validation-summary.json`
+- `codex/bundles/UI_AgentModule_Final_Closure_Bundle/MANIFEST.sha256`
+
+Components task delta: `tests/CanDoItAll.Components.BaseLib.Tests/DialogNavigationOwnershipTests.cs` only (two tests, 57 lines). Primary pre-evidence delta: five files, 42 insertions/two deletions; the fifth file is the strict CI pin test expectation repair. No CSS, FileTools, non-Agent module, workflow canvas, runtime backend or persistence source changed. The accepted ownership matrix remains unchanged except for the localized AgentDetailsDialog permission control; Module effect hosts and the previously named editor/canvas children remain intentional.
+
+### Foundation input, residual contract and branch handoff
+
+The supplied **CanDoItAll_Architecture_Foundation_2026-09-08_v1.1_EN** ZIP is SHA-256 **`22c9518f967976554dc350882ec54890969fd8fa1e3ef1016378684b091cff92`**, 91 members. Its own unchanged `python tools/validate_package.py --verify-hashes` passes all nine structural/hash groups under WSL Ubuntu. The original native Windows invocation failed only separator-dependent manifest coverage and is retained; the package was not edited. README/start guidance, ownership/contracts/adoption/testing/migration material, Agent module card, cross-module journeys and operation catalogs were read. This validates normative input structure, not implementation/application readiness.
+
+Residual Foundation-owned finding: `GET /api/agents/{deletedId}` returns HTTP 500 instead of a typed not-found outcome after a successful delete. Assign this to the **Agent module contract/error-outcome adoption slice**. The UI deletion, authoritative collection readbacks and both provider paths succeed; no raw response was retained or rendered in the accepted UI. This is not a current Agent component P0/P1 and no assertion was weakened. Existing operator model-price governance also remains explicit: an installed model needs the already-required provider row before it can be selected.
+
+Delivery order is: (1) publish Components `1c939033`; (2) pin/verify primary `54e4aeb` against that immutable dependency and tree-equivalent FileTools; (3) publish production `a5119fa`, the separate strict CI test pin repair and this signed evidence-only closure; (4) verify one clean source-mode build and unchanged production hash; (5) the owner creates Foundation from the **exact final closure commit resolved above**. Steps 1-4 are this task's delivery work; step 5 is deliberately not performed. Both published repository branches must be clean and local/remote-equal at final reporting.
+
+The next work is owner-mediated cross-module commands/queries, explicit data/mutation ownership, atomic receipts/idempotency, reverse reads, module contracts, CRM/HR and Simple Chats management gaps, and Scheduler/Resources/Projects collaboration. None is implemented here. No Foundation branch, non-Agent refactor, new bundle, Components MCP call or history rewrite occurred.
+
+Final verdicts: **Agent Chat Ready; Workflows Ready; complete Agent module Ready; clean committed source-mode reproducibility Ready with documented asset prerequisites; Architecture Foundation branch handoff Ready from the exact final published closure commit.**
