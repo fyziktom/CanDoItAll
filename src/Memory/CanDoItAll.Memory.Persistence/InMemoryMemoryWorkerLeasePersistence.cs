@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Persistence.Hosting;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +6,7 @@ namespace CanDoItAll.Memory.Persistence;
 internal static class InMemoryMemoryWorkerLeasePersistence
 {
     public static Task<MemoryWorkerLease?> TryAcquireAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryBackgroundWorkerPhase phase,
         MemoryWorkerLeaseOwnerId ownerId,
         DateTimeOffset nowUtc,
@@ -50,7 +49,7 @@ internal static class InMemoryMemoryWorkerLeasePersistence
             cancellationToken);
 
     public static Task<bool> RenewAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset nowUtc,
         TimeSpan leaseDuration,
@@ -71,7 +70,7 @@ internal static class InMemoryMemoryWorkerLeasePersistence
             cancellationToken);
 
     public static Task<bool> CompleteAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset completedAtUtc,
         MemoryWorkerInMemoryLeaseRegistry registry,
@@ -79,7 +78,7 @@ internal static class InMemoryMemoryWorkerLeasePersistence
         ReleaseAsync(dbContext, lease, completedAtUtc, requireUnexpired: true, registry, cancellationToken);
 
     public static Task<bool> ReleaseAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset releasedAtUtc,
         MemoryWorkerInMemoryLeaseRegistry registry,
@@ -87,7 +86,7 @@ internal static class InMemoryMemoryWorkerLeasePersistence
         ReleaseAsync(dbContext, lease, releasedAtUtc, requireUnexpired: false, registry, cancellationToken);
 
     private static Task<bool> ReleaseAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset releasedAtUtc,
         bool requireUnexpired,
@@ -104,7 +103,7 @@ internal static class InMemoryMemoryWorkerLeasePersistence
             cancellationToken);
 
     private static Task<bool> UpdateOwnedAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset nowUtc,
         bool requireUnexpired,

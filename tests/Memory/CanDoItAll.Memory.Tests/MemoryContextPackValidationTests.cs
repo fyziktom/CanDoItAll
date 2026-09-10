@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -90,7 +89,7 @@ public sealed class MemoryContextPackValidationTests
     private static ServiceProvider CreateServiceProvider(IMemoryProviderDriver driver)
     {
         var services = new ServiceCollection();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-context-validation-{Guid.NewGuid():N}"));
         services.AddSingleton(driver);
         services.AddGenericMemoryModule();

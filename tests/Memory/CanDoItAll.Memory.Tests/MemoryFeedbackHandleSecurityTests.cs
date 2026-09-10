@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -28,7 +27,7 @@ public sealed class MemoryFeedbackHandleSecurityTests
     {
         var driver = new InjectingFeedbackHandleDriver();
         var services = new ServiceCollection();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-feedback-security-{Guid.NewGuid():N}"));
         services.AddGenericMemoryModule();
         services.AddSingleton<IMemoryProviderDriver>(driver);

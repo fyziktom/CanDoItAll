@@ -65,7 +65,7 @@ Use disposable database/storage/profile fixtures. Browser default fixtures isola
 
 Build/test isolation uses the same Release configuration with `--artifacts-path ./artifacts/modules-decoupling/build`. During child-host test execution, set process-scoped `ArtifactsPath` to that absolute root and `CANDOITALL_TEST_CONFIGURATION=Release`; the existing Playwright child `dotnet run` then resolves the isolated Web executable. Keep those settings scoped to the tool process. SDK property evaluation confirmed this path without modifying projects; runtime verification is still required.
 
-## Collaboration slice in progress
+## Collaboration checkpoint and intermediate broad gate
 
 Source base: signed documentation checkpoint `49ef77a3d` plus the staged Collaboration context/stamping change, source tree `a8e5ed489c4c86e1fdbd26d8d0b56781c5a36669` (index before evidence-text updates). Both changed production projects built directly in Release with isolated artifacts: Infrastructure and Collaboration each report 0 warnings / 0 errors. Evidence: `artifacts/modules-decoupling/collaboration/`. xUnit 2.9.3 runs through VSTest on the existing SDK; no test-platform change.
 
@@ -77,9 +77,34 @@ Source base: signed documentation checkpoint `49ef77a3d` plus the staged Collabo
 | Portability-static | PASS: tooling 6 + 4; complete staged-source scan 5630 files / 29250 findings; final no-write enforcement reports 14403 reviewed executable findings unchanged. No baseline rewrite. |
 | Evidence secret scan | PASS: 13 text artifacts scanned, no oversized/unreadable files or findings, before broad execution. |
 | Documentation | PASS: 208 maintained Markdown files after slice and evidence updates. |
-| Broad stable gate | Trigger: shared persistence stamping and owner composition. Refreshed stable aggregate build PASS, 0 errors / 3 warnings in unchanged component tests (CS8602 twice, xUnit2031 once). Discovery established execution expectations: Components 1896, Integration 1407, Memory 180, AgentFramework Memory 22, Unit 7267 (total 10772). Execution in progress with the documented exact exclusions; compare executed totals and report skips independently. |
+| Broad stable gate | Trigger: shared persistence stamping and owner composition. Frozen revision d96ef27796cf7648cb42cfd42c2b832c0b432180. Stable aggregate build PASS, 0 errors / 3 existing component warnings. Discovery 10772; execution PASS 10827, failed 0, skipped 0: Components 1896, Integration 1412, Memory 196, AgentFramework Memory 22, Unit 7301. Run 2026-09-10 13:19:41-15:22:07 UTC, exact documented exclusions. Evidence: collaboration/stable-tests.log and five TRX files under collaboration/stable. This predates Memory and does not close the final gate. |
 | Independent architecture/QA source review | No actionable findings. Explicit model membership, inherited save dispatch, complete mappings, profile binding and removed overload callers checked; runtime closure is evaluated separately. |
 
 No schema migration or data copy is introduced by this slice. Complete migration mapping remains unchanged. Migration rehearsal, cumulative review, remaining owner changes and final gates are NOT_RUN. Complete implementation and end-to-end validation are **not complete**.
 
 The Collaboration slice preserves current local-operator behavior. It does not establish a new membership/private-thread authorization contract: the current service stores participant identities but has no member-removal operation or per-thread authorization policy. Foundation QA-070's broader scenario therefore cannot be claimed PASS from these persistence and shell tests.
+
+Runtime result names reconcile the complete discovery/execution difference: two MemoryOperationHandler theories expand 1 to 5 each; MemoryOperationAccessAuthorizer ownership dimensions expand 1 to 9; PluginCatalog preview expands 1 to 6; FloatingAgentChatSettingsValidator and MafFinalizerToolFactorySchemaCharacterization each expand 1 to 8; ProcessRuntimeToolPreflight routes expand 1 to 21. No discovered method is missing. Ignored reconciliation: collaboration/stable-discovery-expansion.json.
+
+Captured broad-test output required artifact sanitation: synthetic secret-scanner/redaction samples and a disposable authorization fixture token in an intentionally rejected query-string request appeared in discovery/TRX text. Nineteen fragments in three files were redacted, preserving XML validity and every test ID/outcome, with value-free scan/fingerprint metadata retained. The initial scan's oversized integration TRX was subsequently scanned in full at a 100 MB limit. Final scan PASS: 31 text artifacts, no oversized/unreadable files or findings. This is artifact hygiene, not a source-test change or a claim about real-provider credentials.
+
+## Memory applied-source checkpoint
+
+Base: signed Collaboration d96ef27796cf7648cb42cfd42c2b832c0b432180. Applied source tree before this record update: `19f0cc204b15ac71c3e40ba4f8b170899558413c`. Every check below uses actual working-tree files and the normal isolated build root, without the candidate compiler overlay. Evidence root: `artifacts/modules-decoupling/memory/`.
+
+| Check | Discovery and result |
+| --- | --- |
+| Direct builds | Memory.Persistence and Composition PASS, 0 warnings / 0 errors. Refreshed Memory test assembly PASS 0/0; Integration PASS with five preexisting analyzer warnings; Components PASS with three preexisting warnings. No SDK/package change. |
+| Memory focused | memory.filter selects the 11 changed stable fixture classes, MemoryWorkerHostingTests and new MemoryDbContextTests. Discovery 77, execution PASS 85 / failed 0 / skipped 0, 5 seconds; two CrossCallerRoutes theories add eight runtime rows. Existing 392 assertions retained in migrated fixtures. memory.trx. |
+| PostgreSQL/API | FullyQualifiedName~MemoryOwnerPersistenceTests\|FullyQualifiedName~MemoryProvidersApiIntegrationTests: discovery/execution 19, PASS 19 / failed 0 / skipped 0, one minute. New owner tests 3 plus existing API tests 16. memory-integration.trx. |
+| Components | FullyQualifiedName~MemoryProvidersPageTests\|FullyQualifiedName~MemoryProviderOperationsPageTests\|FullyQualifiedName~MemoryProviderUiSurfacePageTests: discovery/execution 17, PASS 17 / failed 0 / skipped 0, 3 seconds. memory-components.trx. |
+| Portability-static | PASS: tooling 6 + 4; complete staged-source scan 5633 files / 29250 findings; final no-write enforcement 14403 reviewed executable-source findings unchanged. No baseline rewrite. |
+| Evidence secret scan | Memory PASS: 17 text artifacts, no oversized/unreadable files or findings. |
+| Documentation | PASS: 208 maintained Markdown files after checkpoint/evidence updates. |
+| Architecture/QA review | Independent review found no material issue or missed callers. Root reviewed the staged source/fixture diff. Exact model membership, all six save entry points, canonical mapping/JSON retention/readback and profile binding covered. |
+
+Reproduce builds with `dotnet build <owning-project> --configuration Release --artifacts-path ./artifacts/modules-decoupling/build /m:1`. After refreshing each owning assembly, run `dotnet test <owning-project> --configuration Release --artifacts-path ./artifacts/modules-decoupling/build --no-build --no-restore --list-tests --filter <filter> /m:1`, then the same filter without `--list-tests`, adding a TRX logger/results directory. Set the scoped configuration/artifact environment above and the explicit disposable PostgreSQL fixture connection; each test leases its own database. The Memory filter file is reproducible from the listed changed fixture classes and the two named additions.
+
+The exact Memory class selection is AgentMemoryProviderEndToEndTests, ManualMemorySourceIngestionTests, MemoryAsyncWorkerTests, MemoryContextPackValidationTests, MemoryEndToEndObservabilityProofTests, MemoryFeedbackHandleSecurityTests, MemoryOperationHandlerTests, MemoryProviderRuntimeContractTests, MemoryRuntimeCheckpointTests, MemoryRuntimePersistenceTests, MemoryWorkerLeaseTests, MemoryWorkerHostingTests and MemoryDbContextTests. Join `FullyQualifiedName~<class>` clauses with `|`.
+
+No schema migration or data copy. The PostgreSQL lease test uses two independent service providers/connections in one process; it proves restart/expiry/forged ownership behavior, not a simultaneous distributed race. ExternalCognitiveMemoryLiveConformanceTests was adapted but is an opt-in LiveProcess test and was not selected. Final frozen product/stable/browser/live/provider/upgrade journeys remain open.

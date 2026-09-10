@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -226,7 +225,7 @@ public sealed class MemoryProviderRuntimeContractTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-suite-rebalance-{Guid.NewGuid():N}"));
         services.AddSingleton(fixture);
         services.AddSingleton<IMemoryProviderDriver>(provider =>

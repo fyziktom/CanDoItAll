@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Memory.Persistence;
 
 public sealed class EfMemoryProviderProfileStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IMemoryProviderProfileStore
+    IDbContextFactory<MemoryDbContext> dbContextFactory) : IMemoryProviderProfileStore
 {
     public async Task UpsertAsync(
         MemoryProviderProfile profile,

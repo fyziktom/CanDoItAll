@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Memory.Persistence;
 
 public sealed class EfMemoryOperationLedgerStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IMemoryOperationLedgerStore
+    IDbContextFactory<MemoryDbContext> dbContextFactory) : IMemoryOperationLedgerStore
 {
     public async Task CreateAsync(
         MemoryOperationRecord record,

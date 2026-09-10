@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -117,7 +116,7 @@ public sealed class ManualMemorySourceIngestionTests
     private static ServiceProvider CreateServiceProvider()
     {
         var services = new ServiceCollection();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"manual-memory-source-{Guid.NewGuid():N}"));
         services.AddGenericMemoryModule();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));

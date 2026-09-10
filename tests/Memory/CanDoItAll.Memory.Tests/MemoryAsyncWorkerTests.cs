@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -335,7 +334,7 @@ public sealed class MemoryAsyncWorkerTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(timeProvider);
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-workers-{Guid.NewGuid():N}"));
         if (statusDriver is not null)
         {

@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Drivers.CognitiveMemory;
@@ -128,7 +127,7 @@ public sealed class ExternalCognitiveMemoryLiveConformanceTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"external-memory-live-{Guid.NewGuid():N}"));
         services.AddGenericMemoryModule();
         services.AddNativeRemoteMemoryProviderDriver();

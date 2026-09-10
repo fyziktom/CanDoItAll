@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -173,7 +172,7 @@ public sealed class MemoryProviderUiSurfacePageTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
-        context.Services.AddDbContextFactory<AppDbContext>(options =>
+        context.Services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-ui-surfaces-{Guid.NewGuid():N}"));
         context.Services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
         context.Services.AddGenericMemoryModule();

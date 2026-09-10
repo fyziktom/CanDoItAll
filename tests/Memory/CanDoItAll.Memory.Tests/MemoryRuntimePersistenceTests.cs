@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Mock;
@@ -150,7 +149,7 @@ public sealed class MemoryRuntimePersistenceTests
     private static ServiceProvider CreateServiceProvider(bool enableMockDriver)
     {
         var services = new ServiceCollection();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-runtime-{Guid.NewGuid():N}"));
         services.AddGenericMemoryModule();
         if (enableMockDriver)

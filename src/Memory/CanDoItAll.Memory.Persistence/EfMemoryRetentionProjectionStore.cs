@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Application;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +8,7 @@ public sealed class EfMemoryRetentionProjectionStore : IMemoryRetentionProjectio
     private readonly EfMemoryRetentionCandidateReader candidateReader;
     private readonly EfMemoryRetentionApplier retentionApplier;
 
-    public EfMemoryRetentionProjectionStore(IDbContextFactory<AppDbContext> dbContextFactory)
+    public EfMemoryRetentionProjectionStore(IDbContextFactory<MemoryDbContext> dbContextFactory)
     {
         candidateReader = new EfMemoryRetentionCandidateReader(dbContextFactory);
         retentionApplier = new EfMemoryRetentionApplier(dbContextFactory);

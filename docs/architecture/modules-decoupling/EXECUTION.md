@@ -26,7 +26,11 @@ All task artifacts and reports are in English. Preserve product localization and
 
 ## Current checkpoint and next action
 
-Initial signed checkpoint: `49ef77a3dcc4bc5b4d39126e7770e4706553098d`, verified with the expected identity. Baseline Collaboration tests passed 2/2 against disposable PostgreSQL. The Collaboration source checkpoint containing this record preserves the verified source tree recorded in VALIDATION: affected production builds, unit 5/5, PostgreSQL integration 4/4, shell badge 1/1, portability enforcement and documentation PASS. The named shared-persistence trigger has started the broad stable gate (10772 discovered cases); it remains in progress at this checkpoint. Inspect its results before changing the frozen source, then implement the prepared Memory context boundary. No schema migration was introduced. Independent agents prepared Memory and runtime adapter/origin work read-only during this verification.
+Signed checkpoints: authorization `49ef77a3dcc4bc5b4d39126e7770e4706553098d`, Collaboration `d96ef27796cf7648cb42cfd42c2b832c0b432180`, both verified with the expected identity. The frozen Collaboration stable gate passed 10827 cases with no failures or skips; seven runtime-expanded theories explain the 55 additional rows over discovery. That gate predates Memory and is not final-refactor proof.
+
+This checkpoint adds the seven-entity Memory runtime context and canonical factory, with existing stores and fixtures using it. Applied-source production builds, 85 Memory cases, 19 PostgreSQL/API cases, 17 component cases, and portability enforcement passed. The source tree before evidence-text updates is recorded in VALIDATION. No schema migration or data copy is introduced. Complete implementation and journeys A-H remain open.
+
+Next apply the reviewed TestLab, Resources and Plugins owner contexts and the single-migration-authority cleanup, then build/discover/test those applied paths and sign their checkpoint. Ignored candidate drafts also cover the explicit transaction coordinator, History/SimpleChats, Security/Providers and owner projections. Candidate tests passed, but these drafts are not implemented or final evidence. The new Simple Chats receipt includes the reviewed acknowledgement-error fix but still needs compilation/execution, its canonical deferred-FK migration, transfer compatibility and durable HR tool admission before exposure. Continue automatically after each checkpoint.
 
 Resume by reading this file, checking branch/HEAD/dirty files, and reconciling committed work and tested revisions with `COVERAGE.md` and `VALIDATION.md`.
 
@@ -47,7 +51,7 @@ Resume by reading this file, checking branch/HEAD/dirty files, and reconciling c
 | Order | Outcome | State |
 | --- | --- | --- |
 | 0 | Signed execution checkpoint, current owner/caller map, isolated build/test/provider baseline | In progress |
-| 1 | Bounded runtime persistence through a small complete owner operation; explicit model membership, unchanged complete schema/migrations and stamping; extend to remaining owners according to dependencies | Collaboration implemented, focused verification in progress; remaining owners not started |
+| 1 | Bounded runtime persistence through a small complete owner operation; explicit model membership, unchanged complete schema/migrations and stamping; extend to remaining owners according to dependencies | Collaboration and Memory implemented with focused proof; Collaboration intermediate broad gate passed; remaining owners in preparation |
 | 2 | Agents/Providers technical/pricing authority and CRM projections/enrichment; Work Management assignments; owner contracts replacing foreign EF and hidden writers | Not started |
 | 3 | Projects/Structure/Resources/Storage lifecycle, shared transaction coordination, imports/exports, single migration authority and restart | Not started |
 | 4 | Durable Structure contributions and execution origin/result recovery for Workflow/Process; pure queries, separate projection delivery, trusted scope and replay receipts | Not started |
@@ -56,10 +60,14 @@ Resume by reading this file, checking branch/HEAD/dirty files, and reconciling c
 
 This order is adaptive: finish one coherent production path and its proof before expanding. Future estimates in the Foundation are not automatic implementation scope. The complete required scope remains open until coverage and mandatory journeys are closed.
 
-## Imminent slice: Collaboration runtime ownership
+## Implemented ownership decisions
 
-`CollaborationService` currently depends on the global context although all four Collaboration records and their callers are owner-local. Introduce one explicit `CollaborationDbContext`, apply the same four mapping configurations, and register its per-operation factory against the immutable `ICanonicalRuntimeDatabase.Profile`. Route all service reads/writes through it and remove the unused public context-accepting command overloads. Keep notifications, activity mirroring, routes, IDs, and stored data shapes unchanged.
+`CollaborationService` uses the explicit four-entity `CollaborationDbContext` and a per-operation factory bound to immutable `ICanonicalRuntimeDatabase.Profile`. Its unused public context-accepting command overloads are removed. Notifications, activity mirroring, routes, IDs and stored shapes are preserved.
 
 Share only the stateless GUID stamping algorithm with `AppDbContext`; do not create a generic foreign repository or new context inheritance hierarchy. Existing complete migration composition continues to apply the same configurations. No schema migration or data copy is intended. The transfer-residue participant remains an explicit maintenance read under the current complete-schema target lock until the coordinated transfer slice replaces that shared contract; it is not a business writer.
 
 Acceptance: actual owner model excludes every foreign entity, mappings match the complete model, synchronous/asynchronous saves retain GUID stamping, canonical legacy records survive restart/readback, profile factories stay isolated, and existing Collaboration integration plus shell-badge behavior remains. Do not add optimistic-concurrency enforcement that the current Collaboration mappings do not have as an incidental refactor. Shared stamping/composition changes are a named broad-gate invalidation trigger, with focused proof first.
+
+Memory now follows the same boundary with its seven existing mappings. All Memory ledger/retention/lease stores use `MemoryDbContext`; generic module registration no longer mutates the global model registry. Application composition supplies the pooled owner factory; standalone consumers register that typed factory explicitly. GUID profile stamping remains distinct from worker lease ownership tokens, and generic workers remain disabled by default. PostgreSQL mapping/readback/restart/retention/profile and lease proof plus the existing API/UI paths passed. The two lease providers share a process; this does not claim a simultaneous distributed race.
+
+Prepared migration cleanup removes the Plugin/Scheduler post-migration DDL while retaining CRM lookup seeding and canonical provider bootstrap. Candidate PostgreSQL proof covers exact fresh physical mappings, repeated bootstrap, and populated baseline upgrade/restart with historical extra indexes/defaults preserved. Actual application and source validation are the next checkpoint's work.
