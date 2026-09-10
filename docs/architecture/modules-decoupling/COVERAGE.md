@@ -1,0 +1,45 @@
+# Module Decoupling Coverage
+
+Reference: [Foundation module cards](../../../codex/bundles/CanDoItAll_Architecture_Foundation/modules/) and [operation matrix](../../../codex/bundles/CanDoItAll_Architecture_Foundation/catalogs/module-operation-matrix.md). Catalog observations are discovery input, not current PASS. The table covers all 15 module and nine boundary cards; refine each row from actual callers when entering its slice. No row is implementation-complete yet.
+
+| Boundary / catalog ID | Ownership and retained operation | Current work / evidence |
+| --- | --- | --- |
+| Agents / MOD-AGENTS | Technical definitions, capabilities, governed execution, HR, attachments/voice, floating Structure/Gantt operations | Preserve accepted UI seams and immutable invocation/policy; remove foreign writers. HR owner calls observed; runtime parity NOT_RUN. |
+| Providers / MOD-PROVIDERS | Profiles, sharing/import, model/tariff/pricing and immutable usage evidence | Trace CRM copies and all technical writers; history stores still use global context. Preserve unknown/free/estimated/actual distinctions. |
+| CRM / MOD-CRM | Parties, affiliations, personnel, staffing, local enrichment, project participation | Existing HR safe query/create/affiliation owner routing retained. Separate technical/pricing projections and work assignments; atomic receipt coverage remains open. |
+| Projects / MOD-PROJECTS | Lifecycle, hierarchy/phases, scope lookup, deletion/transfer coordination | Current coordinator exists; deletion participant and party-transaction contracts expose global context. Preserve one commit and post-commit cleanup outcomes. |
+| Structure / MOD-STRUCTURE | Native notes, graph objects/placements/links, foreign projections, execution bindings | Current workflow status reads mutate; concurrent node set difference is used for outputs; owner-atomic contributions and delivery recovery required. |
+| Work Management / BND-WORK | Tasks, dependencies, plan, assignments, Gantt | Retain canonical task identity in Structure initially. Reconcile CRM assignment meaning, multiplicity, intervals/rates/audit before changing writer. |
+| Processes / MOD-PROCESSES | Definitions/runs/steps, readiness/approval/rework, checkpoints, artifacts | Own persistence exists. Inspect module/global-store seam and UI post-admission mutable-scope link; preserve governed runtime and independent HTTP. |
+| Workflows / BND-WORKFLOWS | Versioned definitions, runtime execution/checkpoints and outcome | Preserve executor registrations/backends; fix owner receipt/origin/manifests and Structure delivery; no general Process tool inferred. |
+| Prompts / MOD-PROMPTS | Versioned prompts, collections, compatibility, imports, curator operations | Retain owner commands and pinned historical use; bounded runtime model and product-neutral runtime policy review pending. |
+| Resources / MOD-RESOURCES | Catalog metadata, content references, promotion, authorized content access | Retain owner lifecycle distinct from Storage bytes and CRM resources; Projects contract and cleanup review pending. |
+| TestLab / MOD-TESTLAB | Plans/runs/verdict and evidence metadata | Verify actual runners and supported authoring/export paths; no invented runner capability. Bounded persistence pending. |
+| Scheduler / MOD-SCHEDULER | Workflow plan/firing/dispatch history, Quartz reconciliation | Three managed workflow-only tools observed; preserve identity/purpose guard. Duplicate bootstrap DDL and firing/retry proof pending. |
+| Collaboration / MOD-COLLAB | Threads, participants/messages, inbox/escalation, automation signals | Four mapping classes, owner-local row access; candidate first bounded model. Existing two integration cases. Current token stamping is not evidence of EF concurrency enforcement. |
+| Memory / MOD-MEMORY | Derived indexes/operations, source scope/revision/revocation | Preserve neutral provider/application seams and disabled-by-default generic workers; persistence still uses global context. |
+| Plugins / MOD-PLUGINS | Install/configuration/grants/recovery, capability cache invalidation | Preserve actual handler registry and secret ownership; duplicate bootstrap DDL and bounded model pending. |
+| Security / MOD-SECURITY | Secret values/protection; trusted operation authority and revocation | Retain API authorization, source access/disclosure distinctions, scope fencing, safe failures. Security assertions require authorization-enabled isolated fixture. |
+| Workspace / MOD-WORKSPACE | Preferences, references, session separation | Profile/control-plane and historical provider tables classified by meaning. Connector command handlers and restart scope need reconciliation. |
+| Storage / BND-STORAGE | Bytes/locators/versions, drivers, authorized FileTools and cleanup | Preserve host binding, scope containment, aliases, actual bytes, reference-aware deletion and compensation. Sibling FileTools read-only. |
+| Connectors / BND-CONNECTORS | Registered external protocol execution and bounded configuration | Preserve implemented handler availability, independent grants and secret references; metadata is not executable capability. |
+| Conversations / BND-CONVERSATIONS | Neutral rendering, intents and floating view state | Accepted rendering boundary must remain free of effects; preserve close/reopen, streaming, navigation, selection and lifetime. |
+| Simple Chats / BND-SIMPLECHATS | Definitions/revisions, ordinary turns/transcript/leases/events | Application isolation retained; bounded EF model required. Add external HR definition adapter (CON-061/062) with owner-atomic creation; no tools/context/transcript grant. |
+| MAF / BND-MAF | Neutral invocation/composition and provider/SDK adapters | Preserve serial tools, approval barriers, compatible payloads; move product policy to owner adapters as required. No upgrades. |
+| API / BND-API | HTTP/auth/OpenAPI/SSE adapters | Preserve all supported routes/payloads and independent authorization while routing to owners. Real-host tests required. |
+| Composition / BND-COMPOSITION | DI, complete design-time schema, profile/host lifecycle | Runtime global context escape hatch must disappear from business services. Keep complete schema authority, immutable runtime profile and isolated test hosts. |
+
+## Required journeys and operation surfaces
+
+| Journey | Required retained operation / proof | Status |
+| --- | --- | --- |
+| A | Floating agent from Structure and Gantt; real file/Resource bytes, supported CRM read, task/dependency/assignment, receipts, reload, follow-up | NOT_RUN |
+| B | Pending admitted scope survives selection/navigation/close/reopen; stale loads, reconnect and authorization denial | NOT_RUN |
+| C | UI Structure workflow launch with real execution/provider step, exact lineage/output, reload, replay-safe observation/delivery | NOT_RUN |
+| D | UI governed agent-backed process, durable admission, artifacts/writeback and supported approval/cancel/rework/recovery | NOT_RUN |
+| E | Existing HR/curator/CRM operations plus new HR chat-definition administration; denial, ordinary real chat streaming and pinned revision | NOT_RUN |
+| F | Managed Scheduler owner path; bounded workflow schedule fires with durable run/outcome and test-owned cleanup | NOT_RUN; default browser fixture suppresses scheduler workers |
+| G | Real PostgreSQL effect-before-ack/checkpoint fault, exact receipt replay, human-edit preservation, conflict, cancellation/restart | NOT_RUN |
+| H | Remaining modules/API families, asset cleanup, project/node deletion, prices/history, transfer/import/export, starting-schema upgrade/restart | NOT_RUN |
+
+Entry-point review includes UI, HTTP, runtime tool attachments, workflow executors, process drivers, background jobs, imports/exports, seed/repair, deletion and restart. Each slice must close the actual affected paths; the table is not permission to omit uncatalogued existing functionality.
