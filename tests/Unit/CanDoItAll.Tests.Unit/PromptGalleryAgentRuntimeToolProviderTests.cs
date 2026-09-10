@@ -39,7 +39,7 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
         var tools = await toolProvider.CreateToolsAsync(compatibleContext, CancellationToken.None);
         var itemTool = Assert.Single(
             tools,
-            tool => tool.Name == AgentToolInvocationPolicyMetadata.PromptGalleryItemGet);
+            tool => tool.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
 
         var result = await InvokeAsync<PromptGalleryAgentItemResult>(
             itemTool,
@@ -55,7 +55,7 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
             CancellationToken.None);
         var incompatibleItemTool = Assert.Single(
             incompatibleTools,
-            tool => tool.Name == AgentToolInvocationPolicyMetadata.PromptGalleryItemGet);
+            tool => tool.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             InvokeAsync<PromptGalleryAgentItemResult>(
                 incompatibleItemTool,

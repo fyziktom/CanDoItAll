@@ -326,6 +326,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddSingleton<CapabilityCuratorSetupAttestationStore>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in PromptGalleryToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptGalleryAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptsCuratorAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowCuratorAgentRuntimeToolProvider>());

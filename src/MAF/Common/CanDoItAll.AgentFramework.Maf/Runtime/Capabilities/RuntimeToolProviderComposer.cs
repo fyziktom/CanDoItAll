@@ -18,8 +18,10 @@ internal interface IRuntimeToolProviderComposer
 }
 
 internal sealed class RuntimeToolProviderComposer(
-    IRuntimeToolProviderAccessFilter accessFilter) : IRuntimeToolProviderComposer
-{
+    IRuntimeToolProviderAccessFilter accessFilter,
+    AgentToolPolicyCatalog? toolPolicies = null) : IRuntimeToolProviderComposer {
+    private readonly AgentToolPolicyCatalog toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
+
     public static IRuntimeToolProviderComposer Default { get; } = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
 
     public IReadOnlyList<RuntimeToolProviderRegistration> ComposeRegistrations(
@@ -43,6 +45,7 @@ internal sealed class RuntimeToolProviderComposer(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        request.State.ToolPolicies = toolPolicies;
         var attachedToolCount = 0;
         var attachmentSummaries = new List<RuntimeToolProviderAttachmentSummary>();
 
@@ -91,7 +94,8 @@ internal sealed class RuntimeToolProviderComposer(
                 providerTools,
                 allToolMetadata));
             var tools = filtered.Tools
-                .Select(tool => WrapRuntimeProviderToolForApproval(tool, request.SuppressApprovalRequirements))
+                .Select(tool => WrapRuntimeProviderToolForApproval(tool, request.SuppressApprovalRequirements,
+                    filtered.Metadata.SingleOrDefault(metadata => metadata.ToolName == tool.Name)))
                 .ToList();
             EnsureRuntimeToolProviderDoesNotDuplicateExistingTools(toolProvider, request.State.Tools, tools);
             var toolMetadata = filtered.Metadata;
@@ -139,14 +143,15 @@ internal sealed class RuntimeToolProviderComposer(
                 attachmentSummaries));
     }
 
-    private static AITool WrapRuntimeProviderToolForApproval(
+    private AITool WrapRuntimeProviderToolForApproval(
         AITool tool,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        AgentRuntimeToolMetadata? metadata)
     {
-        if (suppressApprovalRequirements ||
+        if (metadata?.Unavailability is not null ||
+            suppressApprovalRequirements && metadata?.PrepareAdmission is null ||
             tool is not AIFunction function ||
-            !AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(tool.Name))
-        {
+            !toolPolicies.RequiresApprovalByDefault(tool.Name)) {
             return tool;
         }
 
@@ -224,7 +229,7 @@ internal sealed class RuntimeToolProviderComposer(
         return new RuntimeToolProviderRegistration(provider, descriptor);
     }
 
-    private static IReadOnlyList<AgentRuntimeToolMetadata> ResolveRuntimeToolMetadata(
+    private IReadOnlyList<AgentRuntimeToolMetadata> ResolveRuntimeToolMetadata(
         RuntimeToolProviderRegistration registration,
         AgentRuntimeToolProviderContext context,
         IReadOnlyList<AITool> tools)
@@ -264,14 +269,23 @@ internal sealed class RuntimeToolProviderComposer(
 
         var unregisteredInternalToolNames = tools
             .Select(tool => tool.Name)
-            .Where(toolName => AgentToolInvocationPolicyMetadata.Classify(toolName) == ToolInvocationClassification.Unknown)
+            .Where(toolName => toolPolicies.Classify(toolName) == ToolInvocationClassification.Unknown)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (unregisteredInternalToolNames.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Runtime tool provider '{DescribeRuntimeToolProvider(registration.Provider)}' returned internal tool name(s) without a registered invocation policy classification: {string.Join(", ", unregisteredInternalToolNames)}. Register each internal tool in ToolCapabilityRegistry; only recognized provider-native and MCP tool families may use dynamic names.");
+                $"Runtime tool provider '{DescribeRuntimeToolProvider(registration.Provider)}' returned internal tool name(s) without a registered invocation policy classification: {string.Join(", ", unregisteredInternalToolNames)}. Register each internal tool with the host invocation policy catalog; only recognized provider-native and MCP tool families may use dynamic names.");
+        }
+
+        foreach (var metadata in declaredMetadata) {
+            if (!ToolCapabilityRegistry.TryResolve(metadata.ToolName, out _) &&
+                toolPolicies.TryResolve(metadata.ToolName, out var policy) &&
+                (metadata.OperationKind != MapRuntimeToolOperationKind(policy.Classification) ||
+                 metadata.RequiresApprovalByDefault != policy.RequiresApprovalByDefault)) {
+                throw new InvalidOperationException($"Runtime tool '{metadata.ToolName}' disagrees with its registered invocation policy.");
+            }
         }
 
         var metadataByToolName = declaredMetadata.ToDictionary(
@@ -284,8 +298,8 @@ internal sealed class RuntimeToolProviderComposer(
                 : new AgentRuntimeToolMetadata(
                     registration.Descriptor.ProviderKey,
                     tool.Name,
-                    MapRuntimeToolOperationKind(AgentToolInvocationPolicyMetadata.Classify(tool.Name)),
-                    AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(tool.Name),
+                    MapRuntimeToolOperationKind(toolPolicies.Classify(tool.Name)),
+                    toolPolicies.RequiresApprovalByDefault(tool.Name),
                     registration.Descriptor.DomainTags))
             .ToList();
     }
@@ -334,8 +348,9 @@ internal interface IRuntimeToolProviderAccessFilter
     FilteredRuntimeToolProviderTools Filter(RuntimeToolProviderAccessFilterRequest request);
 }
 
-internal sealed class RuntimeToolProviderAccessFilter : IRuntimeToolProviderAccessFilter
-{
+internal sealed class RuntimeToolProviderAccessFilter(AgentToolPolicyCatalog? toolPolicies = null) : IRuntimeToolProviderAccessFilter {
+    private readonly AgentToolPolicyCatalog toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
+
     public FilteredRuntimeToolProviderTools Filter(RuntimeToolProviderAccessFilterRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -360,7 +375,8 @@ internal sealed class RuntimeToolProviderAccessFilter : IRuntimeToolProviderAcce
                     ResolveRuntimeToolOperationClassifications(toolMetadata),
                     RuntimeToolProviderCapabilityTags.CreateToolImplementationKey(
                         request.Registration.Descriptor.ProviderKey,
-                        RuntimeToolName.Create(tool.Name)));
+                        RuntimeToolName.Create(tool.Name)),
+                    toolPolicies);
             })
             .ToList();
         var accessResult = request.AccessPlan.Evaluator.Evaluate(new CapabilityAccessEvaluationContext(
@@ -400,12 +416,11 @@ internal sealed class RuntimeToolProviderAccessFilter : IRuntimeToolProviderAcce
             request.Tools.Count - includedTools.Count);
     }
 
-    private static IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(
+    private IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(
         AgentRuntimeToolMetadata metadata)
     {
-        if (ToolCapabilityRegistry.TryResolve(metadata.ToolName, out _))
-        {
-            return RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolOperationClassifications(metadata.ToolName);
+        if (toolPolicies.TryResolve(metadata.ToolName, out _)) {
+            return RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolOperationClassifications(metadata.ToolName, toolPolicies);
         }
 
         return metadata.OperationKind switch

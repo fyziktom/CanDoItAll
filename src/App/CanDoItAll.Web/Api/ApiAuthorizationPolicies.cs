@@ -5,6 +5,8 @@ namespace CanDoItAll.Web.Api;
 
 internal static class ApiAuthorizationPolicies
 {
+    public const string GeneralApi = "Api.General";
+
     public const string IssueTokens = "Api.IssueTokens";
 
     public const string ReadMemoryProviders = "Api.MemoryProviders.Read";

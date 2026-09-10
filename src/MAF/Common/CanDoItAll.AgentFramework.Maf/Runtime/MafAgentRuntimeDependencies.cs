@@ -35,8 +35,11 @@ internal sealed record MafAgentRuntimeDependencies(
     IMafRuntimeSessionPersistenceDriver SessionPersistenceDriver,
     MafRuntimeCapabilityDependencies CapabilityDependencies,
     IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy> ExecutionOutcomeRecoveryPolicies,
-    AgentToolInvocationPolicyPipeline ToolInvocationPolicyPipeline)
+    AgentToolInvocationPolicyPipeline ToolInvocationPolicyPipeline,
+    AgentToolAdmissionJournal? ToolAdmissionJournal = null)
 {
+    public AgentToolPolicyCatalog ToolPolicies { get; init; } = AgentToolPolicyCatalog.BuiltIn;
+
     public static MafAgentRuntimeDependencies FromServices(IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -70,6 +73,8 @@ internal sealed record MafAgentRuntimeDependencies(
                 $"The MAF provider runtime service graph is incomplete. Missing: {string.Join(", ", missingServices)}. Register AddMafProviderRuntimeServices().{workspaceFactoryHint}");
         }
 
+        var toolPolicies = serviceProvider.GetService<AgentToolPolicyCatalog>()
+            ?? new AgentToolPolicyCatalog(serviceProvider.GetServices<ToolCapabilityMetadata>());
         return new MafAgentRuntimeDependencies(
             providerRuntimeGateway!,
             providerStreamingDispatchGate!,
@@ -77,7 +82,7 @@ internal sealed record MafAgentRuntimeDependencies(
             providerCredentialService!,
             providerAgentFactory!,
             serviceProvider.GetService(typeof(IRuntimeToolProviderComposer)) as IRuntimeToolProviderComposer
-                ?? CanDoItAll.AgentFramework.Maf.RuntimeToolProviderComposer.Default,
+                ?? new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(toolPolicies), toolPolicies),
             serviceProvider.GetService(typeof(IMafRuntimeCompositionMetrics)) as IMafRuntimeCompositionMetrics
                 ?? NoOpMafRuntimeCompositionMetrics.Instance,
             workspaceRuntimeServicesFactory!,
@@ -87,14 +92,17 @@ internal sealed record MafAgentRuntimeDependencies(
             // Internal single-implementation drivers are constructed directly:
             // they are not composition seams, so a container can never swap in
             // a divergent graph silently.
-            new MafApprovalContinuationDriver(),
+            new MafApprovalContinuationDriver(toolPolicies),
             new MafRuntimeSessionPersistenceDriver(),
             MafRuntimeCapabilityDependencies.FromServices(serviceProvider),
             serviceProvider.GetServices<IAgentExecutionOutcomeRecoveryPolicy>().ToList(),
             new AgentToolInvocationPolicyPipeline(
                 serviceProvider.GetService(typeof(IAgentToolInvocationPolicy)) as IAgentToolInvocationPolicy
                     ?? new DefaultAgentToolInvocationPolicy(),
-                serviceProvider.GetServices<IToolInvocationPolicyContextContributor>().ToList()));
+                serviceProvider.GetServices<IToolInvocationPolicyContextContributor>().ToList()),
+            serviceProvider.GetService<AgentToolAdmissionJournal>()) {
+            ToolPolicies = toolPolicies
+        };
     }
 }
 

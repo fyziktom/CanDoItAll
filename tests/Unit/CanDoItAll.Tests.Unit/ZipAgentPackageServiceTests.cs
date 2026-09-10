@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
@@ -143,11 +144,93 @@ public sealed class ZipAgentPackageServiceTests
         }
     }
 
+    [Fact]
+    public async Task ExportAsync_owner_policy_protects_legacy_pending_and_decided_prompt_approvals() {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"prompt-policy-export-{Guid.NewGuid():N}");
+        var agent = CreateAgent();
+        var policies = new AgentToolPolicyCatalog(PromptGalleryToolPolicy.Capabilities);
+        const string privateContent = "prompt-export-private-sentinel";
+        var pending = new PendingToolApprovalRecord("approval-1", "call-1", PromptGalleryToolPolicy.PromptGalleryDraftUpdate,
+            "function", "", JsonSerializer.Serialize(new { request = new { promptArtifactId = "item-42", content = privateContent } }));
+        var run = CreateExecutionRun(agent.Id, "{}") with { PendingApprovals = [pending] };
+        var decision = ExecutionRunStateTransitions.ApplyApprovalDecision([], run,
+            [new PendingToolApprovalDecision(pending.ApprovalId, true)], FixedTimestamp, "execution-run", run.Id.ToString("N"), policies);
+        var audit = Assert.Single(decision.Decided).ArgumentsJson;
+        var document = SandboxWorkspaceDocument.Empty with {
+            Agents = [agent],
+            ExecutionRuns = [run],
+            ExecutionApprovals = decision.RunApprovals
+        };
+
+        try {
+            var result = await new ZipAgentPackageService(workspaceRoot, toolPolicies: policies).ExportAsync(document, agent);
+            using var archive = ZipFile.OpenRead(result.PackagePath);
+            using var reader = new StreamReader(archive.GetEntry("manifest.json")!.Open(), Encoding.UTF8);
+            var json = await reader.ReadToEndAsync();
+            Assert.DoesNotContain(privateContent, json, StringComparison.Ordinal);
+            using var manifest = JsonDocument.Parse(json);
+            var exported = Assert.Single(manifest.RootElement.GetProperty("approvals").EnumerateArray()).GetProperty("argumentsJson").GetString();
+            Assert.Equal(audit, exported);
+            Assert.Contains("prompt-curator-approval-redacted-v1", json, StringComparison.Ordinal);
+        } finally {
+            if (Directory.Exists(workspaceRoot)) {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ExportAsync_admitted_history_excludes_private_journal_and_runtime_state() {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"admitted-package-export-{Guid.NewGuid():N}");
+        var agent = CreateAgent();
+        var run = AgentPackageAdmittedRunFixture.Create(agent.Id);
+        var document = SandboxWorkspaceDocument.Empty with { Agents = [agent], ExecutionRuns = [run] };
+        try {
+            var service = new ZipAgentPackageService(workspaceRoot);
+            var result = await service.ExportAsync(document, agent);
+            using var archive = ZipFile.OpenRead(result.PackagePath);
+            using var reader = new StreamReader(archive.GetEntry("manifest.json")!.Open(), Encoding.UTF8);
+            var json = await reader.ReadToEndAsync();
+            Assert.DoesNotContain(AgentPackageAdmittedRunFixture.PrivateContent, json, StringComparison.Ordinal);
+            using var manifest = JsonDocument.Parse(json);
+            var exported = Assert.Single(manifest.RootElement.GetProperty("runs").EnumerateArray());
+            Assert.Equal(run.Id, exported.GetProperty("id").GetGuid());
+            Assert.Equal(run.ResultSummary, exported.GetProperty("resultSummary").GetString());
+            Assert.False(exported.TryGetProperty("toolAdmission", out _));
+            Assert.Equal(string.Empty, exported.GetProperty("runtimeSessionKey").GetString());
+            Assert.Equal(JsonValueKind.Null, exported.GetProperty("serializedSessionStateJson").ValueKind);
+            Assert.NotNull(run.ToolAdmission);
+            Assert.Equal(AgentPackageAdmittedRunFixture.PrivateContent, run.ToolAdmission.OriginalInput!.Content);
+        } finally {
+            if (Directory.Exists(workspaceRoot)) {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportAsync_portable_history_drops_foreign_admission_and_provider_checkpoint() {
+        var agent = CreateAgent();
+        var run = AgentPackageAdmittedRunFixture.Create(agent.Id);
+        await using var package = new MemoryStream(CreatePackage(agent, runs: [run]));
+        var result = await new ZipAgentPackageService(Path.GetTempPath()).ImportAsync(package, new AgentPackageReadOptions());
+
+        var imported = Assert.Single(result.Runs);
+        Assert.Equal(run.Id, imported.Id);
+        Assert.Equal(run.ResultSummary, imported.ResultSummary);
+        Assert.Null(imported.ToolAdmission);
+        Assert.Equal(string.Empty, imported.RuntimeSessionKey);
+        Assert.Null(imported.SerializedSessionStateJson);
+        Assert.DoesNotContain(AgentPackageAdmittedRunFixture.PrivateContent,
+            JsonSerializer.Serialize(imported), StringComparison.Ordinal);
+    }
+
     private static byte[] CreatePackage(
         AgentDefinition agent,
         string schemaVersion = "1.0",
         string? rawSecret = null,
-        IReadOnlyList<string>? additionalEntries = null)
+        IReadOnlyList<string>? additionalEntries = null,
+        IReadOnlyList<ExecutionRunRecord>? runs = null)
     {
         var manifest = new Dictionary<string, object?>
         {
@@ -159,7 +242,7 @@ public sealed class ZipAgentPackageServiceTests
             ["memory"] = Array.Empty<object>(),
             ["providers"] = Array.Empty<object>(),
             ["capabilities"] = Array.Empty<object>(),
-            ["runs"] = Array.Empty<object>(),
+            ["runs"] = runs ?? [],
             ["approvals"] = Array.Empty<object>(),
             ["artifacts"] = Array.Empty<object>(),
             ["checkpoints"] = Array.Empty<object>(),

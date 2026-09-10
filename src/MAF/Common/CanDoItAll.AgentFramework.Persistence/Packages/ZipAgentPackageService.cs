@@ -47,10 +47,13 @@ public sealed class ZipAgentPackageService : IAgentPackageService
     private readonly string exportRoot;
     private readonly string workspaceRoot;
 
+    private readonly AgentToolPolicyCatalog toolPolicies;
+
     public ZipAgentPackageService(
         string workspaceRoot,
-        WorkspaceScopeDescriptor? workspaceScope = null)
-    {
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        AgentToolPolicyCatalog? toolPolicies = null) {
+        this.toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
         var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
         this.workspaceRoot = physicalPathPolicyFactory.Create(workspaceRoot).RootPath;
         exportRoot = Path.Combine(
@@ -493,7 +496,7 @@ public sealed class ZipAgentPackageService : IAgentPackageService
         return string.Join(Environment.NewLine, lines);
     }
 
-    private static IReadOnlyList<ChatSessionRecord> NormalizeChatSessions(
+    private IReadOnlyList<ChatSessionRecord> NormalizeChatSessions(
         IReadOnlyList<ChatSessionRecord> sessions,
         IReadOnlyDictionary<Guid, ExecutionRunRecord> latestRunBySessionId)
     {
@@ -512,7 +515,7 @@ public sealed class ZipAgentPackageService : IAgentPackageService
             .ToList();
     }
 
-    private static IReadOnlyList<ExecutionRunRecord> NormalizeExecutionRuns(
+    private IReadOnlyList<ExecutionRunRecord> NormalizeExecutionRuns(
         IReadOnlyList<ExecutionRunRecord> runs,
         IReadOnlySet<Guid>? sensitiveHrApprovalRunIds = null)
     {
@@ -525,15 +528,17 @@ public sealed class ZipAgentPackageService : IAgentPackageService
                                              pendingApprovals.Any(approval =>
                                                  AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName));
                 var isManagerReview = IsManagerReviewRun(run);
+                var hasAdmittedRuntime = run.ToolAdmission is not null;
                 return run with
                 {
                     MetadataJson = ExecutionInvocationMetadata.ProtectForUntrustedOutput(run.MetadataJson),
                     InputSummary = isManagerReview ? ManagerReviewInputExportSummary : run.InputSummary,
                     ResultSummary = isManagerReview ? ManagerReviewResultExportSummary : run.ResultSummary,
-                    RuntimeSessionKey = isManagerReview || hasSensitiveHrApproval
+                    ToolAdmission = null,
+                    RuntimeSessionKey = isManagerReview || hasSensitiveHrApproval || hasAdmittedRuntime
                         ? string.Empty
                         : run.RuntimeSessionKey,
-                    SerializedSessionStateJson = isManagerReview || hasSensitiveHrApproval
+                    SerializedSessionStateJson = isManagerReview || hasSensitiveHrApproval || hasAdmittedRuntime
                         ? null
                         : run.SerializedSessionStateJson,
                     PendingApprovals = ProtectPendingApprovalsForExport(
@@ -546,7 +551,7 @@ public sealed class ZipAgentPackageService : IAgentPackageService
             .ToList();
     }
 
-    private static ChatSessionRuntimeCompatibilityRecord? ProtectChatSessionCompatibilityForExport(
+    private ChatSessionRuntimeCompatibilityRecord? ProtectChatSessionCompatibilityForExport(
         ChatSessionRuntimeCompatibilityRecord? compatibility)
     {
         if (compatibility is null)
@@ -574,7 +579,7 @@ public sealed class ZipAgentPackageService : IAgentPackageService
             .ToList();
     }
 
-    private static ExecutionApprovalRecord ProtectApprovalForExport(
+    private ExecutionApprovalRecord ProtectApprovalForExport(
         ExecutionApprovalRecord approval,
         bool protectAll)
     {
@@ -591,11 +596,12 @@ public sealed class ZipAgentPackageService : IAgentPackageService
         {
             ArgumentsJson = AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
                 approval.ToolName,
-                approval.ArgumentsJson)
+                approval.ArgumentsJson,
+                toolPolicies)
         };
     }
 
-    private static IReadOnlyList<PendingToolApprovalRecord> ProtectPendingApprovalsForExport(
+    private IReadOnlyList<PendingToolApprovalRecord> ProtectPendingApprovalsForExport(
         IReadOnlyList<PendingToolApprovalRecord>? approvals,
         bool protectAll = false)
     {
@@ -609,7 +615,8 @@ public sealed class ZipAgentPackageService : IAgentPackageService
                     ? HrAgentExecutionRetention.ManagerReviewApprovalArgumentsJson
                     : AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
                         approval.ToolName,
-                        approval.ArgumentsJson)
+                        approval.ArgumentsJson,
+                        toolPolicies)
             })
             .ToList() ?? [];
     }

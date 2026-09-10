@@ -142,12 +142,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 decisions,
                 decidedAtUtc,
                 currentRun.ChatSessionId.HasValue ? "chat-session" : "execution-run",
-                currentRun.ChatSessionId?.ToString("N") ?? currentRun.Id.ToString("N"));
+                currentRun.ChatSessionId?.ToString("N") ?? currentRun.Id.ToString("N"),
+                toolPolicies);
             var transitionedRun = ExecutionRunStateTransitions.CreateContinuationStartRun(
                 currentRun,
                 allApproved,
                 effectiveAutoApprove,
                 decidedAtUtc);
+            if (currentRun.ToolAdmission is { Support: AgentToolAdmissionSupport.Recoverable, Segments.Length: > 0 }) {
+                transitionedRun = transitionedRun with { ToolAdmission = AgentToolJournalTransitions.ApplyDecisions(
+                    currentRun.ToolAdmission, currentRun.PendingApprovals, decisions, automatic: false) };
+            }
             var transitionedSession = currentSession is null
                 ? null
                 : ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
@@ -252,12 +257,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     decisions,
                     decidedAtUtc,
                     currentRun.ChatSessionId.HasValue ? "chat-session" : "execution-run",
-                    currentRun.ChatSessionId?.ToString("N") ?? currentRun.Id.ToString("N"));
+                    currentRun.ChatSessionId?.ToString("N") ?? currentRun.Id.ToString("N"),
+                    toolPolicies);
                 var transitionedRun = ExecutionRunStateTransitions.CreateContinuationStartRun(
                     currentRun,
                     allApproved,
                     effectiveAutoApprove,
                     decidedAtUtc);
+                if (currentRun.ToolAdmission is { Support: AgentToolAdmissionSupport.Recoverable, Segments.Length: > 0 }) {
+                    transitionedRun = transitionedRun with { ToolAdmission = AgentToolJournalTransitions.ApplyDecisions(
+                        currentRun.ToolAdmission, currentRun.PendingApprovals, decisions, automatic: false) };
+                }
                 var transitionedSession = currentSession is null
                     ? null
                     : ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
@@ -288,6 +298,150 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             cancellationToken);
 
         return result ?? throw new InvalidOperationException("Execution run continuation could not be prepared.");
+    }
+
+    private async Task<ExecutionRunContinuationStart> BeginAdmittedRunRecoveryAsync(
+        AgentExecutionPreparationSnapshot preparation, ExecutionRunRecord expected, ProviderProfile provider,
+        AgentToolRunLease lease, CancellationToken cancellationToken) {
+        var writer = store as ISandboxWorkspaceExecutionRunMutationStore
+            ?? throw new NotSupportedException("Admitted-run recovery requires the canonical current-state execution writer.");
+        ExecutionRunContinuationStart? result = null;
+        await writer.UpdateExecutionRunDetailAsync(expected.Id, (catalog, detail) => {
+            var run = detail.Run;
+            var journal = RequireRecoverableToolJournal(run);
+            if (run.Revision != expected.Revision || journal.ActiveDispatchLeaseId != lease.Id ||
+                journal.Session.Reference != lease.Session) {
+                throw new AgentToolAdmissionException("tool-admission.recovery-conflict", "The admitted run changed during recovery preparation.");
+            }
+
+            if (run.PendingApprovals.Count != 0 || journal.Segments[^1].ApprovalCheckpoint is not null &&
+                journal.Segments[^1].PendingApprovals.Any(approval => AgentToolJournalTransitions.RequireProposal(journal,
+                    approval.ToolAdmission ?? throw new InvalidDataException("The saved approval has no intent binding.")).ApprovalStatus == ExecutionApprovalStatus.Pending)) {
+                throw new AgentToolAdmissionException("tool-admission.approval-pending", "Decide the exact saved pending approvals before recovering this invocation.");
+            }
+
+            if (run.State == ExecutionState.Completed || run.Outcome == RunOutcome.Cancelled) {
+                throw new AgentToolAdmissionException("tool-admission.terminal-run", "This execution is terminal and cannot dispatch a recovered effect.");
+            }
+
+            var snapshot = new SandboxWorkspaceCatalogSnapshot(catalog, catalog.CatalogDataRevision);
+            EnsurePreparationCurrentForUse(preparation.Blueprint, snapshot);
+            EnsureContinuationProviderLeaseMatches(run, provider);
+            var agent = catalog.Agents.Single(item => item.Id == run.AgentId);
+            if (agent.Status != AgentLifecycleStatus.Active || agent.IsTemplate) {
+                throw new AgentToolAdmissionException("tool-admission.actor-unavailable", "The admitted agent is no longer active.");
+            }
+
+            var session = detail.ChatSession ?? throw new InvalidDataException("The admitted chat was not found.");
+            if (session.Id != journal.Session.Reference.ChatSessionId || session.AgentId != run.AgentId || session.LatestExecutionRunId != run.Id) {
+                throw new AgentToolAdmissionException("tool-admission.chat-mismatch", "The saved run is no longer this chat's current execution.");
+            }
+
+            var transitioned = run with { State = ExecutionState.Running, Outcome = null, CompletedAtUtc = null,
+                ResultSummary = "Recovering the original admitted invocation.", UpdatedAtUtc = DateTimeOffset.UtcNow,
+                Revision = checked(run.Revision + 1) };
+            result = new(ExecutionRunContinuationDisposition.Started, new(preparation.Blueprint, snapshot, run,
+                transitioned, session, agent, provider, detail.Approvals, []));
+            return detail with { Run = transitioned };
+        }, cancellationToken);
+        return result ?? throw new InvalidOperationException("The owner did not prepare admitted-run recovery.");
+    }
+
+    private static AgentToolJournalRecord RequireRecoverableToolJournal(ExecutionRunRecord run) {
+        var journal = run.ToolAdmission ?? throw new AgentToolAdmissionException("tool-admission.legacy-run",
+            "This run has no durable tool admission journal; no effect identity can be fabricated for recovery.");
+        journal.Validate();
+        if (journal.Support != AgentToolAdmissionSupport.Recoverable || journal.OriginalInput is null || journal.Segments.Length == 0) {
+            throw new AgentToolAdmissionException("tool-admission.unsupported-recovery",
+                "This run has no supported immutable input and SDK checkpoint for recovery.");
+        }
+
+        if (journal.Batches.SelectMany(batch => batch.Proposals).Any(proposal =>
+                proposal.State is AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired &&
+                proposal.Payload.Recovery == AgentToolProposalRecovery.ReconcileBeforeRetry)) {
+            throw new AgentToolAdmissionException("tool-admission.reconciliation-required",
+                "A previously dispatched non-idempotent effect is uncertain. Reconcile it before recovery or another model proposal.");
+        }
+
+        return journal;
+    }
+
+    private AgentRuntimeTransientContext? ResolveAdmittedRuntimeContext(ExecutionRunRecord run) {
+        if (!ExecutionInvocationMetadata.RequiresTransientContext(run) ||
+            run.ToolAdmission is not { Support: AgentToolAdmissionSupport.Recoverable, RuntimeContext: { } saved }) {
+            return transientContextRegistry.Resolve(run);
+        }
+
+        var context = saved.ToTransientContext();
+        if (AgentChatContextDigest.Compute(context) != ExecutionInvocationMetadata.ResolveTransientContextDigest(run)) {
+            throw new AgentToolAdmissionException("tool-admission.context-mismatch", "The saved runtime context does not match its original admitted digest.");
+        }
+
+        try {
+            return transientContextRegistry.Resolve(run);
+        } catch (AgentRunTransientContextUnavailableException) {
+            transientContextRegistry.Register(run, context);
+            return context;
+        }
+    }
+
+    private async Task ValidateAdmittedResultReadAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
+        var contextScope = ResolveAdmittedRuntimeContext(run)?.WorkspaceScope
+            ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+        var original = ResolveValidatedExecutionGovernance(run, contextScope, activityWorkspaceIdentity)
+            ?? throw new AgentToolAdmissionException("tool-admission.authority-missing", "The completed run has no trusted authority projection.");
+        var reference = AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson)
+            ?? throw new AgentToolAdmissionException("tool-admission.context-missing", "The completed run has no original source identity.");
+        var resolver = executionAuthorityResolver
+            ?? throw new InvalidOperationException("Completed result disclosure requires the canonical current authority resolver.");
+        AgentExecutionAuthorityRecord current;
+        try {
+            current = await resolver.ResolveAsync(new(run.AgentId, reference.SourceKind, reference.SourceId,
+                original.WorkspaceScope, activityWorkspaceIdentity.DatabaseProfileGeneration, UiAccessHint: null), cancellationToken);
+        } catch (AgentExecutionAuthorityMismatchException) {
+            throw new AgentToolAdmissionException("tool-admission.result-read-denied", "Current authorization does not permit reading this completed execution result.");
+        }
+
+        var currentRead = AgentExecutionGovernanceSnapshot.FromAuthority(current);
+        if (!original.ReadAllowed || !current.ReadAllowed || current.AgentId != original.AgentId ||
+            current.DatabaseProfileId != original.DatabaseProfileId || current.DatabaseProfileGeneration != original.DatabaseProfileGeneration ||
+            current.WorkspaceScope != original.WorkspaceScope ||
+            !CoversReadCeiling(currentRead.AllowedCapabilityKeys, original.AllowedCapabilityKeys) ||
+            !CoversReadCeiling(currentRead.ReadOnlyExternalTargetAliases.Union(currentRead.WritableExternalTargetAliases),
+                original.ReadOnlyExternalTargetAliases.Union(original.WritableExternalTargetAliases))) {
+            throw new AgentToolAdmissionException("tool-admission.result-read-denied", "Current authorization does not permit reading this completed execution result.");
+        }
+
+        static bool CoversReadCeiling(IReadOnlySet<string> current, IReadOnlySet<string> original)
+            => current.Count == 0 || original.Count != 0 && current.IsSupersetOf(original);
+    }
+
+    private async Task ValidateAdmittedResumeAuthorityAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
+        if (run.ToolAdmission is not { Support: AgentToolAdmissionSupport.Recoverable, Segments.Length: > 0 }) {
+            return;
+        }
+
+        var contextScope = ResolveAdmittedRuntimeContext(run)?.WorkspaceScope
+            ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+        var authority = ResolveValidatedExecutionGovernance(run, contextScope, activityWorkspaceIdentity)
+            ?? throw new AgentToolAdmissionException("tool-admission.authority-missing", "The admitted run has no trusted authority projection.");
+        var reference = AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson)
+            ?? throw new AgentToolAdmissionException("tool-admission.context-missing", "The admitted run has no original source identity.");
+        var current = await (executionAuthorityResolver ?? throw new InvalidOperationException("Durable recovery requires the canonical current authority resolver."))
+            .ResolveAsync(new(run.AgentId, reference.SourceKind, reference.SourceId,
+                authority.WorkspaceScope, activityWorkspaceIdentity.DatabaseProfileGeneration,
+                UiAccessHint: null), cancellationToken);
+        if (current.AgentId != authority.AgentId || current.DatabaseProfileId != authority.DatabaseProfileId ||
+            current.DatabaseProfileGeneration != authority.DatabaseProfileGeneration || current.WorkspaceScope != authority.WorkspaceScope ||
+            !current.ReadAllowed || authority.MutationAllowed && !current.MutationAllowed ||
+            current.PolicyVersion != authority.PolicyVersion || current.PolicyFingerprint != authority.PolicyFingerprint ||
+            !authority.AllowedOperations.SetEquals(current.AllowedOperations) ||
+            !authority.AllowedCapabilityKeys.SetEquals(current.AllowedCapabilityKeys) ||
+            !authority.WritableExternalTargetAliases.SetEquals(current.AllowedExternalTargetAliases) ||
+            !authority.ReadOnlyExternalTargetAliases.SetEquals(current.ReadOnlyExternalTargetAliases)) {
+            throw new AgentToolAdmissionException("tool-admission.authority-changed",
+                "Current authorization no longer matches the saved execution authority. Recovery cannot widen or replace the original grants.");
+        }
     }
 
     private static bool PendingApprovalStateMatches(

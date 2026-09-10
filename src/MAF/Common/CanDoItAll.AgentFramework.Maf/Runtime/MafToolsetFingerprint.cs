@@ -48,8 +48,7 @@ internal static class MafToolsetFingerprint
     /// tool name produces a different fingerprint, so stale state cannot be
     /// restored across a tool-contract change (schema v2 dimension).
     /// </summary>
-    public static string ComputeContractFingerprint(IEnumerable<AITool> tools)
-    {
+    public static string ComputeContractFingerprint(IEnumerable<AITool> tools, AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(tools);
 
         var entries = tools
@@ -59,7 +58,7 @@ internal static class MafToolsetFingerprint
                 var schemaText = tool is AIFunction function
                     ? function.JsonSchema.GetRawText()
                     : string.Empty;
-                var classification = AgentToolInvocationPolicyMetadata.Classify(tool.Name);
+                var classification = (toolPolicies ?? AgentToolPolicyCatalog.BuiltIn).Classify(tool.Name);
                 var approvalWrapped = tool is ApprovalRequiredAIFunction;
                 return string.Join(
                     NameSeparator,
@@ -72,7 +71,7 @@ internal static class MafToolsetFingerprint
             .OrderBy(entry => entry, StringComparer.Ordinal)
             .ToArray();
 
-        var payload = string.Join("", entries);
+        var payload = string.Join("\n", entries);
         var digestBytes = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
         return Convert.ToHexString(digestBytes).ToLowerInvariant();
     }

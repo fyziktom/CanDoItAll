@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using Microsoft.Extensions.AI;
@@ -98,7 +99,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
 
     [Theory]
     [InlineData(AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate)]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryDraftUpdate)]
     [InlineData(AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate)]
     [InlineData(AgentToolInvocationPolicyMetadata.CapabilityCuratorSave)]
     public void SummarizeArguments_retains_business_text_masking_for_managed_tools(string toolName)
@@ -113,7 +114,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
                     name = "private-name-sentinel",
                     prompt = "private-prompt-sentinel"
                 }
-            });
+            }, new AgentToolPolicyCatalog(PromptGalleryToolPolicy.Capabilities));
 
         Assert.DoesNotContain("private-name-sentinel", summary, StringComparison.Ordinal);
         Assert.DoesNotContain("private-prompt-sentinel", summary, StringComparison.Ordinal);

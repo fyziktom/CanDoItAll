@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -1133,6 +1134,56 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public async Task RuntimeToolProviderComposer_accepts_a_contributed_tool_without_a_core_name_entry() {
+        const string toolName = "module_extension_write";
+        var contribution = PromptGalleryToolPolicy.Capabilities.Single(policy => policy.Name == PromptGalleryToolPolicy.PromptGalleryDraftCreate)
+            with { Name = toolName };
+        var policies = new AgentToolPolicyCatalog([contribution]);
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(policies), policies);
+        var provider = new TestRuntimeToolProvider(10, CreateDescriptor("tests.contributed"), toolName);
+        var state = new RuntimeCapabilityState();
+
+        await composer.AttachAsync(new RuntimeToolProviderAttachmentRequest(state, CreateAllowAllAccessPlan(),
+            composer.ComposeRegistrations([provider]), CreateContext(), SuppressApprovalRequirements: false), CancellationToken.None);
+
+        var tool = Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(state.Tools));
+        Assert.Equal(toolName, tool.Name);
+        Assert.Same(policies, state.ToolPolicies);
+        Assert.False(ToolCapabilityRegistry.TryResolve(toolName, out _));
+        Assert.Equal(AgentRuntimeToolOperationKind.Mutation, Assert.Single(state.RuntimeToolMetadata).OperationKind);
+        Assert.Equal(CapabilitySideEffectKind.InternalStateMutation,
+            RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolSideEffectProfile(toolName, state.ToolPolicies).Kind);
+    }
+
+    [Fact]
+    public async Task RuntimeToolProviderComposer_rejects_a_live_descriptor_that_downgrades_owner_approval() {
+        var policies = new AgentToolPolicyCatalog(PromptGalleryToolPolicy.Capabilities);
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(policies), policies);
+        var descriptor = CreateDescriptor("tests.policy-downgrade");
+        var provider = new TestRuntimeToolProvider(10, descriptor, PromptGalleryToolPolicy.PromptGalleryDraftCreate) {
+            Metadata = [new AgentRuntimeToolMetadata(descriptor.ProviderKey, PromptGalleryToolPolicy.PromptGalleryDraftCreate,
+                AgentRuntimeToolOperationKind.Read, requiresApprovalByDefault: false, [])]
+        };
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => composer.AttachAsync(
+            new RuntimeToolProviderAttachmentRequest(new RuntimeCapabilityState(), CreateAllowAllAccessPlan(),
+                composer.ComposeRegistrations([provider]), CreateContext(), SuppressApprovalRequirements: false), CancellationToken.None));
+        Assert.Contains("disagrees with its registered invocation policy", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RuntimeToolProviderComposer_rejects_a_tool_when_its_owner_policy_is_not_registered() {
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
+        var provider = new TestRuntimeToolProvider(10, CreateDescriptor("tests.missing-owner-policy"),
+            PromptGalleryToolPolicy.PromptGalleryDraftCreate);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => composer.AttachAsync(
+            new RuntimeToolProviderAttachmentRequest(new RuntimeCapabilityState(), CreateAllowAllAccessPlan(),
+                composer.ComposeRegistrations([provider]), CreateContext(), SuppressApprovalRequirements: false), CancellationToken.None));
+
+        Assert.Contains("registered invocation policy classification", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RuntimeToolProviderComposer_attaches_tools_metadata_and_approval_wrappers()
     {
         var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
@@ -1610,6 +1661,12 @@ public sealed class MafRuntimeArchitectureServicesTests
             Order = order;
             Descriptor = descriptor;
             this.toolNames = toolNames;
+        }
+
+        public IReadOnlyList<AgentRuntimeToolMetadata> Metadata { get; init; } = [];
+
+        public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(AgentRuntimeToolProviderContext context) {
+            return Metadata;
         }
 
         public int Order { get; }

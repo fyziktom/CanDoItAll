@@ -71,11 +71,6 @@ public static class ToolContractCatalog
     public const string BrowserDrag = "browser_drag";
     public const string BrowserWaitFor = "browser_wait_for";
 
-    public const string PromptGalleryCatalogSearch = "prompt_gallery_catalog_search";
-    public const string PromptGalleryItemEditorGet = "prompt_gallery_item_editor_get";
-    public const string PromptGalleryDraftCreate = "prompt_gallery_draft_create";
-    public const string PromptGalleryDraftUpdate = "prompt_gallery_draft_update";
-    public const string PromptGalleryVersionCreate = "prompt_gallery_version_create";
     public const string WorkflowCuratorCatalogSearch = "workflow_curator_catalog_search";
     public const string WorkflowCuratorDefinitionEditorGet = "workflow_curator_definition_editor_get";
     public const string WorkflowCuratorAuthoringOptionsGet = "workflow_curator_authoring_options_get";
@@ -255,13 +250,6 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
         AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
         AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
-        AgentToolInvocationPolicyMetadata.PromptGallerySearch,
-        AgentToolInvocationPolicyMetadata.PromptGalleryItemGet,
-        AgentToolInvocationPolicyMetadata.PromptGalleryCatalogSearch,
-        AgentToolInvocationPolicyMetadata.PromptGalleryItemEditorGet,
-        AgentToolInvocationPolicyMetadata.PromptGalleryDraftCreate,
-        AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate,
-        AgentToolInvocationPolicyMetadata.PromptGalleryVersionCreate,
         AgentToolInvocationPolicyMetadata.WorkflowCuratorCatalogSearch,
         AgentToolInvocationPolicyMetadata.WorkflowCuratorDefinitionEditorGet,
         AgentToolInvocationPolicyMetadata.WorkflowCuratorAuthoringOptionsGet,

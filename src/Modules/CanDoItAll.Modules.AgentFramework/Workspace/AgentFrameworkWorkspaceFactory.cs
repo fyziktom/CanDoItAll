@@ -108,7 +108,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             var workspaceService = CreateWorkspaceService(
                 scope,
                 workspaceIdentity,
-                workspaceRoot);
+                workspaceRoot,
+                confirmedProfile.Runtime.Fingerprint);
             workspaceServices[workspaceIdentity] = workspaceService;
             return workspaceService;
         }
@@ -117,9 +118,13 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     private AgentFrameworkWorkspaceService CreateWorkspaceService(
         WorkspaceScopeDescriptor scope,
         AgentExecutionActivityWorkspaceIdentity workspaceIdentity,
-        string workspaceRoot)
+        string workspaceRoot,
+        string profileFingerprint)
     {
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
+        var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
+            new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
+                workspaceIdentity.DatabaseProfileGeneration));
         var lifecycleFactExtractors = serviceProvider
             .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
             .ToList();
@@ -144,7 +149,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var workspaceBundle = workspaceRuntimeServicesFactory.Create(
             workspaceExecutionScope);
         var processHost = workspaceBundle.ProcessHost;
-        var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope, workspaceRuntimeServicesFactory);
+        var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope, workspaceRuntimeServicesFactory, toolAdmission);
         // SB18: the deterministic interception cores no longer implement any runtime interface or
         // hold an inner fallback; the workspace service consumes the narrow runtime ports directly:
         // native MAF adapters at the bottom, scenario harness decorators above them, process mock
@@ -178,7 +183,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var providerDiagnosticsService = new ProviderDiagnosticsService(diagnosticsPorts, diagnosticsPorts);
         var workspaceService = new AgentFrameworkWorkspaceService(
             store,
-            new ZipAgentPackageService(workspaceRoot, scope),
+            new ZipAgentPackageService(workspaceRoot, scope, serviceProvider.GetRequiredService<AgentToolPolicyCatalog>()),
             executionPorts,
             executionPorts,
             diagnosticsPorts,
@@ -214,7 +219,11 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             providerRuntimeProfileSource: providerRuntimeProfileSource,
             providerSelectionPolicies: serviceProvider.GetServices<IAgentExecutionProviderSelectionPolicy>().ToList(),
             runCriticalityPolicies: serviceProvider.GetServices<IAgentExecutionRunCriticalityPolicy>().ToList(),
-            ownedWorkspaceBundle: workspaceBundle);
+            ownedWorkspaceBundle: workspaceBundle,
+            toolAdmissionJournal: toolAdmission,
+            executionAuthorityResolver: serviceProvider.GetService<IAgentExecutionAuthorityResolver>(),
+            receiptReconciliationProviders: serviceProvider.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray(),
+            toolPolicies: serviceProvider.GetRequiredService<AgentToolPolicyCatalog>());
         return workspaceService;
     }
 

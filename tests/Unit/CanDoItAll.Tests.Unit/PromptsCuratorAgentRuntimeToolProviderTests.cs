@@ -125,7 +125,7 @@ public sealed class PromptsCuratorAgentRuntimeToolProviderTests
             .ToDictionary(tool => tool.Name, StringComparer.Ordinal);
 
         var created = await InvokeAsync<PromptsCuratorItemEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.PromptGalleryDraftCreate],
+            tools[PromptGalleryToolPolicy.PromptGalleryDraftCreate],
             CreateDraftInput("First curator draft", "Initial content."));
 
         Assert.Equal(PromptArtifactStatus.Draft, created.Status);
@@ -133,25 +133,25 @@ public sealed class PromptsCuratorAgentRuntimeToolProviderTests
         Assert.NotEqual(default, created.UpdatedAtUtc);
 
         var editor = await InvokeAsync<PromptsCuratorItemEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.PromptGalleryItemEditorGet],
+            tools[PromptGalleryToolPolicy.PromptGalleryItemEditorGet],
             new PromptsCuratorItemEditorInput(created.PromptArtifactId));
         Assert.Equal("Initial content.", editor.DraftContent);
         Assert.Equal(created.UpdatedAtUtc, editor.UpdatedAtUtc);
 
         var updated = await InvokeAsync<PromptsCuratorItemEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate],
+            tools[PromptGalleryToolPolicy.PromptGalleryDraftUpdate],
             CreateUpdateInput(editor, "Reviewed content."));
         Assert.Equal("Reviewed content.", updated.DraftContent);
         Assert.True(updated.UpdatedAtUtc > editor.UpdatedAtUtc);
 
         var staleException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             InvokeAsync<PromptsCuratorItemEditorResult>(
-                tools[AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate],
+                tools[PromptGalleryToolPolicy.PromptGalleryDraftUpdate],
                 CreateUpdateInput(editor, "Stale overwrite.")));
         Assert.Contains("prompts.gallery.concurrency-conflict", staleException.Message, StringComparison.Ordinal);
 
         var version = await InvokeAsync<PromptVersionSnapshot>(
-            tools[AgentToolInvocationPolicyMetadata.PromptGalleryVersionCreate],
+            tools[PromptGalleryToolPolicy.PromptGalleryVersionCreate],
             new PromptsCuratorVersionCreateInput(
                 updated.PromptArtifactId,
                 updated.UpdatedAtUtc,
@@ -160,12 +160,12 @@ public sealed class PromptsCuratorAgentRuntimeToolProviderTests
         Assert.Equal("Reviewed content.", version.Content);
 
         var secondDraft = await InvokeAsync<PromptsCuratorItemEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.PromptGalleryDraftCreate],
+            tools[PromptGalleryToolPolicy.PromptGalleryDraftCreate],
             CreateDraftInput("Second curator draft", "Still a draft."));
         Assert.Equal(PromptArtifactStatus.Draft, secondDraft.Status);
 
         var allStatuses = await InvokeAsync<PromptsCuratorCatalogSearchResult>(
-            tools[AgentToolInvocationPolicyMetadata.PromptGalleryCatalogSearch],
+            tools[PromptGalleryToolPolicy.PromptGalleryCatalogSearch],
             new PromptsCuratorCatalogSearchInput(pageSize: 10));
 
         Assert.Equal(2, allStatuses.TotalCount);
@@ -174,7 +174,7 @@ public sealed class PromptsCuratorAgentRuntimeToolProviderTests
         Assert.Equal(10, allStatuses.PageSize);
 
         var draftsOnly = await InvokeAsync<PromptsCuratorCatalogSearchResult>(
-            tools[AgentToolInvocationPolicyMetadata.PromptGalleryCatalogSearch],
+            tools[PromptGalleryToolPolicy.PromptGalleryCatalogSearch],
             new PromptsCuratorCatalogSearchInput(status: PromptArtifactStatus.Draft, pageSize: 10));
         var draft = Assert.Single(draftsOnly.Items);
         Assert.Equal(secondDraft.PromptArtifactId, draft.PromptArtifactId);
@@ -183,31 +183,34 @@ public sealed class PromptsCuratorAgentRuntimeToolProviderTests
     [Fact]
     public void Metadata_requires_approval_for_mutations_and_protects_prompt_content_in_audit_data()
     {
+        var policies = new AgentToolPolicyCatalog(PromptGalleryToolPolicy.Capabilities);
         var mutationNames = new[]
         {
-            AgentToolInvocationPolicyMetadata.PromptGalleryDraftCreate,
-            AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate,
-            AgentToolInvocationPolicyMetadata.PromptGalleryVersionCreate
+            PromptGalleryToolPolicy.PromptGalleryDraftCreate,
+            PromptGalleryToolPolicy.PromptGalleryDraftUpdate,
+            PromptGalleryToolPolicy.PromptGalleryVersionCreate
         };
         var readNames = new[]
         {
-            AgentToolInvocationPolicyMetadata.PromptGalleryCatalogSearch,
-            AgentToolInvocationPolicyMetadata.PromptGalleryItemEditorGet
+            PromptGalleryToolPolicy.PromptGalleryCatalogSearch,
+            PromptGalleryToolPolicy.PromptGalleryItemEditorGet
         };
 
         Assert.All(mutationNames, toolName =>
         {
-            Assert.True(ToolContractCatalog.IsKnownToolName(toolName));
-            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName));
-            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.True(policies.TryResolve(toolName, out _));
+            Assert.False(ToolContractCatalog.IsKnownToolName(toolName));
+            Assert.Equal(ToolInvocationClassification.Mutation, policies.Classify(toolName));
+            Assert.True(policies.RequiresApprovalByDefault(toolName));
+            Assert.True(policies.TryResolve(toolName, out var metadata));
             Assert.Equal(ToolCapabilitySideEffectKind.InternalStateMutation, metadata.SideEffectKind);
         });
         Assert.All(readNames, toolName =>
         {
-            Assert.True(ToolContractCatalog.IsKnownToolName(toolName));
-            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName));
-            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+            Assert.True(policies.TryResolve(toolName, out _));
+            Assert.False(ToolContractCatalog.IsKnownToolName(toolName));
+            Assert.Equal(ToolInvocationClassification.Read, policies.Classify(toolName));
+            Assert.False(policies.RequiresApprovalByDefault(toolName));
         });
 
         var promptArtifactId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -223,16 +226,16 @@ public sealed class PromptsCuratorAgentRuntimeToolProviderTests
             tags = new[] { "confidential-customer" }
         };
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate,
+            PromptGalleryToolPolicy.PromptGalleryDraftUpdate,
         [
             new KeyValuePair<string, object?>("request", request)
-        ]);
+        ], policies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate,
+            PromptGalleryToolPolicy.PromptGalleryDraftUpdate,
             redacted);
         var audit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate,
-            JsonSerializer.Serialize(new { request }));
+            PromptGalleryToolPolicy.PromptGalleryDraftUpdate,
+            JsonSerializer.Serialize(new { request }), policies);
 
         Assert.Contains(promptArtifactId.ToString("D"), signature, StringComparison.Ordinal);
         Assert.DoesNotContain(title, signature, StringComparison.Ordinal);

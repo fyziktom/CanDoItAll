@@ -25,6 +25,7 @@ engine and is not globally registered.
 | Workspace and navigation | `CanDoItAll.Modules.AgentFramework` | Host the Simple Chats tab, route-state adapter, `/chats` compatibility redirect, Prompt Gallery composer action, and usage projections without turning Simple Chats into agent runs. |
 | Floating conversations | Shared conversation shell with the Simple Chats contributor | Reuse the same application state and durable operation contract; closing or disconnecting a surface does not cancel an operation. |
 | Remote integration | `CanDoItAll.Web` | Publish the authorized HTTP/OpenAPI contract with server-owned API origin, typed DTOs, ETags, Problem Details, and replayable SSE. |
+| Managed HR definition administration | `CanDoItAll.Agents.SimpleChats` | External Agent runtime adapter invokes the Simple Chats application owner; exact disclosure/mutation proposals require approval and current authority. Definition creation uses the atomic owner receipt. Ordinary turns receive no Agent tools, implicit project context or access to unrelated transcripts. |
 
 ## Remaining Ownership Handoffs
 

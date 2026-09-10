@@ -1,3 +1,4 @@
+using CanDoItAll.Agents.SimpleChats;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -44,6 +45,7 @@ public sealed class HrAgentCompositionTests
         var expectedCapabilityKeys = HrAgentCapabilityKeys.ToolNameToCapabilityKey.Values
             .Append(HrAgentCapabilityKeys.GovernanceSkill)
             .Concat(HrAgentIdentity.CapabilityCurationCapabilityKeys)
+            .Concat(HrSimpleChatToolPolicy.PrivilegedKeys)
             .OrderBy(key => key, StringComparer.Ordinal)
             .ToArray();
         var imageAccess = AgentImageGenerationAccessMetadata.Read(agent.ConfigurationJson);
@@ -87,6 +89,9 @@ public sealed class HrAgentCompositionTests
         var runtimeProvider = Assert.Single(runtimeProviders);
         var runtimeContext = CreateRuntimeToolContext(agent, chatProvider, capabilities);
         var runtimeTools = await runtimeProvider.CreateToolsAsync(runtimeContext, CancellationToken.None);
+        var definitionProvider = Assert.Single(scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>()
+            .OfType<HrSimpleChatRuntimeToolProvider>());
+        Assert.Empty(await definitionProvider.CreateToolsAsync(runtimeContext, CancellationToken.None));
         var spoofedContext = CreateRuntimeToolContext(
             agent with { Id = Guid.NewGuid() },
             chatProvider,

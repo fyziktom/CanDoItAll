@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Integration/CanDoItAll.Agents.SimpleChats/CanDoItAll.Agents.SimpleChats.csproj" />
     <ProjectReference Include="../../MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />

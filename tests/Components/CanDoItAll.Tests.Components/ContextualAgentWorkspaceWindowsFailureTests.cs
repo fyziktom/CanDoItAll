@@ -658,6 +658,7 @@ public sealed class ContextualAgentWorkspaceWindowsFailureTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<AgentToolPolicyCatalog>();
         context.Services.AddSingleton(workspaceService);
         var referenceData = new StubReferenceDataProvider(agent);
         context.Services.AddSingleton<IAgentReferenceDataProvider>(referenceData);

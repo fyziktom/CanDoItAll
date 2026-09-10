@@ -49,6 +49,14 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
                 continue;
             }
 
+            if (detail.Run.ToolAdmission is { Support: AgentToolAdmissionSupport.Recoverable, Segments.Length: > 0 }) {
+                if (await PreserveAdmittedRecoveryAsync(executionRunId, startupCutoffUtc, cancellationToken)) {
+                    repairedCount++;
+                }
+
+                continue;
+            }
+
             var repairedAtUtc = DateTimeOffset.UtcNow;
             var repairedRun = detail.Run with
             {
@@ -95,6 +103,51 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         }
 
         return repairedCount;
+    }
+
+    private async Task<bool> PreserveAdmittedRecoveryAsync(Guid executionRunId, DateTimeOffset startupCutoffUtc,
+        CancellationToken cancellationToken) {
+        var leases = executionRunStore as ISandboxWorkspaceExecutionRunLeaseStore
+            ?? throw new InvalidOperationException("Admitted startup recovery requires the canonical run dispatch lease store.");
+        var writer = executionRunStore as ISandboxWorkspaceExecutionRunMutationStore
+            ?? throw new InvalidOperationException("Admitted startup recovery requires the canonical current-state run writer.");
+        using var acquisition = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        acquisition.CancelAfter(TimeSpan.FromMilliseconds(250));
+        IAsyncDisposable handle;
+        try {
+            handle = await leases.AcquireToolDispatchLeaseAsync(executionRunId, acquisition.Token);
+        } catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+            logger.LogDebug("Admitted execution {ExecutionRunId} still holds its dispatch lease; startup recovery skipped it.", executionRunId);
+            return false;
+        }
+
+        await using var lease = handle;
+        var changed = false;
+        const string message = "Execution was interrupted. Its admitted input, approvals and effect identities are retained for explicit recovery or reconciliation.";
+        var repairedAtUtc = DateTimeOffset.UtcNow;
+        var detail = await writer.UpdateExecutionRunDetailAsync(executionRunId, current => {
+            if (!IsInterruptedRun(current.Run, startupCutoffUtc) || HasResumableApprovals(current)) {
+                return current;
+            }
+
+            var journal = current.Run.ToolAdmission ?? throw new InvalidDataException("The admitted run lost its journal.");
+            journal.Validate();
+            changed = true;
+            return current with {
+                Run = current.Run with { State = ExecutionState.Failed, Outcome = RunOutcome.Failed,
+                    ResultSummary = message, UpdatedAtUtc = repairedAtUtc, CompletedAtUtc = repairedAtUtc,
+                    Revision = checked(current.Run.Revision + 1) },
+                ExecutionLog = AppendRestartRecoveryLog(current.ExecutionLog, current.Run, repairedAtUtc, message)
+            };
+        }, cancellationToken);
+        if (!changed) {
+            return false;
+        }
+
+        await CleanupRetainedProcessLeasesAsync(detail.Run);
+        await NotifyRecoveryObserversAsync(detail.Run, repairedAtUtc, cancellationToken);
+        logger.LogInformation("Preserved durable admitted execution {ExecutionRunId} for same-run recovery.", executionRunId);
+        return true;
     }
 
     private async Task CleanupRetainedProcessLeasesAsync(ExecutionRunRecord run)
@@ -188,7 +241,8 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
     private static IReadOnlyList<ExecutionLogEntry> AppendRestartRecoveryLog(
         IReadOnlyList<ExecutionLogEntry> executionLog,
         ExecutionRunRecord run,
-        DateTimeOffset repairedAtUtc)
+        DateTimeOffset repairedAtUtc,
+        string message = RestartRecoveryMessage)
     {
         var entry = new ExecutionLogEntry(
             Id: Guid.NewGuid(),
@@ -197,7 +251,7 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
             CreatedAtUtc: repairedAtUtc,
             State: ExecutionState.Failed,
             Phase: RestartRecoveryPhase,
-            Message: RestartRecoveryMessage)
+            Message: message)
         {
             ExecutionRunId = run.Id
         };

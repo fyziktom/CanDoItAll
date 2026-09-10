@@ -157,8 +157,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     var chatSession = mutation.Run.ChatSessionId.HasValue
                         ? mutation.Session ?? currentDetail.ChatSession
                         : null;
+                    var persistedRun = MergeAdmissionSnapshot(currentDetail.Run, mutation.Run);
                     return CreateExecutionRunDetail(
-                        mutation.Run,
+                        persistedRun,
                         chatSession,
                         currentDetail.ExecutionLog,
                         mutation.Metric is null
@@ -171,8 +172,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             : InsertUsageObservations(
                                 currentDetail.UsageObservations,
                                 mutation.UsageObservations),
-                        mutation.RunApprovals ??
-                        currentDetail.Approvals,
+                        MergeAdmissionApprovals(currentDetail.Approvals, mutation.RunApprovals, persistedRun),
                         currentDetail.Artifacts,
                         currentDetail.Checkpoints,
                         mutation.ToolReceipts is null
@@ -238,6 +238,60 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ? executionState.ToolExecutionReceipts
                 : InsertToolReceipts(executionState.ToolExecutionReceipts, mutation.ToolReceipts)
         }, cancellationToken);
+    }
+
+    private ExecutionRunRecord AdmitInteractiveRun(ExecutionRunRecord run, ChatSessionRecord session,
+        IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments, ChatMessageRecord input,
+        AgentRuntimeTransientContext? runtimeContext) {
+        if (toolAdmissionJournal is null || AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson) is null ||
+            CreateRuntimeContextIntent(run, activityWorkspaceIdentity.WorkspaceScope).Purpose != AgentRuntimeContextPurpose.InteractiveChat) {
+            return run;
+        }
+
+        var canRecover = inputAttachments.Count == 0 && (runtimeContext?.Attachments.IsEmpty ?? true);
+        return run with { ToolAdmission = toolAdmissionJournal.CreateForNewRun(run, session,
+            canRecover ? AgentToolAdmissionSupport.Recoverable : AgentToolAdmissionSupport.RequestScopedInput,
+            new(input.Id, input.Content), canRecover ? runtimeContext : null) };
+    }
+
+    private static ExecutionRunRecord MergeAdmissionSnapshot(ExecutionRunRecord current, ExecutionRunRecord proposed) {
+        if (current.ToolAdmission is null) {
+            return proposed;
+        }
+
+        var cancelled = proposed.Outcome == RunOutcome.Cancelled;
+        var admission = cancelled ? AgentToolJournalTransitions.RejectUndispatchedOnCancellation(current.ToolAdmission) : current.ToolAdmission;
+        var waiting = !cancelled && current.PendingApprovals.Count != 0 && current.ToolAdmission.Batches.Any(batch =>
+            batch.Proposals.Any(proposal => proposal.ApprovalStatus == ExecutionApprovalStatus.Pending));
+        return proposed with {
+            ToolAdmission = admission,
+            State = waiting && proposed.Outcome != RunOutcome.Cancelled ? ExecutionState.WaitingOnTool : proposed.State,
+            Outcome = waiting && proposed.Outcome != RunOutcome.Cancelled ? null : proposed.Outcome,
+            CompletedAtUtc = waiting && proposed.Outcome != RunOutcome.Cancelled ? null : proposed.CompletedAtUtc,
+            Revision = checked(Math.Max(current.Revision, proposed.Revision) + 1),
+            UpdatedAtUtc = current.UpdatedAtUtc > proposed.UpdatedAtUtc ? current.UpdatedAtUtc : proposed.UpdatedAtUtc,
+            PendingApprovals = cancelled ? [] : waiting ? current.PendingApprovals : proposed.PendingApprovals,
+            SerializedSessionStateJson = waiting ? current.SerializedSessionStateJson : proposed.SerializedSessionStateJson
+        };
+    }
+
+    private static IReadOnlyList<ExecutionApprovalRecord> MergeAdmissionApprovals(
+        IReadOnlyList<ExecutionApprovalRecord> current, IReadOnlyList<ExecutionApprovalRecord>? proposed, ExecutionRunRecord run) {
+        var merged = (proposed ?? current).ToDictionary(approval => approval.ApprovalId, StringComparer.Ordinal);
+        foreach (var approval in current.Where(approval => approval.ToolAdmission is not null)) {
+            if (!merged.TryGetValue(approval.ApprovalId, out var replacement) || approval.Status != ExecutionApprovalStatus.Pending) {
+                merged[approval.ApprovalId] = approval;
+            } else if (replacement.ToolAdmission != approval.ToolAdmission) {
+                throw new AgentToolAdmissionException("tool-admission.stale-approval", "A stale approval snapshot cannot change a saved proposal link.");
+            }
+        }
+
+        return merged.Values.Select(approval => run.Outcome == RunOutcome.Cancelled && approval.ToolAdmission is not null &&
+            approval.Status == ExecutionApprovalStatus.Pending ? approval with {
+                Status = ExecutionApprovalStatus.Rejected, DecidedAtUtc = run.UpdatedAtUtc,
+                DecisionSourceKind = "execution-cancellation", DecisionSourceId = run.Id.ToString("N"),
+                DecisionNotes = "The execution was cancelled before this proposal dispatched."
+            } : approval).ToArray();
     }
 
     private sealed record TerminalFailurePersistenceResult(
@@ -402,6 +456,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentStructuredOutputContract? structuredOutput,
         PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput,
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments,
+        AgentRuntimeTransientContext? runtimeContext,
         AgentExecutionOperationId initialActivityOperationId,
         CancellationToken cancellationToken)
     {
@@ -418,6 +473,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 structuredOutput,
                 jsonSchemaOutput,
                 inputAttachments,
+                runtimeContext,
                 initialActivityOperationId,
                 cancellationToken);
         }
@@ -507,6 +563,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 now,
                 run.Id);
 
+            run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext);
             prepared = new AgentExecutionStartupAggregate(
                 preparation.Blueprint,
                 catalogSnapshot,
@@ -541,6 +598,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentStructuredOutputContract? structuredOutput,
         PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput,
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments,
+        AgentRuntimeTransientContext? runtimeContext,
         AgentExecutionOperationId initialActivityOperationId,
         CancellationToken cancellationToken)
     {
@@ -610,6 +668,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         now,
                         run.Id);
 
+                run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext);
                 return new ChatBackedRunStartMutation(
                     CreateExecutionRunDetail(
                         run,

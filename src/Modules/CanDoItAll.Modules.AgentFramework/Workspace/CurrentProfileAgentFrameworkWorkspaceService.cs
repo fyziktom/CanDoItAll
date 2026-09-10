@@ -508,6 +508,34 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 cancellationToken));
     }
 
+    public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,
+            "Cancelled execution receipt reconciliation accepted.", (service, operation) => service.ReconcileCancelledExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+
+    public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        return DispatchPinnedActivityOperation(operation, expectedAgentId: null, expectedChatSessionId: null,
+            operation.StreamId.OperationId, service => service.ReconcileCancelledExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+    }
+
+    public Task<ExecutionRunResult> RecoverExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,
+            "Execution recovery accepted.", (service, operation) => service.RecoverExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+
+    public Task<ExecutionRunResult> RecoverExecutionRunWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        return DispatchPinnedActivityOperation(operation, expectedAgentId: null, expectedChatSessionId: null,
+            operation.StreamId.OperationId, service => service.RecoverExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+    }
+
     public Task<AgentChatRunResult> SendMessageAsync(
         Guid agentId,
         Guid? chatSessionId,

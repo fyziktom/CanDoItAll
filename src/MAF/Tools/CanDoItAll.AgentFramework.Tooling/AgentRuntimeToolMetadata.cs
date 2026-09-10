@@ -1,3 +1,7 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.AgentFramework.Tooling;
 
 public sealed record AgentRuntimeToolMetadata
@@ -15,6 +19,14 @@ public sealed record AgentRuntimeToolMetadata
         RequiresApprovalByDefault = requiresApprovalByDefault;
         OwnershipTags = NormalizeOwnershipTags(ownershipTags);
     }
+
+    [JsonIgnore]
+    public Func<JsonElement, AgentToolPreparedPayload>? PrepareAdmission { get; init; }
+
+    [JsonIgnore]
+    public Func<AgentToolPreparedPayload, CancellationToken, ValueTask<IAsyncDisposable>>? AuthorizeAdmissionAsync { get; init; }
+
+    public AgentRuntimeToolUnavailability? Unavailability { get; init; }
 
     public string ProviderKey { get; }
 

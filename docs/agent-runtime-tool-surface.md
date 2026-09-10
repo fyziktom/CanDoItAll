@@ -46,9 +46,12 @@ current runtime policy.
 | Workflow Curator | [`WorkflowCuratorAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/WorkflowCurator/WorkflowCuratorAgentRuntimeToolProvider.cs) | Authorized workflow definition and component curation. |
 | Capability Curator | [`CapabilityCuratorAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/CapabilityCurator/CapabilityCuratorAgentRuntimeToolProvider.cs) | Authorized capability catalog curation and validation. |
 | HR | [`HrAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/Hr/HrAgentRuntimeToolProvider.cs) | Identity-bound agent governance, usage analysis, process review, avatar generation, and privacy-safe CRM/HR queries. |
+| HR Simple Chat definitions | [`HrSimpleChatRuntimeToolProvider.cs`](../src/Integration/CanDoItAll.Agents.SimpleChats/HrSimpleChatRuntimeToolProvider.cs) | Owner-backed definition search, options, approved settings disclosure and mutations, with scoped create-receipt reconciliation. Requires the managed HR identity and a durable admitted interactive run. |
 | Scheduler | [`SchedulerAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs) | Identity-bound workflow target/schedule discovery and workflow schedule creation. |
 
 Do not publish a copied count or complete tool-name inventory here. Provider code and runtime metadata are the source of truth, and attachment varies by invocation.
+
+The [HR definition adapter](../src/Integration/CanDoItAll.Agents.SimpleChats/README.md) persists exact proposals and server-issued business intents before approval or serial dispatch. Recovery retains the original run, input, scope and provider segment and rechecks current authority. An uncertain create resolves through the owner's atomic receipt; update/status uncertainty requires reconciliation. Ordinary Simple Chats gain no tools, implicit context or transcript disclosure. Portable Agent history excludes the executable admission journal and its private runtime checkpoint.
 
 ## Process Boundary
 

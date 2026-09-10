@@ -1290,6 +1290,104 @@
         "write",
         "mutation"
       ]
+    },
+    {
+      "kind": "tool",
+      "key": "hr-simple-chats-search",
+      "displayName": "HR Simple Chat Search",
+      "description": "Searches bounded definition summaries without system prompts or settings.",
+      "stableId": "tool:hr-simple-chats-search:v1",
+      "stableGuidKey": "capabilities/hr-simple-chats-search",
+      "endpointOrPath": "sandbox://hr-simple-chats-search",
+      "runtimeToolName": "hr_simple_chats_search",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "hr-simple-chat-creation-options-get",
+      "displayName": "HR Simple Chat Creation Options",
+      "description": "Lists permitted provider and model choices without credentials.",
+      "stableId": "tool:hr-simple-chat-creation-options-get:v1",
+      "stableGuidKey": "capabilities/hr-simple-chat-creation-options-get",
+      "endpointOrPath": "sandbox://hr-simple-chat-creation-options-get",
+      "runtimeToolName": "hr_simple_chat_creation_options_get",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "hr-simple-chat-settings-get",
+      "displayName": "HR Simple Chat Settings",
+      "description": "Discloses an explicitly approved exact definition revision, including sensitive settings.",
+      "stableId": "tool:hr-simple-chat-settings-get:v1",
+      "stableGuidKey": "capabilities/hr-simple-chat-settings-get",
+      "endpointOrPath": "sandbox://hr-simple-chat-settings-get",
+      "runtimeToolName": "hr_simple_chat_settings_get",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "hr-simple-chat-create",
+      "displayName": "HR Simple Chat Create",
+      "description": "Creates a definition through an approved durable intent and atomic owner receipt.",
+      "stableId": "tool:hr-simple-chat-create:v1",
+      "stableGuidKey": "capabilities/hr-simple-chat-create",
+      "endpointOrPath": "sandbox://hr-simple-chat-create",
+      "runtimeToolName": "hr_simple_chat_create",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "hr-simple-chat-settings-update",
+      "displayName": "HR Simple Chat Settings Update",
+      "description": "Updates an approved exact definition revision with owner concurrency validation.",
+      "stableId": "tool:hr-simple-chat-settings-update:v1",
+      "stableGuidKey": "capabilities/hr-simple-chat-settings-update",
+      "endpointOrPath": "sandbox://hr-simple-chat-settings-update",
+      "runtimeToolName": "hr_simple_chat_settings_update",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "hr-simple-chat-status-change",
+      "displayName": "HR Simple Chat Status Change",
+      "description": "Changes an approved exact definition status through the owner API.",
+      "stableId": "tool:hr-simple-chat-status-change:v1",
+      "stableGuidKey": "capabilities/hr-simple-chat-status-change",
+      "endpointOrPath": "sandbox://hr-simple-chat-status-change",
+      "runtimeToolName": "hr_simple_chat_status_change",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "hr-simple-chat-create-receipt-get",
+      "displayName": "HR Simple Chat Create Receipt",
+      "description": "Reads original immutable create identity within the admitted HR chat history.",
+      "stableId": "tool:hr-simple-chat-create-receipt-get:v1",
+      "stableGuidKey": "capabilities/hr-simple-chat-create-receipt-get",
+      "endpointOrPath": "sandbox://hr-simple-chat-create-receipt-get",
+      "runtimeToolName": "hr_simple_chat_create_receipt_get",
+      "operationClassifications": [
+        "read"
+      ]
     }
   ]
 }

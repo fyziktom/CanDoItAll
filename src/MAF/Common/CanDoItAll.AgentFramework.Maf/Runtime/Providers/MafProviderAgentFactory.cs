@@ -438,12 +438,12 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 
         chatClient = new ProviderHistoryChatClient(chatClient, provider, model, history, clock);
         var logger = loggerFactory.CreateLogger<EmptyCompletionRetryChatClient>();
-        return new EmptyCompletionRetryChatClient(
+        return new MafToolAdmissionChatClient(new EmptyCompletionRetryChatClient(
             chatClient,
             provider,
             model,
             allowBackgroundResponses,
-            logger);
+            logger));
     }
 
     private IChatClient AddProviderTransportBoundary(

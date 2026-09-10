@@ -44,7 +44,8 @@ internal static class MafRuntimeSessionBuilder
 
         if (evaluation.ShouldRestore)
         {
-            return await DeserializeSerializedSessionAsync(runtimeAgent, evaluation.RestorePayloadJson!, cancellationToken);
+            return await DeserializeSerializedSessionAsync(runtimeAgent, evaluation.RestorePayloadJson!,
+                runtimeOptions.RequireDurableToolProtocol, cancellationToken);
         }
 
         if (evaluation.FailClosedReason is { } failClosedReason)
@@ -188,10 +189,12 @@ internal static class MafRuntimeSessionBuilder
     private static async ValueTask<AgentSession> DeserializeSerializedSessionAsync(
         AIAgent runtimeAgent,
         string serializedSessionStateJson,
+        bool hasToolAdmission,
         CancellationToken cancellationToken)
     {
         using var document = JsonDocument.Parse(serializedSessionStateJson);
-        return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
+        return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(),
+            hasToolAdmission ? MafToolProtocolCodec.SerializationOptions : null, cancellationToken: cancellationToken);
     }
 
     private static async ValueTask<AgentSession> FailClosedOrCreateSessionAsync(

@@ -16,6 +16,7 @@ public sealed class AgentApiPublicProjectionIntegrationTests
     [
         "runtimeSessionKey",
         "serializedSessionStateJson",
+        "toolAdmission",
         "compatibility",
         "providerRequestId",
         "providerResponseId",
@@ -630,6 +631,49 @@ public sealed class AgentApiPublicProjectionIntegrationTests
                     RuntimeToolProviderKey = DisclosureSentinelAgentRuntime.PrivateRuntimeToolProviderKeySentinel
                 }).ToArray()
             });
+    }
+
+    [Fact]
+    public async Task Public_reads_exclude_a_journal_persisted_at_original_run_creation() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var store = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+        var runStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunStore>(store);
+        var catalog = await store.LoadCatalogAsync();
+        var agent = catalog.Agents.First(item => !item.IsTemplate && item.ProviderProfileId.HasValue);
+        var now = DateTimeOffset.UtcNow;
+        var runId = Guid.NewGuid();
+        var session = new ChatSessionRecord(Guid.NewGuid(), agent.Id, "Private journal projection", now, now, [],
+            LatestExecutionRunId: runId);
+        var run = new ExecutionRunRecord(runId, agent.Id, session.Id, session.Title, "chat-session", session.Id.ToString("N"),
+            string.Empty, string.Empty, "operator", "user", "{}", string.Empty, string.Empty,
+            "Projection fixture", "fixture-model", ExecutionState.Completed, RunOutcome.Succeeded,
+            now, now, now, now, string.Empty, null, [], Revision: 1, ProviderProfileId: agent.ProviderProfileId);
+        run = run with { ToolAdmission = CreatePrivateJournal(run, session.Id) };
+        await runStore.SaveExecutionRunDetailAsync(new(run, session, [], []));
+        Assert.NotNull((await runStore.GetExecutionRunAsync(runId))!.ToolAdmission);
+
+        string[] paths = [
+            "/api/agents/bootstrap",
+            "/api/agents/execution-runs",
+            $"/api/agents/execution-runs/{runId:D}",
+            $"/api/agents/{agent.Id:D}/execution-runs/{runId:D}",
+            $"/api/agents/{agent.Id:D}/chat-workspace?preferredSessionId={session.Id:D}"
+        ];
+        foreach (var path in paths) {
+            using var payload = await GetJsonAsync(host.Client, path);
+            AssertNoPrivateRuntimeState(payload.RootElement, path);
+            Assert.Contains(runId.ToString("D"), payload.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static AgentToolJournalRecord CreatePrivateJournal(ExecutionRunRecord run, Guid chatSessionId) {
+        var journal = new AgentToolJournalRecord(AgentToolJournalRecord.CurrentSchemaVersion, 1,
+            new(new(run.Id, chatSessionId, AgentExecutionAuthorityId.Create()), run.AgentId,
+                AgentRuntimeContextPurpose.InteractiveChat, new(Guid.NewGuid(), "private-profile-fingerprint", new(1))),
+            [], [], OriginalInput: new(Guid.NewGuid(), DisclosureSentinelAgentRuntime.PrivateInputSummarySentinel));
+        journal.Validate();
+        return journal;
     }
 
     private static async Task<JsonDocument> GetJsonAsync(HttpClient client, string requestUri)

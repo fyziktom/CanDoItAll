@@ -20,6 +20,8 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
     private readonly MafRuntimeAgentFactory runtimeAgentFactory;
     private readonly IMafApprovalContinuationDriver approvalContinuationDriver;
     private readonly MafStreamingTurnExecutor streamingTurnExecutor;
+    private readonly AgentToolAdmissionJournal? toolAdmissionJournal;
+    private readonly IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver;
 
     public MafAgentContinuationAdapter(
         string workspaceRoot,
@@ -28,7 +30,9 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
         IWorkspaceRuntimeServicesFactory workspaceRuntimeServicesFactory,
         MafRuntimeAgentFactory runtimeAgentFactory,
         IMafApprovalContinuationDriver approvalContinuationDriver,
-        MafStreamingTurnExecutor streamingTurnExecutor)
+        MafStreamingTurnExecutor streamingTurnExecutor,
+        AgentToolAdmissionJournal? toolAdmissionJournal = null,
+        IMafRuntimeSessionPersistenceDriver? sessionPersistenceDriver = null)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
@@ -46,6 +50,8 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
         this.runtimeAgentFactory = runtimeAgentFactory ?? throw new ArgumentNullException(nameof(runtimeAgentFactory));
         this.approvalContinuationDriver = approvalContinuationDriver ?? throw new ArgumentNullException(nameof(approvalContinuationDriver));
         this.streamingTurnExecutor = streamingTurnExecutor ?? throw new ArgumentNullException(nameof(streamingTurnExecutor));
+        this.toolAdmissionJournal = toolAdmissionJournal;
+        this.sessionPersistenceDriver = sessionPersistenceDriver ?? new MafRuntimeSessionPersistenceDriver();
     }
 
     public async Task<AgentRuntimeResponse> ContinueAsync(
@@ -92,6 +98,19 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
         var suppressApprovalRequirements = request.SuppressApprovalRequirements;
 
         var runtimeOptions = MafRuntimeExecutionOptionsResolver.Normalize(request.StructuredOutput, request.ExecutionOptions);
+        var boundAdmissionLease = AgentToolRunLease.Current;
+        await using var acquiredAdmissionLease = runtimeOptions.AdmittedToolSession is { } reference && boundAdmissionLease is null
+            ? await (toolAdmissionJournal ?? throw new InvalidOperationException("The admitted runtime has no durable journal wiring."))
+                .AcquireRunAsync(reference, cancellationToken)
+            : null;
+        var admissionLease = runtimeOptions.AdmittedToolSession is not null ? acquiredAdmissionLease ?? boundAdmissionLease : null;
+        if (admissionLease is not null && admissionLease.Session != runtimeOptions.AdmittedToolSession) {
+            throw new AgentToolAdmissionException("tool-admission.foreign-lease", "The active dispatch lease belongs to another run.");
+        }
+
+        using var admissionLeaseScope = admissionLease?.Bind();
+        var supportsToolRecovery = admissionLease is not null &&
+            runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable;
         await progressCallback(ExecutionState.Preparing, "Framework", "Rehydrating the Microsoft Agent Framework runtime to continue from a pending approval.");
         if (suppressApprovalRequirements)
         {
@@ -143,10 +162,14 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
             // capability composition has produced runtimeBuild.CapabilityState, so this must run
             // before session restore evaluates runtime-state compatibility.
             var capabilityState = runtimeBuild.CapabilityState;
+            var canRecoverToolInvocations = supportsToolRecovery &&
+                (capabilityState?.RuntimeToolMetadata.Any(item => item.PrepareAdmission is not null) == true ||
+                    (await toolAdmissionJournal!.ReadAsync(admissionLease!, cancellationToken)).Segments.Length != 0);
             runtimeOptions = runtimeOptions with
             {
+                RequireDurableToolProtocol = canRecoverToolInvocations,
                 ToolsetFingerprint = MafToolsetFingerprint.ComputeContractFingerprint(
-                    capabilityState?.Tools ?? []),
+                    capabilityState?.Tools ?? [], capabilityState?.ToolPolicies),
                 LegacyToolsetNameFingerprint = MafToolsetFingerprint.Compute(
                     (capabilityState?.Tools ?? []).Select(tool => tool.Name)),
                 CapabilityPolicyFingerprint = MafToolsetFingerprint.Compute(
@@ -178,6 +201,18 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
             var resolvedApprovalRequestIds = request.ResolvedApprovalRequestIds
                 .Concat(decisions.Select(decision => decision.ProposalId))
                 .ToHashSet(StringComparer.Ordinal);
+            MafToolRunContext? admission = null;
+            if (canRecoverToolInvocations) {
+                var opened = await MafToolRunContext.OpenAsync(toolAdmissionJournal!, admissionLease!,
+                    runtimeBuild.Agent, runtimeSession, agent, runtimeBuild.Provider, runtimeBuild.Model, session,
+                    runtimeOptions, capabilityState, inputMessages, sessionPersistenceDriver,
+                    isApprovalContinuation: true, progressCallback, cancellationToken);
+                admission = opened.Context;
+                runtimeSession = opened.Session;
+                inputMessages = opened.Input;
+            }
+
+            using var admissionScope = admission?.Bind();
             var contextManifest = MafContextManifestBuilder.Create(
                 agent,
                 runtimeBuild.Provider,

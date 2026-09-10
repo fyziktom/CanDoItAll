@@ -20,6 +20,8 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
     private readonly MafRuntimeAgentFactory runtimeAgentFactory;
     private readonly InputAttachmentPreparer inputAttachmentPreparer;
     private readonly MafStreamingTurnExecutor streamingTurnExecutor;
+    private readonly AgentToolAdmissionJournal? toolAdmissionJournal;
+    private readonly IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver;
 
     public MafAgentExecutionAdapter(
         string workspaceRoot,
@@ -28,7 +30,9 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
         IWorkspaceRuntimeServicesFactory workspaceRuntimeServicesFactory,
         MafRuntimeAgentFactory runtimeAgentFactory,
         InputAttachmentPreparer inputAttachmentPreparer,
-        MafStreamingTurnExecutor streamingTurnExecutor)
+        MafStreamingTurnExecutor streamingTurnExecutor,
+        AgentToolAdmissionJournal? toolAdmissionJournal = null,
+        IMafRuntimeSessionPersistenceDriver? sessionPersistenceDriver = null)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
@@ -46,6 +50,8 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
         this.runtimeAgentFactory = runtimeAgentFactory ?? throw new ArgumentNullException(nameof(runtimeAgentFactory));
         this.inputAttachmentPreparer = inputAttachmentPreparer ?? throw new ArgumentNullException(nameof(inputAttachmentPreparer));
         this.streamingTurnExecutor = streamingTurnExecutor ?? throw new ArgumentNullException(nameof(streamingTurnExecutor));
+        this.toolAdmissionJournal = toolAdmissionJournal;
+        this.sessionPersistenceDriver = sessionPersistenceDriver ?? new MafRuntimeSessionPersistenceDriver();
     }
 
     public async Task<AgentRuntimeResponse> ExecuteAsync(
@@ -90,6 +96,19 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
         var suppressApprovalRequirements = request.SuppressApprovalRequirements;
 
         var runtimeOptions = MafRuntimeExecutionOptionsResolver.Normalize(request.StructuredOutput, request.ExecutionOptions);
+        var boundAdmissionLease = AgentToolRunLease.Current;
+        await using var acquiredAdmissionLease = runtimeOptions.AdmittedToolSession is { } reference && boundAdmissionLease is null
+            ? await (toolAdmissionJournal ?? throw new InvalidOperationException("The admitted runtime has no durable journal wiring."))
+                .AcquireRunAsync(reference, cancellationToken)
+            : null;
+        var admissionLease = runtimeOptions.AdmittedToolSession is not null ? acquiredAdmissionLease ?? boundAdmissionLease : null;
+        if (admissionLease is not null && admissionLease.Session != runtimeOptions.AdmittedToolSession) {
+            throw new AgentToolAdmissionException("tool-admission.foreign-lease", "The active dispatch lease belongs to another run.");
+        }
+
+        using var admissionLeaseScope = admissionLease?.Bind();
+        var supportsToolRecovery = admissionLease is not null &&
+            runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable;
         var preparedInput = await inputAttachmentPreparer.PrepareAsync(
             agent,
             provider,
@@ -152,10 +171,14 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
             // capability composition has produced runtimeBuild.CapabilityState, so this must run
             // before session restore evaluates runtime-state compatibility.
             var capabilityState = runtimeBuild.CapabilityState;
+            var canRecoverToolInvocations = supportsToolRecovery &&
+                (capabilityState?.RuntimeToolMetadata.Any(item => item.PrepareAdmission is not null) == true ||
+                    (await toolAdmissionJournal!.ReadAsync(admissionLease!, cancellationToken)).Segments.Length != 0);
             runtimeOptions = runtimeOptions with
             {
+                RequireDurableToolProtocol = canRecoverToolInvocations,
                 ToolsetFingerprint = MafToolsetFingerprint.ComputeContractFingerprint(
-                    capabilityState?.Tools ?? []),
+                    capabilityState?.Tools ?? [], capabilityState?.ToolPolicies),
                 LegacyToolsetNameFingerprint = MafToolsetFingerprint.Compute(
                     (capabilityState?.Tools ?? []).Select(tool => tool.Name)),
                 CapabilityPolicyFingerprint = MafToolsetFingerprint.Compute(
@@ -184,6 +207,18 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
                 forceOmitTemperature: forceOmitTemperature,
                 runtimeOptions);
             var inputMessages = MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, runtimeBuild.Provider, runtimeBuild.Model, session, prompt, runtimeOptions).ToList();
+            MafToolRunContext? admission = null;
+            if (canRecoverToolInvocations) {
+                var opened = await MafToolRunContext.OpenAsync(toolAdmissionJournal!, admissionLease!,
+                    runtimeBuild.Agent, runtimeSession, agent, runtimeBuild.Provider, runtimeBuild.Model, session,
+                    runtimeOptions, capabilityState, inputMessages, sessionPersistenceDriver,
+                    isApprovalContinuation: false, progressCallback, cancellationToken);
+                admission = opened.Context;
+                runtimeSession = opened.Session;
+                inputMessages = opened.Input;
+            }
+
+            using var admissionScope = admission?.Bind();
             var contextManifest = MafContextManifestBuilder.Create(
                 agent,
                 runtimeBuild.Provider,

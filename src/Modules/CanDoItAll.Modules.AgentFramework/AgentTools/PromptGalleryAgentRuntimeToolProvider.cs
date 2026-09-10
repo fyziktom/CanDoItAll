@@ -51,12 +51,12 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
             AIFunctionFactory.Create(
                 (PromptGalleryAgentSearchInput request, CancellationToken token = default) =>
                     SearchAsync(request, provider, model, token),
-                AgentToolInvocationPolicyMetadata.PromptGallerySearch,
+                PromptGalleryToolPolicy.PromptGallerySearch,
                 "Searches the canonical Prompt Gallery with bounded paging. Results contain metadata, not prompt bodies; retrieve one selected item with prompt_gallery_item_get."),
             AIFunctionFactory.Create(
                 (PromptGalleryAgentItemInput request, CancellationToken token = default) =>
                     GetItemAsync(request, provider, model, token),
-                AgentToolInvocationPolicyMetadata.PromptGalleryItemGet,
+                PromptGalleryToolPolicy.PromptGalleryItemGet,
                 "Retrieves one active, final Prompt Gallery item after enforcing compatibility with the current agent provider and model.")
         ]);
     }
@@ -72,8 +72,8 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
 
         return
         [
-            CreateMetadata(AgentToolInvocationPolicyMetadata.PromptGallerySearch),
-            CreateMetadata(AgentToolInvocationPolicyMetadata.PromptGalleryItemGet)
+            CreateMetadata(PromptGalleryToolPolicy.PromptGallerySearch),
+            CreateMetadata(PromptGalleryToolPolicy.PromptGalleryItemGet)
         ];
     }
 
@@ -184,11 +184,9 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
     }
 
     private static AgentRuntimeToolMetadata CreateMetadata(string toolName)
-        => new(
+        => PromptGalleryToolPolicy.CreateRuntimeMetadata(
             ProviderKey,
             toolName,
-            AgentRuntimeToolOperationKind.Read,
-            requiresApprovalByDefault: false,
             ["prompt-gallery", "instructions", "canonical-read"]);
 }
 

@@ -199,6 +199,8 @@ An HTTP route is not automatically available as an in-agent tool. Runtime tools 
 
 Attachment remains subject to execution purpose, agent permissions, assigned capabilities, project/process scope, and invocation policy. See [Agent runtime tool surface](agent-runtime-tool-surface.md).
 
+For supported durably admitted Agent runs, `POST /api/agents/execution-runs/{executionRunId}/recover` resumes the original run and provider segment under current authority. It does not start a replacement conversation or issue a new business intent. Pending approvals use the existing pending-approvals endpoint. `POST /api/agents/execution-runs/{executionRunId}/reconcile-cancellation` only reads approved owner receipts and retains confirmed effects; a missing receipt remains uncertain while an earlier owner transaction could still commit. Both requests accept an optional `activityOperationId` and expose the activity operation header. When HTTP authorization is enabled, both require the general `api` scope. Reconciliation projects effect identity and uncertainty without exposing the internal receipt protocol. See the [HR definition adapter contract](../src/Integration/CanDoItAll.Agents.SimpleChats/README.md) for recovery limits.
+
 ## Operator Skills
 
 Reusable `candoitall-api-*` skills are maintained in the canonical [CanDoItAll.SharedInfo skill source](https://github.com/fyziktom/CanDoItAll.SharedInfo/tree/main/codex/skills). No product-repository source copy is maintained.

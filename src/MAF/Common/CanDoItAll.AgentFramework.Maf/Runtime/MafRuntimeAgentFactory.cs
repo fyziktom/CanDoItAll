@@ -156,7 +156,8 @@ internal sealed class MafRuntimeAgentFactory
             workspaceRuntimeServices,
             runtimeSessionKey,
             runtimeOptions.TransientContext?.Attachments,
-            runtimeOptions.Governance);
+            runtimeOptions.Governance,
+            runtimeOptions.AdmittedToolSession, runtimeOptions.ToolAdmissionSupport);
         try
         {
             // Exactly one owner disposes the run's workspace bundle: the top-level
@@ -235,7 +236,7 @@ internal sealed class MafRuntimeAgentFactory
             options.Name = agent.Name;
             options.Description = agent.Summary;
             options.AIContextProviders = capabilityState.ContextProviders;
-            options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null;
+            options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider(runtimeOptions.RequireDurableToolProtocol) : null;
             options.RequirePerServiceCallChatHistoryPersistence =
                 MafChatClientAgentOptionsFactory.ResolvePerServiceCallHistoryPersistence(
                     agent.RequirePerServiceCallChatHistoryPersistence,
@@ -259,7 +260,7 @@ internal sealed class MafRuntimeAgentFactory
                 runtimeOptions.Governance,
                 // Script inspection reads through the effective run scope so
                 // policy evaluation inspects exactly the file the run's tools can
-                // execute — never the runtime construction scope.
+                // execute â€” never the runtime construction scope.
                 new MafScriptPolicyInspectionService(
                     workspaceRoot,
                     contextWorkspaceScope,
@@ -501,12 +502,12 @@ internal sealed class MafRuntimeAgentFactory
         {
             var functionName = context.Function?.Name ?? "unknown";
             var invocationArguments = context.Arguments.ToArray();
-            var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(functionName, invocationArguments);
+            var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(functionName, invocationArguments, capabilityState.ToolPolicies);
             var pathArguments = ToolInvocationPathArgumentResolver.Resolve(functionName, invocationArguments);
             var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode);
             var classification = isRequiredFinalizerTool
                 ? ToolInvocationClassification.Read
-                : AgentToolInvocationPolicyMetadata.Classify(functionName);
+                : capabilityState.ToolPolicies.Classify(functionName);
             var auditScope = WorkspaceExecutionAuditContext.Current;
             var externalTargetAccess = EffectiveExternalTargetAccessResolver.Resolve(
                 configuredWorkspaceAccess,
@@ -550,6 +551,9 @@ internal sealed class MafRuntimeAgentFactory
                 ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
                 ToolInvocationTraces: toolInvocationTraceRecorder.Snapshot())
             {
+                DeclaredCapability = capabilityState.ToolPolicies.TryResolve(functionName, out var declaredCapability)
+                    ? declaredCapability
+                    : null,
                 SourceId = auditScope?.SourceId ?? string.Empty,
                 AllowedManagedArtifactReadRefs = auditScope?.AllowedManagedArtifactReadRefs ?? [],
                 ExecutionGovernance = executionGovernance,
@@ -615,53 +619,65 @@ internal sealed class MafRuntimeAgentFactory
             using var effectScope = AgentToolInvocationEffectScope.Begin();
             try
             {
-                if (AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+                async ValueTask<object?> InvokeCurrentToolAsync(CancellationToken token) {
+                    var unavailable = capabilityState.RuntimeToolMetadata.SingleOrDefault(metadata => metadata.ToolName == functionName)?.Unavailability;
+                    if (unavailable is not null) {
+                        return new AgentToolFailureResult(false, unavailable.Code, unavailable.Message, false) {
+                            EffectState = AgentToolEffectState.NotCommitted
+                        };
+                    }
+
+                    if (AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+                            functionName,
+                            policyDecision,
+                            policyContext,
+                            out var policyDeniedResult))
+                    {
+                        failureMessage = policyDeniedResult;
+                        failureMessageSafeForPersistence = true;
+                        failureCode = "ToolPolicyDenied";
+                        outcome = AgentToolInvocationOutcome.Failed;
+                        effectState = AgentToolEffectState.NotCommitted;
+                        activity?.SetTag("agentframework.tool_policy_recoverable_denial", true);
+                        activity?.SetStatus(ActivityStatusCode.Ok);
+                        logger?.LogInformation(
+                            "Returning recoverable policy denial for tool {ToolName} on governed run {ProcessRunId}, step {ProcessStepId}. Reason={Reason}",
+                            functionName,
+                            policyContext.ProcessRunId,
+                            policyContext.ProcessStepId,
+                            policyDecision.Reason);
+                        return policyDeniedResult;
+                    }
+
+                    AgentToolPolicyBlockGuard.ThrowIfBlocked(
                         functionName,
                         policyDecision,
-                        policyContext,
-                        out var policyDeniedResult))
-                {
-                    failureMessage = policyDeniedResult;
-                    failureMessageSafeForPersistence = true;
-                    failureCode = "ToolPolicyDenied";
-                    outcome = AgentToolInvocationOutcome.Failed;
-                    effectState = AgentToolEffectState.NotCommitted;
-                    activity?.SetTag("agentframework.tool_policy_recoverable_denial", true);
-                    activity?.SetStatus(ActivityStatusCode.Ok);
-                    logger?.LogInformation(
-                        "Returning recoverable policy denial for tool {ToolName} on governed run {ProcessRunId}, step {ProcessStepId}. Reason={Reason}",
-                        functionName,
-                        policyContext.ProcessRunId,
-                        policyContext.ProcessStepId,
-                        policyDecision.Reason);
-                    return policyDeniedResult;
+                        policyContext.HasEffectiveApprovalPath);
+
+                    if (MafToolArgumentBindingFailureMapper.TryCreatePreInvocationFailure(
+                            context.Function as AIFunction,
+                            invocationArguments,
+                            out var argumentFailure))
+                    {
+                        failureMessage = $"{argumentFailure.ErrorCode}: {argumentFailure.Message}";
+                        failureMessageSafeForPersistence = true;
+                        failureCode = argumentFailure.ErrorCode;
+                        canRetryWithCorrectedInput = argumentFailure.CanRetryWithCorrectedInput;
+                        outcome = AgentToolInvocationOutcome.Failed;
+                        effectState = argumentFailure.EffectState;
+                        activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
+                        logger?.LogInformation(
+                            "Returning sanitized pre-invocation argument failure for tool {ToolName} on agent {AgentId}.",
+                            functionName,
+                            agentDefinition.Id);
+                        return argumentFailure;
+                    }
+                    return await next(context, token);
                 }
 
-                AgentToolPolicyBlockGuard.ThrowIfBlocked(
-                    functionName,
-                    policyDecision,
-                    policyContext.HasEffectiveApprovalPath);
-
-                if (MafToolArgumentBindingFailureMapper.TryCreatePreInvocationFailure(
-                        context.Function as AIFunction,
-                        invocationArguments,
-                        out var argumentFailure))
-                {
-                    failureMessage = $"{argumentFailure.ErrorCode}: {argumentFailure.Message}";
-                    failureMessageSafeForPersistence = true;
-                    failureCode = argumentFailure.ErrorCode;
-                    canRetryWithCorrectedInput = argumentFailure.CanRetryWithCorrectedInput;
-                    outcome = AgentToolInvocationOutcome.Failed;
-                    effectState = argumentFailure.EffectState;
-                    activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
-                    logger?.LogInformation(
-                        "Returning sanitized pre-invocation argument failure for tool {ToolName} on agent {AgentId}.",
-                        functionName,
-                        agentDefinition.Id);
-                    return argumentFailure;
-                }
-
-                var result = await next(context, cancellationToken);
+                var result = MafToolRunContext.Current is { } admitted
+                    ? await admitted.InvokeAsync(context.CallContent, InvokeCurrentToolAsync, effectScope, cancellationToken)
+                    : await InvokeCurrentToolAsync(cancellationToken);
                 var assessment = MafRuntimeToolInvocationResultClassifier.Assess(
                     functionName,
                     classification,
@@ -875,7 +891,7 @@ internal sealed class MafRuntimeAgentFactory
             .Where(tool => !string.IsNullOrWhiteSpace(tool.Name))
             .Where(tool =>
             {
-                var classification = AgentToolInvocationPolicyMetadata.Classify(tool.Name);
+                var classification = capabilityState.ToolPolicies.Classify(tool.Name);
                 if (!governance.MutationAllowed && classification == ToolInvocationClassification.Mutation)
                 {
                     return true;
@@ -927,7 +943,7 @@ internal sealed class MafRuntimeAgentFactory
 
         var unusableMutationTools = capabilityState.Tools
             .Where(tool => tool is ApprovalRequiredAIFunction)
-            .Where(tool => AgentToolInvocationPolicyMetadata.Classify(tool.Name) == ToolInvocationClassification.Mutation)
+            .Where(tool => capabilityState.ToolPolicies.Classify(tool.Name) == ToolInvocationClassification.Mutation)
             .ToList();
         if (unusableMutationTools.Count == 0)
         {
@@ -991,10 +1007,9 @@ internal sealed class MafRuntimeAgentFactory
             : instructions.TrimEnd() + finalizerInstructions;
     }
 
-    private static ChatHistoryProvider CreateChatHistoryProvider()
-    {
-        return new InMemoryChatHistoryProvider(new InMemoryChatHistoryProviderOptions
-        {
+    private static ChatHistoryProvider CreateChatHistoryProvider(bool hasToolAdmission) {
+        return new InMemoryChatHistoryProvider(new InMemoryChatHistoryProviderOptions {
+            JsonSerializerOptions = hasToolAdmission ? MafToolProtocolCodec.SerializationOptions : null,
             StorageInputRequestMessageFilter = messages => messages.Where(message =>
                 message.GetAgentRequestMessageSourceType() != AgentRequestMessageSourceType.AIContextProvider &&
                 message.GetAgentRequestMessageSourceType() != AgentRequestMessageSourceType.ChatHistory)

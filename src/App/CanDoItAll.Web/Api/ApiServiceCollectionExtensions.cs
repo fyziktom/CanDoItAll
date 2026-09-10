@@ -66,6 +66,10 @@ public static class ApiServiceCollectionExtensions
         });
         services.AddAuthorization(options =>
         {
+            options.AddPolicy(ApiAuthorizationPolicies.GeneralApi, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.Api));
+            });
             options.AddPolicy(ApiAuthorizationPolicies.IssueTokens, policy =>
             {
                 policy.RequireAuthenticatedUser();

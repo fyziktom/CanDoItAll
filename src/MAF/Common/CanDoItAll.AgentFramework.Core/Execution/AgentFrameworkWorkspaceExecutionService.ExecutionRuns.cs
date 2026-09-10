@@ -254,6 +254,72 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 cancellationToken));
     }
 
+    public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ValidateActivityOperationScope(operation);
+        EnsureRequiredActivityOperationId(operation.StreamId.OperationId, nameof(operation));
+        return ExecuteWithinActivityBoundaryAsync(operation, async () => {
+            var run = await LoadExecutionRunAsync(executionRunId, cancellationToken);
+            EnsureActivityRunBinding(operation, run);
+            var admission = run.ToolAdmission ?? throw new AgentToolAdmissionException("tool-admission.legacy-run",
+                "This legacy run has no durable effect identity to reconcile.");
+            var journal = toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal.");
+            await using var lease = await journal.AcquireCancelledReconciliationAsync(admission.Session.Reference, cancellationToken);
+            using var bound = lease.Bind();
+            var allowed = await CanReadCancelledReceiptsAsync(run, cancellationToken);
+            operation.Report(AgentExecutionActivityPhase.ResolvingSession,
+                "Reconciling original owner receipts without executing tools or contacting the model provider.");
+            var result = await journal.ReconcileCancelledAsync(lease, receiptReconciliationProviders?.ToArray() ?? [], allowed, cancellationToken);
+            var message = result.HasUnknownEffects
+                ? "Cancellation is closed without replay. Some prior effects remain unverified and require owner inspection."
+                : "Cancellation receipt reconciliation completed without replay.";
+            var entry = new ExecutionLogEntry(Guid.NewGuid(), run.AgentId, run.ChatSessionId, DateTimeOffset.UtcNow,
+                ExecutionState.Failed, "cancelled-tool-reconciliation", message) { ExecutionRunId = run.Id };
+            var writer = store as ISandboxWorkspaceExecutionRunMutationStore
+                ?? throw new InvalidOperationException("Cancelled reconciliation requires the canonical run writer.");
+            operation.Report(AgentExecutionActivityPhase.PersistingResult, "Persisting cancellation receipt reconciliation.");
+            var saved = await writer.UpdateExecutionRunDetailAsync(run.Id, current => current with {
+                ExecutionLog = InsertExecutionLogEntry(current.ExecutionLog, entry)
+            }, cancellationToken);
+            NotifyExecutionUpdated(entry);
+            await executionEventSink.PublishAsync(CreateExecutionEvent(saved.Run, entry), cancellationToken);
+            operation.Complete(message);
+            return result;
+        });
+    }
+
+    private async Task<bool> CanReadCancelledReceiptsAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
+        var contextScope = ResolveAdmittedRuntimeContext(run)?.WorkspaceScope
+            ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+        var original = ResolveValidatedExecutionGovernance(run, contextScope, activityWorkspaceIdentity)
+            ?? throw new AgentToolAdmissionException("tool-admission.authority-missing", "The original execution authority was not found.");
+        var source = AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson)
+            ?? throw new AgentToolAdmissionException("tool-admission.context-missing", "The original execution source was not found.");
+        var resolver = executionAuthorityResolver ?? throw new InvalidOperationException("Receipt reconciliation requires current source authority.");
+        try {
+            var current = await resolver.ResolveAsync(new(run.AgentId, source.SourceKind, source.SourceId,
+                original.WorkspaceScope, activityWorkspaceIdentity.DatabaseProfileGeneration,
+                UiAccessHint: null), cancellationToken);
+            if (current.DatabaseProfileId != original.DatabaseProfileId || current.DatabaseProfileGeneration != original.DatabaseProfileGeneration) {
+                throw new AgentToolAdmissionException("tool-admission.profile-changed", "The current profile cannot reconcile another profile's cancelled effect.");
+            }
+
+            return current.AgentId == original.AgentId && current.ReadAllowed && current.WorkspaceScope == original.WorkspaceScope;
+        } catch (AgentExecutionAuthorityMismatchException) {
+            return false;
+        }
+    }
+
+    public Task<ExecutionRunResult> RecoverExecutionRunWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ValidateActivityOperationScope(operation);
+        EnsureRequiredActivityOperationId(operation.StreamId.OperationId, nameof(operation));
+        return ExecuteWithinActivityBoundaryAsync(operation, () => ContinueExecutionRunEntryAsync(operation,
+            executionRunId, operation.StreamId.OperationId, [], false, cancellationToken, recoverAdmittedTools: true));
+    }
+
     private static string DescribeApprovalDecisionPhase(IReadOnlyList<PendingToolApprovalDecision> decisions)
     {
         var approvedCount = decisions.Count(decision => decision.Approved);
@@ -289,7 +355,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentExecutionOperationId activityOperationId,
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool recoverAdmittedTools = false)
     {
         ArgumentNullException.ThrowIfNull(decisions);
         EnsureRequiredActivityOperationId(
@@ -303,10 +370,36 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         activityOperation.Report(
             AgentExecutionActivityPhase.ResolvingSession,
-            "Loading the execution run awaiting approval.");
+            recoverAdmittedTools ? "Loading the original admitted execution for recovery." : "Loading the execution run awaiting approval.");
         var currentRun = await LoadExecutionRunAsync(executionRunId, cancellationToken);
         EnsureActivityRunBinding(activityOperation, currentRun);
-        if (currentRun.PendingApprovals.Count == 0)
+        if (recoverAdmittedTools) {
+            if (currentRun.Outcome == RunOutcome.Cancelled) {
+                throw new AgentToolAdmissionException("tool-admission.cancelled-reconciliation-required",
+                    "Use cancelled-run receipt reconciliation; a cancelled execution cannot resume effects.");
+            }
+
+            RequireRecoverableToolJournal(currentRun);
+            if (currentRun.State == ExecutionState.Completed) {
+                var completed = await LoadExistingExecutionRunResultAsync(executionRunId, cancellationToken);
+                await ValidateAdmittedResultReadAsync(currentRun, cancellationToken);
+                ReportAndTerminalizeExistingResult(activityOperation, completed);
+                return completed;
+            }
+        }
+
+        await using var recoveryLease = recoverAdmittedTools
+            ? await (toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."))
+                .AcquireRunAsync(currentRun.ToolAdmission!.Session.Reference, cancellationToken)
+            : null;
+        using var recoveryLeaseScope = recoveryLease?.Bind();
+        if (recoveryLease is not null) {
+            currentRun = await LoadExecutionRunAsync(executionRunId, cancellationToken);
+            EnsureActivityRunBinding(activityOperation, currentRun);
+            RequireRecoverableToolJournal(currentRun);
+        }
+
+        if (!recoverAdmittedTools && currentRun.PendingApprovals.Count == 0)
         {
             if (currentRun.State is ExecutionState.Completed or ExecutionState.Failed)
             {
@@ -324,13 +417,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("This execution run is already being continued.");
         }
 
-        AgentApprovalDecisionMismatchException.ValidateExactCoverage(decisions, currentRun.PendingApprovals);
+        if (!recoverAdmittedTools) {
+            AgentApprovalDecisionMismatchException.ValidateExactCoverage(decisions, currentRun.PendingApprovals);
+        }
+
+        await ValidateAdmittedResumeAuthorityAsync(currentRun, cancellationToken);
+        ResolveAdmittedRuntimeContext(currentRun);
         var allApproved = decisions.All(decision => decision.Approved);
 
-        var restoredCheckpoint = await executionCheckpointBridge
-            .ValidatePendingApprovalResumeAsync(
-                currentRun,
-                cancellationToken);
+        var restoredCheckpoint = recoverAdmittedTools ? null : await executionCheckpointBridge
+            .ValidatePendingApprovalResumeAsync(currentRun, cancellationToken);
         var preparation = await AcquireExecutionPreparationAsync(
             activityOperation,
             currentRun.AgentId,
@@ -349,14 +445,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             try
             {
-                continuationStart =
-                    await BeginPendingApprovalContinuationAsync(
-                        preparation,
-                        currentRun,
-                        continuationProvider,
-                        decisions,
-                        autoApprovePendingToolCalls,
-                        cancellationToken);
+                continuationStart = recoverAdmittedTools
+                    ? await BeginAdmittedRunRecoveryAsync(preparation, currentRun, continuationProvider, recoveryLease!, cancellationToken)
+                    : await BeginPendingApprovalContinuationAsync(preparation, currentRun, continuationProvider, decisions,
+                        autoApprovePendingToolCalls, cancellationToken);
                 break;
             }
             catch (AgentExecutionPreparationStaleException)
@@ -438,13 +530,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             activityOperation.Report(
                 AgentExecutionActivityPhase.ResolvingProvider,
-                "Using the canonical provider lease for approval continuation.");
+                recoverAdmittedTools ? "Using the canonical provider lease for admitted-run recovery." : "Using the canonical provider lease for approval continuation.");
             activityOperation.Report(
                 AgentExecutionActivityPhase.PreparingCapabilities,
-                "Using prepared tools and memory for approval continuation.");
+                recoverAdmittedTools ? "Using current prepared tools and memory for admitted-run recovery." : "Using prepared tools and memory for approval continuation.");
             activityOperation.Report(
                 AgentExecutionActivityPhase.PreparingRuntime,
-                "Preparing the agent runtime for approval continuation.");
+                recoverAdmittedTools ? "Restoring the saved admitted runtime invocation." : "Preparing the agent runtime for approval continuation.");
             handoffOptions = await ResolveHandoffExecutionOptionsAsync(
                     agent,
                     prepared.CatalogSnapshot.Catalog,
@@ -506,8 +598,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 agent.Id,
                 run.ChatSessionId,
                 ExecutionState.WaitingOnTool,
-                DescribeApprovalDecisionPhase(decisions),
-                DescribeApprovalDecisionMessage(decisions),
+                recoverAdmittedTools ? "Recovery" : DescribeApprovalDecisionPhase(decisions),
+                recoverAdmittedTools ? "Recovering the original admitted input and serial tool batch." : DescribeApprovalDecisionMessage(decisions),
                 cancellationToken);
 
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
@@ -532,30 +624,41 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
                     "Waiting for the configured provider to continue the run.");
-                runtimeResponse = TrackRuntimeResponse(await continuationRuntime.ContinueAsync(
-                    new AgentRuntimeContinuationRequest(
-                        runtimeAgent,
-                        provider,
-                        runtimeSession,
-                        attachedCapabilities,
-                        memory,
-                        Decisions: ToRuntimeApprovalDecisions(decisions),
+                if (recoverAdmittedTools) {
+                    runtimeResponse = TrackRuntimeResponse(await executionRuntime.ExecuteAsync(new AgentRuntimeExecutionRequest(
+                        runtimeAgent, provider, runtimeSession, attachedCapabilities, memory,
+                        prepared.OriginalRun.ToolAdmission!.OriginalInput!.Content,
                         string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
-                        (state, phase, message) => ReportRuntimeProgressAsync(
-                            activityOperation,
-                            run,
-                            agent.Id,
-                            state,
-                            phase,
-                            message,
-                            cancellationToken),
-                        SuppressApprovalRequirements: false,
-                        StructuredOutput: structuredOutput,
-                        ExecutionOptions: runtimeExecutionOptions)
-                    {
-                        ResolvedApprovalRequestIds = ResolveDecidedApprovalRequestIds(prepared.RunApprovals)
-                    },
-                    runtimeCancellationToken));
+                        (state, phase, message) => ReportRuntimeProgressAsync(activityOperation, run, agent.Id,
+                            state, phase, message, cancellationToken),
+                        SuppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                        StructuredOutput: structuredOutput, ExecutionOptions: runtimeExecutionOptions), runtimeCancellationToken));
+                } else {
+                    runtimeResponse = TrackRuntimeResponse(await continuationRuntime.ContinueAsync(
+                        new AgentRuntimeContinuationRequest(
+                            runtimeAgent,
+                            provider,
+                            runtimeSession,
+                            attachedCapabilities,
+                            memory,
+                            Decisions: ToRuntimeApprovalDecisions(decisions),
+                            string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
+                            (state, phase, message) => ReportRuntimeProgressAsync(
+                                activityOperation,
+                                run,
+                                agent.Id,
+                                state,
+                                phase,
+                                message,
+                                cancellationToken),
+                            SuppressApprovalRequirements: false,
+                            StructuredOutput: structuredOutput,
+                            ExecutionOptions: runtimeExecutionOptions)
+                        {
+                            ResolvedApprovalRequestIds = ResolveDecidedApprovalRequestIds(prepared.RunApprovals)
+                        },
+                        runtimeCancellationToken));
+                }
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
@@ -669,7 +772,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     };
                 }
 
-                var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse);
+                var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse, toolPolicies);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
                     prepared.RunApprovals,
@@ -834,7 +937,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     failureModel);
             var failureToolReceipts = CreateToolInvocationTraceReceipts(
                 run,
-                failureToolInvocationTraces);
+                failureToolInvocationTraces,
+                toolPolicies);
 
             var failedRun = run with
             {
@@ -1186,6 +1290,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         request.StructuredOutput,
                         jsonSchemaOutput,
                         inputAttachments,
+                        request.TransientContext,
                         request.InitialActivityOperationId,
                         cancellationToken);
                     break;
@@ -1530,7 +1635,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     };
                 }
 
-                var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse);
+                var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse, toolPolicies);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
                     [],
@@ -1695,7 +1800,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     failureModel);
             var failureToolReceipts = CreateToolInvocationTraceReceipts(
                 run,
-                failureToolInvocationTraces);
+                failureToolInvocationTraces,
+                toolPolicies);
 
             var failedRun = run with
             {
@@ -2486,7 +2592,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ArgumentNullException.ThrowIfNull(run);
 
         jsonSchemaOutput ??= AgentJsonSchemaOutputContractProcessor.Restore(run);
-        var transientContext = transientContextRegistry.Resolve(run);
+        var transientContext = ResolveAdmittedRuntimeContext(run);
         return BuildRuntimeExecutionOptions(
             run,
             activityOperationId,
@@ -2541,6 +2647,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ContextIntent: CreateRuntimeContextIntent(run, contextWorkspaceScope),
             InputAttachments: inputAttachments)
         {
+            AdmittedToolSession = run.ToolAdmission?.Session.Reference,
+            ToolAdmissionSupport = run.ToolAdmission?.Support ?? AgentToolAdmissionSupport.Recoverable,
             ActivityOperationId = activityOperationId,
             History = AgentHistoryInvocation.Create(run, contextWorkspaceScope),
             TransientContext = transientContext,

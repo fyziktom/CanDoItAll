@@ -42,6 +42,7 @@ public static class AgentFrameworkServiceCollectionExtensions
         }
 
         services.AddLogging();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
         services.AddDataProtection();
         services.TryAddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
         services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
@@ -55,7 +56,8 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddSingleton<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
-        services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<IAgentPackageService>(serviceProvider => new ZipAgentPackageService(
+            normalizedWorkspaceRoot, resolvedScope, serviceProvider.GetRequiredService<AgentToolPolicyCatalog>()));
         services.TryAddSingleton<WorkspaceExecutableLocator>();
         services.TryAddScoped<IWorkspaceFileService>(serviceProvider => new WorkspaceFileService(
             normalizedWorkspaceRoot,

@@ -372,6 +372,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         while (currentResponse.PendingApprovals.Count > 0 && ShouldAutoApprovePendingToolCalls(agent, currentSession))
         {
+            if (run.ToolAdmission is { Support: AgentToolAdmissionSupport.Recoverable, Segments.Length: > 0 }) {
+                var admittedRun = await TryPersistAutomaticAdmissionDecisionAsync(run.Id, currentResponse.PendingApprovals, cancellationToken);
+                if (admittedRun is null) {
+                    break;
+                }
+
+                run = admittedRun;
+            }
+
             foreach (var pendingApproval in currentResponse.PendingApprovals)
             {
                 resolvedApprovalIds.Add(pendingApproval.ApprovalId);
@@ -443,6 +452,39 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         return (currentSession, currentResponse, totalInputTokens, totalCachedInputTokens, totalOutputTokens, totalToolCalls);
+    }
+
+    private async Task<ExecutionRunRecord?> TryPersistAutomaticAdmissionDecisionAsync(Guid runId,
+        IReadOnlyList<PendingToolApprovalRecord> expected, CancellationToken cancellationToken) {
+        var mutations = TryGetExecutionRunMutationStore()
+            ?? throw new InvalidOperationException("Durable auto-approval requires the canonical current-state run writer.");
+        var approved = false;
+        var detail = await mutations.UpdateExecutionRunDetailAsync(runId, current => {
+            var journal = current.Run.ToolAdmission
+                ?? throw new InvalidOperationException("The admitted run lost its tool journal.");
+            if (!current.Run.PendingApprovals.SequenceEqual(expected)) {
+                throw new AgentToolAdmissionException("tool-admission.stale-approval", "Auto-approval no longer matches the saved pending batch.");
+            }
+
+            if (expected.Any(approval => AgentToolJournalTransitions.RequireProposal(journal,
+                    approval.ToolAdmission ?? throw new InvalidOperationException("The saved approval has no intent binding."))
+                    .Payload.Effect == AgentToolProposalEffect.SensitiveDisclosure)) {
+                return current;
+            }
+
+            var decisions = expected.Select(approval => new PendingToolApprovalDecision(approval.ApprovalId, true) {
+                ToolAdmission = approval.ToolAdmission
+            }).ToArray();
+            var now = DateTimeOffset.UtcNow;
+            var audit = ExecutionRunStateTransitions.ApplyApprovalDecision(current.Approvals, current.Run,
+                decisions, now, "auto-approval", runId.ToString("N"), toolPolicies);
+            var run = ExecutionRunStateTransitions.CreateContinuationStartRun(current.Run, true, true, now) with {
+                ToolAdmission = AgentToolJournalTransitions.ApplyDecisions(journal, expected, decisions, automatic: true)
+            };
+            approved = true;
+            return current with { Run = run, Approvals = audit.RunApprovals };
+        }, cancellationToken);
+        return approved ? detail.Run : null;
     }
 
     private static IReadOnlySet<string> ResolveDecidedApprovalRequestIds(

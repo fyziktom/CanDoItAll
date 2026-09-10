@@ -78,6 +78,7 @@ internal static class ExecutionRunStateTransitions
             var record = existingIndex >= 0
                 ? approvals[existingIndex] with
                 {
+                    ToolAdmission = pendingApproval.ToolAdmission,
                     CallId = pendingApproval.CallId,
                     ToolName = pendingApproval.ToolName,
                     ToolKind = pendingApproval.ToolKind,
@@ -118,8 +119,8 @@ internal static class ExecutionRunStateTransitions
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         DateTimeOffset decidedAtUtc,
         string decisionSourceKind,
-        string decisionSourceId)
-    {
+        string decisionSourceId,
+        AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(existingRunApprovals);
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(decisions);
@@ -154,7 +155,8 @@ internal static class ExecutionRunStateTransitions
                     Details = pendingApproval.Details,
                     ArgumentsJson = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
                         pendingApproval.ToolName,
-                        pendingApproval.ArgumentsJson),
+                        pendingApproval.ArgumentsJson,
+                        toolPolicies),
                     Status = approved ? ExecutionApprovalStatus.Approved : ExecutionApprovalStatus.Rejected,
                     DecidedAtUtc = decidedAtUtc,
                     DecisionSourceKind = decisionSourceKind,
@@ -215,7 +217,9 @@ internal static class ExecutionRunStateTransitions
             DecidedAtUtc: null,
             DecisionSourceKind: string.Empty,
             DecisionSourceId: string.Empty,
-            DecisionNotes: string.Empty);
+            DecisionNotes: string.Empty) {
+            ToolAdmission = pendingApproval.ToolAdmission
+        };
     }
 
     private static long NextRevision(long revision)

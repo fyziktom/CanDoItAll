@@ -564,6 +564,16 @@ public interface IAgentFrameworkWorkspaceService :
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
+    Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support durable cancelled-run reconciliation.");
+
+    Task<ExecutionRunResult> RecoverExecutionRunAsync(
+        Guid executionRunId,
+        AgentExecutionOperationId activityOperationId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support durable admitted-run recovery.");
+
     Task<AgentChatRunResult> SendMessageAsync(
         Guid agentId,
         Guid? chatSessionId,

@@ -75,6 +75,8 @@ public sealed record ToolCapabilityMetadata(
     ToolCapabilityBrowserProofRole BrowserProofRole,
     ToolCapabilityIdempotencyDescriptor IdempotencyDescriptor)
 {
+    public string? BusinessArgumentRetentionScheme { get; init; }
+
     public AgentToolPolicyMetadata ToPolicyMetadata()
     {
         return new AgentToolPolicyMetadata(
@@ -301,13 +303,6 @@ public static class ToolCapabilityRegistry
                 AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
                 ToolCapabilitySideEffectKind.RuntimeLaunch,
                 StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
-            Read(AgentToolInvocationPolicyMetadata.PromptGallerySearch, ToolCapabilitySideEffectKind.InternalDataRead),
-            Read(AgentToolInvocationPolicyMetadata.PromptGalleryItemGet, ToolCapabilitySideEffectKind.InternalDataRead),
-            Read(AgentToolInvocationPolicyMetadata.PromptGalleryCatalogSearch, ToolCapabilitySideEffectKind.InternalDataRead),
-            Read(AgentToolInvocationPolicyMetadata.PromptGalleryItemEditorGet, ToolCapabilitySideEffectKind.InternalDataRead),
-            Mutation(AgentToolInvocationPolicyMetadata.PromptGalleryDraftCreate, ToolCapabilitySideEffectKind.InternalStateMutation),
-            Mutation(AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate, ToolCapabilitySideEffectKind.InternalStateMutation),
-            Mutation(AgentToolInvocationPolicyMetadata.PromptGalleryVersionCreate, ToolCapabilitySideEffectKind.InternalStateMutation),
             Read(AgentToolInvocationPolicyMetadata.WorkflowCuratorCatalogSearch, ToolCapabilitySideEffectKind.InternalDataRead),
             Read(AgentToolInvocationPolicyMetadata.WorkflowCuratorDefinitionEditorGet, ToolCapabilitySideEffectKind.InternalDataRead),
             Read(AgentToolInvocationPolicyMetadata.WorkflowCuratorAuthoringOptionsGet, ToolCapabilitySideEffectKind.InternalDataRead),
@@ -336,6 +331,13 @@ public static class ToolCapabilityRegistry
             Read(AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch, ToolCapabilitySideEffectKind.InternalDataRead),
             Mutation(AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate, ToolCapabilitySideEffectKind.InternalStateMutation),
             Mutation(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, ToolCapabilitySideEffectKind.MediaGeneration, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Read(AgentToolInvocationPolicyMetadata.HrSimpleChatsSearch, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.HrSimpleChatCreationOptionsGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.HrSimpleChatSettingsGet, ToolCapabilitySideEffectKind.InternalDataRead) with { RequiresApprovalByDefault = true },
+            Mutation(AgentToolInvocationPolicyMetadata.HrSimpleChatCreate, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Mutation(AgentToolInvocationPolicyMetadata.HrSimpleChatSettingsUpdate, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Mutation(AgentToolInvocationPolicyMetadata.HrSimpleChatStatusChange, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Read(AgentToolInvocationPolicyMetadata.HrSimpleChatCreateReceiptGet, ToolCapabilitySideEffectKind.InternalDataRead),
             Read(AgentToolInvocationPolicyMetadata.HrAgentsSearch, ToolCapabilitySideEffectKind.InternalDataRead),
             Read(AgentToolInvocationPolicyMetadata.HrAgentSettingsGet, ToolCapabilitySideEffectKind.InternalDataRead),
             Read(AgentToolInvocationPolicyMetadata.HrAgentCreationOptionsGet, ToolCapabilitySideEffectKind.InternalDataRead),

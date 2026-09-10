@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Agents.SimpleChats;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
@@ -102,6 +103,8 @@ public static class RuntimeHostServiceCollectionExtensions
             provider.GetRequiredService<IOptions<LlmChatStreamingOptions>>().Value);
         services.AddSingleton(provider =>
             provider.GetRequiredService<IOptions<LlmChatTransferOptions>>().Value);
+        services.TryAddSingleton<IAgentToolAdmissionVerifier, AgentToolAdmissionVerifier>();
+        services.AddHrSimpleChatDefinitionTools();
         services.AddSimpleChatsApplication();
         services.AddSimpleChatsRuntime();
         services.AddLlmChatsPersistence();

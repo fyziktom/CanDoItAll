@@ -1431,7 +1431,9 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             WorkspaceRuntimeServices workspaceRuntimeServices,
             string runtimeSessionKey = "",
             IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
-            AgentExecutionGovernanceSnapshot? governance = null)
+            AgentExecutionGovernanceSnapshot? governance = null,
+            AgentToolSessionReference? admittedToolSession = null,
+            AgentToolAdmissionSupport toolAdmissionSupport = AgentToolAdmissionSupport.Recoverable)
             => throw new NotSupportedException();
     }
 }

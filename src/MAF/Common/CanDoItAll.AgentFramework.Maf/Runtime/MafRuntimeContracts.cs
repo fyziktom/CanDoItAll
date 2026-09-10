@@ -9,6 +9,8 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class RuntimeCapabilityState
 {
+    public AgentToolPolicyCatalog ToolPolicies { get; set; } = AgentToolPolicyCatalog.BuiltIn;
+
     public List<AITool> Tools { get; } = [];
 
     public List<AgentRuntimeToolProviderDescriptor> RuntimeToolProviderDescriptors { get; } = [];

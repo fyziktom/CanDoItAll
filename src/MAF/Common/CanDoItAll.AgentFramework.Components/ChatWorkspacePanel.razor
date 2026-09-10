@@ -1,6 +1,7 @@
 @using System.Collections.Immutable
 @using CanDoItAll.AgentFramework.UI.Chat
 @inject DialogService DialogService
+@inject AgentToolPolicyCatalog ToolPolicies
 @implements IDisposable
 
 <AgentChatSurface Presentation="@MapPresentation()" Intent="HandleIntentAsync" Navigation="@Navigation" NavigationIntent="@NavigationIntent"
@@ -214,8 +215,8 @@
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
 
-    internal static string FormatApprovalArguments(string? argumentsJson, string? toolName = null)
-        => AgentToolArgumentDisplayFormatter.DescribeArguments(argumentsJson, toolName);
+    internal static string FormatApprovalArguments(string? argumentsJson, string? toolName = null, AgentToolPolicyCatalog? toolPolicies = null)
+        => AgentToolArgumentDisplayFormatter.DescribeArguments(argumentsJson, toolName, toolPolicies);
 
     private Task HandleAttachmentFilesSelectedAsync(InputFileChangeEventArgs args)
         => AttachmentFilesSelected.InvokeAsync(args);
@@ -486,7 +487,7 @@
             TransientMessages = TransientMessagePresentations.ToImmutableArray(),
             EmptyState = TranscriptEmptyState,
             Approvals = PendingApprovals.Select(item => new ChatApprovalPresentation(item.ApprovalId, item.ToolKind,
-                item.ToolName, AgentExecutionDisplayText.Format(item.Details, 512), FormatApprovalArguments(item.ArgumentsJson, item.ToolName))).ToImmutableArray(),
+                item.ToolName, AgentExecutionDisplayText.Format(item.Details, 512), FormatApprovalArguments(item.ArgumentsJson, item.ToolName, ToolPolicies))).ToImmutableArray(),
             ExecutionSteps = ResolveVisibleExecutionEntries(entries).Select(item => new ChatExecutionStep(item.Id,
                 item.State.ToString(), ResolveExecutionTone(item.State), BoundExecutionText(item.Phase),
                 ChatPresentationTime.Format(item.CreatedAtUtc), BuildEntryPreview(item))).ToImmutableArray(),

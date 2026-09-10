@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.SharedKernel;
 
@@ -28,6 +29,7 @@ public sealed record LlmChatDefinitionCreateScope {
 }
 
 public readonly record struct LlmChatDefinitionCreateIntentId {
+    [JsonConstructor]
     public LlmChatDefinitionCreateIntentId(Guid value) {
         ArgumentOutOfRangeException.ThrowIfEqual(value, Guid.Empty);
         Value = value;

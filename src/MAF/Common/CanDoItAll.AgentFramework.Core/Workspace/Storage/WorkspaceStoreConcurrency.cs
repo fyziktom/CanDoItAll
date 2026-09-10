@@ -15,7 +15,8 @@ public static class ExecutionRunSessionConcurrencyPolicy
     public static bool BlocksSession(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
-        return run.PendingApprovals.Count > 0 ||
+        return run.ToolAdmission?.HasUnresolvedEffects == true ||
+               run.PendingApprovals.Count > 0 ||
                BlocksSession(run.State);
     }
 

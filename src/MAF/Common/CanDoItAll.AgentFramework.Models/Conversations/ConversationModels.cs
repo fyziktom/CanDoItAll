@@ -20,11 +20,15 @@ public sealed record PendingToolApprovalRecord(
     string ToolName,
     string ToolKind,
     string Details,
-    string ArgumentsJson);
+    string ArgumentsJson) {
+    public AgentToolApprovalBinding? ToolAdmission { get; init; }
+}
 
 public sealed record PendingToolApprovalDecision(
     string ApprovalId,
-    bool Approved);
+    bool Approved) {
+    public AgentToolApprovalBinding? ToolAdmission { get; init; }
+}
 
 public sealed record ChatSessionRuntimeCompatibilityRecord
 {
@@ -680,6 +684,15 @@ public sealed record AgentRuntimeExecutionOptions(
     public AgentExecutionOperationId? ActivityOperationId { get; init; }
 
     [JsonIgnore]
+    public AgentToolSessionReference? AdmittedToolSession { get; init; }
+
+    [JsonIgnore]
+    public AgentToolAdmissionSupport ToolAdmissionSupport { get; init; }
+
+    [JsonIgnore]
+    public bool RequireDurableToolProtocol { get; init; }
+
+    [JsonIgnore]
     public CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext History { get; init; } =
         CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext.Create(
             CanDoItAll.AgentFramework.ProviderHistory.HistoryWorkload.Agent);
@@ -864,6 +877,9 @@ public sealed record ExecutionRunRecord(
     public string FailureProviderName { get; init; } = string.Empty;
 
     public string FailureModel { get; init; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentToolJournalRecord? ToolAdmission { get; init; }
 }
 
 public sealed record ExecutionApprovalRecord(
@@ -879,7 +895,9 @@ public sealed record ExecutionApprovalRecord(
     DateTimeOffset? DecidedAtUtc,
     string DecisionSourceKind,
     string DecisionSourceId,
-    string DecisionNotes);
+    string DecisionNotes) {
+    public AgentToolApprovalBinding? ToolAdmission { get; init; }
+}
 
 public sealed record AgentChatRunOptions(
     AgentExecutionOperationId InitialActivityOperationId,

@@ -55,8 +55,11 @@ public sealed partial class AgentFrameworkWorkspaceService :
         IProviderRuntimeProfileSource? providerRuntimeProfileSource = null,
         IEnumerable<IAgentExecutionProviderSelectionPolicy>? providerSelectionPolicies = null,
         IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null,
-        WorkspaceRuntimeServices? ownedWorkspaceBundle = null)
-    {
+        WorkspaceRuntimeServices? ownedWorkspaceBundle = null,
+        AgentToolAdmissionJournal? toolAdmissionJournal = null,
+        IAgentExecutionAuthorityResolver? executionAuthorityResolver = null,
+        IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
+        AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
         ArgumentNullException.ThrowIfNull(executionRuntime);
@@ -141,7 +144,11 @@ public sealed partial class AgentFrameworkWorkspaceService :
             outputRepairService,
             workspacePathResolutionService,
             providerSelectionPolicies,
-            runCriticalityPolicies);
+            runCriticalityPolicies,
+            toolAdmissionJournal,
+            executionAuthorityResolver,
+            receiptReconciliationProviders,
+            toolPolicies);
 
         executionService.ExecutionUpdated += HandleExecutionUpdated;
     }

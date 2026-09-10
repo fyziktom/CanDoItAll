@@ -39,7 +39,9 @@ internal interface IRuntimeCapabilityComposer
         WorkspaceRuntimeServices workspaceRuntimeServices,
         string runtimeSessionKey = "",
         IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
-        AgentExecutionGovernanceSnapshot? governance = null);
+        AgentExecutionGovernanceSnapshot? governance = null,
+        AgentToolSessionReference? admittedToolSession = null,
+        AgentToolAdmissionSupport toolAdmissionSupport = AgentToolAdmissionSupport.Recoverable);
 }
 
 internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
@@ -112,9 +114,11 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         var imageAnalysisService = serviceProvider.GetService<IAgentImageAnalysisService>()
             ?? throw new InvalidOperationException(
                 $"The MAF provider runtime service graph is incomplete. Missing: {nameof(IAgentImageAnalysisService)}. Register AddMafProviderRuntimeServices().");
+        var toolPolicies = serviceProvider.GetService<AgentToolPolicyCatalog>()
+            ?? new AgentToolPolicyCatalog(serviceProvider.GetServices<ToolCapabilityMetadata>());
         var runtimeToolProviderComposer = serviceProvider.GetService(typeof(IRuntimeToolProviderComposer)) is IRuntimeToolProviderComposer resolvedComposer
             ? resolvedComposer
-            : RuntimeToolProviderComposer.Default;
+            : new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(toolPolicies), toolPolicies);
         var compositionMetrics = serviceProvider.GetService(typeof(IMafRuntimeCompositionMetrics)) is IMafRuntimeCompositionMetrics resolvedMetrics
             ? resolvedMetrics
             : NoOpMafRuntimeCompositionMetrics.Instance;
@@ -189,7 +193,9 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         WorkspaceRuntimeServices workspaceRuntimeServices,
         string runtimeSessionKey = "",
         IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
-        AgentExecutionGovernanceSnapshot? governance = null)
+        AgentExecutionGovernanceSnapshot? governance = null,
+        AgentToolSessionReference? admittedToolSession = null,
+        AgentToolAdmissionSupport toolAdmissionSupport = AgentToolAdmissionSupport.Recoverable)
     {
         ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var totalStopwatch = Stopwatch.StartNew();
@@ -284,7 +290,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     contextIntent,
                     runtimeSessionKey,
                     contextAttachments,
-                    governance));
+                    governance,
+                    admittedToolSession, toolAdmissionSupport));
             await TrackAsync(
                 "capability.a2a-tools",
                 () => AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements));
@@ -388,7 +395,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             auditScope?.InvocationExternalTargetScopeIsAuthoritative == true);
         var writeOperationsAvailable = auditScope?.ProcessAllowsProductMutation != false &&
                                        state.Tools.Any(tool =>
-                                           ToolCapabilityRegistry.TryResolve(tool.Name, out var capability) &&
+                                           state.ToolPolicies.TryResolve(tool.Name, out var capability) &&
                                            capability.CanMutateProduct);
         var content = EffectiveExternalTargetContextBuilder.Build(
             accessScope,

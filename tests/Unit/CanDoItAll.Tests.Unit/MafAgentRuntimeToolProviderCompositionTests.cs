@@ -461,7 +461,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
 
         Assert.Contains("without a registered invocation policy classification", exception.Message, StringComparison.Ordinal);
         Assert.Contains(unregisteredToolName, exception.Message, StringComparison.Ordinal);
-        Assert.Contains(nameof(ToolCapabilityRegistry), exception.Message, StringComparison.Ordinal);
+        Assert.Contains("host invocation policy catalog", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

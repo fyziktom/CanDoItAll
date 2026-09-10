@@ -74,6 +74,8 @@ public sealed record ToolInvocationPolicyContext(
     IReadOnlyList<AgentToolInvocationTrace>? ToolInvocationTraces = null,
     IReadOnlyList<string>? ProcessProductMutationRequiredBranchOutcomeKeys = null)
 {
+    public ToolCapabilityMetadata? DeclaredCapability { get; init; }
+
     public string SourceId { get; init; } = string.Empty;
 
     public IReadOnlyList<string> AllowedManagedArtifactReadRefs { get; init; } = [];
@@ -1060,8 +1062,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     {
         public IReadOnlyList<OperationRequirement> Resolve(ToolInvocationPolicyContext context)
         {
-            if (!ToolCapabilityRegistry.TryResolve(context.ToolName, out var capability))
-            {
+            var capability = context.DeclaredCapability ??
+                (ToolCapabilityRegistry.TryResolve(context.ToolName, out var registered) ? registered : null);
+            if (capability is null) {
                 return [];
             }
 
@@ -1837,8 +1840,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             ToolInvocationPolicyContext context,
             string signature)
         {
-            if (StartsBrowserInteractionEpoch(context.ToolName))
-            {
+            if (StartsBrowserInteractionEpoch(context)) {
                 validationEpoch++;
                 return null;
             }
@@ -1871,14 +1873,10 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             validationEpoch++;
         }
 
-        private static bool StartsBrowserInteractionEpoch(string toolName)
-        {
-            if (!ToolCapabilityRegistry.TryResolve(toolName, out var capability))
-            {
-                return false;
-            }
-
-            return capability.BrowserProofRole == ToolCapabilityBrowserProofRole.Interaction;
+        private static bool StartsBrowserInteractionEpoch(ToolInvocationPolicyContext context) {
+            var capability = context.DeclaredCapability ??
+                (ToolCapabilityRegistry.TryResolve(context.ToolName, out var registered) ? registered : null);
+            return capability?.BrowserProofRole == ToolCapabilityBrowserProofRole.Interaction;
         }
     }
 
@@ -2767,13 +2765,19 @@ public static class AgentToolInvocationPolicyMetadata
     private const string RedactedArgumentValue = "<redacted>";
     private const string InvalidApprovalArgumentsRetentionScheme = "approval-invalid-json-redacted-v1";
     private const string HrApprovalAuditRetentionScheme = "hr-approval-redacted-v1";
-    private const string PromptCuratorApprovalAuditRetentionScheme = "prompt-curator-approval-redacted-v1";
     private const string WorkflowCuratorApprovalAuditRetentionScheme = "workflow-curator-approval-redacted-v1";
     private const string CapabilityCuratorApprovalAuditRetentionScheme = "capability-curator-approval-redacted-v1";
     private const string SchedulerApprovalAuditRetentionScheme = "scheduler-approval-redacted-v1";
 
     private static readonly IReadOnlySet<string> SensitiveHrArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
+        HrSimpleChatsSearch,
+        HrSimpleChatCreationOptionsGet,
+        HrSimpleChatSettingsGet,
+        HrSimpleChatCreate,
+        HrSimpleChatSettingsUpdate,
+        HrSimpleChatStatusChange,
+        HrSimpleChatCreateReceiptGet,
         HrAgentsSearch,
         HrAgentCreate,
         HrAgentSettingsUpdate,
@@ -2783,14 +2787,6 @@ public static class AgentToolInvocationPolicyMetadata
         HrCrmPartyCreate,
         HrCrmPartyAffiliationsList,
         HrCrmAffiliationUpsert
-    };
-
-    private static readonly IReadOnlySet<string> SensitivePromptCuratorArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        PromptGalleryCatalogSearch,
-        PromptGalleryDraftCreate,
-        PromptGalleryDraftUpdate,
-        PromptGalleryVersionCreate
     };
 
     private static readonly IReadOnlySet<string> SensitiveWorkflowCuratorArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -2823,6 +2819,15 @@ public static class AgentToolInvocationPolicyMetadata
 
     private static readonly IReadOnlySet<string> SensitiveManagedArgumentPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
+        "avatarImageUrl",
+        "modelParameterConfigurationJson",
+        "responseFormat",
+        "revisionReason",
+        "schemaDescription",
+        "schemaJson",
+        "schemaName",
+        "settings",
+        "systemPrompt",
         "affiliationId",
         "allowedExternalRoots",
         "allowedWorkingDirectories",
@@ -2942,13 +2947,6 @@ public static class AgentToolInvocationPolicyMetadata
     public const string WorkflowsRunStatusGet = "workflows_run_status_get";
     public const string WorkflowsRunCancel = "workflows_run_cancel";
     public const string WorkflowsExternalResponseSubmit = "workflows_external_response_submit";
-    public const string PromptGallerySearch = "prompt_gallery_search";
-    public const string PromptGalleryItemGet = "prompt_gallery_item_get";
-    public const string PromptGalleryCatalogSearch = ToolContractCatalog.PromptGalleryCatalogSearch;
-    public const string PromptGalleryItemEditorGet = ToolContractCatalog.PromptGalleryItemEditorGet;
-    public const string PromptGalleryDraftCreate = ToolContractCatalog.PromptGalleryDraftCreate;
-    public const string PromptGalleryDraftUpdate = ToolContractCatalog.PromptGalleryDraftUpdate;
-    public const string PromptGalleryVersionCreate = ToolContractCatalog.PromptGalleryVersionCreate;
     public const string WorkflowCuratorCatalogSearch = ToolContractCatalog.WorkflowCuratorCatalogSearch;
     public const string WorkflowCuratorDefinitionEditorGet = ToolContractCatalog.WorkflowCuratorDefinitionEditorGet;
     public const string WorkflowCuratorAuthoringOptionsGet = ToolContractCatalog.WorkflowCuratorAuthoringOptionsGet;
@@ -2968,6 +2966,13 @@ public static class AgentToolInvocationPolicyMetadata
     public const string SchedulerWorkflowSchedulesSearch = ToolContractCatalog.SchedulerWorkflowSchedulesSearch;
     public const string SchedulerWorkflowScheduleCreate = ToolContractCatalog.SchedulerWorkflowScheduleCreate;
     public const string ImageGenerationCreate = "image_generation_create";
+    public const string HrSimpleChatsSearch = "hr_simple_chats_search";
+    public const string HrSimpleChatCreationOptionsGet = "hr_simple_chat_creation_options_get";
+    public const string HrSimpleChatSettingsGet = "hr_simple_chat_settings_get";
+    public const string HrSimpleChatCreate = "hr_simple_chat_create";
+    public const string HrSimpleChatSettingsUpdate = "hr_simple_chat_settings_update";
+    public const string HrSimpleChatStatusChange = "hr_simple_chat_status_change";
+    public const string HrSimpleChatCreateReceiptGet = "hr_simple_chat_create_receipt_get";
     public const string HrAgentsSearch = "hr_agents_search";
     public const string HrAgentSettingsGet = "hr_agent_settings_get";
     public const string HrAgentCreationOptionsGet = "hr_agent_creation_options_get";
@@ -3134,22 +3139,22 @@ public static class AgentToolInvocationPolicyMetadata
 
     public static IReadOnlyList<string> ProjectStructureMutationTools => ProjectStructureMutationToolNames.ToArray();
 
-    public static ToolInvocationClassification Classify(string? toolName)
-        => ToolCapabilityRegistry.Classify(toolName);
+    public static ToolInvocationClassification Classify(string? toolName, AgentToolPolicyCatalog? catalog = null)
+        => (catalog ?? AgentToolPolicyCatalog.BuiltIn).Classify(toolName);
 
-    public static bool IsMutationTool(string toolName)
-        => ToolCapabilityRegistry.IsMutationTool(toolName);
+    public static bool IsMutationTool(string toolName, AgentToolPolicyCatalog? catalog = null)
+        => Classify(toolName, catalog) == ToolInvocationClassification.Mutation;
 
-    public static bool IsValidationTool(string toolName)
-        => ToolCapabilityRegistry.IsValidationTool(toolName);
+    public static bool IsValidationTool(string toolName, AgentToolPolicyCatalog? catalog = null)
+        => Classify(toolName, catalog) == ToolInvocationClassification.Validation;
 
     public static bool IsProjectStructureMutationTool(string toolName)
     {
         return ProjectStructureMutationToolNames.Contains(toolName, StringComparer.OrdinalIgnoreCase);
     }
 
-    public static bool RequiresApprovalByDefault(string toolName)
-        => ToolCapabilityRegistry.RequiresApprovalByDefault(toolName);
+    public static bool RequiresApprovalByDefault(string toolName, AgentToolPolicyCatalog? catalog = null)
+        => (catalog ?? AgentToolPolicyCatalog.BuiltIn).RequiresApprovalByDefault(toolName);
 
     public static IReadOnlyDictionary<string, string> RedactArguments(
         IEnumerable<KeyValuePair<string, object?>> arguments)
@@ -3157,9 +3162,9 @@ public static class AgentToolInvocationPolicyMetadata
 
     public static IReadOnlyDictionary<string, string> RedactArguments(
         string? toolName,
-        IEnumerable<KeyValuePair<string, object?>> arguments)
-    {
-        return SanitizeArguments(toolName, arguments)
+        IEnumerable<KeyValuePair<string, object?>> arguments,
+        AgentToolPolicyCatalog? catalog = null) {
+        return SanitizeArguments(toolName, arguments, catalog)
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 item => item.Key,
@@ -3169,11 +3174,11 @@ public static class AgentToolInvocationPolicyMetadata
 
     public static IReadOnlyDictionary<string, object?> SanitizeArguments(
         string? toolName,
-        IEnumerable<KeyValuePair<string, object?>> arguments)
-    {
+        IEnumerable<KeyValuePair<string, object?>> arguments,
+        AgentToolPolicyCatalog? catalog = null) {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var mode = HasSensitiveBusinessArguments(toolName)
+        var mode = HasSensitiveBusinessArguments(toolName, catalog)
             ? ToolArgumentSanitizationMode.SecretKeysAndManagedBusinessContent
             : ToolArgumentSanitizationMode.SecretKeys;
         return SanitizeArguments(arguments, mode);
@@ -3181,13 +3186,13 @@ public static class AgentToolInvocationPolicyMetadata
 
     public static IReadOnlyDictionary<string, object?> SanitizeArgumentsForDisplay(
         string? toolName,
-        IEnumerable<KeyValuePair<string, object?>> arguments)
-    {
+        IEnumerable<KeyValuePair<string, object?>> arguments,
+        AgentToolPolicyCatalog? catalog = null) {
         ArgumentNullException.ThrowIfNull(arguments);
 
         return SanitizeArguments(
             arguments,
-            ToolCapabilityRegistry.TryResolve(toolName, out _)
+            (catalog ?? AgentToolPolicyCatalog.BuiltIn).TryResolve(toolName, out _)
                 ? ToolArgumentSanitizationMode.DisplayKnownSafeFields
                 : ToolArgumentSanitizationMode.DisplayUnknownIdentityOnly);
     }
@@ -3210,12 +3215,6 @@ public static class AgentToolInvocationPolicyMetadata
                SensitiveHrArgumentToolNames.Contains(toolName.Trim());
     }
 
-    public static bool HasSensitivePromptCuratorArguments(string? toolName)
-    {
-        return !string.IsNullOrWhiteSpace(toolName) &&
-               SensitivePromptCuratorArgumentToolNames.Contains(toolName.Trim());
-    }
-
     public static bool HasSensitiveWorkflowCuratorArguments(string? toolName)
     {
         return !string.IsNullOrWhiteSpace(toolName) &&
@@ -3234,10 +3233,9 @@ public static class AgentToolInvocationPolicyMetadata
                SensitiveSchedulerArgumentToolNames.Contains(toolName.Trim());
     }
 
-    public static bool HasSensitiveBusinessArguments(string? toolName)
-    {
+    public static bool HasSensitiveBusinessArguments(string? toolName, AgentToolPolicyCatalog? catalog = null) {
         return HasSensitiveHrArguments(toolName) ||
-               HasSensitivePromptCuratorArguments(toolName) ||
+               ((catalog ?? AgentToolPolicyCatalog.BuiltIn).TryResolve(toolName, out var metadata) && metadata.BusinessArgumentRetentionScheme is not null) ||
                HasSensitiveWorkflowCuratorArguments(toolName) ||
                HasSensitiveCapabilityCuratorArguments(toolName) ||
                HasSensitiveSchedulerArguments(toolName);
@@ -3245,9 +3243,9 @@ public static class AgentToolInvocationPolicyMetadata
 
     internal static string ProtectApprovalArgumentsForAudit(
         string? toolName,
-        string? argumentsJson)
-    {
-        var retentionScheme = ResolveApprovalAuditRetentionScheme(toolName);
+        string? argumentsJson,
+        AgentToolPolicyCatalog? catalog = null) {
+        var retentionScheme = ResolveApprovalAuditRetentionScheme(toolName, catalog);
         var normalizedArgumentsJson = string.IsNullOrWhiteSpace(argumentsJson)
             ? "{}"
             : argumentsJson.Trim();
@@ -3307,12 +3305,12 @@ public static class AgentToolInvocationPolicyMetadata
 
     internal static string ProtectPreviouslyProtectedApprovalArgumentsForExport(
         string? toolName,
-        string? argumentsJson)
-    {
-        var retentionScheme = ResolveApprovalAuditRetentionScheme(toolName);
+        string? argumentsJson,
+        AgentToolPolicyCatalog? catalog = null) {
+        var retentionScheme = ResolveApprovalAuditRetentionScheme(toolName, catalog);
         if (retentionScheme is null || string.IsNullOrWhiteSpace(argumentsJson))
         {
-            return ProtectApprovalArgumentsForAudit(toolName, argumentsJson);
+            return ProtectApprovalArgumentsForAudit(toolName, argumentsJson, catalog);
         }
 
         try
@@ -3320,11 +3318,11 @@ public static class AgentToolInvocationPolicyMetadata
             using var document = JsonDocument.Parse(argumentsJson);
             return IsProtectedApprovalAudit(document.RootElement, retentionScheme)
                 ? document.RootElement.GetRawText()
-                : ProtectApprovalArgumentsForAudit(toolName, argumentsJson);
+                : ProtectApprovalArgumentsForAudit(toolName, argumentsJson, catalog);
         }
         catch (JsonException)
         {
-            return ProtectApprovalArgumentsForAudit(toolName, argumentsJson);
+            return ProtectApprovalArgumentsForAudit(toolName, argumentsJson, catalog);
         }
     }
 
@@ -3555,16 +3553,15 @@ public static class AgentToolInvocationPolicyMetadata
                !value.Any(char.IsControl);
     }
 
-    private static string? ResolveApprovalAuditRetentionScheme(string? toolName)
-    {
+    private static string? ResolveApprovalAuditRetentionScheme(string? toolName, AgentToolPolicyCatalog? catalog) {
         if (HasSensitiveHrArguments(toolName))
         {
             return HrApprovalAuditRetentionScheme;
         }
 
-        if (HasSensitivePromptCuratorArguments(toolName))
-        {
-            return PromptCuratorApprovalAuditRetentionScheme;
+        if ((catalog ?? AgentToolPolicyCatalog.BuiltIn).TryResolve(toolName, out var metadata) &&
+            metadata.BusinessArgumentRetentionScheme is { } scheme) {
+            return scheme;
         }
 
         if (HasSensitiveWorkflowCuratorArguments(toolName))

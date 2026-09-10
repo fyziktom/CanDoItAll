@@ -85,6 +85,7 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
             serializedSessionJson = await SerializeRuntimeSessionAsync(
                 runtimeAgent,
                 runtimeSession,
+                runtimeOptions.RequireDurableToolProtocol,
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -150,11 +151,13 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
     private static async Task<string> SerializeRuntimeSessionAsync(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
+        bool hasToolAdmission,
         CancellationToken cancellationToken)
     {
         using var serializationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var serializationTask = runtimeAgent.SerializeSessionAsync(
             runtimeSession,
+            hasToolAdmission ? MafToolProtocolCodec.SerializationOptions : null,
             cancellationToken: serializationCancellation.Token).AsTask();
         try
         {

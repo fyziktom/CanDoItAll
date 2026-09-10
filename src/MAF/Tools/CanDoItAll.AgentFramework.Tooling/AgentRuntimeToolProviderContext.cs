@@ -56,6 +56,10 @@ public sealed record AgentRuntimeToolProviderContext
     /// </summary>
     public AgentExecutionGovernanceSnapshot? Governance { get; init; }
 
+    public AgentToolSessionReference? AdmittedToolSession { get; init; }
+
+    public AgentToolAdmissionSupport ToolAdmissionSupport { get; init; }
+
     public ImmutableArray<AgentChatContextAttachmentEnvelope>
         GetAttachments<TAttachment>()
         where TAttachment : class, IAgentChatContextAttachment

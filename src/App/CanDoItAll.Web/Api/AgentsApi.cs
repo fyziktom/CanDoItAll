@@ -556,6 +556,66 @@ internal static class AgentsApi
                 StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
+        agents.MapPost("/execution-runs/{executionRunId:guid}/recover", async (
+                Guid executionRunId,
+                AgentExecutionRecoveryApiRequest request,
+                HttpContext context,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) => {
+            var validation = AgentApiRequestValidation.ValidateExecutionRun(context, executionRunId);
+            if (validation is not null) {
+                return validation;
+            }
+
+            var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
+            AgentActivityApiResults.SetOperationIdHeader(context.Response, operationId);
+            try {
+                var result = await workspaceService.RecoverExecutionRunAsync(executionRunId, operationId, cancellationToken);
+                return Results.Ok(AgentApiResponseMapper.ToExecutionRunResult(result));
+            } catch (AgentExecutionActivityAdmissionException exception) {
+                return AgentActivityApiResults.FromAdmissionException(context, exception, executionRunId: executionRunId);
+            } catch (AgentToolAdmissionException exception) {
+                return ApiEndpointResults.AgentValidationFailure(context, exception.Message, exception.Code, executionRunId: executionRunId);
+            } catch (AgentChatRunFailedException exception) {
+                return ApiEndpointResults.AgentRunFailure(context, exception);
+            } catch (AgentRunFailedException exception) {
+                return ApiEndpointResults.AgentRunFailure(context, exception);
+            }
+        })
+            .WithName("RecoverAgentExecutionRun")
+            .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden,
+                StatusCodes.Status409Conflict, StatusCodes.Status410Gone, StatusCodes.Status500InternalServerError, StatusCodes.Status503ServiceUnavailable)
+            .ApplyApiAuthorization(agents, ApiAuthorizationPolicies.GeneralApi);
+
+        agents.MapPost("/execution-runs/{executionRunId:guid}/reconcile-cancellation", async (
+                Guid executionRunId,
+                AgentExecutionRecoveryApiRequest request,
+                HttpContext context,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) => {
+            var validation = AgentApiRequestValidation.ValidateExecutionRun(context, executionRunId);
+            if (validation is not null) {
+                return validation;
+            }
+
+            var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
+            AgentActivityApiResults.SetOperationIdHeader(context.Response, operationId);
+            try {
+                var result = await workspaceService.ReconcileCancelledExecutionRunAsync(executionRunId, operationId, cancellationToken);
+                return Results.Ok(AgentApiResponseMapper.ToCancellationReconciliation(result));
+            } catch (AgentExecutionActivityAdmissionException exception) {
+                return AgentActivityApiResults.FromAdmissionException(context, exception, executionRunId: executionRunId);
+            } catch (AgentToolAdmissionException exception) {
+                return ApiEndpointResults.AgentValidationFailure(context, exception.Message, exception.Code, executionRunId: executionRunId);
+            }
+        })
+            .WithName("ReconcileCancelledAgentExecutionRun")
+            .Produces<AgentCancellationReconciliationApiResponse>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden,
+                StatusCodes.Status409Conflict, StatusCodes.Status410Gone, StatusCodes.Status500InternalServerError, StatusCodes.Status503ServiceUnavailable)
+            .ApplyApiAuthorization(agents, ApiAuthorizationPolicies.GeneralApi);
+
         agents.MapPost("/execution-runs/{executionRunId:guid}/pending-approvals", async (
                 Guid executionRunId,
                 PendingApprovalApiRequest request,
@@ -1025,6 +1085,8 @@ internal sealed record AgentChatApiRequest(
     string Prompt,
     IReadOnlyList<string>? AttachmentPaths = null,
     AgentExecutionOperationId? ActivityOperationId = null);
+
+internal sealed record AgentExecutionRecoveryApiRequest(AgentExecutionOperationId? ActivityOperationId = null);
 
 internal sealed record PendingApprovalApiRequest(
     bool Approved,

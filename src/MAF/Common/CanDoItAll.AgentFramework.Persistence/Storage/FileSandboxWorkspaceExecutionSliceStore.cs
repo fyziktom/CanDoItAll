@@ -161,7 +161,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                     $"Execution run '{runId:N}' does not match its canonical chat index summary.");
             }
 
-            if (IsIndexedActiveState(detail.Run.State))
+            if (IsIndexedActiveState(detail.Run.State) || detail.Run.ToolAdmission?.HasUnresolvedEffects == true)
             {
                 throw new AgentDeletionConflictException(
                     agentId,
@@ -1358,6 +1358,23 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         SandboxWorkspaceExecutionState executionState,
         CancellationToken cancellationToken)
     {
+        var proposedRuns = executionState.ExecutionRuns.ToDictionary(run => run.Id);
+        foreach (var prior in previousState.ExecutionRuns) {
+            if (!proposedRuns.TryGetValue(prior.Id, out var next)) {
+                if (prior.ToolAdmission is not null) {
+                    throw new InvalidOperationException("An execution-state replacement cannot delete a durable tool admission journal.");
+                }
+
+                continue;
+            }
+
+            if (prior.ToolAdmission is null && next.ToolAdmission is not null) {
+                throw new InvalidOperationException("An existing legacy run cannot acquire fabricated tool admission identity.");
+            }
+
+            AgentToolJournalTransitions.ValidatePersistence(prior.ToolAdmission, next.ToolAdmission);
+        }
+
         jsonStore.EnsureDirectory(layout.ExecutionStorageRoot);
 
         var changed = false;
@@ -2720,6 +2737,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
     private static void EnsureRunDetailConsistency(ExecutionRunDetail detail)
     {
+        detail.Run.ToolAdmission?.Validate();
         if (detail.Run.ChatSessionId.HasValue)
         {
             if (detail.ChatSession is null)
@@ -2862,6 +2880,11 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         ExecutionRunDetail previousDetail,
         ExecutionRunDetail targetDetail)
     {
+        if (previousDetail.Run.ToolAdmission is null && targetDetail.Run.ToolAdmission is not null) {
+            throw new InvalidOperationException("An existing legacy run cannot acquire fabricated tool admission identity.");
+        }
+
+        AgentToolJournalTransitions.ValidatePersistence(previousDetail.Run.ToolAdmission, targetDetail.Run.ToolAdmission);
         if (previousDetail.Run.Id == Guid.Empty ||
             previousDetail.Run.Id != targetDetail.Run.Id)
         {

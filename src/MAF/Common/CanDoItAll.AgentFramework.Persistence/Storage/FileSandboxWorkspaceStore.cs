@@ -15,6 +15,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceExecutionRunStore,
     ISandboxWorkspaceChatRunStartStore,
     ISandboxWorkspaceExecutionRunMutationStore,
+    ISandboxWorkspaceExecutionRunLeaseStore,
     ISandboxWorkspaceExecutionRunReservationStore,
     IAgentRecruitingEvidenceStore
 {
@@ -27,6 +28,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private readonly FileSandboxWorkspaceExecutionSliceStore executionSliceStore;
     private readonly FileSandboxWorkspaceChatProjectionStore chatProjectionStore;
     private readonly FileSandboxWorkspaceCrossProcessLock crossProcessLock;
+    private readonly DurableFileWriter runLeaseWriter;
     private readonly Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary;
     private readonly Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary;
     private readonly Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary;
@@ -96,6 +98,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
         var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
         var durableFileWriter = new DurableFileWriter(physicalPathPolicyFactory);
+        runLeaseWriter = durableFileWriter;
         jsonStore = new FileSandboxWorkspaceJsonStore(
             jsonReadDiagnostics,
             physicalPathPolicyFactory,
@@ -621,6 +624,14 @@ public sealed partial class FileSandboxWorkspaceStore :
         {
             gate.Release();
         }
+    }
+
+    public ValueTask<IAsyncDisposable> AcquireToolDispatchLeaseAsync(
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentOutOfRangeException.ThrowIfEqual(executionRunId, Guid.Empty);
+        return runLeaseWriter.AcquireCoordinationAsync(layout.RootPath,
+            Path.Combine(layout.RunRoot(executionRunId), "tool-dispatch.lock"),
+            TimeSpan.FromMinutes(1), requirePrivateUnixMode: false, cancellationToken);
     }
 
     public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
